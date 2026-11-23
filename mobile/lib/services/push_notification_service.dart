@@ -94,6 +94,62 @@ class PushNotificationService {
   final Future<String?> Function() _timeZoneIdentifier;
   ({int offset, String? name})? _registeredTimezone;
 
+  /// The signed event of each push-control kind that no relay has confirmed
+  /// or refused yet, with the request it carries.
+  ///
+  /// Kinds 3079 and 3083 are regular, so a relay keeps every distinct one it
+  /// stores, and a missing `OK` does not mean nothing was stored (#8380). A
+  /// retry of the same request re-sends this event, which such a relay answers
+  /// as a duplicate instead of storing a second one. A refusal stored nothing,
+  /// so the next attempt signs afresh.
+  ///
+  /// One slot per kind keeps only the latest attempt, which holds because
+  /// callers run one attempt of a kind at a time: preferences through
+  /// `NotificationPreferencesService`'s publication chain, registration
+  /// through the session coordinator's single operation.
+  ///
+  /// A kept event lives only as long as this instance, which serves one
+  /// session. Re-sending a kept registration is safe only while no
+  /// deregistration (kind 3080) comes between: the push service orders the two
+  /// by `created_at`, so it would ignore the older registration while the
+  /// relay confirmed it. Every deregistration first calls
+  /// [deactivateRegistration], after which this instance registers nothing.
+  /// The push service also ignores events older than its 7-day replay window;
+  /// a kept event reaches that age only if one session retries the same
+  /// unconfirmed request for a week.
+  final _unconfirmedEvents = <int, ({String request, Event event})>{};
+
+  static String _pushControlRequest(
+    NostrIdentity identity,
+    String pushServicePubkey,
+    String plaintext,
+  ) => jsonEncode([identity.pubkey, pushServicePubkey, plaintext]);
+
+  Event? _unconfirmedEvent(int kind, String request) {
+    final kept = _unconfirmedEvents[kind];
+    if (kept == null || kept.request != request) return null;
+    Log.info(
+      'Re-sending unconfirmed push event ${kept.event.id} (kind $kind) '
+      'instead of signing a new one',
+      name: 'PushNotificationService',
+      category: LogCategory.system,
+    );
+    return kept.event;
+  }
+
+  void _keepIfUnconfirmed(
+    int kind,
+    String request,
+    Event event,
+    PublishOutcome outcome,
+  ) {
+    if (outcome.confirmed || outcome.rejectedBy.isNotEmpty) {
+      _unconfirmedEvents.remove(kind);
+    } else {
+      _unconfirmedEvents[kind] = (request: request, event: event);
+    }
+  }
+
   static Future<String?> _deviceTimeZoneIdentifier() async =>
       (await FlutterTimezone.getLocalTimezone()).identifier;
 
@@ -349,6 +405,11 @@ class PushNotificationService {
       'kinds': kinds,
       'campaignsEnabled': prefs.campaignsEnabled,
     });
+    final request = _pushControlRequest(identity, pushServicePubkey, plaintext);
+    final unconfirmed = _unconfirmedEvent(pushPreferencesKind, request);
+    if (unconfirmed != null) {
+      return _publishPreferencesEvent(unconfirmed, request);
+    }
 
     final encrypted = await identity.nip44Encrypt(
       pushServicePubkey,
@@ -385,7 +446,13 @@ class PushNotificationService {
     }
     if (!await _isIdentityCurrent(identity, null)) return false;
 
-    return (await _publishPushControlEvent(event, 'preferences')).confirmed;
+    return _publishPreferencesEvent(event, request);
+  }
+
+  Future<bool> _publishPreferencesEvent(Event event, String request) async {
+    final outcome = await _publishPushControlEvent(event, 'preferences');
+    _keepIfUnconfirmed(pushPreferencesKind, request, event, outcome);
+    return outcome.confirmed;
   }
 
   /// Handles a foreground FCM message by displaying a local notification.
@@ -450,6 +517,11 @@ class PushNotificationService {
       'campaignTargetTypes': NotificationWireValues.campaignTargetTypes,
       if (timezone.name != null) 'timezone': timezone.name,
     });
+    final request = _pushControlRequest(identity, pushServicePubkey, plaintext);
+    final unconfirmed = _unconfirmedEvent(pushRegistrationKind, request);
+    if (unconfirmed != null) {
+      return _publishRegistrationEvent(unconfirmed, request, timezone);
+    }
 
     String? encrypted;
     try {
@@ -511,7 +583,16 @@ class PushNotificationService {
       return _signerUnavailableResult();
     }
 
+    return _publishRegistrationEvent(event, request, timezone);
+  }
+
+  Future<PushRegistrationResult> _publishRegistrationEvent(
+    Event event,
+    String request,
+    ({int offset, String? name}) timezone,
+  ) async {
     final outcome = await _publishPushControlEvent(event, 'registration');
+    _keepIfUnconfirmed(pushRegistrationKind, request, event, outcome);
     if (outcome.confirmed) {
       _registeredTimezone = timezone;
       return PushRegistrationResult.published;
