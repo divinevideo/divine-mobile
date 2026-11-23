@@ -429,14 +429,17 @@ class _AddYours extends StatelessWidget {
 /// join it.
 const int _seriesThumbnails = 3;
 
-/// How wide each of those thumbnails is, upright like a video and as tall as
-/// the row the button takes for a viewer who may join, so the card keeps its
-/// size.
-const double _seriesThumbnailWidth = interactiveCardRowHeight * 3 / 4;
+/// How tall each of those thumbnails is: what is left of the card the
+/// viewer who may join sees once the prompt and the invitation to watch take
+/// theirs, so both are the same size and fill the same box.
+const double _seriesThumbnailHeight = 123;
 
-/// An Add yours shown to a viewer who may not join it: its prompt and
-/// hashtag over the latest answers' thumbnails and an invitation to watch
-/// the series, which [onOpen] opens.
+/// How wide each of them is, upright like a video.
+const double _seriesThumbnailWidth = _seriesThumbnailHeight * 3 / 4;
+
+/// An Add yours shown to a viewer who may not join it: its prompt over the
+/// latest answers' thumbnails and an invitation to watch the series, which
+/// [onOpen] opens. Its hashtag is left out to give the thumbnails room.
 class _AddYoursSeries extends StatelessWidget {
   const _AddYoursSeries({
     required this.data,
@@ -460,7 +463,7 @@ class _AddYoursSeries extends StatelessWidget {
     final card = Column(
       mainAxisSize: .min,
       crossAxisAlignment: .stretch,
-      spacing: 12,
+      spacing: 16,
       children: [
         StickerTextLine(
           text: data.prompt ?? '',
@@ -468,65 +471,35 @@ class _AddYoursSeries extends StatelessWidget {
           maxLines: 2,
           textAlign: .center,
         ),
-        StickerTextLine(
-          text: '#${data.hashtag ?? ''}',
-          style: interactiveCardTextStyle(
-            36,
-          ).copyWith(color: interactiveCardInk.withValues(alpha: 0.6)),
-          textAlign: .center,
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: interactiveCardRowHeight,
-          child: Row(
-            spacing: 24,
-            children: [
-              Row(
-                spacing: 12,
-                children: [
-                  for (final (index, response) in shown.indexed)
-                    _ResponseThumbnail(
-                      response: response,
-                      width: _seriesThumbnailWidth,
-                      height: interactiveCardRowHeight,
-                      radius: 16,
-                      moreCount: index == shown.length - 1 && more > 1
-                          ? more
-                          : null,
-                    ),
-                ],
+        Row(
+          mainAxisAlignment: .center,
+          spacing: 12,
+          children: [
+            for (final (index, response) in shown.indexed)
+              _ResponseThumbnail(
+                response: response,
+                width: _seriesThumbnailWidth,
+                height: _seriesThumbnailHeight,
+                radius: 16,
+                moreCount: index == shown.length - 1 && more > 1 ? more : null,
               ),
-              Expanded(
-                child: Row(
-                  spacing: 16,
-                  children: [
-                    const DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: VineTheme.vineGreen,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Padding(
-                        padding: .all(18),
-                        child: DivineIcon(
-                          icon: .play,
-                          size: 40,
-                          color: interactiveCardColor,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      // A longer translation is made smaller, not cut short.
-                      child: FittedBox(
-                        fit: .scaleDown,
-                        alignment: AlignmentDirectional.centerStart,
-                        child: StickerTextLine(
-                          text: l10n.videoStickerAddYoursWatchSeries,
-                          style: interactiveCardTextStyle(40),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+          ],
+        ),
+        // A longer translation is made smaller rather than cut short.
+        FittedBox(
+          fit: .scaleDown,
+          child: Row(
+            mainAxisSize: .min,
+            spacing: 8,
+            children: [
+              const DivineIcon(
+                icon: .play,
+                size: 40,
+                color: VineTheme.vineGreenDark,
+              ),
+              StickerTextLine(
+                text: l10n.videoStickerAddYoursWatchSeries,
+                style: interactiveCardTextStyle(40),
               ),
             ],
           ),
