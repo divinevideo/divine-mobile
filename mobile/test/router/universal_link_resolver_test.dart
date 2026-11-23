@@ -8,6 +8,8 @@ import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 
+import '../helpers/test_pubkeys.dart';
+
 void main() {
   // Uri.parse accepts these, but each holds a percent-escape that is not
   // valid UTF-8, so Uri.pathSegments (the first two) or Uri.queryParametersAll
@@ -63,8 +65,7 @@ void main() {
     });
 
     test('maps authored list links to the internal list route', () {
-      const authorPubkey =
-          'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
+      const authorPubkey = syntheticTestPubkey;
       expect(
         divineUrlToPushRoute(
           Uri.parse('https://divine.video/list/$authorPubkey/my-vines'),
@@ -74,8 +75,7 @@ void main() {
     });
 
     test('maps shared people list links to the internal route', () {
-      const ownerPubkey =
-          'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
+      const ownerPubkey = syntheticTestPubkey;
       expect(
         divineUrlToPushRoute(
           Uri.parse(
@@ -219,8 +219,7 @@ void main() {
     });
 
     group('list', () {
-      const authorPubkey =
-          'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
+      const authorPubkey = syntheticTestPubkey;
 
       test('maps a shared people list link to its owner-qualified route', () {
         expect(

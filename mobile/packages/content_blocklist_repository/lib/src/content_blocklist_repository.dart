@@ -2179,7 +2179,7 @@ class _AuthorListWatch {
   final Set<String> _authors = <String>{};
 
   NostrClient? _boundClient;
-  StreamSubscription<Event>? _subscription;
+  RefusalRetryingSubscription? _subscription;
   String? _subscriptionId;
   int _generation = 0;
   bool _openScheduled = false;
@@ -2245,23 +2245,25 @@ class _AuthorListWatch {
     try {
       _boundClient = client;
       _subscriptionId = id;
-      _subscription = client
-          .subscribe([
-            Filter(authors: _authors.toList(), kinds: [_kind]),
-          ], subscriptionId: id)
-          .listen(
-            onEvent,
-            // A relay that refuses this REQ surfaces a stream error, and the
-            // try/catch here only covers the setup. Without onError it would
-            // escape to the zone as an uncaught async error.
-            onError: (Object error) {
-              Log.warning(
-                '$_label author watch ended: $error',
-                name: 'ContentBlocklistRepository',
-                category: LogCategory.system,
-              );
-            },
-          );
+      // A refusal from every relay is retried; any other error is logged
+      // rather than escaping to the zone, and the watch is not reopened.
+      _subscription = RefusalRetryingSubscription(
+        open: () => client.subscribe([
+          Filter(authors: _authors.toList(), kinds: [_kind]),
+        ], subscriptionId: id),
+        onEvent: onEvent,
+        onRefused: (reasonCategory, retryIn) => Log.warning(
+          'Every relay refused the $_label author watch '
+          '(reason=$reasonCategory); retrying in ${retryIn.inSeconds}s',
+          name: 'ContentBlocklistRepository',
+          category: LogCategory.system,
+        ),
+        onError: (error) => Log.warning(
+          '$_label author watch ended: $error',
+          name: 'ContentBlocklistRepository',
+          category: LogCategory.system,
+        ),
+      )..start();
 
       Log.info(
         'Watching ${_authors.length} $_label author(s) by author id',

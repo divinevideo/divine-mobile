@@ -62,6 +62,7 @@ import 'package:video_responses_repository/video_responses_repository.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
+import '../../../helpers/test_pubkeys.dart';
 import '../../../helpers/url_launcher_test_double.dart';
 
 class _MockVideoInteractionsBloc extends Mock
@@ -142,10 +143,8 @@ const _creatorPubkey =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const _thirdPartyViewer =
     '9999999999999999999999999999999999999999999999999999999999999999';
-const _collaborator1 =
-    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-const _collaborator2 =
-    'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+const String _collaborator1 = syntheticTestPubkey;
+const String _collaborator2 = syntheticOtherTestPubkey;
 const _inspiredByPubkey =
     'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
 const _reposterPubkey =

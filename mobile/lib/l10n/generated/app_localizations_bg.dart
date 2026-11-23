@@ -9488,6 +9488,21 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectEcho => 'Ехо';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Разделено време';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Дълга експозиция';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Само движение';
+
+  @override
+  String get videoEditorEffectStutter => 'Накъсване';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Изкривено време';
+
+  @override
   String get videoEditorEffectFisheye => 'Рибешко око';
 
   @override
@@ -9689,6 +9704,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'Движение';
 
   @override
+  String get videoEditorEffectCategoryTime => 'Време';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'Частици';
 
   @override
@@ -9795,6 +9813,14 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Само един ефект от „Време“ наведнъж. Два заедно биха изглеждали различно след експортиране, затова тук заменихме другия.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Само един ефект от „Време“ наведнъж. Два заедно биха изглеждали различно след експортиране.';
 
   @override
   String get videoEditorEffectsOnBeat => 'В ритъм';

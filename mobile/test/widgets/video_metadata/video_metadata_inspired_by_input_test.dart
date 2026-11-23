@@ -21,6 +21,8 @@ import 'package:riverpod/misc.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/test_pubkeys.dart';
+
 /// Mock for FollowRepository
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -382,7 +384,7 @@ void main() {
       // The tile is the only place the author can see who they credited, so
       // showing just the first would make the extra picks invisible.
       final first = NostrKeyUtils.encodePubKey('a' * 64);
-      final second = NostrKeyUtils.encodePubKey('b' * 64);
+      final second = NostrKeyUtils.encodePubKey(syntheticTestPubkey);
       final state = VideoEditorProviderState(
         inspiredByNpubs: [first, second],
       );
@@ -465,8 +467,7 @@ void main() {
       // Editing a published video seeds inspiredByVideo from its a-tag and
       // inspiredByNpubs from its inspired-by p-tags — and the a-tag creator
       // is carried by both, so the tile would name them twice.
-      const creatorHex =
-          'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+      const creatorHex = syntheticOtherTestPubkey;
       final state = VideoEditorProviderState(
         inspiredByVideo: const InspiredByInfo(
           addressableId: '34236:$creatorHex:vine123',

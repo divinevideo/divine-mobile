@@ -48,12 +48,15 @@ class DatabaseRecoveryStore {
   static const unrecoverableCipherKeyReportedKey =
       'db.cipher_key_unrecoverable.reported.v1';
 
-  /// Device-scoped, not account data: both describe this install's local
-  /// database, which every account on the device shares. Declared beside the
-  /// keys so the preference-key guard can classify them.
+  /// Marks completion of the shared database key accessibility upgrade.
+  static const keyAccessibilityUpgradedKey =
+      'db_cipher_key_accessibility_upgraded_v1';
+
+  /// These keys describe the install's database, shared by every account.
   static const List<String> deviceScopedPrefsKeys = [
     _key,
     unrecoverableCipherKeyReportedKey,
+    keyAccessibilityUpgradedKey,
   ];
 
   static const _logName = 'DatabaseRecoveryStore';

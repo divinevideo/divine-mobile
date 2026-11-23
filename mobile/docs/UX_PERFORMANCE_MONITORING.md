@@ -17,11 +17,12 @@ choosing an optimization.
 | Feed retrieval (existing) | `feed_load_*` | First raw feed event/cache result, timeout, cancellation, and result counts; does not measure first rendered video |
 | Opening the video editor | `editor_ready` | Live trace from entering the editor route until the editor is usable: it shows its clips (at once from the recorder or the Library; a draft once restored with its thumbnails and fonts) and, for video clips, the preview player loaded them and showed its first frame. `total_ms`, plus `clips_loaded_ms`, `player_ready_ms`, and `first_frame_ms` for the phases reached, and `pre_route_ms` for an editor opened with the recorder's "Next" (the wait from the tap to the route); `entry=recording/clips/draft`, `clips=0/1/2-3/4-6/7+/unknown`, `preview=video/stop_motion/none/unknown`, `outcome=ready/failed/left` |
 | Opening the recorder's camera | `camera_startup` | Live trace from the recorder asking the camera to open until it is fitted to the recorder mode. `init_ms` until the camera opened (on iOS its first preview frame, on Android the attached preview surface), `mode_apply_ms` for dual-camera capture and stabilization, `total_ms`; `lens`, `quality`, `outcome=success/failed/error`, and `dual_camera=on/off` on success. A camera that does not open ends the trace at `init_ms` |
-| Video preparation (existing) | `video_generation` | Video generation duration/outcome |
+| Video preparation (existing) | `video_generation` | Video generation duration and outcome, with step `*_ms`, output and feature metrics (see below) |
 | Flipping the camera or changing the lens | `camera_switch` | Live trace from the tap until the recorder shows the new camera. `switch_ms` for the native switch (on both platforms it completes on the incoming camera's first frame), `total_ms` until the frozen preview lifts; `kind=flip/lens`, `outcome=success/failed/error`, `dual_camera=on/off`, `lens` live afterwards |
 | Processing a recorded take | `clip_postprocess` | Live trace per take, from the stop handing it over until its detached background work ends. `copy_ms`, `duration_ms`, `thumbnail_ms`, `ghost_frame_ms`, `library_save_ms`, and `chroma_key_bake_ms` (from the end of the enrichment until the keyed take is saved) for the steps reached, `total_ms`; `outcome=success/save_failed/superseded/error`, `chroma_key=yes/no` |
 | Finishing a stop-motion session | `stop_motion_assemble` | Live trace of turning the session's stills into a clip before the editor opens. `total_ms`, `frames` (stills in the session); `outcome=success/failed`, `append=yes/no` |
 | Publishing and uploads (existing) | `video_publish`, `video_upload`, `video_upload_enqueue` | Publish phase metrics and outcome; in-process transfer and OS enqueue have different populations and boundaries |
+| Starting and stopping a take | `recording_start`, `recording_stop` | Live traces, one per take. `recording_start` runs from the shutter until the camera writes the take and the recorder shows it running; a countdown is excluded and reported as `countdown_ms`. `start_ms`, `sound_prep_ms`, `native_start_ms`, `wakelock_ms`; `outcome=success/failed/aborted/error`, `sound=on/off`. `recording_stop` runs from the stop until the camera handed over the file: `stop_ms`, `native_stop_ms`, `sound_stop_ms`, `wakelock_ms`, `take_ms`, `secondary_file`; `outcome=success/no_file/error`, `trigger=user/auto/teardown`. Both carry `mode`, `stabilization` and `dual_camera=on/off`, plus the 0/1 metrics `chroma_key` and `reaction` |
 | Sound picker search | `sound_search` | **Trace duration** from the debounced query the sound picker's Newest tab sends until its relay results arrive; `outcome` = `results` or `empty` when the relays answered, `fallback` when they did not and the picker showed its cached matches instead (`reason` = `timed_out`, `no_relays` or `relay_error`), `failure`, or `abandoned` when the query, the tab or the picker changed first; `result_bucket` (`0`, `1_10`, `11_50`, `over_50`) and a `result_count` metric when it answered. Never the query text |
 
 `sound_search` is a live trace, so read its duration. It runs once per query the
@@ -65,6 +66,29 @@ within `preview`. `failed` is a draft that could not be restored or a first clip
 load the player rejected; `left` is a close before either, including during a
 draft load, when `clips` is still `unknown`. Reloads after the editor is ready (trim,
 reorder, speed) are not measured.
+
+**`video_generation` is a live trace, emitted once per final render from the
+editor.** It runs from the start of the render until its outcome is known and
+the draft is saved. `outcome` is `success`, `stale` (the render finished but the
+edit changed while it ran, so the editor threw the video away and, while Post
+details still waits, rendered again under its own trace), `incomplete` (a newer render
+replaced it, or it was cancelled, for example because the user left Post
+details), `failed` or `error`, with
+`failure_reason`, `clip_count` and `aspect_ratio`. Each step that ran
+reports its milliseconds, so an absent step metric means the step did not
+happen: `chroma_bake_ms` (keying takes recorded with the color mask),
+`assembly_ms` (stop-motion stills to video, summed over clips), `render_ms`
+(preparing the render, such as fetching sounds, and every native pass),
+`metadata_ms`, `proof_ms` (C2PA and ProofMode signing of the recordings left
+unsigned at capture, then of the output) and `cover_ms`. A
+render that reached its end also reports `output_duration_ms`, `output_width`,
+`output_height` and `output_bytes` (read after signing), so render time per
+second of video can be compared across devices. The features it used are 0/1
+metrics rather than attributes, since a trace takes five attributes:
+`has_text`, `has_filter`, `has_adjustment`, `has_effect`, `has_audio_track`,
+`has_speed_change`, `has_reverse`, `has_chroma_key` and `has_stop_motion`, plus
+`layer_count`. The renders of a draft published from the Library and of a
+background publish retry are not measured.
 
 The HTTP classifier has a finite vocabulary. It separates `creator_delete`,
 `creator_delete_status`, and `moderation_lookup`, plus feed/video, profiles,

@@ -42,6 +42,8 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/test_pubkeys.dart';
+
 // Mock classes
 class MockUploadManager extends Mock implements UploadManager {}
 
@@ -98,10 +100,8 @@ class _FakePerformanceMonitor implements PerformanceTraceMonitor {
 void main() {
   const descriptionMentionPubkey =
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-  const overlayMentionPubkey =
-      'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-  const collaboratorPubkey =
-      'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+  const overlayMentionPubkey = syntheticTestPubkey;
+  const collaboratorPubkey = syntheticOtherTestPubkey;
 
   late MockUploadManager mockUploadManager;
   late _MockDraftUploadMaterializer mockDraftMaterializer;
@@ -2136,7 +2136,7 @@ void main() {
 
         final draft = _createTestDraft(
           collaboratorPubkeys: {
-            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            syntheticTestPubkey,
           },
         );
 
@@ -2160,8 +2160,7 @@ void main() {
         () async {
           const creatorPubkey =
               'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-          const collaboratorPubkey =
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+          const collaboratorPubkey = syntheticTestPubkey;
           _setupSuccessfulPublish(
             mockAuthService: mockAuthService,
             mockUploadManager: mockUploadManager,
@@ -2277,7 +2276,7 @@ void main() {
 
         final draft = _createTestDraft(
           collaboratorPubkeys: {
-            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            syntheticTestPubkey,
           },
         );
 
@@ -2320,7 +2319,7 @@ void main() {
 
           final draft = _createTestDraft(
             collaboratorPubkeys: {
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+              syntheticTestPubkey,
             },
           );
 
@@ -2420,7 +2419,7 @@ void main() {
 
           final draft = _createTestDraft(
             collaboratorPubkeys: {
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+              syntheticTestPubkey,
             },
           );
 
@@ -2461,18 +2460,17 @@ void main() {
           ).thenAnswer(
             (_) async => const CollaboratorInviteBatchResult(
               results: {
-                'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb':
-                    CollaboratorInviteResult(
-                      success: false,
-                      error: 'relay unavailable',
-                    ),
+                syntheticTestPubkey: CollaboratorInviteResult(
+                  success: false,
+                  error: 'relay unavailable',
+                ),
               },
             ),
           );
 
           final draft = _createTestDraft(
             collaboratorPubkeys: {
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+              syntheticTestPubkey,
             },
           );
 
@@ -2485,8 +2483,7 @@ void main() {
       test(
         'successful publish exposes failed collaborator invite warnings',
         () async {
-          const collaboratorPubkey =
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+          const collaboratorPubkey = syntheticTestPubkey;
           const thumbnailUrl = 'https://cdn.divine.video/thumbs/test_video.jpg';
           final readyUpload = _createPendingUpload(
             status: UploadStatus.readyToPublish,
@@ -2550,8 +2547,7 @@ void main() {
       test(
         'successful publish does not warn for a queued collaborator invite',
         () async {
-          const collaboratorPubkey =
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+          const collaboratorPubkey = syntheticTestPubkey;
           _setupSuccessfulPublish(
             mockAuthService: mockAuthService,
             mockUploadManager: mockUploadManager,
@@ -3835,7 +3831,7 @@ void main() {
           final draft =
               _createTestDraft(
                 collaboratorPubkeys: {
-                  'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+                  syntheticTestPubkey,
                 },
               ).copyWith(
                 scheduledAt: publishAt,
@@ -3986,7 +3982,7 @@ void main() {
         () async {
           stubScheduledSigning(handsOver: false);
           final draft = _createTestDraft(
-            collaboratorPubkeys: {'b' * 64},
+            collaboratorPubkeys: {syntheticTestPubkey},
           ).copyWith(scheduledAt: publishAt, skipUpdateLastModified: true);
 
           final result = await scheduledService().publishVideo(draft: draft);

@@ -7,6 +7,8 @@ import 'package:models/models.dart' show VideoEvent;
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/video_metadata_update_service.dart';
 
+import '../helpers/test_pubkeys.dart';
+
 class MockCollaboratorInviteService extends Mock
     implements CollaboratorInviteService {}
 
@@ -19,8 +21,7 @@ void main() {
     });
 
     test('sends an invite for a collaborator added after publish', () async {
-      const collaboratorPubkey =
-          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      const collaboratorPubkey = syntheticTestPubkey;
       when(
         () => inviteService.sendInvite(
           collaboratorPubkey: any(named: 'collaboratorPubkey'),
@@ -59,8 +60,7 @@ void main() {
     });
 
     test('does not invite collaborators already present before edit', () async {
-      const collaboratorPubkey =
-          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      const collaboratorPubkey = syntheticTestPubkey;
 
       final results = await sendPostPublishCollaboratorInvites(
         inviteService: inviteService,
@@ -85,8 +85,7 @@ void main() {
     test(
       'returns structured failure when a new collaborator invite throws',
       () async {
-        const collaboratorPubkey =
-            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+        const collaboratorPubkey = syntheticTestPubkey;
         when(
           () => inviteService.sendInvite(
             collaboratorPubkey: any(named: 'collaboratorPubkey'),

@@ -1,3 +1,6 @@
+import 'dart:ui' as ui;
+
+import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_cache/media_cache.dart';
@@ -272,5 +275,44 @@ void main() {
               as MediaCacheImageProvider;
       expect(provider.cacheManager, same(override));
     });
+
+    testWidgets(
+      'skips AnimatedOpacity fade-in when image resolves synchronously from '
+      'memory cache',
+      (tester) async {
+        const cachedUrl = 'https://example.com/sync-cached.jpg';
+        final override = _FakeImageCache();
+        debugImageCacheOverride = override;
+        addTearDown(() => debugImageCacheOverride = null);
+
+        final recorder = ui.PictureRecorder();
+        ui.Canvas(recorder);
+        final uiImage = recorder.endRecording().toImageSync(4, 4);
+        final provider = MediaCacheImageProvider(
+          cachedUrl,
+          cacheManager: override,
+        );
+        PaintingBinding.instance.imageCache.putIfAbsent(
+          provider,
+          () => OneFrameImageStreamCompleter(
+            SynchronousFuture<ImageInfo>(ImageInfo(image: uiImage.clone())),
+          ),
+        );
+        addTearDown(() {
+          PaintingBinding.instance.imageCache.evict(provider);
+          uiImage.dispose();
+        });
+
+        await tester.pumpWidget(
+          const Directionality(
+            textDirection: TextDirection.ltr,
+            child: VineCachedImage(imageUrl: cachedUrl),
+          ),
+        );
+
+        expect(find.byType(Image), findsOneWidget);
+        expect(find.byType(AnimatedOpacity), findsNothing);
+      },
+    );
   });
 }

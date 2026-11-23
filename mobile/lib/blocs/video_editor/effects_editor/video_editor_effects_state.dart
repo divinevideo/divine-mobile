@@ -172,14 +172,16 @@ class VideoEditorEffectsState extends Equatable {
   /// the others as a new one. It shows over the whole video, so the pick is
   /// visible wherever the playhead is. A flashing pick hides the other
   /// flashing effects, which would otherwise flash along with it while the
-  /// video plays; confirming replaces them where they overlap anyway.
+  /// video plays, and a pick that reads earlier frames the other effects that
+  /// do; confirming replaces them where they overlap anyway (see
+  /// [EditorEffectType.exclusiveGroup]).
   ///
   /// Only built-in effects: `VideoEffectPreview` cannot show a custom one,
   /// which [previewCustomEffects] hands to the native player instead.
   List<EditorVideoEffect> get previewEffects {
     final selection = isEditing ? this.selection : null;
     final picked = selection?.effect == null ? null : selection;
-    final hidesFlashing = selection != null && selection.type.isFlashing;
+    final hidden = selection?.type.exclusiveGroup;
     final effects = <EditorVideoEffect>[];
     var edited = false;
     for (final entry in applied) {
@@ -187,7 +189,7 @@ class VideoEditorEffectsState extends Equatable {
         edited = true;
         if (picked != null) effects.add(picked);
       } else if (entry.effect != null &&
-          (!hidesFlashing || !entry.type.isFlashing)) {
+          (hidden == null || entry.type.exclusiveGroup != hidden)) {
         effects.add(entry);
       }
     }
@@ -198,11 +200,12 @@ class VideoEditorEffectsState extends Equatable {
   /// The effects Divine renders itself that the preview shows, placed like
   /// [previewEffects], except a picked intro or outro, which shows over its
   /// own window (see [selection]): the native player draws these. A flashing
-  /// pick hides the flashing ones among them, as it does in [previewEffects].
+  /// pick hides the flashing ones among them, and a pick that reads earlier
+  /// frames the others that do, as in [previewEffects].
   List<CustomVideoEffect> get previewCustomEffects {
     final selection = isEditing ? this.selection : null;
     final picked = selection?.custom;
-    final hidesFlashing = selection != null && selection.type.isFlashing;
+    final hidden = selection?.type.exclusiveGroup;
     final effects = <CustomVideoEffect>[];
     var edited = false;
     for (final entry in applied) {
@@ -210,7 +213,7 @@ class VideoEditorEffectsState extends Equatable {
         edited = true;
         if (picked != null) effects.add(picked);
       } else if (entry.custom case final custom?
-          when !hidesFlashing || !entry.type.isFlashing) {
+          when hidden == null || entry.type.exclusiveGroup != hidden) {
         effects.add(custom);
       }
     }

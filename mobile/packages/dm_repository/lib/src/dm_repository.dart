@@ -2963,7 +2963,7 @@ class DmRepository {
   /// resumes from the persisted boundary on the next call. Concurrent
   /// callers share one in-flight run. Runs in the background — per-event
   /// decryption already offloads to a [compute] isolate — so it is safe to
-  /// fire-and-forget from the inbox BLoC on every open.
+  /// fire-and-forget whenever a DM surface opens.
   Future<void> backfillHistoryIfNeeded() {
     return _backfillHistoryIfNeeded();
   }

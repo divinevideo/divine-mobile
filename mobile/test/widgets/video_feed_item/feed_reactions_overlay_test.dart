@@ -34,6 +34,7 @@ import 'package:riverpod/misc.dart' show Override;
 
 import '../../helpers/go_router.dart';
 import '../../helpers/test_provider_overrides.dart';
+import '../../helpers/test_pubkeys.dart';
 
 class _MockFeedTopCommentCubit extends MockCubit<FeedTopCommentState>
     implements FeedTopCommentCubit {}
@@ -391,8 +392,7 @@ void main() {
       testWidgets('a mention as the comments sheet does, by display name', (
         tester,
       ) async {
-        const mentionedHex =
-            '6666666666666666666666666666666666666666666666666666666666666666';
+        const mentionedHex = syntheticTestPubkey;
         final npub = NostrKeyUtils.encodePubKey(mentionedHex);
         when(() => cubit.state).thenReturn(
           _visibleState.copyWith(
@@ -564,8 +564,7 @@ void main() {
         tester,
       ) async {
         final handle = tester.ensureSemantics();
-        const mentionedHex =
-            '6666666666666666666666666666666666666666666666666666666666666666';
+        const mentionedHex = syntheticTestPubkey;
         final npub = NostrKeyUtils.encodePubKey(mentionedHex);
         final withMention = _visibleState.copyWith(
           topComment: Comment(
@@ -664,8 +663,7 @@ void main() {
         tester,
       ) async {
         final handle = tester.ensureSemantics();
-        const mentionedHex =
-            '6666666666666666666666666666666666666666666666666666666666666666';
+        const mentionedHex = syntheticTestPubkey;
         final npub = NostrKeyUtils.encodePubKey(mentionedHex);
         when(() => cubit.state).thenReturn(
           _visibleState.copyWith(
@@ -714,8 +712,7 @@ void main() {
         (tester) async {
           final handle = tester.ensureSemantics();
           try {
-            const mentioned =
-                '6666666666666666666666666666666666666666666666666666666666666666';
+            const mentioned = syntheticTestPubkey;
             final npub = NostrKeyUtils.encodePubKey(mentioned);
             final router = MockGoRouter();
             when(() => router.push<void>(any())).thenAnswer((_) async {});

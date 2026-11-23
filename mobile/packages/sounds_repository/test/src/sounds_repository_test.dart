@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -3301,6 +3302,34 @@ void main() {
     });
 
     group('dispose', () {
+      test(
+        'does not open a subscription after disposal during startup',
+        () async {
+          final read =
+              Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(that: isNewestRead),
+              useCache: any(named: 'useCache'),
+              timeout: any(named: 'timeout'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) => read.future);
+          final initialized = repository.initialize();
+
+          await repository.dispose();
+          read.complete((events: <Event>[], timedOut: false, noRelays: false));
+          await initialized;
+
+          verifyNever(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+            ),
+          );
+        },
+      );
+
       test('closes resources without error', () async {
         await repository.initialize();
 
@@ -3400,6 +3429,40 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 50));
 
         expect(repository.getSoundFromCache(testEventId1), isNull);
+      });
+
+      test('subscribes again after every relay refuses the audio feed', () {
+        fakeAsync((async) {
+          var subscribes = 0;
+          when(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              sendAfterAuth: any(named: 'sendAfterAuth'),
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer((_) {
+            if (++subscribes == 1) {
+              return Stream<Event>.error(
+                const RelaySubscriptionRefusedException(
+                  'error: could not complete query',
+                ),
+              );
+            }
+            return streamController.stream;
+          });
+
+          unawaited(repository.initialize());
+          async.flushMicrotasks();
+          expect(subscribes, equals(1));
+
+          async.elapse(const Duration(minutes: 10));
+
+          expect(subscribes, greaterThan(1));
+        });
       });
 
       test('handles subscription stream errors gracefully', () async {

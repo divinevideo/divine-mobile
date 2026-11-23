@@ -11,6 +11,7 @@ export 'src/models/models.dart';
 export 'src/nip89_client_tag.dart';
 export 'src/nostr_client.dart';
 export 'src/publish_result.dart';
+export 'src/refusal_retrying_subscription.dart';
 export 'src/relay_manager.dart';
 export 'src/relay_rejection_classifier.dart' hide relayUrlsEquivalent;
 export 'src/social_publish_result.dart';

@@ -12,6 +12,8 @@ import 'package:nostr_sdk/relay/client_connected.dart';
 
 class _MockRelayManager extends Mock implements RelayManager {}
 
+class _MockEventVerifyWorker extends Mock implements EventVerifyWorker {}
+
 const _key = '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
 const _homeUrl = 'wss://home.example';
 const _otherUrl = 'wss://other.example';
@@ -100,6 +102,7 @@ class _SpySigner extends LocalNostrSigner {
   Set<String> refusingFresh = const {},
   List<String>? connected,
   NostrSigner? signer,
+  EventVerifyWorkerSpawner? eventVerifyWorkerSpawner,
 }) {
   final opened = <_Connection>[];
   final nostr = Nostr(signer ?? LocalNostrSigner(_key), [], (url) {
@@ -123,9 +126,14 @@ class _SpySigner extends LocalNostrSigner {
   when(() => relayManager.configuredRelays).thenReturn(urls);
   when(() => relayManager.isRelayAllowed(any())).thenReturn(true);
   when(() => relayManager.diagnosticsSink).thenReturn(null);
+  when(relayManager.initialize).thenAnswer((_) async {});
   when(relayManager.dispose).thenAnswer((_) async {});
   return (
-    client: NostrClient.forTesting(nostr: nostr, relayManager: relayManager),
+    client: NostrClient.forTesting(
+      nostr: nostr,
+      relayManager: relayManager,
+      eventVerifyWorkerSpawner: eventVerifyWorkerSpawner,
+    ),
     opened: opened,
   );
 }
@@ -207,6 +215,28 @@ void main() {
         expect(r.took, lessThan(const Duration(seconds: 1)));
         expect(busy.reqs, isEmpty);
         expect(h.opened.map(_bare), [_homeUrl]);
+      });
+    });
+
+    test('verifies fresh-connection events with the shared worker', () {
+      fakeAsync((async) {
+        final worker = _MockEventVerifyWorker();
+        when(() => worker.verify(any())).thenAnswer((_) async => true);
+        final h = _client(
+          async,
+          pooled: [_Connection(_homeUrl, events: [])],
+          events: [list],
+          freshAnswerAfter: const Duration(milliseconds: 300),
+          eventVerifyWorkerSpawner: () async => worker,
+        );
+        unawaited(h.client.initialize());
+        async.flushMicrotasks();
+
+        final result = _read(async, h.client);
+
+        expect(result.events.map((event) => event.id), [list.id]);
+        verify(() => worker.verify(list.toJson())).called(1);
+        verifyNever(worker.close);
       });
     });
 

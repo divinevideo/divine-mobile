@@ -58,6 +58,9 @@ final class VideoFrameEffectProcessor {
     let offsetsUs: [Int64]
     let startUs: Int64?
     let endUs: Int64?
+    /// Where in ``histories`` its earlier frames are kept; `nil` for an
+    /// effect that asks for none.
+    var history: Int?
 
     func isActive(atUs timeUs: Int64) -> Bool {
       (startUs.map { timeUs >= $0 } ?? true) && (endUs.map { timeUs < $0 } ?? true)
@@ -68,6 +71,23 @@ final class VideoFrameEffectProcessor {
     let timeUs: Int64
     let clip: Int
     let buffer: CVPixelBuffer
+  }
+
+  /// The frames the player showed, kept at one size for the effects that ask
+  /// for it, back as far as the furthest of them reaches.
+  ///
+  /// Each size an effect asks for has its own, as each stage of the export
+  /// keeps its own: an effect that needs whole frames, such as one that
+  /// compares the frame with the one before, would see lost detail as change
+  /// if it got the smaller copies another effect asked for.
+  private final class History {
+    let scale: CGFloat
+    var maxOffsetUs: Int64 = 0
+    var frames: [Kept] = []
+    var pool: CVPixelBufferPool?
+    var size = CGSize.zero
+
+    init(scale: CGFloat) { self.scale = scale }
   }
 
   /// A frame decoded from the asset: wanted for `targetUs`, shown from `frameUs`.
@@ -95,10 +115,12 @@ final class VideoFrameEffectProcessor {
   /// The configs the stages were built from, to tell a repeated list apart.
   private var lastConfigs: NSArray?
   private var maxOffsetUs: Int64 = 0
-  private var historyScale: CGFloat = 1
   private var clipOffsetsUs: [Int64] = []
-  /// The frames the player showed since the last seek.
-  private var history: [Kept] = []
+  /// The frames the player showed since the last seek, one store per size
+  /// the effects ask for.
+  private var histories: [History] = []
+  /// Where the frame kept last lies, at whichever size.
+  private var lastKept: (timeUs: Int64, clip: Int)?
   /// The frames decoded for the last seek, kept across seeks for scrubbing.
   private var decoded: [Decoded] = []
 
@@ -126,8 +148,11 @@ final class VideoFrameEffectProcessor {
 
   private var outputPool: CVPixelBufferPool?
   private var outputSize = CGSize.zero
-  private var historyPool: CVPixelBufferPool?
-  private var historySize = CGSize.zero
+  /// Frames decoded after a seek are kept at the largest size any effect
+  /// asks for, so each effect gets them at least as sharp as it asked.
+  private var decodedScale: CGFloat = 1
+  private var decodedPool: CVPixelBufferPool?
+  private var decodedSize = CGSize.zero
 
   /// `makeContext` builds the context effects are drawn with, once an effect
   /// is first drawn.
@@ -157,7 +182,7 @@ final class VideoFrameEffectProcessor {
     let incoming = configs as NSArray
     if let lastConfigs, lastConfigs.isEqual(incoming) { return false }
     lastConfigs = incoming
-    stages = configs.compactMap { config in
+    var stages: [Stage] = configs.compactMap { config in
       guard let id = config["id"] as? String else { return nil }
       guard let factory = VideoFrameEffects.factory(for: id) else {
         DivineVideoPlayerLog.shared.warning(
@@ -172,20 +197,43 @@ final class VideoFrameEffectProcessor {
         endUs: (config["endUs"] as? NSNumber)?.int64Value)
     }
     maxOffsetUs = stages.flatMap { $0.offsetsUs }.max() ?? 0
-    let scale = stages.map { $0.effect.historyScale }.min() ?? 1
-    let clamped = CGFloat(min(1, max(0.05, scale)))
-    if clamped != historyScale {
-      historyScale = clamped
-      historyPool = nil
-      history.removeAll()
+    // A store already kept at a size keeps its frames: they are keyed by
+    // time.
+    var kept: [History] = []
+    for index in stages.indices where !stages[index].offsetsUs.isEmpty {
+      let scale = Self.clampedScale(stages[index].effect.historyScale)
+      let position: Int
+      if let existing = kept.firstIndex(where: { $0.scale == scale }) {
+        position = existing
+      } else {
+        let store = histories.first { $0.scale == scale } ?? History(scale: scale)
+        store.maxOffsetUs = 0
+        kept.append(store)
+        position = kept.count - 1
+      }
+      kept[position].maxOffsetUs = max(
+        kept[position].maxOffsetUs, stages[index].offsetsUs.max() ?? 0)
+      stages[index].history = position
+    }
+    self.stages = stages
+    histories = kept
+    let largest = histories.map(\.scale).max() ?? 1
+    if largest != decodedScale {
+      decodedScale = largest
+      decodedPool = nil
       decoded.removeAll()
     }
     if maxOffsetUs == 0 {
-      history.removeAll()
+      lastKept = nil
       decoded.removeAll()
     }
     needsFill = true
     return true
+  }
+
+  /// `scale` within the range ``VideoFrameEffect/historyScale`` allows.
+  static func clampedScale(_ scale: Double) -> CGFloat {
+    CGFloat(min(1, max(0.05, scale)))
   }
 
   /// Where each clip starts on the player's timeline, in seconds, so the
@@ -210,12 +258,14 @@ final class VideoFrameEffectProcessor {
     fillRunning = nil
     lastConfigs = nil
     stages = []
-    history.removeAll()
+    histories = []
+    lastKept = nil
     decoded.removeAll()
   }
 
   private func startOver() {
-    history.removeAll()
+    for store in histories { store.frames.removeAll() }
+    lastKept = nil
     needsFill = true
   }
 
@@ -224,7 +274,7 @@ final class VideoFrameEffectProcessor {
   func process(_ buffer: CVPixelBuffer, timeUs: Int64) -> CVPixelBuffer {
     guard !stages.isEmpty else { return buffer }
     let clip = clipIndex(atUs: timeUs)
-    if let last = history.last,
+    if let last = lastKept,
       last.clip != clip || timeUs < last.timeUs
         || timeUs - last.timeUs > maxOffsetUs + 500_000
     {
@@ -245,7 +295,7 @@ final class VideoFrameEffectProcessor {
       let earlier: [CIImage?] = stage.offsetsUs.map { offset in
         let wantedUs = timeUs - offset
         let buffer =
-          newest(atOrBeforeUs: wantedUs + Self.toleranceUs)?.buffer
+          newest(in: stage.history, atOrBeforeUs: wantedUs + Self.toleranceUs)?.buffer
           ?? nearestDecoded(forUs: wantedUs, clip: clip)?.buffer
         return buffer.map { upscaled(CIImage(cvPixelBuffer: $0), to: extent) }
       }
@@ -256,7 +306,7 @@ final class VideoFrameEffectProcessor {
       drew = true
     }
 
-    if maxOffsetUs > 0, history.last?.timeUs != timeUs {
+    if !histories.isEmpty, lastKept?.timeUs != timeUs {
       keep(image, timeUs: timeUs, clip: clip)
     }
     guard drew, let rendered = render(output, size: extent.size) else { return buffer }
@@ -352,20 +402,20 @@ final class VideoFrameEffectProcessor {
     init(count: Int) { remaining = count }
   }
 
-  /// Swaps in the frames decoded last, each scaled like the history.
+  /// Swaps in the frames decoded last, each scaled to the largest size an
+  /// effect asks for.
   private func replaceDecoded(
     with frames: [(targetUs: Int64, frameUs: Int64, image: CGImage)], clip: Int
   ) {
     guard !frames.isEmpty, lastFrameSize.width > 0 else { return }
     let size = CGSize(
-      width: max(1, (lastFrameSize.width * historyScale).rounded()),
-      height: max(1, (lastFrameSize.height * historyScale).rounded()))
-    if historyPool == nil || historySize != size {
-      historyPool = Self.makePool(size: size)
-      historySize = size
-      history.removeAll()
+      width: max(1, (lastFrameSize.width * decodedScale).rounded()),
+      height: max(1, (lastFrameSize.height * decodedScale).rounded()))
+    if decodedPool == nil || decodedSize != size {
+      decodedPool = Self.makePool(size: size)
+      decodedSize = size
     }
-    guard let pool = historyPool else { return }
+    guard let pool = decodedPool else { return }
     var replacement: [Decoded] = []
     for frame in frames {
       var copy: CVPixelBuffer?
@@ -403,35 +453,42 @@ final class VideoFrameEffectProcessor {
     return index
   }
 
-  private func newest(atOrBeforeUs limitUs: Int64) -> Kept? {
-    history.last { $0.timeUs <= limitUs }
+  /// The newest frame kept in store `index` at or before `limitUs`.
+  private func newest(in index: Int?, atOrBeforeUs limitUs: Int64) -> Kept? {
+    guard let index, index < histories.count else { return nil }
+    return histories[index].frames.last { $0.timeUs <= limitUs }
   }
 
-  /// Keeps a scaled copy of the frame and drops what no later frame can ask
-  /// for.
+  /// Keeps a copy of the frame at each size the effects ask for, and drops
+  /// what no later frame can ask for.
   private func keep(_ image: CIImage, timeUs: Int64, clip: Int) {
-    let size = CGSize(
-      width: max(1, (image.extent.width * historyScale).rounded()),
-      height: max(1, (image.extent.height * historyScale).rounded()))
-    if historyPool == nil || historySize != size {
-      historyPool = Self.makePool(size: size)
-      historySize = size
-      history.removeAll()
-    }
-    guard let pool = historyPool else { return }
-    var copy: CVPixelBuffer?
-    guard CVPixelBufferPoolCreatePixelBuffer(nil, pool, &copy) == kCVReturnSuccess,
-      let copy
-    else { return }
-    let scaled = image.transformed(
-      by: CGAffineTransform(
-        scaleX: size.width / image.extent.width, y: size.height / image.extent.height))
-    context.render(scaled, to: copy)
-    history.append(Kept(timeUs: timeUs, clip: clip, buffer: copy))
+    lastKept = (timeUs, clip)
+    for store in histories {
+      let size = CGSize(
+        width: max(1, (image.extent.width * store.scale).rounded()),
+        height: max(1, (image.extent.height * store.scale).rounded()))
+      if store.pool == nil || store.size != size {
+        store.pool = Self.makePool(size: size)
+        store.size = size
+        store.frames.removeAll()
+      }
+      guard let pool = store.pool else { continue }
+      var copy: CVPixelBuffer?
+      guard CVPixelBufferPoolCreatePixelBuffer(nil, pool, &copy) == kCVReturnSuccess,
+        let copy
+      else { continue }
+      let scaled = image.transformed(
+        by: CGAffineTransform(
+          scaleX: size.width / image.extent.width, y: size.height / image.extent.height))
+      context.render(scaled, to: copy)
+      store.frames.append(Kept(timeUs: timeUs, clip: clip, buffer: copy))
 
-    let limit = timeUs - maxOffsetUs + Self.toleranceUs
-    if let oldestNeeded = history.lastIndex(where: { $0.timeUs <= limit }), oldestNeeded > 0 {
-      history.removeFirst(oldestNeeded)
+      let limit = timeUs - store.maxOffsetUs + Self.toleranceUs
+      if let oldestNeeded = store.frames.lastIndex(where: { $0.timeUs <= limit }),
+        oldestNeeded > 0
+      {
+        store.frames.removeFirst(oldestNeeded)
+      }
     }
   }
 

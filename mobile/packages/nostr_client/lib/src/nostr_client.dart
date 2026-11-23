@@ -1202,6 +1202,9 @@ class NostrClient {
       diagnosticsSink: pool.diagnosticsSink,
       signatureVerificationPolicy: pool.signatureVerificationPolicy,
     );
+    isolated.relayPool
+      ..eventVerifyWorker = _verifyWorker
+      ..isKnownVerifiedEvent = pool.isKnownVerifiedEvent;
     final scope = ReadScope();
     final leaveParent = ReadScope.current?.onEnd(scope.end);
     _freshConnectionReads[isolated] = scope;
@@ -2003,12 +2006,8 @@ class NostrClient {
       tempRelays: targetRelays,
     );
     if (events.isNotEmpty) {
-      // Cache websocket result (fire-and-forget)
-      _writeCacheInBackground(
-        'cache fetched event',
-        () => _nostrEventsDao?.upsertEvent(events.first),
-      );
-
+      // queryEvents already persists fetched websocket events via
+      // upsertEventsBatch, so avoid a redundant second write here.
       return events.first;
     }
     return null;
@@ -2041,11 +2040,8 @@ class NostrClient {
       useCache: false, // Already checked cache above
     );
     if (events.isNotEmpty) {
-      // Cache websocket result (fire-and-forget)
-      _writeCacheInBackground(
-        'cache fetched profile',
-        () => _nostrEventsDao?.upsertEvent(events.first),
-      );
+      // queryEvents already persists fetched websocket events via
+      // upsertEventsBatch, so avoid a redundant second write here.
       return events.first;
     }
     return null;
@@ -2068,7 +2064,8 @@ class NostrClient {
   /// receives them, and they leave the shared cache alone.
   ///
   /// The stream emits a [RelaySubscriptionRefusedException] if every serving
-  /// relay ends the REQ with `CLOSED`.
+  /// relay ends the REQ with `CLOSED` and no relay still connecting can take
+  /// it.
   ///
   /// [onStoredEventsEnd] fires when every relay that can still send stored
   /// events has finished, with the number of events this subscription has

@@ -9419,6 +9419,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectEcho => 'صدى';
 
   @override
+  String get videoEditorEffectTimeSplit => 'انقسام الزمن';
+
+  @override
+  String get videoEditorEffectLongExposure => 'تعريض طويل';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'الحركة فقط';
+
+  @override
+  String get videoEditorEffectStutter => 'تقطّع';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'التواء الزمن';
+
+  @override
   String get videoEditorEffectFisheye => 'عين السمكة';
 
   @override
@@ -9620,6 +9635,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'حركة';
 
   @override
+  String get videoEditorEffectCategoryTime => 'الزمن';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'جزيئات';
 
   @override
@@ -9726,6 +9744,14 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'تأثير زمني واحد في كل مرة. تأثيران معًا سيبدوان مختلفين بعد التصدير، لذلك استبدلنا التأثير الآخر هنا.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'تأثير زمني واحد في كل مرة. تأثيران معًا سيبدوان مختلفين بعد التصدير.';
 
   @override
   String get videoEditorEffectsOnBeat => 'على الإيقاع';

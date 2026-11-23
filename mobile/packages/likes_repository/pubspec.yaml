@@ -24,6 +24,7 @@ dependencies:
 
 dev_dependencies:
   drift: ^2.34.0
+  fake_async: ^1.3.3
   mocktail: ^1.0.4
   # Test-only: names PaginatedPubkeys when stubbing the Funnelcake client.
   models:

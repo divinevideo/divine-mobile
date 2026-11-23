@@ -25,6 +25,8 @@ import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 
+import '../helpers/test_pubkeys.dart';
+
 class _MockAuthService extends Mock implements AuthService {}
 
 /// Hands the test a real [Ref] so [appRouterRedirect] can be driven through a
@@ -32,8 +34,7 @@ class _MockAuthService extends Mock implements AuthService {}
 final _refProvider = Provider<Ref>((ref) => ref);
 
 const _npub = 'npub180cvv07tjdrrgpa9jzd0cdkej42kwsaxq9rz7gvdpjx6nz004f9uulstw6';
-const _listAuthor =
-    'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
+const String _listAuthor = syntheticTestPubkey;
 
 // go_router applies the top-level redirect at most once per navigation and does
 // not re-evaluate the location it redirects to

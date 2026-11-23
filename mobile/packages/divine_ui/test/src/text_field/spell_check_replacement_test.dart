@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -158,6 +159,36 @@ void main() {
       expect(toolbar(state).buttonItems, isEmpty);
     }, variant: const TargetPlatformVariant({TargetPlatform.iOS}));
 
+    testWidgets(
+      'offers nothing on a field emptied after a spell check',
+      (tester) async {
+        final controller = TextEditingController();
+        final state = await pumpField(
+          tester,
+          controller,
+          service: _MisspelledFirstWordService(),
+        );
+        await tester.enterText(find.byType(TextField), 'Helo there');
+        await tester.pump();
+        // Sending a comment clears the field from code. Flutter keeps the
+        // results for the old text, so a tap at offset 0 still lands on the
+        // misspelling at 0..4 and the toolbar would replace 0..4 of ''.
+        controller.clear();
+        await tester.pump(kDoubleTapTimeout);
+        expect(state.spellCheckResults?.spellCheckedText, 'Helo there');
+
+        await tester.tap(find.byType(TextField));
+        await tester.pump(kDoubleTapTimeout);
+
+        expect(find.text('Hello'), findsNothing);
+        expect(controller.text, isEmpty);
+      },
+      variant: const TargetPlatformVariant({
+        TargetPlatform.iOS,
+        TargetPlatform.android,
+      }),
+    );
+
     testWidgets('does not offer delayed results for older text', (
       tester,
     ) async {
@@ -193,4 +224,15 @@ class _DelayedSpellCheckService implements SpellCheckService {
     requestedText = text;
     return result.future;
   }
+}
+
+class _MisspelledFirstWordService implements SpellCheckService {
+  @override
+  Future<List<SuggestionSpan>?> fetchSpellCheckSuggestions(
+    Locale locale,
+    String text,
+  ) async => [
+    if (text.startsWith('Helo'))
+      const SuggestionSpan(TextRange(start: 0, end: 4), ['Hello']),
+  ];
 }

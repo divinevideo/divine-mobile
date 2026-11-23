@@ -236,41 +236,39 @@ Future<void> startOpenVineApp({
   // They initialize automatically when a DivineVideoPlayerController is
   // first created.
 
-  // Configure the Android player's disk cache (LRU eviction), sized to the
-  // disk between kPlayerCacheFloorBytes and kDefaultCacheMaxSizeBytes. It is
-  // Android-only: AVFoundation never reads a URLCache, so the Apple plugin
-  // has nothing to configure (#8029). Skip on web/Linux/Windows —
-  // divine_video_player has no native plugin on those targets and
-  // `configureCache` is a bare method-channel call.
-  // Kept for the container below, so Settings → Storage and bug reports show
-  // the player limit actually in force rather than its ceiling.
+  // Configure the Android player's disk cache (LRU eviction), dispose zombie
+  // native players on debug/profile hot restarts, and size the decoded-image
+  // cache concurrently so independent platform-channel probes do not serialize
+  // cold startup.
   var playerCacheBudgetBytes = kDefaultCacheMaxSizeBytes;
-  await configureVideoPlayerCacheForStartup(
-    skip: !hasNativeVideoPlayer,
-    configureCache: () async {
-      final bytes = await startupPlayerCacheBudgetBytes(
-        readStorageSpace: const DeviceStorageService().storageSpace,
-        ceiling: appMediaCacheBudgetCeiling(),
-      );
-      if (bytes > 0) playerCacheBudgetBytes = bytes;
-      await DivineVideoPlayerController.configureCache(maxSizeBytes: bytes);
-    },
-  );
-
-  // Dispose any zombie native players from a previous Dart VM (e.g. hot
-  // restart). Plugin registration, rather than configureCache, makes the
-  // global method channel available on each native platform.
-  await disposeVideoPlayersForStartup(
-    skip: !hasNativeVideoPlayer,
-    disposeAll: DivineVideoPlayerController.disposeAll,
-  );
-
-  // Size the decoded-image cache by device RAM so thumbnails survive fast
-  // scrolling without the cache's GPU cost crowding out smaller devices.
-  final imageCacheBudget = await configureImageCacheBudget(
-    cache: PaintingBinding.instance.imageCache,
-    readPhysicalMemoryBytes: const DeviceMemoryService().physicalMemoryBytes,
-  );
+  late int imageCacheBudget;
+  await Future.wait([
+    configureVideoPlayerCacheForStartup(
+      skip:
+          !hasNativeVideoPlayer ||
+          defaultTargetPlatform != TargetPlatform.android,
+      configureCache: () async {
+        final bytes = await startupPlayerCacheBudgetBytes(
+          readStorageSpace: const DeviceStorageService().storageSpace,
+          ceiling: appMediaCacheBudgetCeiling(),
+        );
+        if (bytes > 0) playerCacheBudgetBytes = bytes;
+        await DivineVideoPlayerController.configureCache(maxSizeBytes: bytes);
+      },
+    ),
+    // Dispose any zombie native players from a previous Dart VM. Only a hot
+    // restart (debug) keeps them: when Android destroys the engine and later
+    // reruns main() in the same process, the plugin's onDetachedFromEngine
+    // has already disposed the UI engine's players.
+    disposeVideoPlayersForStartup(
+      skip: !hasNativeVideoPlayer || kReleaseMode,
+      disposeAll: DivineVideoPlayerController.disposeAll,
+    ),
+    configureImageCacheBudget(
+      cache: PaintingBinding.instance.imageCache,
+      readPhysicalMemoryBytes: const DeviceMemoryService().physicalMemoryBytes,
+    ).then((budget) => imageCacheBudget = budget),
+  ]);
 
   startupPerformance.completePhase('bindings');
 
@@ -515,18 +513,23 @@ Future<void> startOpenVineApp({
     FlutterError.presentError(details);
   };
 
-  // Initialize SharedPreferences for feature flags
+  // Initialize SharedPreferences and PackageInfo concurrently since they read
+  // independent platform stores.
   startupPerformance.startPhase('shared_preferences');
-  final sharedPreferences = await SharedPreferences.getInstance();
-  startupPerformance.completePhase('shared_preferences');
-
-  // On the web every UI language but English is downloaded on demand. Fetch
-  // the one the UI will render in before any context-less service can capture
-  // strings through currentAppL10n; a no-op on native builds.
-  await preloadAppUiLocalizations(sharedPreferences);
-
-  // Load package info for version checking (non-blocking, fast).
-  final packageInfo = await PackageInfo.fromPlatform();
+  final sharedPreferencesFuture = SharedPreferences.getInstance()
+      .whenComplete(
+        () => startupPerformance.completePhase('shared_preferences'),
+      )
+      .then((preferences) async {
+        // Load the selected web language before context-less services can
+        // capture strings through currentAppL10n.
+        await preloadAppUiLocalizations(preferences);
+        return preferences;
+      });
+  final (sharedPreferences, packageInfo) = await (
+    sharedPreferencesFuture,
+    PackageInfo.fromPlatform(),
+  ).wait;
 
   // This must precede database bootstrap. That bootstrap can render its own
   // failure app and return early; the failure app still needs the updater so a
@@ -606,6 +609,9 @@ Future<void> startOpenVineApp({
   Future<void> clearSyncStateAfterDatabaseReset() async {
     await DmSyncState(sharedPreferences).clearAll();
     await MyFollowersSyncState().clearAll();
+    await sharedPreferences.remove(
+      DatabaseRecoveryStore.keyAccessibilityUpgradedKey,
+    );
   }
 
   // Resets preserve a backup by default because encrypted backups stay readable
@@ -663,6 +669,17 @@ Future<void> startOpenVineApp({
             databaseCorruptionService.hasPendingRecovery,
         clearPendingCorruptionRecovery:
             databaseCorruptionService.clearPendingRecovery,
+        hasCompletedAccessibilityUpgrade: () async =>
+            sharedPreferences.getBool(
+              DatabaseRecoveryStore.keyAccessibilityUpgradedKey,
+            ) ??
+            false,
+        markAccessibilityUpgradeCompleted: () async {
+          await sharedPreferences.setBool(
+            DatabaseRecoveryStore.keyAccessibilityUpgradedKey,
+            true,
+          );
+        },
       ).resolveCipherKey(),
       // SQLite3MultipleCiphers build misconfiguration or secure-storage
       // failures must fail closed after reporting. Continuing with a null key

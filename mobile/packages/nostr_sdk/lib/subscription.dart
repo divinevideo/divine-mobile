@@ -49,7 +49,8 @@ class Subscription {
   void Function()? onEose;
 
   /// Callback invoked when every relay serving this subscription has ended
-  /// its REQ with a `CLOSED` frame.
+  /// its REQ with a `CLOSED` frame and no relay still connecting or replaying
+  /// subscriptions can take it.
   void Function(String reason)? onClosed;
 
   /// Callback invoked when stored events start arriving again: a relay

@@ -1,6 +1,7 @@
 // ABOUTME: Normalizes all public identifier formats to hex pubkey
 // ABOUTME: Handles npub, nprofile, hex, and special 'me' identifier universally
 
+import 'package:nostr_sdk/client_utils/keys.dart' show pubkeyIsOnCurve;
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 
@@ -25,7 +26,10 @@ class NormalizedPublicIdentifier {
 /// - nprofile (bech32 encoded pubkey with relay hints)
 /// - hex (64-char hex pubkey)
 ///
-/// Returns null if the identifier is invalid or cannot be decoded
+/// Returns null if the identifier is invalid or cannot be decoded, including
+/// a well-formed key that is not a point on secp256k1: no account can own it,
+/// so a link to it gets the invalid-identifier treatment rather than a profile
+/// whose Message button cannot work (#8706).
 NormalizedPublicIdentifier? normalizePublicIdentifier(
   String identifier, {
   String? currentUserHex,
@@ -43,6 +47,7 @@ NormalizedPublicIdentifier? normalizePublicIdentifier(
 
   // Try hex format first (most common internally)
   if (NostrKeyUtils.isValidKey(identifier)) {
+    if (!pubkeyIsOnCurve(identifier)) return null;
     // Canonicalize casing: consumers compare this hex against the signed-in
     // pubkey and key providers with it, so an uppercase deep-link segment must
     // not read as a different identity than its lowercase form.
@@ -53,7 +58,7 @@ NormalizedPublicIdentifier? normalizePublicIdentifier(
   // checksum and does not check that the payload is a 32-byte key.
   if (identifier.startsWith('npub1')) {
     final hexKey = NostrKeyUtils.decode(identifier);
-    if (!NostrKeyUtils.isValidKey(hexKey)) return null;
+    if (!pubkeyIsOnCurve(hexKey)) return null;
     return NormalizedPublicIdentifier(hexPubkey: hexKey);
   }
 
@@ -61,7 +66,7 @@ NormalizedPublicIdentifier? normalizePublicIdentifier(
   if (identifier.startsWith('nprofile1')) {
     final decoded = NIP19Tlv.decodeNprofile(identifier);
     final pubkey = decoded?.pubkey;
-    if (pubkey == null || pubkey.isEmpty || pubkey.length != 64) return null;
+    if (pubkey == null || !pubkeyIsOnCurve(pubkey)) return null;
     return NormalizedPublicIdentifier(
       hexPubkey: pubkey,
       relayHints: decoded?.relays ?? const [],

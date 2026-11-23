@@ -594,7 +594,9 @@ flutter:
     - shaders/light_leak_transition.frag
     - shaders/light_rays.frag
     - shaders/lightning.frag
+    - shaders/long_exposure.frag
     - shaders/look.frag
+    - shaders/motion_only.frag
     - shaders/neon_edges.frag
     - shaders/night_vision.frag
     - shaders/paint.frag
@@ -611,6 +613,8 @@ flutter:
     - shaders/swirl.frag
     - shaders/thermal.frag
     - shaders/tilt_shift.frag
+    - shaders/time_split.frag
+    - shaders/time_warp.frag
     - shaders/tunnel.frag
     - shaders/window_light.frag
     - shaders/x_ray.frag

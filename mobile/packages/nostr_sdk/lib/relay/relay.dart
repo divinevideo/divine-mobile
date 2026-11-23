@@ -71,13 +71,24 @@ abstract class Relay {
   );
 
   /// The method to call connect function by framework.
-  Future<bool> connect() async {
+  ///
+  /// Supplying [onReplayFailure] waits for saved REQs to be replayed and
+  /// reports the ID of each request that could not be sent.
+  Future<bool> connect({void Function(String id)? onReplayFailure}) async {
     try {
       relayStatus.authed = false;
       var result = await doConnect();
       if (result) {
         try {
-          onConnected(source: 'connect()');
+          final replay = onConnected(
+            source: 'connect()',
+            onReplayFailure: onReplayFailure,
+          );
+          if (onReplayFailure == null) {
+            unawaited(replay);
+          } else {
+            await replay;
+          }
         } catch (e) {
           log("onConnected exception.");
           log('$e');
@@ -134,7 +145,10 @@ abstract class Relay {
   /// permanently silent after any reconnect and its caller can only fall back
   /// to a timeout. Mirrors the post-AUTH replay and the zombie reconnect in
   /// `RelayPool`.
-  Future onConnected({String? source}) async {
+  Future<void> onConnected({
+    String? source,
+    void Function(String id)? onReplayFailure,
+  }) async {
     final isFresh = connectionIsFresh;
     if (isFresh) _connectionGeneration = ++_lastConnectionGeneration;
     final saved = isFresh
@@ -143,7 +157,7 @@ abstract class Relay {
     await _flushPendingMessages(source, {
       for (final s in saved) s.id,
     }, dropQueuedCloses: isFresh);
-    await _reissueSavedRequests(source, saved);
+    await _reissueSavedRequests(source, saved, onReplayFailure);
   }
 
   /// Sends the frames that failed while the socket was down.
@@ -226,6 +240,7 @@ abstract class Relay {
   Future<void> _reissueSavedRequests(
     String? source,
     List<Subscription> saved,
+    void Function(String id)? onReplayFailure,
   ) async {
     if (saved.isEmpty) return;
     diagnose(
@@ -240,14 +255,13 @@ abstract class Relay {
     for (final subscription in saved) {
       try {
         final sent = await send(subscription.toJson(), skipReconnect: true);
-        if (!sent) {
-          log('Saved relay request ${subscription.id} was not sent');
-          diagnose(
-            RelayDiagnosticSite.subscriptionReplay,
-            RelayDiagnosticLevel.warning,
-            'Saved relay request ${subscription.id} was not sent',
-          );
-        }
+        if (sent) continue;
+        log('Saved relay request ${subscription.id} was not sent');
+        diagnose(
+          RelayDiagnosticSite.subscriptionReplay,
+          RelayDiagnosticLevel.warning,
+          'Saved relay request ${subscription.id} was not sent',
+        );
       } catch (e, stackTrace) {
         diagnose(
           RelayDiagnosticSite.subscriptionReplay,
@@ -259,6 +273,7 @@ abstract class Relay {
         log('subscription re-issue exception onConnected');
         log('$e');
       }
+      onReplayFailure?.call(subscription.id);
     }
   }
 

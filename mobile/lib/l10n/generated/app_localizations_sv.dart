@@ -9399,6 +9399,21 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectEcho => 'Eko';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Tidsdelning';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Lång exponering';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Bara rörelse';
+
+  @override
+  String get videoEditorEffectStutter => 'Hackig';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Tidsförvrängning';
+
+  @override
   String get videoEditorEffectFisheye => 'Fisköga';
 
   @override
@@ -9600,6 +9615,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'Rörelse';
 
   @override
+  String get videoEditorEffectCategoryTime => 'Tid';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'Partiklar';
 
   @override
@@ -9705,6 +9723,14 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'En Tid-effekt i taget. Två tillsammans skulle se annorlunda ut efter exporten, så vi har ersatt den andra här.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'En Tid-effekt i taget. Två tillsammans skulle se annorlunda ut efter exporten.';
 
   @override
   String get videoEditorEffectsOnBeat => 'I takt';

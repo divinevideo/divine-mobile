@@ -941,6 +941,45 @@ void main() {
 
           expect(emissions.last, equals(['crew']));
         });
+
+        test('ends without an error when a cache repair deletes the box '
+            'under it', () async {
+          final boxName = 'people_lists_test_repair_${boxCounter++}';
+          Future<Box<dynamic>> opener() =>
+              Hive.openBox<dynamic>(boxName, path: tempDir.path);
+          final cache = LocalPeopleListsCache(openBox: opener);
+          for (final id in ['first', 'second']) {
+            await cache.putFollowedCopy(
+              viewerPubkey: _ownerA,
+              ownerPubkey: _ownerB,
+              list: _list(id: id, updatedAt: DateTime.utc(2026, 1, 1)),
+            );
+          }
+          final emissions = <List<String>>[];
+          final errors = <Object>[];
+          final done = Completer<void>();
+          final subscription = cache
+              .watchFollowedCopies(viewerPubkey: _ownerA)
+              .listen(
+                (lists) => emissions.add([for (final f in lists) f.list.id]),
+                onError: errors.add,
+                onDone: done.complete,
+              );
+          addTearDown(subscription.cancel);
+          await pumpEventQueue();
+          expect(emissions.single, equals(['first', 'second']));
+
+          // The order CacheRecoveryService wipes the box in: clear() queues a
+          // deletion event per row, and deleteBoxFromDisk closes the box
+          // before they are delivered.
+          final box = await opener();
+          await box.clear();
+          await Hive.deleteBoxFromDisk(boxName);
+          await done.future;
+
+          expect(errors, isEmpty);
+          expect(emissions, hasLength(1));
+        });
       });
 
       group('clearFollowedCopies', () {

@@ -117,7 +117,9 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
             height: widget.height,
             fit: fit,
             videoId: widget.video.id,
-            onImageDimensionsResolved: _handleImageDimensionsResolved,
+            onImageDimensionsResolved: _hasUsableVideoDimensions
+                ? null
+                : _handleImageDimensionsResolved,
           ),
         if (widget.showPlayIcon)
           Center(
@@ -560,16 +562,16 @@ class _PassiveAuthThumbnailImageState extends State<PassiveAuthThumbnailImage> {
             },
           );
 
+          final onImageDimensionsResolved = widget.onImageDimensionsResolved;
+          if (onImageDimensionsResolved == null) {
+            return image;
+          }
+
           return ImageWithDimensionsListener(
             key: ValueKey('network-${widget.url}-$_imageGeneration'),
             imageProvider: imageProvider,
-            onImageDimensionsResolved: widget.onImageDimensionsResolved == null
-                ? null
-                : (width, height) => widget.onImageDimensionsResolved!(
-                    resolvedUrl,
-                    width,
-                    height,
-                  ),
+            onImageDimensionsResolved: (width, height) =>
+                onImageDimensionsResolved(resolvedUrl, width, height),
             child: image,
           );
         }

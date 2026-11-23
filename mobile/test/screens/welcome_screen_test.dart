@@ -30,14 +30,15 @@ import 'package:openvine/widgets/error_message.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/test_pubkeys.dart';
+
 class _MockAuthService extends Mock implements AuthService {}
 
 class _MockAppDatabase extends Mock implements AppDatabase {}
 
 class _MockUserProfilesDao extends Mock implements UserProfilesDao {}
 
-const _testPubkeyHex =
-    'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
+const String _testPubkeyHex = syntheticTestPubkey;
 
 final _testProfile = UserProfile(
   pubkey: _testPubkeyHex,
