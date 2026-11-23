@@ -34,9 +34,8 @@ final class NostrVideoTarget extends NostrSearchTarget {
   final String routeId;
 }
 
-/// A bare 64-character hex string, which is a valid public key *and* a valid
-/// event id at the same time. Hex carries no type tag, so only a lookup can
-/// say which the value actually names.
+/// A bare 64-character hex string. It can be an event id, and if it is a
+/// point on secp256k1 it can also be a public key. A lookup checks what exists.
 final class NostrAmbiguousTarget extends NostrSearchTarget {
   const NostrAmbiguousTarget(this.hex);
 
@@ -99,7 +98,8 @@ NostrSearchTarget? resolveNostrSearchTarget(String rawQuery) {
     return NostrVideoTarget(query);
   }
 
-  // Bare 64-hex is valid as both a pubkey and an event id.
+  // Bare 64-hex has no type tag. The resolver checks curve membership before
+  // treating it as a possible profile.
   if (NostrHexUtils.isValidEventId(query)) {
     return NostrAmbiguousTarget(lower);
   }
@@ -112,8 +112,8 @@ NostrSearchTarget? resolveNostrSearchTarget(String rawQuery) {
   return null;
 }
 
-/// Turns a query into the entity to open, resolving a bare hex query against
-/// both the profile and video sources because hex alone cannot say which it is.
+/// Turns a query into the entity to open. A bare hex query can name an event,
+/// or a profile if it is a valid public key.
 class NostrIdSearchResolver {
   const NostrIdSearchResolver({
     required this.profileExists,
@@ -130,8 +130,8 @@ class NostrIdSearchResolver {
   ///
   /// `npub1` / `nprofile1` and the event forms open without a lookup — the
   /// destination screen owns "does this exist". A bare hex string is looked up
-  /// against both sources; the video wins when both somehow resolve, since a
-  /// pasted event id is the common case and a hex value cannot be two things.
+  /// as a video and, if it is on the curve, as a profile. The video wins when
+  /// both resolve.
   Future<NostrIdOpenAction?> resolve(String rawQuery) async {
     final target = resolveNostrSearchTarget(rawQuery);
     switch (target) {
@@ -142,13 +142,16 @@ class NostrIdSearchResolver {
       case NostrVideoTarget(:final routeId):
         return OpenVideoAction(routeId);
       case NostrAmbiguousTarget(:final hex):
-        // Both lookups start together, but a found video does not wait for
-        // the profile lookup, which for an event id can only miss after
-        // every profile source has answered.
+        // An off-curve value can still be an event id. When both lookups run,
+        // a found video can open as soon as its lookup completes.
         final videoHit = _orFalse(() => videoExists(hex));
-        final profileHit = _orFalse(() => profileExists(hex));
+        final profileHit = pubkeyIsOnCurve(hex)
+            ? _orFalse(() => profileExists(hex))
+            : null;
         if (await videoHit) return OpenVideoAction(hex);
-        if (await profileHit) return OpenProfileAction(hex);
+        if (profileHit != null && await profileHit) {
+          return OpenProfileAction(hex);
+        }
         return null;
     }
   }
