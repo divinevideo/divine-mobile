@@ -20,6 +20,7 @@ choosing an optimization.
 | Publishing and uploads (existing) | `video_publish`, `video_upload`, `video_upload_enqueue` | Publish phase metrics and outcome; in-process transfer and OS enqueue have different populations and boundaries |
 | Starting and stopping a take | `recording_start`, `recording_stop` | Live traces, one per take. `recording_start` runs from the shutter until the camera writes the take and the recorder shows it running; a countdown is excluded and reported as `countdown_ms`. `start_ms`, `sound_prep_ms`, `native_start_ms`, `wakelock_ms`; `outcome=success/failed/aborted/error`, `sound=on/off`. `recording_stop` runs from the stop until the camera handed over the file: `stop_ms`, `native_stop_ms`, `sound_stop_ms`, `wakelock_ms`, `take_ms`, `secondary_file`; `outcome=success/no_file/error`, `trigger=user/auto/teardown`. Both carry `mode`, `stabilization` and `dual_camera=on/off`, plus the 0/1 metrics `chroma_key` and `reaction` |
 | Sound picker search | `sound_search` | **Trace duration** from the debounced query the sound picker's Newest tab sends until its relay results arrive; `outcome` = `results` or `empty` when the relays answered, `fallback` when they did not and the picker showed its cached matches instead (`reason` = `timed_out`, `no_relays` or `relay_error`), `failure`, or `abandoned` when the query, the tab or the picker changed first; `result_bucket` (`0`, `1_10`, `11_50`, `over_50`) and a `result_count` metric when it answered. Never the query text |
+| Drawing smoothness in the camera and the editor | `screen_frames` | One sample per visit to the recorder or editor screen: from when it shows until it closes, an opaque route covers it, or the app goes to the background. `frames`, `slow_frames` (over the display's frame budget, 16.7 ms at 60 Hz and 8.3 ms at 120 Hz, on the UI or raster thread), `frozen_frames` (over 700 ms), `slow_per_mille`, `visible_ms`, `build_p90_us` (vsync to build end) and `raster_p90_us`; `screen=recorder/editor`, `refresh=60/90/120/other`, `end=closed/covered/background`. Visits under 1 s or 10 frames are dropped |
 
 `sound_search` is a live trace, so read its duration. It runs once per query the
 Newest tab sends — at most one per pause in typing — and never for the other
@@ -31,6 +32,18 @@ times; `result_bucket` then counts the cached matches the user saw. A
 `timed_out` fallback can hold relay sounds that arrived before the deadline.
 The picker's tab loads and picks are Analytics events, not traces; see
 [Analytics observability](../../docs/ANALYTICS_OBSERVABILITY.md#sound-picker).
+
+**`screen_frames` replaces Firebase's automatic frame metrics for the camera and
+the editor.** Those are kept per native screen, and the whole Flutter app is one
+native screen, so they cannot tell the editor from the feed. They also count
+every frame over 16 ms as slow, which on a 120 Hz iPhone is every frame at 60
+fps. `screen_frames` judges each frame by the display's refresh rate and reports
+`refresh`, so compare within it. Read its custom metrics, never the trace
+duration: the trace is created when the visit ends, and `visible_ms` is the
+visit's length. Dialogs and sheets are not opaque routes, so their frames count
+towards the screen beneath them, as do transitions to and from it. A visit that
+ends because the app went to the background reports at once and misses up to a
+second of its last frames, which the engine had not reported yet.
 
 **Startup and first-frame traces are snapshots of already measured intervals.**
 Select their custom millisecond metric, never the default trace duration. Early
@@ -269,8 +282,9 @@ Playback samples only cover successfully rendered first frames from the existing
 fullscreen-feed event bus. They do not establish playback success rate, rebuffer
 frequency, abandoned activations, background playback, or native image latency.
 Feed/search/profile HTTP metrics measure retrieval, not every screen's time to
-usable content. Native screen frame ratios need validation against Flutter's
-rendering surface before being treated as per-route jank measurements. Existing
+usable content. Native screen frame ratios cover the
+whole Flutter app, so they are not per-route jank measurements; `screen_frames`
+is, for the recorder and the editor only. Existing
 publish phase metrics cover the wider publish flow; `video_upload_enqueue`
 measures OS handoff, not transfer completion. WebSocket relay traffic is outside
 Dart HTTP instrumentation.
