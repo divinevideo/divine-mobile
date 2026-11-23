@@ -4723,6 +4723,18 @@ class AppLocalizationsTe extends AppLocalizations {
       'వేరొక శోధన పదాన్ని ప్రయత్నించండి';
 
   @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count శబ్దాలు కనుగొనబడ్డాయి',
+      one: '$count శబ్దం కనుగొనబడింది',
+      zero: 'శబ్దాలు ఏవీ కనుగొనబడలేదు',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get soundsSavedToLibrary => 'సౌండ్‌లకు సేవ్ చేయబడింది';
 
   @override

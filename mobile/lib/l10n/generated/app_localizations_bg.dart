@@ -4616,6 +4616,18 @@ class AppLocalizationsBg extends AppLocalizations {
   String get soundsNoSoundsFoundDescription => 'Пробвай с друго търсене';
 
   @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Намерени са $count звука',
+      one: 'Намерен е $count звук',
+      zero: 'Няма намерени звуци',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get soundsSavedToLibrary => 'Запазен в Звуци';
 
   @override

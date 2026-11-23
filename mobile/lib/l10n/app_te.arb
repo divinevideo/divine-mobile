@@ -2534,6 +2534,7 @@
   "soundsSearchResults": "శోధన ఫలితాలు",
   "soundsNoSoundsFound": "శబ్దాలు ఏవీ కనుగొనబడలేదు",
   "soundsNoSoundsFoundDescription": "వేరొక శోధన పదాన్ని ప్రయత్నించండి",
+  "soundsSearchResultCount": "{count, plural, =0{శబ్దాలు ఏవీ కనుగొనబడలేదు} one{{count} శబ్దం కనుగొనబడింది} other{{count} శబ్దాలు కనుగొనబడ్డాయి}}",
   "soundsSavedToLibrary": "సౌండ్‌లకు సేవ్ చేయబడింది",
   "soundsAlreadySavedToLibrary": "ఇప్పటికే సౌండ్స్‌లో ఉన్నాయి",
   "soundsAddSound": "సౌండ్ జోడించండి",

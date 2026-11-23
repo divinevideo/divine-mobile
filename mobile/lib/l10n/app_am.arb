@@ -2016,6 +2016,7 @@
   "soundsSearchResults": "የፍለጋ ውጤቶች",
   "soundsNoSoundsFound": "ምንም ድምፆች አልተገኙም።",
   "soundsNoSoundsFoundDescription": "የተለየ የፍለጋ ቃል ይሞክሩ",
+  "soundsSearchResultCount": "{count, plural, =0{ምንም ድምፆች አልተገኙም} one{{count} ድምፅ ተገኝቷል} other{{count} ድምፆች ተገኝተዋል}}",
   "profileTitle": "መገለጫ",
   "profileMoreOptions": "ተጨማሪ አማራጮች",
   "profileBlockedUser": "ታግዷል {name}",

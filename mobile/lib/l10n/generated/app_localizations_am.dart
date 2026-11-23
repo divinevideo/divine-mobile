@@ -4456,6 +4456,18 @@ class AppLocalizationsAm extends AppLocalizations {
   String get soundsNoSoundsFoundDescription => 'የተለየ የፍለጋ ቃል ይሞክሩ';
 
   @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ድምፆች ተገኝተዋል',
+      one: '$count ድምፅ ተገኝቷል',
+      zero: 'ምንም ድምፆች አልተገኙም',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get soundsSavedToLibrary => 'ወደ ድምፆች ተቀመጠ';
 
   @override

@@ -4503,6 +4503,18 @@ class AppLocalizationsTr extends AppLocalizations {
   String get soundsNoSoundsFoundDescription => 'Farklı bir arama terimi dene';
 
   @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ses bulundu',
+      one: '$count ses bulundu',
+      zero: 'Hiç ses bulunamadı',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get soundsSavedToLibrary => 'Seslere kaydedildi';
 
   @override

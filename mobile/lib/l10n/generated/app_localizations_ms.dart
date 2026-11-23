@@ -4555,6 +4555,17 @@ class AppLocalizationsMs extends AppLocalizations {
   String get soundsNoSoundsFoundDescription => 'Cuba istilah carian lain';
 
   @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count bunyi ditemui',
+      zero: 'Tiada bunyi ditemui',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get soundsSavedToLibrary => 'Disimpan ke Bunyi';
 
   @override

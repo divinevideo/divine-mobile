@@ -1564,6 +1564,7 @@
   "soundsSearchResults": "検索結果",
   "soundsNoSoundsFound": "サウンドが見つからない",
   "soundsNoSoundsFoundDescription": "別のキーワードで検索してみて",
+  "soundsSearchResultCount": "{count, plural, =0{サウンドが見つからない} other{サウンドが{count}件見つかった}}",
   "profileTitle": "プロフィール",
   "profileMoreOptions": "その他のオプション",
   "profileBlockedUser": "{name}をブロックしたよ",

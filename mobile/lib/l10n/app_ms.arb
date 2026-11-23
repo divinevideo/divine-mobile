@@ -2180,6 +2180,7 @@
   "soundsSearchResults": "Hasil Carian",
   "soundsNoSoundsFound": "Tiada bunyi ditemui",
   "soundsNoSoundsFoundDescription": "Cuba istilah carian lain",
+  "soundsSearchResultCount": "{count, plural, =0{Tiada bunyi ditemui} other{{count} bunyi ditemui}}",
   "soundsSavedToLibrary": "Disimpan ke Bunyi",
   "soundsAlreadySavedToLibrary": "Sudah ada dalam Bunyi",
   "soundsAddSound": "Tambah bunyi",

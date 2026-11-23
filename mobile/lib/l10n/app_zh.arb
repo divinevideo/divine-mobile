@@ -2180,6 +2180,7 @@
   "soundsSearchResults": "搜索结果",
   "soundsNoSoundsFound": "没有找到声音",
   "soundsNoSoundsFoundDescription": "换个搜索词试试",
+  "soundsSearchResultCount": "{count, plural, =0{没有找到声音} other{找到 {count} 个声音}}",
   "soundsSavedToLibrary": "已存入声音库",
   "soundsAlreadySavedToLibrary": "已在声音库中",
   "soundsAddSound": "添加声音",

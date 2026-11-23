@@ -1574,6 +1574,7 @@
   "soundsSearchResults": "Suchergebnisse",
   "soundsNoSoundsFound": "Keine Sounds gefunden",
   "soundsNoSoundsFoundDescription": "Versuch einen anderen Suchbegriff",
+  "soundsSearchResultCount": "{count, plural, =0{Keine Sounds gefunden} one{{count} Sound gefunden} other{{count} Sounds gefunden}}",
   "profileTitle": "Profil",
   "profileMoreOptions": "Weitere Optionen",
   "profileBlockedUser": "{name} blockiert",

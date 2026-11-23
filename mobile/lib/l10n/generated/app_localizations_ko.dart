@@ -4299,6 +4299,17 @@ class AppLocalizationsKo extends AppLocalizations {
   String get soundsNoSoundsFoundDescription => '다른 검색어로 시도해 보세요';
 
   @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '사운드 $count개를 찾았어요',
+      zero: '사운드를 찾을 수 없어요',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get soundsSavedToLibrary => '사운드에 저장됨';
 
   @override

@@ -2180,6 +2180,7 @@
   "soundsSearchResults": "تلاش کے نتائج",
   "soundsNoSoundsFound": "کوئی آواز نہیں ملی",
   "soundsNoSoundsFoundDescription": "کوئی اور تلاش کی اصطلاح آزمائیں",
+  "soundsSearchResultCount": "{count, plural, =0{کوئی آواز نہیں ملی} one{{count} آواز ملی} other{{count} آوازیں ملیں}}",
   "soundsSavedToLibrary": "آوازوں میں محفوظ ہو گئی",
   "soundsAlreadySavedToLibrary": "پہلے سے آوازوں میں ہے",
   "soundsAddSound": "ساؤنڈ شامل کریں",

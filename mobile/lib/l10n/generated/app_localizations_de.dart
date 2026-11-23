@@ -4624,6 +4624,18 @@ class AppLocalizationsDe extends AppLocalizations {
       'Versuch einen anderen Suchbegriff';
 
   @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Sounds gefunden',
+      one: '$count Sound gefunden',
+      zero: 'Keine Sounds gefunden',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get soundsSavedToLibrary => 'In Sounds gespeichert';
 
   @override

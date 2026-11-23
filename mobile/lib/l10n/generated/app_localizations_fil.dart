@@ -4590,6 +4590,18 @@ class AppLocalizationsFil extends AppLocalizations {
   String get soundsNoSoundsFoundDescription => 'Subukan ang ibang search term';
 
   @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sound ang nahanap',
+      one: '$count sound ang nahanap',
+      zero: 'Walang nahanap na sound',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get soundsSavedToLibrary => 'Na-save sa Sounds';
 
   @override

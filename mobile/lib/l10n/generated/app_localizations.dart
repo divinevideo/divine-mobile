@@ -7663,6 +7663,12 @@ abstract class AppLocalizations {
   /// **'Try a different search term'**
   String get soundsNoSoundsFoundDescription;
 
+  /// Screen-reader announcement when a search in the sound picker has answered, saying how many sounds the list now shows.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No sounds found} =1{{count} sound found} other{{count} sounds found}}'**
+  String soundsSearchResultCount(int count);
+
   /// No description provided for @soundsSavedToLibrary.
   ///
   /// In en, this message translates to:

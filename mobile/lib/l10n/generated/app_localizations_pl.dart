@@ -4699,6 +4699,20 @@ class AppLocalizationsPl extends AppLocalizations {
   String get soundsNoSoundsFoundDescription => 'Spróbuj innego wyszukiwania';
 
   @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Znaleziono $count dźwięku',
+      many: 'Znaleziono $count dźwięków',
+      few: 'Znaleziono $count dźwięki',
+      one: 'Znaleziono $count dźwięk',
+      zero: 'Nie znaleziono dźwięków',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get soundsSavedToLibrary => 'Zapisano w Dźwiękach';
 
   @override
