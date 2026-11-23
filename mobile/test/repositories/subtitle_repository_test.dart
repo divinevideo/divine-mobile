@@ -23,6 +23,8 @@ import 'package:videos_repository/videos_repository.dart'
         LatestVideoRevisionUnknown,
         VideosRepository;
 
+import '../helpers/test_pubkeys.dart';
+
 class _MockBlossom extends Mock implements BlossomUploadService {}
 
 class _MockPublisher extends Mock implements VideoEventPublisher {}
@@ -352,12 +354,19 @@ void main() {
         List<List<String>> tracks, {
         String? loadedRef,
       }) async {
+        when(() => auth.currentPublicKeyHex).thenReturn(video.pubkey);
         when(() => videos.fetchLatestVideoRevision(any())).thenAnswer(
           (_) async => LatestVideoRevisionFound(
-            Event('a' * 64, 34236, [
-              ['d', 'my-vine-id'],
-              ...tracks,
-            ], ''),
+            Event(
+              syntheticTestPubkey,
+              34236,
+              [
+                ['d', 'my-vine-id'],
+                ...tracks,
+              ],
+              '',
+              createdAt: 2,
+            ),
           ),
         );
         when(
@@ -511,22 +520,47 @@ void main() {
         },
       );
 
-      test('keeps the base language when the selected track is still there '
-          'without one', () async {
+      group('when the editor loaded an untagged primary track', () {
         const untagged = 'https://media.divine.video/untagged.vtt';
-        expect(
-          await savedLanguage(
-            _video.copyWith(textTrackRef: untagged, textTrackLang: 'en'),
+        final primary = track(untagged, 'captions', '');
+        final spanish = track(
+          'https://media.divine.video/spanish.vtt',
+          'subtitles',
+          'es',
+        );
+        final opened = VideoEvent.fromNostrEvent(
+          Event(
+            syntheticTestPubkey,
+            34236,
             [
-              track(untagged, 'captions', ''),
-              track(
-                'https://media.divine.video/british.vtt',
-                'subtitles',
-                'en-GB',
-              ),
+              ['d', 'my-vine-id'],
+              primary,
+              spanish,
             ],
+            '',
+            createdAt: 1,
           ),
-          'en',
+          permissive: true,
+        );
+
+        test('does not borrow the next track’s language', () async {
+          expect(
+            await savedLanguage(opened, [
+              primary,
+              spanish,
+            ], loadedRef: untagged),
+            'en',
+          );
+        });
+
+        test(
+          'does not borrow its language when the primary track moved',
+          () async {
+            expect(
+              await savedLanguage(opened, [spanish], loadedRef: untagged),
+              'en',
+            );
+          },
         );
       });
     });

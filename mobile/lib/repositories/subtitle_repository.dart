@@ -220,14 +220,15 @@ class SubtitleRepository {
     // the copy was opened: then the copy's own tags name it, or else the
     // newest revision's only caption track in that base language is it.
     final ref = loadedRef ?? video.textTrackRef;
-    final isFirstTrack = ref == video.textTrackRef;
-    final newest = _trackLanguageAt(newestTags, ref);
-    if (newest != null && newest.isNotEmpty) return newest;
-    if (newest != null && isFirstTrack) return video.textTrackLang;
-    final opened = _trackLanguageAt(video.nostrEventTags, ref);
-    if (opened != null && opened.isNotEmpty) return opened;
-    // The model's language describes only the first track.
-    if (!isFirstTrack) return null;
+    final taggedLanguage =
+        _trackLanguageAt(newestTags, ref) ??
+        _trackLanguageAt(video.nostrEventTags, ref);
+    // An explicitly untagged track uses the default. The model's language
+    // can come from a later track when the primary track is untagged.
+    if (taggedLanguage != null) {
+      return taggedLanguage.isEmpty ? null : taggedLanguage;
+    }
+    if (ref != video.textTrackRef) return null;
     final baseLanguage = video.textTrackLang?.toLowerCase();
     final sameBase = {
       for (final tag in newestTags)
