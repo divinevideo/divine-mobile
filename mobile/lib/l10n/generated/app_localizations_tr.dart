@@ -16702,4 +16702,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get settingsDiscordSubtitle => 'Talk to the Divine team and community';
+
+  @override
+  String get settingsDiscordOpenError => 'Could not open Discord';
 }

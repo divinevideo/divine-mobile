@@ -14109,5 +14109,9 @@
   "settingsDiscordSubtitle": "Talk to the Divine team and community",
   "@settingsDiscordSubtitle": {
     "description": "Settings row subtitle explaining that the Discord server is where to talk to the Divine team and community."
+  },
+  "settingsDiscordOpenError": "Could not open Discord",
+  "@settingsDiscordOpenError": {
+    "description": "Error snackbar shown when the official Divine Discord invite link could not be launched."
   }
 }

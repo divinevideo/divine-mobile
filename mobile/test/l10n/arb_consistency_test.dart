@@ -972,6 +972,7 @@ const _knownUntranslatedDebt = <String>{
   // Settings Discord community link row; translations in the next human pass.
   'settingsDiscordTitle',
   'settingsDiscordSubtitle',
+  'settingsDiscordOpenError',
 };
 
 const _profileBadgeSheetKeys = <String>{

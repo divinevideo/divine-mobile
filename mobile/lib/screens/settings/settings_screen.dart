@@ -572,7 +572,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 }
 
 Future<void> _openDiscord(BuildContext context) async {
-  final pageName = context.l10n.settingsDiscordTitle;
   var opened = false;
   try {
     opened = await launchUrl(
@@ -591,7 +590,7 @@ Future<void> _openDiscord(BuildContext context) async {
   if (!opened && context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
       DivineSnackbarContainer.snackBar(
-        context.l10n.supportCouldNotOpenPage(pageName),
+        context.l10n.settingsDiscordOpenError,
         error: true,
       ),
     );

@@ -1321,6 +1321,7 @@ void main() {
         expect(launcher.launched, hasLength(1));
         expect(launcher.launched.single.url, AppConstants.discordInviteUrl);
         expect(launcher.launched.single.useExternalApplication, isTrue);
+        expect(find.byType(SnackBar), findsNothing);
 
         await tester.pumpWidget(const SizedBox());
         await tester.pump();
@@ -1348,10 +1349,7 @@ void main() {
         await tester.tap(find.text(l10n.settingsDiscordTitle));
         await tester.pumpAndSettle();
 
-        expect(
-          find.text(l10n.supportCouldNotOpenPage(l10n.settingsDiscordTitle)),
-          findsOneWidget,
-        );
+        expect(find.text(l10n.settingsDiscordOpenError), findsOneWidget);
 
         await tester.pumpWidget(const SizedBox());
         await tester.pump();
@@ -1381,22 +1379,25 @@ void main() {
         await tester.tap(find.text(l10n.settingsDiscordTitle));
         await tester.pumpAndSettle();
 
-        expect(
-          find.text(l10n.supportCouldNotOpenPage(l10n.settingsDiscordTitle)),
-          findsOneWidget,
-        );
+        expect(find.text(l10n.settingsDiscordOpenError), findsOneWidget);
 
         await tester.pumpWidget(const SizedBox());
         await tester.pump();
       });
 
       testWidgets('is hidden on account-only settings view', (tester) async {
+        // Tall surface so the entire lazy ListView is laid out through the
+        // bottom version row; otherwise absence of a lower row proves nothing.
+        await tester.binding.setSurfaceSize(const Size(900, 2400));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
         stubAccountDestinationAuth();
         await tester.pumpWidget(
           buildSubject(child: const SettingsScreen(accountOnly: true)),
         );
         await tester.pumpAndSettle();
 
+        expect(find.text(l10n.nostrSettingsDeleteAccount), findsOneWidget);
         expect(find.text(l10n.settingsDiscordTitle), findsNothing);
 
         await tester.pumpWidget(const SizedBox());

@@ -28070,6 +28070,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Talk to the Divine team and community'**
   String get settingsDiscordSubtitle;
+
+  /// Error snackbar shown when the official Divine Discord invite link could not be launched.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open Discord'**
+  String get settingsDiscordOpenError;
 }
 
 class _AppLocalizationsDelegate
