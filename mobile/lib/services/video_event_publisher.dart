@@ -1185,10 +1185,13 @@ class VideoEventPublisher {
     if (latest == null ||
         !ownsVideo() ||
         !tags.any((tag) => tag.length >= 2 && tag.first == 'd')) {
-      if (latest != null && ownsVideo()) {
+      if (latest != null) {
+        final reason = ownsVideo()
+            ? 'missing d tag'
+            : 'the signed-in account changed while its newest revision was '
+                  'read';
         Log.error(
-          'Cannot republish subtitles for video ${existingEvent.id}: '
-          'missing d tag',
+          'Cannot republish subtitles for video ${existingEvent.id}: $reason',
           name: _logName,
           category: LogCategory.video,
         );

@@ -15,6 +15,7 @@ import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart'
     show
         LatestVideoRevision,
@@ -912,6 +913,44 @@ void main() {
             content: any(named: 'content'),
             tags: any(named: 'tags'),
             createdAt: any(named: 'createdAt'),
+          ),
+        );
+      });
+
+      test('logs and returns null when the account changes while the newest '
+          'revision is read', () async {
+        var signedIn = testPubkey;
+        when(
+          () => mockAuthService.currentPublicKeyHex,
+        ).thenAnswer((_) => signedIn);
+        when(
+          () => mockVideosRepository.fetchLatestVideoRevision(any()),
+        ).thenAnswer((_) async {
+          signedIn = 'f' * 64;
+          return LatestVideoRevisionFound(newest());
+        });
+        await LogCaptureService().clearAllLogs();
+
+        final result = await publisher.republishWithSubtitles(
+          existingEvent: existingEvent,
+          textTrackRef: textTrackRef,
+        );
+
+        expect(result, isNull);
+        verifyNever(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        );
+        expect(
+          LogCaptureService()
+              .getRecentLogs(minLevel: LogLevel.error)
+              .map((entry) => entry.message),
+          contains(
+            contains('account changed while its newest revision was read'),
           ),
         );
       });
