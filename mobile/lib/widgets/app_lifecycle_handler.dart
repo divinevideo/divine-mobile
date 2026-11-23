@@ -45,11 +45,22 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
   late final LogMessageBatcher _logMessageBatcher;
   bool _tickersEnabled = true;
 
+  /// Whether the app reached hidden or paused, or mounted outside the
+  /// foreground, since it was last resumed.
+  ///
+  /// A system alert, Control Center or the Android notification shade only
+  /// make the app inactive. Its relay sockets stay healthy, so the return to
+  /// resumed must not redial them (#9028).
+  late bool _backgroundedSinceResume;
+
   @override
   void initState() {
     super.initState();
     _backgroundManager = ref.read(backgroundActivityManagerProvider);
     _logMessageBatcher = ref.read(logMessageBatcherProvider);
+    _backgroundedSinceResume = _startsOutsideForeground(
+      WidgetsBinding.instance.lifecycleState,
+    );
     WidgetsBinding.instance.addObserver(this);
 
     // Resume any pending publish drafts after first frame,
@@ -177,15 +188,18 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
           setState(() => _tickersEnabled = true);
         }
 
-        // Force reconnect relays - WebSocket connections are often silently
-        // dropped by iOS/Android when app is backgrounded. Without this,
-        // subscriptions sent to stale sockets will timeout (30s) with no response.
-        runDetached(
-          _reconnectRelays(),
-          'reconnect relays after app resume',
-          logName: 'AppLifecycleHandler',
-          category: LogCategory.system,
-        );
+        // iOS and Android can silently drop sockets while the app is in the
+        // background, so a real background redials every relay. Redialling
+        // after a transient inactive would only drop replies in flight.
+        if (_backgroundedSinceResume) {
+          runDetached(
+            _reconnectRelays(),
+            'reconnect relays after app resume',
+            logName: 'AppLifecycleHandler',
+            category: LogCategory.system,
+          );
+        }
+        _backgroundedSinceResume = false;
         unawaited(_clearAppBadge());
         // Coming back is often coming back online, so recordings waiting for
         // their signature may be backed up now.
@@ -240,6 +254,7 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
 
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
+        _backgroundedSinceResume = true;
         Log.info(
           '📱 App backgrounded - disabling foreground playback gates',
           name: 'AppLifecycleHandler',
@@ -261,7 +276,8 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
     }
   }
 
-  /// Reconnects relay WebSocket connections after app resume.
+  /// Reconnects relay WebSocket connections after the app returns from the
+  /// background.
   ///
   /// iOS/Android often silently drop WebSocket connections when apps are
   /// backgrounded. The connection status may still show "connected" but
@@ -311,6 +327,15 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
   Widget build(BuildContext context) =>
       TickerMode(enabled: _tickersEnabled, child: widget.child);
 }
+
+/// Whether a handler mounting in [state] counts as coming from the background.
+///
+/// A silent push launches the app straight into the background, and it gets no
+/// hidden or paused transition before iOS suspends it; `null` is a foreground
+/// launch the engine has not reported yet (see
+/// `shouldSuspendDownloadsAtLaunch`).
+bool _startsOutsideForeground(AppLifecycleState? state) =>
+    state != null && state != AppLifecycleState.resumed;
 
 bool _inactiveDisablesForegroundPlayback(TargetPlatform platform) =>
     platform == TargetPlatform.android || platform == TargetPlatform.iOS;
