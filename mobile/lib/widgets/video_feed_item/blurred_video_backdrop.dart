@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 import 'package:openvine/widgets/blurhash_display.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
@@ -41,6 +42,7 @@ class BlurredVideoBackdrop extends StatelessWidget {
     this.filePath,
     this.blurhash,
     this.videoAspectRatio,
+    this.useRuntimeBlur = !kIsWeb,
   });
 
   /// Largest decoded width or height for the blurred poster fallback. The
@@ -61,6 +63,14 @@ class BlurredVideoBackdrop extends StatelessWidget {
   /// paints fullscreen — the safe fallback when dimensions are unknown.
   final double? videoAspectRatio;
 
+  /// Whether to apply a runtime GPU Gaussian blur when falling back to a poster
+  /// image without a [blurhash].
+  ///
+  /// Defaults to `false` on web, where a 30 px WebGL blur shader over video
+  /// platform views causes shader compilation stalls; renders a dimmed poster
+  /// instead.
+  final bool useRuntimeBlur;
+
   @override
   Widget build(BuildContext context) {
     final aspectRatio = videoAspectRatio;
@@ -70,6 +80,7 @@ class BlurredVideoBackdrop extends StatelessWidget {
         filePath: filePath,
         blurhash: blurhash,
         isolatePosterPaint: true,
+        useRuntimeBlur: useRuntimeBlur,
       );
     }
     return LayoutBuilder(
@@ -94,6 +105,7 @@ class BlurredVideoBackdrop extends StatelessWidget {
                     url: url,
                     filePath: filePath,
                     blurhash: blurhash,
+                    useRuntimeBlur: useRuntimeBlur,
                   ),
                 ),
               ),
@@ -112,12 +124,14 @@ class _BackdropContent extends StatelessWidget {
     this.filePath,
     this.blurhash,
     this.isolatePosterPaint = false,
+    this.useRuntimeBlur = true,
   });
 
   final String? url;
   final String? filePath;
   final String? blurhash;
   final bool isolatePosterPaint;
+  final bool useRuntimeBlur;
 
   @override
   Widget build(BuildContext context) {
@@ -174,18 +188,23 @@ class _BackdropContent extends StatelessWidget {
   }
 
   Widget _blurredPoster(Widget poster) {
-    final blurredPoster = ClipRect(
-      // `ImageFiltered` applies the blur on the GPU side; `ClipRect`
-      // keeps the bleeding edge of the blur kernel from leaking
-      // outside the widget's box and over the surrounding chrome.
-      child: ImageFiltered(
-        imageFilter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-        child: Opacity(opacity: 0.5, child: poster),
-      ),
-    );
+    final Widget fallbackPoster;
+    if (useRuntimeBlur) {
+      fallbackPoster = ClipRect(
+        // `ImageFiltered` applies the blur on the GPU side; `ClipRect`
+        // keeps the bleeding edge of the blur kernel from leaking
+        // outside the widget's box and over the surrounding chrome.
+        child: ImageFiltered(
+          imageFilter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+          child: Opacity(opacity: 0.5, child: poster),
+        ),
+      );
+    } else {
+      fallbackPoster = ClipRect(child: Opacity(opacity: 0.25, child: poster));
+    }
     return isolatePosterPaint
-        ? RepaintBoundary(child: blurredPoster)
-        : blurredPoster;
+        ? RepaintBoundary(child: fallbackPoster)
+        : fallbackPoster;
   }
 }
 

@@ -125,4 +125,43 @@ void main() {
       );
     });
   });
+
+  group(ContentWarningBlurOverlay, () {
+    testWidgets('omits $BackdropFilter when useBackdropBlur is false', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ContentWarningBlurOverlay(
+            labels: const ['nudity'],
+            onReveal: () {},
+            useBackdropBlur: false,
+          ),
+        ),
+      );
+
+      expect(find.byType(BackdropFilter), findsNothing);
+      expect(find.byType(ContentWarningBlurOverlay), findsOneWidget);
+    });
+
+    testWidgets('includes $BackdropFilter when useBackdropBlur is true', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ContentWarningBlurOverlay(
+            labels: const ['nudity'],
+            onReveal: () {},
+            useBackdropBlur: true,
+          ),
+        ),
+      );
+
+      expect(find.byType(BackdropFilter), findsOneWidget);
+    });
+  });
 }

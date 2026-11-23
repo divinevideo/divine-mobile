@@ -491,6 +491,11 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         key: _feedKey,
         videos: widget.videos,
         isActive: isFeedActive,
+        // On web, each live HtmlElementView <video> splits the CanvasKit
+        // layer tree into an extra WebGL overlay surface and triggers shader
+        // recompilation during swipes. Keep only the active video mounted.
+        keepPreviousAlive: !kIsWeb,
+        keepNextAlive: !kIsWeb,
         releaseNeighboursWhenInactive:
             widget.releaseNeighboursWhenInactive && !focusOnlyPause,
         releaseCurrentWhenInactive: codecHeavySurfaceActive,

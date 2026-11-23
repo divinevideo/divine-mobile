@@ -7,5 +7,10 @@ import 'package:profile_repository/profile_repository.dart';
 
 /// Read coordination must not depend on which profile handle fetched the data.
 final profileApiCacheProvider = Provider<ProfileApiCache>((ref) {
-  return ProfileApiCache(client: ref.watch(funnelcakeApiClientProvider));
+  final cache = ProfileApiCache(
+    client: ref.watch(funnelcakeApiClientProvider),
+    batchWindow: const Duration(milliseconds: 16),
+  );
+  ref.onDispose(cache.dispose);
+  return cache;
 });

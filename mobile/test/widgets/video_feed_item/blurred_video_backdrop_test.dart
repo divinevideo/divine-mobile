@@ -40,6 +40,32 @@ void main() {
     });
 
     testWidgets(
+      'omits $ImageFiltered and dims poster when useRuntimeBlur is false',
+      (tester) async {
+        await tester.pumpWidget(
+          WidgetsApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            color: const Color(0xFF000000),
+            builder: (_, _) => const SizedBox(
+              width: 400,
+              height: 800,
+              child: BlurredVideoBackdrop(
+                url: testUrl,
+                useRuntimeBlur: false,
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byType(ClipRect), findsOneWidget);
+        expect(find.byType(ImageFiltered), findsNothing);
+        final opacity = tester.widget<Opacity>(find.byType(Opacity));
+        expect(opacity.opacity, equals(0.25));
+      },
+    );
+
+    testWidgets(
       'renders $BlurhashDisplay without any blur pass when a blurhash '
       'is available',
       (tester) async {

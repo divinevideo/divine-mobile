@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -19,11 +20,18 @@ class CenterPlaybackControl extends StatelessWidget {
   const CenterPlaybackControl({
     required this.state,
     this.semanticsLabel,
+    this.useBackdropBlur = !kIsWeb,
     super.key,
   });
 
   final CenterPlaybackControlState state;
   final String? semanticsLabel;
+
+  /// Whether to wrap the translucent pill in a [BackdropFilter] blur.
+  ///
+  /// Defaults to `false` on web, where backdrop blur forces an expensive
+  /// multi-pass WebGL shader compilation over video platform views.
+  final bool useBackdropBlur;
 
   @override
   Widget build(BuildContext context) {
@@ -49,22 +57,26 @@ class CenterPlaybackControl extends StatelessWidget {
       );
     }
 
+    final pill = Container(
+      width: 64,
+      height: 64,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: VineTheme.scrim65,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: icon,
+    );
+
     return Center(
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8.4, sigmaY: 8.4),
-          child: Container(
-            width: 64,
-            height: 64,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: VineTheme.scrim65,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: icon,
-          ),
-        ),
+        child: useBackdropBlur
+            ? BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 8.4, sigmaY: 8.4),
+                child: pill,
+              )
+            : pill,
       ),
     );
   }

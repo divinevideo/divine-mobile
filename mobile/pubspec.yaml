@@ -644,6 +644,10 @@ flutter:
           weight: 400
         - asset: assets/fonts/Inter-SemiBold.ttf
           weight: 600
+    - family: ChivoMono
+      fonts:
+        - asset: assets/fonts/ChivoMono-Light.ttf
+          weight: 300
   #   - family: Schyler
   #     fonts:
   #       - asset: fonts/Schyler-Regular.ttf

@@ -651,6 +651,40 @@ void main() {
         expect(style.color, isNull);
       });
 
+      test(
+        'uses bundled font families directly when useBundledFonts is true',
+        () {
+          final previous = VineTheme.useBundledFonts;
+          VineTheme.useBundledFonts = true;
+          addTearDown(() => VineTheme.useBundledFonts = previous);
+
+          expect(
+            VineTheme.displayLargeFont().fontFamily,
+            VineTheme.fontFamilyBricolage,
+          );
+          expect(
+            VineTheme.tabTextStyle().fontFamily,
+            VineTheme.fontFamilyBricolage,
+          );
+          expect(
+            VineTheme.bodyLargeFont().fontFamily,
+            VineTheme.fontFamilyInter,
+          );
+          expect(
+            VineTheme.labelLargeFont().fontFamily,
+            VineTheme.fontFamilyInter,
+          );
+          expect(
+            VineTheme.captionPillFont().fontFamily,
+            VineTheme.fontFamilyChivoMono,
+          );
+          expect(
+            VineTheme.codeFont().fontFamily,
+            VineTheme.fontFamilyChivoMono,
+          );
+        },
+      );
+
       testWidgets('captionPillFont accepts a color override', (tester) async {
         final style = VineTheme.captionPillFont(color: VineTheme.vineGreen);
         expect(style.color, VineTheme.vineGreen);
