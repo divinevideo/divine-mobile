@@ -203,6 +203,12 @@
 
 🍏 Verify iOS shipping target versions	native	bash scripts/check_ios_shipping_versions.sh
 
+# Guards macOS Release.entitlements, Info.plist, PrivacyInfo.xcprivacy, and
+# NativeCameraPlugin.swift against Mac App Store rejections (forbidden /tmp/
+# or Hardened Runtime CS exceptions, missing category/encryption/speech keys,
+# unbundled privacy manifest, or sandbox-disallowed Process() calls). Gated
+# on `native` because its inputs live strictly under mobile/macos/** and its
+# own script.
 🖥️ Verify macOS App Store configuration	native	bash scripts/check_macos_app_store_config.sh
 
 # The wrapper is tracked (#7201) so a fresh clone or worktree can run gradle

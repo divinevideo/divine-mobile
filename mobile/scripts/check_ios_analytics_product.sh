@@ -57,7 +57,9 @@ fi
 
 # Support both iOS (.app/Info.plist, .app/<exec>, .app/Frameworks) and
 # macOS (.app/Contents/Info.plist, .app/Contents/MacOS/<exec>, .app/Contents/Frameworks).
+is_macos=0
 if [ -f "$app/Contents/Info.plist" ]; then
+  is_macos=1
   info_plist="$app/Contents/Info.plist"
   exec_dir="$app/Contents/MacOS"
   frameworks_dir="$app/Contents/Frameworks"
@@ -118,4 +120,8 @@ if [ "$fail" -ne 0 ]; then
   exit 1
 fi
 
-echo "OK [ios_analytics_product]: FirebaseAnalyticsCore linked — app-analytics-services.com present, app-ads-services.com absent (${#binaries[@]} binaries scanned)."
+if [ "$is_macos" -eq 1 ]; then
+  echo "OK [macos_analytics_product]: Firebase Analytics linked without Google ads-measurement hosts — app-analytics-services.com present, app-ads-services.com absent (${#binaries[@]} binaries scanned)."
+else
+  echo "OK [ios_analytics_product]: FirebaseAnalyticsCore linked — app-analytics-services.com present, app-ads-services.com absent (${#binaries[@]} binaries scanned)."
+fi

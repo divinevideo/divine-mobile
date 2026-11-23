@@ -66,10 +66,21 @@ void main() {
       }
     });
 
+    test('macOS Info.plist declares all app locales', () {
+      final infoPlist = File('macos/Runner/Info.plist').readAsStringSync();
+
+      for (final localeCode in appLocaleCodes) {
+        expect(
+          infoPlist,
+          contains('<string>$localeCode</string>'),
+          reason: 'macOS CFBundleLocalizations is missing $localeCode',
+        );
+      }
+    });
+
     test('Xcode knownRegions includes all app locales', () {
-      final projectFile = File(
-        'ios/Runner.xcodeproj/project.pbxproj',
-      ).readAsStringSync();
+      final projectFile = File('ios/Runner.xcodeproj/project.pbxproj')
+          .readAsStringSync();
 
       for (final localeCode in appLocaleCodes) {
         expect(
