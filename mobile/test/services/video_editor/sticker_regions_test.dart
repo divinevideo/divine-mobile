@@ -7,7 +7,8 @@ import 'dart:ui';
 
 import 'package:flutter/widgets.dart' show SizedBox;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' show VideoStickerKind, VideoStickerRegion;
+import 'package:models/models.dart'
+    show VideoStickerAudience, VideoStickerKind, VideoStickerRegion;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
@@ -437,6 +438,28 @@ void main() {
           ),
         ]).single.style,
         equals('light'),
+      );
+    });
+
+    test('publishes a replies sticker only some may answer without a look, '
+        'covering nothing beneath it', () {
+      final regions = _regions([
+        _captured(_link),
+        _captured(
+          const SocialStickerData(
+            kind: SocialStickerKind.replies,
+            prompt: 'Reply with a video',
+            audience: VideoStickerAudience.following,
+          ),
+        ),
+      ]);
+
+      expect(
+        regions.map((region) => (region.kind, region.style, region.audience)),
+        equals([
+          (VideoStickerKind.link, 'light', VideoStickerAudience.everyone),
+          (VideoStickerKind.replies, null, VideoStickerAudience.following),
+        ]),
       );
     });
 

@@ -31,6 +31,10 @@ Comment _comment(int n, {String? videoUrl}) => Comment(
 
 void main() {
   group('CommentsListBloc watch stream', () {
+    setUpAll(
+      () => registerFallbackValue(const Stream<Set<String>>.empty()),
+    );
+
     late _MockCommentsRepository repository;
     late StreamController<Comment> watch;
     void Function()? onEose;
@@ -65,13 +69,13 @@ void main() {
       when(
         () => repository.watchCommentDeletions(
           rootEventId: any(named: 'rootEventId'),
+          commentAuthors: any(named: 'commentAuthors'),
           includeVideoReplies: any(named: 'includeVideoReplies'),
         ),
       ).thenAnswer((_) => const Stream<CommentDeletion>.empty());
       when(
         () => repository.findAuthorDeletedComments(any()),
       ).thenAnswer((_) async => <String>{});
-      when(() => repository.stopWatchingComments()).thenAnswer((_) async {});
     });
 
     tearDown(() => watch.close());
@@ -148,6 +152,7 @@ void main() {
         when(
           () => repository.watchCommentDeletions(
             rootEventId: any(named: 'rootEventId'),
+            commentAuthors: any(named: 'commentAuthors'),
             includeVideoReplies: any(named: 'includeVideoReplies'),
           ),
         ).thenAnswer((_) => deletions.stream);

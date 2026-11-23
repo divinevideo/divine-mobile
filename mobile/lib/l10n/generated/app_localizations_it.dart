@@ -2166,6 +2166,14 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Tocca a te';
 
   @override
+  String get videoStickerAddYoursWatchSeries => 'Guarda la serie';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Guarda la serie: $prompt';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11987,6 +11995,34 @@ class AppLocalizationsIt extends AppLocalizations {
       'Mostra chi ha risposto a questo video con un video. Chi guarda lo tocca per vedere le risposte.';
 
   @override
+  String get videoEditorSocialStickerAudienceTitle => 'Chi può rispondere';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Chiunque';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Chi segui';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Solo io';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Possono partecipare solo le persone che segui. Le altre vedono lo sticker non appena qualcuno ha partecipato.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Lo sticker mostra solo le risposte video delle persone che segui. Le altre persone lo vedono non appena una di loro ha risposto.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Puoi partecipare solo tu. Lo sticker resta invisibile a chiunque altro finché non partecipi.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Lo sticker mostra solo le tue risposte video. Resta invisibile a chiunque altro finché non rispondi.';
+
+  @override
   String get videoEditorInteractiveCardAreaHint =>
       'Questo sticker resta in questo riquadro così chi guarda può toccarlo';
 
@@ -13814,6 +13850,21 @@ class AppLocalizationsIt extends AppLocalizations {
       'Forzatura minore protetto azzerata';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
   String get commentsRecordVideoButtonLabel => 'Registra un commento video';
 
   @override
@@ -14881,6 +14932,65 @@ class AppLocalizationsIt extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Scollega l\'account $platform $identity';
   }
@@ -14912,7 +15022,26 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'Un tap';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -15024,6 +15153,18 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'Verificato, ma nessun relay ha accettato l\'aggiornamento. Riprova.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>

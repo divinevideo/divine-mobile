@@ -561,11 +561,7 @@ class VideosRepository {
       } else if (videos.isNotEmpty) {
         seenOnlyPages++;
       }
-      _appendUniqueVideos(
-        visible,
-        unseenVideos,
-        seenVideoKeys: seenVideoKeys,
-      );
+      _appendUniqueVideos(visible, unseenVideos, seenVideoKeys: seenVideoKeys);
       // Trust the server's flag rather than the row count: the client drops
       // malformed rows, and a short page would otherwise end the feed early.
       if (!response.hasMore) break;
@@ -1254,10 +1250,7 @@ class VideosRepository {
   }
 
   Future<({List<VideoEvent> videos, int? nextBefore})>
-  _fetchVisibleRecentVideosFromRelays({
-    required int limit,
-    int? until,
-  }) async {
+  _fetchVisibleRecentVideosFromRelays({required int limit, int? until}) async {
     var cursor = until;
     final visible = <VideoEvent>[];
     final seenVideoKeys = <String>{};
@@ -2097,6 +2090,20 @@ class VideosRepository {
       );
     }
   }
+
+  /// [event] as the video this viewer may see, or `null` when it is no
+  /// video or this viewer's blocks, deletions or content filters leave it
+  /// out: the rules [getVideosFromRelaysByAddressableIds] applies to what
+  /// the relays return, for a video event another source handed over.
+  /// [includeFeedShape] works as for [getVideosByAddressableIds].
+  VideoEvent? visibleVideoFromEvent(
+    Event event, {
+    bool includeFeedShape = true,
+  }) => _tryParseAndFilter(
+    event,
+    permissive: true,
+    includeFeedShape: includeFeedShape,
+  );
 
   /// The videos at [addressableIds] as the relays alone hold them, in that
   /// order, and whether every relay answered in full.
@@ -3291,20 +3298,17 @@ class VideosRepository {
         start < authors.length;
         start += _membersFeedRelayFilterAuthors
       )
-        _nostrClient.queryEventsDetailed(
-          [
-            Filter(
-              kinds: [_videoKind],
-              authors: authors
-                  .skip(start)
-                  .take(_membersFeedRelayFilterAuthors)
-                  .toList(),
-              limit: limit,
-              until: until,
-            ),
-          ],
-          requireAllRelaysSettled: true,
-        ),
+        _nostrClient.queryEventsDetailed([
+          Filter(
+            kinds: [_videoKind],
+            authors: authors
+                .skip(start)
+                .take(_membersFeedRelayFilterAuthors)
+                .toList(),
+            limit: limit,
+            until: until,
+          ),
+        ], requireAllRelaysSettled: true),
     ]);
     final events = <Event>[];
     for (final read in reads) {

@@ -48,6 +48,9 @@ abstract class Relay {
   // NIP-45 COUNT queries
   final Map<String, Completer<CountResponse>> _countQueries = {};
 
+  // Observed COUNT support on the current socket.
+  bool? _supportsCount;
+
   Relay(this.url, this.relayStatus, {this.diagnosticsSink});
 
   final RelayDiagnosticsSink? diagnosticsSink;
@@ -150,7 +153,10 @@ abstract class Relay {
     void Function(String id)? onReplayFailure,
   }) async {
     final isFresh = connectionIsFresh;
-    if (isFresh) _connectionGeneration = ++_lastConnectionGeneration;
+    if (isFresh) {
+      _connectionGeneration = ++_lastConnectionGeneration;
+      _supportsCount = null;
+    }
     final saved = isFresh
         ? [..._subscriptions.values, ..._queries.values]
         : const <Subscription>[];
@@ -470,13 +476,42 @@ abstract class Relay {
   /// Complete a COUNT query with the response
   void completeCountQuery(String id, CountResponse response) {
     final completer = _countQueries.remove(id);
-    completer?.complete(response);
+    if (completer == null) return;
+    _supportsCount = true;
+    completer.complete(response);
   }
 
   /// Complete a COUNT query with an error (e.g., CLOSED response)
   void failCountQuery(String id, String reason) {
     final completer = _countQueries.remove(id);
     completer?.completeError(CountNotSupportedException(reason));
+  }
+
+  /// Whether the current socket has refused COUNT.
+  ///
+  /// Once disconnected, allow the caller to try again on a fresh socket.
+  bool get countUnsupported =>
+      _supportsCount == false &&
+      relayStatus.connected == ClientConnected.connected;
+
+  /// Settles pending COUNTs after a known unknown-command notice unless the
+  /// socket has already answered COUNT. An ambiguous notice also needs to
+  /// agree with the advertised capabilities.
+  void handleCountUnknownCommandNotice(
+    String reason, {
+    required bool namesCount,
+  }) {
+    if (_countQueries.isEmpty || _supportsCount == true) return;
+    if (!namesCount && (info?.nips.any((nip) => '$nip' == '45') ?? false)) {
+      return;
+    }
+
+    _supportsCount = false;
+    final pending = _countQueries.values.toList();
+    _countQueries.clear();
+    for (final completer in pending) {
+      completer.completeError(CountNotSupportedException(reason));
+    }
   }
 
   Function? relayStatusCallback;

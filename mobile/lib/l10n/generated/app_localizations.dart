@@ -3583,6 +3583,18 @@ abstract class AppLocalizations {
   /// **'Add yours'**
   String get videoStickerAddYoursButton;
 
+  /// Shown on an Add yours sticker, beside the latest answers' thumbnails, to a viewer who may not join it: a tap opens the answers in a feed. Short: it fits beside three thumbnails.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch the series'**
+  String get videoStickerAddYoursWatchSeries;
+
+  /// Screen reader label of an Add yours sticker shown to a viewer who may not join it; a tap opens its answers. {prompt} is what the sticker prompts its answers to show.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch the series: {prompt}'**
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt);
+
   /// On an Add yours sticker in the player: how many people answered its prompt with a video.
   ///
   /// In en, this message translates to:
@@ -20177,6 +20189,54 @@ abstract class AppLocalizations {
   /// **'Shows who replied to this video with a video. Viewers tap it to watch the replies.'**
   String get videoEditorSocialStickerRepliesNote;
 
+  /// Heading over the choice of who may answer an Add yours or replies sticker with a video.
+  ///
+  /// In en, this message translates to:
+  /// **'Who can answer'**
+  String get videoEditorSocialStickerAudienceTitle;
+
+  /// Choice: anyone may answer the sticker. The default; the sticker is drawn into the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone'**
+  String get videoEditorSocialStickerAudienceEveryone;
+
+  /// Choice: only the people the creator follows may answer the sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Friends'**
+  String get videoEditorSocialStickerAudienceFollowing;
+
+  /// Choice: only the creator may answer the sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Only me'**
+  String get videoEditorSocialStickerAudienceCreator;
+
+  /// Help line under the choice when only people the creator follows may join an Add yours. The sticker is then left out of the video and shows to everyone else once someone joined.
+  ///
+  /// In en, this message translates to:
+  /// **'Only people you follow can join in. Everyone else sees the sticker once someone has.'**
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote;
+
+  /// Help line under the choice when the replies sticker shows only the video replies of people the creator follows. It says what the sticker shows, not who can post a video reply: older app versions and other clients can still post one. The sticker is left out of the video and shows to everyone else once one of those people replied.
+  ///
+  /// In en, this message translates to:
+  /// **'The sticker shows only video replies from people you follow. Everyone else sees it once one of them has replied.'**
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote;
+
+  /// Help line under the choice when only the creator may join their own Add yours. Nobody else sees the sticker until the creator joined.
+  ///
+  /// In en, this message translates to:
+  /// **'Only you can join in. Nobody else sees the sticker until you do.'**
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote;
+
+  /// Help line under the choice when the replies sticker shows only the creator's own video replies. It says what the sticker shows, not who can post a video reply: older app versions and other clients can still post one. Nobody else sees the sticker until the creator replied.
+  ///
+  /// In en, this message translates to:
+  /// **'The sticker shows only your own video replies. Nobody else sees it until you have replied.'**
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote;
+
   /// Line beside the outlined box shown while the creator moves a poll, quiz, slider, question, Add yours or replies sticker: the sticker can only stand inside it, clear of the feed's buttons and caption.
   ///
   /// In en, this message translates to:
@@ -23019,6 +23079,36 @@ abstract class AppLocalizations {
   /// **'Protected-minor override cleared'**
   String get devOptionsProtectedMinorClearedToast;
 
+  /// Developer options section heading for forcing whether this account has Divine Confirmation, for testing.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation access'**
+  String get devOptionsConfirmationAccessTitle;
+
+  /// Developer options choice that uses the verifier's real answer for whether this account has Divine Confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Real answer'**
+  String get devOptionsConfirmationAccessReal;
+
+  /// Developer options choice that makes the app act as if this account has Divine Confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Has Confirmation'**
+  String get devOptionsConfirmationAccessHas;
+
+  /// Developer options choice that makes the app act as if this account doesn't have Divine Confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Doesn\'t have Confirmation'**
+  String get devOptionsConfirmationAccessHasNot;
+
+  /// Developer options choice that makes the app act as if it couldn't find out whether this account has Divine Confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check'**
+  String get devOptionsConfirmationAccessUnknown;
+
   /// Semantics label for the button that opens the recorder to create a video reply in comments.
   ///
   /// In en, this message translates to:
@@ -24705,6 +24795,108 @@ abstract class AppLocalizations {
   /// **'Account changed'**
   String get verifyStatusAccountChanged;
 
+  /// Pill on an account linked by signing in that doesn't count because its owner doesn't have Divine Confirmation right now. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs Confirmation'**
+  String get verifyStatusNeedsConfirmation;
+
+  /// App bar title and headline of the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation'**
+  String get verifyConfirmationTitle;
+
+  /// Short pitch under the headline of the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation lets you link your accounts on other platforms by signing in to them.'**
+  String get verifyConfirmationHeroBody;
+
+  /// Heading of the list of what Divine Confirmation includes. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s included'**
+  String get verifyConfirmationIncludedTitle;
+
+  /// List item on the Divine Confirmation screen: linking accounts by signing in. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Link accounts by signing in'**
+  String get verifyConfirmationIncludedSignIn;
+
+  /// Label of the disabled buy button on the Divine Confirmation screen, shown because it cannot be bought yet. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon'**
+  String get verifyConfirmationComingSoon;
+
+  /// Small print at the bottom of the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Details will appear here when Divine Confirmation is ready.'**
+  String get verifyConfirmationSmallPrint;
+
+  /// Shown in place of a button that would buy Divine Confirmation when this build cannot be billed by a store: on the Divine Confirmation screen, on the link-an-account screen, in the sheet shown when a sign-in link is refused for Divine Confirmation, and under a linked account on the verify dashboard in place of the Renew Confirmation button. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation is available in the App Store and Google Play versions of Divine.'**
+  String get verifyConfirmationStoreOnly;
+
+  /// Screen reader label for the disabled buy button on the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation, coming soon, unavailable'**
+  String get verifyConfirmationBuySemantic;
+
+  /// Screen reader label for the disabled restore link on the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore purchases, unavailable'**
+  String get verifyConfirmationRestoreSemantic;
+
+  /// Title of the card on the link-an-account screen that takes the place of the sign-in button when linking by signing in needs Divine Confirmation and the person doesn't have it. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Link by signing in'**
+  String get verifyConfirmationCardTitle;
+
+  /// Body of the card on the link-an-account screen that takes the place of the sign-in button when linking by signing in needs Divine Confirmation and the person doesn't have it. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'One-tap linking is part of Divine Confirmation.'**
+  String get verifyConfirmationCardBody;
+
+  /// Button that opens the Divine Confirmation screen, on the link-an-account screen and in the sheet shown when a sign-in link is refused for Divine Confirmation. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Get Divine Confirmation'**
+  String get verifyGetConfirmation;
+
+  /// Heading of the proof-post section of the link-an-account screen, used in place of the usual heading while the Divine Confirmation card replaces the sign-in button, to say a proof post still links the account without it. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof posts are always available'**
+  String get verifyProofAlwaysAvailable;
+
+  /// Title of the sheet shown when the verification service refuses a sign-in link because linking by signing in needs Divine Confirmation, which the person doesn't have. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Linking by signing in needs Divine Confirmation'**
+  String get verifyConfirmationSheetTitle;
+
+  /// Text under the title of the sheet shown when a sign-in link is refused for Divine Confirmation. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'You can still link this account with a proof post.'**
+  String get verifyConfirmationSheetSubtitle;
+
+  /// Button in the sheet shown when a sign-in link is refused for Divine Confirmation. Drops the sign-in and goes to the proof-post section of the link-an-account screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a proof post'**
+  String get verifyConfirmationSheetUseProof;
+
   /// Screen reader label for the button that removes a linked account.
   ///
   /// In en, this message translates to:
@@ -24747,11 +24939,35 @@ abstract class AppLocalizations {
   /// **'Link your {platform} account'**
   String verifyLinkSemanticLabel(String platform);
 
+  /// Screen reader label for a row that opens the flow for linking one platform, when linking it by signing in needs Divine Confirmation the user lacks. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Link your {platform} account. Signing in needs Divine Confirmation'**
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform);
+
   /// Small marker on platforms that can be linked by signing in, without posting a proof.
   ///
   /// In en, this message translates to:
   /// **'One tap'**
   String get verifyOneTapBadge;
+
+  /// Small marker on a platform that can be linked by signing in, when that needs Divine Confirmation the person does not have. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'One tap with Confirmation'**
+  String get verifyOneTapWithConfirmationBadge;
+
+  /// Button on a linked account that needs Divine Confirmation to count as verified. Opens the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Renew Confirmation'**
+  String get verifyRenewConfirmation;
+
+  /// Screen reader label for the button that opens the Divine Confirmation screen from a linked account that needs it. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Renew Divine Confirmation to restore {platform} account {identity}'**
+  String verifyRenewConfirmationSemanticLabel(String platform, String identity);
 
   /// Notice under the sign-in explainer on the connect screen, saying how long a sign-in link lasts. Shown only when the verifier reports a lifetime for that platform; platforms whose links last until unlinked omit it, so the notice is not shown there.
   ///
@@ -24920,6 +25136,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Verified, but no relay took the update. Try again.'**
   String get verifyErrorPublishFailed;
+
+  /// Error shown when the verification service refused a sign-in link because linking by signing in needs Divine Confirmation, which the person doesn't have. A proof post can still link the account. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Linking by signing in needs Divine Confirmation. You can still link with a proof post.'**
+  String get verifyErrorConfirmationRequired;
+
+  /// Error shown when the verification service couldn't check Divine Confirmation while confirming a sign-in link. The sign-in is kept, so the person can try linking again later. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.'**
+  String get verifyErrorConfirmationUnavailable;
+
+  /// Error shown when a sign-in link is refused for Divine Confirmation right after the app read that the person has it, as happens just after buying it. The sign-in is kept to try again. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'This can take a minute after buying. Try again shortly.'**
+  String get verifyErrorConfirmationPending;
 
   /// Error shown when the platform's one-tap sign-in has no credentials configured on the verification service, so only the proof-post route works.
   ///

@@ -8,6 +8,7 @@ void main() {
     const cases = <String?, SignInLapse?>{
       'signin_expired': SignInLapse.expired,
       'signin_account_changed': SignInLapse.accountChanged,
+      'signin_needs_confirmation': SignInLapse.needsConfirmation,
       // Only the verifier's exact strings count.
       'SIGNIN_EXPIRED': null,
       'proof_not_found': null,

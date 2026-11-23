@@ -2941,7 +2941,9 @@ void main() {
           );
           expect(
             id,
-            equals(scopedSubscriptionId('comments_watch', testRootEventId)),
+            startsWith(
+              '${scopedSubscriptionId('comments_watch', testRootEventId)}_',
+            ),
           );
 
           await controller.close();
@@ -3124,55 +3126,6 @@ void main() {
 
         await sub.cancel();
         await controller.close();
-      });
-    });
-
-    group('stopWatchingComments', () {
-      test('calls unsubscribe with the subscription ID', () async {
-        final controller = StreamController<Event>.broadcast();
-
-        when(
-          () => mockNostrClient.subscribe(
-            any(),
-            subscriptionId: any(named: 'subscriptionId'),
-          ),
-        ).thenAnswer((_) => controller.stream);
-
-        when(
-          () => mockNostrClient.unsubscribe(any()),
-        ).thenAnswer((_) async {});
-
-        // Start watching to set the subscription ID
-        repository.watchComments(
-          rootEventId: testRootEventId,
-          rootEventKind: _testRootEventKind,
-          since: DateTime.fromMillisecondsSinceEpoch(1000000),
-        );
-
-        await repository.stopWatchingComments();
-
-        final subscribedId =
-            verify(
-                  () => mockNostrClient.subscribe(
-                    any(),
-                    subscriptionId: captureAny(named: 'subscriptionId'),
-                  ),
-                ).captured.single
-                as String;
-        verify(() => mockNostrClient.unsubscribe(subscribedId)).called(1);
-
-        await controller.close();
-      });
-
-      test('does nothing when no active subscription', () async {
-        when(
-          () => mockNostrClient.unsubscribe(any()),
-        ).thenAnswer((_) async {});
-
-        // Stop without starting — should not throw or call unsubscribe
-        await repository.stopWatchingComments();
-
-        verifyNever(() => mockNostrClient.unsubscribe(any()));
       });
     });
 

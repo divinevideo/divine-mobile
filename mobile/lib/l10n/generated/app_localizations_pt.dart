@@ -2151,6 +2151,14 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Sua vez';
 
   @override
+  String get videoStickerAddYoursWatchSeries => 'Assista à série';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Assista à série: $prompt';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -11946,6 +11954,34 @@ class AppLocalizationsPt extends AppLocalizations {
       'Mostra quem respondeu a este vídeo com um vídeo. Quem assiste toca nele para ver as respostas.';
 
   @override
+  String get videoEditorSocialStickerAudienceTitle => 'Quem pode responder';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Todo mundo';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Amizades';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Só eu';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Só as pessoas que você segue podem participar. As demais veem o sticker assim que alguém participar.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'O sticker só mostra respostas em vídeo das pessoas que você segue. As demais o veem assim que uma delas responder.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Só você pode participar. Ninguém mais vê o sticker até você participar.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'O sticker só mostra as suas respostas em vídeo. Ninguém mais o vê até você responder.';
+
+  @override
   String get videoEditorInteractiveCardAreaHint =>
       'Este sticker fica nesta área para que quem assiste possa tocar nele';
 
@@ -13759,6 +13795,21 @@ class AppLocalizationsPt extends AppLocalizations {
       'Substituição de menor protegido limpa';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
   String get commentsRecordVideoButtonLabel => 'Gravar comentário em vídeo';
 
   @override
@@ -14828,6 +14879,65 @@ class AppLocalizationsPt extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Desvincular a conta $platform $identity';
   }
@@ -14859,7 +14969,26 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'Um toque';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -14971,6 +15100,18 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'Verificada, mas nenhum relay aceitou a atualização. Tente de novo.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>

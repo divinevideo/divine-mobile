@@ -12,5 +12,6 @@ PROVISIONING_PROFILE_SPECIFIER =
 ENABLE_HARDENED_RUNTIME = YES
 OTHER_CODE_SIGN_FLAGS = --timestamp --options=runtime
 
-// Optional local-only override for unsigned/dev macOS builds.
+// Optional local or CI-generated override (git-ignored). Codemagic writes
+// Mac App Store manual signing settings here before archiving.
 #include? "LocalRelease.xcconfig"

@@ -78,6 +78,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/utils/path_resolver.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_actions.dart';
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_sheet.dart';
@@ -132,6 +133,7 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
     this.draftId,
     this.fromLibrary = false,
     this.analyticsSession,
+    this.openRequest,
   });
 
   /// Optional draft ID to load an existing draft.
@@ -143,6 +145,9 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
 
   /// Continues the funnel of the reaction that opened this editor.
   final CreationAnalyticsSession? analyticsSession;
+
+  /// When the recorder asked for this editor, timed into `editor_ready`.
+  final EditorOpenRequest? openRequest;
 
   /// Route name for this screen.
   static const routeName = 'video-editor';
@@ -281,6 +286,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         hasDraft: widget.draftId != null,
         fromLibrary: widget.fromLibrary,
       ),
+      openRequest: widget.openRequest,
     );
     _creationAnalyticsTracker = ref.read(creationAnalyticsTrackerProvider);
     if (widget.analyticsSession case final session?) {
@@ -1023,6 +1029,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       prompt: addYours.prompt,
       hashtag: addYours.hashtag,
       chainRoot: addYours.chainRoot,
+      audience: addYours.audience,
     );
     if (!sticker.isComplete) return;
     Log.debug(
@@ -1684,8 +1691,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
                 canPop: false,
                 child: ValueListenableBuilder<bool>(
                   valueListenable: _isLoadingDraft,
-                  builder: (_, isLoading, _) =>
-                      VideoEditorScaffold(isLoading: isLoading),
+                  builder: (_, isLoading, _) => ScreenFrameTraceScope(
+                    screen: .editor,
+                    child: VideoEditorScaffold(isLoading: isLoading),
+                  ),
                 ),
               ),
             );

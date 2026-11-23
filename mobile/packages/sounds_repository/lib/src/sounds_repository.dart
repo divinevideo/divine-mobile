@@ -24,13 +24,6 @@ import 'package:sounds_repository/src/sound_library_api_client.dart';
 import 'package:sounds_repository/src/sound_search_page_exception.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// The sounds being picked up right now, the most trending first, with the
-/// number of videos that use each, keyed by event id.
-typedef RankedSounds = ({
-  List<AudioEvent> sounds,
-  Map<String, int> usageCounts,
-});
-
 /// One page of a sound list from Funnelcake's sound index: its sounds, in
 /// the index's order, Funnelcake's count of the videos using each, keyed by
 /// event id, and the cursor of the page after it, `null` on the last.
@@ -126,10 +119,6 @@ class SoundsRepository {
   /// Default cap on the Divine library sounds one [fetchDivineSounds] pulls.
   static const int maxDivineSounds = 500;
 
-  /// How many of the ranking [fetchPopularSounds] asks for unless told
-  /// otherwise, and so how far apart its pages' offsets are.
-  static const int popularPageSize = 50;
-
   /// Default cap on the video events one batched usage-count query pulls.
   ///
   /// Applies to the whole batch, not per sound — see
@@ -204,6 +193,11 @@ class SoundsRepository {
   /// Event IDs whose stable unresolved result was already reported.
   final Set<String> _loggedUnresolvedSoundIds = {};
 
+  /// What Funnelcake's sound index said about the source videos of the
+  /// sounds it listed, keyed by [AudioEvent.sourceVideoReference], oldest
+  /// first; see [sourceVideosFromIndex].
+  final Map<String, Event?> _indexedSourceVideos = {};
+
   /// Active subscription for real-time updates
   RefusalRetryingSubscription? _subscription;
   String? _subscriptionId;
@@ -277,6 +271,7 @@ class SoundsRepository {
     await _soundsSubject.close();
     _cache.clear();
     _loggedUnresolvedSoundIds.clear();
+    _indexedSourceVideos.clear();
   }
 
   /// Fetch trending/recent sounds from relays.
@@ -325,44 +320,6 @@ class SoundsRepository {
     }
   }
 
-  /// Fetch the sounds people are picking up right now, the most trending
-  /// first, with how many videos use each.
-  ///
-  /// Funnelcake ranks them; the events come from the relays, so each sound
-  /// carries the reuse and source-video tags the picker relies on. A ranked
-  /// sound no relay returns is left out. The usage counts are Funnelcake's,
-  /// keyed by event id, since they are what the ranking is built on.
-  ///
-  /// [offset] skips that many of the ranking, for the pages after the
-  /// first. The usage counts hold an entry for every ranked sound, so fewer
-  /// of them than [limit] means the ranking ends with this page.
-  ///
-  /// Returns no sounds when no Funnelcake client is available.
-  ///
-  /// Throws whatever the Funnelcake request or the relay query throws.
-  Future<RankedSounds> fetchPopularSounds({
-    int limit = popularPageSize,
-    int offset = 0,
-  }) async {
-    final client = _funnelcakeApiClient;
-    if (client == null || !client.isAvailable) {
-      return (sounds: const <AudioEvent>[], usageCounts: const <String, int>{});
-    }
-
-    final ranked = await client.getTrendingSounds(
-      limit: limit,
-      offset: offset,
-    );
-    final usageCounts = {
-      for (final sound in ranked)
-        if (sound.id.isNotEmpty) sound.id: sound.usageCount,
-    };
-    return (
-      sounds: withoutBlockedAuthors(await _soundsInOrder(usageCounts.keys)),
-      usageCounts: usageCounts,
-    );
-  }
-
   /// How long [_soundsInOrder] waits for every relay to answer on the shared
   /// connections before it asks again for the sounds still missing on
   /// connections of their own.
@@ -376,7 +333,10 @@ class SoundsRepository {
   /// carries the reuse and source-video tags the picker relies on. One no
   /// relay returns is left out. Empty, without asking, for no ids.
   ///
-  /// Sounds this repository holds already are not asked for again. The rest
+  /// Sounds this repository holds already are not asked for again, and
+  /// neither are those among [served], the events Funnelcake sent along: one
+  /// of them that is no playable sound is left out, as the relay would have
+  /// returned the same event. The rest
   /// are read waiting for every relay to answer: a read that does not wait
   /// ends as soon as the local event cache has answered, with only the
   /// sounds it held, whenever the relay is still busy with the requests
@@ -384,21 +344,27 @@ class SoundsRepository {
   /// starts. When the relays have not all answered within
   /// [soundLookupTimeout], the sounds still missing are asked for again on
   /// connections of their own, which no other request is queued on.
-  Future<List<AudioEvent>> _soundsInOrder(Iterable<String> ids) async {
+  Future<List<AudioEvent>> _soundsInOrder(
+    Iterable<String> ids, {
+    Iterable<Event> served = const [],
+  }) async {
     final wanted = ids.toList();
     if (wanted.isEmpty) return const [];
     final found = <String, AudioEvent>{
       for (final id in wanted) id: ?_cache[id],
     };
+    final servedEvents = [
+      for (final event in served)
+        if (wanted.contains(event.id) && !found.containsKey(event.id)) event,
+    ];
+    final answered = {for (final event in servedEvents) event.id};
 
+    List<String> missingIds() => [
+      for (final id in wanted)
+        if (!found.containsKey(id) && !answered.contains(id)) id,
+    ];
     List<Filter> missing() => [
-      Filter(
-        ids: [
-          for (final id in wanted)
-            if (!found.containsKey(id)) id,
-        ],
-        kinds: const [audioEventKind],
-      ),
+      Filter(ids: missingIds(), kinds: const [audioEventKind]),
     ];
     void addFound(List<Event> events) {
       for (final sound in _processAndCacheEvents(events)) {
@@ -406,14 +372,15 @@ class SoundsRepository {
       }
     }
 
-    if (found.length < wanted.length) {
+    addFound(servedEvents);
+    if (missingIds().isNotEmpty) {
       final read = await _nostrClient.queryEventsDetailed(
         missing(),
         timeout: soundLookupTimeout,
         requireAllRelaysSettled: true,
       );
       addFound(read.events);
-      if (read.timedOut && found.length < wanted.length) {
+      if (read.timedOut && missingIds().isNotEmpty) {
         final retry = await _nostrClient.queryEventsOnFreshConnections(
           missing(),
           timeout: freshSoundLookupTimeout,
@@ -493,10 +460,9 @@ class SoundsRepository {
     );
     if (read.noRelays) return _nostrClient.queryEvents([filter]);
     if (!read.timedOut) return read.events;
-    final retry = await _nostrClient.queryEventsOnFreshConnections(
-      [filter],
-      timeout: freshSoundLookupTimeout,
-    );
+    final retry = await _nostrClient.queryEventsOnFreshConnections([
+      filter,
+    ], timeout: freshSoundLookupTimeout);
     final newest = {
       for (final event in [...read.events, ...retry.events]) event.id: event,
     }.values.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -727,9 +693,7 @@ class SoundsRepository {
         ),
       ]);
 
-      final audioEvents = withoutBlockedAuthors(
-        _processAndCacheEvents(events),
-      );
+      final audioEvents = withoutBlockedAuthors(_processAndCacheEvents(events));
 
       Log.debug(
         'Fetched ${audioEvents.length} sounds by creator',
@@ -754,7 +718,8 @@ class SoundsRepository {
   /// From Funnelcake's sound index, which classifies sounds as music or
   /// effects by their audio (almost no sound carries a tag that says so) and
   /// leaves out sounds that are only someone talking or silent. Each sound is
-  /// loaded from the relays, as [fetchPopularSounds] does. Left out are
+  /// taken from the event Funnelcake sends with it, or loaded from the relays
+  /// when it sends none, as [fetchPopularSounds] does. Left out are
   /// sounds by authors the viewer blocked or muted, and a video's own sound
   /// shared as it was ([AudioEvent.isAutoSharedOriginal]) until a second
   /// video uses it, as the index counts: most of the newest sounds are such,
@@ -769,21 +734,21 @@ class SoundsRepository {
   /// the two apart. A later page of the index does not switch: it throws
   /// what the Funnelcake request or the relay lookup throws, or a
   /// [FunnelcakeNotConfiguredException] without a client.
-  Future<SoundIndexPage> fetchNewestSounds({
-    SoundKind? kind,
-    String? cursor,
-  }) => _newestSoundList(kind: kind, cursor: cursor);
+  Future<SoundIndexPage> fetchNewestSounds({SoundKind? kind, String? cursor}) =>
+      _newestSoundList(kind: kind, cursor: cursor);
 
-  /// The sounds of [kind] people are picking up, the most trending first, a
-  /// page at a time: the picker's Popular list with a kind chosen.
+  /// The sounds people are picking up right now, the most trending first,
+  /// of [kind] when one is given, a page at a time: the picker's Popular
+  /// list.
   ///
   /// From Funnelcake's sound index, like [fetchNewestSounds], but keeping a
-  /// video's own sound, which only ranks once people use it. A single empty
-  /// page, without asking, when no Funnelcake client is available; throws
-  /// what the Funnelcake request or the relay lookup throws, as there is no
-  /// ranking to fall back on.
-  Future<SoundIndexPage> fetchPopularSoundsOfKind(
-    SoundKind kind, {
+  /// video's own sound, which only ranks once people use it. The usage
+  /// counts are Funnelcake's, since they are what the ranking is built on. A
+  /// single empty page, without asking, when no Funnelcake client is
+  /// available; throws what the Funnelcake request or the relay lookup
+  /// throws, as there is no ranking to fall back on.
+  Future<SoundIndexPage> fetchPopularSounds({
+    SoundKind? kind,
     String? cursor,
   }) async {
     final client = _funnelcakeApiClient;
@@ -931,20 +896,106 @@ class SoundsRepository {
     nextCursor: null,
   );
 
-  /// [page] with its sounds loaded from the relays in its order, leaving out
-  /// those by authors the viewer blocked or muted.
+  /// [page] with its sounds in its order, leaving out those by authors the
+  /// viewer blocked or muted. A sound whose event Funnelcake sent along is
+  /// taken from it, the rest are loaded from the relays, and what Funnelcake
+  /// said about their source videos is kept for [sourceVideosFromIndex].
   Future<SoundIndexPage> _indexPage(SoundSearchResponse page) async {
     final usageCounts = {
       for (final sound in page.sounds)
         if (sound.id.isNotEmpty) sound.id: sound.usageCount,
     };
+    final sounds = await _soundsInOrder(
+      usageCounts.keys,
+      served: [
+        for (final hit in page.sounds)
+          if (hit.event case final event?
+              when event.id == hit.id && event.kind == audioEventKind)
+            event,
+      ],
+    );
+    _rememberIndexedSourceVideos(page.sounds);
     return (
-      sounds: List<AudioEvent>.unmodifiable(
-        withoutBlockedAuthors(await _soundsInOrder(usageCounts.keys)),
-      ),
+      sounds: List<AudioEvent>.unmodifiable(withoutBlockedAuthors(sounds)),
       usageCounts: usageCounts,
       nextCursor: page.nextCursor,
     );
+  }
+
+  /// How many answers of [sourceVideosFromIndex] are kept: a few pages of
+  /// each picker list. The oldest go first.
+  @visibleForTesting
+  static const maxIndexedSourceVideos = 400;
+
+  /// What Funnelcake's sound index said about the source videos at
+  /// [references], each an [AudioEvent.sourceVideoReference] of a sound it
+  /// listed lately: the current version of the video, or `null` when the
+  /// index shows the public none, because it is deleted, moderated,
+  /// unplayable or by an author who is not public.
+  ///
+  /// A reference the index said nothing about is absent, and so is one
+  /// whose `a` tag the index may have read differently from
+  /// [AudioEvent.sourceVideoReference]: the index reads a sound's first
+  /// video `a` tag. Absent means unknown, not gone.
+  ///
+  /// The events are the index's, unchecked against this viewer's blocks
+  /// and content filters, which a caller applies as for any video.
+  Map<String, Event?> sourceVideosFromIndex(Iterable<String> references) => {
+    for (final reference in references)
+      if (_indexedSourceVideos.containsKey(reference))
+        reference: _indexedSourceVideos[reference],
+  };
+
+  void _rememberIndexedSourceVideos(List<SoundStats> hits) {
+    for (final hit in hits) {
+      final event = hit.event;
+      if (!hit.sourceEventKnown || event == null || event.id != hit.id) {
+        continue;
+      }
+      final reference = _cache[hit.id]?.sourceVideoReference;
+      if (reference == null) continue;
+      final address = AId.fromString(reference);
+      final indexed = _firstVideoAddress(event.tags);
+      if (address == null ||
+          indexed == null ||
+          indexed.kind != address.kind ||
+          indexed.pubkey != address.pubkey.toLowerCase() ||
+          indexed.dTag != address.dTag) {
+        continue;
+      }
+      final source = hit.sourceEvent;
+      if (source != null &&
+          (source.kind != indexed.kind ||
+              source.pubkey != indexed.pubkey ||
+              source.dTagValue != indexed.dTag)) {
+        continue;
+      }
+      _indexedSourceVideos
+        ..remove(reference)
+        ..[reference] = source;
+    }
+    while (_indexedSourceVideos.length > maxIndexedSourceVideos) {
+      _indexedSourceVideos.remove(_indexedSourceVideos.keys.first);
+    }
+  }
+
+  /// The video [tags] name first, as Funnelcake's sound index reads them:
+  /// the first `a` tag of a video kind, its public key lowercased and its
+  /// d-tag kept whole.
+  static AId? _firstVideoAddress(List<List<String>> tags) {
+    for (final tag in tags) {
+      if (tag.length < 2 || tag[0] != 'a') continue;
+      final address = AId.fromString(tag[1]);
+      if (address != null &&
+          NIP71VideoKinds.isAddressableVideoKind(address.kind)) {
+        return AId(
+          kind: address.kind,
+          pubkey: address.pubkey.toLowerCase(),
+          dTag: address.dTag,
+        );
+      }
+    }
+    return null;
   }
 
   /// A lowercase hex public key.
@@ -979,7 +1030,8 @@ class SoundsRepository {
   /// Funnelcake's sound search answers when it can. It finds sounds despite
   /// typos and partial words, so "pianno" finds piano sounds, and ranks them
   /// best match first, with Divine's own first among equal matches; that
-  /// order is kept. Each sound is loaded from the relays, as
+  /// order is kept. Each sound is taken from the event Funnelcake sends with
+  /// it, or loaded from the relays when it sends none, as
   /// [fetchPopularSounds] does, so it carries the reuse and source-video tags
   /// the picker relies on, and one no relay returns is left out. A page can
   /// therefore hold fewer sounds than [limit], or none, and still not be the
@@ -1323,9 +1375,9 @@ class SoundsRepository {
   }
 
   Future<AudioEvent?> _fetchVideoOriginalSound(String soundId) async {
-    final match = RegExp(r'^video_([0-9a-fA-F]{64})(?:-.*)?$').firstMatch(
-      soundId,
-    );
+    final match = RegExp(
+      r'^video_([0-9a-fA-F]{64})(?:-.*)?$',
+    ).firstMatch(soundId);
     if (match == null) return null;
     final videoId = match.group(1)!;
     final api = _funnelcakeApiClient;

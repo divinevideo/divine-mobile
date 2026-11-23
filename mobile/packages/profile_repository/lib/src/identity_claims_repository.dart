@@ -5,10 +5,12 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:clock/clock.dart';
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' show Event, Filter;
+import 'package:profile_repository/src/confirmation_access.dart';
 import 'package:profile_repository/src/identity_event_selection.dart';
 import 'package:profile_repository/src/sign_in_lapse.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -29,6 +31,16 @@ typedef IdentityEventSigner =
       required String content,
       required List<List<String>> tags,
       int? createdAt,
+    });
+
+/// Signs a NIP-98 HTTP auth event (kind 27235) with [content] and [tags]
+/// without asking the user. Returns null when that can't be done without a
+/// prompt. The kind is fixed by the wiring, not passed in, so this signer can
+/// only ever sign HTTP auth.
+typedef PassiveHttpAuthSigner =
+    Future<Event?> Function({
+      required String content,
+      required List<List<String>> tags,
     });
 
 /// The claims already on the identity event could not be read, so a write
@@ -204,16 +216,23 @@ class IdentityClaimsRepository {
   /// constructing this without them. [identityEventsDao] lets a completed
   /// write refresh the local `i` tag cache so the new link renders without
   /// waiting on a relay reread.
+  ///
+  /// [signPassively] signs without asking the user, for checks that run on
+  /// their own when a screen opens ([confirmationAccess]): it must never
+  /// launch an external signer or a bunker prompt. Without it those checks
+  /// answer as unknown.
   IdentityClaimsRepository({
     required VerifierClient verifierClient,
     IdentityVerificationsDao? identityVerificationsDao,
     NostrClient? nostrClient,
     IdentityEventSigner? signEvent,
+    PassiveHttpAuthSigner? signPassively,
     IdentityEventsDao? identityEventsDao,
   }) : _verifierClient = verifierClient,
        _verificationsDao = identityVerificationsDao,
        _nostrClient = nostrClient,
        _signEvent = signEvent,
+       _signPassively = signPassively,
        _identityEventsDao = identityEventsDao;
 
   /// Event kind carrying NIP-39 identity claims since the 2026-02 spec
@@ -225,6 +244,20 @@ class IdentityClaimsRepository {
   /// verifier to drop a cached OAuth verification.
   static const int _nip98EventKind = 27235;
 
+  /// How long [confirmationAccess] waits for the passive signer. A local key
+  /// signs at once; a remote signer that hangs would otherwise hold the
+  /// shared check open, so it gives up as unknown, as the app's other
+  /// passive NIP-98 signing does.
+  static const Duration _passiveSignTimeout = Duration(seconds: 15);
+
+  /// How long [confirmationAccess] reuses a definite answer, the same as the
+  /// verifier reuses its own: a purchase made on another device shows on the
+  /// next check after that. A stale "no" hides sign-in from someone who has
+  /// paid, so it is kept for the shorter time; a stale "yes" only shows a
+  /// sign-in the verifier still refuses at confirm.
+  static const Duration _hasNotLifetime = Duration(seconds: 60);
+  static const Duration _hasLifetime = Duration(minutes: 5);
+
   /// Client-side freshness window for verified verdicts, anchored on the
   /// verifier's `checked_at`. Mirrors the service's KV TTL for verified
   /// results (divine-identify-verification-service/src/utils/cache.ts:4).
@@ -234,6 +267,7 @@ class IdentityClaimsRepository {
   final IdentityVerificationsDao? _verificationsDao;
   final NostrClient? _nostrClient;
   final IdentityEventSigner? _signEvent;
+  final PassiveHttpAuthSigner? _signPassively;
   final IdentityEventsDao? _identityEventsDao;
 
   /// Tags this instance last published per pubkey.
@@ -258,6 +292,24 @@ class IdentityClaimsRepository {
   /// screen opened over it make one request between them, and the screen
   /// gets the newer answer rather than the one before it.
   Future<List<VerifierPlatform>>? _platformsInFlight;
+
+  /// The last definite answer [confirmationAccess] got, reused until it is
+  /// older than its lifetime or a refresh replaces it. It is dropped when the
+  /// signed-in account changes (the repository is rebuilt); the server is the
+  /// backstop.
+  ConfirmationAccess? _lastConfirmationAccess;
+
+  /// When [_lastConfirmationAccess] was answered.
+  DateTime? _lastConfirmationAccessAt;
+
+  /// The [confirmationAccess] check in flight, shared so screens asking at
+  /// the same time sign and send one request between them.
+  Future<ConfirmationAccess>? _confirmationAccessInFlight;
+
+  /// The newest [confirmationAccess] check, kept after it finishes. A check a
+  /// newer one overtook answers with this one, so its callers get the newest
+  /// answer even when that answer is unknown and so was not remembered.
+  Future<ConfirmationAccess>? _latestConfirmationAccess;
 
   /// Parses NIP-39 identity claims out of the given identity-event tag
   /// list (kind 10011, or kind 0 for pre-migration profiles).
@@ -769,6 +821,101 @@ class IdentityClaimsRepository {
         'Verifier OAuth revoke failed for ${claim.platform}: $e',
         name: 'IdentityClaimsRepository',
       );
+    }
+  }
+
+  /// Whether the signed-in user holds Divine Confirmation, as the verifier
+  /// answers a NIP-98 request signed by this repository's signer.
+  ///
+  /// Remembers the last definite answer as long as the verifier does:
+  /// [ConfirmationAccess.has] for five minutes, [ConfirmationAccess.hasNot]
+  /// for 60 seconds. Shares a check already in flight, ahead of a remembered
+  /// answer, so a call made during a refresh gets the refresh's answer.
+  /// [refresh] asks again, for a re-check after a purchase or a refusal.
+  /// An [ConfirmationAccess.unknown] answer is a blip, not a fact, so it is
+  /// returned but not remembered: the next call asks again.
+  /// Callers of a check a newer one overtook get the newest check's answer.
+  ///
+  /// Signs only through the passive signer, so it never prompts the user.
+  ///
+  /// Never throws: no passive signer, a declined signature, a signer that
+  /// does not answer within 15 seconds, an unreachable verifier or one
+  /// without the endpoint is [ConfirmationAccess.unknown], which callers
+  /// treat like [ConfirmationAccess.has].
+  Future<ConfirmationAccess> confirmationAccess({bool refresh = false}) {
+    if (!refresh) {
+      final inFlight = _confirmationAccessInFlight;
+      if (inFlight != null) return inFlight;
+      final last = _lastConfirmationAccess;
+      final at = _lastConfirmationAccessAt;
+      if (last != null && at != null) {
+        final lifetime = last == ConfirmationAccess.has
+            ? _hasLifetime
+            : _hasNotLifetime;
+        if (clock.now().difference(at) < lifetime) return Future.value(last);
+      }
+    }
+    late final Future<ConfirmationAccess> check;
+    check = _askConfirmationAccess().then((access) {
+      final latest = _latestConfirmationAccess;
+      if (latest != null && !identical(latest, check)) {
+        // A newer check overtook this one, usually a refresh, or a plain
+        // call made after a refresh finished unknown. This answer is older,
+        // so its callers follow the newest check instead, whether it is
+        // still running or already finished, and this answer is not
+        // remembered.
+        return latest;
+      }
+      _lastConfirmationAccess = access == ConfirmationAccess.unknown
+          ? null
+          : access;
+      _lastConfirmationAccessAt = clock.now();
+      _confirmationAccessInFlight = null;
+      return access;
+    });
+    return _confirmationAccessInFlight = _latestConfirmationAccess = check;
+  }
+
+  Future<ConfirmationAccess> _askConfirmationAccess() async {
+    final sign = _signPassively;
+    if (sign == null) return ConfirmationAccess.unknown;
+    try {
+      final event = await sign(
+        content: '',
+        tags: [
+          ['u', _verifierClient.confirmationAccessUrl],
+          ['method', 'GET'],
+        ],
+      ).timeout(_passiveSignTimeout);
+      if (event == null) {
+        Log.warning(
+          'Confirmation access check skipped: the signer declined',
+          name: 'IdentityClaimsRepository',
+        );
+        return ConfirmationAccess.unknown;
+      }
+      final access = await _verifierClient.fetchConfirmationAccess(
+        nip98Event: event.toJson(),
+      );
+      return switch (access) {
+        true => ConfirmationAccess.has,
+        false => ConfirmationAccess.hasNot,
+        null => ConfirmationAccess.unknown,
+      };
+    } on VerifierApiException catch (e) {
+      Log.warning(
+        'Confirmation access check refused by the verifier: '
+        'HTTP ${e.statusCode}',
+        name: 'IdentityClaimsRepository',
+      );
+      return ConfirmationAccess.unknown;
+    } on Object catch (e) {
+      // Only the type: a signer's message can name the account.
+      Log.warning(
+        'Confirmation access check failed: ${e.runtimeType}',
+        name: 'IdentityClaimsRepository',
+      );
+      return ConfirmationAccess.unknown;
     }
   }
 

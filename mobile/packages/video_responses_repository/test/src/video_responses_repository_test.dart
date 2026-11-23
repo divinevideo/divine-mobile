@@ -650,6 +650,92 @@ void main() {
       );
     });
 
+    group('fetchSeriesBy', () {
+      test('reads every part one person added to a chain, the newest '
+          'first, from the relays alone', () async {
+        relayAnswers([
+          _answer(301, createdAt: 1000, pubkey: _creator),
+          _answer(302, createdAt: 3000, pubkey: _creator),
+          _answer(303, createdAt: 2000, pubkey: _creator),
+          // Someone else's answer, and the creator's to another chain.
+          _answer(304, createdAt: 4000),
+          _answer(
+            305,
+            createdAt: 5000,
+            pubkey: _creator,
+            chain: '34236:$_creator:other-d',
+          ),
+        ]);
+
+        final series = await repository(withFunnelcake: true).fetchSeriesBy(
+          chainRoot: _rootAddress,
+          hashtag: 'desksetup',
+          author: _creator,
+        );
+
+        expect(series.total, equals(3));
+        expect(
+          series.videos.map((v) => v.id),
+          equals([_hex(302), _hex(303), _hex(301)]),
+        );
+        final filter =
+            (verify(
+                      () => nostrClient.readEvents(captureAny()),
+                    ).captured.single
+                    as List<Filter>)
+                .single;
+        expect(filter.authors, equals([_creator]));
+        expect(filter.a, equals([_rootAddress]));
+        expect(filter.t, equals(['desksetup']));
+        verifyNever(
+          () => funnelcake.getVideoResponses(
+            videoId: any(named: 'videoId'),
+            type: any(named: 'type'),
+            limit: any(named: 'limit'),
+            hashtag: any(named: 'hashtag'),
+          ),
+        );
+      });
+
+      test('says when a relay may hold more parts than it sent', () async {
+        relayAnswers([
+          for (var id = 301; id < 304; id++)
+            _answer(id, createdAt: id, pubkey: _creator),
+        ], capped: true);
+
+        final series = await repository().fetchSeriesBy(
+          chainRoot: _rootAddress,
+          hashtag: 'desksetup',
+          author: _creator,
+          limit: 2,
+        );
+
+        expect(series.videos, hasLength(2));
+        expect(series.total, equals(3));
+        expect(series.totalIsAtLeast, isTrue);
+      });
+    });
+
+    group('fetchVideoAt', () {
+      test('reads the video at an address', () async {
+        relayAnswers([_rootVideo()]);
+
+        final video = await repository().fetchVideoAt(_rootAddress);
+
+        expect(video?.id, equals(_rootId));
+      });
+
+      test(
+        'reads nothing for what is no address, or a video not there',
+        () async {
+          relayAnswers([_video(id: 101, createdAt: 600, dTag: 'other-d')]);
+
+          expect(await repository().fetchVideoAt(_rootId), isNull);
+          expect(await repository().fetchVideoAt(_rootAddress), isNull);
+        },
+      );
+    });
+
     group('fetchRemixesOf', () {
       Event remix(
         int id, {
@@ -866,7 +952,10 @@ void main() {
           ], endedBy: QueryEnd.settledEarly);
 
           // Read starting it, so a relay that stayed silent changes nothing.
-          expect(await chainStart(_rootAddress), AddYoursChainStart.starts);
+          expect(
+            (await chainStart(_rootAddress)).video?.addressableId,
+            _rootAddress,
+          );
           final filter =
               (verify(
                         () => nostrClient.readEvents(captureAny()),

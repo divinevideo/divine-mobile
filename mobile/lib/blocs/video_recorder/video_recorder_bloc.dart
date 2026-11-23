@@ -35,8 +35,12 @@ import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dart';
+import 'package:openvine/observability/camera_startup_trace.dart';
+import 'package:openvine/observability/camera_switch_trace.dart';
+import 'package:openvine/observability/clip_postprocess_trace.dart';
 import 'package:openvine/observability/recording_traces.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/observability/stop_motion_assemble_trace.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/services/front_camera_mirror_preference_service.dart';
@@ -577,14 +581,16 @@ class VideoRecorderBloc
       category: LogCategory.video,
     );
 
-    // Operation-scoped trace: this init owns the returned handle, so a
-    // concurrent init gets its own trace instead of stopping or re-attributing
-    // this one. Start is fire-and-forget so it doesn't add a platform round-trip
-    // to the exact startup path this trace measures; stop is fire-and-forget so
-    // it doesn't gate preview bring-up. The handle is still stopped in `finally`,
-    // tagged with the outcome so the console can filter startups that never
-    // reached a live preview.
-    final trace = _performanceMonitor.startOperationTrace('camera_startup');
+    // Operation-scoped trace: this init owns it, so a concurrent init gets its
+    // own trace instead of stopping or re-attributing this one. Start and stop
+    // are fire-and-forget, so the trace adds no platform round-trip to the
+    // startup it measures. A camera that does not open ends it in `finally`,
+    // tagged with the outcome; an open one ends it once the mode is applied.
+    final startup = CameraStartupTrace(
+      _performanceMonitor,
+      lens: initialLens.name,
+      quality: event.videoQuality.value,
+    );
 
     Object? initError;
     try {
@@ -611,16 +617,10 @@ class VideoRecorderBloc
       initError = e;
       addError(e, stackTrace);
     } finally {
-      trace
-        ..putAttribute('lens', initialLens.name)
-        ..putAttribute('quality', event.videoQuality.value)
-        ..putAttribute(
-          'outcome',
-          initError != null
-              ? 'error'
-              : (_cameraService.isInitialized ? 'success' : 'failed'),
-        );
-      unawaited(trace.stop());
+      startup.cameraInitFinished(
+        threw: initError != null,
+        opened: _cameraService.isInitialized,
+      );
     }
 
     if (initError != null) {
@@ -657,7 +657,13 @@ class VideoRecorderBloc
     // A mode switched to while the camera was starting could not reach it,
     // and the camera opens with one camera even where dual capture was left
     // on.
-    await _applyCameraForRecorderMode(emit);
+    try {
+      await _applyCameraForRecorderMode(emit);
+    } finally {
+      startup.modeApplied(
+        dualCamera: _dualCamera?.isDualCameraEnabled ?? false,
+      );
+    }
 
     // Opening straight into Upload: the screen's pause for that tab arrived
     // while the camera was still starting and was dropped, so release it now.
@@ -823,6 +829,11 @@ class VideoRecorderBloc
   ) async {
     if (_refusesRebindMidTake('Camera switch')) return;
 
+    final trace = CameraSwitchTrace(
+      _performanceMonitor,
+      kind: CameraSwitchKind.flip,
+      dualCamera: _dualCamera?.isDualCameraEnabled ?? false,
+    );
     // Flag the switch up front so the preview blurs its frozen last frame
     // while the native camera rebinds. `_emitCameraSync` rebuilds the state
     // from scratch and drops this flag once the new lens is live; the
@@ -830,6 +841,7 @@ class VideoRecorderBloc
     emit(state.copyWith(isSwitchingCamera: true));
     try {
       final success = await _cameraService.switchCamera();
+      trace.switched(success: success);
 
       if (!success) {
         Log.warning(
@@ -856,6 +868,7 @@ class VideoRecorderBloc
       if (!emit.isDone) {
         emit(state.copyWith(isSwitchingCamera: false));
       }
+      trace.finish(lens: _cameraService.currentLens.name);
     }
   }
 
@@ -917,26 +930,40 @@ class VideoRecorderBloc
       return;
     }
 
-    final success = await _cameraService.setLens(event.lens);
-    if (!success) {
-      Log.warning(
-        '⚠️ Failed to set lens to ${event.lens.displayName}',
+    // Picking the lens already live is no switch, and would report one that
+    // took no time.
+    final trace = event.lens == _cameraService.currentLens
+        ? null
+        : CameraSwitchTrace(
+            _performanceMonitor,
+            kind: CameraSwitchKind.lens,
+            dualCamera: _dualCamera?.isDualCameraEnabled ?? false,
+          );
+    try {
+      final success = await _cameraService.setLens(event.lens);
+      trace?.switched(success: success);
+      if (!success) {
+        Log.warning(
+          '⚠️ Failed to set lens to ${event.lens.displayName}',
+          name: 'VideoRecorderBloc',
+          category: LogCategory.video,
+        );
+        return;
+      }
+
+      await _saveCurrentLensPreference();
+
+      Log.info(
+        '🔄 Lens switched to ${event.lens.displayName} - zoom reset to 1.0x',
         name: 'VideoRecorderBloc',
         category: LogCategory.video,
       );
-      return;
+
+      emit(state.copyWith(zoomLevel: 1, baseZoomLevel: 1));
+      _emitCameraSync(emit);
+    } finally {
+      trace?.finish(lens: _cameraService.currentLens.name);
     }
-
-    await _saveCurrentLensPreference();
-
-    Log.info(
-      '🔄 Lens switched to ${event.lens.displayName} - zoom reset to 1.0x',
-      name: 'VideoRecorderBloc',
-      category: LogCategory.video,
-    );
-
-    emit(state.copyWith(zoomLevel: 1, baseZoomLevel: 1));
-    _emitCameraSync(emit);
   }
 
   Future<void> _onZoomLevelSet(
@@ -1679,6 +1706,10 @@ class VideoRecorderBloc
     // bare clip was already persisted by the unawaited save above. The clip
     // manager tracks completion so a layout can await it before taking the
     // clip off the timeline, without holding this sequential stop handler.
+    final postprocess = ClipPostprocessTrace(
+      _performanceMonitor,
+      chromaKey: clip.hasPendingCaptureChromaKey,
+    );
     final enrichment =
         _enrichAndSaveClip(
           videoResult: videoResult,
@@ -1686,6 +1717,7 @@ class VideoRecorderBloc
           clipManager: clipManager,
           generation: generation,
           remainingDuration: remainingDuration,
+          trace: postprocess,
         ).catchError((Object error, StackTrace stackTrace) {
           // Detached work must not escape as an unhandled async error. The bare
           // clip is already saved, so a failure here only loses the enriched
@@ -1704,10 +1736,12 @@ class VideoRecorderBloc
       // Bind the bake to this recording now. Let both raw library saves
       // finish first so neither can overwrite a keyed result.
       runDetached(
-        clipManager.bakeRecordedTake(
-          clip,
-          generation: generation,
-          after: Future.wait([initialSave, enrichment]),
+        postprocess.timeChromaKeyBake(
+          clipManager.bakeRecordedTake(
+            clip,
+            generation: generation,
+            after: Future.wait([initialSave, enrichment]),
+          ),
         ),
         'bake the chroma key of take ${clip.id}',
         logName: 'VideoRecorderBloc',
@@ -1846,14 +1880,35 @@ class VideoRecorderBloc
   ///
   /// Runs detached (fire-and-forget) from [_onRecordingStopRequested] so the
   /// `sequential()` stop handler returns immediately and never blocks a
-  /// following stop request behind this potentially slow work.
+  /// following stop request behind this potentially slow work. Each step is
+  /// timed on [trace].
   Future<void> _enrichAndSaveClip({
     required EditorVideo videoResult,
     required DivineVideoClip clip,
     required ClipManagerNotifier clipManager,
     required int generation,
     required Duration remainingDuration,
+    required ClipPostprocessTrace trace,
+  }) => trace.timeEnrichment(
+    () => _enrichClip(
+      videoResult: videoResult,
+      clip: clip,
+      clipManager: clipManager,
+      generation: generation,
+      remainingDuration: remainingDuration,
+      trace: trace,
+    ),
+  );
+
+  Future<void> _enrichClip({
+    required EditorVideo videoResult,
+    required DivineVideoClip clip,
+    required ClipManagerNotifier clipManager,
+    required int generation,
+    required Duration remainingDuration,
+    required ClipPostprocessTrace trace,
   }) async {
+    trace.startPhase(ClipPostprocessPhase.copy);
     final videoPath = await videoResult.safeFilePath();
     if (!clipManager.isSessionCurrent(generation)) return;
     final workCopyPath = '$videoPath.work.mp4';
@@ -1861,6 +1916,7 @@ class VideoRecorderBloc
 
     try {
       if (!clipManager.isSessionCurrent(generation)) return;
+      trace.startPhase(ClipPostprocessPhase.duration);
       final metadata = await ProVideoEditor.instance.getMetadata(
         EditorVideo.file(File(workCopyPath)),
       );
@@ -1898,6 +1954,7 @@ class VideoRecorderBloc
           ? halfDuration
           : VideoEditorConstants.defaultThumbnailExtractTime;
 
+      trace.startPhase(ClipPostprocessPhase.thumbnail);
       final thumbnailResult = await VideoThumbnailService.extractThumbnail(
         videoPath: workCopyPath,
         targetTimestamp: targetTimestamp,
@@ -1931,6 +1988,7 @@ class VideoRecorderBloc
         );
       }
 
+      trace.startPhase(ClipPostprocessPhase.ghostFrame);
       final ghostFramePath = await VideoThumbnailService.extractLastFrame(
         videoPath: workCopyPath,
         videoDuration: metadata.duration,
@@ -1974,7 +2032,9 @@ class VideoRecorderBloc
         );
         return;
       }
+      trace.startPhase(ClipPostprocessPhase.librarySave);
       final saved = await clipManager.saveClipToLibrary(updatedClip);
+      trace.librarySaved(saved: saved);
       if (!saved) {
         Log.warning(
           '⚠️ Metadata-enriched clip save to library failed for ${clip.id}',
@@ -3125,6 +3185,11 @@ class VideoRecorderBloc
     final frames = state.stopMotionFrames;
     if (frames.isEmpty) return;
 
+    final trace = StopMotionAssembleTrace(
+      _performanceMonitor,
+      frames: frames.length,
+      append: event.appendToComposition,
+    );
     // Never painted (the handler is synchronous, so this is superseded before
     // the next frame) — but required: without a distinct state in between, a
     // second assemble of the same failing frame list emits a state equal to the
@@ -3139,6 +3204,7 @@ class VideoRecorderBloc
         appendToComposition: event.appendToComposition,
       );
     } catch (e, stackTrace) {
+      trace.finish(assembled: false);
       Log.warning(
         '⚠️ Stop-motion ingest failed',
         name: 'VideoRecorderBloc',
@@ -3148,6 +3214,7 @@ class VideoRecorderBloc
       emit(state.copyWith(stopMotionStatus: StopMotionStatus.failure));
       return;
     }
+    trace.finish(assembled: true);
 
     emit(
       state.copyWith(

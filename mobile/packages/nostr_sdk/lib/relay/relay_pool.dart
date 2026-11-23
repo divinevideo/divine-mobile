@@ -128,9 +128,18 @@ class RelayPool {
 
   final Set<String> _queryFanoutInProgress = {};
 
-  /// Tracks which relays have sent EOSE for each subscription.
-  /// Used to determine when all relays have finished sending stored events.
-  final Map<String, Set<String>> _subscriptionEoseRelays = {};
+  /// Which REQs have drawn EOSE for each live subscription since its
+  /// [Subscription.onEose] last fired.
+  final Map<String, Map<String, (int, int)>> _subscriptionEoseRelays = {};
+
+  /// REQ resends after AUTH, keyed by subscription id and relay URL.
+  final Map<String, Map<String, int>> _liveRequestResends = {};
+
+  /// Armed [subscriptionEoseSettleWindow] timers, keyed by subscription id.
+  final Map<String, Timer> _subscriptionEoseSettleTimers = {};
+
+  /// Live subscriptions whose [Subscription.onEose] has fired at least once.
+  final Set<String> _subscriptionEoseFired = {};
 
   /// Subscription ids the pool released most recently, so a late `EOSE` or
   /// `CLOSED` for one still logs which request it answered.
@@ -179,6 +188,12 @@ class RelayPool {
   /// [_authRejected]: being throttled, or having the event's stamp disputed,
   /// says nothing about whether the key may read.
   static const _inconclusiveAuthRejections = {'rate-limited', 'invalid'};
+
+  /// What strfry before 1.1 says, in a NOTICE, when it gets a COUNT.
+  static const _unknownCommandNotice = 'ERROR: bad msg: unknown cmd';
+
+  /// What memlay says when it gets a COUNT.
+  static const _unknownCountCommandNotice = 'Unknown message type: COUNT';
 
   /// Relay url -> queries in [_queriesParkedForAuth] that the relay ended with
   /// an `auth`-hinted `EOSE` rather than `CLOSED`, so their subscription is
@@ -342,6 +357,7 @@ class RelayPool {
     this.minSubscriptionAgeBeforeRepair = const Duration(seconds: 10),
     this.minQueryAgeBeforeRepair = const Duration(seconds: 4),
     this.subscriptionSilenceProbe = const Duration(seconds: 8),
+    this.subscriptionEoseSettleWindow = const Duration(seconds: 15),
     this.tempRelayIdleTimeout = const Duration(seconds: 120),
     this.tempRelaySweepInterval = const Duration(seconds: 60),
   });
@@ -494,6 +510,19 @@ class RelayPool {
   /// the probe, so a feed the user left inside the relay's round-trip time is
   /// never judged at all rather than being judged and then excused.
   Duration subscriptionSilenceProbe;
+
+  /// How long the relays that owe a live subscription its first EOSE can hold
+  /// [Subscription.onEose] back after another relay sent one, while none of
+  /// them sends the subscription anything.
+  ///
+  /// Each event one of them sends restarts it, as for [querySettleWindow]. The
+  /// default outlasts [subscriptionSilenceProbe], so a relay the probe
+  /// reconnects can still answer the REQ it re-sends. Counted from the first
+  /// EOSE, it also outlasts any subscriber timeout of 15s or less counted from
+  /// the subscribe, so such a subscriber gives up before it ends. It starts
+  /// only once some relay has sent EOSE: while none has, onEose waits as it
+  /// always has.
+  Duration subscriptionEoseSettleWindow;
 
   /// Controls whether [_dispatchTypedFrame] performs expensive Schnorr
   /// verification. The event id is always recomputed first; policy skips only
@@ -885,19 +914,24 @@ class RelayPool {
   /// `connect()`; the socket and heartbeat timer it opens then outlive the
   /// [removeAll] that was supposed to close them, because the relay holding
   /// them is disposed a moment later and nothing can reach them again (#7367).
-  /// Calling this first closes that window: the probes are disarmed and every
-  /// path that could start a connection turns into a no-op.
+  /// Calling this first closes that window: the probes and EOSE settle windows
+  /// are disarmed and every path that could start a connection turns into a
+  /// no-op.
   void beginClose() {
     if (_closed) return;
     _closed = true;
-    _cancelSilenceProbes();
+    _cancelSubscriptionTimers();
   }
 
-  void _cancelSilenceProbes() {
+  void _cancelSubscriptionTimers() {
     for (final probe in _subscriptionSilenceProbes.values) {
       probe.cancel();
     }
     _subscriptionSilenceProbes.clear();
+    for (final timer in _subscriptionEoseSettleTimers.values) {
+      timer.cancel();
+    }
+    _subscriptionEoseSettleTimers.clear();
   }
 
   /// Removes every relay from the pool.
@@ -921,7 +955,7 @@ class RelayPool {
     _tempRelaySweepTimer = null;
     // Nothing left to repair, and a probe outliving the pool would fire into
     // an empty relay set on every armed subscription.
-    _cancelSilenceProbes();
+    _cancelSubscriptionTimers();
     // As in [remove]: a caller starting over re-adds relays synchronously.
     scheduleMicrotask(_settleRefusedAwaitingReplay);
   }
@@ -934,6 +968,9 @@ class RelayPool {
   /// and a counter that restarted could match it to the new socket's
   /// challenge.
   void _forgetRelayBookkeeping(String url) {
+    for (final subId in _subscriptionEoseRelays.keys.toList()) {
+      _withdrawLiveEose(subId, url);
+    }
     _lastSilentRepairAt.remove(url);
     _authHandshakeStartedAt.remove(url);
     _authGateClosed.remove(url);
@@ -1005,9 +1042,11 @@ class RelayPool {
   /// its subscriber why.
   void _endRefusedSubscription(String subId, String reason) {
     _subscriptionSilenceProbes.remove(subId)?.cancel();
+    _clearLiveEoseWindow(subId);
+    _subscriptionEoseFired.remove(subId);
+    _liveRequestResends.remove(subId);
     _refusedAwaitingReplay.remove(subId);
     final subscription = _subscriptions.remove(subId);
-    _subscriptionEoseRelays.remove(subId);
     _storedEventsPhases.remove(subId);
     _subscriptionSentAt.remove(subId);
     if (subscription != null) {
@@ -1974,6 +2013,12 @@ class RelayPool {
     // A queued frame may be dispatched after the relay reconnected: it still
     // belongs to the socket it arrived on.
     final receivedOnGeneration = relay.connectionGeneration;
+    final subId = json.length > 1 && json[1] is String
+        ? json[1] as String
+        : null;
+    final answeredRequest = messageType == 'EOSE' && subId != null
+        ? _liveRequestVersion(relay, subId)
+        : null;
 
     // #5863: when an off-main verify worker is wired, serialize the frames
     // that carry or terminate a query per subscription so the asynchronous
@@ -1987,19 +2032,19 @@ class RelayPool {
     // [_dispatchTypedFrame] logs and drops it without awaiting. With no
     // worker the original synchronous path runs unchanged.
     if (_verifyWorker != null &&
-        json.length > 1 &&
-        json[1] is String &&
+        subId != null &&
         (messageType == 'EVENT' ||
             messageType == 'EOSE' ||
             messageType == 'CLOSED')) {
       return _enqueueOrdered(
         relay,
-        json[1] as String,
+        subId,
         () => _dispatchTypedFrame(
           relay,
           json,
           messageType,
           receivedOnGeneration: receivedOnGeneration,
+          answeredRequest: answeredRequest,
         ),
       );
     }
@@ -2008,6 +2053,7 @@ class RelayPool {
       json,
       messageType,
       receivedOnGeneration: receivedOnGeneration,
+      answeredRequest: answeredRequest,
     );
   }
 
@@ -2177,7 +2223,11 @@ class RelayPool {
   /// Records that the pool re-sent [subId]'s REQ to [relay] on its current
   /// connection. The relay answers it again, after replaying its stored
   /// events.
-  void _storedEventsPhaseResent(Relay relay, String subId) {
+  void _recordLiveRequestResent(Relay relay, String subId) {
+    if (_subscriptions[subId]?.onEose != null) {
+      final resends = _liveRequestResends.putIfAbsent(subId, () => {});
+      resends.update(relay.url, (count) => count + 1, ifAbsent: () => 1);
+    }
     final phase = _storedEventsPhases[subId];
     if (phase == null) return;
     phase.expected.add(relay.url);
@@ -2288,6 +2338,109 @@ class RelayPool {
     }
   }
 
+  /// Fires live subscription [subId]'s [Subscription.onEose] once every relay
+  /// that holds its REQ has sent EOSE.
+  ///
+  /// Until it first fires, the relays that still owe EOSE hold it for no
+  /// longer than [subscriptionEoseSettleWindow] of their silence after the
+  /// first EOSE. Nothing else bounds them: a relay that never connected sends
+  /// nothing, and one that refused the REQ with `NOTICE`, which names no
+  /// subscription (NIP-01 sets no rules for it), keeps the REQ saved and
+  /// stays connected. Either one held it for good (#9007). After it has
+  /// fired, it fires again only once every relay has sent EOSE since, as
+  /// after a reconnect replays the REQ everywhere.
+  void _maybeFireLiveEose(String subId, {bool settleWindowElapsed = false}) {
+    final onEose = _subscriptions[subId]?.onEose;
+    final eosed = _subscriptionEoseRelays[subId];
+    if (onEose == null || eosed == null || eosed.isEmpty) return;
+    final holders = _getRelaysWithSubscription(subId);
+    if (holders.isEmpty) {
+      _clearLiveEoseWindow(subId);
+      return;
+    }
+    final owing = [
+      for (final relay in holders.values)
+        if (eosed[relay.url] != _liveRequestVersion(relay, subId)) relay.url,
+    ];
+    // The timer is not on the ordered frame chain. Do not close a bounded
+    // read while an owing relay's already-received frames await verification.
+    if (owing.isNotEmpty &&
+        (!settleWindowElapsed ||
+            owing.any((url) => _orderedFrameTails.containsKey((url, subId))))) {
+      if (!_subscriptionEoseFired.contains(subId)) _armEoseSettleWindow(subId);
+      return;
+    }
+    if (owing.isNotEmpty) {
+      final message =
+          'Live subscription $subId ended its EOSE wait after '
+          '${subscriptionEoseSettleWindow.inMilliseconds}ms of silence from '
+          '${owing.length} relay(s)';
+      log(message);
+      _diagnose(
+        RelayDiagnosticSite.requestSettlement,
+        RelayDiagnosticLevel.info,
+        RelayDiagnostic.poolScope,
+        message,
+      );
+    }
+    _clearLiveEoseWindow(subId);
+    _subscriptionEoseFired.add(subId);
+    onEose();
+  }
+
+  void _armEoseSettleWindow(String subId) {
+    if (_closed || _subscriptionEoseSettleTimers.containsKey(subId)) return;
+    _subscriptionEoseSettleTimers[subId] = Timer(
+      subscriptionEoseSettleWindow,
+      () {
+        _subscriptionEoseSettleTimers.remove(subId);
+        _maybeFireLiveEose(subId, settleWindowElapsed: true);
+      },
+    );
+  }
+
+  void _clearLiveEoseWindow(String subId) {
+    _subscriptionEoseRelays.remove(subId);
+    _subscriptionEoseSettleTimers.remove(subId)?.cancel();
+  }
+
+  /// A replayed REQ must draw a fresh EOSE once all previous answers are gone.
+  void _withdrawLiveEose(String subId, String relayUrl) {
+    final eosed = _subscriptionEoseRelays[subId];
+    if (eosed == null) return;
+    eosed.remove(relayUrl);
+    if (eosed.isEmpty) _clearLiveEoseWindow(subId);
+  }
+
+  /// Restarts [subId]'s armed EOSE settle window because [relay], which holds
+  /// its REQ and still owes it EOSE, is sending it events: part-way through
+  /// its stored events, or replaying them after a reconnect, it is being
+  /// served, not silent. A relay that already sent EOSE is streaming live
+  /// events instead, and restarting for those would hold the window open for
+  /// as long as the subscription is busy.
+  void _restartEoseSettleWindow(Relay relay, String subId) {
+    final armed = _subscriptionEoseSettleTimers[subId];
+    if (armed == null) return;
+    if (!_relayHoldsLiveRequest(relay, subId)) return;
+    if (_subscriptionEoseRelays[subId]?[relay.url] ==
+        _liveRequestVersion(relay, subId)) {
+      return;
+    }
+    _subscriptionEoseSettleTimers.remove(subId);
+    armed.cancel();
+    _armEoseSettleWindow(subId);
+  }
+
+  bool _relayHoldsLiveRequest(Relay relay, String subId) =>
+      relay.hasSubscriptionById(subId) &&
+      (identical(_relays[relay.url], relay) ||
+          identical(_tempRelays[relay.url], relay) ||
+          identical(_cacheRelays[relay.url], relay));
+
+  /// Identifies the current REQ across reconnects and resends on one socket.
+  (int, int) _liveRequestVersion(Relay relay, String subId) =>
+      (relay.connectionGeneration, _liveRequestResends[subId]?[relay.url] ?? 0);
+
   /// Records that [relay] sent [subId] an `EVENT` frame the pool rejected,
   /// on the connection of [generation]. The frame may have taken a slot of
   /// the relay's `limit`, so a one-shot query's outcome treats the relay as
@@ -2333,6 +2486,7 @@ class RelayPool {
     List<dynamic> json,
     String messageType, {
     required int receivedOnGeneration,
+    required (int, int)? answeredRequest,
   }) async {
     if (messageType == 'EVENT') {
       try {
@@ -2448,6 +2602,8 @@ class RelayPool {
           // gone silent. Restart the grace period rather than cutting its
           // result set off part-way through.
           _restartQuerySettleWindow(subId);
+        } else {
+          _restartEoseSettleWindow(relay, subId);
         }
 
         if (!subscription.matchesEvent(event)) {
@@ -2563,19 +2719,12 @@ class RelayPool {
           completesBatch: true,
           eoseFrame: json,
         );
-        // Handle EOSE for long-running subscriptions
-        final subscription = _subscriptions[subId];
-        if (subscription != null && subscription.onEose != null) {
-          // Track which relays have sent EOSE for this subscription
-          _subscriptionEoseRelays.putIfAbsent(subId, () => <String>{});
-          _subscriptionEoseRelays[subId]!.add(relay.url);
-
-          // Check if all relays that have this subscription have sent EOSE
-          final activeRelays = _getRelaysWithSubscription(subId);
-          if (_subscriptionEoseRelays[subId]!.length >= activeRelays.length) {
-            subscription.onEose!();
-            _subscriptionEoseRelays.remove(subId);
-          }
+        if (_subscriptions[subId]?.onEose != null &&
+            answeredRequest != null &&
+            answeredRequest == _liveRequestVersion(relay, subId) &&
+            _relayHoldsLiveRequest(relay, subId)) {
+          (_subscriptionEoseRelays[subId] ??= {})[relay.url] = answeredRequest;
+          _maybeFireLiveEose(subId);
         }
       }
     } else if (messageType == "OK") {
@@ -2709,7 +2858,7 @@ class RelayPool {
                 '🔐 AUTH post-auth: sending ${subscription.id} '
                 '${relay.url}',
               );
-              _storedEventsPhaseResent(relay, subscription.id);
+              _recordLiveRequestResent(relay, subscription.id);
               relay.send(subscription.toJson());
             }
           } else {
@@ -2766,6 +2915,10 @@ class RelayPool {
         relay.url,
         'Relay NOTICE: ${relayNoticeForDiagnostics(message)}',
       );
+      final namesCount = message == _unknownCountCommandNotice;
+      if (namesCount || message == _unknownCommandNotice) {
+        relay.handleCountUnknownCommandNotice(message, namesCount: namesCount);
+      }
 
       if (onNotice != null) {
         onNotice!(relay.url, message);
@@ -2930,6 +3083,10 @@ class RelayPool {
         }
         if (awaitsReplay) {
           _refusedAwaitingReplay[subscriptionId] = reason;
+          // The replacement's replay must draw a new EOSE.
+          _clearLiveEoseWindow(subscriptionId);
+        } else {
+          _withdrawLiveEose(subscriptionId, relay.url);
         }
         _storedEventsPhaseAnswered(
           relay,
@@ -2938,21 +3095,7 @@ class RelayPool {
           completesBatch: false,
           dropsRequest: true,
         );
-        if (subscription.onEose != null) {
-          final activeRelays = _getRelaysWithSubscription(subscriptionId);
-          final eoseRelays = _subscriptionEoseRelays[subscriptionId];
-          // A relay that reported EOSE and then refused the REQ leaves the
-          // tally with it. Left in, its EOSE would stand in for a relay that
-          // is still streaming stored events, and a bounded read would close
-          // on a partial result.
-          eoseRelays?.remove(relay.url);
-          if (activeRelays.isNotEmpty &&
-              eoseRelays != null &&
-              eoseRelays.length >= activeRelays.length) {
-            subscription.onEose!();
-            _subscriptionEoseRelays.remove(subscriptionId);
-          }
-        }
+        _maybeFireLiveEose(subscriptionId);
         return;
       }
 
@@ -3197,9 +3340,10 @@ class RelayPool {
   void unsubscribe(String id) {
     _subscriptionSilenceProbes.remove(id)?.cancel();
     _refusedAwaitingReplay.remove(id);
+    _clearLiveEoseWindow(id);
+    _subscriptionEoseFired.remove(id);
+    _liveRequestResends.remove(id);
     final subscription = _subscriptions.remove(id);
-    // Clean up EOSE tracking for this subscription
-    _subscriptionEoseRelays.remove(id);
     _storedEventsPhases.remove(id);
     if (subscription != null) {
       // A relay that still holds this REQ never served it, so offer it to the
@@ -4370,9 +4514,14 @@ class RelayPool {
   /// not be written is dropped, not queued: replayed on the next connection,
   /// its answer would reach nobody.
   ///
+  /// A relay that already refused COUNT on the same socket
+  /// ([Relay.countUnsupported]) is skipped. A missing NIP-45 advertisement
+  /// is inconclusive because some relays answer COUNT without listing it.
+  ///
   /// Throws [CountNotSentException] when no relay accepted the COUNT, and
   /// [CountNotSupportedException] when relays accepted it but none answered
-  /// in time, whether by timing out or refusing with CLOSED.
+  /// in time, whether by timing out, refusing with CLOSED or replying that
+  /// they do not know COUNT, or when all readable relays were already skipped.
   ///
   /// Parameters:
   /// - [filters]: The filters to count events for (same format as REQ)
@@ -4436,12 +4585,20 @@ class RelayPool {
     // Send COUNT to all relays in parallel, return the largest count.
     // Different relays may have different subsets of data, so the highest
     // count is the most accurate.
-    final eligibleRelays = relaysToTry
+    final readableRelays = relaysToTry
         .where((r) => r.relayStatus.readAccess)
         .toList();
 
-    if (eligibleRelays.isEmpty) {
+    if (readableRelays.isEmpty) {
       throw CountNotSentException('No relay can take COUNT');
+    }
+
+    final eligibleRelays = readableRelays
+        .where((r) => !r.countUnsupported)
+        .toList();
+
+    if (eligibleRelays.isEmpty) {
+      throw CountNotSupportedException('No relay supports COUNT');
     }
 
     var acceptedByAny = false;
@@ -4493,7 +4650,8 @@ class RelayPool {
           );
           return null;
         } on CountNotSupportedException catch (e) {
-          // A CLOSED refusal, which the CLOSED handler has already reported.
+          // A CLOSED refusal or an unknown-command NOTICE, which its handler
+          // has already reported.
           log('📊 COUNT refused by ${relay.url}: $e');
           return null;
         } catch (e) {
@@ -4529,18 +4687,18 @@ class RelayPool {
     return best;
   }
 
-  /// Returns the URLs of relays with a saved copy of this subscription.
+  /// Returns the relays with a saved copy of this subscription, keyed by URL.
   ///
   /// [forRefusalSettlement] excludes relays still attempting a replay and
   /// copies an earlier pool replay failed to send on this socket.
   ///
   /// EOSE settlement includes connecting relays with a queued copy so their
   /// replay has time to arrive.
-  Set<String> _getRelaysWithSubscription(
+  Map<String, Relay> _getRelaysWithSubscription(
     String subscriptionId, {
     bool forRefusalSettlement = false,
   }) {
-    final relays = <String>{};
+    final relays = <String, Relay>{};
     bool holdsRequest(Relay relay) {
       if (!relay.hasSubscriptionById(subscriptionId)) return false;
       if (!forRefusalSettlement) return true;
@@ -4554,21 +4712,21 @@ class RelayPool {
     // Check normal relays
     for (final entry in _relayEntriesSnapshot()) {
       if (holdsRequest(entry.value)) {
-        relays.add(entry.key);
+        relays[entry.key] = entry.value;
       }
     }
 
     // Check temp relays
     for (final entry in _tempRelayEntriesSnapshot()) {
       if (holdsRequest(entry.value)) {
-        relays.add(entry.key);
+        relays[entry.key] = entry.value;
       }
     }
 
     // Check cache relays
     for (final entry in _cacheRelayEntriesSnapshot()) {
       if (holdsRequest(entry.value)) {
-        relays.add(entry.key);
+        relays[entry.key] = entry.value;
       }
     }
 

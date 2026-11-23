@@ -4,23 +4,39 @@
 import 'dart:async';
 
 import 'package:analytics/analytics.dart';
+import 'package:db_client/db_client.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/models/auth_rpc_capability.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/services/auth/following_prefetch_marker.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nip07_service.dart';
 import 'package:openvine/services/nip07_types.dart';
+import 'package:profile_repository/profile_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
+
+class _MockAppDatabase extends Mock implements AppDatabase {}
+
+class _MockIdentityVerificationsDao extends Mock
+    implements IdentityVerificationsDao {}
+
+class _MockIdentityEventsDao extends Mock implements IdentityEventsDao {}
+
+class _MockNostrClient extends Mock implements NostrClient {}
+
+class _MockVerifierClient extends Mock implements VerifierClient {}
 
 const _accountPubkey =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -197,6 +213,62 @@ void main() {
         expect(persisted.createdAt, 1234);
         expect(persisted.eventId, _contactListEventId);
         expect(hasFollowingPrefetchMarker(prefs, _accountPubkey), isTrue);
+      },
+    );
+  });
+
+  group('identityClaimsRepositoryProvider', () {
+    test(
+      'signs the Confirmation access check without user interaction',
+      () async {
+        final authService = _MockAuthService();
+        final database = _MockAppDatabase();
+        final verifierClient = _MockVerifierClient();
+        when(
+          () => database.identityVerificationsDao,
+        ).thenReturn(_MockIdentityVerificationsDao());
+        when(
+          () => database.identityEventsDao,
+        ).thenReturn(_MockIdentityEventsDao());
+        when(
+          () => verifierClient.confirmationAccessUrl,
+        ).thenReturn('https://verifier.example/auth/confirmation-access');
+        when(
+          () => authService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+            allowUserInteraction: any(named: 'allowUserInteraction'),
+          ),
+        ).thenAnswer((_) async => null);
+        final container = ProviderContainer(
+          overrides: [
+            authServiceProvider.overrideWithValue(authService),
+            databaseProvider.overrideWithValue(database),
+            nostrServiceProvider.overrideWithValue(_MockNostrClient()),
+            verifierClientProvider.overrideWithValue(verifierClient),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final access = await container
+            .read(identityClaimsRepositoryProvider)
+            .confirmationAccess();
+
+        // A declined passive signature is not a "no".
+        expect(access, ConfirmationAccess.unknown);
+        verify(
+          () => authService.createAndSignEvent(
+            kind: 27235,
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+            allowUserInteraction: false,
+          ),
+        ).called(1);
+        // Nothing else was signed, so no interactive signature either.
+        verifyNoMoreInteractions(authService);
       },
     );
   });

@@ -101,6 +101,46 @@ void main() {
       expect(a, isNot(equals(b)));
     });
 
+    test('reads signin_requires "confirmation"', () {
+      final platform = VerifierPlatform.fromJson('twitter', const {
+        'label': 'X',
+        'supported': true,
+        'oauth': true,
+        'signin_requires': 'confirmation',
+      });
+
+      expect(platform.signinRequires, equals(SigninRequirement.confirmation));
+    });
+
+    test('reads any other or absent signin_requires as null', () {
+      for (final value in <Object?>[null, 'supporter', '', 42, true]) {
+        final platform = VerifierPlatform.fromJson('twitter', {
+          'supported': true,
+          'signin_requires': value,
+        });
+
+        expect(platform.signinRequires, isNull, reason: '$value');
+      }
+      expect(
+        VerifierPlatform.fromJson('twitter', const {
+          'supported': true,
+        }).signinRequires,
+        isNull,
+      );
+    });
+
+    test('tells apart platforms that differ only in signinRequires', () {
+      const a = VerifierPlatform(
+        key: 'twitter',
+        label: 'X',
+        supported: true,
+        signinRequires: SigninRequirement.confirmation,
+      );
+      const b = VerifierPlatform(key: 'twitter', label: 'X', supported: true);
+
+      expect(a, isNot(equals(b)));
+    });
+
     test('treats an oauth value that is not a bool as unknown', () {
       for (final value in <Object?>['false', 0, 1, 'true', null, <String>[]]) {
         final platform = VerifierPlatform.fromJson('twitter', {
