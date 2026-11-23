@@ -155,10 +155,6 @@ class VideoFeedPage extends ConsumerWidget {
                   sharedPreferences: sharedPreferences,
                   persistenceCoordinator: context
                       .read<FeedModePersistenceCoordinator>(),
-                  // Cached-feed serving stays on (constructor default) regardless of
-                  // the Divine-hosted-only filter: applyContentPreferences re-filters
-                  // on read and the splice-on-refresh keeps the post-active tail
-                  // fresh, so the cached serve is never stale to the viewer.
                   feedTracker: ref.read(feedPerformanceTrackerProvider),
                   feedTuningRepository: feedTuningRepository,
                   badgeAuthors: badgeRepository.loadSubscribedHolders,

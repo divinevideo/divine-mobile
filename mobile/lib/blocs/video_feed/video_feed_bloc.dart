@@ -1845,11 +1845,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
 
   /// Load videos for the specified mode.
   ///
-  /// On a cache-eligible load ([skipCache] false), serves the persisted home
-  /// feed for the mode instantly — positioned at the user's last-viewed index
-  /// — while fresh data loads in the background. When the fresh result
-  /// arrives it is spliced in *after* the active video so the playing video
-  /// and its next never jump (via [HomeFeedResumeManager]).
+  /// On a cache-eligible load ([skipCache] false), serves the filtered resume
+  /// window before fetching fresh data. [HomeFeedResumeManager] keeps the active
+  /// video and its lookahead when splicing in the fresh result.
   ///
   /// For the home feed, does NOT wait for the follow list to initialize.
   /// Instead, the follow-list stream subscription (set up in [_onStarted])

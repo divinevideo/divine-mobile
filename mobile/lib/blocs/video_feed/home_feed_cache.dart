@@ -1,4 +1,4 @@
-// ABOUTME: Disk-backed cache for the home feed, enabling instant cold start.
+// ABOUTME: Disk-backed cache for resuming Home on cold start.
 // ABOUTME: Stores a forward window of videos starting just past the user's
 // last-viewed position, account-scoped, via CacheSync.
 
@@ -15,18 +15,18 @@ const homeFeedCacheMaxAge = Duration(hours: 6);
 
 /// Upper bound on how many videos are persisted per mode.
 ///
-/// The cached window only has to bridge the gap until the parallel fresh
-/// load lands (a few seconds), so it is deliberately small. It also bounds
+/// The cached window only has to bridge the gap until the fresh load lands
+/// (a few seconds), so it is deliberately small. It also bounds
 /// the per-swipe write cost.
 const _forwardWindowSize = 30;
 
-/// Reads and writes the cached home-feed videos for instant cold start.
+/// Reads and writes the cached Home videos for cold-start resume.
 ///
 /// The cache stores a **forward window**: the videos starting just past the
 /// user's last-viewed position (already-watched videos are intentionally
 /// dropped — the user resumes at the top of the window and cannot scroll back
-/// to content they have seen). On cold start the window is served at index 0
-/// while fresh data loads in parallel.
+/// to that part of the window). On cold start Home applies the current filters
+/// and can serve the surviving videos at index 0 before the fresh load.
 ///
 /// Entries are keyed by account pubkey and feed mode and persisted through
 /// [CacheSync], so signing out clears them via the account-scoped
