@@ -217,6 +217,22 @@ void main() {
         );
       });
 
+      test('does not carry indexed cues across a mutable caption URL', () {
+        const ref = 'https://cdn.example.com/captions/video.vtt';
+        final existing = video(id: 'old', createdAt: 1000).copyWith(
+          textTrackRef: ref,
+          textTrackContent: oldCues,
+        );
+        final republished = video(id: 'new', createdAt: 2000).copyWith(
+          textTrackRef: ref,
+        );
+
+        expect(
+          mergeRepublishedVideo(existing, republished).textTrackContent,
+          isNull,
+        );
+      });
+
       test('does not carry indexed cues across a mutable relay reference', () {
         const ref = '39307:author:subtitles:video';
         final existing = video(id: 'old', createdAt: 1000).copyWith(
