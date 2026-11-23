@@ -1059,7 +1059,7 @@ void main() {
     });
 
     test(
-      'classic deep-fetch triggers when filtering removes most of page',
+      'classics walks past seen pages and only hydrates surviving videos',
       () async {
         final seenPage = List.generate(
           5,
@@ -1099,6 +1099,12 @@ void main() {
         expect(result.videos.any((v) => v.id.startsWith('seen-')), isFalse);
         expect(result.videos.any((v) => v.id.startsWith('fresh-')), isTrue);
         expect(call, greaterThan(1));
+        expect(
+          verify(() => mockFunnelcake.getBulkVideoStats(captureAny())).captured,
+          [
+            ['fresh-0', 'fresh-1'],
+          ],
+        );
       },
     );
 
@@ -1539,6 +1545,134 @@ void main() {
         expect(page, equals(maxSeenOnlyFeedPages));
         expect(result.videos.map((v) => v.id), equals(['popular-unwatched']));
         expect(result.paginationCursor, isNull);
+      },
+    );
+
+    test(
+      'Following feed filters seen videos before bulk-stats hydration',
+      () async {
+        final seenId = 's' * 64;
+        final unseenId = 'u' * 64;
+        var pageCalls = 0;
+        when(
+          () => mockFunnelcake.getHomeFeed(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((_) async {
+          pageCalls++;
+          if (pageCalls == 1) {
+            return HomeFeedResponse(
+              videos: [_stats(seenId, createdAt: 1000)],
+              rawBody: '{}',
+              hasMore: true,
+              nextCursor: 999,
+            );
+          }
+          return HomeFeedResponse(
+            videos: [_stats(unseenId, createdAt: 900)],
+            rawBody: '{}',
+          );
+        });
+        final hydratedBatches = <List<String>>[];
+        when(() => mockFunnelcake.getBulkVideoStats(any())).thenAnswer((
+          inv,
+        ) async {
+          final ids = List<String>.from(inv.positionalArguments.first as List);
+          hydratedBatches.add(ids);
+          return const BulkVideoStatsResponse(stats: {});
+        });
+
+        final repo = VideosRepository(
+          nostrClient: mockNostr,
+          funnelcakeApiClient: mockFunnelcake,
+          inMemoryFeedCache: InMemoryFeedCache(),
+          seenVideoLookup: SeenVideoLookup(
+            wasSeenRecently: (id, {within = seenVideoExclusionWindow}) =>
+                id == seenId,
+          ),
+        );
+
+        final result = await repo.getHomeFeedVideos(
+          authors: const ['author'],
+          userPubkey: 'viewer',
+          limit: 1,
+        );
+
+        expect(result.videos.map((v) => v.id), equals([unseenId]));
+        expect(
+          hydratedBatches,
+          equals([
+            [unseenId],
+          ]),
+        );
+      },
+    );
+
+    test(
+      'Following feed hydrates every walked page in one bulk-stats request',
+      () async {
+        final firstId = 'a' * 64;
+        final seenId = 's' * 64;
+        final secondId = 'b' * 64;
+        var pageCalls = 0;
+        when(
+          () => mockFunnelcake.getHomeFeed(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((_) async {
+          pageCalls++;
+          if (pageCalls == 1) {
+            return HomeFeedResponse(
+              videos: [
+                _stats(firstId, createdAt: 1000),
+                _stats(seenId, createdAt: 990),
+              ],
+              rawBody: '{}',
+              hasMore: true,
+              nextCursor: 990,
+            );
+          }
+          return HomeFeedResponse(
+            videos: [_stats(secondId, createdAt: 900)],
+            rawBody: '{}',
+          );
+        });
+        final hydratedBatches = <List<String>>[];
+        when(() => mockFunnelcake.getBulkVideoStats(any())).thenAnswer((
+          inv,
+        ) async {
+          final ids = List<String>.from(inv.positionalArguments.first as List);
+          hydratedBatches.add(ids);
+          return const BulkVideoStatsResponse(stats: {});
+        });
+
+        final repo = VideosRepository(
+          nostrClient: mockNostr,
+          funnelcakeApiClient: mockFunnelcake,
+          inMemoryFeedCache: InMemoryFeedCache(),
+          seenVideoLookup: SeenVideoLookup(
+            wasSeenRecently: (id, {within = seenVideoExclusionWindow}) =>
+                id == seenId,
+          ),
+        );
+
+        await repo.getHomeFeedVideos(
+          authors: const ['author'],
+          userPubkey: 'viewer',
+          limit: 2,
+        );
+
+        expect(pageCalls, equals(2));
+        expect(
+          hydratedBatches,
+          equals([
+            [firstId, secondId],
+          ]),
+        );
       },
     );
   });

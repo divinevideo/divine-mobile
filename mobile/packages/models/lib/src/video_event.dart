@@ -250,6 +250,7 @@ class VideoEvent {
     this.isFlaggedContent = false,
     this.moderationStatus,
     this.originalLoops,
+    this.loopCountSnapshot,
     this.originalLikes,
     this.originalComments,
     this.originalReposts,
@@ -310,6 +311,7 @@ class VideoEvent {
     DateTime? optDate(Object? value) =>
         value == null ? null : DateTime.parse(value as String);
 
+    final snapshot = json['loopCountSnapshot'];
     final createdAt = optInt(json['createdAt']) ?? 0;
     final timestamp = json['timestamp'];
     final textTrackRef = json['textTrackRef'] as String?;
@@ -363,6 +365,13 @@ class VideoEvent {
       isFlaggedContent: json['isFlaggedContent'] as bool? ?? false,
       moderationStatus: json['moderationStatus'] as String?,
       originalLoops: optInt(json['originalLoops']),
+      loopCountSnapshot: switch (snapshot) {
+        {'count': final int count, 'fetchedAt': final String date} => (
+          count: count,
+          fetchedAt: DateTime.parse(date),
+        ),
+        _ => null,
+      },
       originalLikes: optInt(json['originalLikes']),
       originalComments: optInt(json['originalComments']),
       originalReposts: optInt(json['originalReposts']),
@@ -914,6 +923,9 @@ class VideoEvent {
 
   // Original Vine metrics (from imported data)
   final int? originalLoops; // Original loop count from classic Vine
+
+  /// Reconciled playback total and fetch time from the bulk stats endpoint.
+  final ({int count, DateTime fetchedAt})? loopCountSnapshot;
   final int? originalLikes; // Original like count from classic Vine
   final int? originalComments; // Original comment count from classic Vine
   final int? originalReposts; // Original repost count from classic Vine
@@ -1935,6 +1947,7 @@ class VideoEvent {
     bool? isFlaggedContent,
     String? moderationStatus,
     int? originalLoops,
+    ({int count, DateTime fetchedAt})? loopCountSnapshot,
     int? originalLikes,
     int? originalComments,
     int? originalReposts,
@@ -2007,6 +2020,7 @@ class VideoEvent {
     originalLoops: clearOriginalLoops
         ? null
         : (originalLoops ?? this.originalLoops),
+    loopCountSnapshot: loopCountSnapshot ?? this.loopCountSnapshot,
     originalLikes: clearOriginalLikes
         ? null
         : (originalLikes ?? this.originalLikes),
@@ -2109,6 +2123,11 @@ class VideoEvent {
     'isFlaggedContent': isFlaggedContent,
     'moderationStatus': moderationStatus,
     'originalLoops': originalLoops,
+    if (loopCountSnapshot case final snapshot?)
+      'loopCountSnapshot': {
+        'count': snapshot.count,
+        'fetchedAt': snapshot.fetchedAt.toIso8601String(),
+      },
     'originalLikes': originalLikes,
     'originalComments': originalComments,
     'originalReposts': originalReposts,

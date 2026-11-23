@@ -682,6 +682,29 @@ void main() {
     );
 
     testWidgets(
+      'skips moderation lookup during healthy loading before any source failure',
+      (tester) async {
+        const sha256 =
+            '8ad13ea11bed00b086a4c93d1bbc43f85953cf05f7715bfb16200663b6e3c0ac';
+        final video = _makeVideo(
+          videoUrl: 'https://media.divine.video/$sha256',
+          sha256: sha256,
+        );
+        final moderationService = _MockVideoModerationStatusService();
+
+        await _pumpFeedVideos(
+          tester,
+          videos: [video],
+          moderationService: moderationService,
+        );
+        await tester.pump(const Duration(seconds: 2));
+
+        verifyNever(() => moderationService.fetchStatus(any()));
+        expect(find.byType(VideoLoadingPlaceholder), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'auto-authorizes age-restricted loading media when preferences allow show',
       (tester) async {
         const sha256 =
@@ -724,7 +747,14 @@ void main() {
           mediaAuthInterceptor: mediaAuthInterceptor,
         );
         await tester.pump();
+        verifyNever(() => moderationService.fetchStatus(any()));
 
+        tester
+            .state<InfiniteVideoFeedState>(find.byType(InfiniteVideoFeed))
+            .debugMarkLoadingSourceFailed(0);
+        await tester.pump();
+
+        verify(() => moderationService.fetchStatus(sha256)).called(1);
         verify(
           () => mediaAuthInterceptor.createAutoAuthHeadersForAdultMedia(
             sha256Hash: sha256,
@@ -772,6 +802,12 @@ void main() {
         );
         await tester.pump();
 
+        tester
+            .state<InfiniteVideoFeedState>(find.byType(InfiniteVideoFeed))
+            .debugMarkLoadingSourceFailed(0);
+        await tester.pump();
+
+        verify(() => moderationService.fetchStatus(sha256)).called(1);
         verifyNever(() => playbackStatusCubit.markVerifying(video.id));
         verifyNever(
           () => mediaAuthInterceptor.createAutoAuthHeadersForAdultMedia(

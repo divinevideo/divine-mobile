@@ -205,6 +205,16 @@ final class VideoFeedEnrichmentReady extends VideoFeedEvent {
   List<Object?> get props => [source, enrichedVideos, sourceIds];
 }
 
+/// Fetches creator profiles independently of the feed load.
+final class _VideoFeedCreatorProfilesRequested extends VideoFeedEvent {
+  const _VideoFeedCreatorProfilesRequested(this.videos);
+
+  final List<VideoEvent> videos;
+
+  @override
+  List<Object?> get props => [videos];
+}
+
 /// A user was blocked or the blocklist changed.
 ///
 /// When [blockedPubkey] is provided, the handler removes that user's videos

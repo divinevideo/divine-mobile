@@ -63,6 +63,22 @@ void main() {
       });
     });
 
+    test('round-trips a reconciled playback count separately from views', () {
+      final fetchedAt = DateTime.utc(2026, 11, 22);
+      final video = _video(rawTags: const {'views': '34'}).copyWith(
+        loopCountSnapshot: (count: 50, fetchedAt: fetchedAt),
+      );
+      final restored = VideoEvent.fromJson(video.toJson());
+      expect(restored.totalLoops, 34);
+      expect(restored.loopCountSnapshot, (count: 50, fetchedAt: fetchedAt));
+
+      final legacy = VideoEvent.fromJson(
+        _video(rawTags: const {'views': '34'}).toJson(),
+      );
+      expect(legacy.totalLoops, 34);
+      expect(legacy.loopCountSnapshot, isNull);
+    });
+
     group('hasOriginalVineMetrics', () {
       test('is false when no archival metric is present', () {
         expect(_video().hasOriginalVineMetrics, isFalse);

@@ -143,6 +143,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     on<VideoFeedBlocklistChanged>(_onBlocklistChanged);
     on<VideoFeedActiveIndexChanged>(_onActiveIndexChanged);
     on<VideoFeedEnrichmentReady>(_onEnrichmentReady);
+    on<_VideoFeedCreatorProfilesRequested>(_onCreatorProfilesRequested);
     on<VideoFeedTuningSwipeCommitted>(_onTuningSwipeCommitted);
     on<VideoFeedTuningUndoRequested>(_onTuningUndoRequested);
     on<VideoFeedVideoRemoved>(_onVideoRemoved, transformer: sequential());
@@ -234,6 +235,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   /// without people-list feeds.
   final PeopleListsRepository? _peopleListsRepository;
   final ProfileRepository? _profileRepository;
+  final _pendingCreatorProfilePubkeys = <String>{};
   final ContentBlocklistRepository? _blocklistRepository;
   final String? _userPubkey;
   final bool _serveCachedHomeFeed;
@@ -1220,8 +1222,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
 
       _scheduleNostrEnrichment(source: source, videos: updatedVideos);
 
-      // Batch-fetch profiles for new creators only.
-      await _fetchCreatorProfiles(validNewVideos, source, emit);
+      // Batch-fetch profiles for new creators without blocking pagination.
+      addIfOpen(_VideoFeedCreatorProfilesRequested(validNewVideos));
 
       // The cross-restart cache is written only on a genuine swipe
       // (_onActiveIndexChanged); pagination alone does not move the resume
@@ -1993,15 +1995,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         );
       }
 
-      // Batch-fetch creator profiles to warm the Drift cache.
-      await _fetchCreatorProfiles(validVideos, source, emit);
-      if (!canEmit()) return;
+      // Batch-fetch creator profiles in the background to warm the Drift cache
+      // without delaying resume persistence or blocking subsequent loads.
+      addIfOpen(_VideoFeedCreatorProfilesRequested(validVideos));
 
       // Advance the resume window past the active position so the next cold
       // start opens on the next unseen video — even when the user just
-      // reopens without scrolling. Reads the current list rather than the
-      // spliced local, so a removal that landed during the profile fetch is
-      // not written back.
+      // reopens without scrolling.
       if (_usesHomeFeedCache(source)) {
         _resumeManager.persistNow(
           pubkey: _userPubkey,
@@ -2394,46 +2394,43 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     }
   }
 
-  /// Batch-fetch creator profiles for the given videos.
+  /// Batch-fetch creator profiles for the given videos in the background.
   ///
-  /// Only fetches profiles for pubkeys not already in
-  /// [state.creatorProfiles]. Does not block video display — called
-  /// after videos are already emitted.
-  Future<void> _fetchCreatorProfiles(
-    List<VideoEvent> videos,
-    VideoFeedSource source,
+  /// Runs outside the pagination handler so a slow lookup can't hold its lock.
+  Future<void> _onCreatorProfilesRequested(
+    _VideoFeedCreatorProfilesRequested event,
     Emitter<VideoFeedBlocState> emit,
   ) async {
-    if (_profileRepository == null || videos.isEmpty) return;
+    final repository = _profileRepository;
+    if (repository == null || _isClosing || isClosed) return;
 
-    final newPubkeys = videos
-        .map((v) => v.pubkey)
-        .toSet()
-        .difference(state.creatorProfiles.keys.toSet())
-        .toList();
-
-    if (newPubkeys.isEmpty) return;
+    final pubkeys = <String>[
+      for (final pubkey in event.videos.map((video) => video.pubkey))
+        if (!state.creatorProfiles.containsKey(pubkey) &&
+            _pendingCreatorProfilePubkeys.add(pubkey))
+          pubkey,
+    ];
+    if (pubkeys.isEmpty) return;
 
     try {
-      final profiles = await _profileRepository.fetchBatchProfiles(
-        pubkeys: newPubkeys,
+      final profiles = await repository.fetchBatchProfiles(pubkeys: pubkeys);
+      if (_isClosing || isClosed || emit.isDone || profiles.isEmpty) return;
+      // Creator profiles belong to this account and are shared across sources.
+      emit(
+        state.copyWith(
+          creatorProfiles: {...state.creatorProfiles, ...profiles},
+        ),
       );
-
-      if (!_canEmitForSource(source, emit)) return;
-
-      if (profiles.isNotEmpty) {
-        emit(
-          state.copyWith(
-            creatorProfiles: {...state.creatorProfiles, ...profiles},
-          ),
-        );
-      }
-    } catch (e) {
+    } on Object catch (error, stackTrace) {
       Log.error(
-        'VideoFeedBloc: Failed to batch-fetch creator profiles - $e',
+        'VideoFeedBloc: Failed to batch-fetch creator profiles',
         name: 'VideoFeedBloc',
         category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
       );
+    } finally {
+      _pendingCreatorProfilePubkeys.removeAll(pubkeys);
     }
   }
 }

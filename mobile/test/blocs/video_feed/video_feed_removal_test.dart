@@ -882,7 +882,7 @@ void main() {
     );
 
     test(
-      'a profile read finishing after deletion persists the surviving window',
+      'persists the resume window while profiles load and keeps deletions',
       () async {
         final profiles = _MockProfileRepository();
         final profileRead = Completer<Map<String, UserProfile>>();
@@ -912,6 +912,10 @@ void main() {
         await pumpEventQueue();
         expect(requested.isCompleted, isTrue);
         expect(bloc.state.videos, hasLength(3));
+        expect(cache.saved?.map((video) => video.id).toList(), [
+          '2' * 64,
+          '3' * 64,
+        ]);
         removals.add('3' * 64);
         await pumpEventQueue();
         expect(bloc.state.videos, hasLength(2));

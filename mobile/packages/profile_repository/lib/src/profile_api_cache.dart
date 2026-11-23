@@ -8,7 +8,7 @@ import 'package:models/models.dart';
 
 // A sparse/older response is not a permanent negative, but scrolling through
 // unanswered authors must not request their full profile on every mount.
-const _unknownEligibilityRetryDelay = Duration(minutes: 1);
+const _unknownEligibilityRetryDelay = Duration(minutes: 15);
 
 /// Session-scoped REST read coordination shared by read/write profile handles.
 /// It belongs to one Funnelcake environment and is replaced with its client.

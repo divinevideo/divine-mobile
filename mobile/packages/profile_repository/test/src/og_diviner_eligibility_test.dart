@@ -290,7 +290,7 @@ void main() {
       expect(fixture.requests, hasLength(2));
 
       includeAnswer = true;
-      now = now.add(const Duration(minutes: 1));
+      now = now.add(const Duration(minutes: 15));
       expect(await fixture.repository.isOgDiviner(_pubkey), isTrue);
       expect(fixture.requests, hasLength(3));
     });
@@ -311,7 +311,10 @@ void main() {
         includeAnswer = true;
         expect(await fixture.repository.isOgDiviner(_pubkey), isFalse);
         expect(fixture.requests, hasLength(1));
-        now = now.add(const Duration(minutes: 1));
+        now = now.add(const Duration(minutes: 10));
+        expect(await fixture.repository.isOgDiviner(_pubkey), isFalse);
+        expect(fixture.requests, hasLength(1));
+        now = now.add(const Duration(minutes: 5));
         expect(await fixture.repository.isOgDiviner(_pubkey), isTrue);
         expect(fixture.requests, hasLength(2));
       },
