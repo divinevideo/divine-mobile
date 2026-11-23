@@ -526,7 +526,13 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
           // Already retried inside the confirm window. It says nothing
           // about the sign-in, so it stays to approve again later.
           return _failKeepingSignIn(VerifyConnectError.confirmationUnavailable);
-        case _:
+        case SignInRefusal.notFound:
+        case SignInRefusal.used:
+        case SignInRefusal.wrongAccount:
+        case SignInRefusal.notYours:
+        case SignInRefusal.claimMismatch:
+        case SignInRefusal.invalidEvent:
+        case SignInRefusal.other:
           break;
       }
       // Too many requests says nothing about the sign-in, so it stays to
