@@ -128,9 +128,9 @@ class RelayPool {
 
   final Set<String> _queryFanoutInProgress = {};
 
-  /// Which relays have sent EOSE for each live subscription since its
-  /// [Subscription.onEose] last fired.
-  final Map<String, Set<String>> _subscriptionEoseRelays = {};
+  /// Which relay connections have sent EOSE for each live subscription since
+  /// its [Subscription.onEose] last fired.
+  final Map<String, Map<String, int>> _subscriptionEoseRelays = {};
 
   /// Armed [subscriptionEoseSettleWindow] timers, keyed by subscription id.
   final Map<String, Timer> _subscriptionEoseSettleTimers = {};
@@ -2318,7 +2318,10 @@ class RelayPool {
     final eosed = _subscriptionEoseRelays[subId];
     if (onEose == null || eosed == null || eosed.isEmpty) return;
     final holders = _getRelaysWithSubscription(subId);
-    final owing = holders.difference(eosed);
+    final owing = [
+      for (final entry in holders.entries)
+        if (eosed[entry.key] != entry.value.connectionGeneration) entry.key,
+    ];
     // The timer is not on the ordered frame chain. Do not close a bounded
     // read while an owing relay's already-received frames await verification.
     if (owing.isNotEmpty &&
@@ -2364,10 +2367,14 @@ class RelayPool {
   /// events instead, and restarting for those would hold the window open for
   /// as long as the subscription is busy.
   void _restartEoseSettleWindow(Relay relay, String subId) {
-    if (!relay.hasSubscriptionById(subId)) return;
-    if (_subscriptionEoseRelays[subId]?.contains(relay.url) ?? true) return;
-    final armed = _subscriptionEoseSettleTimers.remove(subId);
+    final armed = _subscriptionEoseSettleTimers[subId];
     if (armed == null) return;
+    if (!relay.hasSubscriptionById(subId)) return;
+    if (_subscriptionEoseRelays[subId]?[relay.url] ==
+        relay.connectionGeneration) {
+      return;
+    }
+    _subscriptionEoseSettleTimers.remove(subId);
     armed.cancel();
     _armEoseSettleWindow(subId);
   }
@@ -2618,10 +2625,10 @@ class RelayPool {
           completesBatch: true,
           eoseFrame: json,
         );
-        if (_subscriptions[subId]?.onEose != null) {
-          _subscriptionEoseRelays
-              .putIfAbsent(subId, () => <String>{})
-              .add(relay.url);
+        if (_subscriptions[subId]?.onEose != null &&
+            receivedOnGeneration == relay.connectionGeneration) {
+          (_subscriptionEoseRelays[subId] ??= {})[relay.url] =
+              receivedOnGeneration;
           _maybeFireLiveEose(subId);
         }
       }
@@ -4573,18 +4580,18 @@ class RelayPool {
     return best;
   }
 
-  /// Returns the URLs of relays with a saved copy of this subscription.
+  /// Returns the relays with a saved copy of this subscription, keyed by URL.
   ///
   /// [forRefusalSettlement] excludes relays still attempting a replay and
   /// copies an earlier pool replay failed to send on this socket.
   ///
   /// EOSE settlement includes connecting relays with a queued copy so their
   /// replay has time to arrive.
-  Set<String> _getRelaysWithSubscription(
+  Map<String, Relay> _getRelaysWithSubscription(
     String subscriptionId, {
     bool forRefusalSettlement = false,
   }) {
-    final relays = <String>{};
+    final relays = <String, Relay>{};
     bool holdsRequest(Relay relay) {
       if (!relay.hasSubscriptionById(subscriptionId)) return false;
       if (!forRefusalSettlement) return true;
@@ -4598,21 +4605,21 @@ class RelayPool {
     // Check normal relays
     for (final entry in _relayEntriesSnapshot()) {
       if (holdsRequest(entry.value)) {
-        relays.add(entry.key);
+        relays[entry.key] = entry.value;
       }
     }
 
     // Check temp relays
     for (final entry in _tempRelayEntriesSnapshot()) {
       if (holdsRequest(entry.value)) {
-        relays.add(entry.key);
+        relays[entry.key] = entry.value;
       }
     }
 
     // Check cache relays
     for (final entry in _cacheRelayEntriesSnapshot()) {
       if (holdsRequest(entry.value)) {
-        relays.add(entry.key);
+        relays[entry.key] = entry.value;
       }
     }
 

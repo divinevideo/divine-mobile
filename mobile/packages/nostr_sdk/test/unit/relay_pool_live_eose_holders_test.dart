@@ -405,6 +405,45 @@ void main() {
           expect(eoseCalls, equals(1));
         });
       });
+
+      test('waits for a reconnecting EOSE relay to finish its replay', () {
+        fakeAsync((fake) {
+          async = fake;
+          final worker = _HeldVerifyWorker();
+          nostr.relayPool.eventVerifyWorker = worker;
+          final replaying = _Relay('wss://replaying.example');
+          final silent = _Relay('wss://silent.example');
+          var delivered = 0;
+          final subId = subscribe(
+            [replaying, silent],
+            onEvent: (_) {
+              delivered++;
+            },
+          );
+          settle(replaying.deliver(['EOSE', subId]));
+          final halfWindow = window ~/ 2;
+          async.elapse(halfWindow);
+
+          replaying.drop();
+          settle(replaying.reconnect());
+          settle(replaying.deliver(['EVENT', subId, _comment(1)]));
+          async.elapse(halfWindow);
+          expect(eoseCalls, 0, reason: 'the replay is still verifying');
+
+          worker.release.complete();
+          async.flushMicrotasks();
+          expect(delivered, 1);
+          async.elapse(halfWindow);
+          settle(replaying.deliver(['EVENT', subId, _comment(2)]));
+          async.elapse(halfWindow);
+          expect(eoseCalls, 0, reason: 'the replay restarted the window');
+
+          settle(replaying.deliver(['EOSE', subId]));
+          async.elapse(halfWindow);
+          expect(delivered, 2);
+          expect(eoseCalls, 1);
+        });
+      });
     });
 
     group('when a refusal leaves only a relay still replaying', () {

@@ -45,14 +45,14 @@ class Subscription {
   Function onEvent;
 
   /// Callback invoked when EOSE (End of Stored Events) has been received from
-  /// every relay serving this subscription.
+  /// every relay serving this subscription on its current connection.
   ///
   /// The first time, the relays that still owe EOSE after another relay sent
   /// one hold it only while they keep sending this subscription events: once
-  /// they have sent nothing for `RelayPool.subscriptionEoseSettleWindow`, it
-  /// fires without them. After that it fires again only once every relay has
-  /// sent EOSE since it last fired, as after a reconnect replays the REQ
-  /// everywhere.
+  /// they have sent nothing for `RelayPool.subscriptionEoseSettleWindow` and
+  /// their received events have finished verifying, it fires without them.
+  /// After that it fires again only once every relay has sent EOSE since it
+  /// last fired, as after a reconnect replays the REQ everywhere.
   void Function()? onEose;
 
   /// Callback invoked when every relay serving this subscription has ended
