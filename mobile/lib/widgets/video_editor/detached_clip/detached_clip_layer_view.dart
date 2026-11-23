@@ -446,8 +446,10 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
 
   /// Drops the poster fade once [player] has drawn into its texture.
   Future<void> _resumeOnFirstFrame(DetachedClipPlayer player) async {
-    await player.controller.firstFrameRendered;
-    if (!mounted || _resumed || !identical(_player, player)) return;
+    final rendered = await player.controller.firstFrameRendered;
+    if (!rendered || !mounted || _resumed || !identical(_player, player)) {
+      return;
+    }
     setState(() => _resumed = true);
   }
 

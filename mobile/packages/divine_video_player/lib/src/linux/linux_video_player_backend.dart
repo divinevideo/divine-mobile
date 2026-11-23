@@ -16,6 +16,12 @@ import 'package:unified_logger/unified_logger.dart';
 /// Creates a Linux video backend implementation.
 typedef LinuxVideoPlayerBackendFactory = LinuxVideoPlayerBackend Function();
 
+/// Readiness owned by a desktop backend's current accepted output.
+abstract interface class DesktopVideoFrameReadiness {
+  /// Completes false if the output is retired before rendering a frame.
+  Future<bool> get firstFrameRendered;
+}
+
 /// Linux-specific playback backend used by the public controller.
 abstract interface class LinuxVideoPlayerBackend {
   /// Initializes the backend and starts emitting state changes.
@@ -68,7 +74,8 @@ abstract interface class LinuxVideoPlayerBackend {
 }
 
 /// Linux backend powered by `media_kit` and mpv.
-class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
+class MediaKitLinuxVideoPlayerBackend
+    implements LinuxVideoPlayerBackend, DesktopVideoFrameReadiness {
   /// Creates a Linux backend instance.
   MediaKitLinuxVideoPlayerBackend({
     void Function()? mediaKitInitializer,
@@ -129,7 +136,13 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   bool _changingPlayer = false;
   bool _outputReady = false;
   bool _outputFailed = false;
+  var _firstFrameCompleter = Completer<bool>();
+
+  @override
+  Future<bool> get firstFrameRendered => _firstFrameCompleter.future;
+
   Object? _terminalError;
+  Duration _sourceErrorPosition = Duration.zero;
   int _loadGeneration = 0;
   // Only validated requests can supersede a native commit already in progress.
   int _acceptedLoadGeneration = 0;
@@ -224,6 +237,9 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
       }
       // Player streams can emit during the duration probe. Publish one coherent
       // timeline only after all source durations and offsets are available.
+      if (_firstFrameCompleter.isCompleted && !_hasLoadedMedia) {
+        _firstFrameCompleter = Completer<bool>();
+      }
       _clips
         ..clear()
         ..addAll(nextClips);
@@ -283,7 +299,10 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   Future<void> play() async {
     _ensureReady();
     await _enqueue(() async {
+      if (_outputFailed) return;
       await _player.play();
+      // Renderer setup can fail while the native play command is in flight.
+      if (_outputFailed) await _player.pause();
       _refreshState();
     });
   }
@@ -302,6 +321,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     _ensureReady();
     _acceptedLoadGeneration = ++_loadGeneration;
     _activeLoadGeneration = null;
+    _cancelFirstFrame();
     final cancellingProbes = _cancelDurationProbes();
     await _enqueue(() async {
       await cancellingProbes;
@@ -419,6 +439,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    _cancelFirstFrame();
     _acceptedLoadGeneration = ++_loadGeneration;
     await _cancelDurationProbes();
     await _mutations;
@@ -440,6 +461,9 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   }
 
   void _createPlayer() {
+    if (_firstFrameCompleter.isCompleted) {
+      _firstFrameCompleter = Completer<bool>();
+    }
     _player = _playerFactory();
     _ownsPlayer = true;
     _videoController = _videoControllerFactory(_player);
@@ -463,7 +487,12 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
         onError: (Object error) {
           if (_disposed || generation != _playerGeneration) return;
           _outputFailed = true;
+          _cancelFirstFrame();
           _terminalError = error;
+          _reportedErrorGeneration = null;
+          // Reserve this before callbacks can enqueue replacement playback.
+          // The captured owner prevents a late pause from stopping that source.
+          _quiesceFailedOutput(_player, generation);
           _reportOutputReady();
         },
       ),
@@ -479,12 +508,18 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
         _reportedErrorGeneration = _activeLoadGeneration;
         _handleError(error);
       }
-    } else if (_outputReady && !_state.isFirstFrameRendered) {
+    } else if (_hasLoadedMedia &&
+        _outputReady &&
+        !_state.isFirstFrameRendered) {
+      if (!_firstFrameCompleter.isCompleted) {
+        _firstFrameCompleter.complete(true);
+      }
       _emitState(_state.copyWith(isFirstFrameRendered: true));
     }
   }
 
   Future<void> _retirePlayer() async {
+    _cancelFirstFrame();
     if (!_ownsPlayer) return;
     _ownsPlayer = false;
     _playerGeneration++;
@@ -493,6 +528,29 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     }
     _subscriptions.clear();
     await _player.dispose();
+  }
+
+  void _cancelFirstFrame() {
+    if (!_firstFrameCompleter.isCompleted) {
+      _firstFrameCompleter.complete(false);
+    }
+  }
+
+  void _quiesceFailedOutput(Player player, int generation) {
+    unawaited(
+      _enqueue(() async {
+        if (generation != _playerGeneration || !_outputFailed) return;
+        try {
+          await player.pause();
+        } on Object catch (error) {
+          Log.error(
+            'Failed to pause the unavailable desktop output: $error',
+            name: 'divine_video_player',
+            category: LogCategory.video,
+          );
+        }
+      }),
+    );
   }
 
   void _listenToPlayer() {
@@ -526,10 +584,16 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
       player.stream.playlist.listen((playlist) async {
         if (!isCurrent() || _changingPlayer) return;
         try {
-          _currentClipIndex = playlist.index.clamp(
-            0,
-            math.max(_clips.length - 1, 0),
-          );
+          final nextIndex = playlist.index
+              .clamp(0, math.max(_clips.length - 1, 0))
+              .toInt();
+          if (nextIndex != _currentClipIndex && !_outputFailed) {
+            // mpv can recover a failed item by advancing the playlist. A
+            // renderer failure instead belongs to the whole native output.
+            _terminalError = null;
+            _reportedErrorGeneration = null;
+          }
+          _currentClipIndex = nextIndex;
           // Only re-apply per-clip rate on transitions when any clip was
           // authored with a non-default speed. Otherwise leave the player rate
           // alone so an explicit [setPlaybackSpeed] override persists across
@@ -541,6 +605,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
             await player.setRate(clipSpeed);
           }
           refresh(null);
+          if (isCurrent()) _reportOutputReady();
         } on Object catch (error) {
           report(error);
         }
@@ -719,12 +784,23 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
 
   void _refreshState() {
     if (!_initialized || _disposed || _changingPlayer) return;
+    final playerState = _player.state;
+    if (_terminalError != null &&
+        !_outputFailed &&
+        playerState.playing &&
+        !playerState.buffering &&
+        playerState.position > _sourceErrorPosition) {
+      // SDK log diagnostics can arrive after the failed item's playlist
+      // transition. Observed native playback progress proves recovery without
+      // guessing which URI a diagnostic refers to or hiding a stalled source.
+      _terminalError = null;
+      _reportedErrorGeneration = null;
+    }
     if (_terminalError != null) {
       _reportOutputReady();
       return;
     }
 
-    final playerState = _player.state;
     final hasClips = _clips.isNotEmpty;
     final currentIndex = hasClips
         ? _currentClipIndex.clamp(0, _clips.length - 1)
@@ -792,6 +868,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
         clearError: status != PlaybackStatus.error,
       ),
     );
+    _reportOutputReady();
   }
 
   Duration _clampDuration(Duration value, {required Duration max}) {
@@ -816,6 +893,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
 
   void _handleError(Object error) {
     if (_disposed) return;
+    if (!_outputFailed) _sourceErrorPosition = _player.state.position;
     _terminalError = error;
     _reportedErrorGeneration = _activeLoadGeneration;
     _emitState(

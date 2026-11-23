@@ -7,9 +7,11 @@ import 'dart:io';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:divine_video_player/src/linux/linux_video_player_backend.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_kit/media_kit.dart' hide AudioTrack;
+import 'package:media_kit_video/media_kit_video.dart' as video;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -31,7 +33,7 @@ void main() {
         final errors = <Object>[];
         final backend = MediaKitLinuxVideoPlayerBackend(
           playerFactory: () {
-            final player = Player();
+            final player = _headlessPlayer();
             players.add(player);
             return player;
           },
@@ -44,9 +46,6 @@ void main() {
         );
         addTearDown(backend.dispose);
         final firstNative = players.first.platform! as NativePlayer;
-        await firstNative.setProperty('vo', 'null');
-        await firstNative.setProperty('vid', 'auto');
-        await firstNative.setProperty('ao', 'null');
         final first = File(
           'test/fixtures/desktop_silent_portrait.mp4',
         ).absolute;
@@ -98,9 +97,6 @@ void main() {
         );
         expect(states.last.clipCount, 1);
         expect(states.last.duration, const Duration(milliseconds: 900));
-        await native.setProperty('vo', 'null');
-        await native.setProperty('ao', 'null');
-        await native.setProperty('vid', 'auto');
         final progressing = players.last.stream.position.firstWhere(
           (position) => position > Duration.zero,
         );
@@ -115,11 +111,7 @@ void main() {
       'preserves a rendered source after replacement validation fails',
       () async {
         MediaKit.ensureInitialized();
-        final player = Player();
-        final native = player.platform! as NativePlayer;
-        await native.setProperty('vo', 'null');
-        await native.setProperty('vid', 'auto');
-        await native.setProperty('ao', 'null');
+        final player = _headlessPlayer();
         final source = File(
           'test/fixtures/desktop_silent_portrait.mp4',
         ).absolute;
@@ -134,7 +126,7 @@ void main() {
               first = false;
               return player;
             }
-            return Player();
+            return _headlessPlayer();
           },
           videoControllerFactory: (_) => Object(),
           videoControllerReady: (_) => rendered.future,
@@ -229,7 +221,7 @@ void main() {
       final errors = <Object>[];
       final backend = MediaKitLinuxVideoPlayerBackend(
         playerFactory: () {
-          if (mainPlayerCreated) return Player();
+          if (mainPlayerCreated) return _headlessPlayer();
           mainPlayerCreated = true;
           return Player(platformPlayer: _PlaybackHarness());
         },
@@ -250,11 +242,9 @@ void main() {
       MediaKit.ensureInitialized();
       final source = File('test/fixtures/desktop_audio_portrait.mp4').absolute;
       expect(source.existsSync(), isTrue);
-      final player = Player();
-      final native = player.platform! as NativePlayer;
-      await native.setProperty('vo', 'null');
-      await native.setProperty('vid', 'auto');
-      await native.setProperty('ao', 'divine_missing_audio_driver');
+      final player = _headlessPlayer(
+        audioOutput: 'divine_missing_audio_driver',
+      );
       final states = <DivineVideoPlayerState>[];
       final errors = <Object>[];
       final diagnostics = <String>[];
@@ -288,7 +278,147 @@ void main() {
       );
       expect(errors, isEmpty);
     });
+
+    test('reflects native recovery onto a valid subsequent clip', () async {
+      MediaKit.ensureInitialized();
+      final player = _headlessPlayer();
+      final states = <DivineVideoPlayerState>[];
+      final errors = <Object>[];
+      final backend = MediaKitLinuxVideoPlayerBackend(
+        playerFactory: () => player,
+        videoControllerFactory: (_) => Object(),
+        videoControllerReady: (_) => Completer<void>().future,
+      );
+      await backend.initialize(onStateChanged: states.add, onError: errors.add);
+      addTearDown(backend.dispose);
+      final progressing = player.stream.position.firstWhere(
+        (position) =>
+            position > Duration.zero && player.state.playlist.index == 1,
+      );
+      await backend.setClips([
+        VideoClip(
+          uri: File(
+            'test/fixtures/absent-playlist.mp4',
+          ).absolute.uri.toString(),
+          end: const Duration(seconds: 1),
+        ),
+        VideoClip(
+          uri: File(
+            'test/fixtures/desktop_audio_portrait.mp4',
+          ).absolute.uri.toString(),
+          end: const Duration(seconds: 1),
+        ),
+      ]);
+      await backend.play();
+      await progressing.timeout(const Duration(seconds: 5));
+      await pumpEventQueue();
+
+      expect(errors, isNotEmpty, reason: 'the first clip genuinely failed');
+      expect(player.state.playlist.index, 1);
+      expect(player.state.playing, isTrue);
+      expect(states.last.currentClipIndex, 1);
+      expect(states.last.status, PlaybackStatus.playing);
+      expect(states.last.errorMessage, isNull);
+    });
+
+    testWidgets('blocks playback after attached renderer creation fails', (
+      tester,
+    ) async {
+      const channel = MethodChannel('com.alexmercerind/media_kit_video');
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      final calls = <String>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(call.method);
+        if (call.method == 'VideoOutputManager.Create') {
+          throw PlatformException(code: 'synthetic_output_create_failed');
+        }
+        return null;
+      });
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+      final originalPlatform = debugDefaultTargetPlatformOverride;
+      final originalFactory = DivineVideoPlayerController.linuxBackendFactory;
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      late Player player;
+      late DivineVideoPlayerController controller;
+      late Future<void> opened;
+      late Future<DivineVideoPlayerState> failed;
+      try {
+        await tester.runAsync(() async {
+          MediaKit.ensureInitialized();
+          player = _headlessPlayer();
+          DivineVideoPlayerController.linuxBackendFactory = () =>
+              MediaKitLinuxVideoPlayerBackend(
+                playerFactory: () => player,
+                videoControllerFactory: (player) => video.VideoController(
+                  player,
+                  configuration: const video.VideoControllerConfiguration(
+                    vo: 'null',
+                    hwdec: 'no',
+                  ),
+                ),
+              );
+          controller = DivineVideoPlayerController();
+          await controller.initialize();
+          final loading = controller.stateStream.firstWhere(
+            (state) => state.status == PlaybackStatus.buffering,
+          );
+          failed = controller.stateStream.firstWhere(
+            (state) => state.status == PlaybackStatus.error,
+          );
+          opened = controller.setSource(
+            VideoClip(
+              uri: File(
+                'test/fixtures/desktop_audio_portrait.mp4',
+              ).absolute.uri.toString(),
+              end: const Duration(seconds: 1),
+            ),
+          );
+          await loading.timeout(const Duration(seconds: 3));
+          expect(
+            (player.platform! as NativePlayer).isVideoControllerAttached,
+            isTrue,
+          );
+        });
+        await tester.pump();
+        await tester.runAsync(() async {
+          await opened.timeout(const Duration(seconds: 5));
+          final error = await failed.timeout(const Duration(seconds: 3));
+          expect(
+            error.errorMessage,
+            contains('synthetic_output_create_failed'),
+          );
+          await controller.play();
+
+          final native = player.platform! as NativePlayer;
+          expect(native.videoControllerCompleter.isCompleted, isTrue);
+          expect(await native.getProperty('pause'), 'yes');
+          expect(player.state.playing, isFalse);
+          expect(await controller.firstFrameRendered, isFalse);
+          expect(controller.state.status, PlaybackStatus.error);
+          expect(calls, contains('VideoOutputManager.Create'));
+        });
+        expect(tester.takeException(), isNull);
+      } finally {
+        await tester.runAsync(controller.dispose);
+        DivineVideoPlayerController.linuxBackendFactory = originalFactory;
+        debugDefaultTargetPlatformOverride = originalPlatform;
+      }
+    });
   });
+}
+
+Player _headlessPlayer({String audioOutput = 'null'}) {
+  final player = Player();
+  final native = player.platform! as NativePlayer;
+  // Configure before mpv selects tracks. Setting these after open races with
+  // automatic audio/video selection and can leave an already idle playlist.
+  native.onLoadHooks.add(() async {
+    await native.setProperty('vo', 'null', waitForInitialization: false);
+    await native.setProperty('ao', audioOutput, waitForInitialization: false);
+    await native.setProperty('vid', 'auto', waitForInitialization: false);
+  });
+  return player;
 }
 
 class _PlaybackHarness extends PlatformPlayer {

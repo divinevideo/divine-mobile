@@ -801,6 +801,37 @@ void main() {
       expect(detachedClipPlayers.entryCount, 0);
     });
 
+    testWidgets('keeps the poster when its first-frame wait is cancelled', (
+      tester,
+    ) async {
+      final opening = Completer<DetachedClipPlayer?>();
+      unawaited(detachedClipPlayers.acquire(key, () => opening.future));
+      await _pumpEditorLayer(
+        tester,
+        meta: meta,
+        editor: editor,
+        previewReleased: previewReleased,
+      );
+      detachedClipPlayers.release(key);
+      final fake = _fakePlayer();
+      final firstFrame = Completer<bool>();
+      when(
+        () => fake.controller.firstFrameRendered,
+      ).thenAnswer((_) => firstFrame.future);
+      opening.complete(fake);
+      await tester.pump();
+      await tester.pump();
+      expect(shownPlayer(tester)?.controller, same(fake.controller));
+      expect(shownPlayer(tester)?.placeholder, isNotNull);
+
+      firstFrame.complete(false);
+      await tester.pump();
+
+      expect(shownPlayer(tester)?.placeholder, isNotNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 3));
+    });
+
     testWidgets('drops the poster fade once its player has drawn a frame', (
       tester,
     ) async {

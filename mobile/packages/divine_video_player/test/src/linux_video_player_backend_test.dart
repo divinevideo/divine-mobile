@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:divine_video_player/src/linux/linux_video_player_backend.dart';
 import 'package:fake_async/fake_async.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_kit/media_kit.dart' hide AudioTrack;
@@ -13,7 +14,386 @@ void main() {
   setUp(MediaKitLinuxVideoPlayerBackend.resetInitializationForTesting);
   tearDown(MediaKitLinuxVideoPlayerBackend.resetInitializationForTesting);
 
+  group('public firstFrameRendered', () {
+    test('preserves the active wait until replacement acceptance', () async {
+      final players = <_FakePlatformPlayer>[];
+      final outputs = <_FakeVideoController>[];
+      final probe = Completer<Duration>();
+      final probing = Completer<void>();
+      final backend = MediaKitLinuxVideoPlayerBackend(
+        mediaKitInitializer: _noop,
+        playerFactory: () {
+          final player = _FakePlatformPlayer();
+          players.add(player);
+          return Player(platformPlayer: player);
+        },
+        videoControllerFactory: (_) {
+          final output = _FakeVideoController();
+          outputs.add(output);
+          return output;
+        },
+        videoControllerReady: (output) =>
+            (output as _FakeVideoController).ready.future,
+        durationProbe: (_) {
+          probing.complete();
+          return probe.future;
+        },
+      );
+      await _withDesktopController(backend, (controller) async {
+        await controller.setSource(
+          const VideoClip(uri: 'file:///first.mp4', end: Duration(seconds: 2)),
+        );
+        outputs.single.ready.complete();
+        await pumpEventQueue();
+        final first = controller.firstFrameRendered;
+        expect(await first, isTrue);
+        final replacing = controller.setSource(
+          const VideoClip(uri: 'file:///second.mp4'),
+        );
+        await probing.future;
+        try {
+          expect(controller.firstFrameRendered, same(first));
+          players.first.emitState(
+            players.first.state.copyWith(
+              position: const Duration(milliseconds: 20),
+            ),
+          );
+          await pumpEventQueue();
+        } finally {
+          probe.complete(const Duration(seconds: 3));
+          await replacing;
+        }
+        final second = controller.firstFrameRendered;
+        var completed = false;
+        unawaited(second.then((_) => completed = true));
+        await pumpEventQueue();
+
+        expect(second, isNot(same(first)));
+        expect(completed, isFalse);
+        expect(controller.state.isFirstFrameRendered, isFalse);
+        outputs.last.ready.complete();
+        expect(await second, isTrue);
+      });
+    });
+
+    test('cancels an unrendered output when it is retired', () async {
+      final outputs = <_FakeVideoController>[];
+      final backend = MediaKitLinuxVideoPlayerBackend(
+        mediaKitInitializer: _noop,
+        playerFactory: () => Player(platformPlayer: _FakePlatformPlayer()),
+        videoControllerFactory: (_) {
+          final output = _FakeVideoController();
+          outputs.add(output);
+          return output;
+        },
+        videoControllerReady: (output) =>
+            (output as _FakeVideoController).ready.future,
+      );
+      await _withDesktopController(backend, (controller) async {
+        await controller.setSource(
+          const VideoClip(uri: 'file:///first.mp4', end: Duration(seconds: 2)),
+        );
+        final first = controller.firstFrameRendered;
+        bool? result;
+        unawaited(first.then((value) => result = value));
+        await controller.setSource(
+          const VideoClip(uri: 'file:///second.mp4', end: Duration(seconds: 3)),
+        );
+        await pumpEventQueue();
+
+        expect(result, isFalse);
+        expect(controller.firstFrameRendered, isNot(same(first)));
+        outputs.first.ready.complete();
+        await pumpEventQueue();
+        expect(controller.state.isFirstFrameRendered, isFalse);
+        outputs.last.ready.complete();
+        expect(await controller.firstFrameRendered, isTrue);
+      });
+    });
+
+    test('keeps the active wait when replacement validation rejects', () async {
+      final output = _FakeVideoController();
+      final backend = MediaKitLinuxVideoPlayerBackend(
+        mediaKitInitializer: _noop,
+        playerFactory: () => Player(platformPlayer: _FakePlatformPlayer()),
+        videoControllerFactory: (_) => output,
+        videoControllerReady: (_) => output.ready.future,
+        durationProbe: (_) =>
+            Future<Duration>.error(StateError('Invalid replacement')),
+      );
+      await _withDesktopController(backend, (controller) async {
+        await controller.setSource(
+          const VideoClip(uri: 'file:///first.mp4', end: Duration(seconds: 2)),
+        );
+        output.ready.complete();
+        await pumpEventQueue();
+        final first = controller.firstFrameRendered;
+        expect(await first, isTrue);
+
+        await expectLater(
+          controller.setSource(const VideoClip(uri: 'file:///missing.mp4')),
+          throwsStateError,
+        );
+
+        expect(controller.firstFrameRendered, same(first));
+        expect(await controller.firstFrameRendered, isTrue);
+      });
+    });
+
+    for (final action in ['stop', 'dispose']) {
+      test('settles an unrendered wait on $action', () async {
+        final output = _FakeVideoController();
+        final backend = MediaKitLinuxVideoPlayerBackend(
+          mediaKitInitializer: _noop,
+          playerFactory: () => Player(platformPlayer: _FakePlatformPlayer()),
+          videoControllerFactory: (_) => output,
+          videoControllerReady: (_) => output.ready.future,
+        );
+        await _withDesktopController(backend, (controller) async {
+          await controller.setSource(
+            const VideoClip(
+              uri: 'file:///first.mp4',
+              end: Duration(seconds: 2),
+            ),
+          );
+          bool? result;
+          unawaited(
+            controller.firstFrameRendered.then((value) => result = value),
+          );
+          if (action == 'stop') {
+            await controller.stop();
+          } else {
+            await controller.dispose();
+          }
+          output.ready.complete();
+          await pumpEventQueue();
+
+          expect(result, isFalse);
+        });
+      });
+    }
+  });
+
   group(MediaKitLinuxVideoPlayerBackend, () {
+    test('publishes output readiness after observed source recovery', () async {
+      final player = _FakePlatformPlayer();
+      final output = _FakeVideoController();
+      final backend = MediaKitLinuxVideoPlayerBackend(
+        mediaKitInitializer: _noop,
+        playerFactory: () => Player(platformPlayer: player),
+        videoControllerFactory: (_) => output,
+        videoControllerReady: (_) => output.ready.future,
+      );
+      await backend.initialize(onStateChanged: (_) {}, onError: (_) {});
+      addTearDown(backend.dispose);
+      await backend.setClips([
+        const VideoClip(uri: 'file:///one.mp4', end: Duration(seconds: 2)),
+      ]);
+      bool? rendered;
+      unawaited(backend.firstFrameRendered.then((value) => rendered = value));
+      player.emitPlaybackError('Source interruption');
+      await pumpEventQueue();
+      output.ready.complete();
+      await pumpEventQueue();
+      expect(rendered, isNull);
+      player.emitState(
+        player.state.copyWith(playing: true, position: 1.seconds),
+      );
+      await pumpEventQueue();
+
+      expect(rendered, isTrue);
+    });
+
+    test('preserves renderer failure when native pause rejects', () async {
+      final player = _FakePlatformPlayer()
+        ..pauseError = StateError('Pause lost');
+      final output = _FakeVideoController();
+      final errors = <Object>[];
+      final states = <DivineVideoPlayerState>[];
+      final backend = MediaKitLinuxVideoPlayerBackend(
+        mediaKitInitializer: _noop,
+        playerFactory: () => Player(platformPlayer: player),
+        videoControllerFactory: (_) => output,
+        videoControllerReady: (_) => output.ready.future,
+      );
+      await backend.initialize(onStateChanged: states.add, onError: errors.add);
+      addTearDown(backend.dispose);
+      await backend.setClips([
+        const VideoClip(uri: 'file:///one.mp4', end: Duration(seconds: 2)),
+      ]);
+      output.ready.completeError(StateError('Renderer failed'));
+      await pumpEventQueue();
+      await backend.play();
+
+      expect(player.pauseCalls, 1);
+      expect(player.playCalls, 0);
+      expect(states.last.status, PlaybackStatus.error);
+      expect(errors.single.toString(), contains('Renderer failed'));
+    });
+
+    test('recovers source errors when the native playlist advances', () async {
+      final player = _FakePlatformPlayer();
+      final states = <DivineVideoPlayerState>[];
+      final errors = <Object>[];
+      final backend = MediaKitLinuxVideoPlayerBackend(
+        mediaKitInitializer: _noop,
+        playerFactory: () => Player(platformPlayer: player),
+        videoControllerFactory: (_) => _FakeVideoController(),
+        videoControllerReady: (_) => Completer<void>().future,
+      );
+      await backend.initialize(onStateChanged: states.add, onError: errors.add);
+      addTearDown(backend.dispose);
+      await backend.setClips([
+        const VideoClip(uri: 'file:///missing.mp4', end: Duration(seconds: 2)),
+        const VideoClip(uri: 'file:///valid.mp4', end: Duration(seconds: 3)),
+      ]);
+      player.emitPlaybackError('First item could not open');
+      await pumpEventQueue();
+      expect(states.last.status, PlaybackStatus.error);
+      player.emitState(player.state.copyWith(position: 1.seconds));
+      await pumpEventQueue();
+      expect(states.last.status, PlaybackStatus.error);
+
+      player.emitPlaylistIndex(1);
+      player.emitState(
+        player.state.copyWith(position: Duration.zero, buffering: true),
+      );
+      await pumpEventQueue();
+      player.emitPlaybackError('Delayed diagnostic from first item');
+      await pumpEventQueue();
+      expect(states.last.status, PlaybackStatus.error);
+      player.emitState(
+        player.state.copyWith(
+          playing: true,
+          buffering: false,
+          position: 1.seconds,
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(states.last.status, PlaybackStatus.playing);
+      expect(states.last.currentClipIndex, 1);
+      expect(states.last.position, 3.seconds);
+      expect(states.last.errorMessage, isNull);
+      expect(errors, [
+        'First item could not open',
+        'Delayed diagnostic from first item',
+      ]);
+    });
+
+    test('quiesces renderer failure and blocks queued play', () async {
+      final player = _FakePlatformPlayer();
+      final output = _FakeVideoController();
+      final states = <DivineVideoPlayerState>[];
+      final errors = <Object>[];
+      final backend = MediaKitLinuxVideoPlayerBackend(
+        mediaKitInitializer: _noop,
+        playerFactory: () => Player(platformPlayer: player),
+        videoControllerFactory: (_) => output,
+        videoControllerReady: (_) => output.ready.future,
+      );
+      await backend.initialize(onStateChanged: states.add, onError: errors.add);
+      addTearDown(backend.dispose);
+      await backend.setClips([
+        const VideoClip(uri: 'file:///one.mp4', end: Duration(seconds: 2)),
+        const VideoClip(uri: 'file:///two.mp4', end: Duration(seconds: 3)),
+      ]);
+      await backend.play();
+      expect(player.state.playing, isTrue);
+      final firstFrame = backend.firstFrameRendered;
+      final gate = Completer<void>();
+      player.volumeReady = gate.future;
+      final volume = backend.setVolume(0.5);
+      final queuedPlay = backend.play();
+      output.ready.completeError(StateError('Renderer failed'));
+      await pumpEventQueue();
+      gate.complete();
+      await Future.wait<void>([volume, queuedPlay]);
+      await pumpEventQueue();
+
+      expect(player.state.playing, isFalse);
+      expect(player.playCalls, 1);
+      expect(player.pauseCalls, 1);
+      expect(await firstFrame, isFalse);
+      player.emitPlaylistIndex(1);
+      await pumpEventQueue();
+      await backend.play();
+      expect(player.state.playing, isFalse);
+      expect(player.playCalls, 1);
+      expect(states.last.status, PlaybackStatus.error);
+      expect(errors.single.toString(), contains('Renderer failed'));
+    });
+
+    test('does not quiesce a replacement after the old output fails', () async {
+      final players = <_FakePlatformPlayer>[];
+      final outputs = <_FakeVideoController>[];
+      final states = <DivineVideoPlayerState>[];
+      final backend = MediaKitLinuxVideoPlayerBackend(
+        mediaKitInitializer: _noop,
+        playerFactory: () {
+          final player = _FakePlatformPlayer();
+          players.add(player);
+          return Player(platformPlayer: player);
+        },
+        videoControllerFactory: (_) {
+          final output = _FakeVideoController();
+          outputs.add(output);
+          return output;
+        },
+        videoControllerReady: (output) =>
+            (output as _FakeVideoController).ready.future,
+      );
+      await backend.initialize(onStateChanged: states.add, onError: (_) {});
+      addTearDown(backend.dispose);
+      await backend.setClips([
+        const VideoClip(uri: 'file:///one.mp4', end: Duration(seconds: 2)),
+      ]);
+      await backend.play();
+      final gate = Completer<void>();
+      players.first.volumeReady = gate.future;
+      final volume = backend.setVolume(0.5);
+      final replacing = backend.setClips([
+        const VideoClip(uri: 'file:///two.mp4', end: Duration(seconds: 3)),
+      ]);
+      await pumpEventQueue();
+      final playing = backend.play();
+      outputs.first.ready.completeError(StateError('Retiring output failed'));
+      await pumpEventQueue();
+      gate.complete();
+      await Future.wait<void>([volume, replacing, playing]);
+
+      expect(players, hasLength(2));
+      expect(players.last.pauseCalls, 0);
+      expect(players.last.state.playing, isTrue);
+      expect(states.last.status, PlaybackStatus.playing);
+    });
+
+    test('reports renderer failure after a source error', () async {
+      final player = _FakePlatformPlayer();
+      final output = _FakeVideoController();
+      final errors = <Object>[];
+      final backend = MediaKitLinuxVideoPlayerBackend(
+        mediaKitInitializer: _noop,
+        playerFactory: () => Player(platformPlayer: player),
+        videoControllerFactory: (_) => output,
+        videoControllerReady: (_) => output.ready.future,
+      );
+      await backend.initialize(onStateChanged: (_) {}, onError: errors.add);
+      addTearDown(backend.dispose);
+      await backend.setClips([
+        const VideoClip(uri: 'file:///one.mp4', end: Duration(seconds: 2)),
+      ]);
+      player.emitPlaybackError('Source failed');
+      await pumpEventQueue();
+      output.ready.completeError(StateError('Renderer failed'));
+      await pumpEventQueue();
+
+      expect(errors.map((error) => '$error'), [
+        'Source failed',
+        'Bad state: Renderer failed',
+      ]);
+    });
+
     test(
       'keeps a validated replacement when a newer request rejects '
       'during retirement',
@@ -1150,6 +1530,12 @@ void main() {
       fakeVideoController.ready.complete();
       await tester.pump();
 
+      expect(emittedStates, isEmpty, reason: 'no media has been loaded');
+      await tester.runAsync(
+        () => backend.setClips([
+          const VideoClip(uri: 'file:///one.mp4', end: Duration(seconds: 2)),
+        ]),
+      );
       expect(emittedStates.last.isFirstFrameRendered, isTrue);
       await tester.runAsync(backend.dispose);
     });
@@ -1622,6 +2008,25 @@ void main() {
   });
 }
 
+Future<void> _withDesktopController(
+  LinuxVideoPlayerBackend backend,
+  Future<void> Function(DivineVideoPlayerController) action,
+) async {
+  final originalPlatform = debugDefaultTargetPlatformOverride;
+  final originalFactory = DivineVideoPlayerController.linuxBackendFactory;
+  debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+  DivineVideoPlayerController.linuxBackendFactory = () => backend;
+  final controller = DivineVideoPlayerController();
+  try {
+    await controller.initialize();
+    await action(controller);
+  } finally {
+    await controller.dispose();
+    DivineVideoPlayerController.linuxBackendFactory = originalFactory;
+    debugDefaultTargetPlatformOverride = originalPlatform;
+  }
+}
+
 class _FakeVideoController {
   final ready = Completer<void>();
 }
@@ -1652,6 +2057,7 @@ class _FakePlatformPlayer extends PlatformPlayer {
   int disposeCalls = 0;
   int setRateCalls = 0;
   StateError? volumeError;
+  StateError? pauseError;
   bool deferVolumeObservation = false;
   Future<void>? volumeReady;
   Timer? _durationTimer;
@@ -1713,6 +2119,7 @@ class _FakePlatformPlayer extends PlatformPlayer {
   @override
   Future<void> pause() async {
     pauseCalls++;
+    if (pauseError case final error?) throw error;
     state = state.copyWith(playing: false);
     playingController.add(false);
   }

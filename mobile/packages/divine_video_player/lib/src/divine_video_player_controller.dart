@@ -403,7 +403,13 @@ class DivineVideoPlayerController {
   /// Resets each time [setClips] or [setSource] loads new media.
   /// Safe to await multiple times — a completed future stays completed
   /// until the next source change.
-  Future<bool> get firstFrameRendered => _firstFrameCompleter.future;
+  /// On desktop, follows the accepted output while a replacement validates,
+  /// and completes false if that output fails, stops or retires before
+  /// rendering.
+  Future<bool> get firstFrameRendered => switch (_linuxBackend) {
+    final DesktopVideoFrameReadiness backend => backend.firstFrameRendered,
+    _ => _firstFrameCompleter.future,
+  };
 
   /// Whether [initialize] has completed successfully.
   bool get isInitialized => _initialized;
@@ -537,7 +543,8 @@ class DivineVideoPlayerController {
     if (clips.isEmpty) {
       throw ArgumentError.value(clips, 'clips', 'must not be empty');
     }
-    if (_firstFrameCompleter.isCompleted) {
+    if (_linuxBackend is! DesktopVideoFrameReadiness &&
+        _firstFrameCompleter.isCompleted) {
       _firstFrameCompleter = Completer<bool>();
     }
     if (_isWebBackend) {
