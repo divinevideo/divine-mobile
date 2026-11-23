@@ -205,10 +205,11 @@ class SoundsRepository {
   final Set<String> _loggedUnresolvedSoundIds = {};
 
   /// Active subscription for real-time updates
-  StreamSubscription<Event>? _subscription;
+  RefusalRetryingSubscription? _subscription;
   String? _subscriptionId;
 
   bool _isInitialized = false;
+  bool _isDisposed = false;
 
   /// Whether the repository has been initialized
   bool get isInitialized => _isInitialized;
@@ -233,7 +234,7 @@ class SoundsRepository {
   ///
   /// Call this before using the repository to ensure sounds are loaded.
   Future<void> initialize() async {
-    if (_isInitialized) return;
+    if (_isDisposed || _isInitialized) return;
 
     Log.debug(
       'Initializing SoundsRepository',
@@ -244,6 +245,7 @@ class SoundsRepository {
     try {
       // Fetch initial trending sounds
       await fetchTrendingSounds();
+      if (_isDisposed) return;
 
       // Subscribe for real-time updates
       _subscribeToAudioEvents();
@@ -266,6 +268,7 @@ class SoundsRepository {
 
   /// Dispose resources
   Future<void> dispose() async {
+    _isDisposed = true;
     await _subscription?.cancel();
     if (_subscriptionId != null) {
       await _nostrClient.unsubscribe(_subscriptionId!);
@@ -1565,26 +1568,31 @@ class SoundsRepository {
       category: LogCategory.relay,
     );
 
-    _subscriptionId = 'sounds_repo_audio_events';
+    final subscriptionId = _subscriptionId = 'sounds_repo_audio_events';
 
-    final eventStream = _nostrClient.subscribe([
-      Filter(kinds: const [audioEventKind], m: audioMimeTypes, limit: 100),
-    ], subscriptionId: _subscriptionId);
-
-    _subscription = eventStream.listen(
-      (event) {
+    // A pending reopen of an earlier subscription would outlive dispose.
+    unawaited(_subscription?.cancel());
+    _subscription = RefusalRetryingSubscription(
+      open: () => _nostrClient.subscribe([
+        Filter(kinds: const [audioEventKind], m: audioMimeTypes, limit: 100),
+      ], subscriptionId: subscriptionId),
+      onEvent: (event) {
         if (event.kind == audioEventKind) {
           _processAndCacheEvent(event);
         }
       },
-      onError: (Object error) {
-        Log.error(
-          'Audio events subscription error: $error',
-          name: 'SoundsRepository',
-          category: LogCategory.relay,
-        );
-      },
-    );
+      onRefused: (reasonCategory, retryIn) => Log.warning(
+        'Every relay refused the audio events subscription '
+        '(reason=$reasonCategory); retrying in ${retryIn.inSeconds}s',
+        name: 'SoundsRepository',
+        category: LogCategory.relay,
+      ),
+      onError: (error) => Log.error(
+        'Audio events subscription error: $error',
+        name: 'SoundsRepository',
+        category: LogCategory.relay,
+      ),
+    )..start();
   }
 
   /// Process and cache a single Nostr event as an AudioEvent.

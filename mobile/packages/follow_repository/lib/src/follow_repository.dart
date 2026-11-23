@@ -503,7 +503,7 @@ class FollowRepository {
   static const _profileListCacheTtl = Duration(seconds: 30);
 
   // Real-time sync subscription for cross-device synchronization
-  StreamSubscription<Event>? _contactListSubscription;
+  RefusalRetryingSubscription? _contactListSubscription;
   String? _contactListSubscriptionId;
 
   // Getters
@@ -3290,36 +3290,40 @@ class FollowRepository {
     );
 
     // Use a deterministic subscription ID so we can unsubscribe later
-    _contactListSubscriptionId = scopedSubscriptionId(
+    final subscriptionId = _contactListSubscriptionId = scopedSubscriptionId(
       'follow_repo_contact_list',
       currentUserPubkey,
     );
 
-    final eventStream = _nostrClient.subscribe([
-      Filter(
-        authors: [currentUserPubkey],
-        kinds: const [EventKind.contactList],
-        limit: 1,
-      ),
-    ], subscriptionId: _contactListSubscriptionId);
-
-    _contactListSubscription = eventStream.listen(
-      (event) {
+    // A pending reopen of an earlier subscription would outlive dispose.
+    unawaited(_contactListSubscription?.cancel());
+    _contactListSubscription = RefusalRetryingSubscription(
+      open: () => _nostrClient.subscribe([
+        Filter(
+          authors: [currentUserPubkey],
+          kinds: const [EventKind.contactList],
+          limit: 1,
+        ),
+      ], subscriptionId: subscriptionId),
+      onEvent: (event) {
         // Only process Kind 3 events from the current user
         if (event.kind == EventKind.contactList &&
             event.pubkey == currentUserPubkey) {
           _processContactListEvent(event);
         }
       },
-      onError: (Object error) {
-        Log.error(
-          'Real-time contact list subscription '
-          'error: $error',
-          name: 'FollowRepository',
-          category: LogCategory.system,
-        );
-      },
-    );
+      onRefused: (reasonCategory, retryIn) => Log.warning(
+        'Every relay refused the live contact list subscription '
+        '(reason=$reasonCategory); retrying in ${retryIn.inSeconds}s',
+        name: 'FollowRepository',
+        category: LogCategory.system,
+      ),
+      onError: (error) => Log.warning(
+        'Live contact list subscription ended: $error',
+        name: 'FollowRepository',
+        category: LogCategory.system,
+      ),
+    )..start();
   }
 
   /// Republish the contact list without changing who is followed.
