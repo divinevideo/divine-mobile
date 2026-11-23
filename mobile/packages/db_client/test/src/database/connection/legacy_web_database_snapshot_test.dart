@@ -17,9 +17,10 @@ void main() {
       databaseFile = File('${directory.path}/legacy.sqlite');
       final db = sqlite3.open(databaseFile.path);
       try {
-        db.execute('PRAGMA user_version = 5');
-        db.execute('CREATE TABLE outbox (body BLOB NOT NULL)');
-        db.execute("INSERT INTO outbox VALUES (X'0080FF')");
+        db
+          ..execute('PRAGMA user_version = 5')
+          ..execute('CREATE TABLE outbox (body BLOB NOT NULL)')
+          ..execute("INSERT INTO outbox VALUES (X'0080FF')");
       } finally {
         db.close();
       }

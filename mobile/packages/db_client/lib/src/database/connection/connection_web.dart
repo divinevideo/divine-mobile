@@ -2,12 +2,10 @@
 // ABOUTME: Web Worker on OPFS or IndexedDB, in memory when neither is usable
 
 import 'dart:js_interop';
-import 'dart:typed_data';
 
+import 'package:db_client/src/database/connection/legacy_web_database_snapshot.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/wasm.dart';
-
-import 'legacy_web_database_snapshot.dart';
 
 @JS('window.localStorage')
 external _WebStorage? get _localStorage;
