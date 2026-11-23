@@ -1,16 +1,47 @@
-// ABOUTME: Web-specific database connection using IndexedDB
-// ABOUTME: Provides web-compatible storage through drift's web implementation
+// ABOUTME: Web-specific database connection using Drift's WasmDatabase
+// ABOUTME: Runs SQLite off the main thread in a Web Worker backed by OPFS/IndexedDB
+
+import 'dart:js_interop';
 
 import 'package:drift/drift.dart';
-// TODO(any): Migrate from deprecated drift/web.dart https://github.com/divinevideo/divine-mobile/issues/373
-// ignore_for_file: deprecated_member_use
-import 'package:drift/web.dart';
+import 'package:drift/wasm.dart';
 
-/// Open a database connection for web platform
-/// Uses IndexedDB through drift's web implementation
+@JS('window.localStorage')
+external _WebStorage? get _localStorage;
+
+extension type _WebStorage._(JSObject _) implements JSObject {
+  external void removeItem(String key);
+}
+
+void _clearLegacyLocalStorageDb() {
+  try {
+    final storage = _localStorage;
+    if (storage == null) return;
+    // Reclaim localStorage quota left behind by the deprecated drift/web.dart
+    // WebDatabase('divine_db') backend, which serialized the entire SQLite file
+    // into localStorage on every write.
+    storage
+      ..removeItem('moor_db_str_divine_db')
+      ..removeItem('moor_db_version_divine_db');
+  } on Object catch (_) {
+    // Best-effort cleanup; ignore storage access errors in restricted contexts.
+  }
+}
+
+/// Open a database connection for web platform.
+///
+/// Uses [WasmDatabase.open] with `sqlite3.wasm` and `drift_worker.js` so SQLite
+/// runs in a Web Worker backed by OPFS/IndexedDB instead of blocking the UI
+/// thread or serializing the whole database into `localStorage`.
 QueryExecutor openConnection() {
   return LazyDatabase(() async {
-    return WebDatabase('divine_db');
+    _clearLegacyLocalStorageDb();
+    final result = await WasmDatabase.open(
+      databaseName: 'divine_db',
+      sqlite3Uri: Uri.parse('sqlite3.wasm'),
+      driftWorkerUri: Uri.parse('drift_worker.js'),
+    );
+    return result.resolvedExecutor;
   });
 }
 

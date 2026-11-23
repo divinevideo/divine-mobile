@@ -121,6 +121,92 @@ void main() {
 
         await expectLater(signer.signEvent(event), throwsStateError);
       });
+
+      test('uses native Schnorr signer when available', () async {
+        when(
+          () => mockKeyContainer.withPrivateKey<Future<String>>(any()),
+        ).thenAnswer((invocation) {
+          final callback =
+              invocation.positionalArguments[0]
+                  as Future<String> Function(String);
+          return callback(testPrivateKey);
+        });
+
+        var nativeCalls = 0;
+        final fakeSig = 'a' * 128;
+        final signer = LocalKeySigner(
+          mockKeyContainer,
+          nativeSchnorrSigner:
+              ({
+                required privateKey,
+                required message,
+                auxRand,
+              }) async {
+                nativeCalls++;
+                expect(privateKey, equals(testPrivateKey));
+                expect(message, hasLength(64));
+                expect(auxRand, hasLength(64));
+                return fakeSig;
+              },
+        );
+        final event = Event(
+          testPublicKey,
+          EventKind.textNote,
+          [],
+          'Native sign test',
+        );
+
+        final signedEvent = await signer.signEvent(event);
+
+        expect(nativeCalls, equals(1));
+        expect(signedEvent.sig, equals(fakeSig));
+      });
+
+      test(
+        'falls back to Dart signing permanently after a native signer failure',
+        () async {
+          when(
+            () => mockKeyContainer.withPrivateKey<Future<String>>(any()),
+          ).thenAnswer((invocation) {
+            final callback =
+                invocation.positionalArguments[0]
+                    as Future<String> Function(String);
+            return callback(testPrivateKey);
+          });
+          when(() => mockKeyContainer.withPrivateKey<Event>(any())).thenAnswer((
+            invocation,
+          ) {
+            final callback =
+                invocation.positionalArguments[0] as Event Function(String);
+            return callback(testPrivateKey);
+          });
+
+          var nativeCalls = 0;
+          final signer = LocalKeySigner(
+            mockKeyContainer,
+            nativeSchnorrSigner:
+                ({
+                  required privateKey,
+                  required message,
+                  auxRand,
+                }) async {
+                  nativeCalls++;
+                  throw UnsupportedError('WebCrypto unavailable');
+                },
+          );
+
+          final first = await signer.signEvent(
+            Event(testPublicKey, EventKind.textNote, [], 'First'),
+          );
+          final second = await signer.signEvent(
+            Event(testPublicKey, EventKind.textNote, [], 'Second'),
+          );
+
+          expect(nativeCalls, equals(1));
+          expect(first.isSigned, isTrue);
+          expect(second.isSigned, isTrue);
+        },
+      );
     });
 
     group('signCanonicalPayload', () {
@@ -155,6 +241,42 @@ void main() {
           throwsStateError,
         );
       });
+
+      test(
+        'uses native Schnorr signer with deterministic zero auxRand',
+        () async {
+          when(
+            () => mockKeyContainer.withPrivateKey<Future<String>>(any()),
+          ).thenAnswer((invocation) {
+            final callback =
+                invocation.positionalArguments[0]
+                    as Future<String> Function(String);
+            return callback(testPrivateKey);
+          });
+
+          String? capturedAux;
+          final fakeSig = 'b' * 128;
+          final signer = LocalKeySigner(
+            mockKeyContainer,
+            nativeSchnorrSigner:
+                ({
+                  required privateKey,
+                  required message,
+                  auxRand,
+                }) async {
+                  capturedAux = auxRand;
+                  return fakeSig;
+                },
+          );
+
+          final sig = await signer.signCanonicalPayload(
+            Uint8List.fromList([1, 2, 3]),
+          );
+
+          expect(sig, equals(fakeSig));
+          expect(capturedAux, equals('0' * 64));
+        },
+      );
     });
 
     group('getRelays', () {

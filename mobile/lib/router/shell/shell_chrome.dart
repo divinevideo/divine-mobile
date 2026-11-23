@@ -3,7 +3,6 @@
 // ABOUTME: takes decided values so it can be pumped without the shell's wiring
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/app_update/app_update.dart';
@@ -13,7 +12,6 @@ import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/environment_indicator.dart';
 import 'package:openvine/widgets/environment_indicator_line.dart';
 import 'package:openvine/widgets/vine_bottom_nav.dart';
-import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// App bar + bottom nav wrapped around the active [StatefulShellRoute] branch.
@@ -84,17 +82,17 @@ class ShellChrome extends StatelessWidget {
         ? statusBarColumn.onRight
         : usesRail && isRtl;
     final navAtBottom = !navOnLeft && !navOnRight;
-    final navigation = PointerInterceptor(
-      intercepting: kIsWeb,
-      child: VineBottomNav(
-        currentIndex: currentIndex,
-        // `/following/new` renders inside the home branch, so Home reads
-        // as active even though it is not the home feed. The nav needs
-        // that distinction to give the tap an escape back to Home.
-        isCampaignLanding: routeContext?.isCampaignFollowing ?? false,
-        direction: navOnLeft || navOnRight ? Axis.vertical : Axis.horizontal,
-        statusBarColumnWidth: navInColumn ? statusBarColumn.width : null,
-      ),
+    // Web video elements already carry `pointer-events: none` in web/index.html,
+    // so wrapping navigation in PointerInterceptor would only spawn an extra
+    // HtmlElementView that splits CanvasKit into multiple WebGL overlays.
+    final navigation = VineBottomNav(
+      currentIndex: currentIndex,
+      // `/following/new` renders inside the home branch, so Home reads
+      // as active even though it is not the home feed. The nav needs
+      // that distinction to give the tap an escape back to Home.
+      isCampaignLanding: routeContext?.isCampaignFollowing ?? false,
+      direction: navOnLeft || navOnRight ? Axis.vertical : Axis.horizontal,
+      statusBarColumnWidth: navInColumn ? statusBarColumn.width : null,
     );
     return Scaffold(
       resizeToAvoidBottomInset: resizeToAvoidBottomInset,
@@ -144,8 +142,6 @@ class ShellChrome extends StatelessWidget {
             _StatusBarColumnFill(width: columnFillWidth),
         ],
       ),
-      // PointerInterceptor ensures the bottom nav receives taps on web even
-      // when HTML platform views (video elements) overlap the area.
       // Only a bottom bar takes the slot: the Scaffold drops the content's
       // bottom inset whenever the slot is filled, so with the nav at a side
       // the content would run under the home indicator.

@@ -4,6 +4,10 @@ import 'package:bip340/bip340.dart' as schnorr;
 import 'package:hex/hex.dart';
 import 'package:string_validator/string_validator.dart';
 
+import '../relay/native_schnorr_sign.dart';
+
+bool _nativePublicKeyDeriverFailed = false;
+
 /// Generates a random new secret key which is a 32-byte hexadecimal string.
 String generatePrivateKey() => getRandomHexString();
 
@@ -17,6 +21,16 @@ String getPublicKey(String privateKey) {
       'Invalid key (expected 64 hex characters)',
       'privateKey',
     );
+  }
+  if (!_nativePublicKeyDeriverFailed) {
+    final nativeDerive = resolveNativePublicKeyDeriver();
+    if (nativeDerive != null) {
+      try {
+        return nativeDerive(privateKey: privateKey);
+      } on Object catch (_) {
+        _nativePublicKeyDeriverFailed = true;
+      }
+    }
   }
   return schnorr.getPublicKey(privateKey);
 }

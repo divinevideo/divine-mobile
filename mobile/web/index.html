@@ -24,8 +24,8 @@
   <!-- Performance optimizations -->
   <link rel="dns-prefetch" href="https://api.divine.video">
   <link rel="preconnect" href="https://api.divine.video" crossorigin>
-  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
-  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+  <link rel="dns-prefetch" href="https://media.divine.video">
+  <link rel="preconnect" href="https://media.divine.video" crossorigin>
   <link rel="dns-prefetch" href="https://www.gstatic.com">
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 
@@ -40,17 +40,13 @@
        Written by scripts/generate_web_favicon.dart, not flutter_launcher_icons. -->
   <link rel="icon" type="image/png" sizes="96x96" href="favicon.png"/>
 
-  <!-- Material Icons with better loading strategy -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
-
   <title>Divine - Short-form Looping Videos on Nostr</title>
   <link rel="manifest" href="manifest.json">
   
-  <!-- Preload critical resources -->
+  <!-- Preload critical resources so main.dart.js starts downloading immediately
+       instead of waiting for DOMContentLoaded + flutter_bootstrap.js. -->
   <link rel="preload" href="flutter_bootstrap.js" as="script">
+  <link rel="preload" href="main.dart.js" as="script">
   <link rel="modulepreload" href="nostr_crypto.js">
   <link rel="modulepreload" href="vendor/noble-secp256k1/index.js">
   
@@ -79,23 +75,6 @@
     flt-platform-view,
     flt-platform-view-slot {
       pointer-events: none;
-    }
-    
-    /* Ensure Material Icons load properly */
-    .material-icons {
-      font-family: 'Material Icons';
-      font-weight: normal;
-      font-style: normal;
-      font-size: 24px;
-      line-height: 1;
-      letter-spacing: normal;
-      text-transform: none;
-      display: inline-block;
-      white-space: nowrap;
-      word-wrap: normal;
-      direction: ltr;
-      -webkit-font-feature-settings: 'liga';
-      -webkit-font-smoothing: antialiased;
     }
     
     /* Loading indicator for app startup */
@@ -139,28 +118,9 @@
        browser that previously registered the old cache-first SW will auto-clean on
        its next update check. -->
 
-  <!-- sql.js for drift/web IndexedDB-backed persistence -->
-  <script
-    src="https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js"
-    type="application/javascript"
-  ></script>
-  <script>
-    const sqlJsBaseUrl = 'https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/';
-    const originalInitSqlJs = window.initSqlJs;
-    if (typeof originalInitSqlJs === 'function') {
-      window.initSqlJs = (config = {}) => originalInitSqlJs({
-        ...config,
-        locateFile:
-            config.locateFile ?? ((file) => `${sqlJsBaseUrl}${file}`),
-      });
-    } else {
-      console.warn('sql.js failed to load before Flutter bootstrap');
-    }
-  </script>
-
-  <!-- Native-speed Nostr signature checks (see web/nostr_crypto.js). Module
+  <!-- Native-speed Nostr BIP-340 crypto (see web/nostr_crypto.js). Module
        scripts are deferred and run before flutter_bootstrap.js; the
-       modulepreload links below fetch both files early so they do not delay
+       modulepreload links above fetch both files early so they do not delay
        it. -->
   <script type="module" src="nostr_crypto.js"></script>
 
