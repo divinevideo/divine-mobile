@@ -11,6 +11,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
+import '../../helpers/fixtures.dart';
+
 void main() {
   group('DivineCameraDesktop', () {
     late _CameraBackend backend;
@@ -44,7 +46,9 @@ void main() {
             PathProviderPlatform.instance = _DocumentPaths(directory.path);
             try {
               final source = photo
-                  ? await File('test/fixtures/desktop_still_portrait.jpg').copy(
+                  ? await (await fixtureFile(
+                      'desktop_still_portrait.jpg',
+                    )).copy(
                       '${directory.path}/native.jpg',
                     )
                   : await File('${directory.path}/native.mp4').writeAsBytes([
@@ -1138,7 +1142,7 @@ void main() {
           'camera-still-',
         );
         addTearDown(() => directory.delete(recursive: true));
-        final file = await File('test/fixtures/desktop_still_portrait.jpg')
+        final file = await (await fixtureFile('desktop_still_portrait.jpg'))
             .copy(
               '${directory.path}/native.jpg',
             );

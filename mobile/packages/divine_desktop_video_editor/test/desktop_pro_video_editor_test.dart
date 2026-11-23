@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:divine_desktop_video_editor/src/desktop_pro_video_editor.dart';
@@ -7,6 +6,8 @@ import 'package:divine_desktop_video_editor/src/media_worker_client.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+
+import 'helpers/fixtures.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -19,22 +20,8 @@ void main() {
     setUp(() async {
       locations = 0;
       root = await Directory.systemTemp.createTemp('editor adapter ');
-      var directory = Directory.current;
-      while (!File('${directory.path}/.dart_tool/package_config.json')
-          .existsSync()) {
-        directory = directory.parent;
-      }
-      final config = File('${directory.path}/.dart_tool/package_config.json');
-      final json =
-          jsonDecode(await config.readAsString()) as Map<String, dynamic>;
-      final flutter = (json['packages'] as List<dynamic>)
-          .cast<Map<String, dynamic>>()
-          .singleWhere((package) => package['name'] == 'flutter');
-      final sdk = Directory.fromUri(
-        config.uri.resolve(flutter['rootUri'] as String),
-      ).parent.parent;
-      final executable =
-          '${sdk.path}/bin/cache/dart-sdk/bin/dart${Platform.isWindows ? '.exe' : ''}';
+      final executable = await dartExecutable();
+      final worker = await fixtureFile('worker.dart');
       editor = DesktopProVideoEditor(
         client: MediaWorkerClient(
           locate: () async {
@@ -42,7 +29,7 @@ void main() {
             return MediaWorkerCommand(
               executable,
               arguments: [
-                File('test/fixtures/worker.dart').absolute.path,
+                worker.path,
               ],
             );
           },
@@ -50,7 +37,7 @@ void main() {
         ),
       );
       video = EditorVideo.file(
-        File('test/fixtures/synthetic-colors.mp4').absolute,
+        await fixtureFile('synthetic-colors.mp4'),
       );
     });
     tearDown(() async {

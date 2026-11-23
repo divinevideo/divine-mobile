@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:divine_desktop_video_editor/src/media_worker_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'helpers/fixtures.dart';
+
 void main() {
   group('MediaWorkerClient', () {
     late Directory root;
@@ -14,26 +16,9 @@ void main() {
 
     setUp(() async {
       root = await Directory.systemTemp.createTemp('media worker test ');
-      var directory = Directory.current;
-      while (!File('${directory.path}/.dart_tool/package_config.json')
-          .existsSync()) {
-        if (directory.parent.path == directory.path) {
-          throw StateError('Workspace package configuration not found.');
-        }
-        directory = directory.parent;
-      }
-      final config = File('${directory.path}/.dart_tool/package_config.json');
-      final json =
-          jsonDecode(await config.readAsString()) as Map<String, dynamic>;
-      final flutter = (json['packages'] as List<dynamic>)
-          .cast<Map<String, dynamic>>()
-          .singleWhere((package) => package['name'] == 'flutter');
-      final sdk = Directory.fromUri(
-        config.uri.resolve(flutter['rootUri'] as String),
-      ).parent.parent;
       command = MediaWorkerCommand(
-        '${sdk.path}/bin/cache/dart-sdk/bin/dart${Platform.isWindows ? '.exe' : ''}',
-        arguments: [File('test/fixtures/worker.dart').absolute.path],
+        await dartExecutable(),
+        arguments: [(await fixtureFile('worker.dart')).path],
       );
       jobDirectories = [];
       client = MediaWorkerClient(

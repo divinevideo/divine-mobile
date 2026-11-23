@@ -5,6 +5,8 @@ import 'package:divine_camera/src/desktop/desktop_video_file_inspector.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_kit/media_kit.dart';
 
+import '../../helpers/fixtures.dart';
+
 void main() {
   setUpAll(() {
     final library = Platform.environment['DIVINE_NATIVE_LIBMPV'];
@@ -15,7 +17,9 @@ void main() {
       test('reads encoded portrait dimensions and audio=$hasAudio', () async {
         final inspector = DesktopVideoFileInspector();
         final metadata = await inspector.inspect(
-          'test/fixtures/desktop_${hasAudio ? 'audio' : 'silent'}_portrait.mp4',
+          (await fixtureFile(
+            'desktop_${hasAudio ? 'audio' : 'silent'}_portrait.mp4',
+          )).path,
         );
 
         // The native demuxer can include one 1024-sample AAC priming packet.

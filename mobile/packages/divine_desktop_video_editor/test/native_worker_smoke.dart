@@ -5,6 +5,8 @@ import 'package:flutter/widgets.dart' show Size;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
+import 'helpers/fixtures.dart';
+
 // Run explicitly with the actual helper. This is kept outside default test
 // discovery because native codec development libraries are a separate CI job.
 void main() {
@@ -24,7 +26,7 @@ void main() {
       try {
         final destination = File('${parent.path}/sdk.mp4');
         final source = EditorVideo.file(
-          File('test/fixtures/synthetic-colors.mp4').absolute,
+          await fixtureFile('synthetic-colors.mp4'),
         );
         await editor.renderVideoToFile(
           destination.path,
@@ -66,7 +68,7 @@ void main() {
         );
         try {
           final video = EditorVideo.file(
-            File('test/fixtures/synthetic-colors.mp4').absolute,
+            await fixtureFile('synthetic-colors.mp4'),
           );
           final configs = ThumbnailConfigs(
             video: video,
@@ -132,9 +134,7 @@ void main() {
           temporaryDirectory: () async => parent,
         );
         try {
-          final source = File('test/fixtures/synthetic-colors.mp4')
-              .absolute
-              .path;
+          final source = (await fixtureFile('synthetic-colors.mp4')).path;
           final destination = File('${parent.path}/completed.mp4');
           await client.execute(
             'renderVideo',
