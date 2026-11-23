@@ -196,8 +196,9 @@ final class VideoRecorderRecordingStartRequested extends VideoRecorderEvent {
 /// Registered with `transformer: sequential()` — see
 /// [VideoRecorderRecordingStartRequested].
 final class VideoRecorderRecordingStopRequested extends VideoRecorderEvent {
-  const VideoRecorderRecordingStopRequested({this.result})
-    : _teardown = null,
+  const VideoRecorderRecordingStopRequested()
+    : result = null,
+      _teardown = null,
       _isAutoStop = false;
 
   const VideoRecorderRecordingStopRequested._forTeardown(this._teardown)

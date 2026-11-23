@@ -26,8 +26,9 @@ class RecordingTraceContext {
   /// The recorder mode the take is filmed in.
   final VideoRecorderMode mode;
 
-  /// The stabilization the camera runs with. A look-ahead mode on iOS holds
-  /// the stop until the camera hands over its last frames.
+  /// The stabilization mode the camera reports. A look-ahead mode on iOS
+  /// holds the stop until the camera hands over its last frames; `auto` is
+  /// reported as `auto`, though iOS usually resolves it to one.
   final DivineVideoStabilizationMode stabilization;
 
   /// Whether the second camera films alongside the main one.
@@ -65,7 +66,8 @@ class RecordingTraces {
   /// [countdown] says whether a countdown runs first. Its time is kept out of
   /// the trace: the trace opens when [RecordingStartTrace.countdownEnded] is
   /// called, and the countdown goes into `countdown_ms` instead.
-  /// [sound] says whether a sound plays along with the take.
+  /// [sound] says whether a sound was picked to play along with the take. One
+  /// that fails to load still counts, and the take records without it.
   RecordingStartTrace start(
     RecordingTraceContext context, {
     required bool countdown,
