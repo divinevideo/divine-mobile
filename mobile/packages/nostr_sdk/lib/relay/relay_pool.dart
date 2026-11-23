@@ -4226,8 +4226,9 @@ class RelayPool {
   /// not be written is dropped, not queued: replayed on the next connection,
   /// its answer would reach nobody.
   ///
-  /// A relay skipped after an unknown-command notice ([Relay.countUnsupported])
-  /// is eligible again when its socket reconnects.
+  /// A relay known not to support COUNT ([Relay.countUnsupported]) is not
+  /// asked: its NIP-11 document leaves out NIP-45, or it answered an earlier
+  /// COUNT on the same socket with an unknown-command notice.
   ///
   /// Throws [CountNotSentException] when no relay accepted the COUNT, and
   /// [CountNotSupportedException] when relays accepted it but none answered

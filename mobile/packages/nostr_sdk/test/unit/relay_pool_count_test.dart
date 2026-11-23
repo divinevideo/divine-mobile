@@ -387,9 +387,46 @@ void main() {
       expect((await result).count, equals(42));
     });
 
+    test(
+      'does not ask a relay whose NIP-11 document leaves out NIP-45',
+      () async {
+        // memlay lists NIPs 1, 9 and 11 and refuses COUNT with a NOTICE of its
+        // own wording, which nothing here matches: the document is the only
+        // signal that would keep it from holding the count.
+        legacyRelay.info = nip11Listing([1, 9, 11]);
+        await addRelays();
+
+        final result = count();
+        await pumpEventQueue();
+
+        expect(countFramesOn(legacyFactory.lastChannel!), isEmpty);
+        answerCount(countingFactory.lastChannel!, 42);
+        expect((await result).count, equals(42));
+      },
+    );
+
+    test('reports COUNT as unsupported, without sending it, when no relay '
+        'lists NIP-45 in its NIP-11 document', () async {
+      countingRelay.info = nip11Listing([1, 11]);
+      legacyRelay.info = nip11Listing([1, 11]);
+      await addRelays();
+
+      await expectLater(
+        count(),
+        throwsA(
+          allOf(
+            isA<CountNotSupportedException>(),
+            isNot(isA<CountNotSentException>()),
+          ),
+        ),
+      );
+
+      expect(countFramesOn(countingFactory.lastChannel!), isEmpty);
+      expect(countFramesOn(legacyFactory.lastChannel!), isEmpty);
+    });
+
     for (final (description, nips) in [
       ('lists NIP-45', [1, 11, 45]),
-      ('omits NIP-45', [1, 11]),
       ('lists no NIPs', <int>[]),
     ]) {
       test('still asks a relay whose NIP-11 document $description', () async {
