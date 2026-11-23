@@ -472,30 +472,19 @@ abstract class Relay {
     completer?.completeError(CountNotSupportedException(reason));
   }
 
-  /// Whether to skip COUNT on this relay: its NIP-11 document lists its NIPs
-  /// without 45, or it refused COUNT on the current socket.
+  /// Whether the current socket has refused COUNT.
   ///
-  /// A relay whose document is missing or lists no NIPs is still asked, and
-  /// one that refused COUNT is asked again once its socket reconnects.
+  /// Once disconnected, allow the caller to try again on a fresh socket.
   bool get countUnsupported =>
-      _nip11ListsCount == false ||
-      (_supportsCount == false &&
-          relayStatus.connected == ClientConnected.connected);
+      _supportsCount == false &&
+      relayStatus.connected == ClientConnected.connected;
 
-  /// Whether the NIP-11 document lists NIP-45: null when it is missing or
-  /// lists no NIPs.
-  bool? get _nip11ListsCount {
-    final nips = info?.nips;
-    if (nips == null || nips.isEmpty) return null;
-    return nips.any((nip) => '$nip' == '45');
-  }
-
-  /// Treats an unscoped unknown-command notice as a COUNT refusal only when
-  /// a COUNT is pending and there is no evidence that this relay supports it.
+  /// Treats a known unscoped unknown-command notice as a COUNT refusal only
+  /// when a COUNT is pending and there is no evidence this relay supports it.
   void handleCountUnknownCommandNotice(String reason) {
     if (_countQueries.isEmpty ||
         _supportsCount == true ||
-        _nip11ListsCount == true) {
+        (info?.nips.any((nip) => '$nip' == '45') ?? false)) {
       return;
     }
 

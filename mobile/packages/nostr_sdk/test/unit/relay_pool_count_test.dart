@@ -335,6 +335,7 @@ void main() {
         legacyFactory.lastChannel!,
         'rate-limited: too many unknown cmd errors',
       );
+      sendNotice(legacyFactory.lastChannel!, 'Unknown message type: REQ');
       await pumpEventQueue();
       answerCount(legacyFactory.lastChannel!, 99);
 
@@ -387,47 +388,34 @@ void main() {
       expect((await result).count, equals(42));
     });
 
-    test(
-      'does not ask a relay whose NIP-11 document leaves out NIP-45',
-      () async {
-        // memlay lists NIPs 1, 9 and 11 and refuses COUNT with a NOTICE of its
-        // own wording, which nothing here matches: the document is the only
-        // signal that would keep it from holding the count.
-        legacyRelay.info = nip11Listing([1, 9, 11]);
-        await addRelays();
-
-        final result = count();
-        await pumpEventQueue();
-
-        expect(countFramesOn(legacyFactory.lastChannel!), isEmpty);
-        answerCount(countingFactory.lastChannel!, 42);
-        expect((await result).count, equals(42));
-      },
-    );
-
-    test('reports COUNT as unsupported, without sending it, when no relay '
-        'lists NIP-45 in its NIP-11 document', () async {
-      countingRelay.info = nip11Listing([1, 11]);
-      legacyRelay.info = nip11Listing([1, 11]);
+    test('settles COUNT when a relay names the unsupported command', () async {
+      legacyRelay.info = nip11Listing([1, 9, 11]);
       await addRelays();
 
-      await expectLater(
-        count(),
-        throwsA(
-          allOf(
-            isA<CountNotSupportedException>(),
-            isNot(isA<CountNotSentException>()),
-          ),
-        ),
-      );
+      var settled = false;
+      final result = count();
+      unawaited(result.whenComplete(() => settled = true));
+      await pumpEventQueue();
 
-      expect(countFramesOn(countingFactory.lastChannel!), isEmpty);
-      expect(countFramesOn(legacyFactory.lastChannel!), isEmpty);
+      expect(countFramesOn(legacyFactory.lastChannel!), hasLength(1));
+      answerCount(countingFactory.lastChannel!, 42);
+      sendNotice(legacyFactory.lastChannel!, 'Unknown message type: COUNT');
+      await pumpEventQueue();
+
+      expect(settled, isTrue);
+      expect((await result).count, equals(42));
+
+      final next = count(id: 'count-after-explicit-refusal');
+      await pumpEventQueue();
+      expect(countFramesOn(legacyFactory.lastChannel!), hasLength(1));
+      answerCount(countingFactory.lastChannel!, 43);
+      expect((await next).count, equals(43));
     });
 
     for (final (description, nips) in [
       ('lists NIP-45', [1, 11, 45]),
       ('lists no NIPs', <int>[]),
+      ('omits NIP-45', [1, 11, 42, 50]),
     ]) {
       test('still asks a relay whose NIP-11 document $description', () async {
         legacyRelay.info = nip11Listing(nips);
