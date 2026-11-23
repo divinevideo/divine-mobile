@@ -14,6 +14,125 @@ void main() {
   tearDown(MediaKitLinuxVideoPlayerBackend.resetInitializationForTesting);
 
   group('public firstFrameRendered', () {
+    for (final transition in ['stop', 'replacement']) {
+      testWidgets('keeps a fresh poster during $transition retirement', (
+        tester,
+      ) async {
+        final players = <_FakePlatformPlayer>[];
+        final outputs = <_FakeVideoController>[];
+        MediaKitLinuxVideoPlayerBackend createBackend() =>
+            MediaKitLinuxVideoPlayerBackend(
+              mediaKitInitializer: _noop,
+              playerFactory: () {
+                final player = _FakePlatformPlayer();
+                players.add(player);
+                return Player(platformPlayer: player);
+              },
+              videoControllerFactory: (_) {
+                final output = _FakeVideoController();
+                outputs.add(output);
+                return output;
+              },
+              videoControllerReady: (output) =>
+                  (output as _FakeVideoController).ready.future,
+              videoViewBuilder: (_) => const SizedBox.expand(),
+            );
+        final savedFactory = DivineVideoPlayerController.linuxBackendFactory;
+        final savedForced = DivineVideoPlayerController.debugForceLinuxBackend;
+        DivineVideoPlayerController.debugForceLinuxBackend = true;
+        DivineVideoPlayerController.linuxBackendFactory = createBackend;
+        late DivineVideoPlayerController controller;
+        late Completer<void> disposal;
+        Future<void>? replacing;
+        try {
+          await tester.runAsync(() async {
+            controller = DivineVideoPlayerController();
+            disposal = Completer<void>();
+            await controller.initialize();
+            await controller.setSource(
+              const VideoClip(
+                uri: 'file:///first.mp4',
+                end: Duration(seconds: 1),
+              ),
+            );
+            outputs.single.ready.complete();
+            final rendered = controller.firstFrameRendered;
+            expect(await rendered, isTrue);
+            if (transition == 'replacement') {
+              players.first.disposalGate = disposal;
+              replacing = controller.setSource(
+                const VideoClip(
+                  uri: 'file:///second.mp4',
+                  end: Duration(seconds: 1),
+                ),
+              );
+              await players.first.disposalStarted.future;
+            } else {
+              await controller.stop();
+            }
+            // Existing holders retain the result for the frame they observed.
+            expect(await rendered, isTrue);
+            expect(controller.state.isFirstFrameRendered, isFalse);
+            expect(controller.state.clipCount, 0);
+            var freshSuccess = false;
+            unawaited(
+              controller.firstFrameRendered.then(
+                (value) => freshSuccess = value,
+              ),
+            );
+            await pumpEventQueue();
+            expect(freshSuccess, isFalse);
+          });
+          await tester.pumpWidget(
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: MediaQuery(
+                data: const MediaQueryData(disableAnimations: true),
+                child: DivineVideoPlayer(
+                  controller: controller,
+                  placeholder: const Text('Replacement poster'),
+                ),
+              ),
+            ),
+          );
+          await tester.runAsync(pumpEventQueue);
+          await tester.pumpAndSettle();
+          expect(find.text('Replacement poster'), findsOneWidget);
+          await tester.runAsync(() async {
+            disposal.complete();
+            if (replacing != null) {
+              await replacing;
+            } else {
+              await controller.setSource(
+                const VideoClip(
+                  uri: 'file:///second.mp4',
+                  end: Duration(seconds: 1),
+                ),
+              );
+            }
+          });
+          await tester.pumpAndSettle();
+          expect(find.text('Replacement poster'), findsOneWidget);
+          await tester.runAsync(() async {
+            outputs.last.ready.complete();
+            expect(await controller.firstFrameRendered, isTrue);
+            await pumpEventQueue();
+          });
+          await tester.pumpAndSettle();
+          expect(find.text('Replacement poster'), findsNothing);
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.runAsync(() async {
+            if (!disposal.isCompleted) disposal.complete();
+            await replacing;
+            await controller.dispose();
+          });
+          DivineVideoPlayerController.linuxBackendFactory = savedFactory;
+          DivineVideoPlayerController.debugForceLinuxBackend = savedForced;
+        }
+      });
+    }
+
     test('preserves failure during replacement volume restoration', () async {
       final players = <_FakePlatformPlayer>[];
       final outputs = <_FakeVideoController>[];

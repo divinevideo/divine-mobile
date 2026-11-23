@@ -30,10 +30,23 @@ class ControllerSubscriptions {
     onError,
   }) {
     unawaited(_errors[index]?.cancel());
-    _errors[index] = controller.stateStream.listen((state) {
-      if (!state.hasError || isAlreadyError()) return;
+    var handlingFailure = false;
+    void observe(DivineVideoPlayerState state) {
+      if (!state.hasError) {
+        handlingFailure = false;
+        return;
+      }
+      if (handlingFailure) return;
+      handlingFailure = true;
+      if (isAlreadyError()) return;
       onError(state.errorCode, state.errorMessage);
-    });
+    }
+
+    // Loading may fail before the feed finishes configuring this controller.
+    // Install the listener first, then consume the snapshot without handling
+    // its queued broadcast event a second time.
+    _errors[index] = controller.stateStream.listen(observe);
+    observe(controller.state);
   }
 
   /// Subscribes to loop-completion detection. Fires [onLoopCompleted] when

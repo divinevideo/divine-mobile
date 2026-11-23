@@ -217,6 +217,7 @@ class MediaKitLinuxVideoPlayerBackend
         _activeLoadGeneration = null;
         _hasLoadedMedia = false;
         _clearTimeline();
+        _cancelFirstFrame();
         _emitState(
           const DivineVideoPlayerState().copyWith(
             status: PlaybackStatus.buffering,
@@ -533,9 +534,12 @@ class MediaKitLinuxVideoPlayerBackend
   }
 
   void _cancelFirstFrame() {
-    if (!_firstFrameCompleter.isCompleted) {
-      _firstFrameCompleter.complete(false);
+    // Existing holders retain their output's result. New callers must never
+    // receive a retired output's success, including while disposal is pending.
+    if (_firstFrameCompleter.isCompleted) {
+      _firstFrameCompleter = Completer<bool>();
     }
+    _firstFrameCompleter.complete(false);
   }
 
   void _quiesceFailedOutput(Player player, int generation) {
