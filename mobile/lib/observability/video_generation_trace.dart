@@ -169,13 +169,14 @@ class VideoGenerationFeatures {
   /// Whether a layer is text.
   final bool text;
 
-  /// Whether a filter look is applied.
+  /// Whether a color filter from the Filter tool is applied.
   final bool filter;
 
   /// Whether an Adjust setting, such as brightness, is applied.
   final bool adjustment;
 
-  /// Whether a video effect is applied.
+  /// Whether a video effect, such as a look, an intro or an outro, is
+  /// applied.
   final bool effect;
 
   /// Whether a sound plays under the video.
