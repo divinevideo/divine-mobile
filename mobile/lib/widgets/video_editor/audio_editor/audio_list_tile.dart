@@ -63,6 +63,10 @@ class AudioListTile extends StatelessWidget {
       child: SoundListTile(
         title: displayTitle ?? _titleOf(context, audio),
         duration: audio.duration,
+        // A provider's catalog can list a sound without the length of the
+        // file it plays, which the picker learns on loading it. Until then
+        // the row shows no length rather than one second.
+        showsUnknownDuration: !audio.isExternalProviderSound,
         details: [
           if (videoCount != null && videoCount > 0)
             context.l10n.soundVideoCount(videoCount),

@@ -21,6 +21,7 @@ class SoundListTile extends StatelessWidget {
     required this.colorSeed,
     required this.onTap,
     this.duration,
+    this.showsUnknownDuration = true,
     this.details = const [],
     this.caption,
     this.cover,
@@ -38,6 +39,11 @@ class SoundListTile extends StatelessWidget {
   /// Length in seconds, shown first under the title; under a second, or
   /// unknown, reads as one second.
   final double? duration;
+
+  /// Whether an unknown [duration] still reads as one second. A list whose
+  /// sounds learn their length only once they load passes `false`, and such
+  /// a row then starts with its [details].
+  final bool showsUnknownDuration;
 
   /// Shown after [duration] on the same line, which cuts the last one short
   /// when they do not fit.
@@ -84,7 +90,11 @@ class SoundListTile extends StatelessWidget {
     final caption = this.caption;
     final Widget detailsLine = isUnavailable
         ? _UnavailableSubtitle(reason: unavailableReason)
-        : _Details(duration: duration, details: details);
+        : _Details(
+            duration: duration,
+            showsUnknownDuration: showsUnknownDuration,
+            details: details,
+          );
     return Padding(
       padding: const .symmetric(vertical: 4),
       child: ListTile(
@@ -191,9 +201,14 @@ class SoundListActionTile extends StatelessWidget {
 
 /// The duration, then each detail, on one line.
 class _Details extends StatelessWidget {
-  const _Details({required this.duration, required this.details});
+  const _Details({
+    required this.duration,
+    required this.showsUnknownDuration,
+    required this.details,
+  });
 
   final double? duration;
+  final bool showsUnknownDuration;
   final List<String> details;
 
   @override
@@ -201,17 +216,21 @@ class _Details extends StatelessWidget {
     final style = VineTheme.bodyMediumFont(
       color: context.vineColors.onSurfaceVariant,
     );
+    final showsDuration = duration != null || showsUnknownDuration;
     return Text.rich(
       TextSpan(
         style: style,
         children: [
-          TextSpan(
-            text: Duration(seconds: max((duration ?? 0).toInt(), 1)).toMmSs(),
-            // Tabular, so the durations of a list line up.
-            style: style.copyWith(fontFeatures: const [.tabularFigures()]),
-          ),
-          for (final detail in details) ...[
-            const TextSpan(text: ' ∙ '),
+          if (showsDuration)
+            TextSpan(
+              text: Duration(
+                seconds: max((duration ?? 0).toInt(), 1),
+              ).toMmSs(),
+              // Tabular, so the durations of a list line up.
+              style: style.copyWith(fontFeatures: const [.tabularFigures()]),
+            ),
+          for (final (index, detail) in details.indexed) ...[
+            if (showsDuration || index > 0) const TextSpan(text: ' ∙ '),
             TextSpan(text: detail),
           ],
         ],

@@ -29,6 +29,30 @@ AudioEvent _createTestAudioEvent({
   );
 }
 
+/// A sound from a provider's catalog, which lists it without the length of
+/// the file it plays.
+AudioEvent _createProviderSound() => AudioEvent(
+  id: 'provider_sound',
+  pubkey: AudioEvent.externalProviderMarker,
+  createdAt: 0,
+  url: 'https://example.com/previews/sound.m4a',
+  title: 'Night Drive',
+  source: 'The Example Band',
+  externalSource: AudioExternalSource(
+    provider: 'catalog',
+    providerSoundId: '1',
+    providerName: 'Catalog',
+    license: AudioLicenseMetadata(
+      type: 'preview',
+      name: 'Preview',
+      url: 'https://example.com/terms',
+      allowsCommercialUse: false,
+      allowsDerivatives: false,
+      requiresAttribution: false,
+    ),
+  ),
+);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -229,6 +253,28 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.textContaining('00:01'), findsOneWidget);
+      });
+
+      testWidgets('shows no length for a provider sound until it is known', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget(audio: _createProviderSound()));
+        await tester.pumpAndSettle();
+
+        // The row starts with its detail, with no separator before it.
+        expect(find.text('The Example Band'), findsOneWidget);
+        expect(find.textContaining('00:01'), findsNothing);
+      });
+
+      testWidgets('shows the length of a provider sound once it is known', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(audio: _createProviderSound().copyWith(duration: 29)),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('00:29 ∙ The Example Band'), findsOneWidget);
       });
 
       testWidgets('renders source when available', (tester) async {
