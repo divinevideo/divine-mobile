@@ -93,6 +93,7 @@ class FeedVideos extends ConsumerStatefulWidget {
     this.trafficSource = ViewTrafficSource.unknown,
     this.trafficSourceForVideo,
     this.sourceDetail,
+    this.isAddYoursSeries = false,
     this.feedSessionRevision = 0,
     super.key,
   });
@@ -143,6 +144,10 @@ class FeedVideos extends ConsumerStatefulWidget {
   /// Optional attribution for mixed feeds, such as a share followed by For You.
   final ViewTrafficSource Function(VideoEvent video)? trafficSourceForVideo;
   final String? sourceDetail;
+
+  /// Whether the feed is the series an Add yours collects; see
+  /// [VideoStickerTapAreas.isAddYoursSeries].
+  final bool isAddYoursSeries;
 
   /// Identifies one feed-depth session.
   ///
@@ -689,6 +694,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
                 trafficSource: _trafficSourceFor(video),
                 sourceDetail: widget.sourceDetail,
                 child: _Overlay(
+                  isAddYoursSeries: widget.isAddYoursSeries,
                   controller: controller,
                   video: video,
                   index: index,
@@ -738,9 +744,13 @@ class _Overlay extends ConsumerStatefulWidget {
     required this.loopCompletions,
     this.onSuppressAutoAdvance,
     this.onResumeAutoAdvance,
+    this.isAddYoursSeries = false,
   });
 
   final String? contextTitle;
+
+  /// See [VideoStickerTapAreas.isAddYoursSeries].
+  final bool isAddYoursSeries;
   final DivineVideoPlayerController? controller;
 
   /// Whether the feed fills the item with a video that is not square, which
@@ -1491,6 +1501,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
                               controller: widget.controller!,
                               shouldPortraitExpand: widget.shouldPortraitExpand,
                               isActive: widget.isActive && widget.isFeedActive,
+                              isAddYoursSeries: widget.isAddYoursSeries,
                               onVoteStarted: widget.onSuppressAutoAdvance,
                             ),
                           ),

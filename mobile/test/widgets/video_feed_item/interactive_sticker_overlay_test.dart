@@ -452,11 +452,17 @@ void main() {
         expect(Uri.parse(pushed.single).path, equals('/pooled-video-feed'));
         expect(
           extras.single,
-          isA<PooledFullscreenVideoFeedArgs>().having(
-            (args) => args.contextTitle,
-            'contextTitle',
-            l10n(tester).videoStickerRepliesManageTitle,
-          ),
+          isA<PooledFullscreenVideoFeedArgs>()
+              .having(
+                (args) => args.contextTitle,
+                'contextTitle',
+                l10n(tester).videoStickerRepliesManageTitle,
+              )
+              .having(
+                (args) => args.isAddYoursSeries,
+                'isAddYoursSeries',
+                isFalse,
+              ),
         );
       });
 
@@ -474,11 +480,18 @@ void main() {
         expect(Uri.parse(pushed.single).path, equals('/pooled-video-feed'));
         expect(
           extras.single,
-          isA<PooledFullscreenVideoFeedArgs>().having(
-            (args) => args.contextTitle,
-            'contextTitle',
-            'Show your desk',
-          ),
+          isA<PooledFullscreenVideoFeedArgs>()
+              .having(
+                (args) => args.contextTitle,
+                'contextTitle',
+                'Show your desk',
+              )
+              // Its answers carry the same sticker, left out there.
+              .having(
+                (args) => args.isAddYoursSeries,
+                'isAddYoursSeries',
+                isTrue,
+              ),
         );
       });
 

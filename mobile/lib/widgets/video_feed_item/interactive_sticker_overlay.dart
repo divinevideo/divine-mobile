@@ -289,6 +289,7 @@ class _ResponsesSticker extends ConsumerWidget {
         sourceDetail: region.kind == VideoStickerKind.replies
             ? 'video_replies'
             : 'add_yours',
+        isAddYoursSeries: region.kind == VideoStickerKind.prompt,
       ),
       'watch who joined or replied',
       logName: 'InteractiveStickerOverlay',

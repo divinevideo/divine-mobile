@@ -405,6 +405,10 @@ publishing an answer, so the Divine player holds to it:
   latest answers' thumbnails and "Watch the series" in place of who joined and
   the button, and a tap opens the answers. On a video with a replies sticker,
   only whoever may answer is offered a video reply in the comments.
+- In the series a tap on an Add yours opens, the answers' copies of a sticker
+  only some may answer are left out: each answer carries the same sticker,
+  and the viewer is watching the series already. It shows in every other
+  feed.
 - Who the creator follows is read from their kind 3 contact list. For an Add
   yours, the creator is whoever started the chain the sticker counts, and an
   answer carries the chain's `audience` on to its own sticker, so nobody joins
