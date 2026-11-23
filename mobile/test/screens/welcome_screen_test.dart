@@ -7,6 +7,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
@@ -14,12 +15,16 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/social_sign_in_providers.dart';
+import 'package:openvine/repositories/social_sign_in_repository.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
@@ -37,6 +42,9 @@ class _MockAuthService extends Mock implements AuthService {}
 class _MockAppDatabase extends Mock implements AppDatabase {}
 
 class _MockUserProfilesDao extends Mock implements UserProfilesDao {}
+
+class _MockSocialSignInRepository extends Mock
+    implements SocialSignInRepository {}
 
 const String _testPubkeyHex = syntheticTestPubkey;
 
@@ -75,6 +83,7 @@ void main() {
 
   setUpAll(() async {
     registerFallbackValue(AuthenticationSource.none);
+    registerFallbackValue(SocialProvider.google);
   });
 
   setUp(() async {
@@ -108,8 +117,13 @@ void main() {
   Widget createTestWidget({
     AuthState authState = AuthState.unauthenticated,
     String? initialSelectedPubkeyHex,
+    Locale? locale,
+    bool offerSocialSignIn = false,
   }) {
+    final socialSignInRepository = _MockSocialSignInRepository();
+    when(() => socialSignInRepository.isAvailable(any())).thenReturn(true);
     final app = MaterialApp.router(
+      locale: locale,
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: VineTheme.theme,
@@ -158,6 +172,14 @@ void main() {
         currentAuthStateProvider.overrideWithValue(authState),
         databaseProvider.overrideWithValue(mockDb),
         sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+        if (offerSocialSignIn) ...[
+          socialSignInRepositoryProvider.overrideWithValue(
+            socialSignInRepository,
+          ),
+          isFeatureEnabledProvider(
+            FeatureFlag.socialSignIn,
+          ).overrideWith((ref) => true),
+        ],
       ],
       child: app,
     );
@@ -165,22 +187,7 @@ void main() {
 
   group(WelcomeScreen, () {
     group('default variant', () {
-      // The fresh-install hero column overflows the default 800x600 test
-      // surface by 13px, but only when it lays out with the wide fallback
-      // font: VineTheme's GoogleFonts.inter registers its asset into the
-      // process-global font collection asynchronously, so the first test in
-      // an isolate to render this screen misses real Inter metrics. Under
-      // randomized ordering that is whichever test the seed sorts first, so
-      // every test here takes the headroom rather than the four that
-      // happened to hit it. Width stays 800 so nothing re-wraps. This cannot
-      // move into setUp — setSurfaceSize asserts it runs inside a test.
-      Future<void> useTallSurface(WidgetTester tester) async {
-        await tester.binding.setSurfaceSize(const Size(800, 1200));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
-      }
-
       testWidgets('displays $AuthHeroSection', (tester) async {
-        await useTallSurface(tester);
         await tester.pumpWidget(createTestWidget());
         await tester.pumpAndSettle();
 
@@ -188,7 +195,6 @@ void main() {
       });
 
       testWidgets('displays create account button', (tester) async {
-        await useTallSurface(tester);
         await tester.pumpWidget(createTestWidget());
         await tester.pumpAndSettle();
 
@@ -196,7 +202,6 @@ void main() {
       });
 
       testWidgets('displays login button', (tester) async {
-        await useTallSurface(tester);
         await tester.pumpWidget(createTestWidget());
         await tester.pumpAndSettle();
 
@@ -223,8 +228,41 @@ void main() {
         );
       });
 
+      testWidgets('shrinks the hero to fit when Google and Apple buttons '
+          'crowd a small phone', (tester) async {
+        // iPhone SE (375 x 667 pt, 20 pt status bar) with the German copy,
+        // whose headline wraps onto four lines.
+        tester.view
+          ..physicalSize = const Size(750, 1334)
+          ..devicePixelRatio = 2
+          ..padding = const FakeViewPadding(top: 40);
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPadding);
+
+        await tester.pumpWidget(
+          createTestWidget(locale: const Locale('de'), offerSocialSignIn: true),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('de'));
+        expect(find.text(l10n.authContinueWithApple), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        final logo = tester.getRect(
+          find.descendant(
+            of: find.byType(AuthHeroSection),
+            matching: find.byType(SvgPicture),
+          ),
+        );
+        expect(
+          logo.bottom,
+          lessThanOrEqualTo(
+            tester.getTopLeft(find.text(l10n.authMinAgeNotice)).dy,
+          ),
+        );
+      });
+
       testWidgets('displays terms notice with legal links', (tester) async {
-        await useTallSurface(tester);
         await tester.pumpWidget(createTestWidget());
         await tester.pumpAndSettle();
 
@@ -244,7 +282,6 @@ void main() {
         'renders Greenlight label, under-16 link, and terms above the auth buttons',
         (tester) async {
           final l10n = lookupAppLocalizations(const Locale('en'));
-          await useTallSurface(tester);
           await tester.pumpWidget(createTestWidget());
           await tester.pumpAndSettle();
 
@@ -300,7 +337,6 @@ void main() {
       testWidgets(
         'tapping create account opens account creation',
         (tester) async {
-          await useTallSurface(tester);
           await tester.pumpWidget(createTestWidget());
           await tester.pumpAndSettle();
 
@@ -315,7 +351,6 @@ void main() {
       testWidgets('tapping login button calls acceptTerms and navigates', (
         tester,
       ) async {
-        await useTallSurface(tester);
         await tester.pumpWidget(createTestWidget());
         await tester.pumpAndSettle();
 
@@ -329,7 +364,6 @@ void main() {
       testWidgets(
         'tapping "Divine age authorization" navigates to the public family guide',
         (tester) async {
-          await useTallSurface(tester);
           await tester.pumpWidget(createTestWidget());
           await tester.pumpAndSettle();
 
@@ -370,7 +404,6 @@ void main() {
       testWidgets(
         'tapping "Here are your choices." navigates to the public family guide',
         (tester) async {
-          await useTallSurface(tester);
           await tester.pumpWidget(createTestWidget());
           await tester.pumpAndSettle();
 
@@ -396,7 +429,6 @@ void main() {
       testWidgets(
         'localizes startup cleanup failure and retains login actions',
         (tester) async {
-          await useTallSurface(tester);
           when(() => mockAuthService.lastError)
               .thenReturn('Could not clear account data safely');
           when(() => mockAuthService.lastFailureReason)
@@ -428,7 +460,6 @@ void main() {
       );
 
       testWidgets('shows error when lastError is set', (tester) async {
-        await useTallSurface(tester);
         when(() => mockAuthService.lastError).thenReturn('Auth failed');
 
         await tester.pumpWidget(createTestWidget());
@@ -439,7 +470,6 @@ void main() {
       });
 
       testWidgets('does not show error when lastError is null', (tester) async {
-        await useTallSurface(tester);
         await tester.pumpWidget(createTestWidget());
         await tester.pumpAndSettle();
 

@@ -277,7 +277,8 @@ class _NewUserLayout extends StatelessWidget {
     );
     return Column(
       children: [
-        const Expanded(child: Center(child: AuthHeroSection())),
+        const Expanded(child: _FittedHero()),
+        const SizedBox(height: 16),
 
         if (lastError != null) ...[
           ErrorMessage(message: lastError),
@@ -329,6 +330,28 @@ class _NewUserLayout extends StatelessWidget {
 
         const SizedBox(height: 32),
       ],
+    );
+  }
+}
+
+/// The hero at full width, scaled down only when the buttons below leave it
+/// less height than it needs: a small phone, a long headline, or the Google
+/// and Apple buttons. Where it fits it renders unscaled.
+class _FittedHero extends StatelessWidget {
+  const _FittedHero();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => Center(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: SizedBox(
+            width: constraints.maxWidth,
+            child: const AuthHeroSection(),
+          ),
+        ),
+      ),
     );
   }
 }
