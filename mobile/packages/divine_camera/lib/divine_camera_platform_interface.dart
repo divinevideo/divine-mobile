@@ -14,6 +14,15 @@ import 'package:divine_camera/src/models/video_stabilization_mode.dart';
 import 'package:flutter/widgets.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
+/// Optional device-failure events for platforms with asynchronous capture.
+abstract interface class CameraErrorEvents {
+  /// Reports a device failure once capture resources have been released.
+  void Function(Object error)? get onCameraError;
+
+  /// Installs or clears the device-failure callback.
+  set onCameraError(void Function(Object error)? callback);
+}
+
 /// The interface that implementations of divine_camera must implement.
 abstract class DivineCameraPlatform extends PlatformInterface {
   /// Constructs a DivineCameraPlatform.

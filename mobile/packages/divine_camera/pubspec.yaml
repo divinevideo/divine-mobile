@@ -9,17 +9,25 @@ environment:
   flutter: ^3.47.0
 
 dependencies:
+  camera_desktop: 2.0.0
+  camera_platform_interface: ^2.7.0
   equatable: ^2.0.8
   flutter:
     sdk: flutter
   material_ui: ^1.2.0
+  media_kit: ^1.2.6
+  media_kit_libs_linux: ^1.2.1
+  media_kit_libs_windows_video: ^1.0.11
+  path_provider: ^2.1.5
   plugin_platform_interface: ^2.0.2
   unified_logger:
     path: ../unified_logger
 
 dev_dependencies:
+  fake_async: ^1.3.3
   flutter_test:
     sdk: flutter
+  path_provider_platform_interface: ^2.1.2
   very_good_analysis: ^10.0.0
 
 flutter:

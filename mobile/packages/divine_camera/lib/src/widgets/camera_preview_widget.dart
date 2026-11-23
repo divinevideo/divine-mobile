@@ -345,7 +345,7 @@ class _CameraPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget preview = Texture(textureId: textureId);
+    var preview = DivineCamera.instance.buildPreview(textureId);
 
     // Rotate the raw sensor-oriented frame upright when the platform doesn't
     // orient it itself (Android SurfaceProducer path). Applied before mirror so

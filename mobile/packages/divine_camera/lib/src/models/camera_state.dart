@@ -135,7 +135,10 @@ class CameraState extends Equatable {
   /// Whether manual exposure point selection is supported.
   final bool isExposurePointSupported;
 
-  /// The texture ID for the camera preview (Android).
+  /// Opaque preview handle passed to the platform's preview builder.
+  ///
+  /// Native mobile/Apple implementations use a texture ID. Desktop backends
+  /// may use a camera ID that their builder resolves to a texture.
   final int? textureId;
 
   /// Clockwise rotation (degrees) to apply to the preview texture so it renders

@@ -9,8 +9,13 @@ import 'package:openvine/models/video_recorder/camera_initialization_error.dart'
 import 'package:openvine/services/video_recorder/camera/camera_mobile_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
-class _FakeCameraPlatform extends DivineCameraPlatform {
+class _FakeCameraPlatform extends DivineCameraPlatform
+    implements CameraErrorEvents {
   bool shouldFail = true;
+  bool errorDuringInitialize = false;
+
+  @override
+  void Function(Object error)? onCameraError;
 
   /// When false, the opened camera reports a single usable lens.
   bool hasBothCameras = false;
@@ -58,6 +63,9 @@ class _FakeCameraPlatform extends DivineCameraPlatform {
     lastStabilizationMode = videoStabilizationMode;
     lastMirrorFrontCameraOutput = mirrorFrontCameraOutput;
     if (shouldFail) throw StateError('camera unavailable');
+    if (errorDuringInitialize) {
+      onCameraError?.call(StateError('Synthetic device loss during open'));
+    }
     return CameraState(
       isInitialized: true,
       textureId: 1,
@@ -152,6 +160,36 @@ void main() {
         CameraInitializationError.failed,
       );
       expect(rebuildRequests, [isTrue]);
+    });
+
+    test('offers retry after an initialized camera is lost', () async {
+      platform.shouldFail = false;
+      await service.initialize();
+      expect(service.isInitialized, isTrue);
+      expect(service.canRecord, isTrue);
+      rebuildRequests.clear();
+
+      platform.onCameraError?.call(StateError('Synthetic device loss'));
+
+      expect(service.isInitialized, isFalse);
+      expect(service.canRecord, isFalse);
+      expect(service.initializationError, CameraInitializationError.failed);
+      expect(rebuildRequests, [isTrue]);
+      await service.initialize();
+      expect(service.isInitialized, isTrue);
+      expect(service.initializationError, isNull);
+    });
+
+    test('does not overwrite device loss with a late ready result', () async {
+      platform
+        ..shouldFail = false
+        ..errorDuringInitialize = true;
+
+      await expectLater(service.initialize(), throwsStateError);
+
+      expect(DivineCamera.instance.state.isInitialized, isFalse);
+      expect(service.isInitialized, isFalse);
+      expect(service.initializationError, CameraInitializationError.failed);
     });
 
     test('clears a previous failure when initialization is retried', () async {
