@@ -115,9 +115,8 @@ class CrashReportingService implements CrashReporter {
   Future<void> initialize() async {
     if (_readiness != _Readiness.pending) return;
 
-    // Firebase only supports Android, iOS, macOS, and web.
-    // DefaultFirebaseOptions.currentPlatform throws UnsupportedError for
-    // Linux and Windows — skip initialization on those platforms.
+    // Only Android, iOS and macOS have a real Firebase project; see
+    // isFirebaseSupported.
     if (!isFirebaseSupported) {
       _giveUp('Firebase is not supported on this platform');
       return;
