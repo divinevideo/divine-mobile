@@ -50,6 +50,27 @@ load the player rejected; `left` is a close before either, including during a
 draft load, when `clips` is still `unknown`. Reloads after the editor is ready (trim,
 reorder, speed) are not measured.
 
+**`video_generation` is a live trace, emitted once per final render from the
+editor.** It runs from the start of the render until its outcome is known and
+the draft is saved. `outcome` is `success`, `stale` (the render finished but the
+edit changed while it ran, so the editor threw the video away and, while Post
+details still waits, rendered again under its own trace), `incomplete` (a newer render
+replaced it, or teardown cancelled it), `failed` or `error`, with
+`failure_reason`, `clip_count` and `aspect_ratio` as before. Each step that ran
+reports its milliseconds, so an absent step metric means the step did not
+happen: `chroma_bake_ms` (keying takes recorded with the color mask),
+`assembly_ms` (stop-motion stills to video, summed over clips), `render_ms`
+(preparing the render, such as fetching sounds, and every native pass),
+`metadata_ms`, `proof_ms` (C2PA and ProofMode signing) and `cover_ms`. A
+render that reached its end also reports `output_duration_ms`, `output_width`,
+`output_height` and `output_bytes` (read after signing), so render time per
+second of video can be compared across devices. The features it used are 0/1
+metrics rather than attributes, since a trace takes five attributes:
+`has_text`, `has_filter`, `has_adjustment`, `has_effect`, `has_audio_track`,
+`has_speed_change`, `has_reverse`, `has_chroma_key` and `has_stop_motion`, plus
+`layer_count`. The renders of a draft published from the Library and of a
+background publish retry are not measured.
+
 The HTTP classifier has a finite vocabulary. It separates `creator_delete`,
 `creator_delete_status`, and `moderation_lookup`, plus feed/video, profiles,
 notifications, search, comments, discovery, login/signing, names, and media.

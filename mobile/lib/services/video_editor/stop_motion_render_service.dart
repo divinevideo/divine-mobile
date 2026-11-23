@@ -10,8 +10,11 @@ import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/video_generation_trace.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
+import 'package:openvine/services/video_editor/render_progress_tracker.dart';
+import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
@@ -162,6 +165,66 @@ class StopMotionRenderService {
       duration: materializedDuration,
       clearStopMotionFrames: true,
     );
+  }
+
+  /// Replaces each frames-only stop-motion clip in [clips] with the video
+  /// [materialize] assembles from its stills, for the final render [taskId].
+  ///
+  /// Each assembly reports its progress through [progress] and its time to
+  /// [recorder]. The path of every assembled video is added to
+  /// [assembledPaths], for the caller to delete once the render is done.
+  ///
+  /// Throws [VideoRenderFailedException] when a clip cannot be assembled, or
+  /// as [VideoRenderFailureReason.canceled] when its assembly was cancelled.
+  static Future<List<DivineVideoClip>> materializeForRender(
+    List<DivineVideoClip> clips, {
+    required String taskId,
+    required RenderProgressTracker progress,
+    required List<String> assembledPaths,
+    VideoGenerationRecorder? recorder,
+  }) async {
+    final stepCount = clips.where((clip) => clip.isStopMotion).length;
+    final renderClips = <DivineVideoClip>[];
+    var step = 0;
+    for (final clip in clips) {
+      if (!clip.isStopMotion) {
+        renderClips.add(clip);
+        continue;
+      }
+      final assemblyTaskId = '$taskId-stop-motion-$step';
+      await progress.startAssemblyStep(
+        assemblyTaskId: assemblyTaskId,
+        step: step,
+        stepCount: stepCount,
+      );
+      step++;
+      final DivineVideoClip? assembled;
+      try {
+        assembled = await recorder.timed(
+          .assembly,
+          () => materialize(clip, taskId: assemblyTaskId),
+        );
+      } on RenderCanceledException catch (e) {
+        // Detach / cancelActiveNativeTasks during assembly must not land in
+        // the stop_motion_assembly bucket — same incomplete semantics as a
+        // cancelled composite render.
+        throw VideoRenderFailedException(
+          VideoRenderFailureReason.canceled,
+          cause: e,
+        );
+      }
+      if (assembled == null) {
+        throw const VideoRenderFailedException(
+          VideoRenderFailureReason.stopMotionAssembly,
+        );
+      }
+      if (assembled.video?.file?.path case final path?) {
+        assembledPaths.add(path);
+      }
+      renderClips.add(assembled);
+    }
+    await progress.markAssemblyComplete();
+    return renderClips;
   }
 
   /// Deletes the mp4 [materialize] created when [sourceClip] was frames-only.
