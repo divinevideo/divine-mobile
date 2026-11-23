@@ -37,6 +37,7 @@ import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../builders/comment_builder.dart';
 import '../../helpers/test_provider_overrides.dart';
+import '../../helpers/test_pubkeys.dart';
 
 class _FakeNostrClient implements NostrClient {
   const _FakeNostrClient();
@@ -76,8 +77,7 @@ class _MockContentReportingService extends Mock
 class _MockListBloc extends MockBloc<CommentsListEvent, CommentsListState>
     implements CommentsListBloc {}
 
-const _testHexPubkey =
-    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const String _testHexPubkey = syntheticTestPubkey;
 const _testRootEventId =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const _testRootAuthorPubkey =

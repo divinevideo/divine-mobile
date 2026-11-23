@@ -12,6 +12,8 @@ import 'package:openvine/notifications/widgets/notification_comment_quote.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 
+import '../../helpers/test_pubkeys.dart';
+
 final AppLocalizations _l10n = lookupAppLocalizations(const Locale('en'));
 
 Future<void> _pump(
@@ -59,8 +61,7 @@ TextSpan? _findSpan(
 
 void main() {
   group(NotificationCommentQuote, () {
-    const profileHex =
-        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+    const profileHex = syntheticTestPubkey;
 
     testWidgets('wraps text in curly quotes', (tester) async {
       await _pump(tester, text: 'Hello world');

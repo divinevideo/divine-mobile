@@ -6,10 +6,11 @@ import 'package:models/models.dart';
 import 'package:openvine/services/saved_sound_context_builder.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 
+import '../helpers/test_pubkeys.dart';
+
 const _fullEventId =
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-const _fullPubkey =
-    'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
+const String _fullPubkey = syntheticTestPubkey;
 
 VideoEvent _video({
   String? textTrackContent,

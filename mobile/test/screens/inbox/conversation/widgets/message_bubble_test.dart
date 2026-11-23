@@ -33,6 +33,7 @@ import 'package:videos_repository/videos_repository.dart';
 import '../../../../helpers/contrast.dart';
 import '../../../../helpers/decoded_images.dart';
 import '../../../../helpers/test_provider_overrides.dart';
+import '../../../../helpers/test_pubkeys.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
@@ -49,8 +50,7 @@ String _longestRenderedText(WidgetTester tester) {
   return values.first;
 }
 
-const _testHexPubkey =
-    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const String _testHexPubkey = syntheticTestPubkey;
 
 /// The route an author-named share of `abc123` resolves by (#10384).
 const _testCoordinate = '34236:$_testHexPubkey:abc123';

@@ -26,6 +26,7 @@ import 'package:openvine/services/video_publish/signed_event_relay_publisher.dar
 import 'package:openvine/utils/nostr_key_utils.dart';
 
 import '../helpers/test_provider_overrides.dart';
+import '../helpers/test_pubkeys.dart';
 
 class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
 
@@ -552,7 +553,7 @@ void main() {
 
       test('removes collaborator tags with mixed-case markers', () async {
         const removedCollaborator =
-            'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+            '7777777777777777777777777777777777777777777777777777777777777777';
         final video = _testVideo(
           extraTags: const [
             [
@@ -1008,9 +1009,9 @@ void main() {
 
       test('replaces collaborator p-tags but keeps mention p-tags', () async {
         const removedCollaborator =
-            'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+            '7777777777777777777777777777777777777777777777777777777777777777';
         const mentionedPubkey =
-            '1111111111111111111111111111111111111111111111111111111111111111';
+            '4444444444444444444444444444444444444444444444444444444444444444';
         final video = _testVideo(
           extraTags: const [
             [
@@ -1057,8 +1058,7 @@ void main() {
       });
 
       test('canonicalizes collaborator tags and invite recipients', () async {
-        const collaborator =
-            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+        const collaborator = syntheticTestPubkey;
         when(
           () => mockDmRepository.sendMessage(
             recipientPubkey: any(named: 'recipientPubkey'),
@@ -1105,8 +1105,7 @@ void main() {
       });
 
       test('compares existing collaborators in canonical form', () async {
-        const collaborator =
-            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+        const collaborator = syntheticTestPubkey;
 
         final result = await service.updateVideo(
           originalVideo: _testVideo(),
@@ -1233,8 +1232,7 @@ void main() {
       test(
         'preserves clip-source tags when manual inspired-by is cleared',
         () async {
-          const sourceCreator =
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+          const sourceCreator = syntheticTestPubkey;
           const sourceAddressableId = '34236:$sourceCreator:source-vid';
           final video = _testVideo(
             extraTags: const [
@@ -1310,10 +1308,8 @@ void main() {
       test(
         'preserves multiple clip-source credits when editing metadata',
         () async {
-          const sourceCreatorA =
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-          const sourceCreatorB =
-              'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+          const sourceCreatorA = syntheticTestPubkey;
+          const sourceCreatorB = syntheticOtherTestPubkey;
           const sourceAddressableIdA = '34236:$sourceCreatorA:source-a';
           const sourceAddressableIdB = '34236:$sourceCreatorB:source-b';
           final video = _testVideo(
@@ -1391,7 +1387,7 @@ void main() {
         'drops a mention p-tag when its pubkey is promoted to collaborator',
         () async {
           const promoted =
-              '1111111111111111111111111111111111111111111111111111111111111111';
+              '4444444444444444444444444444444444444444444444444444444444444444';
           final video = _testVideo(
             extraTags: [
               [
@@ -1689,8 +1685,7 @@ void main() {
     });
 
     group('invite failure', () {
-      const newCollaborator =
-          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      const newCollaborator = syntheticTestPubkey;
 
       test('returns VideoUpdateSuccess with inviteFailureCount > 0 when DM '
           'send fails for a newly added collaborator', () async {
@@ -1781,8 +1776,7 @@ void main() {
     });
 
     group('inspired-by p-tag lifecycle', () {
-      const inspiredCreator =
-          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      const inspiredCreator = syntheticTestPubkey;
       const otherCreator =
           '2222222222222222222222222222222222222222222222222222222222222222';
       const inspiredAddressableId = '34236:$inspiredCreator:source-vid';

@@ -19,6 +19,8 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/test_pubkeys.dart';
+
 class _MockUserProfilesDao extends Mock implements UserProfilesDao {}
 
 class _MockAuthService extends Mock implements AuthService {}
@@ -33,8 +35,7 @@ class _CapturingObserver extends BlocObserver {
   }
 }
 
-const _testPubkeyHex =
-    'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
+const String _testPubkeyHex = syntheticTestPubkey;
 
 const _testPubkeyHex2 =
     'b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3';

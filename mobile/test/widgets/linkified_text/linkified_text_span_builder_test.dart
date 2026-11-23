@@ -6,6 +6,8 @@ import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_span_builder.dart';
 
+import '../../helpers/test_pubkeys.dart';
+
 void main() {
   group(LinkifiedTextSpanBuilder, () {
     const defaultStyle = TextStyle(color: Colors.white);
@@ -459,8 +461,7 @@ void main() {
     });
 
     test('routes profile-like hex references to profile taps', () {
-      const profileHex =
-          'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+      const profileHex = syntheticTestPubkey;
       String? tappedProfile;
 
       final spans = LinkifiedTextSpanBuilder(
@@ -476,6 +477,22 @@ void main() {
       expect(profileSpan.text, equals('@casey'));
       profileSpan.tap();
       expect(tappedProfile, equals(profileHex));
+    });
+
+    test('leaves an off-curve hex author reference as plain text', () {
+      const offCurve =
+          '0000000000000000000000000000000000000000000000000000000000000005';
+      const text = 'author: $offCurve';
+      final spans = LinkifiedTextSpanBuilder(
+        text: text,
+        defaultStyle: defaultStyle,
+        linkStyle: linkStyle,
+        profileLabelForHex: (_) => 'casey',
+        videoLabel: 'View video',
+      ).build();
+
+      expect(spans.tappableSpans, isEmpty);
+      expect(spans.map((span) => span.text).join(), equals(text));
     });
 
     // The reporter reads their own copy of a user report's moderation DM, so
@@ -685,8 +702,7 @@ void main() {
       });
 
       test('replaces an unpaired surrogate in a resolved profile label', () {
-        const profileHex =
-            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+        const profileHex = syntheticTestPubkey;
 
         final spans = LinkifiedTextSpanBuilder(
           text: 'author: $profileHex',

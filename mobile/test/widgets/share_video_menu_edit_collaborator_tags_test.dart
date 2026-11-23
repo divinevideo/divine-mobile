@@ -21,6 +21,7 @@ import 'package:openvine/services/video_publish/signed_event_relay_publisher.dar
 import 'package:openvine/utils/collaborator_tags.dart';
 
 import '../helpers/test_provider_overrides.dart';
+import '../helpers/test_pubkeys.dart';
 
 class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
 
@@ -61,8 +62,7 @@ VideoEvent _testVideo({
 void main() {
   const ownerPubkey =
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-  const collaboratorPubkey =
-      'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+  const collaboratorPubkey = syntheticTestPubkey;
 
   late MockAuthService mockAuthService;
   late _MockSignedEventRelayPublisher mockRelayPublisher;

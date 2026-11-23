@@ -31,7 +31,7 @@ void main() {
     timestamp: DateTime.utc(2023, 11, 14),
   );
   final profile = UserProfile(
-    pubkey: hexId,
+    pubkey: authorHex,
     rawData: const {},
     createdAt: DateTime.utc(2023, 11, 14),
     eventId: 'f3c1a4e8b2d64e0e9a7b5c3d1f2e4a6b8c0d2e4f6a8b0c2d4e6f8a0b2c4d6e8f',
@@ -108,16 +108,19 @@ void main() {
       );
 
       group('with a bare hex value', () {
-        void stubVideo(VideoRouteLookupResult result) => when(
-          () => videosRepository.lookupVideoForRouteId(hexId),
+        void stubVideo(
+          VideoRouteLookupResult result, {
+          String routeId = hexId,
+        }) => when(
+          () => videosRepository.lookupVideoForRouteId(routeId),
         ).thenAnswer((_) async => result);
 
         void stubProfile({UserProfile? cached, UserProfile? fresh}) {
           when(
-            () => profileRepository.getCachedProfile(pubkey: hexId),
+            () => profileRepository.getCachedProfile(pubkey: authorHex),
           ).thenAnswer((_) async => cached);
           when(
-            () => profileRepository.fetchFreshProfile(pubkey: hexId),
+            () => profileRepository.fetchFreshProfile(pubkey: authorHex),
           ).thenAnswer((_) async => fresh);
         }
 
@@ -125,7 +128,6 @@ void main() {
           'opens the video it names',
           setUp: () {
             stubVideo(VideoRouteFound(video));
-            stubProfile();
           },
           build: buildCubit,
           act: (cubit) => cubit.queryChanged(hexId),
@@ -139,7 +141,6 @@ void main() {
           "opens a video the viewer's filters hide",
           setUp: () {
             stubVideo(VideoRouteHiddenByFilter(video));
-            stubProfile();
           },
           build: buildCubit,
           act: (cubit) => cubit.queryChanged(hexId),
@@ -152,36 +153,36 @@ void main() {
         blocTest<NostrIdSearchCubit, NostrIdSearchState>(
           'opens a cached profile when no video matches',
           setUp: () {
-            stubVideo(const VideoRouteMissing());
+            stubVideo(const VideoRouteMissing(), routeId: authorHex);
             stubProfile(cached: profile);
           },
           build: buildCubit,
-          act: (cubit) => cubit.queryChanged(hexId),
+          act: (cubit) => cubit.queryChanged(authorHex),
           expect: () => const [
-            NostrIdSearchState(query: hexId),
+            NostrIdSearchState(query: authorHex),
             NostrIdSearchState(
-              query: hexId,
-              action: OpenProfileAction(hexId),
+              query: authorHex,
+              action: OpenProfileAction(authorHex),
             ),
           ],
           verify: (_) => verifyNever(
-            () => profileRepository.fetchFreshProfile(pubkey: hexId),
+            () => profileRepository.fetchFreshProfile(pubkey: authorHex),
           ),
         );
 
         blocTest<NostrIdSearchCubit, NostrIdSearchState>(
           'fetches the profile when it is not cached',
           setUp: () {
-            stubVideo(const VideoRouteMissing());
+            stubVideo(const VideoRouteMissing(), routeId: authorHex);
             stubProfile(fresh: profile);
           },
           build: buildCubit,
-          act: (cubit) => cubit.queryChanged(hexId),
+          act: (cubit) => cubit.queryChanged(authorHex),
           expect: () => const [
-            NostrIdSearchState(query: hexId),
+            NostrIdSearchState(query: authorHex),
             NostrIdSearchState(
-              query: hexId,
-              action: OpenProfileAction(hexId),
+              query: authorHex,
+              action: OpenProfileAction(authorHex),
             ),
           ],
         );
@@ -189,12 +190,12 @@ void main() {
         blocTest<NostrIdSearchCubit, NostrIdSearchState>(
           'opens nothing when neither a video nor a profile matches',
           setUp: () {
-            stubVideo(const VideoRouteMissing());
+            stubVideo(const VideoRouteMissing(), routeId: authorHex);
             stubProfile();
           },
           build: buildCubit,
-          act: (cubit) => cubit.queryChanged(hexId),
-          expect: () => const [NostrIdSearchState(query: hexId)],
+          act: (cubit) => cubit.queryChanged(authorHex),
+          expect: () => const [NostrIdSearchState(query: authorHex)],
         );
 
         test('drops a lookup that finishes after the query changed', () async {
@@ -202,7 +203,6 @@ void main() {
           when(
             () => videosRepository.lookupVideoForRouteId(hexId),
           ).thenAnswer((_) => videoLookup.future);
-          stubProfile();
           final cubit = buildCubit();
           addTearDown(cubit.close);
 

@@ -18,6 +18,7 @@ import 'package:openvine/widgets/video_feed_item/collaborator_avatar_row.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../helpers/test_provider_overrides.dart';
+import '../../helpers/test_pubkeys.dart';
 
 class _MockCollaboratorConfirmationRepository extends Mock
     implements CollaboratorConfirmationRepository {}
@@ -28,10 +29,8 @@ Finder _divineIcon(DivineIconName icon) => find.byWidgetPredicate(
 
 const _creatorPubkey =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-const _collab1 =
-    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-const _collab2 =
-    'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+const String _collab1 = syntheticTestPubkey;
+const String _collab2 = syntheticOtherTestPubkey;
 const _collab3 =
     'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
 const _thirdPartyPubkey =
