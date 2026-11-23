@@ -363,12 +363,10 @@ void main() {
           buildTestWidget(type: DivineButtonType.outline, onPressed: () {}),
         );
         final outlineHeight = tester.getSize(find.byType(DivineButton)).height;
+        expect(outlineHeight, 48);
         await tester.pumpWidget(buildTestWidget(onPressed: () {}));
 
-        expect(
-          tester.getSize(find.byType(DivineButton)).height,
-          outlineHeight,
-        );
+        expect(tester.getSize(find.byType(DivineButton)).height, outlineHeight);
       });
 
       testWidgets('keeps a brand mark in its own colours when asked', (
@@ -741,9 +739,7 @@ void main() {
         for (final size in [DivineButtonSize.base, DivineButtonSize.small]) {
           testWidgets(
             'quiet ${size.name} is accessible on ${theme.brightness}',
-            (
-              tester,
-            ) async {
+            (tester) async {
               var pressed = false;
               await tester.pumpWidget(
                 buildTestWidget(
