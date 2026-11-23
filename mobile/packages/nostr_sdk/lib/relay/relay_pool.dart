@@ -2369,7 +2369,7 @@ class RelayPool {
   void _restartEoseSettleWindow(Relay relay, String subId) {
     final armed = _subscriptionEoseSettleTimers[subId];
     if (armed == null) return;
-    if (!relay.hasSubscriptionById(subId)) return;
+    if (!_relayHoldsLiveRequest(relay, subId)) return;
     if (_subscriptionEoseRelays[subId]?[relay.url] ==
         relay.connectionGeneration) {
       return;
@@ -2378,6 +2378,12 @@ class RelayPool {
     armed.cancel();
     _armEoseSettleWindow(subId);
   }
+
+  bool _relayHoldsLiveRequest(Relay relay, String subId) =>
+      relay.hasSubscriptionById(subId) &&
+      (identical(_relays[relay.url], relay) ||
+          identical(_tempRelays[relay.url], relay) ||
+          identical(_cacheRelays[relay.url], relay));
 
   /// Records that [relay] sent [subId] an `EVENT` frame the pool rejected,
   /// on the connection of [generation]. The frame may have taken a slot of
@@ -2626,7 +2632,8 @@ class RelayPool {
           eoseFrame: json,
         );
         if (_subscriptions[subId]?.onEose != null &&
-            receivedOnGeneration == relay.connectionGeneration) {
+            receivedOnGeneration == relay.connectionGeneration &&
+            _relayHoldsLiveRequest(relay, subId)) {
           (_subscriptionEoseRelays[subId] ??= {})[relay.url] =
               receivedOnGeneration;
           _maybeFireLiveEose(subId);

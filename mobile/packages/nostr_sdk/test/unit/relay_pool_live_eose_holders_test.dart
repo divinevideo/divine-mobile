@@ -164,6 +164,24 @@ void main() {
       });
     });
 
+    test('does not start settling on EOSE from a relay without the REQ', () {
+      fakeAsync((fake) {
+        async = fake;
+        final live = _Relay('wss://live.example');
+        final subId = subscribe([live]);
+        final other = _Relay('wss://other.example');
+        settle(nostr.relayPool.add(other));
+        expect(other.hasSubscriptionById(subId), isFalse);
+
+        settle(other.deliver(['EOSE', subId]));
+        async.elapse(window);
+        expect(eoseCalls, 0);
+
+        settle(live.deliver(['EOSE', subId]));
+        expect(eoseCalls, 1);
+      });
+    });
+
     group('with a relay that never connected', () {
       test('fires once the settle window passes without it', () {
         fakeAsync((fake) {
