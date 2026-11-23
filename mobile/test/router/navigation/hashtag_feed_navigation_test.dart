@@ -129,6 +129,9 @@ void main() {
         ),
       );
 
+      await tester.pumpAndSettle();
+      expect(tester.binding.hasScheduledFrame, isFalse);
+
       openHashtagFeed(homeContext, 'funny', logName: 'test');
       expect(tester.binding.hasScheduledFrame, isTrue);
       await tester.pump();
