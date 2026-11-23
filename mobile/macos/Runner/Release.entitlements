@@ -23,7 +23,7 @@
 		<string>applinks:divine.video</string>
 		<string>applinks:www.divine.video</string>
 	</array>
-	<key>com.apple.security.photos.library.add-only</key>
+	<key>com.apple.security.personal-information.photos-library</key>
 	<true/>
 </dict>
 </plist>

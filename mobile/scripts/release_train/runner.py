@@ -672,6 +672,7 @@ class Runtime:
             + urllib.parse.urlencode(
                 {
                     "filter[app]": APP_ID,
+                    "filter[preReleaseVersion.platform]": "IOS",
                     "include": "preReleaseVersion,buildBetaDetail,betaAppReviewSubmission",
                     "limit": 200,
                 }
@@ -732,7 +733,9 @@ class Runtime:
                     ),
                 }
             )
-        reviews = apple.pages("/apps/" + APP_ID + "/reviewSubmissions")
+        reviews = apple.pages(
+            "/apps/" + APP_ID + "/reviewSubmissions?filter[platform]=IOS"
+        )
         versions = []
         for v in apple.pages(
             "/apps/" + APP_ID + "/appStoreVersions?filter[platform]=IOS"
