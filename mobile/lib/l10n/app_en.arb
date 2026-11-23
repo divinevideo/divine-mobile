@@ -11623,7 +11623,7 @@
   },
   "verifyConfirmationStoreOnly": "Divine Confirmation is available in the App Store and Google Play versions of Divine.",
   "@verifyConfirmationStoreOnly": {
-    "description": "Shown in place of a button that would buy Divine Confirmation when this build cannot be billed by a store: on the Divine Confirmation screen, on the link-an-account screen, and in the sheet shown when a sign-in link is refused for Divine Confirmation. Placeholder until #8278."
+    "description": "Shown in place of a button that would buy Divine Confirmation when this build cannot be billed by a store: on the Divine Confirmation screen, on the link-an-account screen, in the sheet shown when a sign-in link is refused for Divine Confirmation, and under a linked account on the verify dashboard in place of the Renew Confirmation button. Placeholder until #8278."
   },
   "verifyConfirmationBuySemantic": "Divine Confirmation, coming soon, unavailable",
   "@verifyConfirmationBuySemantic": {
@@ -11647,7 +11647,7 @@
   },
   "verifyProofAlwaysAvailable": "Proof posts are always available",
   "@verifyProofAlwaysAvailable": {
-    "description": "Line above the proof-post section of the link-an-account screen, shown while linking by signing in needs Divine Confirmation, to say a proof post still links the account without it. Placeholder until #8278."
+    "description": "Heading of the proof-post section of the link-an-account screen, used in place of the usual heading while the Divine Confirmation card replaces the sign-in button, to say a proof post still links the account without it. Placeholder until #8278."
   },
   "verifyConfirmationSheetTitle": "Linking by signing in needs Divine Confirmation",
   "@verifyConfirmationSheetTitle": {

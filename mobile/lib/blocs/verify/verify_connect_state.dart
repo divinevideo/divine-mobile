@@ -171,19 +171,20 @@ class VerifyConnectState extends Equatable {
   /// sign-in keeps the proof post on offer while the sign-in can be retried.
   final bool signInFailedToStart;
 
-  /// Whether the signed-in user holds Divine Confirmation, as last read.
+  /// Whether the signed-in user holds Divine Confirmation: the last answer
+  /// taken with the `confirmationSignIn` flag on, or
+  /// [ConfirmationAccess.hasNot] after a refusal for it.
   ///
-  /// Read only while the `confirmationSignIn` flag is on and the platform's
-  /// sign-in requires it; [ConfirmationAccess.unknown] until then, which the
-  /// screen treats like [ConfirmationAccess.has].
+  /// [ConfirmationAccess.unknown] until then, which the screen treats like
+  /// [ConfirmationAccess.has].
   final ConfirmationAccess confirmationAccess;
 
   /// Whether the verifier refused a sign-in in this flow because it needs
   /// Divine Confirmation.
   ///
-  /// Stays set for the rest of the flow, like [signInFailedToStart]: a
-  /// renewal refused this way can't finish by signing in, so the proof post
-  /// comes back.
+  /// Stays set for the rest of the flow, like [signInFailedToStart]: until
+  /// Confirmation is bought a refused renewal can't finish by signing in, so
+  /// the proof post is offered for the renewed handle.
   final bool confirmationRefused;
 
   /// Whether this flow renews by signing in alone, so the proof post is not

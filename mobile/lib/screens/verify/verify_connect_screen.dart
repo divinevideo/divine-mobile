@@ -170,8 +170,9 @@ class VerifyConnectView extends StatefulWidget {
   /// Whether this platform's OAuth route can complete here.
   final bool oauthAvailable;
 
-  /// The internal `confirmationSignIn` flag. With it off the screen draws as
-  /// it did before Divine Confirmation, whatever the verifier reports.
+  /// The internal `confirmationSignIn` flag. With it off there is no
+  /// Confirmation card, sheet or heading, but a refusal for Confirmation
+  /// still gets its own snackbar, and a refused renewal offers the proof post.
   final bool confirmationSignIn;
 
   /// Whether a store can bill this build, so a buy button can be offered.
@@ -255,7 +256,7 @@ class _VerifyConnectViewState extends State<VerifyConnectView> {
     if (error == null) return;
     // With the flag on there is somewhere to go next, so the refusal asks
     // rather than tells. With it off there is nowhere to buy, and the
-    // snackbar below says the proof post still works [P2].
+    // snackbar below says the proof post still works.
     if (error == VerifyConnectError.confirmationRequired &&
         widget.confirmationSignIn) {
       runDetached(

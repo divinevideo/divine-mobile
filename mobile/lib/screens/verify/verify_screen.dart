@@ -117,8 +117,9 @@ class VerifyView extends StatelessWidget {
   /// Whether this device can run a platform sign-in.
   final bool oauthUsable;
 
-  /// The internal `confirmationSignIn` flag. With it off the dashboard draws
-  /// as it did before Divine Confirmation.
+  /// The internal `confirmationSignIn` flag. With it off there is no
+  /// Confirmation badge or Renew action, but a link the verifier reports as
+  /// needing Confirmation still says so on its pill.
   final bool confirmationSignIn;
 
   /// Whether this build can buy Divine Confirmation. Gates only the buy

@@ -487,7 +487,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
           // With the flag on, the sign-in stays so it can be approved once
           // Confirmation is bought, without signing in at the platform
           // again. With it off there is nowhere to buy, and a waiting
-          // sign-in keeps the proof post closed, so it ends [D3a].
+          // sign-in keeps the proof post closed, so it ends.
           if (!_confirmationSignIn) {
             return _fail(
               VerifyConnectError.confirmationRequired,
@@ -523,7 +523,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
             confirmationAccess: ConfirmationAccess.hasNot,
           );
         case SignInRefusal.confirmationUnavailable:
-          // Already retried inside the confirm window [D3c]. It says nothing
+          // Already retried inside the confirm window. It says nothing
           // about the sign-in, so it stays to approve again later.
           return _failKeepingSignIn(VerifyConnectError.confirmationUnavailable);
         case _:

@@ -24633,7 +24633,7 @@ abstract class AppLocalizations {
   /// **'Details will appear here when Divine Confirmation is ready.'**
   String get verifyConfirmationSmallPrint;
 
-  /// Shown in place of a button that would buy Divine Confirmation when this build cannot be billed by a store: on the Divine Confirmation screen, on the link-an-account screen, and in the sheet shown when a sign-in link is refused for Divine Confirmation. Placeholder until #8278.
+  /// Shown in place of a button that would buy Divine Confirmation when this build cannot be billed by a store: on the Divine Confirmation screen, on the link-an-account screen, in the sheet shown when a sign-in link is refused for Divine Confirmation, and under a linked account on the verify dashboard in place of the Renew Confirmation button. Placeholder until #8278.
   ///
   /// In en, this message translates to:
   /// **'Divine Confirmation is available in the App Store and Google Play versions of Divine.'**
@@ -24669,7 +24669,7 @@ abstract class AppLocalizations {
   /// **'Get Divine Confirmation'**
   String get verifyGetConfirmation;
 
-  /// Line above the proof-post section of the link-an-account screen, shown while linking by signing in needs Divine Confirmation, to say a proof post still links the account without it. Placeholder until #8278.
+  /// Heading of the proof-post section of the link-an-account screen, used in place of the usual heading while the Divine Confirmation card replaces the sign-in button, to say a proof post still links the account without it. Placeholder until #8278.
   ///
   /// In en, this message translates to:
   /// **'Proof posts are always available'**
