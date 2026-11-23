@@ -134,8 +134,9 @@ class ConfirmationRequirementSimulatedNotifier extends Notifier<bool> {
 /// offer.
 ///
 /// Nothing the app submits changes, and the verifier still approves sign-ins
-/// as before. With the requirement shown, the app does ask the verifier
-/// whether the account has Confirmation, as it would with the gate on.
+/// as before. With the requirement shown and no access override applying,
+/// the app asks the verifier whether the account has Confirmation, as it
+/// would with the gate on.
 final simulateConfirmationRequirementProvider = Provider<bool>((ref) {
   final applies =
       ref.watch(confirmationAccessDebugBuildProvider) ||
