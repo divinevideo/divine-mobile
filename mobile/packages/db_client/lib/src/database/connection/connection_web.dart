@@ -2,53 +2,114 @@
 // ABOUTME: Web Worker on OPFS or IndexedDB, in memory when neither is usable
 
 import 'dart:js_interop';
+import 'dart:typed_data';
 
 import 'package:drift/drift.dart';
 import 'package:drift/wasm.dart';
+
+import 'legacy_web_database_snapshot.dart';
 
 @JS('window.localStorage')
 external _WebStorage? get _localStorage;
 
 extension type _WebStorage._(JSObject _) implements JSObject {
+  external String? getItem(String key);
   external void removeItem(String key);
 }
 
-void _clearLegacyLocalStorageDb() {
-  try {
-    final storage = _localStorage;
-    if (storage == null) return;
-    // Reclaim localStorage quota left behind by the deprecated drift/web.dart
-    // WebDatabase('divine_db') backend, which serialized the entire SQLite file
-    // into localStorage on every write.
-    storage
-      ..removeItem('moor_db_str_divine_db')
-      ..removeItem('moor_db_version_divine_db');
-  } on Object catch (_) {
-    // Best-effort cleanup; ignore storage access errors in restricted contexts.
-  }
-}
+const _databaseName = 'divine_db';
+const _legacyDataKey = 'moor_db_str_$_databaseName';
+const _legacyVersionKey = 'moor_db_version_$_databaseName';
 
 /// Open a database connection for web platform.
 ///
-/// Uses [WasmDatabase.open], which hosts SQLite in a Web Worker on OPFS or
-/// IndexedDB when the browser allows it and otherwise falls back to an
-/// in-memory database on the main thread that does not survive a reload.
+/// Hosts SQLite in a worker when browser support allows it. The legacy SQLite
+/// file includes local writes such as queued DMs, not just relay-backed cache.
 QueryExecutor openConnection() {
-  return LazyDatabase(() async {
-    _clearLegacyLocalStorageDb();
-    final result = await WasmDatabase.open(
-      databaseName: 'divine_db',
-      sqlite3Uri: Uri.parse('sqlite3.wasm'),
-      driftWorkerUri: Uri.parse('drift_worker.js'),
-    );
-    return result.resolvedExecutor;
-  });
+  return DatabaseConnection.delayed(
+    Future(() async {
+      final probe = await WasmDatabase.probe(
+        databaseName: _databaseName,
+        sqlite3Uri: Uri.parse('sqlite3.wasm'),
+        driftWorkerUri: Uri.parse('drift_worker.js'),
+      );
+      // Preserve Drift's usual preference for any existing durable database.
+      final available = WasmStorageImplementation.values.where(
+        probe.availableStorages.contains,
+      );
+      final selected = available.firstWhere(
+        (mode) =>
+            probe.existingDatabases.contains((mode.storageApi, _databaseName)),
+        orElse: () =>
+            available.firstOrNull ?? WasmStorageImplementation.inMemory,
+      );
+      if (selected.storageApi == null) {
+        // Importing into memory would replay the old outbox on every reload.
+        return probe.open(selected, _databaseName);
+      }
+
+      final migration = _LegacyDatabaseMigration();
+      final connection = await probe.open(
+        selected,
+        _databaseName,
+        initializeDatabase: migration.restore,
+      );
+      return connection.interceptWith(migration);
+    }),
+  );
+}
+
+class _LegacyDatabaseMigration extends QueryInterceptor {
+  String? _importedSnapshot;
+  String? _importedVersion;
+
+  Uint8List? restore() {
+    try {
+      final storage = _localStorage;
+      final snapshot = storage?.getItem(_legacyDataKey);
+      if (snapshot == null) return null;
+      final version = storage?.getItem(_legacyVersionKey);
+      final bytes = decodeLegacyWebDatabaseSnapshot(snapshot, version);
+      _importedSnapshot = snapshot;
+      _importedVersion = version;
+      return bytes;
+    } on Object catch (_) {
+      // Storage may be inaccessible in restricted contexts. Leave it untouched.
+      return null;
+    }
+  }
+
+  @override
+  Future<bool> ensureOpen(
+    QueryExecutor executor,
+    QueryExecutorUser user,
+  ) async {
+    final opened = await executor.ensureOpen(user);
+    final snapshot = _importedSnapshot;
+    if (opened && snapshot != null) {
+      _importedSnapshot = null;
+      try {
+        final storage = _localStorage;
+        // Do not remove a snapshot another tab replaced during the upgrade.
+        if (storage != null &&
+            storage.getItem(_legacyDataKey) == snapshot &&
+            storage.getItem(_legacyVersionKey) == _importedVersion) {
+          storage
+            ..removeItem(_legacyDataKey)
+            ..removeItem(_legacyVersionKey);
+        }
+      } on Object catch (_) {
+        // The new database is open; cleanup can fail if access was revoked.
+      }
+    }
+    return opened;
+  }
 }
 
 /// On web, returns the Drift database name: an OPFS directory or an IndexedDB
 /// database, whichever [WasmDatabase.open] picked.
 Future<String> getSharedDatabasePath() async {
-  return 'divine_db';
+  return _databaseName;
 }
 
 /// Native at-rest encryption is unsupported on web.
