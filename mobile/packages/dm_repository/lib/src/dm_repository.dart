@@ -2070,9 +2070,11 @@ class DmRepository {
   /// Before this, the self-copy went to the pool only. Divine advertises
   /// `nos.lol` and `relay.primal.net` in every account's kind-10050 (the app
   /// layer's `IndexerRelayConfig.dmInboxTaggedRelays`, passed in as
-  /// [_dmInboxTaggedRelays]), and neither joins the pool unless NIP-65
-  /// discovery came back empty — so the sender's own replies were absent from
-  /// two of the three relays their own inbox list points at.
+  /// [_dmInboxTaggedRelays]), and at the time neither joined the pool unless
+  /// NIP-65 discovery came back empty — so the sender's own replies were
+  /// absent from two of the three relays their own inbox list points at. The
+  /// app layer has added both to the pool on every discovery since #8378; the
+  /// union still reaches inbox relays an account lists outside the pool.
   Future<List<String>?> _selfWrapTargetRelays() async {
     final ownInbox = await _ownInboxRelays();
     if (ownInbox == null || ownInbox.isEmpty) return null;

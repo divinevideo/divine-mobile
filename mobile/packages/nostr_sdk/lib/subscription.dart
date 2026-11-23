@@ -44,8 +44,15 @@ class Subscription {
   final List<Map<String, dynamic>> filters;
   Function onEvent;
 
-  /// Callback invoked when EOSE (End of Stored Events) is received from all
-  /// relays for this subscription.
+  /// Callback invoked when EOSE (End of Stored Events) has been received from
+  /// every relay serving this subscription's current REQ.
+  ///
+  /// The first time, the relays that still owe EOSE after another relay sent
+  /// one hold it only while they keep sending this subscription events: once
+  /// they have sent nothing for `RelayPool.subscriptionEoseSettleWindow` and
+  /// their received events have finished verifying, it fires without them.
+  /// After that it fires again only once every relay has sent EOSE since it
+  /// last fired, as after a reconnect replays the REQ everywhere.
   void Function()? onEose;
 
   /// Callback invoked when every relay serving this subscription has ended
@@ -67,8 +74,12 @@ class Subscription {
   /// (EOSE or `CLOSED`), no relay owes the rest of a batch it started, and
   /// every event received so far has been handed to [onEvent].
   ///
-  /// Unlike [onEose], a relay that is not connected does not hold this up.
-  /// See [StoredEventsEnd] for what it reports.
+  /// A relay that drops before starting a batch does not hold this up. A
+  /// silent relay still able to answer, or a relay with an unfinished batch,
+  /// can hold it open.
+  /// [onEose] differs on both: until it first fires, any relay that owes EOSE
+  /// holds it, but only for `RelayPool.subscriptionEoseSettleWindow` of
+  /// silence. See [StoredEventsEnd] for what it reports.
   void Function(StoredEventsEnd end)? onStoredEventsEnd;
 
   /// [filters] parsed once at construction.
