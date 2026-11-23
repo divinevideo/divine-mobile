@@ -1053,6 +1053,7 @@ workflows:
         IOS_EXTENSION_BUNDLE_IDS: >-
           co.openvine.app.NotificationServiceExtension
           co.openvine.app.CameraQuickActionWidget
+          co.openvine.app.watchkitapp
         # firebase_analytics links FirebaseAnalyticsCore — no IDFA support, no
         # Google ads-measurement SDK — when this is present while Xcode
         # evaluates its Package.swift (#7303). Presence is what counts, not the
@@ -1367,6 +1368,7 @@ workflows:
         IOS_EXTENSION_BUNDLE_IDS: >-
           co.openvine.app.NotificationServiceExtension
           co.openvine.app.CameraQuickActionWidget
+          co.openvine.app.watchkitapp
         # Same analytics product as ios-build (#7303); see the comment there.
         FIREBASE_ANALYTICS_WITHOUT_ADID: "true"
       ios_signing:
