@@ -277,13 +277,14 @@ class VerifierClient {
   /// [confirmationAccessUrl] and whose `method` tag is `GET`. It travels as
   /// `Authorization: Nostr <base64 of its JSON>`.
   ///
-  /// Returns true for `200 {"access":"yes"}` and false for
-  /// `200 {"access":"no"}`. Every other answer is null: the verifier said it
-  /// could not tell (`"unavailable"`), refused the request, failed, or is an
-  /// older deployment without this endpoint (404). None of those is a "no".
+  /// Returns true for `200 {"access":"yes"}`, false for
+  /// `200 {"access":"no"}`, and null when the verifier says it could not tell
+  /// (`"unavailable"`) or is an older deployment without this endpoint (404).
   ///
-  /// Throws [VerifierTimeoutException] and [VerifierNetworkException] as
-  /// [verifyBatch] does.
+  /// Throws [VerifierApiException] when the verifier refuses the request or
+  /// fails, or answers 200 with anything else, so the caller can log why.
+  /// None of those is a "no". Throws [VerifierTimeoutException] and
+  /// [VerifierNetworkException] as [verifyBatch] does.
   Future<bool?> fetchConfirmationAccess({
     required Map<String, dynamic> nip98Event,
   }) async {
@@ -293,18 +294,28 @@ class VerifierClient {
     final res = await _fetch(
       () => _httpClient.get(uri, headers: {'Authorization': authorization}),
     );
-    if (res.statusCode != 200) return null;
-    final Object? json;
+    if (res.statusCode == 404) return null;
+    if (res.statusCode != 200) {
+      throw VerifierApiException(
+        res.statusCode,
+        'verifier refused the Confirmation access check',
+      );
+    }
+    Object? json;
     try {
       json = jsonDecode(res.body);
     } on FormatException {
-      return null;
+      json = null;
     }
-    if (json is! Map<String, dynamic>) return null;
-    return switch (json['access']) {
+    final access = json is Map<String, dynamic> ? json['access'] : null;
+    return switch (access) {
       'yes' => true,
       'no' => false,
-      _ => null,
+      'unavailable' => null,
+      _ => throw const VerifierApiException(
+        200,
+        'verifier answered the Confirmation access check without an answer',
+      ),
     };
   }
 

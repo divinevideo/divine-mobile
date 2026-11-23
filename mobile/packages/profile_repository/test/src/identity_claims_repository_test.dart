@@ -10,6 +10,7 @@ import 'package:mocktail/mocktail.dart' hide VerificationResult;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' show Event, Filter, PublishOutcome;
 import 'package:profile_repository/profile_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockVerifierClient extends Mock implements VerifierClient {}
 
@@ -4675,6 +4676,25 @@ void main() {
           equals(ConfirmationAccess.unknown),
         );
       });
+
+      test(
+        'when the verifier refuses the request, logging its status',
+        () async {
+          await LogCaptureService().clearAllLogs();
+          stubVerifier(
+            () async => throw const VerifierApiException(401, 'refused'),
+          );
+
+          expect(
+            await buildRepo().confirmationAccess(),
+            equals(ConfirmationAccess.unknown),
+          );
+          expect(
+            LogCaptureService().getRecentLogs().map((entry) => entry.message),
+            anyElement(contains('HTTP 401')),
+          );
+        },
+      );
     });
 
     test('a second call reuses the answer; refresh asks again', () async {

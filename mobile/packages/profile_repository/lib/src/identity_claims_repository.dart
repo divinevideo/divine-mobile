@@ -892,6 +892,13 @@ class IdentityClaimsRepository {
         false => ConfirmationAccess.hasNot,
         null => ConfirmationAccess.unknown,
       };
+    } on VerifierApiException catch (e) {
+      Log.warning(
+        'Confirmation access check refused by the verifier: '
+        'HTTP ${e.statusCode}',
+        name: 'IdentityClaimsRepository',
+      );
+      return ConfirmationAccess.unknown;
     } on Object catch (e) {
       // Only the type: a signer's message can name the account.
       Log.warning(

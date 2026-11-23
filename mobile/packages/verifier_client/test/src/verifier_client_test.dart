@@ -925,29 +925,53 @@ void main() {
         );
       });
 
+      test('unavailable and 404 -> null', () async {
+        final cases = <(int, String)>[
+          (200, jsonEncode({'access': 'unavailable'})),
+          // Today's verifier has no such route: the app must read that as
+          // not knowing, not as "no".
+          (404, jsonEncode({'error': 'Not Found'})),
+        ];
+        for (final (status, body) in cases) {
+          expect(
+            await clientAnswering(
+              status,
+              body,
+            ).fetchConfirmationAccess(nip98Event: nip98Event),
+            isNull,
+            reason: '$status $body',
+          );
+        }
+      });
+
       test(
-        'unavailable, 404, 401, 500 and a malformed body -> null',
+        'a refused or failed request and a malformed answer throw with the '
+        'status',
         () async {
           final cases = <(int, String)>[
-            (200, jsonEncode({'access': 'unavailable'})),
             (200, jsonEncode({'access': true})),
             (200, jsonEncode(<String, dynamic>{})),
             (200, jsonEncode(['yes'])),
             (200, 'not json'),
-            // Today's verifier has no such route: the app must read that as
-            // not knowing, not as "no".
-            (404, jsonEncode({'error': 'Not Found'})),
+            // A refused NIP-98 header (clock skew, a mismatched `u` tag) must
+            // reach the logs, not read as "unavailable".
             (401, jsonEncode({'access': 'yes'})),
             (500, jsonEncode({'access': 'no'})),
             (204, ''),
           ];
           for (final (status, body) in cases) {
-            expect(
-              await clientAnswering(
+            await expectLater(
+              clientAnswering(
                 status,
                 body,
               ).fetchConfirmationAccess(nip98Event: nip98Event),
-              isNull,
+              throwsA(
+                isA<VerifierApiException>().having(
+                  (e) => e.statusCode,
+                  'statusCode',
+                  status,
+                ),
+              ),
               reason: '$status $body',
             );
           }
