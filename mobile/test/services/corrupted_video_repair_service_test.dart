@@ -303,14 +303,15 @@ void main() {
                 ['title', 'Second'],
               ],
             );
-            final kept = first.id.compareTo(second.id) < 0 ? first : second;
+            final revisions = [first, second]
+              ..sort((a, b) => b.id.compareTo(a.id));
             when(
               () => mockNostrClient.queryEventsDetailed(
                 any(),
                 useCache: any(named: 'useCache'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               ),
-            ).thenAnswer((_) async => _answeredScan([first, second]));
+            ).thenAnswer((_) async => _answeredScan(revisions));
             stubSignAndPublishSuccess();
 
             final result = await repairService.repairIfNeeded();
@@ -318,7 +319,7 @@ void main() {
             expect(result, equals(1));
             expect(
               publishedEvents.single.tags,
-              contains(equals(kept.tags.last)),
+              contains(equals(revisions.last.tags.last)),
             );
           },
         );

@@ -82,10 +82,11 @@ void main() {
     });
 
     test('breaks a created_at tie by the lowest event id', () async {
-      final a = signed(createdAt: 2000, title: 'a');
-      final b = signed(createdAt: 2000, title: 'b');
-      final lowest = a.id.compareTo(b.id) < 0 ? a : b;
-      answer((events: [a, b], timedOut: false, noRelays: false));
+      final revisions = [
+        signed(createdAt: 2000, title: 'a'),
+        signed(createdAt: 2000, title: 'b'),
+      ]..sort((a, b) => b.id.compareTo(a.id));
+      answer((events: revisions, timedOut: false, noRelays: false));
 
       final result = await repository.fetchLatestVideoRevision(address);
 
@@ -94,7 +95,7 @@ void main() {
         isA<LatestVideoRevisionFound>().having(
           (r) => r.event.id,
           'event.id',
-          lowest.id,
+          revisions.last.id,
         ),
       );
     });
