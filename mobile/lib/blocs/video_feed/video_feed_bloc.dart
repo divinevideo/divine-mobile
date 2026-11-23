@@ -1802,6 +1802,54 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     }
   }
 
+  void _onVideoReplaced(
+    VideoFeedVideoReplaced event,
+    Emitter<VideoFeedBlocState> emit,
+  ) {
+    final republished = event.video;
+    final address = republished.addressableId;
+    if (address == null) return;
+    _classicSession?.replaceVideoRevision(republished);
+    final index = state.videos.indexWhere(
+      (video) =>
+          video.addressableId == address &&
+          isNewerVideoRevision(republished, video),
+    );
+    if (index == -1) return;
+
+    final previous = state.videos[index];
+    final merged = mergeRepublishedVideo(previous, republished);
+    final allowed = _removalRepository.applyContentPreferences([merged]);
+    if (allowed.isEmpty) {
+      _onVideoRemoved(VideoFeedVideoRemoved(previous.id), emit);
+      return;
+    }
+    final videos = [...state.videos];
+    videos[index] = allowed.single;
+    final listSources = Map.of(state.videoListSources);
+    final listOnlyIds = {...state.listOnlyVideoIds};
+    if (listSources.remove(previous.id) case final sources?) {
+      listSources[republished.id] = sources;
+    }
+    if (listOnlyIds.remove(previous.id)) listOnlyIds.add(republished.id);
+    emit(
+      state.copyWith(
+        videos: videos,
+        videoListSources: listSources,
+        listOnlyVideoIds: listOnlyIds,
+      ),
+    );
+
+    if (_usesHomeFeedCache(state.source)) {
+      _resumeManager.persistNow(
+        pubkey: _userPubkey,
+        mode: state.source.mode.name,
+        videos: videos,
+        activeIndex: state.currentIndex,
+      );
+    }
+  }
+
   /// Drops late results for removals that were deletions. Block and mute
   /// sweeps share the bus but are reversible, so an unblocked author's video
   /// may come back on a later read.
@@ -2417,54 +2465,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         pubkey: _userPubkey,
         mode: state.source.mode.name,
         videos: mergedVideos,
-        activeIndex: state.currentIndex,
-      );
-    }
-  }
-
-  void _onVideoReplaced(
-    VideoFeedVideoReplaced event,
-    Emitter<VideoFeedBlocState> emit,
-  ) {
-    final republished = event.video;
-    final address = republished.addressableId;
-    if (address == null) return;
-    _classicSession?.replaceVideoRevision(republished);
-    final index = state.videos.indexWhere(
-      (video) =>
-          video.addressableId == address &&
-          isNewerVideoRevision(republished, video),
-    );
-    if (index == -1) return;
-
-    final previous = state.videos[index];
-    final merged = mergeRepublishedVideo(previous, republished);
-    final allowed = _removalRepository.applyContentPreferences([merged]);
-    if (allowed.isEmpty) {
-      _onVideoRemoved(VideoFeedVideoRemoved(previous.id), emit);
-      return;
-    }
-    final videos = [...state.videos];
-    videos[index] = allowed.single;
-    final listSources = Map.of(state.videoListSources);
-    final listOnlyIds = {...state.listOnlyVideoIds};
-    if (listSources.remove(previous.id) case final sources?) {
-      listSources[republished.id] = sources;
-    }
-    if (listOnlyIds.remove(previous.id)) listOnlyIds.add(republished.id);
-    emit(
-      state.copyWith(
-        videos: videos,
-        videoListSources: listSources,
-        listOnlyVideoIds: listOnlyIds,
-      ),
-    );
-
-    if (_usesHomeFeedCache(state.source)) {
-      _resumeManager.persistNow(
-        pubkey: _userPubkey,
-        mode: state.source.mode.name,
-        videos: videos,
         activeIndex: state.currentIndex,
       );
     }
