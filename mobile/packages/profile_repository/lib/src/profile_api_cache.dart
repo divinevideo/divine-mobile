@@ -151,16 +151,9 @@ class ProfileApiCache {
       return;
     }
 
-    for (var start = 0; start < pubkeys.length; start += maxBulkBatchSize) {
-      final end = (start + maxBulkBatchSize) < pubkeys.length
-          ? start + maxBulkBatchSize
-          : pubkeys.length;
-      final chunkKeys = pubkeys.sublist(start, end);
-      final chunk = <String, Completer<UserProfileResult?>>{
-        for (final key in chunkKeys) key: batch[key]!,
-      };
-      unawaited(_dispatchBulkChunk(client, chunkKeys, chunk));
-    }
+    // `_batchQueue` flushes immediately on reaching `maxBulkBatchSize`, so
+    // `pubkeys.length` is guaranteed to be within the endpoint's batch limit.
+    unawaited(_dispatchBulkChunk(client, pubkeys, batch));
   }
 
   Future<void> _completeSingleFromQueue(

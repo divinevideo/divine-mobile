@@ -260,5 +260,66 @@ void main() {
         expect(requestCount, 0);
       },
     );
+
+    test(
+      'propagates errors from queued single GET lookups to awaiting callers',
+      () async {
+        final pk1 = _pk(1);
+        final httpClient = MockClient((request) async {
+          return http.Response('server error', 500);
+        });
+        addTearDown(httpClient.close);
+
+        final api = FunnelcakeApiClient(
+          baseUrl: 'https://profiles.example.test',
+          httpClient: httpClient,
+          retryBaseDelay: Duration.zero,
+        );
+        final cache = ProfileApiCache(
+          client: api,
+          batchWindow: const Duration(milliseconds: 10),
+        );
+        addTearDown(cache.dispose);
+
+        await expectLater(
+          cache.getProfile(pk1),
+          throwsA(isA<FunnelcakeException>()),
+        );
+      },
+    );
+
+    test(
+      'propagates errors to queued callers claimed by explicit getBulkProfiles',
+      () async {
+        final pk1 = _pk(1);
+        final pk2 = _pk(2);
+        final httpClient = MockClient((request) async {
+          return http.Response('server error', 500);
+        });
+        addTearDown(httpClient.close);
+
+        final api = FunnelcakeApiClient(
+          baseUrl: 'https://profiles.example.test',
+          httpClient: httpClient,
+          retryBaseDelay: Duration.zero,
+        );
+        final cache = ProfileApiCache(
+          client: api,
+          batchWindow: const Duration(milliseconds: 50),
+        );
+        addTearDown(cache.dispose);
+
+        final singleFuture = cache.getProfile(pk1);
+        final bulkFuture = cache.getBulkProfiles([pk1, pk2]);
+
+        await expectLater(
+          Future.wait<Object?>([
+            expectLater(singleFuture, throwsA(isA<FunnelcakeException>())),
+            expectLater(bulkFuture, throwsA(isA<FunnelcakeException>())),
+          ]),
+          completes,
+        );
+      },
+    );
   });
 }
