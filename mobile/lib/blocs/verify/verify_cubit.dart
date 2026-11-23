@@ -30,9 +30,8 @@ class VerifyCubit extends Cubit<VerifyState> {
   final String _pubkey;
   final bool _confirmationSignIn;
 
-  /// The reader of the account this cubit was made for. The page keys the
-  /// cubit on the repository and pubkey, so an account change makes a new
-  /// cubit with the new account's reader rather than reusing this one's.
+  /// The reader this cubit was made with; the Verify page re-keys the cubit
+  /// when it changes, so an account change never reuses this one.
   final ConfirmationAccessReader _readConfirmationAccess;
 
   /// Reads the links and their verdicts, plus the platforms on offer.
@@ -46,10 +45,7 @@ class VerifyCubit extends Cubit<VerifyState> {
   /// answer.
   ///
   /// A call while a load is already in flight is dropped, [refreshAccess]
-  /// included. That is safe today: the only caller that asks for a refresh is
-  /// [refreshQuietly], which falls back to this only when no list is showing,
-  /// and the dashboard's own loads (open, retry) are never started from a
-  /// state that shows a renew action.
+  /// included.
   Future<void> load({bool refreshAccess = false}) async {
     if (state.status == VerifyStatus.loading) return;
     emit(state.copyWith(status: VerifyStatus.loading, clearError: true));
