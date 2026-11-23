@@ -64,7 +64,7 @@ class DivineVideoPlayer extends StatelessWidget {
     if (ctrl.usesWebBackend) {
       surface = ctrl.buildWebView();
     } else if (ctrl.usesLinuxBackend) {
-      surface = ctrl.buildLinuxView();
+      surface = _DesktopPlayerView(controller: ctrl);
     } else if (ctrl.useTexture && ctrl.textureId != null) {
       // SurfaceProducer does not forward ExoPlayer's GL transform matrix
       // (NATIVE_WINDOW_TRANSFORM_HINT) to Flutter, unlike the legacy
@@ -106,6 +106,21 @@ class DivineVideoPlayer extends StatelessWidget {
       ],
     );
   }
+}
+
+class _DesktopPlayerView extends StatelessWidget {
+  const _DesktopPlayerView({required this.controller});
+
+  final DivineVideoPlayerController controller;
+
+  @override
+  Widget build(BuildContext context) => StreamBuilder<DivineVideoPlayerState>(
+    stream: controller.stateStream,
+    builder: (context, snapshot) {
+      if (controller.isDisposed) return const SizedBox.shrink();
+      return controller.buildLinuxView();
+    },
+  );
 }
 
 /// Android uses [PlatformViewLink] for Hybrid Composition which provides

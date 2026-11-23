@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'dart:math' as math;
 
 import 'package:divine_video_player/src/audio_track.dart' as divine;
+import 'package:divine_video_player/src/desktop/desktop_video_frame_ready.dart';
 import 'package:divine_video_player/src/video_clip.dart';
 import 'package:divine_video_player/src/video_player_state.dart';
 import 'package:flutter/widgets.dart';
@@ -100,8 +101,8 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     _mediaKitInitialized = false;
   }
 
-  late final Player _player;
-  late final Object _videoController;
+  late Player _player;
+  late Object _videoController;
   final _subscriptions = <StreamSubscription<dynamic>>[];
   final _clips = <VideoClip>[];
   final _clipSpeeds = <double>[];
@@ -116,6 +117,16 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   bool _disposed = false;
   bool _isLooping = false;
   bool _hasLoadedMedia = false;
+  bool _playerHasOpenedMedia = false;
+  bool _ownsPlayer = false;
+  bool _changingPlayer = false;
+  bool _outputReady = false;
+  Object? _outputError;
+  int _loadGeneration = 0;
+  int? _activeLoadGeneration = 0;
+  int? _reportedOutputErrorGeneration;
+  int _playerGeneration = 0;
+  Future<void> _mutations = Future<void>.value();
   bool _didLogUnsupportedAudioTrackWarning = false;
   int _currentClipIndex = 0;
 
@@ -127,16 +138,8 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     _ensureMediaKitInitialized();
     _onStateChanged = onStateChanged;
     _onError = onError;
-    _player = _playerFactory();
-    _videoController = _videoControllerFactory(_player);
-    _listenToPlayer();
+    _createPlayer();
     _initialized = true;
-
-    unawaited(
-      _videoControllerReady(_videoController).then((_) {
-        _emitState(_state.copyWith(isFirstFrameRendered: true));
-      }, onError: onError),
-    );
   }
 
   @override
@@ -145,95 +148,143 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     Duration? startPosition,
   }) async {
     _ensureReady();
-    _clips
-      ..clear()
-      ..addAll(clips);
-    _clipSpeeds
-      ..clear()
-      ..addAll(clips.map((c) => c.playbackSpeed));
+    final generation = ++_loadGeneration;
+    if (_state.isFirstFrameRendered) {
+      _emitState(_state.copyWith(isFirstFrameRendered: false));
+    }
+    final nextClips = List<VideoClip>.of(clips);
+    final nextSpeeds = nextClips.map((clip) => clip.playbackSpeed).toList();
 
     // _resolveClipDurations returns source-time durations.  Divide by the
     // per-clip speed so _clipDurations (and therefore _clipOffsets and
     // _totalDuration) are in wall-clock (playback) time, consistent with
     // the global timeline coordinate space.
-    final sourceDurations = await _resolveClipDurations(clips);
-    _clipDurations.clear();
+    final sourceDurations = await _resolveClipDurations(nextClips);
+    if (_disposed || generation != _loadGeneration) return;
+    final nextDurations = <Duration>[];
+    final nextOffsets = <Duration>[];
+    var offset = Duration.zero;
     for (var i = 0; i < sourceDurations.length; i++) {
-      _clipDurations.add(
-        _sourceToPlayback(
-          sourceDurations[i],
-          speed: _clipSpeeds.elementAtOrNull(i) ?? 1.0,
+      final duration = _sourceToPlayback(
+        sourceDurations[i],
+        speed: nextSpeeds[i],
+      );
+      nextDurations.add(duration);
+      nextOffsets.add(offset);
+      offset += duration;
+    }
+    await _enqueue(() async {
+      if (generation != _loadGeneration) return;
+      if (_playerHasOpenedMedia || _outputError != null) {
+        _changingPlayer = true;
+        final volume = _player.state.volume;
+        await _retirePlayer();
+        _createPlayer();
+        await _player.setVolume(volume);
+      }
+      if (_disposed || generation != _loadGeneration) {
+        _changingPlayer = false;
+        return;
+      }
+      // Player streams can emit during the duration probe. Publish one coherent
+      // timeline only after all source durations and offsets are available.
+      _clips
+        ..clear()
+        ..addAll(nextClips);
+      _clipSpeeds
+        ..clear()
+        ..addAll(nextSpeeds);
+      _clipDurations
+        ..clear()
+        ..addAll(nextDurations);
+      _clipOffsets
+        ..clear()
+        ..addAll(nextOffsets);
+
+      final playlist = Playlist([
+        for (final clip in nextClips)
+          Media(clip.uri, start: clip.start, end: clip.end),
+      ]);
+
+      _hasLoadedMedia = true;
+      _playerHasOpenedMedia = true;
+      _activeLoadGeneration = generation;
+      _currentClipIndex = 0;
+      _changingPlayer = false;
+      _emitState(
+        _state.copyWith(
+          status: PlaybackStatus.buffering,
+          clipCount: nextClips.length,
+          currentClipIndex: 0,
+          duration: _totalDuration,
+          position: Duration.zero,
+          bufferedPosition: Duration.zero,
+          isFirstFrameRendered: false,
+          clearError: true,
         ),
       );
-    }
-    _rebuildClipOffsets();
 
-    final playlist = Playlist([
-      for (final clip in clips)
-        Media(clip.uri, start: clip.start, end: clip.end),
-    ]);
+      await _player.open(playlist, play: false);
+      if (_disposed || generation != _loadGeneration) return;
+      await _player.setPlaylistMode(
+        _isLooping ? PlaylistMode.loop : PlaylistMode.none,
+      );
+      // Apply first-clip speed immediately so playback starts at the correct
+      // rate.
+      await _player.setRate(_clipSpeeds.firstOrNull ?? 1.0);
 
-    _hasLoadedMedia = true;
-    _currentClipIndex = 0;
-    _emitState(
-      _state.copyWith(
-        status: PlaybackStatus.buffering,
-        clipCount: clips.length,
-        currentClipIndex: 0,
-        duration: _totalDuration,
-        position: Duration.zero,
-        bufferedPosition: Duration.zero,
-        isFirstFrameRendered: false,
-        clearError: true,
-      ),
-    );
-
-    await _player.open(playlist, play: false);
-    await _player.setPlaylistMode(
-      _isLooping ? PlaylistMode.loop : PlaylistMode.none,
-    );
-    // Apply first-clip speed immediately so playback starts at the correct
-    // rate.
-    await _player.setRate(_clipSpeeds.firstOrNull ?? 1.0);
-
-    final seekPosition = startPosition ?? Duration.zero;
-    if (seekPosition > Duration.zero) {
-      await seekTo(seekPosition);
-    } else {
-      _refreshState();
-    }
+      final seekPosition = startPosition ?? Duration.zero;
+      if (seekPosition > Duration.zero) {
+        await _seekTo(seekPosition);
+      } else {
+        _refreshState();
+      }
+      _reportOutputReady();
+    });
   }
 
   @override
   Future<void> play() async {
     _ensureReady();
-    await _player.play();
-    _refreshState();
+    await _enqueue(() async {
+      await _player.play();
+      _refreshState();
+    });
   }
 
   @override
   Future<void> pause() async {
     _ensureReady();
-    await _player.pause();
-    _refreshState();
+    await _enqueue(() async {
+      await _player.pause();
+      _refreshState();
+    });
   }
 
   @override
   Future<void> stop() async {
     _ensureReady();
-    await _player.stop();
-    _hasLoadedMedia = false;
-    _clips.clear();
-    _clipSpeeds.clear();
-    _clipDurations.clear();
-    _clipOffsets.clear();
-    _currentClipIndex = 0;
-    _emitState(const DivineVideoPlayerState());
+    _loadGeneration++;
+    _activeLoadGeneration = null;
+    await _enqueue(() async {
+      await _player.stop();
+      _hasLoadedMedia = false;
+      _clips.clear();
+      _clipSpeeds.clear();
+      _clipDurations.clear();
+      _clipOffsets.clear();
+      _currentClipIndex = 0;
+      _emitState(const DivineVideoPlayerState());
+    });
   }
 
   @override
   Future<void> seekTo(Duration position) async {
     _ensureReady();
+    await _enqueue(() => _seekTo(position));
+  }
+
+  Future<void> _seekTo(Duration position) async {
     if (_clips.isEmpty) return;
 
     final clamped = _clampGlobalPosition(position);
@@ -258,8 +309,10 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   @override
   Future<void> setVolume(double volume) async {
     _ensureReady();
-    await _player.setVolume(volume * 100);
-    _emitState(_state.copyWith(volume: volume));
+    await _enqueue(() async {
+      await _player.setVolume(volume * 100);
+      _emitState(_state.copyWith(volume: volume));
+    });
   }
 
   /// Sets the runtime player rate.
@@ -272,27 +325,33 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   @override
   Future<void> setPlaybackSpeed(double speed) async {
     _ensureReady();
-    await _player.setRate(speed);
-    _emitState(_state.copyWith(playbackSpeed: speed));
+    await _enqueue(() async {
+      await _player.setRate(speed);
+      _emitState(_state.copyWith(playbackSpeed: speed));
+    });
   }
 
   @override
   Future<void> setLooping({required bool looping}) async {
     _ensureReady();
     _isLooping = looping;
-    await _player.setPlaylistMode(
-      looping ? PlaylistMode.loop : PlaylistMode.none,
-    );
-    _emitState(_state.copyWith(isLooping: looping));
+    await _enqueue(() async {
+      await _player.setPlaylistMode(
+        looping ? PlaylistMode.loop : PlaylistMode.none,
+      );
+      _emitState(_state.copyWith(isLooping: looping));
+    });
   }
 
   @override
   Future<void> jumpToClip(int index) async {
     _ensureReady();
-    if (index < 0 || index >= _clips.length) return;
-    await _player.jump(index);
-    await _player.seek(_clips[index].start);
-    _refreshState();
+    await _enqueue(() async {
+      if (index < 0 || index >= _clips.length) return;
+      await _player.jump(index);
+      await _player.seek(_clips[index].start);
+      _refreshState();
+    });
   }
 
   @override
@@ -314,75 +373,133 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   @override
   Widget buildView() {
     _ensureReady();
-    return _videoViewBuilder(_videoController);
+    return KeyedSubtree(
+      key: ObjectKey(_videoController),
+      child: _videoViewBuilder(_videoController),
+    );
   }
 
   @override
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    _loadGeneration++;
+    await _mutations;
+    await _retirePlayer();
+  }
+
+  Future<void> _enqueue(Future<void> Function() action) {
+    final operation = _mutations.then((_) async {
+      if (_disposed) return;
+      await action();
+    });
+    _mutations = operation.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {
+        // The caller owns the failure; later player operations still run.
+      },
+    );
+    return operation;
+  }
+
+  void _createPlayer() {
+    _player = _playerFactory();
+    _ownsPlayer = true;
+    _videoController = _videoControllerFactory(_player);
+    _playerHasOpenedMedia = false;
+    _outputReady = false;
+    _outputError = null;
+    final generation = ++_playerGeneration;
+    _listenToPlayer();
+    unawaited(
+      _videoControllerReady(_videoController).then<void>(
+        (_) {
+          if (_disposed || generation != _playerGeneration) return;
+          _outputReady = true;
+          _reportOutputReady();
+        },
+        onError: (Object error) {
+          if (_disposed || generation != _playerGeneration) return;
+          _outputError = error;
+          _reportOutputReady();
+        },
+      ),
+    );
+  }
+
+  void _reportOutputReady() {
+    if (_disposed ||
+        _changingPlayer ||
+        _activeLoadGeneration != _loadGeneration) {
+      return;
+    }
+    if (_outputError case final error?) {
+      if (_reportedOutputErrorGeneration != _loadGeneration) {
+        _reportedOutputErrorGeneration = _loadGeneration;
+        _handleError(error);
+      }
+    } else if (_outputReady && !_state.isFirstFrameRendered) {
+      _emitState(_state.copyWith(isFirstFrameRendered: true));
+    }
+  }
+
+  Future<void> _retirePlayer() async {
+    if (!_ownsPlayer) return;
+    _ownsPlayer = false;
+    _playerGeneration++;
     for (final subscription in _subscriptions) {
       await subscription.cancel();
     }
+    _subscriptions.clear();
     await _player.dispose();
   }
 
   void _listenToPlayer() {
+    final player = _player;
+    final generation = _playerGeneration;
+    bool isCurrent() => !_disposed && generation == _playerGeneration;
+    void refresh(Object? _) {
+      if (isCurrent()) _refreshState();
+    }
+
+    void report(Object error) {
+      if (isCurrent()) _handleError(error);
+    }
+
     _subscriptions.addAll([
-      _player.stream.playing.listen(
-        (_) => _refreshState(),
-        onError: _handleError,
-      ),
-      _player.stream.position.listen(
-        (_) => _refreshState(),
-        onError: _handleError,
-      ),
-      _player.stream.duration.listen(
-        (_) => _refreshState(),
-        onError: _handleError,
-      ),
-      _player.stream.buffer.listen(
-        (_) => _refreshState(),
-        onError: _handleError,
-      ),
-      _player.stream.buffering.listen(
-        (_) => _refreshState(),
-        onError: _handleError,
-      ),
-      _player.stream.playlist.listen((playlist) async {
-        _currentClipIndex = playlist.index.clamp(
-          0,
-          math.max(_clips.length - 1, 0),
-        );
-        // Only re-apply per-clip rate on transitions when any clip was
-        // authored with a non-default speed. Otherwise leave the player rate
-        // alone so an explicit [setPlaybackSpeed] override persists across
-        // implicit playlist events.
-        final hasAuthoredSpeed = _clipSpeeds.any((s) => s != 1.0);
-        if (hasAuthoredSpeed) {
-          final clipSpeed =
-              _clipSpeeds.elementAtOrNull(_currentClipIndex) ?? 1.0;
-          await _player.setRate(clipSpeed);
+      player.stream.playing.listen(refresh, onError: report),
+      player.stream.position.listen(refresh, onError: report),
+      player.stream.duration.listen(refresh, onError: report),
+      player.stream.buffer.listen(refresh, onError: report),
+      player.stream.buffering.listen(refresh, onError: report),
+      player.stream.playlist.listen((playlist) async {
+        if (!isCurrent() || _changingPlayer) return;
+        try {
+          _currentClipIndex = playlist.index.clamp(
+            0,
+            math.max(_clips.length - 1, 0),
+          );
+          // Only re-apply per-clip rate on transitions when any clip was
+          // authored with a non-default speed. Otherwise leave the player rate
+          // alone so an explicit [setPlaybackSpeed] override persists across
+          // implicit playlist events.
+          final hasAuthoredSpeed = _clipSpeeds.any((s) => s != 1.0);
+          if (hasAuthoredSpeed) {
+            final clipSpeed =
+                _clipSpeeds.elementAtOrNull(_currentClipIndex) ?? 1.0;
+            await player.setRate(clipSpeed);
+          }
+          refresh(null);
+        } on Object catch (error) {
+          report(error);
         }
-        _refreshState();
-      }, onError: _handleError),
-      _player.stream.completed.listen(
-        (_) => _refreshState(),
-        onError: _handleError,
-      ),
-      _player.stream.volume.listen(
-        (_) => _refreshState(),
-        onError: _handleError,
-      ),
-      _player.stream.rate.listen((_) => _refreshState(), onError: _handleError),
-      _player.stream.width.listen(
-        (_) => _refreshState(),
-        onError: _handleError,
-      ),
-      _player.stream.height.listen(
-        (_) => _refreshState(),
-        onError: _handleError,
-      ),
+      }, onError: report),
+      player.stream.completed.listen(refresh, onError: report),
+      player.stream.volume.listen(refresh, onError: report),
+      player.stream.rate.listen(refresh, onError: report),
+      player.stream.width.listen(refresh, onError: report),
+      player.stream.height.listen(refresh, onError: report),
+      player.stream.error.listen(report, onError: report),
     ]);
   }
 
@@ -476,8 +593,16 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
 
   static Future<void> _defaultVideoControllerReady(Object controller) {
     if (controller is _DisabledVideoController) return Future.value();
-    return (controller as media_kit.VideoController)
-        .waitUntilFirstFrameRendered;
+    final video = controller as media_kit.VideoController;
+    final disposed = Completer<void>();
+    video.player.platform?.release.add(() async {
+      disposed.complete();
+    });
+    return waitForDesktopVideoFrame(
+      firstFrame: video.waitUntilFirstFrameRendered,
+      rect: video.rect,
+      disposed: disposed.future,
+    );
   }
 
   static Widget _defaultVideoViewBuilder(Object controller) {
@@ -509,15 +634,6 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     );
   }
 
-  void _rebuildClipOffsets() {
-    _clipOffsets.clear();
-    var offset = Duration.zero;
-    for (final duration in _clipDurations) {
-      _clipOffsets.add(offset);
-      offset += duration;
-    }
-  }
-
   Duration get _totalDuration =>
       _clipDurations.fold(Duration.zero, (a, b) => a + b);
 
@@ -540,7 +656,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   }
 
   void _refreshState() {
-    if (!_initialized || _disposed) return;
+    if (!_initialized || _disposed || _changingPlayer) return;
 
     final playerState = _player.state;
     final hasClips = _clips.isNotEmpty;

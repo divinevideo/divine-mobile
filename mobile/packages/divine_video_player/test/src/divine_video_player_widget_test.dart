@@ -107,6 +107,39 @@ void main() {
   }
 
   group(DivineVideoPlayer, () {
+    testWidgets(
+      'updates a mounted desktop surface and removes it on disposal',
+      (tester) async {
+        final linuxController = await initLinuxController();
+        final backend = _FakeLinuxBackend.instance!;
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: DivineVideoPlayer(controller: linuxController),
+          ),
+        );
+        expect(find.text('Linux player view'), findsOneWidget);
+
+        backend
+          ..viewLabel = 'Replacement desktop view'
+          ..emitState(
+            const DivineVideoPlayerState(status: PlaybackStatus.buffering),
+          );
+        expect(linuxController.state.status, PlaybackStatus.buffering);
+        // Drain broadcast delivery before checking the rebuilt surface.
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text('Replacement desktop view'), findsOneWidget);
+        expect(find.text('Linux player view'), findsNothing);
+        await linuxController.dispose();
+        await tester.pump();
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+        expect(find.text('Replacement desktop view'), findsNothing);
+      },
+    );
+
     testWidgets('renders the desktop video surface on Windows', (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.windows;
       try {
@@ -691,6 +724,7 @@ class _FakeLinuxBackend implements LinuxVideoPlayerBackend {
   }
 
   static _FakeLinuxBackend? instance;
+  String viewLabel = 'Linux player view';
 
   late void Function(DivineVideoPlayerState state) _onStateChanged;
 
@@ -705,7 +739,7 @@ class _FakeLinuxBackend implements LinuxVideoPlayerBackend {
   void emitState(DivineVideoPlayerState state) => _onStateChanged(state);
 
   @override
-  Widget buildView() => const Text('Linux player view');
+  Widget buildView() => Text(viewLabel);
 
   @override
   Future<void> dispose() async {}

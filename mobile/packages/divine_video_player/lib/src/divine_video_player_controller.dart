@@ -408,6 +408,9 @@ class DivineVideoPlayerController {
   /// Whether [initialize] has completed successfully.
   bool get isInitialized => _initialized;
 
+  /// Whether disposal of this controller has begun.
+  bool get isDisposed => _disposed;
+
   /// The platform view type identifier used to render this player's video.
   String get viewType => 'divine_video_player_view';
 
