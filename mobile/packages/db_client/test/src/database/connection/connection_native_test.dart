@@ -1718,13 +1718,25 @@ void main() {
       expect(synchronous.read<int>('synchronous'), equals(2));
       expect(tempStore.read<int>('temp_store'), equals(2));
 
-      // Persist a local-only row across restart and salvage.
-      await db.customStatement(
-        'INSERT INTO removed_message_ids '
-        '(owner_pubkey, rumor_id, removed_at) '
-        "VALUES ('owner-1', 'wal-msg-1', 1700000000);",
-      );
-      await db.close();
+      final salvagePath = p.join(tempRoot.path, 'needs_salvage.db');
+      try {
+        // Copy the checkpointed database before the insert so the new row
+        // can only be recovered from the WAL. A clean close would checkpoint
+        // the insert and hide a recovery path that ignored the WAL.
+        final checkpoint = await db
+            .customSelect('PRAGMA wal_checkpoint(TRUNCATE);')
+            .getSingle();
+        expect(checkpoint.read<int>('busy'), isZero);
+        File(dbPath).copySync(salvagePath);
+        await db.customStatement(
+          'INSERT INTO removed_message_ids '
+          '(owner_pubkey, rumor_id, removed_at) '
+          "VALUES ('owner-1', 'wal-msg-1', 1700000000);",
+        );
+        File('$dbPath-wal').copySync('$salvagePath-wal');
+      } finally {
+        await db.close();
+      }
 
       // Classification and key verification handle a WAL-mode encrypted DB.
       expect(
@@ -1764,16 +1776,24 @@ void main() {
       ]);
       await reopened.close();
 
-      // Salvage preserves local-only rows from a WAL-mode encrypted DB.
+      // Classify and salvage the crash snapshot without an earlier keyed
+      // open that could checkpoint the row into the database file.
+      expect(
+        await migratePlaintextToEncrypted(
+          rawKeyHex: validKey,
+          databasePath: salvagePath,
+        ),
+        equals(CipherMigrationOutcome.alreadyEncrypted),
+      );
       expect(
         await salvageCorruptEncryptedDatabase(
           rawKeyHex: validKey,
-          databasePath: dbPath,
+          databasePath: salvagePath,
         ),
         isTrue,
       );
       final postSalvage = AppDatabase(
-        openEncryptedConnection(rawKeyHex: validKey, databasePath: dbPath),
+        openEncryptedConnection(rawKeyHex: validKey, databasePath: salvagePath),
       );
       addTearDown(postSalvage.close);
       final salvagedRows = await postSalvage
