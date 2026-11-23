@@ -46,3 +46,24 @@ bool showsConfirmationUpsell({
 }) {
   return required && access == ConfirmationAccess.hasNot;
 }
+
+/// [platform] as the verifier reports it while its Confirmation requirement
+/// is on, for the developer setting that simulates that requirement against a
+/// verifier with it off.
+///
+/// Like the verifier, it marks only a platform whose sign-in is on. Only the
+/// app's view changes: the verifier still approves a sign-in without
+/// Confirmation, so a refusal at confirm can't be simulated this way.
+VerifierPlatform withSimulatedConfirmationRequirement(
+  VerifierPlatform platform,
+) {
+  if (platform.oauth != true) return platform;
+  return VerifierPlatform(
+    key: platform.key,
+    label: platform.label,
+    supported: platform.supported,
+    oauth: platform.oauth,
+    signinExpiresAfterDays: platform.signinExpiresAfterDays,
+    signinRequires: SigninRequirement.confirmation,
+  );
+}

@@ -13952,6 +13952,14 @@ class AppLocalizationsPl extends AppLocalizations {
   String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
 
   @override
+  String get devOptionsConfirmationRequirementSimulatedTitle =>
+      'Act as if Confirmation is required';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedSubtitle =>
+      'Shows the Confirmation screens when the verifier doesn\'t require it. Sign-ins still go through as before.';
+
+  @override
   String get commentsRecordVideoButtonLabel => 'Nagraj komentarz wideo';
 
   @override

@@ -121,4 +121,52 @@ void main() {
       );
     });
   });
+
+  group('withSimulatedConfirmationRequirement', () {
+    const signIn = VerifierPlatform(
+      key: 'bluesky',
+      label: 'Bluesky',
+      supported: true,
+      oauth: true,
+      signinExpiresAfterDays: 30,
+    );
+
+    test(
+      'marks a platform whose sign-in is on as requiring Confirmation, '
+      'keeping everything else',
+      () => expect(
+        withSimulatedConfirmationRequirement(signIn),
+        equals(
+          const VerifierPlatform(
+            key: 'bluesky',
+            label: 'Bluesky',
+            supported: true,
+            oauth: true,
+            signinExpiresAfterDays: 30,
+            signinRequires: SigninRequirement.confirmation,
+          ),
+        ),
+      ),
+    );
+
+    test(
+      'leaves a platform whose sign-in is off or unknown as it is, as the '
+      'verifier only marks platforms whose sign-in is on',
+      () {
+        for (final oauth in [false, null]) {
+          final platform = VerifierPlatform(
+            key: 'tiktok',
+            label: 'TikTok',
+            supported: true,
+            oauth: oauth,
+          );
+          expect(
+            withSimulatedConfirmationRequirement(platform),
+            equals(platform),
+            reason: 'oauth: $oauth',
+          );
+        }
+      },
+    );
+  });
 }

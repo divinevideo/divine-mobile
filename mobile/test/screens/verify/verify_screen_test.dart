@@ -1145,6 +1145,7 @@ void main() {
       confirmationAccessReaderProvider.overrideWithValue(
         ({bool refresh = false}) async => ConfirmationAccess.unknown,
       ),
+      simulateConfirmationRequirementProvider.overrideWithValue(false),
     ];
 
     setUp(() {
@@ -1233,6 +1234,7 @@ void main() {
             FeatureFlag.confirmationSignIn,
           ).overrideWithValue(true),
           confirmationAccessReaderProvider.overrideWithValue(reader),
+          simulateConfirmationRequirementProvider.overrideWithValue(false),
           authServiceProvider.overrideWithValue(
             createMockAuthService(
               authState: AuthState.authenticated,
@@ -1304,6 +1306,9 @@ void main() {
                 ).overrideWithValue(true),
                 confirmationAccessReaderProvider.overrideWithValue(
                   ({bool refresh = false}) async => ConfirmationAccess.hasNot,
+                ),
+                simulateConfirmationRequirementProvider.overrideWithValue(
+                  false,
                 ),
                 authServiceProvider.overrideWithValue(
                   createMockAuthService(
@@ -1481,6 +1486,86 @@ void main() {
         );
         expect(reads, equals([false]));
       });
+
+      testWidgets(
+        'turning on the simulated requirement shows the Confirmation badge '
+        'on a verifier that names none',
+        (tester) async {
+          SharedPreferences.setMockInitialValues({});
+          final prefs = await SharedPreferences.getInstance();
+          final reads = <bool>[];
+          when(repository.supportedPlatforms).thenAnswer(
+            (_) async => const [
+              VerifierPlatform(
+                key: 'bluesky',
+                label: 'Bluesky',
+                supported: true,
+                oauth: true,
+              ),
+            ],
+          );
+          when(() => repository.claimsWithVerdicts(any())).thenAnswer(
+            (_) async => const IdentityClaimStatus(
+              claims: [],
+              verifiedKeys: {},
+              verifierReachable: true,
+            ),
+          );
+          when(
+            () => repository.confirmationAccess(refresh: any(named: 'refresh')),
+          ).thenAnswer((invocation) async {
+            reads.add(invocation.namedArguments[#refresh]! as bool);
+            return ConfirmationAccess.hasNot;
+          });
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                identityClaimsRepositoryProvider.overrideWithValue(repository),
+                sharedPreferencesProvider.overrideWithValue(prefs),
+                confirmationAccessDebugBuildProvider.overrideWithValue(true),
+                supporterStoreBillingAvailableProvider.overrideWithValue(true),
+                isFeatureEnabledProvider(
+                  FeatureFlag.confirmationSignIn,
+                ).overrideWithValue(true),
+                authServiceProvider.overrideWithValue(
+                  createMockAuthService(
+                    authState: AuthState.authenticated,
+                    currentPublicKeyHex: _pubkey,
+                  ),
+                ),
+                currentAuthStateProvider.overrideWithValue(
+                  AuthState.authenticated,
+                ),
+                appOAuthSupportProvider.overrideWith((ref) async => true),
+              ],
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                theme: VineTheme.theme,
+                home: const VerifyPage(),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          // The verifier names no requirement, so nothing is gated or read.
+          expect(find.text(l10n.verifyOneTapBadge), findsOneWidget);
+          expect(reads, isEmpty);
+
+          await ProviderScope.containerOf(
+                tester.element(find.byType(VerifyPage)),
+              )
+              .read(confirmationRequirementSimulatedProvider.notifier)
+              .set(on: true);
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(l10n.verifyOneTapWithConfirmationBadge),
+            findsOneWidget,
+          );
+          expect(reads, equals([false]));
+        },
+      );
     });
 
     group('sign in again', () {

@@ -107,6 +107,10 @@ class VerifyConnectPage extends ConsumerWidget {
           confirmationSignIn: ref.read(
             isFeatureEnabledProvider(FeatureFlag.confirmationSignIn),
           ),
+          // Read once per flow like the flag, for the same reason.
+          simulateConfirmationRequirement: ref.read(
+            simulateConfirmationRequirementProvider,
+          ),
           // The verifier's reader is the repository's own, and the repository
           // is in the ValueKey, so an account change (a new repository) makes
           // a new cubit reading the new account's answer rather than the old

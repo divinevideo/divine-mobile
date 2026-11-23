@@ -9,6 +9,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -50,10 +51,12 @@ void main() {
   Future<ProviderContainer> containerWith({
     required bool developerMode,
     String? storedOverride,
+    bool? storedSimulation,
     bool debugBuild = false,
   }) async {
     SharedPreferences.setMockInitialValues({
       confirmationAccessOverrideKey: ?storedOverride,
+      confirmationRequirementSimulatedKey: ?storedSimulation,
     });
     final prefs = await SharedPreferences.getInstance();
     final container = ProviderContainer(
@@ -201,5 +204,77 @@ void main() {
       expect(container.read(confirmationAccessOverrideProvider), isNull);
       expect(prefs.containsKey(confirmationAccessOverrideKey), isFalse);
     });
+  });
+
+  group('simulateConfirmationRequirementProvider', () {
+    test('applies a stored choice in developer mode', () async {
+      final container = await containerWith(
+        storedSimulation: true,
+        developerMode: true,
+      );
+
+      expect(container.read(simulateConfirmationRequirementProvider), isTrue);
+    });
+
+    test('applies a stored choice in a debug build', () async {
+      final container = await containerWith(
+        storedSimulation: true,
+        developerMode: false,
+        debugBuild: true,
+      );
+
+      expect(container.read(simulateConfirmationRequirementProvider), isTrue);
+    });
+
+    test('is off with nothing stored', () async {
+      final container = await containerWith(
+        developerMode: true,
+        debugBuild: true,
+      );
+
+      expect(container.read(simulateConfirmationRequirementProvider), isFalse);
+    });
+
+    test('a stored choice is ignored once developer mode is off', () async {
+      final container = await containerWith(
+        storedSimulation: true,
+        developerMode: true,
+      );
+      expect(container.read(simulateConfirmationRequirementProvider), isTrue);
+
+      (container.read(
+        isDeveloperModeEnabledProvider.notifier,
+      ) as _DeveloperMode).turnOff();
+
+      expect(container.read(simulateConfirmationRequirementProvider), isFalse);
+      // Still stored: turning developer mode back on restores it.
+      expect(container.read(confirmationRequirementSimulatedProvider), isTrue);
+    });
+  });
+
+  group('confirmationRequirementSimulatedProvider', () {
+    test('set stores the choice, and false clears it', () async {
+      final container = await containerWith(developerMode: true);
+      final notifier = container.read(
+        confirmationRequirementSimulatedProvider.notifier,
+      );
+      final prefs = container.read(sharedPreferencesProvider);
+
+      await notifier.set(on: true);
+      expect(container.read(confirmationRequirementSimulatedProvider), isTrue);
+      expect(prefs.getBool(confirmationRequirementSimulatedKey), isTrue);
+
+      await notifier.set(on: false);
+      expect(container.read(confirmationRequirementSimulatedProvider), isFalse);
+      expect(prefs.containsKey(confirmationRequirementSimulatedKey), isFalse);
+    });
+
+    test(
+      'is not swept on sign-out: it is about the verifier, not the account',
+      () => expect(
+        UserDataCleanupService.userSpecificKeys,
+        isNot(contains(confirmationRequirementSimulatedKey)),
+      ),
+    );
   });
 }

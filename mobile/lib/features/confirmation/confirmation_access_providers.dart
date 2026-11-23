@@ -81,3 +81,58 @@ final confirmationAccessReaderProvider = Provider<ConfirmationAccessReader>((
   }
   return ref.watch(identityClaimsRepositoryProvider).confirmationAccess;
 });
+
+/// SharedPreferences key holding whether the developer setting that simulates
+/// the verifier's Confirmation requirement is on.
+///
+/// Device-wide, unlike [confirmationAccessOverrideKey]: it stands in for the
+/// verifier's answer, which is the same for every account, so it is not swept
+/// on sign-out.
+const confirmationRequirementSimulatedKey =
+    'confirmation_requirement_simulated';
+
+/// Whether a developer turned on "act as if the verifier requires Divine
+/// Confirmation" in developer options.
+///
+/// Stored even while it doesn't apply: [simulateConfirmationRequirementProvider]
+/// honours it only in a debug build or with developer mode on.
+final confirmationRequirementSimulatedProvider =
+    NotifierProvider<ConfirmationRequirementSimulatedNotifier, bool>(
+      ConfirmationRequirementSimulatedNotifier.new,
+    );
+
+/// Holds and persists the developer setting that simulates the requirement.
+class ConfirmationRequirementSimulatedNotifier extends Notifier<bool> {
+  @override
+  bool build() =>
+      ref
+          .watch(sharedPreferencesProvider)
+          .getBool(confirmationRequirementSimulatedKey) ??
+      false;
+
+  /// Turns the simulation on or off. Off removes the stored key.
+  Future<void> set({required bool on}) async {
+    state = on;
+    final prefs = ref.read(sharedPreferencesProvider);
+    if (on) {
+      await prefs.setBool(confirmationRequirementSimulatedKey, true);
+    } else {
+      await prefs.remove(confirmationRequirementSimulatedKey);
+    }
+  }
+}
+
+/// Whether the Verify screens treat every platform whose sign-in is on as
+/// requiring Divine Confirmation, as the verifier reports while its
+/// requirement is on (see `withSimulatedConfirmationRequirement`).
+///
+/// It applies, like the access override, in a debug build or in any build with
+/// developer mode on, so a tester can see the Confirmation screens on a build
+/// that talks to a verifier with the requirement off. It changes only what the
+/// app shows: the verifier still approves sign-ins as before.
+final simulateConfirmationRequirementProvider = Provider<bool>((ref) {
+  final applies =
+      ref.watch(confirmationAccessDebugBuildProvider) ||
+      ref.watch(isDeveloperModeEnabledProvider);
+  return applies && ref.watch(confirmationRequirementSimulatedProvider);
+});

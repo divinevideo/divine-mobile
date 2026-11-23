@@ -101,6 +101,7 @@ void main() {
       bool confirmationSignIn = false,
       ConfirmationAccessReader readConfirmationAccess = _unknownAccess,
       bool canBuy = true,
+      bool simulateConfirmationRequirement = false,
     }) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -112,6 +113,9 @@ void main() {
             ).overrideWithValue(confirmationSignIn),
             confirmationAccessReaderProvider.overrideWithValue(
               readConfirmationAccess,
+            ),
+            simulateConfirmationRequirementProvider.overrideWithValue(
+              simulateConfirmationRequirement,
             ),
             authServiceProvider.overrideWithValue(
               createMockAuthService(
@@ -302,6 +306,48 @@ void main() {
 
         expect(reads, equals([false]));
       });
+
+      testWidgets(
+        'reads access on a verifier that names no requirement only with the '
+        'simulated requirement on',
+        (tester) async {
+          const twitterOpen = VerifierPlatform(
+            key: 'twitter',
+            label: 'Twitter / X',
+            supported: true,
+            oauth: true,
+          );
+          when(
+            () => repository.startingPlatform('twitter'),
+          ).thenReturn(twitterOpen);
+          when(
+            () => repository.platform('twitter'),
+          ).thenAnswer((_) async => twitterOpen);
+
+          for (final simulated in [false, true]) {
+            final reads = <bool>[];
+            await pump(
+              tester,
+              platformKey: 'twitter',
+              confirmationSignIn: true,
+              simulateConfirmationRequirement: simulated,
+              readConfirmationAccess: ({bool refresh = false}) async {
+                reads.add(refresh);
+                return ConfirmationAccess.hasNot;
+              },
+            );
+            await tester.pump();
+
+            expect(
+              reads,
+              simulated ? equals([false]) : isEmpty,
+              reason: 'simulated: $simulated',
+            );
+            // A fresh page for the next pass.
+            await tester.pumpWidget(const SizedBox());
+          }
+        },
+      );
 
       testWidgets(
         'asks the new account, not the old one, after an account change',
