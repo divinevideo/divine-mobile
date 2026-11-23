@@ -224,7 +224,7 @@ class _ResponsesSticker extends ConsumerWidget {
       watchOnly: isAddYours && !state.canAnswer,
       onOpenResponses: () {
         onInteraction?.call();
-        _open(context, ref, state.videos);
+        _open(context, ref, state);
       },
     );
   }
@@ -262,8 +262,9 @@ class _ResponsesSticker extends ConsumerWidget {
   }
 
   /// Opens who joined or replied: the creator manages their replies, anyone
-  /// else watches them.
-  void _open(BuildContext context, WidgetRef ref, List<VideoEvent> videos) {
+  /// else watches them. A series only its creator adds to opens in the order
+  /// it was posted, at the part the sticker is on.
+  void _open(BuildContext context, WidgetRef ref, StickerResponsesState state) {
     final address = video.addressableId;
     if (region.kind == VideoStickerKind.replies && isCreator) {
       if (address == null) return;
@@ -277,11 +278,18 @@ class _ResponsesSticker extends ConsumerWidget {
       );
       return;
     }
+    final series = state.series;
+    final at = series.indexWhere(
+      (part) =>
+          part.id == video.id ||
+          (address != null && part.addressableId == address),
+    );
     runDetached(
       openVideoResponsesFeed(
         context,
         feedRepository: ref.read(feedRepositoryProvider),
-        videos: videos,
+        videos: series.isEmpty ? state.videos : series,
+        index: at < 0 ? 0 : at,
         // The replies, or the answers under the prompt they answer.
         title: region.kind == VideoStickerKind.replies
             ? context.l10n.videoStickerRepliesManageTitle

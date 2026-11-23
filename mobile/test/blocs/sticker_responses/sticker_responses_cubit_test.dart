@@ -817,6 +817,112 @@ void main() {
         },
       );
 
+      group('on a series only its creator adds to', () {
+        final first = '34236:$_creator:first';
+        VideoEvent part(int id, int createdAt) => VideoEvent(
+          id: _hex(id),
+          pubkey: _creator,
+          createdAt: createdAt,
+          content: '',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(0),
+          vineId: 'part-$id',
+          addressableDTag: 'part-$id',
+          eventKind: 34236,
+        );
+        final start = VideoEvent(
+          id: _hex(90),
+          pubkey: _creator,
+          createdAt: 100,
+          content: '',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(0),
+          vineId: 'first',
+          addressableDTag: 'first',
+          eventKind: 34236,
+        );
+
+        void stubParts(List<VideoEvent> newestFirst) =>
+            when(
+              () => repository.fetchSeriesBy(
+                chainRoot: any(named: 'chainRoot'),
+                hashtag: any(named: 'hashtag'),
+                author: any(named: 'author'),
+              ),
+            ).thenAnswer(
+              (_) async => VideoResponses(
+                total: newestFirst.length,
+                videos: newestFirst,
+              ),
+            );
+
+        blocTest<StickerResponsesCubit, StickerResponsesState>(
+          'counts every part, and lays them out in the order they were '
+          'posted after the video the series starts at',
+          setUp: () => stubParts([part(3, 300), part(2, 200), part(1, 150)]),
+          build: () => build(
+            _region(
+              VideoStickerKind.prompt,
+              audience: VideoStickerAudience.creator,
+            ),
+            viewer: _hex(9),
+          ),
+          act: (cubit) => cubit.load(),
+          verify: (cubit) {
+            expect(cubit.state.total, equals(3));
+            expect(
+              cubit.state.videos,
+              equals([part(3, 300), part(2, 200), part(1, 150)]),
+            );
+            expect(
+              cubit.state.series,
+              equals([root, part(1, 150), part(2, 200), part(3, 300)]),
+            );
+            verify(
+              () => repository.fetchSeriesBy(
+                chainRoot: rootAddress,
+                hashtag: 'desksetup',
+                author: _creator,
+              ),
+            ).called(1);
+            verifyNever(
+              () => repository.fetchJoined(
+                chainRoot: any(named: 'chainRoot'),
+                hashtag: any(named: 'hashtag'),
+                limit: any(named: 'limit'),
+                filter: any(named: 'filter'),
+              ),
+            );
+          },
+        );
+
+        blocTest<StickerResponsesCubit, StickerResponsesState>(
+          'starts the series of a part at the first video, and keeps the '
+          'part even when it is older than the parts read',
+          setUp: () {
+            when(
+              () => repository.chainStart(first, hashtag: 'desksetup'),
+            ).thenAnswer((_) async => AddYoursChainStart.starts);
+            when(
+              () => repository.fetchVideoAt(first),
+            ).thenAnswer((_) async => start);
+            stubParts([part(3, 300), part(2, 200)]);
+          },
+          build: () => build(
+            _region(
+              VideoStickerKind.prompt,
+              target: first,
+              audience: VideoStickerAudience.creator,
+            ),
+            on: part(1, 150),
+            viewer: _hex(9),
+          ),
+          act: (cubit) => cubit.load(),
+          verify: (cubit) => expect(
+            cubit.state.series,
+            equals([start, part(1, 150), part(2, 200), part(3, 300)]),
+          ),
+        );
+      });
+
       blocTest<StickerResponsesCubit, StickerResponsesState>(
         'fails, showing the sticker to no one else, when who the creator '
         'follows could not be read',

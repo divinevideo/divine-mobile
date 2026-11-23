@@ -7,7 +7,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:models/models.dart'
-    show VideoEvent, VideoStickerKind, VideoStickerRegion;
+    show VideoEvent, VideoStickerAudience, VideoStickerKind, VideoStickerRegion;
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/sticker_responses/sticker_answerers.dart';
 import 'package:video_responses_repository/video_responses_repository.dart';
@@ -29,7 +29,9 @@ typedef StickerResponsesFilter = List<VideoEvent> Function(
 ///
 /// When only some may answer the sticker, see [VideoStickerRegion.audience],
 /// only their responses count, and [StickerResponsesState.canAnswer] tells
-/// whether [viewer] is one of them.
+/// whether [viewer] is one of them. An Add yours only its creator may answer
+/// is their own series: every part they added counts, not their newest alone,
+/// and [StickerResponsesState.series] lays the parts out in order.
 class StickerResponsesCubit extends Cubit<StickerResponsesState>
     with CloseGuardedEmit<StickerResponsesState> {
   StickerResponsesCubit({
@@ -78,6 +80,7 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
       final VideoResponses responses;
       var curation = const RepliesCuration();
       String? chainRoot;
+      VideoEvent? seriesStart;
       // Whoever started the chain an Add yours counts owns who may answer it.
       var owner = _video.pubkey;
       if (_region.kind == VideoStickerKind.replies) {
@@ -105,16 +108,27 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
             : await _chain(chainAddress, hashtag);
         chainRoot = chain?.join;
         if (chain != null) owner = chain.read.split(':')[1];
-        responses = chain == null || hashtag == null
-            ? const VideoResponses()
-            : await _repository.fetchJoined(
-                chainRoot: chain.read,
-                hashtag: hashtag,
-                limit: feedLimit,
-                // Before each person's answer is picked; filtering again
-                // below changes nothing.
-                filter: _filter,
-              );
+        if (chain == null || hashtag == null) {
+          responses = const VideoResponses();
+        } else if (_isSeries) {
+          responses = await _repository.fetchSeriesBy(
+            chainRoot: chain.read,
+            hashtag: hashtag,
+            author: owner,
+          );
+          seriesStart = chain.read == chainAddress
+              ? _video
+              : await _repository.fetchVideoAt(chain.read);
+        } else {
+          responses = await _repository.fetchJoined(
+            chainRoot: chain.read,
+            hashtag: hashtag,
+            limit: feedLimit,
+            // Before each person's answer is picked; filtering again
+            // below changes nothing.
+            filter: _filter,
+          );
+        }
       }
       final answerers = await StickerAnswerers.read(
         _followRepository,
@@ -127,6 +141,7 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
         curation,
         answerers: answerers,
         chainRoot: chainRoot,
+        seriesStart: seriesStart,
       );
     } catch (error, stackTrace) {
       addError(error, stackTrace);
@@ -186,11 +201,32 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
     };
   }
 
+  /// Whether the sticker is an Add yours only its creator may answer, whose
+  /// answers are the parts of their series.
+  bool get _isSeries =>
+      _region.kind == VideoStickerKind.prompt &&
+      _region.audience == VideoStickerAudience.creator;
+
+  /// The parts of a series in the order they were posted: [start], the video
+  /// it starts at, then [answers], with the video the sticker is on among
+  /// them even when it is older than those read.
+  List<VideoEvent> _seriesOf(VideoEvent? start, List<VideoEvent> answers) {
+    bool isVideo(VideoEvent part) =>
+        part.id == _video.id ||
+        (_video.addressableId != null &&
+            part.addressableId == _video.addressableId);
+    final included = (start != null && isVideo(start)) || answers.any(isVideo);
+    final parts = [...answers, if (!included) _video]
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return [?start, ...parts];
+  }
+
   void _emitShown(
     VideoResponses responses,
     RepliesCuration curation, {
     required StickerAnswerers answerers,
     String? chainRoot,
+    VideoEvent? seriesStart,
   }) {
     final shown = [
       for (final response in curation.apply(_filter(responses.videos)))
@@ -215,6 +251,12 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
         curation: curation,
         chainRoot: chainRoot,
         canAnswer: answerers.admits(_viewer),
+        series: _isSeries
+            ? _seriesOf(
+                seriesStart == null ? null : _filter([seriesStart]).firstOrNull,
+                shown,
+              )
+            : const [],
       ),
     );
   }

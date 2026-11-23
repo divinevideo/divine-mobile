@@ -129,6 +129,7 @@ void main() {
       VideoStickerRegion region, {
       bool isActive = true,
       String? viewer = 'viewer',
+      VideoEvent? on,
     }) async {
       final pubkey = viewer == 'viewer' ? _viewer : viewer;
       final router = GoRouter(
@@ -142,7 +143,7 @@ void main() {
                   height: 240,
                   child: InteractiveStickerOverlay(
                     region: region,
-                    video: _video,
+                    video: on ?? _video,
                     data: SocialStickerData.ofRegion(region)!,
                     isActive: isActive,
                     onInteraction: () => interactions++,
@@ -635,6 +636,68 @@ void main() {
 
           expect(Uri.parse(pushed.single).path, equals('/pooled-video-feed'));
           expect(addYoursWhileOpen, isNull);
+        });
+
+        testWidgets('opens a series only its creator adds to in the order it '
+            'was posted, at the part the sticker is on', (tester) async {
+          VideoEvent part(int n) => VideoEvent(
+            id: '$n'.padLeft(64, 'a'),
+            pubkey: _creator,
+            createdAt: 1778120201 + n,
+            content: '',
+            timestamp: DateTime.utc(2026),
+            vineId: 'part-$n',
+            addressableDTag: 'part-$n',
+            eventKind: 34236,
+          );
+          final first = '34236:$_creator:root-d';
+          when(
+            () => repository.chainStart(first, hashtag: 'desksetup'),
+          ).thenAnswer((_) async => AddYoursChainStart.starts);
+          when(
+            () => repository.fetchVideoAt(first),
+          ).thenAnswer((_) async => null);
+          when(
+            () => repository.fetchSeriesBy(
+              chainRoot: any(named: 'chainRoot'),
+              hashtag: any(named: 'hashtag'),
+              author: any(named: 'author'),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                VideoResponses(total: 3, videos: [part(3), part(2), part(1)]),
+          );
+          await pump(
+            tester,
+            VideoStickerRegion(
+              kind: VideoStickerKind.prompt,
+              target: first,
+              centerX: 0.5,
+              centerY: 0.5,
+              width: 0.8,
+              height: 0.5,
+              label: 'Show your desk\ndesksetup',
+              audience: VideoStickerAudience.creator,
+            ),
+            on: part(2),
+          );
+          await tester.pump();
+
+          await tester.tap(
+            find.text(l10n(tester).videoStickerAddYoursWatchSeries),
+          );
+          await tester.pumpAndSettle();
+
+          expect(
+            extras.single,
+            isA<PooledFullscreenVideoFeedArgs>()
+                .having(
+                  (args) => (args.source as VideoListViewSource).videos,
+                  'videos',
+                  equals([part(1), part(2), part(3)]),
+                )
+                .having((args) => args.initialIndex, 'initialIndex', 1),
+          );
         });
 
         testWidgets('lets someone the creator follows join, and their answer '
