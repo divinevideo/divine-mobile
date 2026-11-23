@@ -1187,9 +1187,12 @@ class CommentsRepository {
     }
 
     void watch(Set<String> authors) {
+      // Relays match authors as lowercase hex, and a REST key can arrive in
+      // upper case.
+      final listed = {for (final author in authors) author.toLowerCase()};
       // Unrelated sheet state changes must not retry a refused filter.
-      if (seenAuthors.containsAll(authors)) return;
-      seenAuthors.addAll(authors);
+      if (seenAuthors.containsAll(listed)) return;
+      seenAuthors.addAll(listed);
       late final StreamSubscription<CommentDeletion> opened;
       try {
         opened =

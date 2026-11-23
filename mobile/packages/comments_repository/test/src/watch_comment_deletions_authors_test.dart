@@ -91,6 +91,19 @@ void main() {
         },
       );
 
+      test('delivers the requests of an author listed in upper case', () async {
+        final author = TestCommenter();
+        final deletions = watchDeletions();
+        addTearDown(deletions.cancel);
+
+        commentAuthors.add({author.pubkey.toUpperCase()});
+
+        await expectLater(
+          deletions.waitFor(deleteCommentOf(author).commentId),
+          completes,
+        );
+      });
+
       test('keeps one relay subscription open as authors are listed', () async {
         final first = TestCommenter();
         final second = TestCommenter();
