@@ -1156,7 +1156,9 @@ class CommentsRepository {
   /// The watch retains the previous relay subscription until its replacement
   /// finishes backfill. Cancelling the stream closes both. A subscription
   /// refusal reaches the stream as a [WatchCommentsFailedException]. A new
-  /// request is sent only when an author is listed for the first time.
+  /// request is sent only when an author is listed for the first time, so a
+  /// watch the relay refuses or closes stays off until another author is
+  /// listed or a new watch is opened.
   Stream<CommentDeletion> watchCommentDeletions({
     required String rootEventId,
     required Stream<Set<String>> commentAuthors,
