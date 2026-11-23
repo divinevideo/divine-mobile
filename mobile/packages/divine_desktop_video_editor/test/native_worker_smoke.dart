@@ -24,7 +24,7 @@ void main() {
         ),
       );
       try {
-        final destination = File('${parent.path}/sdk.mp4');
+        final destination = File.fromUri(parent.uri.resolve('sdk.mp4'));
         final source = EditorVideo.file(
           await fixtureFile('synthetic-colors.mp4'),
         );
@@ -135,7 +135,7 @@ void main() {
         );
         try {
           final source = (await fixtureFile('synthetic-colors.mp4')).path;
-          final destination = File('${parent.path}/completed.mp4');
+          final destination = File.fromUri(parent.uri.resolve('completed.mp4'));
           await client.execute(
             'renderVideo',
             {
