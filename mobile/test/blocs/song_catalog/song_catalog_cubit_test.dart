@@ -142,6 +142,38 @@ void main() {
         expect(cubit.state.songs, equals(matches));
       });
 
+      for (final fails in [false, true]) {
+        test(
+          'ignores an old request after returning to its query (fails: $fails)',
+          () async {
+            final earlier = Completer<List<AudioEvent>>();
+            var calls = 0;
+            when(() => repository.searchSongs('night')).thenAnswer(
+              (_) => ++calls == 1 ? earlier.future : Future.value(matches),
+            );
+            when(() => repository.searchSongs('day'))
+                .thenAnswer((_) async => [_song('day')]);
+            final cubit = buildCubit();
+            addTearDown(cubit.close);
+            final first = cubit.showSongsFor('night');
+            await cubit.showSongsFor('day');
+            await cubit.showSongsFor('night');
+            expect(cubit.state.status, SongCatalogStatus.success);
+            expect(cubit.state.songs, matches);
+            if (fails) {
+              earlier.completeError(
+                const AppleMusicApiException('old request failed'),
+              );
+            } else {
+              earlier.complete([_song('stale')]);
+            }
+            await first;
+            expect(cubit.state.status, SongCatalogStatus.success);
+            expect(cubit.state.songs, matches);
+          },
+        );
+      }
+
       test('ignores a late failure of an earlier query', () async {
         final earlier = Completer<List<AudioEvent>>();
         when(

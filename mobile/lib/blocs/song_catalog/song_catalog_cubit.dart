@@ -17,6 +17,7 @@ class SongCatalogCubit extends Cubit<SongCatalogState>
       super(const SongCatalogState());
 
   final SongCatalogRepository _repository;
+  int _requestGeneration = 0;
 
   /// Lists the songs for [query]: the most played while it is blank, the
   /// ones matching it otherwise.
@@ -28,6 +29,7 @@ class SongCatalogCubit extends Cubit<SongCatalogState>
     if (trimmed == state.query && state.status != SongCatalogStatus.initial) {
       return;
     }
+    final generation = ++_requestGeneration;
     if (trimmed.isEmpty && state.trending != null) {
       emit(
         state.copyWith(
@@ -45,23 +47,24 @@ class SongCatalogCubit extends Cubit<SongCatalogState>
         results: const [],
       ),
     );
-    await _load(trimmed);
+    await _load(trimmed, generation);
   }
 
   /// Loads the list that failed again.
   Future<void> retry() async {
     if (state.status != SongCatalogStatus.failure) return;
     emit(state.copyWith(status: SongCatalogStatus.loading));
-    await _load(state.query);
+    await _load(state.query, ++_requestGeneration);
   }
 
-  Future<void> _load(String query) async {
+  Future<void> _load(String query, int generation) async {
     try {
       final songs = query.isEmpty
           ? await _repository.fetchTrendingSongs()
           : await _repository.searchSongs(query);
-      // Another query was asked for meanwhile; its answer is the one to show.
-      if (state.query != query) return;
+      // Query text can repeat after another search. Only the newest request
+      // may update the list, including its failures.
+      if (generation != _requestGeneration) return;
       emitIfOpen(
         query.isEmpty
             ? state.copyWith(
@@ -71,11 +74,11 @@ class SongCatalogCubit extends Cubit<SongCatalogState>
             : state.copyWith(status: SongCatalogStatus.success, results: songs),
       );
     } on AppleMusicApiException catch (e, stackTrace) {
-      if (state.query != query) return;
+      if (generation != _requestGeneration) return;
       addError(e, stackTrace);
       emitIfOpen(state.copyWith(status: SongCatalogStatus.failure));
     } catch (e, stackTrace) {
-      if (state.query != query) return;
+      if (generation != _requestGeneration) return;
       addError(Reportable(e, context: 'SongCatalogCubit._load'), stackTrace);
       emitIfOpen(state.copyWith(status: SongCatalogStatus.failure));
     }
