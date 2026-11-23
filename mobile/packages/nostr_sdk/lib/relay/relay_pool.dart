@@ -2632,9 +2632,9 @@ class RelayPool {
         relay.url,
         'Relay NOTICE: ${relayNoticeForDiagnostics(message)}',
       );
-      if (message == _unknownCommandNotice ||
-          message == _unknownCountCommandNotice) {
-        relay.handleCountUnknownCommandNotice(message);
+      final namesCount = message == _unknownCountCommandNotice;
+      if (namesCount || message == _unknownCommandNotice) {
+        relay.handleCountUnknownCommandNotice(message, namesCount: namesCount);
       }
 
       if (onNotice != null) {

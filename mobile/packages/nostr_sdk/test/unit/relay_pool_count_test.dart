@@ -412,6 +412,26 @@ void main() {
       expect((await next).count, equals(43));
     });
 
+    test(
+      'settles an explicit COUNT refusal despite advertised support',
+      () async {
+        legacyRelay.info = nip11Listing([1, 11, 45]);
+        await addRelays();
+
+        var settled = false;
+        final result = count();
+        unawaited(result.whenComplete(() => settled = true));
+        await pumpEventQueue();
+
+        answerCount(countingFactory.lastChannel!, 42);
+        sendNotice(legacyFactory.lastChannel!, 'Unknown message type: COUNT');
+        await pumpEventQueue();
+
+        expect(settled, isTrue);
+        expect((await result).count, equals(42));
+      },
+    );
+
     for (final (description, nips) in [
       ('lists NIP-45', [1, 11, 45]),
       ('lists no NIPs', <int>[]),

@@ -479,12 +479,15 @@ abstract class Relay {
       _supportsCount == false &&
       relayStatus.connected == ClientConnected.connected;
 
-  /// Treats a known unscoped unknown-command notice as a COUNT refusal only
-  /// when a COUNT is pending and there is no evidence this relay supports it.
-  void handleCountUnknownCommandNotice(String reason) {
-    if (_countQueries.isEmpty ||
-        _supportsCount == true ||
-        (info?.nips.any((nip) => '$nip' == '45') ?? false)) {
+  /// Settles pending COUNTs after a known unknown-command notice unless the
+  /// socket has already answered COUNT. An ambiguous notice also needs to
+  /// agree with the advertised capabilities.
+  void handleCountUnknownCommandNotice(
+    String reason, {
+    required bool namesCount,
+  }) {
+    if (_countQueries.isEmpty || _supportsCount == true) return;
+    if (!namesCount && (info?.nips.any((nip) => '$nip' == '45') ?? false)) {
       return;
     }
 
