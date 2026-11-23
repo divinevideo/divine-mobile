@@ -119,7 +119,8 @@ extension OptionalVideoGenerationRecorder on VideoGenerationRecorder? {
   }
 }
 
-/// Which editor features a render used, each reported as a 0/1 metric.
+/// Which editor features a render used, each reported as a 0/1 metric, plus
+/// the number of layers.
 ///
 /// Metrics rather than attributes: a trace takes at most five attributes and
 /// `video_generation` already carries four.
