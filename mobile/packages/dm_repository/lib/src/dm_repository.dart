@@ -8845,7 +8845,10 @@ class DmRepository {
         // keeps its status and the retry sweep re-drives it; receivers drop
         // the replay by its rumor id. The attempt spends retry budget, so a
         // persist failure that keeps recurring stops being republished once
-        // the budget runs out. Don't rethrow: the caller still gets the
+        // the budget runs out. The row then shows as failed with Resend,
+        // although the recipient has the message. The charge is a write of
+        // its own, so if the database cannot record it either, the sweep
+        // keeps re-driving the row. Don't rethrow: the caller still gets the
         // success result.
         await _chargeFailedReplay(dao: dao, rumorId: rumorId);
       }
