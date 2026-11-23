@@ -18,8 +18,13 @@ class _Relay extends Relay {
 
   bool reachable;
 
+  /// When set, [doConnect] waits for it, so the relay stays connecting.
+  Completer<void>? connectGate;
+
   @override
   Future<bool> doConnect() async {
+    final gate = connectGate;
+    if (gate != null) await gate.future;
     relayStatus.connected = reachable
         ? ClientConnected.connected
         : ClientConnected.disconnect;
@@ -358,6 +363,36 @@ void main() {
           settle(slow.deliver(['EVENT', subId, _comment(1700000001)]));
           expect(eoseCalls, equals(0));
           settle(slow.deliver(['EOSE', subId]));
+          expect(eoseCalls, equals(1));
+        });
+      });
+    });
+
+    group('when a refusal leaves only a relay still replaying', () {
+      test('waits for that relay to answer instead of firing', () {
+        fakeAsync((fake) {
+          async = fake;
+          final refuser = _Relay('wss://refuser.example');
+          final redialled = _Relay('wss://redialled.example');
+          final subId = subscribe([refuser, redialled]);
+          settle(redialled.deliver(['EOSE', subId]));
+
+          nostr.relayPool.remove(redialled.url);
+          final replacement = _Relay('wss://redialled.example')
+            ..connectGate = Completer<void>();
+          settle(nostr.relayPool.add(replacement, autoSubscribe: true));
+          expect(replacement.hasSubscriptionById(subId), isFalse);
+
+          settle(
+            refuser.deliver(['CLOSED', subId, 'error: could not complete']),
+          );
+          expect(eoseCalls, equals(0), reason: 'the REQ is not replayed yet');
+
+          replacement.connectGate!.complete();
+          async.flushMicrotasks();
+          expect(replacement.hasSubscriptionById(subId), isTrue);
+          settle(replacement.deliver(['EOSE', subId]));
+
           expect(eoseCalls, equals(1));
         });
       });

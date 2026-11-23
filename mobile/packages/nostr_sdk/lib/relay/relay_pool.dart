@@ -510,7 +510,9 @@ class RelayPool {
   /// default outlasts [subscriptionSilenceProbe], so a relay the probe
   /// reconnects can still answer the REQ it re-sends. Counted from the first
   /// EOSE, it also outlasts any subscriber timeout of 15s or less counted from
-  /// the subscribe, so such a subscriber gives up before it ends.
+  /// the subscribe, so such a subscriber gives up before it ends. It starts
+  /// only once some relay has sent EOSE: while none has, onEose waits as it
+  /// always has.
   Duration subscriptionEoseSettleWindow;
 
   /// Controls whether [_dispatchTypedFrame] performs expensive Schnorr
@@ -2315,13 +2317,14 @@ class RelayPool {
     final onEose = _subscriptions[subId]?.onEose;
     final eosed = _subscriptionEoseRelays[subId];
     if (onEose == null || eosed == null || eosed.isEmpty) return;
+    final holders = _getRelaysWithSubscription(subId);
     // A refusal can leave no relay holding the REQ while one still connecting
     // or replaying may yet take it and answer, so wait for that relay.
-    if (_aRelayIsStillReplaying && _getRelaysWithSubscription(subId).isEmpty) {
+    if (holders.isEmpty && _aRelayIsStillReplaying) {
       if (!_subscriptionEoseFired.contains(subId)) _armEoseSettleWindow(subId);
       return;
     }
-    final owing = _relaysOwingLiveEose(subId, eosed);
+    final owing = holders.difference(eosed);
     // The timer is not on the ordered frame chain. Do not close a bounded
     // read while an owing relay's already-received frames await verification.
     if (owing.isNotEmpty &&
@@ -2374,18 +2377,6 @@ class RelayPool {
     armed.cancel();
     _armEoseSettleWindow(subId);
   }
-
-  /// The relays that hold live subscription [subId]'s REQ and have not sent
-  /// EOSE for it ([eosed] holds those that have).
-  List<String> _relaysOwingLiveEose(String subId, Set<String> eosed) => [
-    for (final entry in [
-      ..._relayEntriesSnapshot(),
-      ..._tempRelayEntriesSnapshot(),
-      ..._cacheRelayEntriesSnapshot(),
-    ])
-      if (entry.value.hasSubscriptionById(subId) && !eosed.contains(entry.key))
-        entry.key,
-  ];
 
   /// Records that [relay] sent [subId] an `EVENT` frame the pool rejected,
   /// on the connection of [generation]. The frame may have taken a slot of
