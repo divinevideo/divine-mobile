@@ -92,6 +92,8 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
     required this.inverseOnSurface,
     required this.mediaChrome,
     required this.mediaChromeForeground,
+    required this.contrastSurface,
+    required this.onContrastSurface,
   });
 
   /// How often [VineThemeColorsContext.vineColors] resolved the dark fallback
@@ -323,6 +325,13 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
   /// Media controls foreground.
   final Color mediaChromeForeground;
 
+  /// Pure white on dark, pure black on light: for third-party sign-in buttons
+  /// whose brand rules allow only black or white.
+  final Color contrastSurface;
+
+  /// Content color on [contrastSurface].
+  final Color onContrastSurface;
+
   /// Whether this palette describes a light appearance.
   ///
   /// Derived from [background] rather than stored, so it stays correct for
@@ -376,6 +385,8 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
     Color? inverseOnSurface,
     Color? mediaChrome,
     Color? mediaChromeForeground,
+    Color? contrastSurface,
+    Color? onContrastSurface,
   }) => VineThemeColors(
     background: background ?? this.background,
     card: card ?? this.card,
@@ -422,6 +433,8 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
     inverseOnSurface: inverseOnSurface ?? this.inverseOnSurface,
     mediaChrome: mediaChrome ?? this.mediaChrome,
     mediaChromeForeground: mediaChromeForeground ?? this.mediaChromeForeground,
+    contrastSurface: contrastSurface ?? this.contrastSurface,
+    onContrastSurface: onContrastSurface ?? this.onContrastSurface,
   );
 
   @override
@@ -489,6 +502,12 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
         other.mediaChromeForeground,
         t,
       ),
+      contrastSurface: Color.lerp(contrastSurface, other.contrastSurface, t),
+      onContrastSurface: Color.lerp(
+        onContrastSurface,
+        other.onContrastSurface,
+        t,
+      ),
     );
   }
 
@@ -540,7 +559,9 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
           inverseSurface == other.inverseSurface &&
           inverseOnSurface == other.inverseOnSurface &&
           mediaChrome == other.mediaChrome &&
-          mediaChromeForeground == other.mediaChromeForeground;
+          mediaChromeForeground == other.mediaChromeForeground &&
+          contrastSurface == other.contrastSurface &&
+          onContrastSurface == other.onContrastSurface;
 
   @override
   int get hashCode => Object.hashAll([
@@ -589,6 +610,8 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
     inverseOnSurface,
     mediaChrome,
     mediaChromeForeground,
+    contrastSurface,
+    onContrastSurface,
   ]);
 }
 
@@ -1323,6 +1346,8 @@ class VineTheme {
     inverseOnSurface: inverseOnSurface,
     mediaChrome: scrim80,
     mediaChromeForeground: whiteText,
+    contrastSurface: Color(0xFFFFFFFF),
+    onContrastSurface: Color(0xFF000000),
   );
 
   /// Warm off-white content surfaces with dark-green anchors, inspired by
@@ -1397,6 +1422,8 @@ class VineTheme {
     inverseOnSurface: Color(0xFFFFFFFF),
     mediaChrome: Color(0xF2F9F7F6),
     mediaChromeForeground: Color(0xFF07241B),
+    contrastSurface: Color(0xFF000000),
+    onContrastSurface: Color(0xFFFFFFFF),
   );
 
   /// Scrim at 80% opacity (black 80%).

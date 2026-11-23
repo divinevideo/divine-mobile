@@ -19,6 +19,10 @@ enum DivineButtonType {
   /// Use for high-contrast actions on dark backgrounds.
   tertiary,
 
+  /// Pure white on dark appearances and pure black on light ones. Use for
+  /// third-party sign-in buttons whose brand rules allow only black or white.
+  contrast,
+
   /// Ghost button with semi-transparent dark background (65% black)
   /// and white text. Use for actions overlaying content like video
   /// controls.
@@ -115,6 +119,7 @@ class DivineButton extends StatelessWidget {
     this.size = DivineButtonSize.base,
     this.leadingIcon,
     this.trailingIcon,
+    this.tintLeadingIcon = true,
     this.expanded = false,
     this.isLoading = false,
     this.maxLines = 1,
@@ -166,6 +171,12 @@ class DivineButton extends StatelessWidget {
   /// and [size].
   final DivineIconName? trailingIcon;
 
+  /// Whether [leadingIcon] takes the button's content color.
+  ///
+  /// Pass false for a multi-colour brand mark, such as Google's G, whose
+  /// colours must not change.
+  final bool tintLeadingIcon;
+
   /// Whether the button should expand to fill available width.
   ///
   /// You don't need to set this when the button is already forced wider
@@ -197,6 +208,7 @@ class DivineButton extends StatelessWidget {
       size: size,
       leadingIcon: leadingIcon,
       trailingIcon: trailingIcon,
+      tintLeadingIcon: tintLeadingIcon,
       expanded: expanded,
       isLoading: isLoading,
       maxLines: maxLines,
@@ -215,6 +227,7 @@ class _DivineButtonContent extends StatelessWidget {
     required this.expanded,
     required this.isLoading,
     required this.maxLines,
+    required this.tintLeadingIcon,
     this.leadingIcon,
     this.trailingIcon,
     this.semanticLabel,
@@ -227,6 +240,7 @@ class _DivineButtonContent extends StatelessWidget {
   final DivineButtonSize size;
   final DivineIconName? leadingIcon;
   final DivineIconName? trailingIcon;
+  final bool tintLeadingIcon;
   final bool expanded;
   final bool isLoading;
   final int maxLines;
@@ -330,6 +344,7 @@ class _DivineButtonContent extends StatelessWidget {
     DivineButtonType.primary => VineTheme.primary,
     DivineButtonType.secondary => colors.surfaceContainer,
     DivineButtonType.tertiary => colors.inverseSurface,
+    DivineButtonType.contrast => colors.contrastSurface,
     DivineButtonType.ghost => colors.ghostFill,
     DivineButtonType.ghostSecondary => VineTheme.scrim15,
     DivineButtonType.link => VineTheme.transparent,
@@ -341,6 +356,7 @@ class _DivineButtonContent extends StatelessWidget {
     DivineButtonType.primary => VineTheme.onPrimary,
     DivineButtonType.secondary => colors.accentBrand,
     DivineButtonType.tertiary => colors.inverseOnSurface,
+    DivineButtonType.contrast => colors.onContrastSurface,
     DivineButtonType.ghost => colors.onSurface,
     DivineButtonType.ghostSecondary =>
       colors.isLight ? colors.onSurface : VineTheme.onSurface,
@@ -412,7 +428,7 @@ class _DivineButtonContent extends StatelessWidget {
         else if (leadingIcon != null)
           DivineIcon(
             icon: leadingIcon!,
-            color: foregroundColor,
+            color: tintLeadingIcon ? foregroundColor : null,
             size: _iconSize,
           ),
         if (!_noLabel)

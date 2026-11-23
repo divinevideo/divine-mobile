@@ -20,6 +20,7 @@ void main() {
       DivineButtonSize size = DivineButtonSize.base,
       DivineIconName? leadingIcon,
       DivineIconName? trailingIcon,
+      bool tintLeadingIcon = true,
       bool expanded = false,
       bool isLoading = false,
       String? semanticLabel,
@@ -37,6 +38,7 @@ void main() {
               size: size,
               leadingIcon: leadingIcon,
               trailingIcon: trailingIcon,
+              tintLeadingIcon: tintLeadingIcon,
               expanded: expanded,
               isLoading: isLoading,
               semanticLabel: semanticLabel,
@@ -287,6 +289,59 @@ void main() {
 
         final divineIcon = tester.widget<DivineIcon>(find.byType(DivineIcon));
         expect(divineIcon.color, VineTheme.onErrorContainer);
+      });
+
+      for (final (name, theme, colors) in [
+        ('dark', VineTheme.theme, VineTheme.darkColors),
+        ('light', VineTheme.lightTheme, VineTheme.lightColors),
+      ]) {
+        testWidgets('contrast type is pure black and white in $name mode', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildTestWidget(
+              theme: theme,
+              type: DivineButtonType.contrast,
+              leadingIcon: DivineIconName.appleSignIn,
+              onPressed: () {},
+            ),
+          );
+
+          final divineIcon = tester.widget<DivineIcon>(
+            find.byType(DivineIcon),
+          );
+          final ink = tester.widget<Ink>(find.byType(Ink));
+          expect(divineIcon.color, colors.onContrastSurface);
+          expect(
+            (ink.decoration! as BoxDecoration).color,
+            colors.contrastSurface,
+          );
+          expect(
+            {colors.contrastSurface, colors.onContrastSurface},
+            {const Color(0xFFFFFFFF), const Color(0xFF000000)},
+          );
+        });
+      }
+
+      testWidgets('keeps a brand mark in its own colours when asked', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildTestWidget(
+            type: DivineButtonType.contrast,
+            leadingIcon: DivineIconName.googleSignIn,
+            tintLeadingIcon: false,
+            trailingIcon: DivineIconName.caretRight,
+            onPressed: () {},
+          ),
+        );
+
+        final icons = tester
+            .widgetList<DivineIcon>(find.byType(DivineIcon))
+            .toList();
+        expect(icons.first.icon, DivineIconName.googleSignIn);
+        expect(icons.first.color, isNull);
+        expect(icons.last.color, VineTheme.darkColors.onContrastSurface);
       });
     });
 

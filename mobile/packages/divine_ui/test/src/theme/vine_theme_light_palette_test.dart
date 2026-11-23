@@ -71,6 +71,8 @@ Map<String, Color> _tokens(VineThemeColors c) => {
   'inverseOnSurface': c.inverseOnSurface,
   'mediaChrome': c.mediaChrome,
   'mediaChromeForeground': c.mediaChromeForeground,
+  'contrastSurface': c.contrastSurface,
+  'onContrastSurface': c.onContrastSurface,
 };
 
 /// Body-copy pairs, held to the WCAG AA normal-text ratio.
@@ -134,6 +136,13 @@ const _supportingPairs = <(String, String)>[
 /// light mode. Freezing the inventory means a future palette edit that widens
 /// this blind spot has to say so.
 const _darkAmbiguousPairs = <(String, String)>[
+  // The contrast pair is pure black and white in both appearances, and only
+  // third-party sign-in buttons use it, so sharing dark values is harmless.
+  ('background', 'onContrastSurface'),
+  ('inverseSurface', 'contrastSurface'),
+  ('mediaChromeForeground', 'contrastSurface'),
+  ('onNav', 'contrastSurface'),
+  ('primaryText', 'contrastSurface'),
   ('containerLow', 'outlineMuted'),
   ('iconButton', 'skeleton'),
   ('onNavMuted', 'disabled'),

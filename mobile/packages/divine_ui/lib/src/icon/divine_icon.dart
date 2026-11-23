@@ -13,6 +13,9 @@ enum DivineIconName {
   /// A ball bouncing along its arc: layer animation.
   animation('animation'),
   appleLogo('AppleLogo'),
+
+  /// Apple's logo mark: the Sign in with Apple button.
+  appleSignIn('apple_sign_in'),
   arrowArcLeft('arrow_arc_left'),
   arrowArcRight('arrow_arc_right'),
   arrowBendDownLeft('arrow_bend_down_left'),
@@ -138,6 +141,10 @@ enum DivineIconName {
   ghost('Ghost'),
   gif('gif'),
   globe('Globe'),
+
+  /// Google's four-colour G: the Sign in with Google button. Render it
+  /// untinted, since Google's brand rules forbid recolouring it.
+  googleSignIn('google_sign_in'),
   graph('graph'),
   gridNine('GridNine'),
   handPointing('hand_pointing'),
