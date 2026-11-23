@@ -42,6 +42,13 @@ APP_GRADLE_PATH = (
     / "app"
     / "build.gradle.kts"
 )
+WEAR_GRADLE_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "mobile"
+    / "android"
+    / "wear"
+    / "build.gradle.kts"
+)
 CAPTION_GENERATOR_GRADLE_PATH = (
     Path(__file__).resolve().parents[3]
     / "mobile"
@@ -334,6 +341,32 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         direct = next(i for i, step in enumerate(macos) if 'release_identity.py direct' in step['script'])
         build = next(i for i, step in enumerate(macos) if step['name'] == 'Build macOS app')
         self.assertLess(direct, build)
+
+    def test_android_build_bundles_the_wear_remote_beside_the_phone_bundle(self) -> None:
+        workflow = self._resolved_config()["workflows"]["android-build"]
+        names = [step["name"] for step in workflow["scripts"]]
+        wear = workflow["scripts"][names.index("Build Wear OS AAB")]
+        self.assertLess(
+            names.index("Build Android AAB (Shorebird release)"),
+            names.index("Build Wear OS AAB"),
+        )
+        # The watch's version code is derived from the build number allocated
+        # for the phone, so the watch build must read the same identity, under
+        # the property names the watch's Gradle build reads.
+        self.assertIn(". build/shorebird/android_release.env", wear["script"])
+        self.assertIn('-PdivineBuildName="$SHOREBIRD_BUILD_NAME"', wear["script"])
+        self.assertIn('-PdivineBuildNumber="$SHOREBIRD_BUILD_NUMBER"', wear["script"])
+        wear_gradle = WEAR_GRADLE_PATH.read_text()
+        self.assertIn('gradleProperty("divineBuildName")', wear_gradle)
+        self.assertIn('gradleProperty("divineBuildNumber")', wear_gradle)
+        # A broken watch build must not hold up the phone release.
+        self.assertIs(wear.get("ignore_failure"), True)
+        # The guarded Play upload expects exactly one bundle in the phone's
+        # output directory; the watch's lands in its own.
+        self.assertNotIn("build/app/outputs/bundle", wear["script"])
+        self.assertIn(
+            "android/wear/build/outputs/bundle/release/*.aab", workflow["artifacts"]
+        )
 
     def test_android_release_uses_explicit_guarded_internal_publisher(self) -> None:
         workflow = self._resolved_config()['workflows']['android-build']

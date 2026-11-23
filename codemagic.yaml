@@ -470,6 +470,25 @@ definitions:
           --dart-define-from-file=build/shorebird/dart_defines.json \
           --public-key-path=build/shorebird/patch_public_key.pem \
           -- --extra-gen-snapshot-options=--no-strip
+    - &build_wear_aab
+      name: Build Wear OS AAB
+      # The Wear OS remote shutter ships in the phone app's Play listing, on
+      # the Wear OS track (mobile/android/wear/README.md). It is not uploaded
+      # here: it waits in the artifacts for a manual upload. A broken watch
+      # build must not hold up the phone release, which has everything it
+      # needs by now.
+      ignore_failure: true
+      script: |
+        set -euo pipefail
+        . build/shorebird/android_release.env
+        # The phone bundle's name and build number; the watch derives its own
+        # version code from the build number, so the two never collide.
+        # A Gradle build of its own, outside the Flutter Android project, on
+        # the phone build's wrapper and the same release keystore.
+        cd android/wear
+        ../gradlew bundleRelease \
+          -PdivineBuildName="$SHOREBIRD_BUILD_NAME" \
+          -PdivineBuildNumber="$SHOREBIRD_BUILD_NUMBER"
     - &confirm_patch
       name: Confirm patch to production
       script: |
@@ -1225,6 +1244,7 @@ workflows:
       - *build_apk
       - *precache_shorebird_android_artifacts
       - *build_aab
+      - *build_wear_aab
       - *emit_shorebird_provenance
       - *publish_github_release
       - *publish_zapstore
@@ -1233,6 +1253,8 @@ workflows:
     artifacts:
       - build/app/outputs/apk/release/*.apk
       - build/app/outputs/bundle/release/*.aab
+      - android/wear/build/outputs/bundle/release/*.aab
+      - android/wear/build/outputs/mapping/release/mapping.txt
       - build/shorebird/android_release.env
       - build/shorebird/android_provenance.json
       - build/shorebird/android_upload.json
