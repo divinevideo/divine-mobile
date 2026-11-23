@@ -353,4 +353,138 @@ void main() {
       },
     );
   });
+
+  group('clip_postprocess trace', () {
+    late Directory docsDir;
+    late File recordingFile;
+    late PathProviderPlatform originalPathProvider;
+    late ProVideoEditor originalProVideoEditor;
+    late WakelockPlusPlatformInterface originalWakelock;
+
+    setUp(() {
+      stubRecorder();
+      docsDir = Directory.systemTemp.createTempSync('clip_postprocess_trace');
+      originalPathProvider = PathProviderPlatform.instance;
+      PathProviderPlatform.instance = MockPathProviderPlatform()
+        ..setApplicationDocumentsPath(docsDir.path)
+        ..setTemporaryPath(docsDir.path);
+      originalWakelock = wakelockPlusPlatformInstance;
+      wakelockPlusPlatformInstance = _FakeWakelockPlatform();
+
+      final editor = _MockProVideoEditor();
+      when(() => editor.getMetadata(any())).thenAnswer(
+        (_) async => VideoMetadata(
+          duration: const Duration(milliseconds: 2400),
+          audioDuration: const Duration(milliseconds: 2380),
+          extension: 'mp4',
+          fileSize: 1024,
+          resolution: const Size(720, 1280),
+          rotation: 0,
+          bitrate: 2000000,
+        ),
+      );
+      when(() => editor.getThumbnails(any())).thenAnswer(
+        (_) async => [
+          Uint8List.fromList(const [1, 2, 3]),
+        ],
+      );
+      when(
+        () => editor.getSingleThumbnail(any()),
+      ).thenAnswer((_) async => Uint8List.fromList(const [4, 5, 6]));
+      originalProVideoEditor = ProVideoEditor.instance;
+      ProVideoEditor.instance = editor;
+
+      recordingFile = File('${docsDir.path}/recording.mp4')
+        ..writeAsStringSync('recorded clip');
+      final recorded = _MockEditorVideo();
+      when(recorded.safeFilePath).thenAnswer((_) async => recordingFile.path);
+      when(
+        () => cameraService.stopRecording(),
+      ).thenAnswer((_) async => recorded);
+
+      final take = DivineVideoClip(
+        id: 'take',
+        video: recorded,
+        duration: const Duration(milliseconds: 2400),
+        recordedAt: DateTime(2024),
+        targetAspectRatio: model.AspectRatio.vertical,
+        originalAspectRatio: 9 / 16,
+      );
+      final earlierTake = take.copyWith(id: 'earlier-take');
+      when(
+        () => clipManager.addClip(
+          video: any(named: 'video'),
+          originalAspectRatio: any(named: 'originalAspectRatio'),
+          targetAspectRatio: any(named: 'targetAspectRatio'),
+          lensMetadata: any(named: 'lensMetadata'),
+          limitClipDuration: any(named: 'limitClipDuration'),
+          captureChromaKey: any(named: 'captureChromaKey'),
+        ),
+      ).thenReturn(take);
+      // Two takes, so the enrichment skips preloading the first one into the
+      // native player.
+      when(() => clipManager.clips).thenReturn([earlierTake, take]);
+      when(
+        () => clipManager.updateClipDuration(any(), any()),
+      ).thenAnswer((_) {});
+      when(
+        () => clipManager.updateThumbnail(
+          clipId: any(named: 'clipId'),
+          thumbnailPath: any(named: 'thumbnailPath'),
+          thumbnailTimestamp: any(named: 'thumbnailTimestamp'),
+        ),
+      ).thenAnswer((_) {});
+      when(
+        () => clipManager.updateGhostFrame(
+          clipId: any(named: 'clipId'),
+          ghostFramePath: any(named: 'ghostFramePath'),
+        ),
+      ).thenAnswer((_) {});
+      when(
+        () => clipManager.saveClipToLibrary(any()),
+      ).thenAnswer((_) async => true);
+    });
+
+    tearDown(() {
+      ProVideoEditor.instance = originalProVideoEditor;
+      PathProviderPlatform.instance = originalPathProvider;
+      wakelockPlusPlatformInstance = originalWakelock;
+      if (docsDir.existsSync()) docsDir.deleteSync(recursive: true);
+    });
+
+    blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+      'times each step of the take enrichment after the stop',
+      build: () => buildBloc()
+        ..emit(
+          const VideoRecorderBlocState(
+            recordingState: VideoRecorderState.recording,
+          ),
+        ),
+      act: (bloc) async {
+        bloc.add(const VideoRecorderRecordingStopRequested());
+        await TestHelpers.waitForCondition(
+          () => tracesNamed('clip_postprocess').any((t) => t.stops > 0),
+          checkInterval: const Duration(milliseconds: 10),
+          description: 'the clip_postprocess trace to end',
+        );
+      },
+      verify: (_) {
+        final trace = tracesNamed('clip_postprocess').single;
+        expect(trace.stops, 1);
+        expect(trace.attributes, {'outcome': 'success', 'chroma_key': 'no'});
+        expect(trace.metrics.keys, {
+          'total_ms',
+          'copy_ms',
+          'duration_ms',
+          'thumbnail_ms',
+          'ghost_frame_ms',
+          'library_save_ms',
+        });
+        expect(
+          File('${recordingFile.path}.work.mp4').existsSync(),
+          isFalse,
+        );
+      },
+    );
+  });
 }

@@ -37,6 +37,7 @@ import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dart';
 import 'package:openvine/observability/camera_startup_trace.dart';
 import 'package:openvine/observability/camera_switch_trace.dart';
+import 'package:openvine/observability/clip_postprocess_trace.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -1632,6 +1633,10 @@ class VideoRecorderBloc
     // bare clip was already persisted by the unawaited save above. The clip
     // manager tracks completion so a layout can await it before taking the
     // clip off the timeline, without holding this sequential stop handler.
+    final postprocess = ClipPostprocessTrace(
+      _performanceMonitor,
+      chromaKey: clip.hasPendingCaptureChromaKey,
+    );
     final enrichment =
         _enrichAndSaveClip(
           videoResult: videoResult,
@@ -1639,6 +1644,7 @@ class VideoRecorderBloc
           clipManager: clipManager,
           generation: generation,
           remainingDuration: remainingDuration,
+          trace: postprocess,
         ).catchError((Object error, StackTrace stackTrace) {
           // Detached work must not escape as an unhandled async error. The bare
           // clip is already saved, so a failure here only loses the enriched
@@ -1657,10 +1663,12 @@ class VideoRecorderBloc
       // Bind the bake to this recording now. Let both raw library saves
       // finish first so neither can overwrite a keyed result.
       runDetached(
-        clipManager.bakeRecordedTake(
-          clip,
-          generation: generation,
-          after: Future.wait([initialSave, enrichment]),
+        postprocess.timeChromaKeyBake(
+          clipManager.bakeRecordedTake(
+            clip,
+            generation: generation,
+            after: Future.wait([initialSave, enrichment]),
+          ),
         ),
         'bake the chroma key of take ${clip.id}',
         logName: 'VideoRecorderBloc',
@@ -1799,14 +1807,35 @@ class VideoRecorderBloc
   ///
   /// Runs detached (fire-and-forget) from [_onRecordingStopRequested] so the
   /// `sequential()` stop handler returns immediately and never blocks a
-  /// following stop request behind this potentially slow work.
+  /// following stop request behind this potentially slow work. Each step is
+  /// timed on [trace].
   Future<void> _enrichAndSaveClip({
     required EditorVideo videoResult,
     required DivineVideoClip clip,
     required ClipManagerNotifier clipManager,
     required int generation,
     required Duration remainingDuration,
+    required ClipPostprocessTrace trace,
+  }) => trace.timeEnrichment(
+    () => _enrichClip(
+      videoResult: videoResult,
+      clip: clip,
+      clipManager: clipManager,
+      generation: generation,
+      remainingDuration: remainingDuration,
+      trace: trace,
+    ),
+  );
+
+  Future<void> _enrichClip({
+    required EditorVideo videoResult,
+    required DivineVideoClip clip,
+    required ClipManagerNotifier clipManager,
+    required int generation,
+    required Duration remainingDuration,
+    required ClipPostprocessTrace trace,
   }) async {
+    trace.startPhase(ClipPostprocessPhase.copy);
     final videoPath = await videoResult.safeFilePath();
     if (!clipManager.isSessionCurrent(generation)) return;
     final workCopyPath = '$videoPath.work.mp4';
@@ -1814,6 +1843,7 @@ class VideoRecorderBloc
 
     try {
       if (!clipManager.isSessionCurrent(generation)) return;
+      trace.startPhase(ClipPostprocessPhase.duration);
       final metadata = await ProVideoEditor.instance.getMetadata(
         EditorVideo.file(File(workCopyPath)),
       );
@@ -1851,6 +1881,7 @@ class VideoRecorderBloc
           ? halfDuration
           : VideoEditorConstants.defaultThumbnailExtractTime;
 
+      trace.startPhase(ClipPostprocessPhase.thumbnail);
       final thumbnailResult = await VideoThumbnailService.extractThumbnail(
         videoPath: workCopyPath,
         targetTimestamp: targetTimestamp,
@@ -1884,6 +1915,7 @@ class VideoRecorderBloc
         );
       }
 
+      trace.startPhase(ClipPostprocessPhase.ghostFrame);
       final ghostFramePath = await VideoThumbnailService.extractLastFrame(
         videoPath: workCopyPath,
         videoDuration: metadata.duration,
@@ -1927,7 +1959,9 @@ class VideoRecorderBloc
         );
         return;
       }
+      trace.startPhase(ClipPostprocessPhase.librarySave);
       final saved = await clipManager.saveClipToLibrary(updatedClip);
+      trace.librarySaved(saved: saved);
       if (!saved) {
         Log.warning(
           '⚠️ Metadata-enriched clip save to library failed for ${clip.id}',
