@@ -1437,6 +1437,14 @@ class RelayPool {
         _armQuerySettleWindow(subId);
         return;
       }
+      // Nor is a relay whose frames for this query are still queued behind a
+      // signature check: it answered in time, and its EOSE waits behind those
+      // frames, so completing here would drop events it sent while the window
+      // was open (#11048). The caller's deadline still ends the query.
+      if (_queryHasFramesInFlight(subId)) {
+        _armQuerySettleWindow(subId);
+        return;
+      }
       log(
         'Query $subId settled without ${_queryStragglers(subId)} — '
         'completing on the relays that answered',
@@ -1451,6 +1459,11 @@ class RelayPool {
     ..._tempRelaysSnapshot(),
     ..._cacheRelaysSnapshot(),
   ].any((r) => r.checkQuery(subId) && _hasLiveAuthHandshake(r));
+
+  /// Whether a relay's frames for [subId] are still waiting in, or being
+  /// handled by, its [_orderedFrameTails] chain.
+  bool _queryHasFramesInFlight(String subId) =>
+      _orderedFrameTails.keys.any((key) => key.$2 == subId);
 
   /// Restarts an armed settle window for [subId] because a relay is still
   /// streaming its result set.
@@ -2289,6 +2302,32 @@ class RelayPool {
     _queryOutcomes[subId]?.recordRejectedEvent(relay);
   }
 
+  /// Reports [event], which [relay] sent for [subId] while that read was
+  /// open, dropped because the read ended during the event's signature
+  /// check. Without it a support log cannot tell this event from one that
+  /// never arrived (#11048). [subId] is printed as is: the pool held it when
+  /// the frame arrived, so it is not text the relay chose.
+  void _reportInFlightEventDrop(
+    Relay relay,
+    String subId,
+    String readType,
+    Event event,
+  ) {
+    // Relay URLs can include credentials or other private routing data.
+    // Report the endpoint's host and port, not the full connection URL.
+    final uri = Uri.tryParse(relay.url);
+    final endpoint = uri == null || uri.host.isEmpty
+        ? '(unknown relay)'
+        : Uri(scheme: uri.scheme, host: uri.host, port: uri.port).toString();
+    _diagnose(
+      RelayDiagnosticSite.inFlightEventDrop,
+      RelayDiagnosticLevel.debug,
+      endpoint,
+      'Dropped event ${event.id} (kind ${event.kind}) for $readType $subId, '
+      "which ended while the event's signature was being checked",
+    );
+  }
+
   Future<void> _dispatchTypedFrame(
     Relay relay,
     List<dynamic> json,
@@ -2309,6 +2348,10 @@ class RelayPool {
             relay.getRequestSubscription(subId) == null) {
           return;
         }
+        // Taken now: the read may end during the verify below.
+        final readType = _subscriptions[subId] != null
+            ? 'subscription'
+            : 'query';
 
         final eventJson = _mapAt(relay, json, 2, 'EVENT payload');
         if (eventJson == null) {
@@ -2392,6 +2435,7 @@ class RelayPool {
         final subscription = poolSubscription ?? querySubscription;
 
         if (subscription == null) {
+          _reportInFlightEventDrop(relay, subId, readType, event);
           return;
         }
 

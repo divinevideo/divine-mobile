@@ -384,8 +384,10 @@ class Nostr {
   ///
   /// The read ends at [deadline] — [timeout] from now when [deadline] is
   /// null — unless the relay pool completes it first, and either way it
-  /// returns the events that had arrived. [QueryResult.endedBy] says how it
-  /// ended.
+  /// returns the events that had arrived and passed their signature check.
+  /// [QueryResult.endedBy] says how it ended. An event still being checked
+  /// when the read ends is dropped, with one
+  /// [RelayDiagnosticSite.inFlightEventDrop] line naming it.
   ///
   /// Set [requireAllRelaysSettled] when an incomplete answer must not
   /// complete the read — see [RelayPool.query]. Such a read then runs to its
