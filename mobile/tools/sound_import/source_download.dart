@@ -88,6 +88,11 @@ class SourceDownloader {
       } on TimeoutException {
         abort.complete();
         failure = 'sent nothing for ${idleTimeout.inSeconds} s';
+      } on FileSystemException {
+        // Opening the partial file can fail before the response is listened
+        // to. Close the pool to release that connection before moving on.
+        close();
+        rethrow;
       } finally {
         if (partial.existsSync()) partial.deleteSync();
       }

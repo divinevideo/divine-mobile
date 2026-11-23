@@ -30,6 +30,13 @@ void main() {
       return downloader;
     }
 
+    SourceDownloader loopbackDownloader() => downloaderWith(
+      () => HttpOverrides.runWithHttpOverrides(
+        http.Client.new,
+        _LoopbackHttpOverrides(),
+      ),
+    );
+
     Future<void> download(MockClient client) =>
         downloaderWith(() => client).download(
           'https://example.com/click.wav',
@@ -78,12 +85,7 @@ void main() {
           }
           await server.close();
         });
-        final downloader = downloaderWith(
-          () => HttpOverrides.runWithHttpOverrides(
-            http.Client.new,
-            _LoopbackHttpOverrides(),
-          ),
-        );
+        final downloader = loopbackDownloader();
         final firstClosed = Completer<void>();
         server.listen((socket) {
           sockets.add(socket);
@@ -144,26 +146,59 @@ void main() {
       });
     }
 
-    test('reports a partial-file write error only to its caller', () async {
+    test('closes an unconsumed response and reports a partial-file write '
+        'error only to its caller', () async {
       Directory('${file.path}.part').createSync();
-      final body = StreamController<List<int>>();
-      addTearDown(() {
-        unawaited(body.close());
+      final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final sockets = <Socket>[];
+      addTearDown(() async {
+        for (final socket in sockets) {
+          socket.destroy();
+        }
+        await server.close();
       });
-      final client = MockClient.streaming(
-        (_, _) async => http.StreamedResponse(body.stream, 200),
-      );
-      final downloader = downloaderWith(() => client);
+      final firstClosed = Completer<void>();
+      server.listen((socket) {
+        sockets.add(socket);
+        final first = sockets.length == 1;
+        var answered = false;
+        final request = StringBuffer();
+        socket.listen(
+          (bytes) {
+            if (answered) return;
+            request.write(ascii.decode(bytes));
+            if (!request.toString().contains('\r\n\r\n')) return;
+            answered = true;
+            // Keep the first body incomplete so reading it cannot hide a leak.
+            socket.add(
+              ascii.encode(
+                'HTTP/1.1 200 OK\r\n'
+                'Content-Length: ${first ? 10000 : 3}\r\n\r\n'
+                'abc',
+              ),
+            );
+          },
+          onDone: () {
+            if (first) firstClosed.complete();
+            socket.destroy();
+          },
+        );
+      });
+      final downloader = loopbackDownloader();
+      final url = Uri.http(
+        '${server.address.address}:${server.port}',
+        '/click.wav',
+      ).toString();
       final uncaught = <Object>[];
       final result = Completer<Object?>();
       unawaited(
         runZonedGuarded(() async {
           try {
             await downloader.download(
-              'https://example.com/click.wav',
+              url,
               file,
               userAgent: 'test',
-              idleTimeout: const Duration(milliseconds: 300),
+              idleTimeout: const Duration(seconds: 2),
             );
             result.complete(null);
           } on Object catch (error) {
@@ -171,16 +206,19 @@ void main() {
           }
         }, (error, _) => uncaught.add(error)),
       );
-      // The first chunk triggers the write. Keep the body open so the
-      // failure can happen before the downloader asks the sink to close.
-      body.add([1, 2, 3]);
-
       expect(
         await result.future.timeout(const Duration(seconds: 5)),
         isA<FileSystemException>(),
       );
-      expect(uncaught, isEmpty);
       expect(file.existsSync(), isFalse);
+      await firstClosed.future.timeout(const Duration(seconds: 1));
+      expect(uncaught, isEmpty);
+
+      // The next candidate can use the downloader after it resets its pool.
+      final next = File('${work.path}/next.wav');
+      await downloader.download(url, next, userAgent: 'test');
+      expect(sockets, hasLength(2));
+      expect(next.readAsStringSync(), 'abc');
     });
   });
 }
