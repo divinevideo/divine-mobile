@@ -39,6 +39,7 @@ QueryExecutor openConnection() {
       // recovery snapshot left behind needs no such proof.
       setup: (rawDb) {
         _waitForDatabaseLocks(rawDb);
+        configureDatabasePerformancePragmas(rawDb);
         sweepPreservedDatabaseCopies(dbPath);
         sweepStrandedHotJournalSnapshots(dbPath);
       },
@@ -90,6 +91,23 @@ void _waitForDatabaseLocks(
     sleep(_databaseLockRetryInterval);
     return true;
   };
+}
+
+/// Applies connection-level SQLite performance pragmas after any cipher key
+/// has been configured.
+///
+/// WAL mode allows concurrent reads alongside writes and uses sequential WAL
+/// appends instead of rollback journals; `synchronous = FULL` keeps every
+/// committed transaction durable across OS crashes and power loss (preserving
+/// SQLite's default rollback-journal durability for drafts and scheduled
+/// posts); `temp_store = MEMORY` keeps transient sort/index tables off flash
+/// storage.
+@visibleForTesting
+void configureDatabasePerformancePragmas(CommonDatabase rawDb) {
+  rawDb
+    ..execute('PRAGMA journal_mode = WAL;')
+    ..execute('PRAGMA synchronous = FULL;')
+    ..execute('PRAGMA temp_store = MEMORY;');
 }
 
 /// Opens the database at [path] with [_waitForDatabaseLocks] applied.
@@ -148,6 +166,7 @@ QueryExecutor openEncryptedConnection({
         // Before the key, so the schema read that checks it waits too.
         _waitForDatabaseLocks(rawDb);
         applyCipherKey(rawDb, rawKeyHex);
+        configureDatabasePerformancePragmas(rawDb);
         cleanUpPreCipherMigrationBackups(dbPath);
         sweepPreservedDatabaseCopies(dbPath);
         // A launch killed after its journal was replayed leaves a snapshot

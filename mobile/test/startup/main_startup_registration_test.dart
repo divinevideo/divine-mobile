@@ -1,21 +1,36 @@
+import 'dart:io';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/features/app/startup/startup_phase.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/device_scope.dart';
 import 'package:openvine/providers/media_cache_budget_provider.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/media_cache_budget.dart';
 import 'package:openvine/services/media_cache_budget_service.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/startup/app_bootstrap.dart' as bootstrap;
 import 'package:openvine/startup/startup_coordinator_factory.dart' as app;
+import 'package:openvine/startup/startup_phases.dart';
+import 'package:openvine/utils/draft_audio_path_resolver.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
+
+import '../mocks/mock_path_provider_platform.dart';
+
+class _MockAuthService extends Mock implements AuthService {}
+
+class _MockSecureKeyStorage extends Mock implements SecureKeyStorage {}
 
 class _MockDeviceScope extends Mock implements DeviceScope {}
 
@@ -47,6 +62,46 @@ class _FakeUpdater implements ShorebirdUpdater {
 }
 
 void main() {
+  group('initializeCoreServices', () {
+    test('makes legacy draft audio readable before restoring auth', () async {
+      final documents = Directory.systemTemp.createTempSync('startup_audio_');
+      addTearDown(() => documents.deleteSync(recursive: true));
+      final originalPathProvider = PathProviderPlatform.instance;
+      PathProviderPlatform.instance = MockPathProviderPlatform()
+        ..setApplicationDocumentsPath(documents.path);
+      addTearDown(() => PathProviderPlatform.instance = originalPathProvider);
+
+      final legacyPath = p.join(draftAudioImportsDirName, 'draft', 'audio.m4a');
+      final legacyFile = File(p.join(documents.path, legacyPath))
+        ..createSync(recursive: true)
+        ..writeAsBytesSync([1, 2, 3]);
+      final resolvedFile = File(resolveAudioPath(legacyPath, documents.path));
+      final keys = _MockSecureKeyStorage();
+      when(keys.initialize).thenAnswer((_) async {});
+      when(keys.hasKeys).thenAnswer((_) async => true);
+      final auth = _MockAuthService();
+      final endOfAuthRestore = StateError('stop after checking auth startup');
+      when(auth.initialize).thenAnswer((_) async {
+        expect(resolvedFile.existsSync(), isTrue);
+        expect(resolvedFile.readAsBytesSync(), equals([1, 2, 3]));
+        expect(legacyFile.existsSync(), isFalse);
+        throw endOfAuthRestore;
+      });
+      final container = ProviderContainer(
+        overrides: [
+          secureKeyStorageProvider.overrideWithValue(keys),
+          authServiceProvider.overrideWithValue(auth),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await expectLater(
+        initializeCoreServices(container),
+        throwsA(same(endOfAuthRestore)),
+      );
+    });
+  });
+
   group('startShorebirdStartupUpdate', () {
     test(
       'starts the Shorebird track update without waiting for a frame',

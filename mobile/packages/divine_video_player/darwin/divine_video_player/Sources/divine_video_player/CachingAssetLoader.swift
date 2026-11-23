@@ -2,6 +2,139 @@ import AVFoundation
 import Foundation
 import UniformTypeIdentifiers
 
+/// Shared `URLSession` pool and delegate router so consecutive feed clips reuse
+/// warm HTTP/2 and TLS connections instead of creating and invalidating a
+/// fresh `URLSession` per video.
+private final class CachingAssetLoaderSessionRouter: NSObject, URLSessionDataDelegate {
+    private struct WeakLoader {
+        weak var value: CachingAssetLoader?
+    }
+
+    static let shared = CachingAssetLoaderSessionRouter()
+
+    private let lock = NSLock()
+    private var defaultLoaders: [Int: WeakLoader] = [:]
+    private var ephemeralLoaders: [Int: WeakLoader] = [:]
+
+    // Created once, in `init`, rather than as `lazy var`s: loaders start tasks
+    // from their own queues, and a lazy property first read from two threads at
+    // once can be initialized twice. A task made on the losing session would
+    // then fail `owner(for:)`'s identity check and be cancelled. `shared` is a
+    // static `let`, which Swift initializes exactly once.
+    private var defaultSession: URLSession!
+    private var ephemeralSession: URLSession!
+
+    private override init() {
+        super.init()
+        defaultSession = Self.makeSession(
+            configuration: .default,
+            queueName: "co.divine.video_player.caching_asset_loader.default_session",
+            delegate: self
+        )
+        let ephemeral = URLSessionConfiguration.ephemeral
+        ephemeral.urlCache = nil
+        // Keep the process-wide ephemeral session stateless across clips so
+        // redirect cookies or credentials never leak from one load to another.
+        ephemeral.httpShouldSetCookies = false
+        ephemeral.httpCookieAcceptPolicy = .never
+        ephemeral.httpCookieStorage = nil
+        ephemeral.urlCredentialStorage = nil
+        ephemeralSession = Self.makeSession(
+            configuration: ephemeral,
+            queueName: "co.divine.video_player.caching_asset_loader.ephemeral_session",
+            delegate: self
+        )
+    }
+
+    private static func makeSession(
+        configuration: URLSessionConfiguration,
+        queueName: String,
+        delegate: URLSessionDataDelegate
+    ) -> URLSession {
+        let queue = OperationQueue()
+        queue.name = queueName
+        queue.maxConcurrentOperationCount = 1
+        return URLSession(
+            configuration: configuration,
+            delegate: delegate,
+            delegateQueue: queue
+        )
+    }
+
+    func startDataTask(
+        with request: URLRequest,
+        keepsDownload: Bool,
+        owner: CachingAssetLoader
+    ) -> URLSessionDataTask {
+        let session: URLSession = keepsDownload ? defaultSession! : ephemeralSession!
+        let task = session.dataTask(with: request)
+        lock.lock()
+        if keepsDownload {
+            defaultLoaders[task.taskIdentifier] = WeakLoader(value: owner)
+        } else {
+            ephemeralLoaders[task.taskIdentifier] = WeakLoader(value: owner)
+        }
+        lock.unlock()
+        return task
+    }
+
+    func unregister(taskIdentifier: Int, keepsDownload: Bool) {
+        lock.lock()
+        if keepsDownload {
+            defaultLoaders.removeValue(forKey: taskIdentifier)
+        } else {
+            ephemeralLoaders.removeValue(forKey: taskIdentifier)
+        }
+        lock.unlock()
+    }
+
+    private func owner(for session: URLSession, taskIdentifier: Int) -> CachingAssetLoader? {
+        let isDefault = session === defaultSession
+        lock.lock()
+        let loader = isDefault
+            ? defaultLoaders[taskIdentifier]?.value
+            : ephemeralLoaders[taskIdentifier]?.value
+        lock.unlock()
+        return loader
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        dataTask: URLSessionDataTask,
+        didReceive response: URLResponse,
+        completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
+    ) {
+        guard let loader = owner(for: session, taskIdentifier: dataTask.taskIdentifier) else {
+            completionHandler(.cancel)
+            return
+        }
+        loader.handleDidReceive(
+            session: session,
+            dataTask: dataTask,
+            response: response,
+            completionHandler: completionHandler
+        )
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        owner(for: session, taskIdentifier: dataTask.taskIdentifier)?.handleDidReceive(
+            session: session,
+            dataTask: dataTask,
+            chunk: data
+        )
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        let isDefault = session === defaultSession
+        lock.lock()
+        let loader = isDefault
+            ? defaultLoaders.removeValue(forKey: task.taskIdentifier)?.value
+            : ephemeralLoaders.removeValue(forKey: task.taskIdentifier)?.value
+        lock.unlock()
+        loader?.handleDidComplete(session: session, task: task, error: error)
+    }
+}
+
 /// Streams a remote clip to `AVPlayer` through one download it keeps, so the
 /// clip's audio can be decoded from the same bytes without fetching them
 /// again — the Apple counterpart of decoding from ExoPlayer's cache on
@@ -13,11 +146,11 @@ import UniformTypeIdentifiers
 /// file, answers the player's byte-range requests from what has arrived, and
 /// reports the file once it is complete.
 ///
-/// A file larger than [maxKeptBytes] is not kept: a feed plays only its first
+/// A file larger than `maxKeptBytes` is not kept: a feed plays only its first
 /// seconds, and fetching all of a long video to loop them would waste the
 /// data. The loader then fetches each byte range the player asks for on its
 /// own, as `AVFoundation` would have, and never reports a file.
-final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSessionDataDelegate {
+final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate {
 
     /// The largest file kept for decoding. Feed clips are a few megabytes.
     static let maxKeptBytes: Int64 = 16 * 1024 * 1024
@@ -72,7 +205,6 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
         observations[task.taskIdentifier] = PlaybackNetworkObservation(loadID: id, emit: onPlaybackNetwork)
     }
     private let queue = DispatchQueue(label: "co.divine.video_player.caching_asset_loader")
-    private var session: URLSession?
     private var download: URLSessionDataTask?
     private let fileURL = FileManager.default.temporaryDirectory
         .appendingPathComponent("divine-loop-\(UUID().uuidString).mp4")
@@ -90,6 +222,7 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
     /// player makes is then fetched on its own.
     private var proxying = false
     private var proxied: [Int: AVAssetResourceLoadingRequest] = [:]
+    private var proxiedTasks: [Int: URLSessionDataTask] = [:]
     private let proxyHTTPFailureLock = NSLock()
     private var proxyHTTPFailure: (status: Int, error: NSError)?
 
@@ -138,8 +271,14 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
         queue.async { [self] in
             cancelled = true
             proxyHTTPFailureLock.withLock { proxyHTTPFailure = nil }
-            session?.invalidateAndCancel()
-            session = nil
+            if let downloadTask = download {
+                download = nil
+                cancelTask(downloadTask)
+            }
+            for task in proxiedTasks.values {
+                cancelTask(task)
+            }
+            proxiedTasks.removeAll()
             let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled)
             pending.forEach { $0.finishLoading(with: error) }
             pending.removeAll()
@@ -173,18 +312,62 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
         pending.removeAll { $0 === loadingRequest }
         for (id, request) in proxied where request === loadingRequest {
             proxied[id] = nil
-            session?.getAllTasks { tasks in
-                tasks.first { $0.taskIdentifier == id }?.cancel()
+            if let task = proxiedTasks.removeValue(forKey: id) {
+                cancelTask(task)
             }
         }
     }
 
-    // MARK: - URLSessionDataDelegate
+    private func cancelTask(_ task: URLSessionTask) {
+        // The router stops forwarding callbacks as soon as we unregister.
+        observations.removeValue(forKey: task.taskIdentifier)?.finish(outcome: "cancelled")
+        CachingAssetLoaderSessionRouter.shared.unregister(
+            taskIdentifier: task.taskIdentifier,
+            keepsDownload: keepsDownload
+        )
+        task.cancel()
+    }
 
-    func urlSession(
-        _ session: URLSession,
+    // MARK: - Routed URLSessionDataDelegate handlers
+
+    fileprivate func handleDidReceive(
+        session: URLSession,
         dataTask: URLSessionDataTask,
-        didReceive response: URLResponse,
+        response: URLResponse,
+        completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
+    ) {
+        queue.async { [self] in
+            self.onDidReceive(
+                dataTask: dataTask,
+                response: response,
+                completionHandler: completionHandler
+            )
+        }
+    }
+
+    fileprivate func handleDidReceive(
+        session: URLSession,
+        dataTask: URLSessionDataTask,
+        chunk: Data
+    ) {
+        queue.async { [self] in
+            self.onDidReceive(dataTask: dataTask, chunk: chunk)
+        }
+    }
+
+    fileprivate func handleDidComplete(
+        session: URLSession,
+        task: URLSessionTask,
+        error: Error?
+    ) {
+        queue.async { [self] in
+            self.onDidComplete(task: task, error: error)
+        }
+    }
+
+    private func onDidReceive(
+        dataTask: URLSessionDataTask,
+        response: URLResponse,
         completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
     ) {
         observations[dataTask.taskIdentifier]?.headers()
@@ -249,7 +432,7 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
         serve()
     }
 
-    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive chunk: Data) {
+    private func onDidReceive(dataTask: URLSessionDataTask, chunk: Data) {
         observations[dataTask.taskIdentifier]?.received(chunk.count)
         if let request = proxied[dataTask.taskIdentifier] {
             request.dataRequest?.respond(with: chunk)
@@ -268,9 +451,10 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
         serve()
     }
 
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+    private func onDidComplete(task: URLSessionTask, error: Error?) {
         let outcome = error == nil ? "complete" : (error as NSError?)?.code == NSURLErrorCancelled ? "cancelled" : "error"
         observations.removeValue(forKey: task.taskIdentifier)?.finish(outcome: outcome)
+        proxiedTasks.removeValue(forKey: task.taskIdentifier)
         if let request = proxied.removeValue(forKey: task.taskIdentifier) {
             if let error {
                 request.finishLoading(with: error)
@@ -305,26 +489,14 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
         guard download == nil, !finished, failure == nil, !cancelled, !proxying else { return }
         var request = URLRequest(url: remoteURL)
         for (field, value) in headers { request.setValue(value, forHTTPHeaderField: field) }
-        let task = makeSession().dataTask(with: request)
+        let task = CachingAssetLoaderSessionRouter.shared.startDataTask(
+            with: request,
+            keepsDownload: keepsDownload,
+            owner: self
+        )
         download = task
         observe(task)
         task.resume()
-    }
-
-    private func makeSession() -> URLSession {
-        if let session { return session }
-        let operationQueue = OperationQueue()
-        operationQueue.underlyingQueue = queue
-        operationQueue.maxConcurrentOperationCount = 1
-        let configuration = keepsDownload ? URLSessionConfiguration.default : .ephemeral
-        if !keepsDownload { configuration.urlCache = nil }
-        let session = URLSession(
-            configuration: configuration,
-            delegate: self,
-            delegateQueue: operationQueue
-        )
-        self.session = session
-        return session
     }
 
     private func openFile() -> Bool {
@@ -416,8 +588,13 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
             request.finishLoading()
             return
         }
-        let task = makeSession().dataTask(with: urlRequest)
+        let task = CachingAssetLoaderSessionRouter.shared.startDataTask(
+            with: urlRequest,
+            keepsDownload: keepsDownload,
+            owner: self
+        )
         proxied[task.taskIdentifier] = request
+        proxiedTasks[task.taskIdentifier] = task
         observe(task)
         task.resume()
     }

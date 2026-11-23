@@ -981,8 +981,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   Future<void> _activateCurrentController(
     DivineVideoPlayerController controller,
-    int index,
-  ) async {
+    int index, {
+    bool applyVolume = true,
+  }) async {
     // The captured [controller] can be disposed mid-await by a window update,
     // failover, or re-init — each removes it from [_controllers] before
     // disposing. Re-checking identity (not just _isActive/_currentIndex, which
@@ -1000,8 +1001,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final allowed = _canAutoPlayAt(index);
     if (index == _currentIndex) _lastAppliedGate = allowed;
     if (!allowed) return;
-    await controller.setVolume(_volume);
-    if (!stillOwnsController()) return;
+    if (applyVolume) {
+      await controller.setVolume(_volume);
+      if (!stillOwnsController()) return;
+    }
     _firstFrameTimerFor(index)?.markPlaybackRequested();
     await controller.play();
     if (!stillOwnsController()) return;
@@ -1601,7 +1604,11 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       if (index == _currentIndex && _isActive) {
         _log('Playing index $index (${video.id})');
         unawaited(_recordFirstFrame(index, controller));
-        await _activateCurrentController(controller, index);
+        await _activateCurrentController(
+          controller,
+          index,
+          applyVolume: false,
+        );
         if (!guardInitOwnership('play')) return false;
       }
 
