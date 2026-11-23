@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// A song as the Apple Music catalog lists it.
 @immutable
@@ -58,7 +59,9 @@ class AppleMusicApiException implements Exception {
   final String message;
 
   /// The HTTP status the API answered with, or `null` when it did not answer.
-  /// `401` means the developer token is missing, malformed or expired.
+  /// `401` means the developer token is missing, malformed or expired, or
+  /// that the API refused a valid one
+  /// [AppleMusicApiClient.maxAttempts] times in a row.
   final int? statusCode;
 
   @override
@@ -70,6 +73,10 @@ class AppleMusicApiException implements Exception {
 ///
 /// Catalog requests are authorized by the developer token alone, so nothing
 /// here identifies the person searching.
+///
+/// The API answers `401` to a share of the requests that carry a valid token,
+/// and accepts the same request sent again, so a refused request is sent up
+/// to [maxAttempts] times.
 class AppleMusicApiClient {
   /// Creates an [AppleMusicApiClient].
   ///
@@ -88,6 +95,10 @@ class AppleMusicApiClient {
 
   /// The most songs one search request returns.
   static const maxSearchLimit = 25;
+
+  /// How many times a request the API answers `401` to is sent before it
+  /// counts as failed.
+  static const maxAttempts = 3;
 
   static const _host = 'api.music.apple.com';
 
@@ -162,21 +173,19 @@ class AppleMusicApiClient {
       pathSegments: ['v1', 'catalog', storefront, resource],
       queryParameters: queryParameters,
     );
-    final http.Response response;
-    try {
-      response = await _httpClient
-          .get(
-            uri,
-            headers: {
-              'Accept': 'application/json',
-              'Authorization': 'Bearer $_developerToken',
-            },
-          )
-          .timeout(_timeout);
-    } on TimeoutException {
-      throw const AppleMusicApiException('Apple Music request timed out');
-    } on http.ClientException catch (error) {
-      throw AppleMusicApiException('Apple Music network error: $error');
+    var response = await _send(uri);
+    for (
+      var attempt = 1;
+      response.statusCode == 401 && attempt < maxAttempts;
+      attempt++
+    ) {
+      Log.warning(
+        'Apple Music refused a $resource request with 401 on attempt '
+        '$attempt of $maxAttempts; sending it again',
+        name: 'AppleMusicApiClient',
+        category: LogCategory.api,
+      );
+      response = await _send(uri);
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw AppleMusicApiException(
@@ -200,6 +209,24 @@ class AppleMusicApiClient {
       );
     }
     return decoded;
+  }
+
+  Future<http.Response> _send(Uri uri) async {
+    try {
+      return await _httpClient
+          .get(
+            uri,
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $_developerToken',
+            },
+          )
+          .timeout(_timeout);
+    } on TimeoutException {
+      throw const AppleMusicApiException('Apple Music request timed out');
+    } on http.ClientException catch (error) {
+      throw AppleMusicApiException('Apple Music network error: $error');
+    }
   }
 
   Map<String, dynamic> _results(Map<String, dynamic> decoded) {

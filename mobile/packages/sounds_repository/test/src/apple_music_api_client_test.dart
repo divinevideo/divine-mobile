@@ -389,6 +389,94 @@ void main() {
       });
     });
 
+    group('a request the catalog refuses with 401', () {
+      /// A client whose requests are answered with [statuses] in turn, then
+      /// with the last of them, and that records each request in [sent].
+      AppleMusicApiClient clientAnswering(
+        List<int> statuses,
+        List<http.Request> sent,
+      ) => AppleMusicApiClient(
+        developerToken: _token,
+        httpClient: MockClient((request) async {
+          final status = statuses[sent.length.clamp(0, statuses.length - 1)];
+          sent.add(request);
+          return _json(
+            status == 200 ? _chart([_songJson()]) : const <String, dynamic>{},
+            status: status,
+          );
+        }),
+      );
+
+      test('is sent again, unchanged, until the catalog accepts it', () async {
+        final sent = <http.Request>[];
+        final client = clientAnswering([401, 401, 200], sent);
+
+        final songs = await client.fetchTopSongs(storefront: 'us');
+
+        expect(songs.single.name, equals('Night Drive'));
+        expect(sent, hasLength(3));
+        expect(sent.map((request) => request.url).toSet(), hasLength(1));
+        expect(
+          sent.map((request) => request.headers['Authorization']).toSet(),
+          equals({'Bearer $_token'}),
+        );
+      });
+
+      test('fails once it has been refused every time it is sent', () async {
+        final sent = <http.Request>[];
+        final client = clientAnswering([401], sent);
+
+        await expectLater(
+          client.searchSongs(storefront: 'us', term: 'night'),
+          throwsA(
+            isA<AppleMusicApiException>().having(
+              (error) => error.statusCode,
+              'statusCode',
+              equals(401),
+            ),
+          ),
+        );
+        expect(sent, hasLength(AppleMusicApiClient.maxAttempts));
+      });
+
+      test('is the only one sent again: another failure is final', () async {
+        for (final status in [403, 429, 500]) {
+          final sent = <http.Request>[];
+          final client = clientAnswering([status, 200], sent);
+
+          await expectLater(
+            client.fetchTopSongs(storefront: 'us'),
+            throwsA(
+              isA<AppleMusicApiException>().having(
+                (error) => error.statusCode,
+                'statusCode',
+                equals(status),
+              ),
+            ),
+            reason: 'for $status',
+          );
+          expect(sent, hasLength(1), reason: 'for $status');
+        }
+      });
+
+      test('fails with the failure a later attempt ends in', () async {
+        final sent = <http.Request>[];
+        final client = clientAnswering([401, 500], sent);
+
+        await expectLater(
+          client.fetchTopSongs(storefront: 'us'),
+          throwsA(
+            isA<AppleMusicApiException>().having(
+              (error) => error.statusCode,
+              'statusCode',
+              equals(500),
+            ),
+          ),
+        );
+        expect(sent, hasLength(2));
+      });
+    });
+
     group('close', () {
       test('closes the HTTP client it was given', () {
         final httpClient = _MockHttpClient();
