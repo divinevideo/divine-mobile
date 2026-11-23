@@ -117,6 +117,9 @@ void main() {
         'mediaChromeForeground': (c) => c.mediaChromeForeground,
         'contrastSurface': (c) => c.contrastSurface,
         'onContrastSurface': (c) => c.onContrastSurface,
+        'outlineButtonSurface': (c) => c.outlineButtonSurface,
+        'onOutlineButtonSurface': (c) => c.onOutlineButtonSurface,
+        'outlineButtonBorder': (c) => c.outlineButtonBorder,
       };
 
       // Accent chips are pairs, not flat colors, so they cannot live in
@@ -180,6 +183,9 @@ void main() {
         mediaChromeForeground: color,
         contrastSurface: color,
         onContrastSurface: color,
+        outlineButtonSurface: color,
+        onOutlineButtonSurface: color,
+        outlineButtonBorder: color,
       );
 
       test('copyWith replaces each semantic color', () {
@@ -224,6 +230,9 @@ void main() {
           mediaChromeForeground: const Color(0xFF000010),
           contrastSurface: const Color(0xFF000025),
           onContrastSurface: const Color(0xFF000026),
+          outlineButtonSurface: const Color(0xFF000027),
+          onOutlineButtonSurface: const Color(0xFF000028),
+          outlineButtonBorder: const Color(0xFF000029),
         );
 
         expect(copied.background, const Color(0xFF000001));
@@ -269,6 +278,9 @@ void main() {
         expect(copied.mediaChromeForeground, const Color(0xFF000010));
         expect(copied.contrastSurface, const Color(0xFF000025));
         expect(copied.onContrastSurface, const Color(0xFF000026));
+        expect(copied.outlineButtonSurface, const Color(0xFF000027));
+        expect(copied.onOutlineButtonSurface, const Color(0xFF000028));
+        expect(copied.outlineButtonBorder, const Color(0xFF000029));
       });
 
       test(
@@ -383,6 +395,15 @@ void main() {
                 : null,
             contrastSurface: token == 'contrastSurface' ? Colors.white : null,
             onContrastSurface: token == 'onContrastSurface'
+                ? Colors.white
+                : null,
+            outlineButtonSurface: token == 'outlineButtonSurface'
+                ? Colors.white
+                : null,
+            onOutlineButtonSurface: token == 'onOutlineButtonSurface'
+                ? Colors.white
+                : null,
+            outlineButtonBorder: token == 'outlineButtonBorder'
                 ? Colors.white
                 : null,
           );

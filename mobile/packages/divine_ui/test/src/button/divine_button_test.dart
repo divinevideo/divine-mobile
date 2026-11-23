@@ -323,6 +323,50 @@ void main() {
         });
       }
 
+      for (final (name, theme, colors) in [
+        ('dark', VineTheme.theme, VineTheme.darkColors),
+        ('light', VineTheme.lightTheme, VineTheme.lightColors),
+      ]) {
+        testWidgets('outline type has a 1px border in $name mode', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildTestWidget(
+              theme: theme,
+              type: DivineButtonType.outline,
+              leadingIcon: DivineIconName.googleSignIn,
+              onPressed: () {},
+            ),
+          );
+
+          final decoration =
+              tester.widget<Ink>(find.byType(Ink)).decoration! as BoxDecoration;
+          final border = decoration.border! as Border;
+          expect(decoration.color, colors.outlineButtonSurface);
+          expect(border.top.width, 1);
+          expect(border.top.color, colors.outlineButtonBorder);
+          expect(
+            tester.widget<DivineIcon>(find.byType(DivineIcon)).color,
+            colors.onOutlineButtonSurface,
+          );
+        });
+      }
+
+      testWidgets('outline and primary buttons share the same height', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildTestWidget(type: DivineButtonType.outline, onPressed: () {}),
+        );
+        final outlineHeight = tester.getSize(find.byType(DivineButton)).height;
+        await tester.pumpWidget(buildTestWidget(onPressed: () {}));
+
+        expect(
+          tester.getSize(find.byType(DivineButton)).height,
+          outlineHeight,
+        );
+      });
+
       testWidgets('keeps a brand mark in its own colours when asked', (
         tester,
       ) async {

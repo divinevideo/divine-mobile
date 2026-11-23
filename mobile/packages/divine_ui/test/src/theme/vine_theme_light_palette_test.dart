@@ -73,6 +73,9 @@ Map<String, Color> _tokens(VineThemeColors c) => {
   'mediaChromeForeground': c.mediaChromeForeground,
   'contrastSurface': c.contrastSurface,
   'onContrastSurface': c.onContrastSurface,
+  'outlineButtonSurface': c.outlineButtonSurface,
+  'onOutlineButtonSurface': c.onOutlineButtonSurface,
+  'outlineButtonBorder': c.outlineButtonBorder,
 };
 
 /// Body-copy pairs, held to the WCAG AA normal-text ratio.

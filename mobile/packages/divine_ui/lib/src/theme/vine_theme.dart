@@ -94,6 +94,9 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
     required this.mediaChromeForeground,
     required this.contrastSurface,
     required this.onContrastSurface,
+    required this.outlineButtonSurface,
+    required this.onOutlineButtonSurface,
+    required this.outlineButtonBorder,
   });
 
   /// How often [VineThemeColorsContext.vineColors] resolved the dark fallback
@@ -332,6 +335,16 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
   /// Content color on [contrastSurface].
   final Color onContrastSurface;
 
+  /// Fill of the outline button: near-black on dark, white on light, the
+  /// colours of Google's own sign-in button.
+  final Color outlineButtonSurface;
+
+  /// Content color on [outlineButtonSurface].
+  final Color onOutlineButtonSurface;
+
+  /// Thin border around [outlineButtonSurface].
+  final Color outlineButtonBorder;
+
   /// Whether this palette describes a light appearance.
   ///
   /// Derived from [background] rather than stored, so it stays correct for
@@ -387,6 +400,9 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
     Color? mediaChromeForeground,
     Color? contrastSurface,
     Color? onContrastSurface,
+    Color? outlineButtonSurface,
+    Color? onOutlineButtonSurface,
+    Color? outlineButtonBorder,
   }) => VineThemeColors(
     background: background ?? this.background,
     card: card ?? this.card,
@@ -435,6 +451,10 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
     mediaChromeForeground: mediaChromeForeground ?? this.mediaChromeForeground,
     contrastSurface: contrastSurface ?? this.contrastSurface,
     onContrastSurface: onContrastSurface ?? this.onContrastSurface,
+    outlineButtonSurface: outlineButtonSurface ?? this.outlineButtonSurface,
+    onOutlineButtonSurface:
+        onOutlineButtonSurface ?? this.onOutlineButtonSurface,
+    outlineButtonBorder: outlineButtonBorder ?? this.outlineButtonBorder,
   );
 
   @override
@@ -508,6 +528,21 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
         other.onContrastSurface,
         t,
       ),
+      outlineButtonSurface: Color.lerp(
+        outlineButtonSurface,
+        other.outlineButtonSurface,
+        t,
+      ),
+      onOutlineButtonSurface: Color.lerp(
+        onOutlineButtonSurface,
+        other.onOutlineButtonSurface,
+        t,
+      ),
+      outlineButtonBorder: Color.lerp(
+        outlineButtonBorder,
+        other.outlineButtonBorder,
+        t,
+      ),
     );
   }
 
@@ -561,7 +596,10 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
           mediaChrome == other.mediaChrome &&
           mediaChromeForeground == other.mediaChromeForeground &&
           contrastSurface == other.contrastSurface &&
-          onContrastSurface == other.onContrastSurface;
+          onContrastSurface == other.onContrastSurface &&
+          outlineButtonSurface == other.outlineButtonSurface &&
+          onOutlineButtonSurface == other.onOutlineButtonSurface &&
+          outlineButtonBorder == other.outlineButtonBorder;
 
   @override
   int get hashCode => Object.hashAll([
@@ -612,6 +650,9 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
     mediaChromeForeground,
     contrastSurface,
     onContrastSurface,
+    outlineButtonSurface,
+    onOutlineButtonSurface,
+    outlineButtonBorder,
   ]);
 }
 
@@ -1348,6 +1389,9 @@ class VineTheme {
     mediaChromeForeground: whiteText,
     contrastSurface: Color(0xFFFFFFFF),
     onContrastSurface: Color(0xFF000000),
+    outlineButtonSurface: Color(0xFF131314),
+    onOutlineButtonSurface: Color(0xFFE3E3E3),
+    outlineButtonBorder: Color(0xFF8E918F),
   );
 
   /// Warm off-white content surfaces with dark-green anchors, inspired by
@@ -1424,6 +1468,9 @@ class VineTheme {
     mediaChromeForeground: Color(0xFF07241B),
     contrastSurface: Color(0xFF000000),
     onContrastSurface: Color(0xFFFFFFFF),
+    outlineButtonSurface: Color(0xFFFFFFFF),
+    onOutlineButtonSurface: Color(0xFF1F1F1F),
+    outlineButtonBorder: Color(0xFF747775),
   );
 
   /// Scrim at 80% opacity (black 80%).
