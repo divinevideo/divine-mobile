@@ -78,10 +78,9 @@ class LocalKeySigner implements IsolateDecryptSigner {
   final NativeSchnorrSign? _nativeSchnorrSignerOverride;
   bool _nativeSignerDisabled = false;
 
-  NativeSchnorrSign? _resolveNativeSigner() {
-    if (_nativeSignerDisabled) return null;
-    return _nativeSchnorrSignerOverride ?? resolveNativeSchnorrSigner();
-  }
+  NativeSchnorrSign? get _activeNativeSigner => _nativeSignerDisabled
+      ? null
+      : (_nativeSchnorrSignerOverride ?? resolveNativeSchnorrSigner());
 
   /// Returns the current public key for creator-bound signing flows.
   Future<String> currentPubkey() async {
@@ -116,7 +115,7 @@ class LocalKeySigner implements IsolateDecryptSigner {
   Future<String> signCanonicalPayload(Uint8List payload) async {
     try {
       final digest = sha256.convert(payload).toString();
-      final nativeSigner = _resolveNativeSigner();
+      final nativeSigner = _activeNativeSigner;
       if (nativeSigner != null) {
         final sigFuture = _keyContainer.withPrivateKey<Future<String>>(
           (privateKeyHex) => Future<String>.sync(
@@ -147,7 +146,7 @@ class LocalKeySigner implements IsolateDecryptSigner {
   @override
   Future<Event> signEvent(Event event) async {
     try {
-      final nativeSigner = _resolveNativeSigner();
+      final nativeSigner = _activeNativeSigner;
       if (nativeSigner != null) {
         final auxRand = getRandomHexString();
         final sigFuture = _keyContainer.withPrivateKey<Future<String>>(
