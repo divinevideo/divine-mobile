@@ -102,10 +102,28 @@ exit "${BUILD_EXIT_CODE:-0}"
       final result = await Process.run(
         'bash',
         ['-c', await _symbolUploadPhase()],
-        environment: {...environment, 'CODE_SIGNING_ALLOWED': 'YES'},
+        environment: {
+          ...environment,
+          'CODE_SIGNING_ALLOWED': 'YES',
+          'CONFIGURATION': 'Release',
+        },
       );
 
       expect(result.exitCode, 29, reason: '${result.stderr}');
+    });
+
+    test('signed Debug builds do not publish release symbols', () async {
+      final result = await Process.run(
+        'bash',
+        ['-c', await _symbolUploadPhase()],
+        environment: {
+          ...environment,
+          'CODE_SIGNING_ALLOWED': 'YES',
+          'CONFIGURATION': 'Debug',
+        },
+      );
+
+      expect(result.exitCode, 0, reason: '${result.stderr}');
     });
     // The fixtures exercise POSIX shell scripts, not Windows command scripts.
   }, skip: Platform.isWindows);
