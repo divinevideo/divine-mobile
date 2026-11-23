@@ -111,6 +111,23 @@ void main() {
       expect(FeatureFlag.concordChat.audience, FeatureFlagAudience.internal);
     });
 
+    test('confirmationSignIn is internal and off by default', () {
+      expect(
+        FeatureFlag.confirmationSignIn.audience,
+        FeatureFlagAudience.internal,
+      );
+      expect(
+        const BuildConfiguration().getDefault(FeatureFlag.confirmationSignIn),
+        isFalse,
+      );
+      expect(
+        const BuildConfiguration().getEnvironmentKey(
+          FeatureFlag.confirmationSignIn,
+        ),
+        'FF_CONFIRMATION_SIGN_IN',
+      );
+    });
+
     test('should leave user-facing flags visible to users', () {
       expect(FeatureFlag.blueskyPublishing.audience, FeatureFlagAudience.user);
       expect(FeatureFlag.videoReplies.audience, FeatureFlagAudience.user);

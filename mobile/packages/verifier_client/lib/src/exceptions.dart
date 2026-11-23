@@ -59,6 +59,12 @@ enum SignInRefusal {
   /// The confirmation wasn't a signed linked-accounts list.
   invalidEvent,
 
+  /// Divine Confirmation is required before this sign-in counts.
+  confirmationRequired,
+
+  /// The verifier could not check Divine Confirmation just now.
+  confirmationUnavailable,
+
   /// Anything else.
   other;
 
@@ -70,11 +76,18 @@ enum SignInRefusal {
     'signin_not_yours' => notYours,
     'signin_claim_mismatch' => claimMismatch,
     'invalid_event' => invalidEvent,
+    'confirmation_required' => confirmationRequired,
+    'confirmation_unavailable' => confirmationUnavailable,
     _ => other,
   };
 }
 
-/// The verifier refused to confirm a sign-in.
+/// The verifier refused to confirm a sign-in, or couldn't check it.
+///
+/// A refusal carries its own code. A 5xx carrying `confirmation_unavailable`
+/// is reported here too ([SignInRefusal.confirmationUnavailable]): that is
+/// not a refusal but a check that couldn't run, so the same sign-in may be
+/// retried. Every other 5xx stays a [VerifierApiException].
 final class SignInConfirmException extends VerifierClientException {
   /// Creates a [SignInConfirmException]. The message never carries the code
   /// or secret sent.

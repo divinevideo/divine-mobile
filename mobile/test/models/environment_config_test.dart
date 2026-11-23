@@ -260,7 +260,7 @@ void main() {
         expect(config.verifierBaseUrl, equals('https://verifier.divine.video'));
       });
 
-      test('is the same across environments (no local stub)', () {
+      test('is the same across environments when no override is defined', () {
         for (final env in AppEnvironment.values) {
           final config = EnvironmentConfig(environment: env);
           expect(
@@ -268,6 +268,27 @@ void main() {
             equals('https://verifier.divine.video'),
           );
         }
+      });
+    });
+
+    group('resolveVerifierBaseUrl', () {
+      test('an empty override means production', () {
+        expect(
+          resolveVerifierBaseUrl(''),
+          equals('https://verifier.divine.video'),
+        );
+      });
+
+      test('a non-empty override wins', () {
+        expect(
+          resolveVerifierBaseUrl('http://localhost:8787'),
+          equals('http://localhost:8787'),
+        );
+      });
+
+      test('a release build (no define) ships the production default', () {
+        // Guard: an ordinary build passes no VERIFIER_BASE_URL.
+        expect(verifierBaseUrlOverride, isEmpty);
       });
     });
 

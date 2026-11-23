@@ -10665,6 +10665,26 @@
   "devOptionsProtectedMinorEnabledToast": "Protected-minor state forced on",
   "devOptionsProtectedMinorNonMinorToast": "Protected-minor state forced off",
   "devOptionsProtectedMinorClearedToast": "Protected-minor override cleared",
+  "devOptionsConfirmationAccessTitle": "Divine Confirmation access",
+  "@devOptionsConfirmationAccessTitle": {
+    "description": "Developer options section heading for forcing whether this account has Divine Confirmation, for testing."
+  },
+  "devOptionsConfirmationAccessReal": "Real answer",
+  "@devOptionsConfirmationAccessReal": {
+    "description": "Developer options choice that uses the verifier's real answer for whether this account has Divine Confirmation."
+  },
+  "devOptionsConfirmationAccessHas": "Has Confirmation",
+  "@devOptionsConfirmationAccessHas": {
+    "description": "Developer options choice that makes the app act as if this account has Divine Confirmation."
+  },
+  "devOptionsConfirmationAccessHasNot": "Doesn't have Confirmation",
+  "@devOptionsConfirmationAccessHasNot": {
+    "description": "Developer options choice that makes the app act as if this account doesn't have Divine Confirmation."
+  },
+  "devOptionsConfirmationAccessUnknown": "Couldn't check",
+  "@devOptionsConfirmationAccessUnknown": {
+    "description": "Developer options choice that makes the app act as if it couldn't find out whether this account has Divine Confirmation."
+  },
   "commentsRecordVideoButtonLabel": "Record video comment",
   "@commentsRecordVideoButtonLabel": {
     "description": "Semantics label for the button that opens the recorder to create a video reply in comments."
@@ -11759,6 +11779,74 @@
   "@verifyStatusAccountChanged": {
     "description": "Pill on a linked account whose handle now points to a different account than the one that signed in."
   },
+  "verifyStatusNeedsConfirmation": "Needs Confirmation",
+  "@verifyStatusNeedsConfirmation": {
+    "description": "Pill on an account linked by signing in that doesn't count because its owner doesn't have Divine Confirmation right now. Placeholder until #8278."
+  },
+  "verifyConfirmationTitle": "Divine Confirmation",
+  "@verifyConfirmationTitle": {
+    "description": "App bar title and headline of the Divine Confirmation screen. Placeholder until #8278."
+  },
+  "verifyConfirmationHeroBody": "Divine Confirmation lets you link your accounts on other platforms by signing in to them.",
+  "@verifyConfirmationHeroBody": {
+    "description": "Short pitch under the headline of the Divine Confirmation screen. Placeholder until #8278."
+  },
+  "verifyConfirmationIncludedTitle": "What's included",
+  "@verifyConfirmationIncludedTitle": {
+    "description": "Heading of the list of what Divine Confirmation includes. Placeholder until #8278."
+  },
+  "verifyConfirmationIncludedSignIn": "Link accounts by signing in",
+  "@verifyConfirmationIncludedSignIn": {
+    "description": "List item on the Divine Confirmation screen: linking accounts by signing in. Placeholder until #8278."
+  },
+  "verifyConfirmationComingSoon": "Coming soon",
+  "@verifyConfirmationComingSoon": {
+    "description": "Label of the disabled buy button on the Divine Confirmation screen, shown because it cannot be bought yet. Placeholder until #8278."
+  },
+  "verifyConfirmationSmallPrint": "Details will appear here when Divine Confirmation is ready.",
+  "@verifyConfirmationSmallPrint": {
+    "description": "Small print at the bottom of the Divine Confirmation screen. Placeholder until #8278."
+  },
+  "verifyConfirmationStoreOnly": "Divine Confirmation is available in the App Store and Google Play versions of Divine.",
+  "@verifyConfirmationStoreOnly": {
+    "description": "Shown in place of a button that would buy Divine Confirmation when this build cannot be billed by a store: on the Divine Confirmation screen, on the link-an-account screen, in the sheet shown when a sign-in link is refused for Divine Confirmation, and under a linked account on the verify dashboard in place of the Renew Confirmation button. Placeholder until #8278."
+  },
+  "verifyConfirmationBuySemantic": "Divine Confirmation, coming soon, unavailable",
+  "@verifyConfirmationBuySemantic": {
+    "description": "Screen reader label for the disabled buy button on the Divine Confirmation screen. Placeholder until #8278."
+  },
+  "verifyConfirmationRestoreSemantic": "Restore purchases, unavailable",
+  "@verifyConfirmationRestoreSemantic": {
+    "description": "Screen reader label for the disabled restore link on the Divine Confirmation screen. Placeholder until #8278."
+  },
+  "verifyConfirmationCardTitle": "Link by signing in",
+  "@verifyConfirmationCardTitle": {
+    "description": "Title of the card on the link-an-account screen that takes the place of the sign-in button when linking by signing in needs Divine Confirmation and the person doesn't have it. Placeholder until #8278."
+  },
+  "verifyConfirmationCardBody": "One-tap linking is part of Divine Confirmation.",
+  "@verifyConfirmationCardBody": {
+    "description": "Body of the card on the link-an-account screen that takes the place of the sign-in button when linking by signing in needs Divine Confirmation and the person doesn't have it. Placeholder until #8278."
+  },
+  "verifyGetConfirmation": "Get Divine Confirmation",
+  "@verifyGetConfirmation": {
+    "description": "Button that opens the Divine Confirmation screen, on the link-an-account screen and in the sheet shown when a sign-in link is refused for Divine Confirmation. Placeholder until #8278."
+  },
+  "verifyProofAlwaysAvailable": "Proof posts are always available",
+  "@verifyProofAlwaysAvailable": {
+    "description": "Heading of the proof-post section of the link-an-account screen, used in place of the usual heading while the Divine Confirmation card replaces the sign-in button, to say a proof post still links the account without it. Placeholder until #8278."
+  },
+  "verifyConfirmationSheetTitle": "Linking by signing in needs Divine Confirmation",
+  "@verifyConfirmationSheetTitle": {
+    "description": "Title of the sheet shown when the verification service refuses a sign-in link because linking by signing in needs Divine Confirmation, which the person doesn't have. Placeholder until #8278."
+  },
+  "verifyConfirmationSheetSubtitle": "You can still link this account with a proof post.",
+  "@verifyConfirmationSheetSubtitle": {
+    "description": "Text under the title of the sheet shown when a sign-in link is refused for Divine Confirmation. Placeholder until #8278."
+  },
+  "verifyConfirmationSheetUseProof": "Use a proof post",
+  "@verifyConfirmationSheetUseProof": {
+    "description": "Button in the sheet shown when a sign-in link is refused for Divine Confirmation. Drops the sign-in and goes to the proof-post section of the link-an-account screen. Placeholder until #8278."
+  },
   "verifyUnlinkSemanticLabel": "Unlink {platform} account {identity}",
   "@verifyUnlinkSemanticLabel": {
     "description": "Screen reader label for the button that removes a linked account.",
@@ -11825,9 +11913,41 @@
       }
     }
   },
+  "verifyLinkNeedsConfirmationSemanticLabel": "Link your {platform} account. Signing in needs Divine Confirmation",
+  "@verifyLinkNeedsConfirmationSemanticLabel": {
+    "description": "Screen reader label for a row that opens the flow for linking one platform, when linking it by signing in needs Divine Confirmation the user lacks. Placeholder until #8278.",
+    "placeholders": {
+      "platform": {
+        "type": "String",
+        "example": "Bluesky"
+      }
+    }
+  },
   "verifyOneTapBadge": "One tap",
   "@verifyOneTapBadge": {
     "description": "Small marker on platforms that can be linked by signing in, without posting a proof."
+  },
+  "verifyOneTapWithConfirmationBadge": "One tap with Confirmation",
+  "@verifyOneTapWithConfirmationBadge": {
+    "description": "Small marker on a platform that can be linked by signing in, when that needs Divine Confirmation the person does not have. Placeholder until #8278."
+  },
+  "verifyRenewConfirmation": "Renew Confirmation",
+  "@verifyRenewConfirmation": {
+    "description": "Button on a linked account that needs Divine Confirmation to count as verified. Opens the Divine Confirmation screen. Placeholder until #8278."
+  },
+  "verifyRenewConfirmationSemanticLabel": "Renew Divine Confirmation to restore {platform} account {identity}",
+  "@verifyRenewConfirmationSemanticLabel": {
+    "description": "Screen reader label for the button that opens the Divine Confirmation screen from a linked account that needs it. Placeholder until #8278.",
+    "placeholders": {
+      "platform": {
+        "type": "String",
+        "example": "Twitter / X"
+      },
+      "identity": {
+        "type": "String",
+        "example": "jack"
+      }
+    }
   },
   "verifyConnectSignInLifetime": "Sign-in links last {days, plural, =1{{days} day} other{{days} days}}. After that, sign in again to keep the link.",
   "@verifyConnectSignInLifetime": {
@@ -11968,6 +12088,18 @@
   "verifyErrorPublishFailed": "Verified, but no relay took the update. Try again.",
   "@verifyErrorPublishFailed": {
     "description": "Error shown when the account verified but no relay accepted the identity event carrying the link."
+  },
+  "verifyErrorConfirmationRequired": "Linking by signing in needs Divine Confirmation. You can still link with a proof post.",
+  "@verifyErrorConfirmationRequired": {
+    "description": "Error shown when the verification service refused a sign-in link because linking by signing in needs Divine Confirmation, which the person doesn't have. A proof post can still link the account. Placeholder until #8278."
+  },
+  "verifyErrorConfirmationUnavailable": "Couldn't check Divine Confirmation right now. Try again in a few minutes.",
+  "@verifyErrorConfirmationUnavailable": {
+    "description": "Error shown when the verification service couldn't check Divine Confirmation while confirming a sign-in link. The sign-in is kept, so the person can try linking again later. Placeholder until #8278."
+  },
+  "verifyErrorConfirmationPending": "This can take a minute after buying. Try again shortly.",
+  "@verifyErrorConfirmationPending": {
+    "description": "Error shown when a sign-in link is refused for Divine Confirmation right after the app read that the person has it, as happens just after buying it. The sign-in is kept to try again. Placeholder until #8278."
   },
   "verifyErrorOauthUnavailable": "One-tap sign-in isn't set up for this one yet. Use the proof post below.",
   "@verifyErrorOauthUnavailable": {
