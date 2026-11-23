@@ -1,0 +1,116 @@
+# ABOUTME: Validates the desktop editor package and its owned media client.
+# ABOUTME: Exercises actual codec output and native process ownership on Linux and Windows.
+name: Divine Desktop Video Editor CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/packages/divine_desktop_video_editor/**"
+      - ".github/workflows/divine_desktop_video_editor.yaml"
+      - "mobile/pubspec.lock"
+      - "mobile/mise.toml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "mobile/packages/divine_desktop_video_editor/**"
+      - ".github/workflows/divine_desktop_video_editor.yaml"
+      - "mobile/pubspec.lock"
+      - "mobile/mise.toml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v2
+    with:
+      run_bloc_lint: true
+      working_directory: "mobile/packages/divine_desktop_video_editor"
+      flutter_version: "3.47.9"
+      min_coverage: 100
+
+  native-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: mobile/packages/divine_desktop_video_editor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.9"
+          channel: stable
+          cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install native development and independent decoder tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libges-1.0-dev libjson-glib-dev gstreamer1.0-libav gstreamer1.0-plugins-bad gstreamer1.0-tools ffmpeg xvfb xauth
+      - name: Build the actual media helper
+        run: |
+          cmake -G Ninja -DCMAKE_CXX_COMPILER=clang++ -S native -B "$RUNNER_TEMP/divine-media-worker"
+          cmake --build "$RUNNER_TEMP/divine-media-worker"
+      - name: Decode and check real synthetic exports
+        run: python native/tests/worker_test.py "$RUNNER_TEMP/divine-media-worker/divine_media_worker"
+      - name: Verify Dart transport against actual native media
+        run: python tool/native_harness.py --platform linux --worker "$RUNNER_TEMP/divine-media-worker/divine_media_worker"
+      - name: Verify installed Flutter plugin and owned process startup
+        run: python tool/native_harness.py --platform linux
+
+  native-windows:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: mobile/packages/divine_desktop_video_editor
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.9"
+          channel: stable
+          cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install private pinned GStreamer development SDK
+        run: |
+          $sdk = Join-Path $env:RUNNER_TEMP 'divine-gstreamer-sdk'
+          ./tool/install_gstreamer_windows.ps1 -Destination $sdk
+          "GSTREAMER_1_0_ROOT_MSVC_X86_64=$sdk" >> $env:GITHUB_ENV
+          (Join-Path $sdk 'bin') >> $env:GITHUB_PATH
+      - name: Install independent test decoder
+        run: |
+          choco install ffmpeg --yes --no-progress
+          if ($LASTEXITCODE -ne 0) { throw 'Independent decoder installation failed.' }
+      - name: Build native process lifetime tests
+        run: |
+          $build = Join-Path $env:RUNNER_TEMP 'divine-worker-lifetime'
+          cmake -S windows/tests -B $build -A x64
+          if ($LASTEXITCODE -ne 0) { throw 'Lifetime test configuration failed.' }
+          cmake --build $build --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'Lifetime test build failed.' }
+          ctest --test-dir $build -C Release --output-on-failure
+          if ($LASTEXITCODE -ne 0) { throw 'Native lifetime tests failed.' }
+      - name: Build and decode actual native exports
+        run: |
+          $build = Join-Path $env:RUNNER_TEMP 'divine-media-worker'
+          cmake -S native -B $build -A x64
+          if ($LASTEXITCODE -ne 0) { throw 'Media helper configuration failed.' }
+          cmake --build $build --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'Media helper build failed.' }
+          python native/tests/worker_test.py (Join-Path $build 'Release/divine_media_worker.exe')
+          if ($LASTEXITCODE -ne 0) { throw 'Native media output tests failed.' }
+      - name: Verify Dart transport against actual native media
+        run: python tool/native_harness.py --platform windows --worker (Join-Path $env:RUNNER_TEMP 'divine-media-worker/Release/divine_media_worker.exe')
+      - name: Verify installed Flutter plugin and owned process startup
+        run: python tool/native_harness.py --platform windows
