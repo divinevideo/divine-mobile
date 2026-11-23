@@ -293,9 +293,7 @@ class SoundsOfKind extends _$SoundsOfKind with _LoadsMoreSounds {
       keep: switch (list) {
         SoundListOfKind.newest => repository.withoutLibrarySounds,
         SoundListOfKind.popular => null,
-        SoundListOfKind.followed => _withoutLibraryOrDivineSounds(
-          repository,
-        ),
+        SoundListOfKind.followed => _withoutLibraryOrDivineSounds(repository),
       },
     );
     return PagedSounds.first(await _pager.next());
@@ -773,14 +771,17 @@ _SoundCoverCache _soundCoverCache(Ref ref) {
   ref.watch(currentAuthStateProvider);
   return _SoundCoverCache(
     ref.watch(videosRepositoryProvider),
+    ref.watch(soundsRepositoryProvider),
     viewer: ref.watch(authServiceProvider).currentPublicKeyHex,
   );
 }
 
 class _SoundCoverCache {
-  _SoundCoverCache(this._videos, {required String? viewer}) : _viewer = viewer;
+  _SoundCoverCache(this._videos, this._sounds, {required String? viewer})
+    : _viewer = viewer;
 
   final VideosRepository _videos;
+  final SoundsRepository _sounds;
   final String? _viewer;
   final _covers = <String, SoundCover?>{};
   final _sources = <String, VideoEvent>{};
@@ -793,9 +794,11 @@ class _SoundCoverCache {
   VideoEvent? sourceOf(String reference) => _sources[reference];
 
   /// Covers for [references], keyed like [trendingSoundCovers]. A reference
-  /// looked up before keeps its answer, and the rest are looked up now in
-  /// one batch. When that fails they are left out, unanswered, so their rows
-  /// show no cover and the next lookup asks again.
+  /// looked up before keeps its answer. For the rest, the source videos
+  /// Funnelcake sent along with the sounds are taken as they are, and the
+  /// others are looked up now in one batch. When that fails they are left
+  /// out, unanswered, so their rows show no cover and the next lookup asks
+  /// again.
   ///
   /// A video whose creator lets no one else reuse its sound is marked like a
   /// gone one, so its row is left out rather than refusing a tap.
@@ -807,16 +810,22 @@ class _SoundCoverCache {
     if (unknown.isNotEmpty) {
       // Asked alongside the covers, and about as quick, so rows wait no longer.
       final refusals = _refusedAmong(unknown);
-      try {
-        final (:covers, :sources) = await _sourceVideoCovers(_videos, unknown);
-        _covers.addAll(covers);
-        _sources.addAll(sources);
-      } on Object catch (e) {
-        Log.warning(
-          'Could not look up sound covers: $e',
-          name: 'SoundsProviders',
-          category: LogCategory.api,
-        );
+      final notServed = _takeServedSources(unknown);
+      if (notServed.isNotEmpty) {
+        try {
+          final (:covers, :sources) = await _sourceVideoCovers(
+            _videos,
+            notServed,
+          );
+          _covers.addAll(covers);
+          _sources.addAll(sources);
+        } on Object catch (e) {
+          Log.warning(
+            'Could not look up sound covers: $e',
+            name: 'SoundsProviders',
+            category: LogCategory.api,
+          );
+        }
       }
       _refused.addAll(await refusals);
     }
@@ -825,6 +834,27 @@ class _SoundCoverCache {
         if (_covers.containsKey(reference))
           reference: _refused.contains(reference) ? null : _covers[reference],
     };
+  }
+
+  /// Takes the source videos Funnelcake sent along with the sounds for
+  /// [references], and returns the references it said nothing about.
+  ///
+  /// A video this viewer may not see is gone for them, as when the relays
+  /// return it, and one Funnelcake shows the public none of is gone for
+  /// everyone: neither is looked up on the relays, where it would only come
+  /// back.
+  Set<String> _takeServedSources(Set<String> references) {
+    final served = _sounds.sourceVideosFromIndex(references);
+    for (final MapEntry(key: reference, value: event) in served.entries) {
+      final video = event == null
+          ? null
+          : _videos.visibleVideoFromEvent(event, includeFeedShape: false);
+      _covers[reference] = video == null
+          ? null
+          : SoundCover.fromSourceVideo(video);
+      if (video != null) _sources[reference] = video;
+    }
+    return references.difference(served.keys.toSet());
   }
 
   /// The videos among [references] whose creator lets no one else reuse
@@ -858,10 +888,7 @@ class _SoundCoverCache {
 /// The covers for [references], keyed and marked like [trendingSoundCovers],
 /// and the source videos found for them.
 Future<({Map<String, SoundCover?> covers, Map<String, VideoEvent> sources})>
-_sourceVideoCovers(
-  VideosRepository repository,
-  Set<String> references,
-) async {
+_sourceVideoCovers(VideosRepository repository, Set<String> references) async {
   // The feed's shape preference decides what the feed plays, not where a
   // sound came from, so it does not hide a cover. Every other visibility
   // rule — blocks, deletions, content filters — still applies.

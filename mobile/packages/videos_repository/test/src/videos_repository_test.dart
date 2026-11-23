@@ -9674,6 +9674,46 @@ void main() {
       });
     });
 
+    group('visibleVideoFromEvent', () {
+      final event = _createVideoEvent(
+        id: 'dtag1',
+        pubkey: 'pubkey1',
+        videoUrl: 'https://example.com/video.mp4',
+        createdAt: 1704067200,
+      );
+
+      test('returns the video this viewer may see', () {
+        final video = repository.visibleVideoFromEvent(event);
+
+        expect(video?.id, equals(event.id));
+        expect(video?.vineId, equals('dtag1'));
+        verifyNever(() => mockNostrClient.readEvents(any()));
+      });
+
+      test('leaves out a video whose author the viewer blocked', () {
+        final blocking = VideosRepository(
+          nostrClient: mockNostrClient,
+          blockFilter: (pubkey) => pubkey == 'pubkey1',
+        );
+
+        expect(blocking.visibleVideoFromEvent(event), isNull);
+      });
+
+      test('leaves out an event that is no video', () {
+        final note = Event.fromJson({
+          'id': 'a' * 64,
+          'pubkey': 'pubkey1',
+          'created_at': 1704067200,
+          'kind': EventKind.textNote,
+          'tags': const <List<String>>[],
+          'content': 'hello',
+          'sig': '',
+        });
+
+        expect(repository.visibleVideoFromEvent(note), isNull);
+      });
+    });
+
     group('video event filtering (stage 2)', () {
       test('filters videos with NSFW hashtag when filter is active', () async {
         final nsfwFilter = TestNsfwFilter();

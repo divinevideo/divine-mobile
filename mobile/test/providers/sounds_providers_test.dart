@@ -1753,6 +1753,9 @@ void main() {
         _keepEverySound(mockRepository);
         when(() => mockRepository.initialize()).thenAnswer((_) async {});
         when(() => mockRepository.dispose()).thenAnswer((_) async {});
+        when(
+          () => mockRepository.sourceVideosFromIndex(any()),
+        ).thenReturn(const {});
 
         final container = ProviderContainer(
           overrides: [
@@ -1764,6 +1767,99 @@ void main() {
         addTearDown(container.dispose);
         return container;
       }
+
+      group('with the source videos Funnelcake sent', () {
+        final sentVideo = Event.fromJson({
+          'id': 'f' * 64,
+          'pubkey': authorA,
+          'created_at': 1704067200,
+          'kind': 34236,
+          'tags': [
+            ['d', 'clip-a'],
+          ],
+          'content': '',
+          'sig': 'c' * 128,
+        });
+
+        setUp(() => registerFallbackValue(sentVideo));
+
+        test('takes them and asks the relays only about the rest', () async {
+          final container = buildContainer(
+            soundsFrom(const [
+              verticalReference,
+              normalReference,
+              deletedReference,
+            ]),
+          );
+          when(
+            () => mockRepository.sourceVideosFromIndex(any()),
+          ).thenReturn({verticalReference: sentVideo, deletedReference: null});
+          when(
+            () => videosRepository.visibleVideoFromEvent(
+              any(),
+              includeFeedShape: any(named: 'includeFeedShape'),
+            ),
+          ).thenReturn(sourceVideo(authorA, 'clip-a'));
+          stubBothSourceVideos();
+
+          final covers = await container.read(
+            trendingSoundCoversProvider.future,
+          );
+
+          expect(covers, {
+            verticalReference: const SoundCover(
+              imageUrl: 'https://example.com/clip-a.jpg',
+            ),
+            normalReference: const SoundCover(
+              imageUrl: 'https://example.com/clip-b.jpg',
+            ),
+            deletedReference: null,
+          });
+          verify(
+            () => videosRepository.visibleVideoFromEvent(
+              sentVideo,
+              includeFeedShape: false,
+            ),
+          ).called(1);
+          final asked = verify(
+            () => videosRepository.getVideosFromRelaysByAddressableIds(
+              captureAny(),
+              includeFeedShape: false,
+            ),
+          ).captured;
+          expect(asked, [
+            [normalReference],
+          ]);
+        });
+
+        test('marks one this viewer may not see as gone, without asking '
+            'the relays', () async {
+          final container = buildContainer(
+            soundsFrom(const [verticalReference]),
+          );
+          when(
+            () => mockRepository.sourceVideosFromIndex(any()),
+          ).thenReturn({verticalReference: sentVideo});
+          when(
+            () => videosRepository.visibleVideoFromEvent(
+              any(),
+              includeFeedShape: any(named: 'includeFeedShape'),
+            ),
+          ).thenReturn(null);
+
+          final covers = await container.read(
+            trendingSoundCoversProvider.future,
+          );
+
+          expect(covers, {verticalReference: null});
+          verifyNever(
+            () => videosRepository.getVideosFromRelaysByAddressableIds(
+              any(),
+              includeFeedShape: any(named: 'includeFeedShape'),
+            ),
+          );
+        });
+      });
 
       test(
         'maps each sound to its source video through one lookup',

@@ -1986,7 +1986,7 @@ final class _SoundCoverCacheProvider
   }
 }
 
-String _$_soundCoverCacheHash() => r'1cd87cc3aa83da3ee258ccf49f7e54cbe6a654e6';
+String _$_soundCoverCacheHash() => r'bf097cd52c64878a4e27dec359811538b57d0dc2';
 
 /// Viewer-independent reuse terms for explicit and legacy audio events.
 
