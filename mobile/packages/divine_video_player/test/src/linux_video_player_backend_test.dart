@@ -14,6 +14,156 @@ void main() {
   tearDown(MediaKitLinuxVideoPlayerBackend.resetInitializationForTesting);
 
   group(MediaKitLinuxVideoPlayerBackend, () {
+    testWidgets(
+      'schedules native initialization when replacing on an idle binding',
+      (tester) async {
+        late final MediaKitLinuxVideoPlayerBackend backend;
+        await tester.runAsync(() async {
+          backend = MediaKitLinuxVideoPlayerBackend(
+            mediaKitInitializer: _noop,
+            playerFactory: () => Player(platformPlayer: _FakePlatformPlayer()),
+            videoControllerFactory: (player) {
+              final output = _FakeVideoController();
+              (player.platform! as _FakePlatformPlayer).volumeReady =
+                  output.ready.future;
+              WidgetsBinding.instance.addPostFrameCallback(
+                (_) => output.ready.complete(),
+              );
+              return output;
+            },
+            videoControllerReady: (controller) =>
+                (controller as _FakeVideoController).ready.future,
+          );
+        });
+        await tester.runAsync(
+          () => backend.initialize(onStateChanged: (_) {}, onError: (_) {}),
+        );
+        await tester.pump();
+        await tester.runAsync(() async {
+          await backend.setClips([
+            const VideoClip(uri: 'file:///one.mp4', end: Duration(seconds: 4)),
+          ]);
+          await backend.stop();
+        });
+        await tester.pumpAndSettle();
+        expect(tester.binding.hasScheduledFrame, isFalse);
+        late Future<void> replacing;
+        var replaced = false;
+        await tester.runAsync(() async {
+          replacing = backend
+              .setClips([
+                const VideoClip(
+                  uri: 'file:///two.mp4',
+                  end: Duration(seconds: 4),
+                ),
+              ])
+              .then<void>((_) => replaced = true);
+          await pumpEventQueue();
+        });
+        try {
+          expect(replaced, isFalse);
+          expect(tester.binding.hasScheduledFrame, isTrue);
+        } finally {
+          tester.binding.scheduleFrame();
+          await tester.pump();
+          await tester.runAsync(() => replacing);
+          await tester.runAsync(backend.dispose);
+        }
+        expect(replaced, isTrue);
+      },
+    );
+
+    test(
+      'does not probe another clip after disposal during resolution',
+      () async {
+        final first = Completer<Duration>();
+        final entered = Completer<void>();
+        final probed = <String>[];
+        final backend = MediaKitLinuxVideoPlayerBackend(
+          mediaKitInitializer: _noop,
+          playerFactory: () => Player(platformPlayer: _FakePlatformPlayer()),
+          videoControllerFactory: (_) => _FakeVideoController(),
+          videoControllerReady: (controller) =>
+              (controller as _FakeVideoController).ready.future,
+          durationProbe: (uri) {
+            probed.add(uri);
+            if (!entered.isCompleted) entered.complete();
+            return probed.length == 1 ? first.future : Future.value(4.seconds);
+          },
+        );
+        await backend.initialize(onStateChanged: (_) {}, onError: (_) {});
+        final loading = backend.setClips([
+          const VideoClip(uri: 'file:///one.mp4'),
+          const VideoClip(uri: 'file:///two.mp4'),
+        ]);
+        await entered.future;
+
+        await backend.dispose();
+        first.complete(3.seconds);
+        await loading;
+
+        expect(probed, ['file:///one.mp4']);
+      },
+    );
+
+    test('releases an active native duration probe on disposal', () async {
+      final players = <_FakePlatformPlayer>[];
+      final backend = MediaKitLinuxVideoPlayerBackend(
+        mediaKitInitializer: _noop,
+        playerFactory: () {
+          final player = _FakePlatformPlayer();
+          players.add(player);
+          return Player(platformPlayer: player);
+        },
+        videoControllerFactory: (_) => _FakeVideoController(),
+        videoControllerReady: (controller) =>
+            (controller as _FakeVideoController).ready.future,
+      );
+      await backend.initialize(onStateChanged: (_) {}, onError: (_) {});
+      final loading = backend.setClips([
+        const VideoClip(uri: 'file:///one.mp4'),
+      ]);
+      await pumpEventQueue();
+      final probe = players[1];
+      expect(probe.lastOpenedMedia?.uri, endsWith('/one.mp4'));
+
+      await backend.dispose();
+      try {
+        expect(probe.disposeCalls, 1);
+      } finally {
+        if (probe.disposeCalls == 0) {
+          probe.emitState(const PlayerState(duration: Duration(seconds: 4)));
+        }
+        await loading;
+      }
+      expect(probe.disposeCalls, 1);
+    });
+
+    test('uses a duration delivered before native open completes', () async {
+      final mainPlayer = _FakePlatformPlayer();
+      final probe = _FakePlatformPlayer(
+        probeDuration: 6.seconds,
+        durationDuringOpen: true,
+      );
+      var creations = 0;
+      final states = <DivineVideoPlayerState>[];
+      final backend = MediaKitLinuxVideoPlayerBackend(
+        mediaKitInitializer: _noop,
+        playerFactory: () =>
+            Player(platformPlayer: creations++ == 0 ? mainPlayer : probe),
+        videoControllerFactory: (_) => _FakeVideoController(),
+        videoControllerReady: (controller) =>
+            (controller as _FakeVideoController).ready.future,
+      );
+      await backend.initialize(onStateChanged: states.add, onError: (_) {});
+      addTearDown(backend.dispose);
+
+      await backend.setClips([const VideoClip(uri: 'file:///one.mp4')]);
+
+      expect(states.last.duration, 6.seconds);
+      expect(probe.disposeCalls, 1);
+    });
+
     test(
       'releases a retired player once when replacement creation fails',
       () async {
@@ -126,6 +276,11 @@ void main() {
         ]);
         expect(errors, hasLength(2));
         expect(states.last.status, PlaybackStatus.error);
+
+        await backend.setVolume(0.3);
+        await pumpEventQueue();
+        expect(states.last.status, PlaybackStatus.error);
+        expect(states.last.errorMessage, contains('Synthetic output failure'));
 
         await backend.setClips([
           const VideoClip(uri: 'file:///retry.mp4', end: Duration(seconds: 6)),
@@ -437,19 +592,21 @@ void main() {
     ) async {
       final fakeVideoController = _FakeVideoController();
       final emittedStates = <DivineVideoPlayerState>[];
-      final backend = MediaKitLinuxVideoPlayerBackend(
-        mediaKitInitializer: _noop,
-        playerFactory: () => Player(platformPlayer: _FakePlatformPlayer()),
-        videoControllerFactory: (_) => fakeVideoController,
-        videoControllerReady: (controller) =>
-            (controller as _FakeVideoController).ready.future,
-        videoViewBuilder: (_) => const Text('Linux view'),
-      );
-
-      await backend.initialize(
-        onStateChanged: emittedStates.add,
-        onError: (_) {},
-      );
+      late final MediaKitLinuxVideoPlayerBackend backend;
+      await tester.runAsync(() async {
+        backend = MediaKitLinuxVideoPlayerBackend(
+          mediaKitInitializer: _noop,
+          playerFactory: () => Player(platformPlayer: _FakePlatformPlayer()),
+          videoControllerFactory: (_) => fakeVideoController,
+          videoControllerReady: (controller) =>
+              (controller as _FakeVideoController).ready.future,
+          videoViewBuilder: (_) => const Text('Linux view'),
+        );
+        await backend.initialize(
+          onStateChanged: emittedStates.add,
+          onError: (_) {},
+        );
+      });
       await tester.pumpWidget(
         Directionality(
           textDirection: TextDirection.ltr,
@@ -564,20 +721,26 @@ void main() {
       await backend.initialize(onStateChanged: (_) {}, onError: (_) {});
 
       Object? error;
-      fakeAsync((async) {
-        unawaited(
-          backend
-              .setClips([const VideoClip(uri: 'file:///clip.mp4')])
-              .catchError((Object caughtError) => error = caughtError),
-        );
+      final async = FakeAsync()
+        ..run((async) {
+          unawaited(
+            backend
+                .setClips([const VideoClip(uri: 'file:///clip.mp4')])
+                .catchError((Object caughtError) => error = caughtError),
+          );
 
-        async
-          ..elapse(const Duration(seconds: 11))
-          ..flushMicrotasks();
-      });
+          async
+            ..elapse(const Duration(seconds: 11))
+            ..flushMicrotasks();
+        });
+
+      await pumpEventQueue();
+      async.flushMicrotasks();
 
       expect(error, isA<TimeoutException>());
       expect(probePlayer.lastOpenedMedia?.uri, endsWith('clip.mp4'));
+      expect(probePlayer.disposeCalls, 1);
+      await backend.dispose();
     });
 
     test(
@@ -932,11 +1095,15 @@ class _FakeVideoController {
 }
 
 class _FakePlatformPlayer extends PlatformPlayer {
-  _FakePlatformPlayer({this.probeDuration, this.emitErrorOnDispose = false})
-    : super(configuration: const PlayerConfiguration());
+  _FakePlatformPlayer({
+    this.probeDuration,
+    this.emitErrorOnDispose = false,
+    this.durationDuringOpen = false,
+  }) : super(configuration: const PlayerConfiguration());
 
   final Duration? probeDuration;
   final bool emitErrorOnDispose;
+  final bool durationDuringOpen;
 
   Playlist? lastOpenedPlaylist;
   Media? lastOpenedMedia;
@@ -951,12 +1118,15 @@ class _FakePlatformPlayer extends PlatformPlayer {
   int disposeCalls = 0;
   int setRateCalls = 0;
   StateError? volumeError;
+  Future<void>? volumeReady;
+  Timer? _durationTimer;
   StateError? rateError;
   Completer<void>? disposalGate;
   final disposalStarted = Completer<void>();
 
   @override
   Future<void> dispose() async {
+    _durationTimer?.cancel();
     disposeCalls++;
     if (!disposalStarted.isCompleted) disposalStarted.complete();
     await disposalGate?.future;
@@ -987,13 +1157,16 @@ class _FakePlatformPlayer extends PlatformPlayer {
     if (playable is Media) {
       lastOpenedMedia = playable;
       if (probeDuration != null) {
-        state = state.copyWith(duration: probeDuration);
-        unawaited(
-          Future<void>.delayed(
-            Duration.zero,
-            () => durationController.add(probeDuration!),
-          ),
-        );
+        if (durationDuringOpen) {
+          state = state.copyWith(duration: probeDuration);
+          durationController.add(probeDuration!);
+          await pumpEventQueue();
+          return;
+        }
+        _durationTimer = Timer(Duration.zero, () {
+          state = state.copyWith(duration: probeDuration);
+          durationController.add(probeDuration!);
+        });
       }
     }
   }
@@ -1067,6 +1240,7 @@ class _FakePlatformPlayer extends PlatformPlayer {
 
   @override
   Future<void> setVolume(double volume) async {
+    await volumeReady;
     if (volumeError case final error?) throw error;
     lastVolume = volume;
     state = state.copyWith(volume: volume);

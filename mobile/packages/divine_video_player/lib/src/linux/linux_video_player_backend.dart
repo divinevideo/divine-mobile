@@ -3,9 +3,11 @@ import 'dart:io' show Platform;
 import 'dart:math' as math;
 
 import 'package:divine_video_player/src/audio_track.dart' as divine;
+import 'package:divine_video_player/src/desktop/desktop_video_configuration.dart';
 import 'package:divine_video_player/src/desktop/desktop_video_frame_ready.dart';
 import 'package:divine_video_player/src/video_clip.dart';
 import 'package:divine_video_player/src/video_player_state.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart' as media_kit;
@@ -108,6 +110,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   final _clipSpeeds = <double>[];
   final _clipDurations = <Duration>[];
   final _clipOffsets = <Duration>[];
+  final _durationProbes = <_DurationProbe>{};
 
   void Function(DivineVideoPlayerState state)? _onStateChanged;
   void Function(Object error)? _onError;
@@ -159,7 +162,9 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     // per-clip speed so _clipDurations (and therefore _clipOffsets and
     // _totalDuration) are in wall-clock (playback) time, consistent with
     // the global timeline coordinate space.
-    final sourceDurations = await _resolveClipDurations(nextClips);
+    await _cancelDurationProbes();
+    if (_disposed || generation != _loadGeneration) return;
+    final sourceDurations = await _resolveClipDurations(nextClips, generation);
     if (_disposed || generation != _loadGeneration) return;
     final nextDurations = <Duration>[];
     final nextOffsets = <Duration>[];
@@ -266,6 +271,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     _ensureReady();
     _loadGeneration++;
     _activeLoadGeneration = null;
+    await _cancelDurationProbes();
     await _enqueue(() async {
       await _player.stop();
       _hasLoadedMedia = false;
@@ -384,6 +390,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     if (_disposed) return;
     _disposed = true;
     _loadGeneration++;
+    await _cancelDurationProbes();
     await _mutations;
     await _retirePlayer();
   }
@@ -406,6 +413,9 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     _player = _playerFactory();
     _ownsPlayer = true;
     _videoController = _videoControllerFactory(_player);
+    // media_kit initializes the native output in a post-frame callback, but
+    // does not request that frame. Native commands can await that callback.
+    WidgetsBinding.instance.ensureVisualUpdate();
     _playerHasOpenedMedia = false;
     _outputReady = false;
     _outputError = null;
@@ -503,9 +513,13 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
     ]);
   }
 
-  Future<List<Duration>> _resolveClipDurations(List<VideoClip> clips) async {
+  Future<List<Duration>> _resolveClipDurations(
+    List<VideoClip> clips,
+    int generation,
+  ) async {
     final durations = <Duration>[];
     for (final clip in clips) {
+      if (_disposed || generation != _loadGeneration) return [];
       if (clip.end != null) {
         if (clip.end! < clip.start) {
           throw ArgumentError.value(
@@ -519,6 +533,7 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
       }
 
       final sourceDuration = await (_durationProbe ?? _probeDuration)(clip.uri);
+      if (_disposed || generation != _loadGeneration) return [];
       if (clip.start > sourceDuration) {
         throw ArgumentError.value(
           clip.start,
@@ -532,22 +547,20 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
   }
 
   Future<Duration> _probeDuration(String uri) async {
-    final probe = _playerFactory();
+    final probe = _DurationProbe(_playerFactory());
+    _durationProbes.add(probe);
     try {
-      await probe.open(Media(uri), play: false);
-      final duration = await probe.stream.duration
-          .firstWhere(
-            (value) => value > Duration.zero,
-          )
-          .timeout(
-            const Duration(seconds: 10),
-            onTimeout: () =>
-                throw TimeoutException('Could not probe duration for $uri'),
-          );
-      return duration;
+      return await probe.run(uri);
     } finally {
-      await probe.dispose();
+      _durationProbes.remove(probe);
+      await probe.close();
     }
+  }
+
+  Future<void> _cancelDurationProbes() async {
+    final probes = _durationProbes.toList();
+    _durationProbes.clear();
+    await Future.wait(probes.map((probe) => probe.close(cancel: true)));
   }
 
   // coverage:ignore-start
@@ -581,13 +594,11 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
       );
       return const _DisabledVideoController();
     }
-    // Hardware-accelerated EGL rendering crashes on virtual GPUs (QEMU,
-    // VirtualBox). Software rendering is reliable across all Linux setups.
+    // Keep Linux's virtual-GPU workaround without forcing Windows onto its
+    // size-limited software output.
     return media_kit.VideoController(
       player,
-      configuration: const media_kit.VideoControllerConfiguration(
-        enableHardwareAcceleration: false,
-      ),
+      configuration: desktopVideoConfiguration(defaultTargetPlatform),
     );
   }
 
@@ -657,6 +668,10 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
 
   void _refreshState() {
     if (!_initialized || _disposed || _changingPlayer) return;
+    if (_outputError != null) {
+      _reportOutputReady();
+      return;
+    }
 
     final playerState = _player.state;
     final hasClips = _clips.isNotEmpty;
@@ -779,4 +794,56 @@ class MediaKitLinuxVideoPlayerBackend implements LinuxVideoPlayerBackend {
 /// the backend stay non-nullable while skipping native GL setup.
 class _DisabledVideoController {
   const _DisabledVideoController();
+}
+
+/// Owns a temporary player and cancels unfinished duration reads.
+class _DurationProbe {
+  _DurationProbe(this.player);
+
+  final Player player;
+  final _duration = Completer<Duration>();
+  final _cancelled = Completer<void>();
+  StreamSubscription<Duration>? _subscription;
+  Timer? _timeout;
+  Future<void>? _closing;
+
+  Future<Duration> run(String uri) async {
+    void receive(Duration value) {
+      if (value > Duration.zero && !_duration.isCompleted) {
+        _duration.complete(value);
+      }
+    }
+
+    void fail(Object error, StackTrace stackTrace) {
+      if (!_duration.isCompleted) _duration.completeError(error, stackTrace);
+    }
+
+    _subscription = player.stream.duration.listen(receive, onError: fail);
+    _timeout = Timer(const Duration(seconds: 10), () {
+      fail(
+        TimeoutException('Could not probe duration for $uri'),
+        StackTrace.current,
+      );
+    });
+    final opening = Future<void>.sync(
+      () => player.open(Media(uri), play: false),
+    ).then<void>((_) => receive(player.state.duration));
+    await Future.wait<void>([
+      Future.any<void>([opening, _cancelled.future]),
+      _duration.future.then<void>((_) {}),
+    ], eagerError: true);
+    return _duration.future;
+  }
+
+  Future<void> close({bool cancel = false}) {
+    if (cancel && !_cancelled.isCompleted) {
+      _cancelled.complete();
+      if (!_duration.isCompleted) _duration.complete(Duration.zero);
+    }
+    return _closing ??= () async {
+      _timeout?.cancel();
+      await _subscription?.cancel();
+      await player.dispose();
+    }();
+  }
 }
