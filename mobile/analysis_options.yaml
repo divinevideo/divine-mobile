@@ -27,6 +27,13 @@ analyzer:
     inference_failure_on_function_return_type: ignore
     inference_failure_on_instance_creation: ignore
     inference_failure_on_untyped_parameter: ignore
+    # Every finding is a DI port with two to six implementors, not a function
+    # in class clothing. The suggested fix — a top-level function — removes the
+    # named type that `implements` clauses and test doubles hang off. Turned
+    # off here rather than under `linter: rules:` because the rule is
+    # deprecated: naming it there draws a `deprecated_lint` warning, and
+    # very_good_analysis 10.2.0 still enables it (11.0.0 no longer does).
+    one_member_abstracts: ignore
     prefer_int_literals: ignore
     sort_constructors_first: ignore
     strict_raw_type: ignore
@@ -43,10 +50,6 @@ linter:
     # only four that map to a tab. Enumerating the rest would add ~330 lines of
     # dead cases across `main.dart`, `app_shell.dart` and the back handler.
     no_default_cases: false
-    # Every finding is a DI port with two to six implementors, not a function
-    # in class clothing. The suggested fix — a top-level function — removes the
-    # named type that `implements` clauses and test doubles hang off.
-    one_member_abstracts: false
     # The repo convention is named-parameter constructor injection into private
     # fields (~385 app sites), so this conflicts with prescribed DI style.
     prefer_initializing_formals: false
