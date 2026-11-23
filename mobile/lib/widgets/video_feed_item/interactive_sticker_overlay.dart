@@ -183,7 +183,8 @@ class _ResponsesSticker extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = context.watch<StickerResponsesCubit>().state;
-    if (data.isLeftOutOfFrames && !state.isShown) {
+    if ((data.isLeftOutOfFrames || state.audience.isRestricted) &&
+        !state.isShown) {
       return const SizedBox.shrink();
     }
     final responses = state.status == StickerResponsesStatus.loaded
@@ -217,7 +218,7 @@ class _ResponsesSticker extends ConsumerWidget {
       onJoin: isAddYours && state.chainRoot != null && state.canAnswer
           ? () {
               onInteraction?.call();
-              _join(context, ref, chainRoot: state.chainRoot!);
+              _join(context, ref, state);
             }
           : null,
       // Anyone who may not join is invited to watch the series instead.
@@ -229,9 +230,8 @@ class _ResponsesSticker extends ConsumerWidget {
     );
   }
 
-  /// Opens the camera to answer the Add yours, joining the chain starting at
-  /// [chainRoot].
-  void _join(BuildContext context, WidgetRef ref, {required String chainRoot}) {
+  /// Opens the camera to answer the Add yours with the resolved audience.
+  void _join(BuildContext context, WidgetRef ref, StickerResponsesState state) {
     if (!isSignedIn) {
       _showSnackbar(context, context.l10n.videoStickerAddYoursSignIn);
       return;
@@ -241,10 +241,10 @@ class _ResponsesSticker extends ConsumerWidget {
     final notifier = ref.read(addYoursContextProvider.notifier)
       ..set(
         AddYoursContext(
-          chainRoot: chainRoot,
+          chainRoot: state.chainRoot!,
           prompt: data.prompt ?? '',
           hashtag: hashtag,
-          audience: data.audience,
+          audience: state.audience,
         ),
       );
     runDetached(

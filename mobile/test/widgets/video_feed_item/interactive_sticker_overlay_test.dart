@@ -560,6 +560,35 @@ void main() {
           expect(addYoursWhileOpen?.chainRoot, equals(_video.addressableId));
         });
 
+        testWidgets('copies the resolved chain audience into a new answer', (
+          tester,
+        ) async {
+          final root = VideoEvent(
+            id: 'a' * 64,
+            pubkey: _viewer,
+            createdAt: 1778120201,
+            content: '',
+            timestamp: DateTime.utc(2026),
+            vineId: 'first',
+            addressableDTag: 'first',
+            eventKind: 34236,
+            nostrEventTags: [restricted(addYours).toTag()],
+          );
+          when(
+            () => repository.chainStart(first, hashtag: 'desksetup'),
+          ).thenAnswer((_) async => AddYoursChainStart.starts);
+          when(() => repository.fetchVideoAt(first))
+              .thenAnswer((_) async => root);
+          await pump(tester, answer);
+          await tester.pump();
+
+          await tester.tap(find.text(l10n(tester).videoStickerAddYoursButton));
+          await tester.pumpAndSettle();
+
+          expect(addYoursWhileOpen?.chainRoot, first);
+          expect(addYoursWhileOpen?.audience, VideoStickerAudience.following);
+        });
+
         testWidgets('shows who joined but opens no camera while a relay that '
             'did not answer may hold that video', (tester) async {
           when(

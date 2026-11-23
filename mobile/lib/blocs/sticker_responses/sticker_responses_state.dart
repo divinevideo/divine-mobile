@@ -25,6 +25,7 @@ class StickerResponsesState extends Equatable {
     this.curation = const RepliesCuration(),
     this.chainRoot,
     this.canAnswer = true,
+    this.audience = VideoStickerAudience.everyone,
     this.series = const [],
   });
 
@@ -54,6 +55,9 @@ class StickerResponsesState extends Equatable {
   /// sticker, when it is known once the responses are read.
   final bool canAnswer;
 
+  /// The audience resolved when loading the sticker's answers.
+  final VideoStickerAudience audience;
+
   /// The parts of an Add yours only its creator may answer, in the order
   /// they were posted: the video the series starts at, then each answer, the
   /// video the sticker is on among them. Empty for any other sticker, whose
@@ -82,6 +86,7 @@ class StickerResponsesState extends Equatable {
     curation: curation ?? this.curation,
     chainRoot: chainRoot ?? this.chainRoot,
     canAnswer: canAnswer ?? this.canAnswer,
+    audience: audience,
     series: series ?? this.series,
   );
 
@@ -94,6 +99,7 @@ class StickerResponsesState extends Equatable {
     curation,
     chainRoot,
     canAnswer,
+    audience,
     series,
   ];
 }

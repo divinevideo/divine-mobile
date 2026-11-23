@@ -304,6 +304,7 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
         curation: curation,
         chainRoot: chainRoot,
         canAnswer: answerers.admits(_viewer),
+        audience: answerers.audience,
         series: _isSeries(answerers.audience)
             ? _seriesOf(
                 seriesStart == null ? null : _filter([seriesStart]).firstOrNull,
