@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:camera_platform_interface/camera_platform_interface.dart'
     as capture;
 import 'package:divine_camera/divine_camera_platform_interface.dart';
+import 'package:divine_camera/src/desktop/desktop_camera_backend.dart';
 import 'package:divine_camera/src/desktop/desktop_video_file_inspector.dart';
 import 'package:divine_camera/src/models/camera_lens.dart';
 import 'package:divine_camera/src/models/camera_state.dart';

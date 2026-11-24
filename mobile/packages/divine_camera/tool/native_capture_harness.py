@@ -22,9 +22,15 @@ import 'package:divine_camera/src/desktop/desktop_camera_backend.dart';
 
 const channel = MethodChannel('video.divine/desktop_capture');
 final previewFrames = <int, Completer<Map>>{};
+final cameraErrors = <int, Completer<String>>{};
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   channel.setMethodCallHandler((call) async {
+    if (call.method == 'cameraError' && call.arguments is Map) {
+      final error = call.arguments as Map;
+      final pending = cameraErrors[error['cameraId']];
+      if (pending != null && !pending.isCompleted) pending.complete(error['description'] as String);
+    }
     if (call.method == 'imageStreamFrame' && call.arguments is Map) {
       final frame = call.arguments as Map;
       final pending = previewFrames[frame['cameraId']];
@@ -65,7 +71,7 @@ Future<void> main() async {
     try {
       created = await channel.invokeMapMethod<String, Object?>('create', {
         'cameraName': device['name'], 'resolutionPreset': 1,
-        'enableAudio': audio, 'fps': 30, 'mirrorOutput': Platform.environment['DIVINE_CAPTURE_CASE'] == 'mirrored-video',
+        'enableAudio': audio, 'fps': 30, 'mirrorOutput': (Platform.environment['DIVINE_CAPTURE_CASE'] ?? '').startsWith('mirror'),
       });
     } on PlatformException catch (error) {
       if (testCase != 'texture-unavailable' || error.code != 'texture_registration_failed') rethrow;
@@ -75,11 +81,34 @@ Future<void> main() async {
     }
     if (testCase == 'texture-unavailable') throw StateError('Texture allocation failure was ignored');
     id = created!['cameraId']! as int;
+    cameraErrors[id] = Completer<String>();
     setStage('initialization');
     Map<String, Object?>? initialized;
     try {
       initialized = await channel.invokeMapMethod<String, Object?>('initialize', {'cameraId': id});
     } on PlatformException catch (error) {
+      if (['mirror-timeout', 'mirror-error', 'mirror-status', 'mirror-start-timeout', 'mirror-frame-before-start-timeout'].contains(testCase)) {
+        if (error.code != (testCase == 'mirror-error' ? 'disposed' : 'initialization_failed')) rethrow;
+        final injected = await channel.invokeMethod<int>('testMirrorFailure', {'cameraId': id});
+        final expectedInjection = {'mirror-timeout': 1, 'mirror-error': 2, 'mirror-status': 3, 'mirror-start-timeout': 4, 'mirror-frame-before-start-timeout': 6}[testCase];
+        if (injected != expectedInjection) throw StateError('Real mirror acknowledgement did not reach the intended failure');
+        final starts = await channel.invokeMethod<int>('testPreviewStarts', {'cameraId': id});
+        if (starts != (['mirror-start-timeout', 'mirror-frame-before-start-timeout'].contains(testCase) ? 1 : 0)) throw StateError('Unexpected preview startup after terminal failure');
+        if (await channel.invokeMethod<int>('testNativePreviewStarts', {'cameraId': id}) != (testCase == 'mirror-frame-before-start-timeout' ? 1 : 0)) throw StateError('Terminal failure issued a native preview start');
+        if (await channel.invokeMethod<bool>('testCameraRunning', {'cameraId': id}) != false) throw StateError('Failed camera became ready');
+        var retryRejected = false;
+        try {
+          await channel.invokeMethod<void>('initialize', {'cameraId': id});
+        } on PlatformException catch (retry) {
+          retryRejected = retry.code == 'already_initialized';
+        }
+        if (!retryRejected) throw StateError('Failed camera session was reused');
+        await channel.invokeMethod<void>('dispose', {'cameraId': id});
+        id = null;
+        await verifySourcesReleased();
+        stdout.writeln('DIVINE_CAPTURE_PASS');
+        exit(0);
+      }
       if (testCase != 'startup-failure' || error.code != 'initialization_failed') rethrow;
       await channel.invokeMethod<void>('dispose', {'cameraId': id});
       id = null;
@@ -90,9 +119,27 @@ Future<void> main() async {
       stdout.writeln('DIVINE_CAPTURE_PASS');
       exit(0);
     }
+    if (['mirror-timeout', 'mirror-error', 'mirror-status', 'mirror-start-timeout', 'mirror-frame-before-start-timeout'].contains(testCase)) throw StateError('Terminal mirror failure was ignored');
     if (testCase == 'startup-failure') throw StateError('Pipeline startup failure was ignored');
     if ((initialized!['previewWidth']! as num) <= 0) throw StateError('No preview');
+    if (testCase == 'mirror-no-frames') {
+      final description = await cameraErrors[id]!.future.timeout(const Duration(seconds: 15));
+      if (description != 'Camera started but no frames were received') throw StateError('First-frame watchdog did not report the missing sample');
+      if (await channel.invokeMethod<int>('testMirrorFailure', {'cameraId': id}) != 5) throw StateError('Native preview did not withhold a real frame');
+      if (await channel.invokeMethod<int>('testPreviewStarts', {'cameraId': id}) != 1) throw StateError('Preview did not start');
+      if (await channel.invokeMethod<int>('testNativePreviewStarts', {'cameraId': id}) != 1) throw StateError('Native preview did not start');
+      if (await channel.invokeMethod<bool>('testCameraRunning', {'cameraId': id}) != false) throw StateError('Missing-frame failure retained readiness');
+      await channel.invokeMethod<void>('dispose', {'cameraId': id});
+      id = null;
+      await verifySourcesReleased();
+      stdout.writeln('DIVINE_CAPTURE_PASS');
+      exit(0);
+    }
     await verifyFirstPreviewFrame(id);
+    if (testCase == 'mirror-valid-frame-deadline') {
+      await channel.invokeMethod<void>('testInitializationDeadline', {'cameraId': id});
+      if (await channel.invokeMethod<bool>('testCameraRunning', {'cameraId': id}) != true) throw StateError('A valid frame was retired by the deadline');
+    }
     setStage('independent-output-orientation');
     final capabilities = await channel.invokeMapMethod<String, Object?>('getPlatformCapabilities');
     if (capabilities?['supportsMirrorControl'] != false) {
@@ -238,7 +285,7 @@ Future<void> verifyConcurrentStop(Map<Object?, Object?> device, bool audio) asyn
   for (var index = 0; index < 5; index++) {
     stdout.writeln('DIVINE_CAPTURE_CYCLE $index');
     final created = await channel.invokeMapMethod<String, Object?>('create', {
-      'cameraName': device['name'], 'resolutionPreset': 1, 'enableAudio': audio, 'fps': 30, 'mirrorOutput': Platform.environment['DIVINE_CAPTURE_CASE'] == 'mirrored-video',
+      'cameraName': device['name'], 'resolutionPreset': 1, 'enableAudio': audio, 'fps': 30, 'mirrorOutput': (Platform.environment['DIVINE_CAPTURE_CASE'] ?? '').startsWith('mirror'),
     });
     final id = created!['cameraId']! as int;
     await channel.invokeMethod<Object?>('initialize', {'cameraId': id});
@@ -460,7 +507,7 @@ def require_capture_success(result, platform, capture_case, command, app, env):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--platform', choices=['linux', 'windows'], required=True)
-    parser.add_argument('--case', choices=['video', 'audio', 'audio-unavailable', 'texture-unavailable', 'startup-failure', 'mirrored-video'], default='video')
+    parser.add_argument('--case', choices=['video', 'audio', 'audio-unavailable', 'texture-unavailable', 'startup-failure', 'mirrored-video', 'mirror-timeout', 'mirror-error', 'mirror-status', 'mirror-start-timeout', 'mirror-no-frames', 'mirror-frame-before-start-timeout', 'mirror-valid-frame-deadline'], default='video')
     parser.add_argument('--workspace', type=Path, help='Optional private incremental build directory.')
     args = parser.parse_args()
     flutter = ['flutter']
@@ -551,6 +598,14 @@ dependencies:
             env['DIVINE_CAPTURE_TEST_AUDIO_UNAVAILABLE'] = '1'
         if args.case == 'startup-failure':
             env['DIVINE_CAPTURE_TEST_PIPELINE_START_FAILURE'] = '1'
+        if args.case in ['mirror-timeout', 'mirror-error', 'mirror-status']:
+            env['DIVINE_CAPTURE_TEST_MIRROR_ACK_FAILURE'] = args.case.removeprefix('mirror-')
+        if args.case == 'mirror-start-timeout':
+            env['DIVINE_CAPTURE_TEST_PREVIEW_DEADLINE'] = '1'
+        if args.case == 'mirror-frame-before-start-timeout':
+            env['DIVINE_CAPTURE_TEST_EARLY_FRAME_DEADLINE'] = '1'
+        if args.case == 'mirror-no-frames':
+            env['DIVINE_CAPTURE_TEST_NO_PREVIEW_FRAMES'] = '1'
         if args.case == 'texture-unavailable':
             env['DIVINE_CAPTURE_TEST_TEXTURE_FAILURE'] = '1'
         if args.platform == 'linux':
@@ -570,7 +625,7 @@ dependencies:
                             print(line, flush=True)
             raise RuntimeError('Native capture did not release before the harness deadline') from None
         for line in (result.stdout + result.stderr).splitlines():
-            status = re.search(r'capture-status (create|initialize|error|record_start|record_stop|other|event_type|event_status|negotiate|preview):(0x[0-9a-fA-F]+)', line)
+            status = re.search(r'capture-status (create|initialize|error|record_start|record_stop|other|event_type|event_status|negotiate|preview|mirror_effect):(0x[0-9a-fA-F]+)', line)
             if status:
                 print('DIVINE_CAPTURE_NATIVE_STATUS', status.group(1), status.group(2), flush=True)
             if 'capture-stage timeout' in line:
@@ -578,7 +633,7 @@ dependencies:
             if line.startswith('DIVINE_CAPTURE_') or 'GStreamer error:' in line or 'RecordHandler::Setup failed:' in line or 'Audio setup failed:' in line:
                 print(line, flush=True)
         require_capture_success(result, args.platform, args.case, command, app, env)
-        if args.case in ['audio-unavailable', 'texture-unavailable', 'startup-failure']:
+        if args.case in ['audio-unavailable', 'texture-unavailable', 'startup-failure', 'mirror-timeout', 'mirror-error', 'mirror-status', 'mirror-start-timeout', 'mirror-no-frames', 'mirror-frame-before-start-timeout']:
             print('DIVINE_CAPTURE_EXPECTED_FAILURE_PASS', flush=True)
             return
         # FFmpeg is an independent test oracle, never a production dependency.
@@ -596,7 +651,7 @@ dependencies:
             width, height = video['width'], video['height']
             left = (height // 10 * width + width // 14) * 3
             right = (height // 10 * width + width * 13 // 14) * 3
-            if args.case == 'mirrored-video':
+            if args.case in ['mirrored-video', 'mirror-valid-frame-deadline']:
                 if args.platform == 'linux':
                     if frame[right] < frame[left] + 120:
                         raise RuntimeError('Saved capture did not honor mirrored output')

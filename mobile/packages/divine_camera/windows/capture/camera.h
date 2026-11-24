@@ -1,6 +1,7 @@
 #pragma once
 
 #include "capture_work.h"
+#include "capture_initialization.h"
 
 #include <flutter/encodable_value.h>
 #include <flutter/method_channel.h>
@@ -59,6 +60,14 @@ class Camera : public std::enable_shared_from_this<Camera> {
 
   int64_t RegisterTexture();
 
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+  int PreviewStartsForTest() const { return preview_starts_for_test_.load(); }
+  int NativePreviewStartsForTest() const { return native_preview_starts_for_test_.load(); }
+  int MirrorFailureForTest() const { return mirror_failure_for_test_.load(); }
+  bool RunningForTest() const;
+  void InitializationDeadlineForTest() { HandleInitializationDeadline(); }
+#endif
+
   void Initialize(
       std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
 
@@ -101,8 +110,12 @@ class Camera : public std::enable_shared_from_this<Camera> {
   HRESULT StartPreviewInternal();
   HRESULT ConfigureOutputMirroring();
   void FinishInitialization();
+  void HandleInitializationDeadline();
+  void CancelInitializationDeadline();
+  bool HasPendingInitialization();
+  void RetireFailedPreview();
 
-  void CompleteInit(bool success, const std::string& error,
+  bool CompleteInit(bool success, const std::string& error,
                     int width = 0, int height = 0);
   void FailAllPendingResults(const std::string& error);
 
@@ -125,6 +138,13 @@ class Camera : public std::enable_shared_from_this<Camera> {
   flutter::MethodChannel<flutter::EncodableValue>*     channel_;
   PlatformTaskPoster                                   platform_task_poster_;
   CaptureWorkBarrier                                  initialization_work_;
+  CaptureInitializationAttempt                         initialization_attempt_;
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+  std::atomic<int> preview_starts_for_test_{0};
+  std::atomic<int> native_preview_starts_for_test_{0};
+  std::atomic<int> mirror_failure_for_test_{0};
+  std::condition_variable frame_ready_for_test_;
+#endif
   CaptureWorkBarrier                                  photo_writers_;
   std::shared_ptr<CameraTexture>                       texture_;
   // Guards texture_ against concurrent teardown: preview samples arrive on an

@@ -157,6 +157,21 @@ void CameraDesktopPlugin::HandleMethodCall(
   const flutter::EncodableMap empty_args;
   const flutter::EncodableMap& safe_args = args ? *args : empty_args;
 
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+  if (method == "testPreviewStarts" || method == "testNativePreviewStarts" || method == "testMirrorFailure" || method == "testCameraRunning" || method == "testInitializationDeadline") {
+    auto camera = FindCamera(safe_args, result.get());
+    if (camera) {
+      if (method == "testInitializationDeadline") {
+        camera->InitializationDeadlineForTest();
+        result->Success();
+      } else if (method == "testCameraRunning") result->Success(flutter::EncodableValue(camera->RunningForTest()));
+      else result->Success(flutter::EncodableValue(method == "testPreviewStarts"
+          ? camera->PreviewStartsForTest() : method == "testNativePreviewStarts"
+          ? camera->NativePreviewStartsForTest() : camera->MirrorFailureForTest()));
+    }
+    return;
+  }
+#endif
   if (method == "availableCameras") {
     HandleAvailableCameras(std::move(result));
   } else if (method == "getPlatformCapabilities") {

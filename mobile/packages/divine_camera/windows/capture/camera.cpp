@@ -3,6 +3,7 @@
 #include <comdef.h>
 #include <flutter/standard_method_codec.h>
 #include <mfobjects.h>
+#include <mferror.h>
 #include <objbase.h>
 #include <windows.h>
 
@@ -547,6 +548,10 @@ HRESULT Camera::FindBaseMediaTypes() {
 // ============================================================================
 
 HRESULT Camera::StartPreviewInternal() {
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+  preview_starts_for_test_.fetch_add(1);
+#endif
+  if (!HasPendingInitialization()) return MF_E_INVALIDREQUEST;
   ComPtr<IMFCaptureSink> sink;
   HRESULT hr =
       capture_engine_->GetSink(MF_CAPTURE_ENGINE_SINK_TYPE_PREVIEW, &sink);
@@ -626,7 +631,27 @@ HRESULT Camera::StartPreviewInternal() {
     }
   }
 
+  if (!HasPendingInitialization()) return MF_E_INVALIDREQUEST;
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+  native_preview_starts_for_test_.fetch_add(1);
+#endif
   hr = capture_engine_->StartPreview();
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+  char early_frame[2];
+  if (SUCCEEDED(hr) && GetEnvironmentVariableA("DIVINE_CAPTURE_TEST_EARLY_FRAME_DEADLINE", early_frame, sizeof(early_frame))) {
+    std::unique_lock<std::mutex> lock(state_mutex_);
+    const bool received = frame_ready_for_test_.wait_for(lock, std::chrono::seconds(5),
+        [this]() { return first_frame_received_.load(); });
+    lock.unlock();
+    if (!received) return E_FAIL;
+    mirror_failure_for_test_.store(6);
+    HandleInitializationDeadline();
+  }
+#endif
+  if (!HasPendingInitialization()) {
+    capture_engine_->StopPreview();
+    return MF_E_INVALIDREQUEST;
+  }
   DebugLog("StartPreviewInternal: StartPreview hr=" + HrToString(hr));
   return hr;
 }
@@ -656,7 +681,58 @@ HRESULT Camera::ConfigureOutputMirroring() {
   return hr;
 }
 
+bool Camera::HasPendingInitialization() {
+  std::lock_guard<std::mutex> lock(pending_mutex_);
+  return pending_init_ != nullptr;
+}
+
+void Camera::RetireFailedPreview() {
+  auto weak = weak_from_this();
+  platform_task_poster_([weak]() {
+    auto camera = weak.lock();
+    if (!camera || camera->IsDisposedOrDisposing()) return;
+    if (camera->capture_engine_) camera->capture_engine_->StopPreview();
+  }, "retireFailedPreview");
+}
+
+void Camera::CancelInitializationDeadline() {
+  {
+    std::lock_guard<std::mutex> lock(init_timeout_cancel_mutex_);
+    init_timeout_cancelled_ = true;
+  }
+  init_timeout_cancel_cv_.notify_one();
+}
+
+void Camera::HandleInitializationDeadline() {
+  if (CompleteInit(false, "Camera initialization timed out")) return;
+  bool running;
+  {
+    std::lock_guard<std::mutex> lk(state_mutex_);
+    running = state_ == CameraState::kRunning && !first_frame_received_.load();
+    if (running) state_ = CameraState::kCreated;
+  }
+  if (running) {
+    RetireFailedPreview();
+    SendError("Camera started but no frames were received");
+  }
+}
+
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+bool Camera::RunningForTest() const {
+  std::lock_guard<std::mutex> lk(state_mutex_);
+  return state_ == CameraState::kRunning;
+}
+#endif
+
 void Camera::FinishInitialization() {
+  if (!initialization_attempt_.TryClaim()) return;
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+  char deadline[2];
+  if (GetEnvironmentVariableA("DIVINE_CAPTURE_TEST_PREVIEW_DEADLINE", deadline, sizeof(deadline))) {
+    mirror_failure_for_test_.store(4);
+    HandleInitializationDeadline();
+  }
+#endif
   HRESULT hr = StartPreviewInternal();
   if (FAILED(hr)) {
     DebugLog("capture-status preview:" + HrToString(hr));
@@ -664,17 +740,6 @@ void Camera::FinishInitialization() {
     return;
   }
 
-  // Complete initialization now instead of waiting for the first preview
-  // sample. Preview dimensions are already known from negotiation, and
-  // blocking on frame #1 added ~1.9s of camera sensor warm-up to initialize().
-  // Frames populate the texture as they arrive; the init timeout becomes a
-  // watchdog that signals a cameraError if no frames ever show up.
-  {
-    std::lock_guard<std::mutex> lk(state_mutex_);
-    if (state_ == CameraState::kInitializing) state_ = CameraState::kRunning;
-  }
-  DebugLog("init-timing: +" + std::to_string(InitElapsedMs()) +
-           "ms StartPreview issued, init completed (not waiting for frame #1)");
   CompleteInit(true, "", preview_width_, preview_height_);
 }
 
@@ -686,7 +751,7 @@ void Camera::Initialize(
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
   {
     std::lock_guard<std::mutex> lk(state_mutex_);
-    if (state_ != CameraState::kCreated) {
+    if (state_ != CameraState::kCreated || !initialization_attempt_.Begin()) {
       result->Error("already_initialized", "Camera is already initialized");
       return;
     }
@@ -699,6 +764,10 @@ void Camera::Initialize(
   }
 
   first_frame_received_ = false;
+  {
+    std::lock_guard<std::mutex> lock(init_timeout_cancel_mutex_);
+    init_timeout_cancelled_ = false;
+  }
 
   auto initialization = initialization_work_.Begin();
   if (!initialization) {
@@ -719,7 +788,6 @@ void Camera::Initialize(
 
     // Start 8-second timeout.  The engine fires MF_CAPTURE_ENGINE_INITIALIZED
     // asynchronously; if no first frame arrives within 8 s we give up.
-    self->init_timeout_cancelled_ = false;
     self->init_timeout_thread_ = std::thread([self]() {
       CoInitializeEx(nullptr, COINIT_MULTITHREADED);
       {
@@ -729,33 +797,7 @@ void Camera::Initialize(
             [self] { return self->init_timeout_cancelled_; });
         lk.unlock();
         if (timed_out) {
-          // initialize() normally returns at StartPreview. What the 8s deadline
-          // means depends on how far init actually got:
-          //   kInitializing: the engine accepted Initialize() but never fired
-          //     INITIALIZED or ERROR (a silent stall, e.g. the device was
-          //     unplugged mid-init or the driver deadlocked). pending_init_ is
-          //     still outstanding, so fail it rather than let initialize() hang
-          //     indefinitely (restores the pre-1.2.0 watchdog behavior).
-          //   kRunning with no frame yet: init already succeeded at StartPreview,
-          //     so surface a runtime cameraError instead.
-          // CompleteInit moves pending_init_ out under pending_mutex_ and no-ops
-          // if it is already gone, so a late INITIALIZED racing in here is safe.
-          CameraState st;
-          {
-            std::lock_guard<std::mutex> state_lk(self->state_mutex_);
-            st = self->state_;
-          }
-          if (st == CameraState::kInitializing) {
-            DebugLog("capture-stage timeout");
-            DebugLog("Camera::Initialize: timed out in kInitializing, no engine "
-                     "event received");
-            self->CompleteInit(false, "Camera initialization timed out");
-          } else if (st == CameraState::kRunning &&
-                     !self->first_frame_received_.load()) {
-            DebugLog("Camera::Initialize: started but no frames within 8s, "
-                     "signaling cameraError");
-            self->SendError("Camera started but no frames were received");
-          }
+          self->HandleInitializationDeadline();
         }
       }
       CoUninitialize();
@@ -797,7 +839,28 @@ void Camera::OnEngineEvent(IMFMediaEvent* event) {
 
   HRESULT event_hr = S_OK;
   HRESULT get_status_hr = event->GetStatus(&event_hr);
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+  if (event_type == MF_CAPTURE_ENGINE_EFFECT_ADDED && SUCCEEDED(get_status_hr) && SUCCEEDED(event_hr)) {
+    char failure[16]{};
+    GetEnvironmentVariableA("DIVINE_CAPTURE_TEST_MIRROR_ACK_FAILURE", failure, sizeof(failure));
+    if (std::string(failure) == "timeout") {
+      mirror_failure_for_test_.store(1);
+      HandleInitializationDeadline();
+    } else if (std::string(failure) == "error") {
+      ComPtr<IMFMediaEvent> failed;
+      if (SUCCEEDED(MFCreateMediaEvent(MEExtendedType, MF_CAPTURE_ENGINE_ERROR,
+                                      E_FAIL, nullptr, &failed))) {
+        mirror_failure_for_test_.store(2);
+        OnEngineEvent(failed.Get());
+      }
+    } else if (std::string(failure) == "status") {
+      mirror_failure_for_test_.store(3);
+      get_status_hr = E_FAIL;
+    }
+  }
+#endif
   if (FAILED(get_status_hr)) {
+    event_hr = get_status_hr;
     DebugLog("capture-status event_status:" + HrToString(get_status_hr));
     DebugLog("OnEngineEvent: GetStatus failed " + HrToString(get_status_hr));
   }
@@ -856,6 +919,7 @@ void Camera::OnEngineEvent(IMFMediaEvent* event) {
   }
 
   if (event_type == MF_CAPTURE_ENGINE_EFFECT_ADDED && output_mirror_pending_) {
+
     output_mirror_pending_ = false;
     if (FAILED(event_hr)) {
       DebugLog("capture-status mirror_effect:" + HrToString(event_hr));
@@ -937,6 +1001,13 @@ void Camera::OnEngineEvent(IMFMediaEvent* event) {
 // ============================================================================
 
 void Camera::OnPreviewSample(IMFSample* sample) {
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+  char no_frames[2];
+  if (sample && GetEnvironmentVariableA("DIVINE_CAPTURE_TEST_NO_PREVIEW_FRAMES", no_frames, sizeof(no_frames))) {
+    mirror_failure_for_test_.store(5);
+    return;
+  }
+#endif
   if (!sample) return;
 
   {
@@ -1007,71 +1078,77 @@ void Camera::OnPreviewSample(IMFSample* sample) {
                                        cur_w, cur_h);
   }
 
-  // Snapshot natural BGRA; photo output applies its own saved orientation.
+  bool first_sample = false;
+  bool cancel_deadline = false;
   {
-    std::lock_guard<std::mutex> lk(latest_frame_mutex_);
-    latest_frame_.resize(packed_len);
-    std::memcpy(latest_frame_.data(), data, packed_len);
-  }
+    std::lock_guard<std::mutex> state_lock(state_mutex_);
+    if (state_ != CameraState::kInitializing && state_ != CameraState::kRunning &&
+        state_ != CameraState::kPaused) return;
+    first_sample = !first_frame_received_.exchange(true);
+    cancel_deadline = state_ == CameraState::kRunning;
+    // Snapshot natural BGRA; photo output applies its own saved orientation.
+    {
+      std::lock_guard<std::mutex> lk(latest_frame_mutex_);
+      latest_frame_.resize(packed_len);
+      std::memcpy(latest_frame_.data(), data, packed_len);
+    }
 
-  // Image stream gets the native ARGB32 bytes (BGRA in memory, matching the
-  // reported ImageFormatGroup.bgra8888); the frame is then swapped in place to
-  // the RGBA that Flutter's pixel buffer texture expects. PostImageStreamFrame
-  // copies synchronously, so the swap cannot race with it.
-  pixel_utils::EmitStreamFrameThenSwapToRgba(
-      data, cur_w, cur_h, image_streaming_.load(),
-      [&](const uint8_t* bgra) { PostImageStreamFrame(bgra, cur_w, cur_h); });
+    // Image stream gets the native ARGB32 bytes (BGRA in memory, matching the
+    // reported ImageFormatGroup.bgra8888); the frame is then swapped in place to
+    // the RGBA that Flutter's pixel buffer texture expects. PostImageStreamFrame
+    // copies synchronously, so the swap cannot race with it.
+    pixel_utils::EmitStreamFrameThenSwapToRgba(
+        data, cur_w, cur_h, image_streaming_.load(),
+        [&](const uint8_t* bgra) { PostImageStreamFrame(bgra, cur_w, cur_h); });
 
-  // Update preview texture. Hold texture_mutex_ so an in-flight sample can't
-  // deref a texture_ that DisposeInternal is freeing concurrently.
-  {
-    std::lock_guard<std::mutex> lk(texture_mutex_);
-    if (!texture_) {
-      DebugLog("OnPreviewSample: texture_ freed during teardown, dropping frame "
-               "(dispose race caught)");
-    } else if (!preview_paused_.load()) {
-      texture_->Update(data, cur_w, cur_h);
-      texture_registrar_->MarkTextureFrameAvailable(texture_id_);
+    // Update preview texture. Hold texture_mutex_ so an in-flight sample can't
+    // deref a texture_ that DisposeInternal is freeing concurrently.
+    {
+      std::lock_guard<std::mutex> lk(texture_mutex_);
+      if (!texture_) {
+        DebugLog("OnPreviewSample: texture_ freed during teardown, dropping frame "
+                 "(dispose race caught)");
+      } else if (!preview_paused_.load()) {
+        texture_->Update(data, cur_w, cur_h);
+        texture_registrar_->MarkTextureFrameAvailable(texture_id_);
+      }
     }
   }
 
-  // First frame: complete pending initialization.
-  if (!first_frame_received_.exchange(true)) {
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+  frame_ready_for_test_.notify_all();
+#endif
+  // An early frame cannot cancel the pending native-start deadline.
+  if (cancel_deadline) CancelInitializationDeadline();
+  if (first_sample) {
     DebugLog("Camera::OnPreviewSample first frame " +
              std::to_string(cur_w) + "x" + std::to_string(cur_h));
-    DebugLog("init-timing: +" + std::to_string(InitElapsedMs()) +
-             "ms first frame received (init already completed at StartPreview)");
-
-    // Cancel init timeout.
-    {
-      std::lock_guard<std::mutex> lk(init_timeout_cancel_mutex_);
-      init_timeout_cancelled_ = true;
-    }
-    init_timeout_cancel_cv_.notify_one();
-
-    {
-      std::lock_guard<std::mutex> lk(state_mutex_);
-      if (state_ == CameraState::kInitializing) state_ = CameraState::kRunning;
-    }
-
-    CompleteInit(true, "", cur_w, cur_h);
   }
+
 }
 
 // ============================================================================
 // CompleteInit / FailAllPendingResults
 // ============================================================================
 
-void Camera::CompleteInit(bool success, const std::string& error,
+bool Camera::CompleteInit(bool success, const std::string& error,
                           int width, int height) {
+  if (!success) (void)initialization_attempt_.TryClaim();
   std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> r;
   {
     std::lock_guard<std::mutex> lk(pending_mutex_);
     r = std::move(pending_init_);
+    if (r) {
+      std::lock_guard<std::mutex> state_lock(state_mutex_);
+      if (state_ == CameraState::kInitializing) {
+        state_ = success ? CameraState::kRunning : CameraState::kCreated;
+      }
+    }
   }
-  if (!r) return;
+  if (!r) return false;
 
   if (success) {
+    if (first_frame_received_.load()) CancelInitializationDeadline();
     r->Success(flutter::EncodableValue(flutter::EncodableMap{
         {flutter::EncodableValue("previewWidth"),
          flutter::EncodableValue(static_cast<double>(width))},
@@ -1085,18 +1162,21 @@ void Camera::CompleteInit(bool success, const std::string& error,
          flutter::EncodableValue(record_fps_)},
     }));
   } else {
-    {
-      std::lock_guard<std::mutex> lk(state_mutex_);
-      if (state_ == CameraState::kInitializing)
-        state_ = CameraState::kCreated;
-    }
+    RetireFailedPreview();
     r->Error("initialization_failed", error);
   }
+  return true;
 }
 
 void Camera::FailAllPendingResults(const std::string& error) {
+  (void)initialization_attempt_.TryClaim();
   std::lock_guard<std::mutex> lk(pending_mutex_);
   if (pending_init_) {
+    {
+      std::lock_guard<std::mutex> state_lock(state_mutex_);
+      if (state_ == CameraState::kInitializing) state_ = CameraState::kCreated;
+    }
+    RetireFailedPreview();
     pending_init_->Error("disposed", error);
     pending_init_.reset();
   }

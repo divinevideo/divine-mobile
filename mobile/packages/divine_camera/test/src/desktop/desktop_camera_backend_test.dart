@@ -132,7 +132,7 @@ void main() {
       test(
         'binds output mirroring before native camera initialization',
         () async {
-          await backend.createCameraWithSettings(
+          await backend.createCameraWithOutputSettings(
             const CameraDescription(
               name: 'synthetic',
               lensDirection: CameraLensDirection.front,
