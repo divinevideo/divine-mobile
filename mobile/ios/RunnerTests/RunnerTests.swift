@@ -5235,3 +5235,110 @@ final class CameraPurposeLocalizationTests: XCTestCase {
     }
   }
 }
+
+/// The error details the Zendesk bridge hands Dart when the iOS SDK fails to
+/// create a ticket. Dart retries on `authFailed` with the `expectedAuth`
+/// identity type, keeps `networkError` out of crash reports and gives up on an
+/// HTTP 4xx refusal, so a wrong flag here either loses a report or resends it
+/// on every sweep. The errors are built in the shape the SDK raises them.
+final class ZendeskCreateTicketErrorDetailsTests: XCTestCase {
+  private func sdkError(
+    _ domain: String,
+    _ code: Int,
+    _ userInfo: [String: Any] = [:]
+  ) -> NSError {
+    NSError(domain: domain, code: code, userInfo: userInfo)
+  }
+
+  func testTicketApiRefusalCarriesItsStatus() {
+    let details = zendeskCreateTicketErrorDetails(
+      sdkError(ZendeskSdkErrorDomain.http, 422),
+      identity: "jwt"
+    )
+
+    XCTAssertEqual(details["status"] as? Int, 422)
+    XCTAssertEqual(details["authFailed"] as? Bool, false)
+    XCTAssertEqual(details["networkError"] as? Bool, false)
+    XCTAssertNil(details["expectedAuth"])
+    XCTAssertEqual(details["errorDomain"] as? String, "com.zendesk.sdk")
+    XCTAssertEqual(details["errorCode"] as? Int, 422)
+    XCTAssertEqual(details["identity"] as? String, "jwt")
+  }
+
+  func testTicketApi401IsAnAuthFailureForTheHeldType() {
+    let details = zendeskCreateTicketErrorDetails(
+      sdkError(ZendeskSdkErrorDomain.http, 401),
+      identity: "jwt"
+    )
+
+    XCTAssertEqual(details["status"] as? Int, 401)
+    XCTAssertEqual(details["authFailed"] as? Bool, true)
+    XCTAssertEqual(details["expectedAuth"] as? String, "jwt")
+  }
+
+  func testFailedTokenExchangeIsAnAuthFailureWithTheExchangeStatus() {
+    let details = zendeskCreateTicketErrorDetails(
+      sdkError(ZendeskSdkErrorDomain.tokenExchange, 1000, ["HTTP Status code": 401]),
+      identity: "jwt"
+    )
+
+    XCTAssertEqual(details["status"] as? Int, 401)
+    XCTAssertEqual(details["authFailed"] as? Bool, true)
+    XCTAssertEqual(details["expectedAuth"] as? String, "jwt")
+  }
+
+  func testIdentityOfTheWrongTypeExpectsTheOtherType() {
+    let mismatch = sdkError(
+      ZendeskSdkErrorDomain.identityCheck,
+      ZendeskSdkErrorDomain.identityMismatchCode
+    )
+
+    let anonymous = zendeskCreateTicketErrorDetails(mismatch, identity: "anonymous")
+    let jwt = zendeskCreateTicketErrorDetails(mismatch, identity: "jwt")
+
+    XCTAssertEqual(anonymous["authFailed"] as? Bool, true)
+    XCTAssertEqual(anonymous["status"] as? Int, -1)
+    XCTAssertEqual(anonymous["expectedAuth"] as? String, "jwt")
+    XCTAssertEqual(jwt["expectedAuth"] as? String, "anonymous")
+  }
+
+  func testMissingSettingsIsNotAnAuthFailure() {
+    // The SDK raises 808 when it could not load its settings, including when
+    // the settings request failed offline. Another identity cannot help.
+    let details = zendeskCreateTicketErrorDetails(
+      sdkError(ZendeskSdkErrorDomain.identityCheck, 808),
+      identity: "jwt"
+    )
+
+    XCTAssertEqual(details["authFailed"] as? Bool, false)
+    XCTAssertNil(details["expectedAuth"])
+    XCTAssertEqual(details["errorCode"] as? Int, 808)
+  }
+
+  func testOfflineIsANetworkErrorEvenDuringTheTokenExchange() {
+    let offline = sdkError(NSURLErrorDomain, NSURLErrorNotConnectedToInternet)
+    let exchange = sdkError(
+      ZendeskSdkErrorDomain.tokenExchange,
+      1000,
+      [NSUnderlyingErrorKey: offline]
+    )
+
+    for error in [offline, exchange] {
+      let details = zendeskCreateTicketErrorDetails(error, identity: "jwt")
+      XCTAssertEqual(details["networkError"] as? Bool, true, "\(error.domain)")
+      XCTAssertEqual(details["authFailed"] as? Bool, false, "\(error.domain)")
+      XCTAssertNil(details["expectedAuth"], "\(error.domain)")
+    }
+  }
+
+  func testNoIdentityNamesNoExpectedType() {
+    let details = zendeskCreateTicketErrorDetails(
+      sdkError(ZendeskSdkErrorDomain.access, 0),
+      identity: nil
+    )
+
+    XCTAssertEqual(details["authFailed"] as? Bool, true)
+    XCTAssertNil(details["expectedAuth"])
+    XCTAssertNil(details["identity"])
+  }
+}

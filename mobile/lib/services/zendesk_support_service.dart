@@ -86,6 +86,7 @@ class ZendeskSupportService {
     _clearAuthContext();
     _now = DateTime.now;
     _jwtIdentityRefreshOverride = null;
+    _reportedTicketFailures.clear();
     _initializationCompleter = Completer<void>();
   }
 
@@ -820,10 +821,10 @@ class ZendeskSupportService {
 
       // The SDK holds no identity, or one it could not authenticate: the JWT
       // refresh before this call failed or was skipped, or the token lapsed.
-      // After a 401 or an identity of the wrong type the SDK has also thrown
-      // away the identity it held, so the next attempt must not trust the
-      // refresh-reuse window. No ticket exists after either failure, so the
-      // retry cannot file a duplicate.
+      // After a 401 or an identity of the wrong type Android's SDK has also
+      // thrown away the identity it held, so the next attempt must not trust
+      // the refresh-reuse window. No ticket exists after either failure, so
+      // the retry cannot file a duplicate.
       if (_needsAnotherIdentity(e)) {
         _lastJwtRefreshAt = null;
         Log.info(
@@ -903,19 +904,18 @@ class ZendeskSupportService {
   }
 
   /// Whether a native `createTicket` failure means the SDK could not
-  /// authenticate its identity.
+  /// authenticate its identity, as both bridges flag it in `authFailed`.
   ///
-  /// iOS says "unauthorized" in the message. Android flags `authFailed` in the
-  /// details instead, because its SDK reports a failed token exchange as a 400
-  /// whose message never says "unauthorized".
+  /// Neither SDK says so in a way Dart could read from the message: Android
+  /// reports a failed token exchange as a 400, and iOS reports it, and an
+  /// identity of the wrong type, without an HTTP status at all.
   static bool _isNativeAuthFailure(PlatformException e) {
     final details = e.details;
-    if (details is Map && details['authFailed'] == true) return true;
-    return e.message?.toLowerCase().contains('unauthorized') ?? false;
+    return details is Map && details['authFailed'] == true;
   }
 
   /// Whether a native `createTicket` failure can succeed with another
-  /// identity: Android found none on the SDK, or the SDK could not
+  /// identity: the bridge found none on the SDK, or the SDK could not
   /// authenticate the one it had.
   static bool _needsAnotherIdentity(PlatformException e) =>
       e.code == 'NO_IDENTITY' ||
@@ -924,11 +924,12 @@ class ZendeskSupportService {
   /// Sets the identity a retry after [e] needs, and returns whether one was
   /// set.
   ///
-  /// Divine's SDK app authenticates with JWT (#1294). There the SDK refuses an
-  /// anonymous identity and then discards everything it stored, so a fresh
-  /// JWT comes first. The anonymous identity with the user's name and email is
-  /// used when the SDK says it expects one, or when no JWT can be set and the
-  /// SDK has not said it expects JWT (iOS never says).
+  /// Divine's SDK app authenticates with JWT (#1294). There both SDKs refuse
+  /// an anonymous identity, so a fresh JWT comes first. The anonymous identity
+  /// with the user's name and email is used when the bridge says the app
+  /// expects one, or when no JWT can be set and the bridge has not said the
+  /// app expects JWT. Both bridges name the expected type of a refused
+  /// identity; iOS names it for every authentication failure.
   static Future<bool> _setIdentityForRetry(PlatformException e) async {
     final details = e.details;
     final expectedAuth = details is Map ? details['expectedAuth'] : null;
@@ -944,9 +945,10 @@ class ZendeskSupportService {
 
   /// Whether a ticket the native SDK failed to create can succeed later.
   ///
-  /// The Android SDK answers a failed authentication with a synthetic 400, so
-  /// a 400 counts as a refusal only when it is not flagged as an auth or
-  /// network failure.
+  /// The Android SDK answers a failed authentication with a synthetic 400, and
+  /// the iOS bridge passes the status of a failed token exchange, so a 4xx
+  /// counts as a refusal only when it is not flagged as an auth or network
+  /// failure.
   static ZendeskTicketOutcome _outcomeOf(PlatformException e) {
     final details = e.details;
     if (details is! Map ||
@@ -969,32 +971,62 @@ class ZendeskSupportService {
   ///
   /// A network failure is only logged: it is expected offline, and a content
   /// report stays queued for its next attempt. The report names the error
-  /// code, HTTP status and SDK reason, never the ticket itself.
+  /// code, HTTP status, the iOS error domain and code, the identity type the
+  /// SDK held and the one the app expects, and the SDK reason, never the
+  /// ticket itself.
   static void _reportNativeTicketFailure(PlatformException e) {
-    final details = e.details;
-    if (details is Map && details['networkError'] == true) {
+    final details = e.details is Map ? e.details as Map : const {};
+    if (details['networkError'] == true) {
       Log.warning(
         'Zendesk ticket not created: network error',
         category: LogCategory.system,
       );
       return;
     }
-    final status = details is Map ? details['status'] : null;
+    final status = details['status'];
+    final errorDomain = details['errorDomain'];
+    final errorCode = details['errorCode'];
+    final identity = details['identity'];
+    final expectedAuth = details['expectedAuth'];
+    final context = [
+      if (status is int && status > 0) 'HTTP $status',
+      if (errorDomain is String && errorCode is int) '$errorDomain $errorCode',
+      if (identity is String) 'identity $identity',
+      if (expectedAuth is String) 'expects $expectedAuth',
+    ];
     final summary =
         'Zendesk SDK could not create ticket: ${e.code}'
-        '${status is int && status > 0 ? ' (HTTP $status)' : ''}';
-    final reason = e.message;
-    crashlytics.log(
-      reason == null ? summary : '$summary - ${sanitizeForCrashReport(reason)}',
-    );
+        '${context.isEmpty ? '' : ' (${context.join(', ')})'}';
+    final message = e.message;
+    final reason = message == null || message.isEmpty
+        ? null
+        : sanitizeForCrashReport(message);
+    crashlytics.log(reason == null ? summary : '$summary - $reason');
+    // The report outbox retries a failed ticket on every sweep, and it fails
+    // the same way each time: only the first is news.
+    final reported = _withReportedReason(summary, reason);
+    if (!_reportedTicketFailures.add(reported)) return;
     unawaited(
       crashlytics.recordError(
-        Exception(summary),
+        Exception(reported),
         StackTrace.current,
         reason: 'zendesk_sdk_create_failed',
       ),
     );
   }
+
+  static String _withReportedReason(String summary, String? reason) {
+    if (reason == null) return summary;
+    if (reason.length <= _maxReportedReasonLength) return '$summary: $reason';
+    return '$summary: ${reason.substring(0, _maxReportedReasonLength)}...';
+  }
+
+  /// How much of the SDK reason the recorded error carries; the log line
+  /// before it carries all of it.
+  static const int _maxReportedReasonLength = 200;
+
+  /// The failures this session has already reported to the crash reporter.
+  static final Set<String> _reportedTicketFailures = {};
 
   // ========================================================================
   // REST API Methods (for platforms without native SDK: macOS, Windows, Web)
