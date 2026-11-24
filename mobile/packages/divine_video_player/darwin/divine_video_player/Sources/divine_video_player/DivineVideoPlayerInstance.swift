@@ -1217,7 +1217,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 assetVideoTracks = try await asset.loadTracks(withMediaType: .video)
                 assetAudioTracks = try await asset.loadTracks(withMediaType: .audio)
             } catch {
-                if let preserved = loader?.preservedProxyHTTPFailure(for: error as NSError) {
+                if let preserved = loader?.preservedHTTPFailure(for: error as NSError) {
                     throw preserved
                 }
                 throw error
@@ -2676,7 +2676,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         else {
             return error
         }
-        return remoteClipLoader?.preservedProxyHTTPFailure(for: error) ?? error
+        return remoteClipLoader?.preservedHTTPFailure(for: error) ?? error
     }
 
     private func playbackFailureDescription(

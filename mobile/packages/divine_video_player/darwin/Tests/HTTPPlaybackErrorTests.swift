@@ -1,8 +1,9 @@
+import AVFoundation
 import Foundation
 
 @main
 enum HTTPPlaybackErrorTests {
-    static func main() {
+    static func main() async throws {
         let url = URL(string: "https://example.test/clip.mp4")!
         for (status, expected) in [
             (202, "media_processing"), (401, "auth_required"),
@@ -142,6 +143,8 @@ enum HTTPPlaybackErrorTests {
         let badCertificate = NSError(domain: NSURLErrorDomain, code: NSURLErrorServerCertificateUntrusted)
         precondition(playbackNetworkErrorCode(in: wrapping(badCertificate)) == nil)
 
+        try await checkResourceLoaderHTTPDenials()
+
         print("HTTP playback error tests passed")
     }
 }
@@ -171,4 +174,59 @@ private func coreMediaResponseError(code: Int, status: String, underlying: NSErr
         code: code,
         userInfo: userInfo
     )
+}
+
+
+/// Exercise URLSession and AVFoundation together: AVFoundation can drop the
+/// HTTPURLResponse while propagating a resource loader failure.
+private func checkResourceLoaderHTTPDenials() async throws {
+    let server = Process()
+    let stdout = Pipe()
+    server.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+    server.arguments = ["python3", "-u", "-c", """
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+        class Fixture(BaseHTTPRequestHandler):
+            def do_GET(self):
+                status = 401 if self.path == "/age-gated.mp4" else 404
+                self.send_response(status)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+
+        with ThreadingHTTPServer(("127.0.0.1", 0), Fixture) as http:
+            print(http.server_port)
+            http.serve_forever()
+        """]
+    server.standardOutput = stdout
+    try server.run()
+    defer {
+        server.terminate()
+        server.waitUntilExit()
+    }
+    let port = String(decoding: stdout.fileHandleForReading.availableData, as: UTF8.self)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    for (file, expected) in [("age-gated.mp4", "auth_required"), ("missing.mp4", "not_found")] {
+        let url = URL(string: "http://127.0.0.1:\(port)/\(file)")!
+        for headers in [["Cache-Control": "no-store"], [:]] {
+            let loader = CachingAssetLoader(remoteURL: url, headers: headers)!
+            defer { loader.cancel() }
+            do {
+                _ = try await loader.asset.load(.duration)
+                preconditionFailure("The fixture must deny playback")
+            } catch {
+                let failure = loader.preservedHTTPFailure(for: error as NSError) ?? error as NSError
+                let actual = playbackNetworkErrorCode(in: failure)
+                let mode = headers.isEmpty ? "kept download" : "proxy"
+                guard actual == expected else {
+                    throw NSError(
+                        domain: "HTTPPlaybackErrorTests",
+                        code: 1,
+                        userInfo: [NSLocalizedDescriptionKey: "\(mode): expected \(expected), got \(actual ?? "nil")"]
+                    )
+                }
+            }
+        }
+    }
 }

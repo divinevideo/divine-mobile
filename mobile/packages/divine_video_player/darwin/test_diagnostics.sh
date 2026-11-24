@@ -39,6 +39,7 @@ xcrun swiftc -parse-as-library "$SOURCES/PausedFrameRedelivery.swift" \
 "$DIAGNOSTICS_DIR/paused_frame_redelivery_tests"
 
 xcrun swiftc "$SOURCES/HTTPPlaybackError.swift" \
+  "$SOURCES/CachingAssetLoader.swift" "$SOURCES/PlaybackNetworkObservation.swift" \
   "$SCRIPT_DIR/Tests/HTTPPlaybackErrorTests.swift" \
   -o "$DIAGNOSTICS_DIR/http_playback_error_tests"
 "$DIAGNOSTICS_DIR/http_playback_error_tests"
