@@ -1,8 +1,10 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart' show MaterialPage;
+import 'package:material_ui/material_ui.dart'
+    show MaterialPage, Theme, ThemeData;
 import 'package:openvine/router/video_tile_transition_page.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_flight_transition.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
@@ -73,49 +75,53 @@ class _Host extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final origin = this.origin;
-    return MediaQuery(
-      data: const MediaQueryData(size: _screenSize),
-      child: Directionality(
-        textDirection: TextDirection.ltr,
-        child: Navigator(
-          pages: [
-            _GridPage(
-              child: Stack(
-                children: [
-                  Positioned.fromRect(
-                    rect: _tileRect,
-                    child: Builder(
-                      builder: (tileContext) {
-                        onTileContext(tileContext);
-                        return VideoTileThumbnailBoundary(
-                          child: RawImage(image: image, fit: BoxFit.cover),
-                        );
-                      },
+    // Material's fallback theme caches the first platform used in the isolate.
+    return Theme(
+      data: ThemeData(platform: defaultTargetPlatform),
+      child: MediaQuery(
+        data: const MediaQueryData(size: _screenSize),
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: Navigator(
+            pages: [
+              _GridPage(
+                child: Stack(
+                  children: [
+                    Positioned.fromRect(
+                      rect: _tileRect,
+                      child: Builder(
+                        builder: (tileContext) {
+                          onTileContext(tileContext);
+                          return VideoTileThumbnailBoundary(
+                            child: RawImage(image: image, fit: BoxFit.cover),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            if (origin != null)
-              VideoTileTransitionPage(
-                key: playerKey,
-                origin: origin,
-                child: const _Player(),
-              ),
-            if (covered)
-              const _GridPage(
-                key: ValueKey('profile'),
-                child: ColoredBox(color: Color(0xFF00FF00)),
-              ),
-            if (coveredByMaterialPage)
-              const MaterialPage<void>(
-                key: ValueKey('profile'),
-                child: ColoredBox(color: Color(0xFF00FF00)),
-              ),
-          ],
-          onDidRemovePage: (page) {
-            if (page is VideoTileTransitionPage) onClosed();
-          },
+              if (origin != null)
+                VideoTileTransitionPage(
+                  key: playerKey,
+                  origin: origin,
+                  child: const _Player(),
+                ),
+              if (covered)
+                const _GridPage(
+                  key: ValueKey('profile'),
+                  child: ColoredBox(color: Color(0xFF00FF00)),
+                ),
+              if (coveredByMaterialPage)
+                const MaterialPage<void>(
+                  key: ValueKey('profile'),
+                  child: ColoredBox(color: Color(0xFF00FF00)),
+                ),
+            ],
+            onDidRemovePage: (page) {
+              if (page is VideoTileTransitionPage) onClosed();
+            },
+          ),
         ),
       ),
     );
