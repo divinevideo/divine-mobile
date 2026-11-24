@@ -1685,7 +1685,11 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
             nativePlayerErrorCodeFromError(e),
             e.toString(),
           )) {
-        _stopAndMarkTerminalError(index, errorType);
+        _stopAndMarkTerminalError(
+          index,
+          errorType,
+          errorCategory: FeedPlaybackError.initialization,
+        );
       } else {
         _errorTypes[index] = errorType;
         _errors.add(index);
@@ -2113,10 +2117,14 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   /// Like [_stopAndMarkError] but records the failure as terminal for this
   /// video id, so it will not auto-retry and is restored on revisit.
-  void _stopAndMarkTerminalError(int index, VideoErrorType type) {
+  void _stopAndMarkTerminalError(
+    int index,
+    VideoErrorType type, {
+    FeedPlaybackError errorCategory = FeedPlaybackError.playback,
+  }) {
     _firstFrameTimerFor(index)?.finish(
       outcome: FeedPlaybackOutcome.error,
-      errorCategory: FeedPlaybackError.playback,
+      errorCategory: errorCategory,
     );
     final videoId = _videoIdAt(index);
     if (videoId != null) {

@@ -3041,6 +3041,47 @@ void main() {
             }
           },
         );
+
+        testWidgets(
+          'reports initialization error for a terminal init failure',
+          (
+            tester,
+          ) async {
+            await start(tester);
+            harness.setClipsFailures[0] = <Exception>[
+              PlatformException(
+                code: 'COMPOSITION_ERROR',
+                message: 'No playable video tracks found.',
+              ),
+            ];
+            try {
+              await tester.pumpWidget(
+                _wrapFeed(
+                  InfiniteVideoFeed(
+                    videos: [_makeVideo('terminal_init')],
+                    cache: cache,
+                    prefetchCount: 0,
+                    autoRetryMaxAttempts: 0,
+                    preloadGracePeriod: Duration.zero,
+                  ),
+                ),
+              );
+              await tester.pump();
+              await tester.pump();
+
+              await tester.pumpWidget(const SizedBox.shrink());
+
+              expect(sessions, hasLength(1));
+              expect(
+                sessions.single.outcome,
+                FeedPlaybackSessionOutcome.failed,
+              );
+              expect(sessions.single.error, FeedPlaybackError.initialization);
+            } finally {
+              await stop(tester);
+            }
+          },
+        );
       });
 
       testWidgets('does not autoplay when canAutoPlay returns false', (
