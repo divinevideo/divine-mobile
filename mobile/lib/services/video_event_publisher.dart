@@ -545,14 +545,31 @@ class VideoEventPublisher {
         for (final region in stickerRegions)
           if (!region.kind.isPoll) region,
       ]);
+      // A saved draft or queued job can bypass the editor's computed choices.
+      // Enforce every mixed sound's restriction before publishing either the
+      // video's permission tag or a reusable audio event.
+      final soundForbidsDerivatives = [?selectedAudio, ...creditedSounds].any(
+        (sound) => sound.externalSource?.license.allowsDerivatives == false,
+      );
+      final offersAudioReuse = allowAudioReuse && !soundForbidsDerivatives;
+      final offersVideoReuse = allowVideoReuse && !soundForbidsDerivatives;
       // Written as true or false, so an edit keeps an explicit decline.
-      tags.add(['allow_video_reuse', allowVideoReuse.toString()]);
+      tags.add(['allow_video_reuse', offersVideoReuse.toString()]);
 
+      // Editor-only provider tracks have no pre-existing Nostr event id, so
+      // they cannot be selected by the draft's Nostr-attribution fallback.
+      // Give their provenance to the same primary credit bridge used by the
+      // recorder, while preserving an explicit selected sound's precedence.
+      final audioForCredit =
+          selectedAudio ??
+          creditedSounds
+              .where((sound) => sound.isExternalProviderSound)
+              .firstOrNull;
       final audio = await _audioPublisher.resolveForPublish(
         upload: upload,
         videoDTag: dTag,
-        allowAudioReuse: allowAudioReuse,
-        selectedAudio: selectedAudio,
+        allowAudioReuse: offersAudioReuse,
+        selectedAudio: audioForCredit,
         audioShareAttribution: audioShareAttribution,
         selectedAudioEventId: selectedAudioEventId,
         selectedAudioRelay: selectedAudioRelay,

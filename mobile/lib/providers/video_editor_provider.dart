@@ -796,7 +796,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       title: state.title,
       description: state.description,
       hashtags: state.tags,
-      allowAudioReuse: state.allowAudioReuse,
+      allowAudioReuse: state.offersAudioReuse,
       allowVideoReuse: state.offersVideoReuse,
       audioShareAttribution: state.audioShareAttribution,
       expireTime: state.expiration.value,

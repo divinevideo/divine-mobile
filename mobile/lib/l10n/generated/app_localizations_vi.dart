@@ -11591,6 +11591,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => 'Âm thanh của tôi';
 
   @override
+  String get videoEditorAudioCategorySongs => 'Songs';
+
+  @override
   String get videoEditorAudioFilterEffects => 'Hiệu ứng âm thanh';
 
   @override

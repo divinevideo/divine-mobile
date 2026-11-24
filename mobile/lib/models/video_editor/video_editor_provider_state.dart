@@ -123,6 +123,8 @@ class VideoEditorProviderState {
   final Set<String> tags;
 
   /// Whether the audio from the original video can be reused in other videos.
+  ///
+  /// The creator's choice; [offersAudioReuse] is what gets published.
   final bool allowAudioReuse;
 
   /// Whether the creator lets others add this video to their clips.
@@ -254,7 +256,7 @@ class VideoEditorProviderState {
       hasValidPublicAudioAttribution;
 
   bool get requiresPublicAudioAttribution =>
-      allowAudioReuse &&
+      offersAudioReuse &&
       !reusesExternalAudio &&
       audioForAttribution?.externalSource == null;
 
@@ -279,6 +281,12 @@ class VideoEditorProviderState {
 
   /// Whether the published video lets others add it to their clips.
   bool get offersVideoReuse => allowVideoReuse && !soundForbidsDerivatives;
+
+  /// Whether the published video offers its audio for reuse.
+  ///
+  /// The video's audio is one mix, so offering it would offer every sound in
+  /// it, including one whose terms forbid derivatives.
+  bool get offersAudioReuse => allowAudioReuse && !soundForbidsDerivatives;
 
   /// Whether the video's audio is reused from *another creator* — a sound the
   /// user is not entitled to re-offer for reuse.

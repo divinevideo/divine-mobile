@@ -29,6 +29,7 @@ import 'package:openvine/observability/sound_picker_telemetry.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
+import 'package:openvine/providers/song_catalog_providers.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/services/audio_file_picker_service.dart';
@@ -45,7 +46,12 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:sound_service/sound_service.dart';
 import 'package:sounds_repository/sounds_repository.dart'
-    show SoundSearchRelays, SoundSearchSource, SoundsRepository;
+    show
+        AppleMusicApiException,
+        SongCatalogRepository,
+        SoundSearchRelays,
+        SoundSearchSource,
+        SoundsRepository;
 
 import '../../../helpers/recording_analytics_event_sink.dart';
 import '../../../helpers/recording_performance_monitor.dart';
@@ -73,6 +79,35 @@ AudioEvent _createTestAudioEvent({
   );
 }
 
+/// A song as the song catalog lists it: a provider sound that plays its
+/// preview and carries the catalog's artwork.
+AudioEvent _createTestSong({
+  required String id,
+  required String title,
+  String artist = 'The Example Band',
+}) {
+  final previewUrl = 'https://example.com/previews/$id.m4a';
+  return AudioEvent(
+    id: 'apple_music_$id',
+    pubkey: AudioEvent.externalProviderMarker,
+    createdAt: 0,
+    url: previewUrl,
+    title: title,
+    source: artist,
+    imageUrl: 'https://example.com/artwork/$id.jpg',
+    publicTags: const ['music'],
+    externalSource: AudioExternalSource(
+      provider: SongCatalogRepository.provider,
+      providerSoundId: id,
+      providerName: SongCatalogRepository.providerName,
+      creatorName: artist,
+      sourceUrl: 'https://example.com/songs/$id',
+      previewUrl: previewUrl,
+      license: SongCatalogRepository.previewTerms,
+    ),
+  );
+}
+
 /// [createdAt] for a sound published [age] ago.
 int _publishedAgo(Duration age) =>
     DateTime.now().subtract(age).millisecondsSinceEpoch ~/ 1000;
@@ -83,6 +118,9 @@ Finder _divineIcon(DivineIconName name) =>
 class _MockAudioPlaybackService extends Mock implements AudioPlaybackService {}
 
 class _MockSoundsRepository extends Mock implements SoundsRepository {}
+
+class _MockSongCatalogRepository extends Mock
+    implements SongCatalogRepository {}
 
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
@@ -185,6 +223,7 @@ void main() {
       Map<String, Completer<List<AudioEvent>>> pendingSearches = const {},
       Map<SoundListOfKind, Completer<PagedSounds>> pendingKindLists = const {},
       bool routed = false,
+      SongCatalogRepository? songCatalog,
     }) {
       final blocklist = _MockContentBlocklistRepository();
       when(() => blocklist.currentState).thenAnswer(
@@ -240,6 +279,10 @@ void main() {
         child: ProviderScope(
           overrides: [
             contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+            // Always overridden: the real one reads the feature flags, and
+            // with them the stored preferences. Absent unless a test lists
+            // songs, as it is for everyone outside the experiment.
+            songCatalogRepositoryProvider.overrideWithValue(songCatalog),
             // `audioReuseConsentProvider` reads the viewer so it can grant a
             // creator consent for their own sound.
             authServiceProvider.overrideWithValue(
@@ -2926,6 +2969,359 @@ void main() {
       });
     });
 
+    group('Songs', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final topSongs = [
+        _createTestSong(id: 'top-1', title: 'Night Drive'),
+        _createTestSong(
+          id: 'top-2',
+          title: 'Slow Morning',
+          artist: 'Second Artist',
+        ),
+      ];
+
+      late _MockSongCatalogRepository songCatalog;
+
+      setUp(() {
+        songCatalog = _MockSongCatalogRepository();
+      });
+
+      void stubTopSongs() => when(
+        songCatalog.fetchTrendingSongs,
+      ).thenAnswer((_) async => topSongs);
+
+      Future<void> openSongs(WidgetTester tester) async {
+        await tester.tap(find.text(l10n.videoEditorAudioCategorySongs));
+        await tester.pumpAndSettle();
+      }
+
+      /// Types [query] and waits out the pause the picker searches after.
+      Future<void> search(WidgetTester tester, String query) async {
+        await tester.enterText(find.byType(TextField).first, query);
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('has no tab without the song catalog', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(trendingSoundsAsync: AsyncValue.data(testSounds)),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.videoEditorAudioCategoryMySounds), findsWidgets);
+        expect(find.text(l10n.videoEditorAudioCategorySongs), findsNothing);
+      });
+
+      testWidgets('sits before My Sounds when the song catalog is there', (
+        tester,
+      ) async {
+        stubTopSongs();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final songs = tester.getTopLeft(
+          find.text(l10n.videoEditorAudioCategorySongs),
+        );
+        expect(
+          songs.dx,
+          greaterThan(tester.getTopLeft(find.text(l10n.exploreTabNew)).dx),
+        );
+        expect(
+          songs.dx,
+          lessThan(
+            tester
+                .getTopLeft(find.text(l10n.videoEditorAudioCategoryMySounds))
+                .dx,
+          ),
+        );
+      });
+
+      testWidgets('lists the most played songs once its tab opens', (
+        tester,
+      ) async {
+        stubTopSongs();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Not asked for until someone looks.
+        verifyNever(songCatalog.fetchTrendingSongs);
+        expect(find.text('Night Drive'), findsNothing);
+
+        await openSongs(tester);
+
+        expect(find.text('Night Drive'), findsOneWidget);
+        expect(find.text('Slow Morning'), findsOneWidget);
+        expect(find.textContaining('Second Artist'), findsOneWidget);
+        verify(songCatalog.fetchTrendingSongs).called(1);
+      });
+
+      testWidgets("leads a song with the catalog's artwork", (tester) async {
+        stubTopSongs();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+
+        expect(
+          tester
+              .widgetList<VineCachedImage>(find.byType(VineCachedImage))
+              .map((image) => image.imageUrl),
+          equals([
+            'https://example.com/artwork/top-1.jpg',
+            'https://example.com/artwork/top-2.jpg',
+          ]),
+        );
+      });
+
+      testWidgets('keeps the songs it loaded when its tab is opened again', (
+        tester,
+      ) async {
+        stubTopSongs();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+
+        await tester.tap(find.text(l10n.exploreTabForYou));
+        await tester.pumpAndSettle();
+        expect(find.text('Night Drive'), findsNothing);
+        await openSongs(tester);
+
+        expect(find.text('Night Drive'), findsOneWidget);
+        verify(songCatalog.fetchTrendingSongs).called(1);
+      });
+
+      testWidgets('searches the catalog for what is typed', (tester) async {
+        stubTopSongs();
+        when(() => songCatalog.searchSongs('paper')).thenAnswer(
+          (_) async => [_createTestSong(id: 'match', title: 'Paper Planes')],
+        );
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+
+        await search(tester, 'Paper');
+
+        expect(find.text('Paper Planes'), findsOneWidget);
+        expect(find.text('Night Drive'), findsNothing);
+        verify(() => songCatalog.searchSongs('paper')).called(1);
+      });
+
+      testWidgets('brings the most played songs back when the search is '
+          'cleared', (tester) async {
+        stubTopSongs();
+        when(() => songCatalog.searchSongs('paper')).thenAnswer(
+          (_) async => [_createTestSong(id: 'match', title: 'Paper Planes')],
+        );
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+        await search(tester, 'paper');
+        expect(find.text('Night Drive'), findsNothing);
+
+        await search(tester, '');
+
+        expect(find.text('Night Drive'), findsOneWidget);
+        expect(find.text('Paper Planes'), findsNothing);
+      });
+
+      testWidgets('says so when a search matches no song', (tester) async {
+        stubTopSongs();
+        when(
+          () => songCatalog.searchSongs('zzzz'),
+        ).thenAnswer((_) async => const []);
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+
+        await search(tester, 'zzzz');
+
+        expect(find.text(l10n.soundsNoSoundsFound), findsOneWidget);
+        expect(find.text('Night Drive'), findsNothing);
+      });
+
+      testWidgets('keeps what is searched on Songs from the sound search', (
+        tester,
+      ) async {
+        stubTopSongs();
+        when(
+          () => songCatalog.searchSongs('paper'),
+        ).thenAnswer((_) async => const []);
+        final soundSearches = <String>[];
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+            relaySearches: soundSearches,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+
+        await search(tester, 'paper');
+
+        verify(() => songCatalog.searchSongs('paper')).called(1);
+        expect(soundSearches, isEmpty);
+
+        // The same words do go out once a list of sounds is open.
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+
+        expect(soundSearches, equals(['paper']));
+      });
+
+      testWidgets('keeps a search made on another tab from the catalog while '
+          'its list only peeks in', (tester) async {
+        stubTopSongs();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+            savedSounds: [
+              _createTestAudioEvent(id: 'saved', title: 'My private label'),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryMySounds));
+        await tester.pumpAndSettle();
+        await search(tester, 'private');
+        expect(find.text('My private label'), findsOneWidget);
+
+        // Dragging My Sounds aside builds the Songs list beside it.
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.byType(TabBarView)),
+        );
+        await gesture.moveBy(const Offset(40, 0));
+        await gesture.moveBy(const Offset(120, 0));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        verify(songCatalog.fetchTrendingSongs).called(1);
+        verifyNever(() => songCatalog.searchSongs(any()));
+
+        await gesture.moveBy(const Offset(-160, 0));
+        await gesture.up();
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('offers a retry when the catalog cannot be reached', (
+        tester,
+      ) async {
+        var attempts = 0;
+        when(songCatalog.fetchTrendingSongs).thenAnswer((_) async {
+          if (attempts++ == 0) {
+            throw const AppleMusicApiException('Apple Music request failed');
+          }
+          return topSongs;
+        });
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+
+        expect(
+          find.text(l10n.videoEditorAudioFailedToLoadTitle),
+          findsOneWidget,
+        );
+        expect(find.text('Night Drive'), findsNothing);
+
+        await tester.tap(find.text(l10n.commonRetry));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Night Drive'), findsOneWidget);
+      });
+
+      testWidgets('lists no song once the picker is narrowed to effects', (
+        tester,
+      ) async {
+        stubTopSongs();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+        expect(find.text('Night Drive'), findsOneWidget);
+
+        await tester.tap(find.byKey(const Key('audio_kind_filter')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.videoEditorAudioFilterEffects).last);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Night Drive'), findsNothing);
+        expect(find.text(l10n.soundsNoSoundsFound), findsOneWidget);
+      });
+
+      testWidgets('picks a song and plays its preview without a reuse check', (
+        tester,
+      ) async {
+        stubTopSongs();
+        final audioService = _stubbedAudioService();
+        // A reuse check would refuse it: its terms forbid derivatives.
+        final refusedCheck = Completer<bool>();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            songCatalog: songCatalog,
+            audioService: audioService,
+            pendingConsent: refusedCheck,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await openSongs(tester);
+
+        await tester.tap(find.text('Night Drive'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AudioEditorSelectionOverlay), findsOneWidget);
+        verify(
+          () =>
+              audioService.loadAudio('https://example.com/previews/top-1.m4a'),
+        ).called(1);
+        verify(audioService.play).called(1);
+      });
+    });
+
     group('Loading state', () {
       testWidgets('renders $BrandedLoadingIndicator on community tab', (
         tester,
@@ -3547,6 +3943,38 @@ void main() {
           );
         });
 
+        testWidgets('reports a tab left for Songs, which is not timed, as '
+            'dismissed', (tester) async {
+          final songCatalog = _MockSongCatalogRepository();
+          when(
+            songCatalog.fetchTrendingSongs,
+          ).thenAnswer((_) async => const []);
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: const AsyncLoading(),
+              songCatalog: songCatalog,
+              telemetry: telemetry,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          await tester.tap(find.text(l10n.videoEditorAudioCategorySongs));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(
+            surfaceLoads(),
+            contains(tabLoad('newest', SurfaceLoadResult.dismissed)),
+          );
+          expect(
+            surfaceLoads().map((load) => load[AnalyticsParam.tab]),
+            isNot(contains('songs')),
+          );
+        });
+
         testWidgets('reports a list that failed to load', (tester) async {
           await tester.pumpWidget(
             buildWidget(
@@ -3828,6 +4256,36 @@ void main() {
           expect(find.byType(AudioSelectionBottomSheet), findsNothing);
           expect(picks(), [
             {'source': 'newest', 'outcome': 'attached', 'searched': 1},
+          ]);
+        });
+
+        testWidgets('reports a song attached as picked from Songs', (
+          tester,
+        ) async {
+          final songCatalog = _MockSongCatalogRepository();
+          when(songCatalog.fetchTrendingSongs).thenAnswer(
+            (_) async => [_createTestSong(id: 'top-1', title: 'Night Drive')],
+          );
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              audioService: _stubbedAudioService(),
+              songCatalog: songCatalog,
+              telemetry: telemetry,
+              routed: true,
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.videoEditorAudioCategorySongs));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Night Drive'));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(l10n.videoEditorAudioUseSound));
+          await tester.pumpAndSettle();
+
+          expect(picks(), [
+            {'source': 'songs', 'outcome': 'attached', 'searched': 0},
           ]);
         });
       });

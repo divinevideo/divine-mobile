@@ -221,3 +221,26 @@ continue through the canonical upload flow, and signed post URLs remain canonica
 a newly published video can select Bunny after server enrollment is verified.
 Deploy the selection endpoint and verified publisher before testing this flag.
 There is no visual change outside the developer flag entry.
+
+## Song catalog
+
+`songCatalog` is an internal prototype: it adds a Songs list to the editor's
+sound picker, with the most played songs and a search by title or artist. The
+songs come from the Apple Music API catalog and play as its previews.
+
+The flag exists only in a build made with a MusicKit developer token; any
+other build does not list it and ignores a stored value:
+
+```bash
+flutter run --dart-define=APPLE_MUSIC_DEVELOPER_TOKEN=<token> --dart-define=FF_SONG_CATALOG=true
+```
+
+Without `FF_SONG_CATALOG` the flag is off by default; enable Developer Mode,
+then turn on **Songs (Apple Music previews)** in Feature Flags. The token is a
+signed JWT that expires after at most six months, so a build stops listing
+songs once its token does. Keep the token out of the repository.
+
+A picked song is added like any provider sound: the editor trims it to the
+video and renders it into the file. Its terms forbid derivatives, so a video
+made with one never offers its audio or itself for reuse. Publishing still
+posts the video publicly, with a sound credit that links to the song's page.

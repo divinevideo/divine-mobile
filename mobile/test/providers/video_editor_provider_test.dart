@@ -2658,6 +2658,46 @@ void main() {
       expect(draft.id, equals('test-draft'));
     });
 
+    group('audio reuse', () {
+      AudioEvent providerSound({required bool allowsDerivatives}) => AudioEvent(
+        id: 'external_provider_sound',
+        pubkey: AudioEvent.externalProviderMarker,
+        createdAt: 1700000000,
+        externalSource: AudioExternalSource(
+          provider: 'sound-library',
+          providerSoundId: '42',
+          providerName: 'Sound library',
+          sourceUrl: 'https://example.com/sounds/42',
+          previewUrl: 'https://example.com/sounds/42.mp3',
+          license: AudioLicenseMetadata(
+            type: allowsDerivatives ? 'cc-by' : 'no-derivatives',
+            name: allowsDerivatives ? 'CC BY 4.0' : 'No derivatives',
+            url: 'https://example.com/terms',
+            allowsCommercialUse: allowsDerivatives,
+            allowsDerivatives: allowsDerivatives,
+            requiresAttribution: true,
+          ),
+        ),
+      );
+
+      test('keeps the creator choice for a sound that allows derivatives', () {
+        final notifier = container.read(videoEditorProvider.notifier)
+          ..setAllowAudioReuse(true)
+          ..selectSound(providerSound(allowsDerivatives: true));
+
+        expect(notifier.getActiveDraft().allowAudioReuse, isTrue);
+      });
+
+      test('never offers the audio of a video whose sound forbids '
+          'derivatives', () {
+        final notifier = container.read(videoEditorProvider.notifier)
+          ..setAllowAudioReuse(true)
+          ..selectSound(providerSound(allowsDerivatives: false));
+
+        expect(notifier.getActiveDraft().allowAudioReuse, isFalse);
+      });
+    });
+
     test('autosave should always use _clips even if '
         'finalRenderedClip were set', () {
       // Add clips to the clip manager

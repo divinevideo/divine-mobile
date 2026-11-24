@@ -9166,6 +9166,10 @@
   "videoEditorAudioSegmentInstruction": "Select the audio segment for your video",
   "videoEditorAudioCategoryCommunity": "Community",
   "videoEditorAudioCategoryMySounds": "My Sounds",
+  "videoEditorAudioCategorySongs": "Songs",
+  "@videoEditorAudioCategorySongs": {
+    "description": "Tab in the sound picker that lists songs from a music catalog: the most played ones, or the matches of a search by title or artist. Shown only in an internal experiment."
+  },
   "videoEditorAudioFilterEffects": "Effects",
   "@videoEditorAudioFilterEffects": {
     "description": "Filter chip in the sound picker that narrows the lists to sound effects (booms, laughs, meme lines), as opposed to music. Translate as sound effects, not visual effects."

@@ -11555,6 +11555,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => 'Seslerim';
 
   @override
+  String get videoEditorAudioCategorySongs => 'Songs';
+
+  @override
   String get videoEditorAudioFilterEffects => 'Efektler';
 
   @override

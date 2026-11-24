@@ -201,6 +201,27 @@ void main() {
         expect(surfaceLoads(), hasLength(1));
       });
 
+      test('dismisses the loading tab for one that is not timed, and times '
+          'it again once it reopens', () async {
+        telemetry
+          ..startTabLoad(SoundPickerTab.popular, isFirstTab: true)
+          ..dismissTabLoad();
+        await pumpEventQueue();
+
+        expect(
+          surfaceLoads().single,
+          containsPair(AnalyticsParam.result, SurfaceLoadResult.dismissed),
+        );
+        expect(
+          surfaceLoads().single,
+          containsPair(AnalyticsParam.tab, 'popular'),
+        );
+        expect(
+          telemetry.startTabLoad(SoundPickerTab.popular, isFirstTab: false),
+          isTrue,
+        );
+      });
+
       test('dismisses the loading tab on dispose', () async {
         telemetry
           ..startTabLoad(SoundPickerTab.popular, isFirstTab: true)
@@ -422,7 +443,7 @@ void main() {
         final picks = sink.parametersOf('sound_selected');
         expect(
           picks.take(SoundPickSource.values.length).map((p) => p['source']),
-          ['for_you', 'popular', 'newest', 'my_sounds', 'import'],
+          ['for_you', 'popular', 'newest', 'songs', 'my_sounds', 'import'],
         );
         expect(
           picks.skip(SoundPickSource.values.length).map((p) => p['outcome']),

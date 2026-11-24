@@ -11821,6 +11821,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => 'Mes sons';
 
   @override
+  String get videoEditorAudioCategorySongs => 'Songs';
+
+  @override
   String get videoEditorAudioFilterEffects => 'Effets';
 
   @override

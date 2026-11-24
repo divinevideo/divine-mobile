@@ -15,6 +15,7 @@ import 'package:models/models.dart'
         AudioLicenseMetadata,
         UserProfile,
         VideoEvent,
+        VineSound,
         audioEventKind;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
@@ -1002,6 +1003,167 @@ void main() {
         },
       );
     });
+
+    group('mixed sound reuse policy at publication', () {
+      for (final (restrictedAt, expectedReuse) in [
+        ('none', true),
+        ('selected', false),
+        ('secondary', false),
+      ]) {
+        test(
+          'applies $restrictedAt license to restored draft choices',
+          () async {
+            stubSignAndPublish();
+            AudioEvent sound(String id, bool allowsDerivatives) => AudioEvent(
+              id: 'external_provider_$id',
+              pubkey: AudioEvent.externalProviderMarker,
+              createdAt: 0,
+              url: 'https://example.com/$id.mp3',
+              externalSource: AudioExternalSource(
+                provider: 'catalog',
+                providerSoundId: id,
+                providerName: 'Catalog',
+                sourceUrl: 'https://example.com/sounds/$id',
+                license: AudioLicenseMetadata(
+                  type: 'test',
+                  name: 'Test',
+                  url: 'https://example.com/terms',
+                  allowsCommercialUse: false,
+                  allowsDerivatives: allowsDerivatives,
+                  requiresAttribution: false,
+                ),
+              ),
+            );
+            final selected = sound('selected', restrictedAt != 'selected');
+            final secondary = sound('secondary', restrictedAt != 'secondary');
+            final result = await publisher.publishVideoEvent(
+              allowVideoReuse: true,
+              allowAudioReuse: true,
+              upload: createUpload(),
+              selectedAudio: selected,
+              selectedAudioEventId: selected.id,
+              creditedSounds: [selected, secondary],
+            );
+            expect(result, isTrue);
+            expect(
+              capturedTags,
+              containsAll([
+                ['allow_audio_reuse', '$expectedReuse'],
+                ['allow_video_reuse', '$expectedReuse'],
+              ]),
+            );
+            final audioTags =
+                verify(
+                      () => authService.createAndSignEvent(
+                        kind: audioEventKind,
+                        content: any(named: 'content'),
+                        tags: captureAny(named: 'tags'),
+                      ),
+                    ).captured.single
+                    as List<List<String>>;
+            expect(
+              audioTags,
+              contains(equals(['allow_audio_reuse', '$expectedReuse'])),
+            );
+          },
+        );
+      }
+    });
+
+    test(
+      'publishes provider credit for a timeline-only catalog track',
+      () async {
+        final signed = <Event>[];
+        when(
+          () => authService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((call) async {
+          final event = Event(
+            testPubkey,
+            call.namedArguments[#kind] as int,
+            call.namedArguments[#tags] as List<List<String>>,
+            call.namedArguments[#content] as String,
+          );
+          signed.add(event);
+          return event;
+        });
+        when(
+          () => nostrClient.publishEventAwaitOk(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (call) async => PublishOutcome(
+            eventId: (call.positionalArguments.single as Event).id,
+            acceptedBy: const ['wss://relay.divine.video'],
+            rejectedBy: const {},
+            noResponseFrom: const [],
+          ),
+        );
+        final bundled = AudioEvent.fromBundledSound(
+          VineSound(
+            id: 'fixture',
+            title: 'Bundled fixture',
+            assetPath: 'assets/sounds/fixture.mp3',
+            duration: const Duration(seconds: 1),
+          ),
+        );
+        final song = AudioEvent(
+          id: 'apple_music_fixture',
+          pubkey: AudioEvent.externalProviderMarker,
+          createdAt: 0,
+          url: 'https://example.com/preview.m4a',
+          externalSource: AudioExternalSource(
+            provider: 'apple_music',
+            providerSoundId: 'fixture',
+            providerName: 'Apple Music',
+            creatorName: 'Synthetic artist',
+            sourceUrl: 'https://example.com/song',
+            license: AudioLicenseMetadata(
+              type: 'test-preview',
+              name: 'Test preview',
+              url: 'https://example.com/terms',
+              allowsCommercialUse: false,
+              allowsDerivatives: false,
+              requiresAttribution: false,
+            ),
+          ),
+        );
+        final result = await publisher.publishVideoEvent(
+          upload: createUpload(),
+          allowVideoReuse: true,
+          allowAudioReuse: true,
+          creditedSounds: [bundled, song],
+        );
+        expect(result, isTrue);
+        final bridge = signed.singleWhere(
+          (event) => event.kind == audioEventKind,
+        );
+        final video = signed.singleWhere(
+          (event) => event.kind != audioEventKind,
+        );
+        expect(
+          bridge.tags,
+          containsAll([
+            ['source', 'https://example.com/song'],
+            ['creator', 'Synthetic artist'],
+            ['proxy', 'fixture', 'apple_music'],
+            ['allow_audio_reuse', 'false'],
+          ]),
+        );
+        expect(
+          video.tags,
+          containsAll([
+            ['e', bridge.id, 'wss://relay.divine.video', 'audio'],
+            ['allow_audio_reuse', 'false'],
+            ['allow_video_reuse', 'false'],
+          ]),
+        );
+      },
+    );
 
     test('provider license can forbid further reuse', () async {
       stubSignAndPublish();

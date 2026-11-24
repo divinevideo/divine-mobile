@@ -16,6 +16,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart'
     show AudioEvent, AudioEventKind, SoundKind, VineSound, VineSoundKind;
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
+import 'package:openvine/blocs/song_catalog/song_catalog_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/divine_sound_extensions.dart';
@@ -30,6 +31,7 @@ import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
+import 'package:openvine/providers/song_catalog_providers.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
@@ -178,8 +180,14 @@ class _AudioSelectionBottomSheetState
   bool _timedSearchFollowed = false;
   ProviderSubscription<AsyncValue<SoundSearchResults>>? _searchListener;
 
+  /// The lists shown, in tab order: Songs only while the song catalog is
+  /// there.
+  List<AudioCategory> get _categories => AudioCategory.available(
+    songs: ref.read(songCatalogRepositoryProvider) != null,
+  );
+
   @override
-  int get tabCount => AudioCategory.values.length;
+  int get tabCount => _categories.length;
 
   @override
   void initState() {
@@ -226,7 +234,7 @@ class _AudioSelectionBottomSheetState
   @override
   void onTabChanged() {
     if (tabController.indexIsChanging) return;
-    final newCategory = AudioCategory.values[tabController.index];
+    final newCategory = _categories[tabController.index];
     if (_category != newCategory) {
       setState(() => _category = newCategory);
       _onCategoryOpened(newCategory);
@@ -237,9 +245,7 @@ class _AudioSelectionBottomSheetState
     final changed = _category != category;
     setState(() {
       _category = category;
-      tabController.animateTo(
-        AudioCategory.values.indexWhere((el) => el == category),
-      );
+      tabController.animateTo(_categories.indexOf(category));
     });
     if (changed) _onCategoryOpened(category);
   }
@@ -256,20 +262,25 @@ class _AudioSelectionBottomSheetState
   void _timeTabLoad(AudioCategory category, {required bool isFirstTab}) {
     _stopWatchingTabLoad();
     final tab = _tabOf(category);
+    if (tab == null) {
+      // Whichever tab was being timed, the user has left it.
+      _telemetry.dismissTabLoad();
+      return;
+    }
     if (!_telemetry.startTabLoad(tab, isFirstTab: isFirstTab)) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _telemetry.markTabVisible(tab);
     });
 
     final ProviderListenable<AsyncValue<PagedSounds>> list;
-    switch (category) {
-      case AudioCategory.forYou:
+    switch (tab) {
+      case SoundPickerTab.forYou:
         list = forYouSoundsProvider;
-      case AudioCategory.popular:
+      case SoundPickerTab.popular:
         list = popularSoundsProvider;
-      case AudioCategory.newest:
+      case SoundPickerTab.newest:
         list = trendingSoundsProvider;
-      case AudioCategory.mySounds:
+      case SoundPickerTab.mySounds:
         _timeSavedSoundsLoad();
         return;
     }
@@ -318,10 +329,15 @@ class _AudioSelectionBottomSheetState
     _savedSoundsListener = null;
   }
 
-  /// The debounced query the open tab sends out: every tab's but My
-  /// sounds', whose query is often a private label.
-  String get _sentSearchQuery =>
-      _category == AudioCategory.mySounds ? '' : _debouncedQuery;
+  /// The debounced query the open tab sends out as a sound search: every
+  /// tab's but My sounds', whose query is often a private label, and Songs',
+  /// which asks the song catalog instead.
+  String get _sentSearchQuery => switch (_category) {
+    AudioCategory.forYou ||
+    AudioCategory.popular ||
+    AudioCategory.newest => _debouncedQuery,
+    AudioCategory.songs || AudioCategory.mySounds => '',
+  };
 
   /// The search the open tab sends out: For you's within the accounts the
   /// viewer follows, Popular's and New's among every sound.
@@ -583,6 +599,7 @@ class _AudioSelectionBottomSheetState
     final selected = _selectedItem;
     if (selected == null) return null;
     if (SoundCover.publishedWith(selected) case final cover?) return cover;
+    if (_songCover(selected) case final cover?) return cover;
     for (final saved in savedSounds) {
       if (saved.id != selected.id) continue;
       final cover = SoundCover.forSavedSound(
@@ -955,10 +972,13 @@ class _AudioSelectionBottomSheetState
     searched: _searchQuery.isNotEmpty,
   );
 
-  static SoundPickerTab _tabOf(AudioCategory category) => switch (category) {
+  /// The tab [category] is timed as, or `null` for Songs: its list comes from
+  /// the song catalog, which the load telemetry of the sound lists leaves out.
+  static SoundPickerTab? _tabOf(AudioCategory category) => switch (category) {
     AudioCategory.forYou => SoundPickerTab.forYou,
     AudioCategory.popular => SoundPickerTab.popular,
     AudioCategory.newest => SoundPickerTab.newest,
+    AudioCategory.songs => null,
     AudioCategory.mySounds => SoundPickerTab.mySounds,
   };
 
@@ -967,6 +987,7 @@ class _AudioSelectionBottomSheetState
         AudioCategory.forYou => SoundPickSource.forYou,
         AudioCategory.popular => SoundPickSource.popular,
         AudioCategory.newest => SoundPickSource.newest,
+        AudioCategory.songs => SoundPickSource.songs,
         AudioCategory.mySounds => SoundPickSource.mySounds,
       };
 
@@ -1005,6 +1026,12 @@ class _AudioSelectionBottomSheetState
   Widget build(BuildContext context) {
     // The owner exemption follows account changes just as the tap check does.
     ref.watch(currentAuthStateProvider);
+    // The Songs list comes and goes with its flag. Watching the catalog
+    // rebuilds the picker when it does, and the tabs follow here: the open
+    // one keeps its place, so it is read back from the controller.
+    final songCatalog = ref.watch(songCatalogRepositoryProvider);
+    final categories = AudioCategory.available(songs: songCatalog != null);
+    if (syncTabController()) _category = categories[tabController.index];
     final bundledSoundsAsync = ref.watch(soundLibraryServiceProvider);
     // Batched like the counts below and just as supplementary: a row whose
     // cover comes from its source video shows its colour tile until its
@@ -1043,6 +1070,7 @@ class _AudioSelectionBottomSheetState
       AudioCategory.forYou => settled(ref.watch(forYouCoverList)),
       AudioCategory.popular => settled(ref.watch(popularCoverList)),
       AudioCategory.newest => settled(ref.watch(newestCoverList)),
+      AudioCategory.songs ||
       AudioCategory.mySounds => const <String, SoundCover?>{},
     };
     bool loads(AudioCategory category) =>
@@ -1109,6 +1137,9 @@ class _AudioSelectionBottomSheetState
     ref.watch(_searchPagesOf(sent));
     final searchLookup = ref.watch(_searchCoversOf(sent));
     final searchCovers = settled(searchLookup);
+    // The same holds for the song catalog, which is asked from the device:
+    // it only hears what is searched while its own list is open.
+    final songsQuery = _category == AudioCategory.songs ? _debouncedQuery : '';
 
     // The answer the community tabs show for the typed query: the last one
     // that landed, until the next one does.
@@ -1225,6 +1256,7 @@ class _AudioSelectionBottomSheetState
 
     final categoryBar = AudioCategoryBar(
       controller: tabController,
+      categories: categories,
       onSelect: _selectCategory,
     );
     final searchInput = _PickerSearchInput(
@@ -1469,6 +1501,21 @@ class _AudioSelectionBottomSheetState
               );
             },
           ),
+          if (categories.contains(AudioCategory.songs))
+            _SongsTab(
+              query: songsQuery,
+              // Typed but not asked for yet: the field has to stay quiet a
+              // moment first.
+              isQueryPending:
+                  _category == AudioCategory.songs &&
+                  _searchQuery != _debouncedQuery,
+              kind: _kind,
+              scrollController: listScrollController,
+              selectionCardHeight: _selectionCardHeight,
+              selectedSound: _selectedItem,
+              audioService: _audioService,
+              onSelect: _selectSound,
+            ),
           // My sounds is where the user's own files live, so importing one
           // stays its first row.
           _SoundsContent(
@@ -1574,7 +1621,119 @@ class _AudioSelectionBottomSheetState
       ],
     );
 
-    return _KeyboardClearance(child: picker);
+    final clearedPicker = _KeyboardClearance(child: picker);
+    if (songCatalog == null) return clearedPicker;
+    // Above the lists rather than inside the Songs one, which is built only
+    // while it shows: the songs it loaded are still there on coming back.
+    return BlocProvider<SongCatalogCubit>(
+      key: ValueKey(songCatalog),
+      create: (_) => SongCatalogCubit(repository: songCatalog),
+      child: clearedPicker,
+    );
+  }
+}
+
+/// The cover of a song from the catalog: the artwork the catalog lists it
+/// with, or `null` for any other sound.
+///
+/// Not on Divine's media server like a published sound's cover, but it comes
+/// from the catalog itself, never from an event anyone can publish.
+SoundCover? _songCover(AudioEvent sound) {
+  final imageUrl = sound.imageUrl;
+  return sound.isExternalProviderSound && imageUrl != null
+      ? SoundCover(imageUrl: imageUrl)
+      : null;
+}
+
+/// The Songs list: the catalog's most played songs, or the ones matching the
+/// search once the field has been quiet a moment.
+class _SongsTab extends StatefulWidget {
+  const _SongsTab({
+    required this.query,
+    required this.isQueryPending,
+    required this.kind,
+    required this.scrollController,
+    required this.selectionCardHeight,
+    required this.selectedSound,
+    required this.audioService,
+    required this.onSelect,
+  });
+
+  /// What to search the catalog for; blank lists the most played songs.
+  final String query;
+
+  /// Whether the field holds a search that [query] does not carry yet.
+  final bool isQueryPending;
+
+  /// The kind every list is narrowed to, or `null` for all sounds.
+  final SoundKind? kind;
+  final ScrollController scrollController;
+  final ValueListenable<double> selectionCardHeight;
+  final AudioEvent? selectedSound;
+  final AudioPlaybackService audioService;
+  final ValueChanged<AudioEvent> onSelect;
+
+  @override
+  State<_SongsTab> createState() => _SongsTabState();
+}
+
+class _SongsTabState extends State<_SongsTab> {
+  @override
+  void initState() {
+    super.initState();
+    _showSongs();
+  }
+
+  @override
+  void didUpdateWidget(_SongsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.query != oldWidget.query) _showSongs();
+  }
+
+  void _showSongs() => runDetached(
+    context.read<SongCatalogCubit>().showSongsFor(widget.query),
+    'load songs',
+    logName: 'AudioSelectionBottomSheet',
+    category: LogCategory.ui,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    // Every song is music, so narrowing to effects leaves none.
+    if (widget.kind == SoundKind.effect) {
+      return const _SearchEmptyState(hasQuery: false);
+    }
+    return BlocBuilder<SongCatalogCubit, SongCatalogState>(
+      builder: (context, state) {
+        final isLoading =
+            widget.isQueryPending ||
+            state.query != widget.query ||
+            state.status == SongCatalogStatus.initial ||
+            state.status == SongCatalogStatus.loading;
+        if (isLoading) return const Center(child: BrandedLoadingIndicator());
+        if (state.status == SongCatalogStatus.failure) {
+          return _ErrorState(
+            onRetry: () => runDetached(
+              context.read<SongCatalogCubit>().retry(),
+              'reload songs',
+              logName: 'AudioSelectionBottomSheet',
+              category: LogCategory.ui,
+            ),
+          );
+        }
+        final songs = state.songs;
+        return _SoundsContent(
+          scrollController: widget.scrollController,
+          selectionCardHeight: widget.selectionCardHeight,
+          sounds: songs,
+          covers: {for (final song in songs) song.id: ?_songCover(song)},
+          selectedSound: widget.selectedSound,
+          audioService: widget.audioService,
+          onSelect: widget.onSelect,
+          emptyState: _SearchEmptyState(hasQuery: state.query.isNotEmpty),
+        );
+      },
+    );
   }
 }
 
@@ -2322,9 +2481,10 @@ class _LeadingAbove extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.error, required this.onRetry});
+  const _ErrorState({required this.onRetry, this.error});
 
-  final Object error;
+  /// Printed under the title, or `null` to show the title alone.
+  final Object? error;
 
   /// Loads the list that failed again.
   final VoidCallback onRetry;
@@ -2349,16 +2509,18 @@ class _ErrorState extends StatelessWidget {
                 color: context.vineColors.primaryText,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              error.toString(),
-              style: VineTheme.bodySmallFont(
-                color: context.vineColors.secondaryText,
+            if (error case final error?) ...[
+              const SizedBox(height: 8),
+              Text(
+                error.toString(),
+                style: VineTheme.bodySmallFont(
+                  color: context.vineColors.secondaryText,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
+            ],
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: onRetry,

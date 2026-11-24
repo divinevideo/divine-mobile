@@ -10979,6 +10979,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => '我的声音';
 
   @override
+  String get videoEditorAudioCategorySongs => 'Songs';
+
+  @override
   String get videoEditorAudioFilterEffects => '音效';
 
   @override
