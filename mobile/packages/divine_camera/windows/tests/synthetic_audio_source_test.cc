@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <mfapi.h>
 #include <mferror.h>
+#include <mfidl.h>
 #include <mfreadwrite.h>
 #include <wrl/client.h>
 
