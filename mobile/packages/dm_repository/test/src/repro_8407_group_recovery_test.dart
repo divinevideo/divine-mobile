@@ -873,14 +873,25 @@ void main() {
       );
     });
 
-    test(
-      'derives group creation and protocol from the recovered room',
-      () async {
+    for (final hasSent in [false, true]) {
+      final status = hasSent ? 'replied' : 'unreplied';
+      test('restores room metadata and keeps the room $status', () async {
         final oneToOneId = await seedConversation(
           [_me, _alice],
           createdAt: 1600000000,
           dmProtocol: 'nip04',
         );
+        if (hasSent) {
+          // The user's message belongs to the surviving 1:1. The room
+          // inherits its status even though only peer messages are moved.
+          await seedMessage(
+            id: 'one-to-one-sent',
+            conversationId: oneToOneId,
+            sender: _me,
+            pTags: [_alice],
+            createdAt: 1600000001,
+          );
+        }
         final groupId = await seedConversation([_me, _alice, _bob]);
         await seedMessage(
           id: 'g1',
@@ -907,73 +918,13 @@ void main() {
         expect(restored, isNotNull);
         expect(restored!.createdAt, equals(1700000002));
         expect(restored.dmProtocol, equals('nip17'));
+        expect(restored.currentUserHasSent, equals(hasSent));
         expect(
           await conversations.getConversation(oneToOneId, ownerPubkey: _me),
           isNotNull,
         );
-      },
-    );
-
-    // A repair inherits currentUserHasSent from the damaged thread rather
-    // than deriving it from the moved messages, so it neither hides a thread
-    // the user could see in the inbox nor promotes a stranger's room out of
-    // Message requests (#7684).
-    test('keeps a restored room unreplied when the user never wrote in '
-        'it', () async {
-      await seedConversation([_me, _alice]);
-      final groupId = await seedConversation([_me, _alice, _bob]);
-      await seedMessage(
-        id: 'g1',
-        conversationId: groupId,
-        sender: _alice,
-        pTags: [_me, _bob],
-        createdAt: 1700000002,
-      );
-      await seedMessage(
-        id: 'g2',
-        conversationId: groupId,
-        sender: _bob,
-        pTags: [_me, _alice],
-        createdAt: 1700000003,
-      );
-
-      await runHistoricalPass();
-      await recoverViaSetCredentials();
-
-      final restored = await conversations.getConversation(
-        groupId,
-        ownerPubkey: _me,
-      );
-      expect(restored, isNotNull);
-      expect(restored!.currentUserHasSent, isFalse);
-    });
-
-    test('keeps a restored room replied when the user wrote in it', () async {
-      final oneToOneId = await seedConversation([_me, _alice]);
-      await seedMessage(
-        id: 'split-alice',
-        conversationId: oneToOneId,
-        sender: _alice,
-        pTags: [_me, _bob],
-        createdAt: 1700000002,
-      );
-      await seedMessage(
-        id: 'split-me',
-        conversationId: oneToOneId,
-        sender: _me,
-        pTags: [_alice, _bob],
-        createdAt: 1700000003,
-      );
-
-      await recoverViaSetCredentials();
-
-      final restored = await conversations.getConversation(
-        DmRepository.computeConversationId([_me, _alice, _bob]),
-        ownerPubkey: _me,
-      );
-      expect(restored, isNotNull);
-      expect(restored!.currentUserHasSent, isTrue);
-    });
+      });
+    }
 
     test('leaves the unattested reply-mention shape alone', () async {
       final oneToOneId = await seedConversation([_me, _alice]);
