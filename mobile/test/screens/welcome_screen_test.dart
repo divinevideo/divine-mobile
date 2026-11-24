@@ -14,6 +14,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/features/guest_classics/guest_classics_entry.dart';
+import 'package:openvine/features/guest_classics/guest_classics_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/models/known_account.dart';
@@ -108,6 +110,7 @@ void main() {
   Widget createTestWidget({
     AuthState authState = AuthState.unauthenticated,
     String? initialSelectedPubkeyHex,
+    bool guestEntry = false,
   }) {
     final app = MaterialApp.router(
       localizationsDelegates: appLocalizationsDelegates,
@@ -120,6 +123,7 @@ void main() {
             path: WelcomeScreen.path,
             builder: (context, state) => WelcomeScreen(
               initialSelectedPubkeyHex: initialSelectedPubkeyHex,
+              guestEntry: guestEntry,
             ),
             routes: [
               GoRoute(
@@ -154,6 +158,14 @@ void main() {
     );
     return ProviderScope(
       overrides: [
+        if (guestEntry) ...[
+          guestClassicsBaseProvider.overrideWithValue(
+            Uri.parse('https://example.test/'),
+          ),
+          guestClassicsManifestProvider.overrideWithValue(
+            (_, {required muted}) async => null,
+          ),
+        ],
         authServiceProvider.overrideWithValue(mockAuthService),
         currentAuthStateProvider.overrideWithValue(authState),
         databaseProvider.overrideWithValue(mockDb),
@@ -178,6 +190,38 @@ void main() {
         await tester.binding.setSurfaceSize(const Size(800, 1200));
         addTearDown(() => tester.binding.setSurfaceSize(null));
       }
+
+      for (final auth in [
+        AuthState.unauthenticated,
+        AuthState.awaitingTosAcceptance,
+        AuthState.checking,
+      ]) {
+        testWidgets('guest entry under $auth preserves the auth boundary', (
+          tester,
+        ) async {
+          await useTallSurface(tester);
+          await tester.pumpWidget(
+            createTestWidget(guestEntry: true, authState: auth),
+          );
+          await tester.pump();
+          expect(
+            find.byType(GuestClassicsEntry),
+            auth == AuthState.unauthenticated ? findsOneWidget : findsNothing,
+          );
+        });
+      }
+
+      testWidgets(
+        'known accounts stay on recovery when the guest entry is selected',
+        (tester) async {
+          await useTallSurface(tester);
+          when(() => mockAuthService.getKnownAccounts())
+              .thenAnswer((_) async => [_testKnownAccount]);
+          await tester.pumpWidget(createTestWidget(guestEntry: true));
+          await tester.pump();
+          expect(find.byType(GuestClassicsEntry), findsNothing);
+        },
+      );
 
       testWidgets('displays $AuthHeroSection', (tester) async {
         await useTallSurface(tester);

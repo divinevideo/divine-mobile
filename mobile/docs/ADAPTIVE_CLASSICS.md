@@ -48,3 +48,26 @@ and trusted discovery facets. The starting 60/20/20 mix and immediate signal
 weights are experimental. Online changes in satisfaction, discovery, skip rate,
 latency and resources require a controlled rollout; local tests are not evidence
 of that product effect.
+
+## Fresh-install guest playback
+
+For an iOS or Android QA build, set `GUEST_CLASSICS_MANIFEST_BASE_URL` to the
+HTTPS directory containing the reviewed starter manifests. An empty value
+keeps the normal welcome screen. On a fresh ordinary launch, a usable
+manifest adds **Classics** below the existing age and terms notice. Selecting
+it plays the first eligible classic muted. Closing the player returns to
+the account and Greenlight choices. Deep links, account recovery, pending
+terms, account switching and returning accounts retain their existing entry.
+
+The client requests `v1/<language>/muted.json` in viewing preference order,
+then `v1/und/muted.json`. A valid empty list or HTTP 404 advances to the
+next language. The player checks a fresh `audible.json` before enabling
+sound. The first rendered frame triggers preparation of the next clip.
+Transport errors, expired manifests and withdrawals preserve the existing
+welcome flow. Backgrounding releases the player, and resuming requires a
+fresh manifest. The mobile session keeps its recently seen set in memory.
+
+For local QA, override `guestClassicsObserverProvider` to observe a native
+first rendered frame and a page change. This build has no guest behavioral
+upload or experiment enrollment. Validate first-frame latency, audio behavior
+and physical-device playback with reviewed media before enrollment.

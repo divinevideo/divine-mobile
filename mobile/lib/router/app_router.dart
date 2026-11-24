@@ -11,6 +11,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/features/guest_classics/guest_classics_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
@@ -201,7 +202,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     navigatorKey: NavigatorKeys.root,
     // Start at /welcome - redirect logic will navigate to appropriate route.
     initialLocation:
-        ref.read(routerInitialLocationProvider) ?? WelcomeScreen.path,
+        ref.read(routerInitialLocationProvider) ??
+        (ref.read(guestClassicsBaseProvider) == null
+            ? WelcomeScreen.path
+            : WelcomeScreen.guestEntryPath),
     observers: _buildRouterObservers(ref),
     // Refresh router when auth or account-review state changes
     refreshListenable: refreshListenable,
