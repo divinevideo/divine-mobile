@@ -2962,12 +2962,13 @@ void main() {
           'video',
           (tester) async {
             await start(tester);
+            final videos = [_makeVideo('failing')];
             harness.setClipsFailures[0] = <Exception>[
               PlatformException(code: 'service_unavailable'),
             ];
             Widget feed({required bool isActive}) => _wrapFeed(
               InfiniteVideoFeed(
-                videos: [_makeVideo('failing')],
+                videos: videos,
                 cache: cache,
                 isActive: isActive,
                 prefetchCount: 0,
@@ -3003,6 +3004,7 @@ void main() {
           'with neighbour release',
           (tester) async {
             await start(tester);
+            final videos = [_makeVideo('terminal')];
             harness.setClipsFailures[0] = <Exception>[
               PlatformException(
                 code: 'COMPOSITION_ERROR',
@@ -3011,7 +3013,7 @@ void main() {
             ];
             Widget feed({required bool isActive}) => _wrapFeed(
               InfiniteVideoFeed(
-                videos: [_makeVideo('terminal')],
+                videos: videos,
                 cache: cache,
                 isActive: isActive,
                 releaseNeighboursWhenInactive: true,
