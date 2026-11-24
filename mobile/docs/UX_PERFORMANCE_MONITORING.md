@@ -64,11 +64,14 @@ as `tab_switch` and coming back starts a new one; the
 cross-fade between the two counts for the tab being selected. `covered` is a
 route on top, pushed over the whole shell or inside the tab. The inbox,
 notifications, settings and the hashtag, list and sound grids are not traced.
-Frames are drawn for the whole app, so one screen never sits inside another's
-trace; a debug assertion holds that.
+Frames are drawn for the whole app, so one scope never sits inside another's
+trace; a debug assertion holds that. A push or pop between two traced screens
+is the exception: both visits run during the transition, so its frames count
+for both.
 
-A visit has to last a second to report, so a device sends at most one sample a
-second and in practice one per change of screen: someone who changes screen
+A visit has to last a second to report, so a device sends about one sample a
+second at most (two visits overlap only during a transition) and in practice
+one per change of screen: someone who changes screen
 every 10 seconds sends 60 in 10 minutes, a fifth of the shared budget described
 below. Tab hops shorter than a second send nothing.
 
