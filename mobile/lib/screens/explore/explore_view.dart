@@ -30,6 +30,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_apps_platform_support.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/nav_rounded_shell.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// The explore screen body. Provided an [ExploreTabsCubit] by [ExploreScreen].
@@ -342,7 +343,7 @@ class _ExploreViewState extends ConsumerState<ExploreView>
       return _buildContent();
     }
 
-    return NavRoundedShell(
+    final grid = NavRoundedShell(
       child: Column(
         children: [
           SafeArea(
@@ -385,6 +386,8 @@ class _ExploreViewState extends ConsumerState<ExploreView>
         ],
       ),
     );
+    // The feed mode above has the fullscreen feed's own trace.
+    return ScreenFrameTraceScope(screen: .explore, child: grid);
   }
 
   void _onTabTap(int index) {

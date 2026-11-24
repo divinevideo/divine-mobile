@@ -1024,7 +1024,9 @@ void main() {
         await pumpEventQueue();
 
         started.complete(true);
-        await pumpEventQueue();
+        // The main file goes through asynchronous disk I/O, which a loaded
+        // runner can take longer to finish than one pumpEventQueue allows.
+        await _pumpUntil(() => !mainFile.existsSync());
 
         expect(bloc.state.isRecording, isFalse);
         expect(mainFile.existsSync(), isFalse);
@@ -1060,3 +1062,11 @@ void main() {
 }
 
 class _SingleCameraService extends Mock implements CameraService {}
+
+/// Pumps the event queue until [done] holds, for work that finishes on real
+/// I/O rather than within a fixed number of event-loop turns.
+Future<void> _pumpUntil(bool Function() done) async {
+  for (var i = 0; i < 200 && !done(); i++) {
+    await pumpEventQueue();
+  }
+}

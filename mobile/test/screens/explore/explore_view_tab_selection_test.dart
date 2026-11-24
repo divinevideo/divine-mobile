@@ -20,6 +20,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/notification_tap_router.dart';
 import 'package:openvine/notifications/routing/notification_tap_target.dart';
+import 'package:openvine/observability/screen_frame_trace.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/classic_vines_provider.dart';
@@ -35,6 +36,7 @@ import 'package:openvine/screens/explore/explore_view.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/notification_helpers.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -597,6 +599,19 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(selectedTabName(tester), equals(chosen));
+    });
+  });
+
+  group('ExploreView frame trace', () {
+    testWidgets('traces the grid as explore', (tester) async {
+      await pumpExplore(tester, repository: _StagedFeaturedTabsRepository());
+
+      expect(
+        tester
+            .widget<ScreenFrameTraceScope>(find.byType(ScreenFrameTraceScope))
+            .screen,
+        TracedScreen.explore,
+      );
     });
   });
 }

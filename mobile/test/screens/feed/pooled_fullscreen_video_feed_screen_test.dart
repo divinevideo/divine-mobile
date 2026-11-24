@@ -36,6 +36,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/models/viewer_auth_result.dart';
+import 'package:openvine/observability/screen_frame_trace.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -54,6 +55,7 @@ import 'package:openvine/services/media_auth_interceptor.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/divine_video_metrics_tracker.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:openvine/widgets/video_feed_item/actions/actions.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
@@ -499,6 +501,39 @@ void main() {
         },
       );
     }
+
+    testWidgets('traces its frames as the fullscreen feed', (tester) async {
+      final videoService = createMockVideoEventService();
+      when(() => videoService.shouldHideVideo(any())).thenReturn(false);
+      await tester.pumpWidget(
+        BlocProvider<VideoVolumeCubit>.value(
+          value: videoVolumeCubit,
+          child: testMaterialApp(
+            mockProfileRepository: mockProfileRepository,
+            mockNip05VerificationService: mockNip05VerificationService,
+            additionalOverrides: [
+              pendingActionServiceProvider.overrideWithValue(null),
+              videoEventServiceProvider.overrideWithValue(videoService),
+            ],
+            home: PooledFullscreenVideoFeedScreen(
+              source: SingleVideoViewSource(createTestVideos(count: 1).single),
+              feedRepository: StaticFeedRepository(),
+              initialIndex: 0,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        tester
+            .widget<ScreenFrameTraceScope>(find.byType(ScreenFrameTraceScope))
+            .screen,
+        TracedScreen.fullscreenFeed,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
 
     testWidgets(
       'selected Classics retain Classics attribution after the anchor',

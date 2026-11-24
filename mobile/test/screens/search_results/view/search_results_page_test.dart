@@ -18,6 +18,7 @@ import 'package:openvine/blocs/search_results_filter/search_results_filter.dart'
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/constants/search_constants.dart';
+import 'package:openvine/observability/screen_frame_trace.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
@@ -29,6 +30,7 @@ import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/og_viner_cache_service.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/widgets/og_viner_badge.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -437,6 +439,32 @@ void main() {
           expect(cache.isOgViner(tagged.pubkey), isFalse);
           expect(cache.isOgViner(unknown.pubkey), isFalse);
         },
+      );
+    });
+
+    testWidgets('traces the page as search while profiles get ready', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createTestWidget(
+          profileRepositoryOverride: profileRepositoryProvider
+              .overrideWithValue(null),
+        ),
+      );
+      await tester.pump();
+
+      // Above the readiness gate, whose muted tickers are not a route on top.
+      expect(
+        tester
+            .widget<ScreenFrameTraceScope>(find.byType(ScreenFrameTraceScope))
+            .screen,
+        TracedScreen.search,
+      );
+      expect(
+        TickerMode.valuesOf(
+          tester.element(find.byType(ScreenFrameTraceScope)),
+        ).enabled,
+        isTrue,
       );
     });
 

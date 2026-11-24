@@ -12,9 +12,33 @@ import 'package:openvine/observability/performance_operation.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// The screens that report a `screen_frames` trace, as their `screen`
+/// The screens that report a `screen_frames` trace, with their `screen`
 /// attribute.
-enum TracedScreen { recorder, editor }
+enum TracedScreen {
+  recorder('recorder'),
+  editor('editor'),
+
+  /// The home tab's feed.
+  homeFeed('home_feed'),
+
+  /// The fullscreen feed, wherever it opens: from a grid, Classics, replies
+  /// or a video link.
+  fullscreenFeed('fullscreen_feed'),
+
+  /// Explore's tabs and grids, without the feed opened from them.
+  explore('explore'),
+
+  /// Search and its results.
+  search('search'),
+
+  /// A profile and its grids, the account's own or anyone's.
+  profile('profile');
+
+  const TracedScreen(this.attribute);
+
+  /// The `screen` attribute.
+  final String attribute;
+}
 
 /// Where frame timings come from. Replaced in tests.
 abstract interface class FrameTimingsSource {
@@ -64,9 +88,10 @@ class SchedulerFrameTimingsSource implements FrameTimingsSource {
 ///
 /// A visit is a stretch of time in which the screen is on screen with the app
 /// in the foreground. It ends when the screen closes, when an opaque route
-/// covers it, or when the app goes to the background, and a new visit starts
-/// when the screen shows again. Visits shorter than [minimumVisible] or with
-/// fewer than [minimumFrames] frames are not reported.
+/// covers it, when another tab of the app shell is selected, or when the app
+/// goes to the background, and a new visit starts when the screen shows
+/// again. Visits shorter than [minimumVisible] or with fewer than
+/// [minimumFrames] frames are not reported.
 ///
 /// A frame is slow when it misses the display's frame budget — 16.7 ms at 60
 /// Hz, 8.3 ms at 120 Hz — on either thread: the UI thread, counted from the
@@ -81,8 +106,9 @@ class SchedulerFrameTimingsSource implements FrameTimingsSource {
 /// once, as the app may not draw again before it is killed, and loses the
 /// frames that were still to arrive.
 ///
-/// Attributes: `screen` ([TracedScreen]), `refresh` (`60`, `90`, `120` or
-/// `other`) and `end` (`closed`, `covered` or `background`). Metrics:
+/// Attributes: `screen` ([TracedScreen.attribute]), `refresh` (`60`, `90`,
+/// `120` or `other`) and `end` (`closed`, `covered`, `tab_switch` or
+/// `background`). Metrics:
 /// `frames`, `slow_frames`, `frozen_frames`, `slow_per_mille`, `visible_ms`,
 /// and the 90th percentile of the UI thread's time from vsync to the end of
 /// the build (`build_p90_us`) and of the raster time (`raster_p90_us`).
@@ -170,11 +196,13 @@ class ScreenFrameTrace {
     return (Duration.microsecondsPerSecond / rate).round();
   }
 
-  /// Records whether an opaque route covers the screen.
-  void setCovered(bool covered) {
+  /// Records whether the screen is hidden while the app is in the
+  /// foreground: under an opaque route, or, when [byTabSwitch], in a tab of
+  /// the app shell that is no longer selected.
+  void setCovered(bool covered, {bool byTabSwitch = false}) {
     if (_covered == covered) return;
     _covered = covered;
-    _sync(_VisitEnd.covered);
+    _sync(byTabSwitch ? _VisitEnd.tabSwitch : _VisitEnd.covered);
   }
 
   /// Records whether the app is in the foreground.
@@ -272,8 +300,17 @@ class ScreenFrameTrace {
   }
 }
 
-/// How a visit ended, as its `end` attribute.
-enum _VisitEnd { covered, background, closed }
+/// How a visit ended, with its `end` attribute.
+enum _VisitEnd {
+  covered('covered'),
+  tabSwitch('tab_switch'),
+  background('background'),
+  closed('closed');
+
+  const _VisitEnd(this.attribute);
+
+  final String attribute;
+}
 
 /// The frames of one visit.
 final class _FrameVisit {
@@ -341,9 +378,9 @@ final class _FrameVisit {
     }
     return (
       attributes: {
-        'screen': screen.name,
+        'screen': screen.attribute,
         'refresh': _refresh,
-        'end': (_end ?? _VisitEnd.closed).name,
+        'end': (_end ?? _VisitEnd.closed).attribute,
       },
       metrics: {
         'frames': _frames,

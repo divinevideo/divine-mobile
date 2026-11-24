@@ -414,6 +414,22 @@ void main() {
         });
       });
 
+      test('ends the visit as a tab switch when its tab is left', () {
+        fakeAsync((async) {
+          final trace = openTrace(screen: TracedScreen.homeFeed);
+          timings.report(_frames(1, 20));
+          async.elapse(const Duration(seconds: 2));
+          timings.frameNumber = 21;
+          trace.setCovered(true, byTabSwitch: true);
+
+          expect(onlyTrace().attributes, {
+            'screen': 'home_feed',
+            'refresh': '60',
+            'end': 'tab_switch',
+          });
+        });
+      });
+
       test('starts no visit while it opens covered', () {
         fakeAsync((async) {
           final trace = openTrace(covered: true);
@@ -447,6 +463,20 @@ void main() {
           expect(onlyTrace().stops, 1);
           expect(timings.callbacks, isEmpty);
         });
+      });
+    });
+
+    group(TracedScreen, () {
+      test('keeps the screen attributes dashboards filter on', () {
+        expect(TracedScreen.values.map((screen) => screen.attribute), [
+          'recorder',
+          'editor',
+          'home_feed',
+          'fullscreen_feed',
+          'explore',
+          'search',
+          'profile',
+        ]);
       });
     });
 
