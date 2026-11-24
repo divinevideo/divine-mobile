@@ -7,7 +7,7 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from native_capture_harness import native_failure_status, require_capture_success, trace_failure_signatures
+from native_capture_harness import native_failure_status, require_capture_success, trace_capture_failure, trace_failure_signatures
 
 
 class TraceFailureSignaturesTest(unittest.TestCase):
@@ -53,7 +53,74 @@ class NativeFailureStatusTest(unittest.TestCase):
                 self.assertIsNone(native_failure_status(line))
 
 
+class TraceAttributePrivacyTest(unittest.TestCase):
+    def diagnostics(self, trace):
+        output = io.StringIO()
+        completed = subprocess.CompletedProcess([], 0, trace.encode(), b'')
+        with patch('native_capture_harness.capture_trace_tool', return_value=Path('mftrace.exe')):
+            with patch('native_capture_harness.Path.is_file', return_value=True):
+                with patch('native_capture_harness.subprocess.run', return_value=completed):
+                    with contextlib.redirect_stdout(output):
+                        trace_capture_failure([], Path('.'), {'DIVINE_CAPTURE_TRACE_LAUNCHER': 'owned-launcher'})
+        return output.getvalue()
+
+    def test_missing_key_without_hresult_keeps_only_known_sdk_attribute(self):
+        output = self.diagnostics('CMFAttributesDetours::GetGUID @private-address '
+                                  'attribute not found guidKey = MF_MT_SUBTYPE private-value')
+        self.assertIn('DIVINE_CAPTURE_TRACE_ATTRIBUTE 1 CMFAttributesDetours::GetGUID MF_MT_SUBTYPE 0xc00d36e6', output)
+        self.assertNotIn('private-', output)
+
+    def test_unknown_keys_are_counted_without_disclosing_names_or_guids(self):
+        output = self.diagnostics('CMFAttributesDetours::GetGUID attribute not found guidKey = private_value\n'
+                                  'CMFAttributesDetours::GetUINT32 attribute not found guidKey = {00000000-0000-0000-0000-000000000001}')
+        self.assertIn('DIVINE_CAPTURE_TRACE_UNKNOWN_ATTRIBUTE_COUNT 2', output)
+        self.assertNotIn('private_value', output)
+        self.assertNotIn('00000000', output)
+
+    def test_keeps_occurrence_order_without_exporting_unrelated_fields(self):
+        output = self.diagnostics('CMFAttributesDetours::GetUINT32 attribute not found guidKey = MF_MT_INTERLACE_MODE\n'
+                                  'CMFAttributesDetours::GetGUID attribute not found guidKey = MF_MT_SUBTYPE')
+        self.assertLess(output.index('1 CMFAttributesDetours::GetUINT32'), output.index('2 CMFAttributesDetours::GetGUID'))
+
+    def test_success_or_unknown_method_does_not_become_a_missing_attribute(self):
+        output = self.diagnostics('CMFAttributesDetours::GetGUID guidKey = MF_MT_SUBTYPE hr=0x00000000\n'
+                                  'CMFAttributesDetours::private_method attribute not found guidKey = MF_MT_SUBTYPE')
+        self.assertIn('DIVINE_CAPTURE_TRACE_ATTRIBUTE_COUNT 0', output)
+        self.assertIn('DIVINE_CAPTURE_TRACE_UNKNOWN_ATTRIBUTE_COUNT 0', output)
+
+    def test_known_name_in_a_value_cannot_be_mistaken_for_the_missing_key(self):
+        output = self.diagnostics('CMFAttributesDetours::GetGUID attribute not found guidKey = private_key value=MF_MT_SUBTYPE')
+        self.assertIn('DIVINE_CAPTURE_TRACE_ATTRIBUTE_COUNT 0', output)
+        self.assertNotIn('MF_MT_SUBTYPE', output)
+
+    def test_known_sdk_guid_is_rendered_as_its_public_name_only(self):
+        output = self.diagnostics('CMFAttributesDetours::GetGUID attribute not found '
+                                  'guidKey = {F7E34C9A-42E8-4714-B74B-CB29D72C35E5}')
+        self.assertIn('CMFAttributesDetours::GetGUID MF_MT_SUBTYPE 0xc00d36e6', output)
+        self.assertNotIn('F7E34C9A', output)
+
+    def test_topology_missing_key_is_not_lost_at_the_effect_boundary(self):
+        output = self.diagnostics('CMFTopologyNodeDetours::GetGUID attribute not found '
+                                  'guidKey = MF_TOPONODE_TRANSFORM_OBJECTID')
+        self.assertIn('CMFTopologyNodeDetours::GetGUID MF_TOPONODE_TRANSFORM_OBJECTID 0xc00d36e6', output)
+
+
 class EffectFlagsControlTest(unittest.TestCase):
+    def test_initialization_comparison_traces_both_cases_and_retains_failure(self):
+        result = subprocess.CompletedProcess([], 1, '',
+            'capture-stage effect_flags_applied\nDIVINE_CAPTURE_FAIL initialization initialization_failed')
+        environment = {'DIVINE_CAPTURE_TEST_EFFECT_FLAGS': '1'}
+        cases = []
+        with patch('native_capture_harness.trace_capture_failure',
+                   side_effect=lambda command, app, env: cases.append(
+                       (env['DIVINE_CAPTURE_CASE'], env.get('DIVINE_CAPTURE_TEST_EFFECT_FLAGS')))):
+            with contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaisesRegex(RuntimeError, 'Native capture failed; exit=1'):
+                    require_capture_success(result, 'windows', 'mirrored-video', [], Path('.'), environment)
+        self.assertEqual(cases, [('video', None), ('mirrored-video', '1')])
+        self.assertEqual(environment, {'DIVINE_CAPTURE_TEST_EFFECT_FLAGS': '1'})
+        self.assertEqual(result.returncode, 1)
+
     def test_requested_variant_requires_actual_native_application(self):
         result = subprocess.CompletedProcess([], 0, 'DIVINE_CAPTURE_PASS', '')
         with self.assertRaisesRegex(RuntimeError, 'Effect flags variant was not applied'):

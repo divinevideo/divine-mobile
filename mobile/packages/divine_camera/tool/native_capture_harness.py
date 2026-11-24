@@ -467,6 +467,70 @@ def capture_trace_tool():
     return versions[-1] if versions else None
 
 
+def trace_attribute_failures(trace):
+    """Retain public SDK key names only; unknown key names and values stay private."""
+    # Public key identifiers from Microsoft win32metadata a40ed3186943620f304649a077b78f8271034736.
+    attributes = {
+        'MFT_FRIENDLY_NAME_Attribute': '314ffbae-5b41-4c95-9c19-4e7d586face3',
+        'MFT_INPUT_TYPES_Attributes': '4276c9b1-759d-4bf3-9cd0-0d723d138f96',
+        'MFT_OUTPUT_TYPES_Attributes': '8eae8cf3-a44f-4306-ba5c-bf5dda242818',
+        'MFT_TRANSFORM_CLSID_Attribute': '6821c42b-65a4-4e82-99bc-9a88205ecd0c',
+        'MF_CAPTURE_ENGINE_D3D_MANAGER': '76e25e7b-d595-4283-962c-c594afd78ddf',
+        'MF_CAPTURE_ENGINE_EVENT_GENERATOR_GUID': 'abfa8ad5-fc6d-4911-87e0-961945f8f7ce',
+        'MF_CAPTURE_ENGINE_EVENT_STREAM_INDEX': '82697f44-b1cf-42eb-9753-f86d649c8865',
+        'MF_DEVICESTREAM_STREAM_CATEGORY': '2939e7b8-a62e-4579-b674-d4073dfabbba',
+        'MF_DEVICESTREAM_STREAM_ID': '11bd5120-d124-446b-88e6-17060257fff9',
+        'MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE': 'c60ac5fe-252a-478f-a0ef-bc8fa5f7cad3',
+        'MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_AUDCAP_ENDPOINT_ID': '30da9258-feb9-47a7-a453-763a7a8e1c5f',
+        'MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_CATEGORY': '77f0ae69-c3bd-4509-941d-467e4d24899e',
+        'MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_MAX_BUFFERS': '7dd9b730-4f2d-41d5-8f95-0cc9a912ba26',
+        'MF_MT_ALL_SAMPLES_INDEPENDENT': 'c9173739-5e56-461c-b713-46fb995cb95f',
+        'MF_MT_AUDIO_AVG_BYTES_PER_SECOND': '1aab75c8-cfef-451c-ab95-ac034b8e1731',
+        'MF_MT_AUDIO_BITS_PER_SAMPLE': 'f2deb57f-40fa-4764-aa33-ed4f2d1ff669',
+        'MF_MT_AUDIO_BLOCK_ALIGNMENT': '322de230-9eeb-43bd-ab7a-ff412251541d',
+        'MF_MT_AUDIO_NUM_CHANNELS': '37e48bf5-645e-4c5b-89de-ada9e29b696a',
+        'MF_MT_AUDIO_SAMPLES_PER_SECOND': '5faeeae7-0290-4c31-9e8a-c534f68d9dba',
+        'MF_MT_DEFAULT_STRIDE': '644b4e48-1e02-4516-b0eb-c01ca9d49ac6',
+        'MF_MT_FIXED_SIZE_SAMPLES': 'b8ebefaf-b718-4e04-b0a9-116775e3321b',
+        'MF_MT_FRAME_RATE': 'c459a2e8-3d2c-4e44-b132-fee5156c7bb0',
+        'MF_MT_FRAME_SIZE': '1652c33d-d6b2-4012-b834-72030849a37d',
+        'MF_MT_INTERLACE_MODE': 'e2724bb8-e676-4806-b4b2-a8d6efb44ccd',
+        'MF_MT_MAJOR_TYPE': '48eba18e-f8c9-4687-bf11-0a74c9f96a8f',
+        'MF_MT_PIXEL_ASPECT_RATIO': 'c6376a1e-8d0a-4027-be45-6d9a0ad39bb6',
+        'MF_MT_SAMPLE_SIZE': 'dad3ab78-1990-408b-bce2-eba673dacc10',
+        'MF_MT_SUBTYPE': 'f7e34c9a-42e8-4714-b74b-cb29d72c35e5',
+        'MF_READWRITE_D3D_OPTIONAL': '216479d9-3071-42ca-bb6c-4c22102e1d18',
+        'MF_SA_D3D11_AWARE': '206b4fc8-fcf9-4c51-afe3-9764369e33a0',
+        'MF_SA_D3D_AWARE': 'eaa35c29-775e-488e-9b61-b3283e49583b',
+        'MF_TOPONODE_TRANSFORM_OBJECTID': None,
+        'MF_TRANSFORM_ASYNC': 'f81a699a-649a-497d-8c73-29f8fed6ad7a',
+        'MF_TRANSFORM_ASYNC_UNLOCK': 'e5666d6b-3422-4eb6-a421-da7db1f8e207',
+        'MF_TRANSFORM_CATEGORY_Attribute': 'ceabba49-506d-4757-a6ff-66c184987e4e',
+        'MF_TRANSFORM_FLAGS_Attribute': '9359bb7e-6275-46c4-a025-1c01e45f1a86',
+    }
+    guids = {value: name for name, value in attributes.items() if value}
+
+    failures = []
+    unknown = 0
+    for line in trace.splitlines():
+        api = re.search(r'\b(CMF(?:Attributes|Activate|MediaType|MediaEvent|TopologyNode|PresentationDescriptor|StreamDescriptor)Detours)::(GetGUID|GetUINT32|GetUnknown|GetItem)\b', line)
+        if not api or 'attribute not found' not in line:
+            continue
+        status = re.search(r'\b(?:hr|hresult|status)\s*[:=]\s*(0x[0-9a-f]{8})(?![0-9a-f])', line, re.I)
+        if status and status.group(1).lower() != '0xc00d36e6':
+            continue
+        key = re.search(r'\bguidKey\s*=\s*([A-Za-z][A-Za-z0-9_]*|\{[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}\})(?=\s|$|[;,])', line)
+        name = None
+        if key:
+            token = key.group(1)
+            name = token if token in attributes else guids.get(token.strip('{}').lower())
+        if name:
+            failures.append((api.group(0), name, '0xc00d36e6'))
+        else:
+            unknown += 1
+    return failures, unknown
+
+
 def trace_capture_failure(command, app, env):
     """Supplement an unchanged failing assertion; tracing cannot make it pass."""
     tracer = capture_trace_tool()
@@ -495,6 +559,11 @@ def trace_capture_failure(command, app, env):
     print('DIVINE_CAPTURE_TRACE_FAILURE_COUNT', len(signatures), flush=True)
     for symbol, code in signatures[:80]:
         print('DIVINE_CAPTURE_TRACE_STATUS', symbol, code, flush=True)
+    attributes, unknown = trace_attribute_failures(text)
+    print('DIVINE_CAPTURE_TRACE_ATTRIBUTE_COUNT', len(attributes), flush=True)
+    for index, (symbol, attribute, code) in enumerate(attributes[:80], 1):
+        print('DIVINE_CAPTURE_TRACE_ATTRIBUTE', index, symbol, attribute, code, flush=True)
+    print('DIVINE_CAPTURE_TRACE_UNKNOWN_ATTRIBUTE_COUNT', unknown, flush=True)
 
 
 def native_failure_status(line):
@@ -508,6 +577,15 @@ def require_capture_success(result, platform, capture_case, command, app, env):
     if result.returncode != 0 or 'DIVINE_CAPTURE_PASS' not in result.stdout:
         if platform == 'windows' and capture_case == 'audio' and 'DIVINE_CAPTURE_FAIL initialization' in (result.stdout + result.stderr):
             trace_capture_failure(command, app, env)
+        if (platform == 'windows' and capture_case == 'mirrored-video' and
+                env.get('DIVINE_CAPTURE_TEST_EFFECT_FLAGS') == '1' and
+                'DIVINE_CAPTURE_FAIL initialization' in (result.stdout + result.stderr)):
+            for name, case in [('video_control', 'video'), ('mirrored_comparison', 'mirrored-video')]:
+                print('DIVINE_CAPTURE_TRACE_CASE', name, flush=True)
+                comparison = dict(env, DIVINE_CAPTURE_CASE=case)
+                if case == 'video':
+                    comparison.pop('DIVINE_CAPTURE_TEST_EFFECT_FLAGS', None)
+                trace_capture_failure(command, app, comparison)
         raise RuntimeError('Native capture failed; exit=' + str(result.returncode))
 
 
