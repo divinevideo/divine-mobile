@@ -1507,6 +1507,7 @@ workflows:
         - proofmode_credentials
         - github_credentials
         - macos_signing_credentials
+        - store_release_credentials
       vars:
         BUNDLE_ID: co.openvine.app
     cache:
@@ -1516,6 +1517,7 @@ workflows:
     triggering:
       events: []
     scripts:
+      - *verify_shorebird_release_source
       - *check_signing_endpoint
       - *check_supporters_config
       - name: Check macOS App Store configuration

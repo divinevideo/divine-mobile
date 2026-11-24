@@ -1,0 +1,58 @@
+name: macOS TestFlight Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: 'Optional full lowercase 40-character SHA; must equal current main'
+        required: false
+        type: string
+      default_env:
+        description: Default backend for fresh installs
+        type: choice
+        default: PRODUCTION
+        options: [PRODUCTION, STAGING, POC]
+
+permissions:
+  contents: read
+  checks: read
+  actions: read
+
+concurrency:
+  # Serialize credential refresh in store_release_credentials with other native store drivers.
+  group: store-release-train
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  release:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    environment: store-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Scope private ledger build token
+        id: provenance
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ secrets.PROVENANCE_APP_ID }}
+          private-key: ${{ secrets.PROVENANCE_APP_PRIVATE_KEY }}
+          owner: divinevideo
+          repositories: divine-release-provenance
+          permission-contents: write
+          skip-token-revoke: true
+      - name: Submit and monitor main macOS App Store TestFlight release
+        id: codemagic
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CODEMAGIC_API_TOKEN: ${{ secrets.CODEMAGIC_API_TOKEN }}
+          PROVENANCE_TOKEN: ${{ steps.provenance.outputs.token }}
+          PUBLIC_PEOPLE_LIST_POLICY: ${{ vars.DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          NATIVE_DEFAULT_ENV: ${{ inputs.default_env }}
+        run: python3 mobile/scripts/start_macos_release.py
