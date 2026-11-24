@@ -4470,6 +4470,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Relay tidak menerima kemas kini. Cuba lagi sebentar lagi.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Video ini telah diubah pada peranti lain dan kini mempunyai terlalu banyak tag atau kolaborator. Buka semula dan buang beberapa.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Gagal mengemas kini video ini. Cuba lagi.';
 

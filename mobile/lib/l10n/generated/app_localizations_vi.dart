@@ -4442,6 +4442,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Relay không chấp nhận bản cập nhật. Thử lại sau giây lát.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Video này đã thay đổi trên thiết bị khác và giờ có quá nhiều thẻ hoặc cộng tác viên. Mở lại rồi xoá bớt nhé.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Không cập nhật được video này. Thử lại nhé.';
 

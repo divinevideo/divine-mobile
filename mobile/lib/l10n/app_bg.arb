@@ -1731,6 +1731,7 @@
   "videoUpdateErrorNoPlayableVideo": "Това видео няма възпроизводим източник, затова не може да се редактира.",
   "videoUpdateErrorCouldNotSign": "Промяната не можа да бъде подписана. Опитай пак.",
   "videoUpdateErrorPublishRejected": "Релето не прие промяната. Опитай пак след малко.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "Това видео е променено на друго устройство и вече има твърде много етикети или хора, които сътрудничат. Отвори го отново и махни някои.",
   "videoUpdateErrorGeneric": "Това видео не можа да бъде обновено. Опитай пак.",
   "shareMenuDeleteVideoQuestion": "Да изтрием видеото?",
   "shareMenuDeleteCleanupInProgress": "Премахване на видеото…",

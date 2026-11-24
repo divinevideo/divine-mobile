@@ -1555,6 +1555,7 @@
   "videoUpdateErrorNoPlayableVideo": "Den här videon har ingen spelbar källa och kan inte redigeras.",
   "videoUpdateErrorCouldNotSign": "Kunde inte signera ändringen. Försök igen.",
   "videoUpdateErrorPublishRejected": "Relät accepterade inte ändringen. Försök igen om en stund.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "Videon har ändrats på en annan enhet och har nu för många taggar eller samarbetspartner. Öppna den igen och ta bort några.",
   "videoUpdateErrorGeneric": "Kunde inte uppdatera videon. Försök igen.",
   "shareMenuDeleteVideoQuestion": "Ta bort video?",
   "shareMenuDeleteCleanupInProgress": "Tar bort videon…",

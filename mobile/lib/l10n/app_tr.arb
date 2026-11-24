@@ -1552,6 +1552,7 @@
   "videoUpdateErrorNoPlayableVideo": "Bu videonun oynatılabilir bir kaynağı yok, bu yüzden düzenlenemiyor.",
   "videoUpdateErrorCouldNotSign": "Değişiklik imzalanamadı. Tekrar dene.",
   "videoUpdateErrorPublishRejected": "Relay değişikliği kabul etmedi. Birazdan tekrar dene.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "Bu video başka bir cihazda değişti ve artık çok fazla etiketi ya da işbirlikçisi var. Tekrar aç ve birkaçını kaldır.",
   "videoUpdateErrorGeneric": "Bu video güncellenemedi. Tekrar dene.",
   "shareMenuDeleteVideoQuestion": "Video Silinsin mi?",
   "shareMenuDeleteCleanupInProgress": "Video kaldırılıyor…",

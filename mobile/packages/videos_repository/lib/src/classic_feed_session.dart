@@ -11,6 +11,7 @@ import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/src/home_feed_result.dart';
 import 'package:videos_repository/src/recommendation_session_seed.dart';
+import 'package:videos_repository/src/video_merge_helpers.dart';
 
 /// Most recent outcomes a request carries as context.
 const _maxRecentInteractions = 20;
@@ -245,6 +246,28 @@ class ClassicFeedSession {
   /// permanently exclude a video from a later read.
   void reapplyFilters({bool Function(VideoEvent video)? keep}) {
     if (_disposed || state.videos.isEmpty) return;
+    _applyQueueFilters(state.videos, keep: keep);
+  }
+
+  /// Updates an existing slot when its owner republishes a newer revision.
+  void replaceVideoRevision(VideoEvent republished) {
+    final address = republished.addressableId;
+    if (_disposed || address == null) return;
+    final index = state.videos.indexWhere(
+      (video) =>
+          video.addressableId == address &&
+          isNewerVideoRevision(republished, video),
+    );
+    if (index == -1) return;
+    final videos = [...state.videos];
+    videos[index] = mergeRepublishedVideo(videos[index], republished);
+    _applyQueueFilters(videos);
+  }
+
+  void _applyQueueFilters(
+    List<VideoEvent> candidates, {
+    bool Function(VideoEvent video)? keep,
+  }) {
     final previous = state.videos;
     final currentKey = previous[state.currentIndex].feedDedupKey;
     final reachedKeys = previous
@@ -252,7 +275,7 @@ class ClassicFeedSession {
         .map((v) => v.feedDedupKey)
         .toSet();
     final videos = _filterVideos(
-      previous,
+      candidates,
     ).where((video) => keep?.call(video) ?? true).toList();
     final current = videos.indexWhere((v) => v.feedDedupKey == currentKey);
     _furthestIndex = max(

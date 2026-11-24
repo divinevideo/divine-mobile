@@ -4636,6 +4636,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'రిలే నవీకరణను అంగీకరించదు. క్షణంలో మళ్లీ ప్రయత్నించండి.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'ఈ వీడియో మరొక పరికరంలో మార్చబడింది, ఇప్పుడు దీనికి చాలా ఎక్కువ ట్యాగ్‌లు లేదా సహకారులు ఉన్నాయి. దాన్ని మళ్లీ తెరిచి కొన్నింటిని తీసివేయండి.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'ఈ వీడియోని అప్‌డేట్ చేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.';
 

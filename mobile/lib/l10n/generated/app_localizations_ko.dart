@@ -4217,6 +4217,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '릴레이가 업데이트를 받지 않았어요. 잠시 후 다시 시도해보세요.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      '이 영상이 다른 기기에서 변경되어 태그나 콜라보레이터가 너무 많아요. 다시 열어서 몇 개를 지워 주세요.';
+
+  @override
   String get videoUpdateErrorGeneric => '이 영상을 업데이트하지 못했어요. 다시 시도해보세요.';
 
   @override

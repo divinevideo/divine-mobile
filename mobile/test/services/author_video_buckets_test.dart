@@ -103,6 +103,49 @@ void main() {
       expect(afterRemove.map((video) => video.id), ['a-new-id']);
     });
 
+    group('replaceByStableId', () {
+      // A normal (34235) and a short (34236) video are different addresses
+      // even when they share a d tag, so neither may merge into the other.
+      test('leaves a video of another kind at the same d tag alone', () {
+        final short = _video('short', pubkey: _authorA, createdAt: 100);
+        final buckets = AuthorVideoBuckets()..seed(_authorA, [short]);
+
+        final replaced = buckets.replaceByStableId(
+          _authorA,
+          _video(
+            'normal',
+            pubkey: _authorA,
+            createdAt: 200,
+            vineId: 'short',
+          ).copyWith(eventKind: 34235),
+          merge: (_, updated) => updated,
+        );
+
+        expect(replaced, isFalse);
+        expect(buckets.videosFor(_authorA), [short]);
+      });
+
+      test('replaces a video of the same kind at the same d tag', () {
+        final buckets = AuthorVideoBuckets()
+          ..seed(_authorA, [_video('short', pubkey: _authorA, createdAt: 100)]);
+        final edited = _video(
+          'short-edited',
+          pubkey: _authorA,
+          createdAt: 200,
+          vineId: 'short',
+        );
+
+        final replaced = buckets.replaceByStableId(
+          _authorA,
+          edited,
+          merge: (_, updated) => updated,
+        );
+
+        expect(replaced, isTrue);
+        expect(buckets.videosFor(_authorA), [edited]);
+      });
+    });
+
     group('addOrUpdateByVine', () {
       // An edit re-emits the original published_at, which createdAt prefers,
       // so only the signed created_at orders the revisions.

@@ -373,7 +373,7 @@ final class VideoEventPublisherProvider
 }
 
 String _$videoEventPublisherHash() =>
-    r'3a40d2a3de92880b3365f735fb22d2bddf85dfe3';
+    r'f734cb3146cf9f487c7ee45522e450aa7caca580';
 
 /// View event publisher for kind 22236 ephemeral analytics events
 ///
@@ -687,7 +687,7 @@ final class VideoMetadataUpdateServiceProvider
 }
 
 String _$videoMetadataUpdateServiceHash() =>
-    r'549eaa7d18f7ce4435d19000e64c4ab442f5ea07';
+    r'27eb6dec7a201e323e0bf6e1d12483a4ce84005f';
 
 /// Broken video tracker service for filtering non-functional videos.
 ///
@@ -1096,7 +1096,7 @@ final class VideosRepositoryProvider
   }
 }
 
-String _$videosRepositoryHash() => r'8441220dce98f68c4f5ee5ae4305c5a98461f268';
+String _$videosRepositoryHash() => r'c27544fd148aa8557e071590da02ccfc770357be';
 
 /// Provider for LikesRepository instance
 ///

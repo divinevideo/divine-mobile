@@ -4505,6 +4505,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi tinanggap ng relay ang update. Subukan ulit maya-maya.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Nabago ang video na ito sa ibang device at sobrang dami na ng tag o collaborator nito. Buksan ulit at magtanggal ng ilan.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Hindi na-update ang video na ito. Subukan ulit.';
 

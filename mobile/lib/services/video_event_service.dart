@@ -55,6 +55,8 @@ import 'package:openvine/utils/log_tag_sanitizer.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:video_event_cache/video_event_cache.dart';
+import 'package:videos_repository/videos_repository.dart'
+    show isNewerVideoRevision, mergeRepublishedVideo;
 
 export 'package:openvine/services/pagination_state.dart';
 
@@ -4517,42 +4519,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     return null;
   }
 
-  /// Merges an incoming [updatedVideo] (parsed from a freshly published Nostr
-  /// event) with the [existingVideo] already held in the service, carrying
-  /// forward fields that are not stored in Nostr event tags and therefore
-  /// cannot survive a round-trip through [VideoEvent.fromNostrEvent].
-  ///
-  /// **Timestamp preservation** — when neither version has a `published_at`
-  /// tag (common for classic Vine imports), the original `createdAt` /
-  /// `timestamp` values are kept so the video retains its chronological
-  /// position in feeds.
-  ///
-  /// **Runtime like-count carry-forward** — [VideoEvent.nostrLikeCount] is
-  /// injected at runtime after a relay batch query; it is never written into
-  /// the Nostr event body.  Without this carry-forward a metadata edit (e.g.
-  /// changing hashtags) drops the displayed count to zero until the next
-  /// batch re-fetch completes.  The relay-fetched count will overwrite this
-  /// carried value once the batch fires, so there is no risk of a stale
-  /// count persisting indefinitely.
-  VideoEvent _mergeUpdatedVideo(
-    VideoEvent existingVideo,
-    VideoEvent updatedVideo,
-  ) {
-    var merged =
-        (existingVideo.publishedAt == null && updatedVideo.publishedAt == null)
-        ? updatedVideo.copyWith(
-            createdAt: existingVideo.createdAt,
-            timestamp: existingVideo.timestamp,
-          )
-        : updatedVideo;
-
-    if (merged.nostrLikeCount == null && existingVideo.nostrLikeCount != null) {
-      merged = merged.copyWith(nostrLikeCount: existingVideo.nostrLikeCount);
-    }
-
-    return merged;
-  }
-
   /// Check if an error is connection-related
   bool _isConnectionError(dynamic error) {
     final errorString = error.toString().toLowerCase();
@@ -5821,23 +5787,27 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     _addVideoToSubscription(videoEvent, SubscriptionType.discovery);
   }
 
-  /// Update a video event (for addressable events with same pubkey/d-tag).
+  /// Update a video event (for addressable events with the same kind/pubkey/d-tag).
   ///
   /// This method replaces an existing video across all data structures:
   /// - `_eventLists` (all subscription types: homeFeed, discovery, etc.)
   /// - `_authorBuckets` (used by profile feeds)
   /// - `_replaceableVideoEvents` tracking map
   ///
-  /// After updating, callers should refresh any StateProviders that hold
-  /// their own copies of video lists (e.g., `exploreTabVideosProvider`).
-  ///
-  /// Providers that watch VideoEventService (via `ref.watch()` or `addListener()`)
-  /// will automatically rebuild when `notifyListeners()` is called, but those
-  /// with cached state (like `profileFeedProvider`, `homeFeedProvider`) need
-  /// explicit `refreshFromService()` calls.
+  /// Feeds with their own lists can listen via [addVideoUpdateListener].
   ///
   void updateVideoEvent(VideoEvent updatedVideo) {
     bool foundAny = false;
+
+    VideoEvent mergeIfNewer(VideoEvent existing, VideoEvent incoming) {
+      // A late publish acknowledgement can arrive after the relay has
+      // delivered a newer revision. Same-ID updates may enrich the cache.
+      if (incoming.id != existing.id &&
+          !isNewerVideoRevision(incoming, existing)) {
+        return existing;
+      }
+      return mergeRepublishedVideo(existing, incoming);
+    }
 
     // Find and replace in all subscription types
     for (final entry in _eventLists.entries) {
@@ -5845,29 +5815,29 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       final eventList = entry.value;
 
       // Find by stable identifier and pubkey instead of event.id.
-      // For addressable events, (pubkey, d-tag) is the stable identifier.
+      // For addressable events, (kind, pubkey, d-tag) is the stable identifier.
       // Note: Some relays/clients may omit the 'd' tag, in which case we fall
       // back to event.id; using stableId avoids mismatches that cause duplicates.
       final existingIndex = eventList.indexWhere(
         (existing) =>
             existing.stableId == updatedVideo.stableId &&
-            existing.pubkey == updatedVideo.pubkey,
+            existing.pubkey == updatedVideo.pubkey &&
+            existing.referenceKind == updatedVideo.referenceKind,
       );
 
       if (existingIndex != -1) {
+        foundAny = true;
         final existingVideo = eventList[existingIndex];
 
         // Merge updated video: preserve original timestamps and live counts.
-        // See _mergeUpdatedVideo for details.
-        final mergedVideo = _mergeUpdatedVideo(existingVideo, updatedVideo);
+        final mergedVideo = mergeIfNewer(existingVideo, updatedVideo);
+        if (identical(mergedVideo, existingVideo)) continue;
 
         eventList[existingIndex] = mergedVideo;
-        foundAny = true;
 
         // Update replaceable tracking map
-        // Use NIP71VideoKinds.addressableShortVideo since that's what Divine uses
         final replaceKey =
-            '$subscriptionType:${NIP71VideoKinds.addressableShortVideo}:${mergedVideo.pubkey}:${mergedVideo.stableId}';
+            '$subscriptionType:${mergedVideo.referenceKind}:${mergedVideo.pubkey}:${mergedVideo.stableId}';
         // The raw created_at, as _handleReplaceableVideoEvent records it.
         // createdAt holds the published_at every edit re-emits, so an
         // earlier revision would compare as newer.
@@ -5884,18 +5854,19 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     final replacedInAuthorBucket = _authorBuckets.replaceByStableId(
       updatedVideo.pubkey,
       updatedVideo,
-      merge: _mergeUpdatedVideo,
+      merge: mergeIfNewer,
     );
     foundAny = foundAny || replacedInAuthorBucket;
 
     if (foundAny) {
       notifyListeners();
-      // Notify registered callbacks about the update
-      _notifyVideoUpdated(updatedVideo);
     } else {
       // If not found anywhere, add it to discovery feed
       addVideoEvent(updatedVideo);
     }
+    // Feeds this service does not hold (Home is fed over REST) learn of the
+    // republish from the callbacks too (#11250).
+    _notifyVideoUpdated(updatedVideo);
   }
 
   // NIP-50 Search Methods

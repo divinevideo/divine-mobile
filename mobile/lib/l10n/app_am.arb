@@ -1997,6 +1997,7 @@
   "videoUpdateErrorNoPlayableVideo": "ይህ ቪዲዮ ሊጫወት የሚችል ምንጭ የለውም፣ ስለዚህ ሊስተካከል አይችልም።",
   "videoUpdateErrorCouldNotSign": "ማዘመኛውን መፈረም አልተቻለም። እንደገና ሞክር።",
   "videoUpdateErrorPublishRejected": "ማስተላለፊያው ማዘመኛውን አልተቀበለም። ትንሽ ቆይተህ እንደገና ሞክር።",
+  "videoUpdateErrorConcurrentEditsOverLimit": "ይህ ቪዲዮ በሌላ መሣሪያ ላይ ተቀይሯል፤ አሁን በጣም ብዙ መለያዎች ወይም ተባባሪዎች አሉት። እንደገና ከፍተው ጥቂቶቹን ያስወግዱ።",
   "videoUpdateErrorGeneric": "ይህን ቪዲዮ ማዘመን አልተቻለም። እንደገና ሞክር።",
   "shareMenuDeleteVideoQuestion": "ቪዲዮ ይሰረዝ?",
   "shareMenuDeleteCleanupInProgress": "ቪዲዮው እየተወገደ ነው…",

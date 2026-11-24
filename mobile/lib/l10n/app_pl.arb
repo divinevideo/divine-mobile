@@ -1555,6 +1555,7 @@
   "videoUpdateErrorNoPlayableVideo": "Ten film nie ma odtwarzalnego źródła, więc nie można go edytować.",
   "videoUpdateErrorCouldNotSign": "Nie udało się podpisać zmiany. Spróbuj ponownie.",
   "videoUpdateErrorPublishRejected": "Przekaźnik nie przyjął zmiany. Spróbuj za chwilę.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "Ten film zmienił się na innym urządzeniu i ma teraz za dużo tagów lub osób współtworzących. Otwórz go ponownie i usuń część.",
   "videoUpdateErrorGeneric": "Nie udało się zaktualizować tego filmu. Spróbuj ponownie.",
   "shareMenuDeleteVideoQuestion": "Usunąć film?",
   "shareMenuDeleteCleanupInProgress": "Usuwanie filmu…",

@@ -5,8 +5,8 @@
 ///
 /// The arms differ in what the user can do about them, which is the reason
 /// this is a code rather than a single generic message: signing in again,
-/// retrying now, retrying later, and "this video cannot be edited at all" are
-/// four different next steps.
+/// retrying now, retrying later, reopening the video to trim it, and "this
+/// video cannot be edited at all" are five different next steps.
 enum VideoMetadataUpdateError {
   /// No signed-in identity, so the replacement event cannot be authored.
   notAuthenticated,
@@ -20,6 +20,11 @@ enum VideoMetadataUpdateError {
 
   /// The event was signed but no relay accepted it.
   publishRejected,
+
+  /// This edit and a newer one from another device together go over the
+  /// collaborator or hashtag limit. Saving the same edit again fails the same
+  /// way; reopening the video loads the other device's changes to trim.
+  concurrentEditsOverLimit,
 
   /// Anything else. Kept last so a new arm is a compile error in the
   /// localization switch rather than a silent fallthrough.

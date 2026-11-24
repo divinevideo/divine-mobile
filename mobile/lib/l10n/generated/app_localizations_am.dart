@@ -4374,6 +4374,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'ማስተላለፊያው ማዘመኛውን አልተቀበለም። ትንሽ ቆይተህ እንደገና ሞክር።';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'ይህ ቪዲዮ በሌላ መሣሪያ ላይ ተቀይሯል፤ አሁን በጣም ብዙ መለያዎች ወይም ተባባሪዎች አሉት። እንደገና ከፍተው ጥቂቶቹን ያስወግዱ።';
+
+  @override
   String get videoUpdateErrorGeneric => 'ይህን ቪዲዮ ማዘመን አልተቻለም። እንደገና ሞክር።';
 
   @override

@@ -4618,6 +4618,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Releul nu a acceptat modificarea. Încearcă din nou în scurt timp.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Acest videoclip s-a schimbat pe alt dispozitiv și acum are prea multe etichete sau prea multe persoane care colaborează. Deschide-l din nou și elimină câteva.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'N-am putut actualiza acest videoclip. Încearcă din nou.';
 

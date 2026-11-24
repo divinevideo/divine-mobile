@@ -16,6 +16,7 @@ import 'package:videos_repository/src/author_feed_result.dart';
 import 'package:videos_repository/src/badge_video_pager.dart';
 import 'package:videos_repository/src/home_feed_result.dart';
 import 'package:videos_repository/src/in_memory_feed_cache.dart';
+import 'package:videos_repository/src/latest_video_revision.dart';
 import 'package:videos_repository/src/popular_videos_page.dart';
 import 'package:videos_repository/src/profile_video_merge.dart';
 import 'package:videos_repository/src/recommendation_session_seed.dart';
@@ -225,6 +226,7 @@ class VideosRepository {
     BlockedVideoFilter? blockFilter,
     DeletedVideoFilter? deletedFilter,
     this.removedVideoIds = const Stream<String>.empty(),
+    this.replacedVideos = const Stream<VideoEvent>.empty(),
     VideoContentFilter? contentFilter,
     VideoContentFilter? feedShapeFilter,
     VideoWarningLabelsResolver? warningLabelsResolver,
@@ -259,6 +261,10 @@ class VideosRepository {
 
   /// Emits IDs for videos removed by deletion handling.
   final Stream<String> removedVideoIds;
+
+  /// Emits each video its owner republished from this device, so a feed
+  /// holding an older revision can show the new one (#11250).
+  final Stream<VideoEvent> replacedVideos;
 
   final VideoContentFilter? _contentFilter;
   final VideoContentFilter? _feedShapeFilter;
@@ -2133,6 +2139,36 @@ class VideosRepository {
       ],
       complete: reads.every((read) => read.isComplete),
     );
+  }
+
+  /// The newest revision the relays hold at the video [addressableId]
+  /// (`kind:pubkey:d-tag`), for a caller about to replace it.
+  ///
+  /// Reads from every configured relay without the local cache, as required
+  /// before replacing an event (#11250). An incomplete read is retried on
+  /// fresh connections. A refusal or any other missing answer on that retry
+  /// leaves the revision [LatestVideoRevisionUnknown].
+  ///
+  /// Throws [ArgumentError] when [addressableId] is not a Kind 34235 or
+  /// 34236 address.
+  Future<LatestVideoRevision> fetchLatestVideoRevision(
+    String addressableId,
+  ) async {
+    final address = AId.fromString(addressableId);
+    if (address == null ||
+        !NIP71VideoKinds.isAddressableVideoKind(address.kind)) {
+      throw ArgumentError.value(
+        addressableId,
+        'addressableId',
+        'is not a video address',
+      );
+    }
+    final read = await _nostrClient.readCurrentVersion(
+      kind: address.kind,
+      pubkey: address.pubkey,
+      dTag: address.dTag,
+    );
+    return LatestVideoRevision.fromCurrentVersion(read);
   }
 
   /// The video addresses among [addressableIds], in their order: Kind 34236

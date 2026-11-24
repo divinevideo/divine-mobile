@@ -35,13 +35,15 @@ class VideoMetadataEditStack extends StatefulWidget {
 }
 
 class _VideoMetadataEditStackState extends State<VideoMetadataEditStack> {
+  late final VideoEvent _editorBaseline;
   late final Set<String> _initialCollaboratorPubkeys;
   late VideoEvent _video;
 
   @override
   void initState() {
     super.initState();
-    _video = widget.video;
+    _editorBaseline = widget.video;
+    _video = _editorBaseline;
     _initialCollaboratorPubkeys = widget.video.collaboratorPubkeys.toSet();
   }
 
@@ -51,6 +53,7 @@ class _VideoMetadataEditStackState extends State<VideoMetadataEditStack> {
       overrides: [videoEditorProvider.overrideWith(VideoEditorNotifier.new)],
       child: _VideoMetadataEditStackContent(
         video: _video,
+        editorBaseline: _editorBaseline,
         initialCollaboratorPubkeys: _initialCollaboratorPubkeys,
         onVideoUpdated: (video) => setState(() => _video = video),
       ),
@@ -58,16 +61,18 @@ class _VideoMetadataEditStackState extends State<VideoMetadataEditStack> {
   }
 }
 
-/// Inner widget that seeds the isolated [videoEditorProvider] from [video]
-/// and renders the edit scaffold.
+/// Seeds the isolated [videoEditorProvider] from [editorBaseline] and renders
+/// the edit scaffold with the current [video].
 class _VideoMetadataEditStackContent extends ConsumerStatefulWidget {
   const _VideoMetadataEditStackContent({
     required this.video,
+    required this.editorBaseline,
     required this.initialCollaboratorPubkeys,
     required this.onVideoUpdated,
   });
 
   final VideoEvent video;
+  final VideoEvent editorBaseline;
   final Set<String> initialCollaboratorPubkeys;
   final ValueChanged<VideoEvent> onVideoUpdated;
 
@@ -94,7 +99,7 @@ class _VideoMetadataEditStackContentState
       if (!mounted) return;
       ref
           .read(videoEditorProvider.notifier)
-          .initFromPublishedVideo(widget.video);
+          .initFromPublishedVideo(widget.editorBaseline);
     });
   }
 
@@ -175,6 +180,7 @@ class _VideoMetadataEditStackContentState
         ],
         bottomBar: VideoMetadataEditBottomBar(
           video: widget.video,
+          editorBaseline: widget.editorBaseline,
           initialCollaboratorPubkeys: widget.initialCollaboratorPubkeys,
           pendingThumbnailPath: _pendingThumbnailPath,
           onVideoUpdated: widget.onVideoUpdated,

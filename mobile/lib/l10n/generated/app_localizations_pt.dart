@@ -4516,6 +4516,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'O relay não aceitou a atualização. Tente de novo em instantes.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Este vídeo mudou em outro dispositivo e agora tem tags ou pessoas colaboradoras demais. Abra de novo e remova algumas.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Não foi possível atualizar este vídeo. Tente novamente.';
 

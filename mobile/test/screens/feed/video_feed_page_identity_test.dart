@@ -33,6 +33,7 @@ import '../../helpers/test_provider_overrides.dart';
 class _VideosRepository extends Mock implements VideosRepository {
   _VideosRepository({Stream<String> removals = const Stream.empty()}) {
     when(() => removedVideoIds).thenAnswer((_) => removals);
+    when(() => replacedVideos).thenAnswer((_) => const Stream.empty());
   }
 
   @override

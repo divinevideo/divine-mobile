@@ -125,18 +125,20 @@ class CorruptedVideoRepairService {
       );
       return null;
     }
-    final events = result.events;
+    final revisions = _newestSignedRevisions([
+      for (final event in result.events)
+        if (event.isValid) event,
+    ]);
 
     Log.info(
-      'Scanning ${events.length} video events for corrupted URLs',
+      'Scanning ${revisions.length} video events for corrupted URLs',
       name: _logName,
       category: LogCategory.video,
     );
 
     var repairedCount = 0;
 
-    for (final event in events) {
-      final repairedTags = _repairEventTags(event.tags);
+    for (final (:event, :repairedTags) in revisions) {
       if (repairedTags == null) continue;
 
       // Use AuthService for proper signing (handles NIP-46 RPC + validation)
@@ -180,12 +182,58 @@ class CorruptedVideoRepairService {
     }
 
     Log.info(
-      'Repair complete: $repairedCount/${events.length} events fixed',
+      'Repair complete: $repairedCount/${revisions.length} events fixed',
       name: _logName,
       category: LogCategory.video,
     );
 
     return repairedCount;
+  }
+
+  /// The newest signed revision at each address among [events], with the tags
+  /// its repair would publish, or null when it needs none. Relays can hold
+  /// older revisions too, and a repair built from one of those would replace
+  /// the newer revision and delete what only it carried (#11250). An event
+  /// with no `d` tag stands alone.
+  ///
+  /// A signature check is a Schnorr verification on this isolate, and the scan
+  /// reads every video the account published. So a revision is verified only
+  /// when the outcome depends on it: when its repair would re-sign it, or when
+  /// an older revision could take its place.
+  List<({Event event, List<List<String>>? repairedTags})>
+  _newestSignedRevisions(List<Event> events) {
+    final byAddress = <String, List<Event>>{};
+    for (final event in events) {
+      final dTag = event.dTagValue;
+      final key = dTag.isEmpty
+          ? event.id
+          : '${event.kind}:${event.pubkey}:$dTag';
+      (byAddress[key] ??= []).add(event);
+    }
+    return [
+      for (final revisions in byAddress.values)
+        ?_newestSigned(revisions..sort(_newestFirst)),
+    ];
+  }
+
+  ({Event event, List<List<String>>? repairedTags})? _newestSigned(
+    List<Event> newestFirst,
+  ) {
+    for (final (index, event) in newestFirst.indexed) {
+      final repairedTags = _repairEventTags(event.tags);
+      final olderRemain = index < newestFirst.length - 1;
+      if ((repairedTags == null && !olderRemain) || event.isSigned) {
+        return (event: event, repairedTags: repairedTags);
+      }
+    }
+    return null;
+  }
+
+  /// NIP-01 keeps the later `created_at` at an address, or the lower id on a
+  /// tie.
+  static int _newestFirst(Event a, Event b) {
+    final byTime = b.createdAt.compareTo(a.createdAt);
+    return byTime != 0 ? byTime : a.id.compareTo(b.id);
   }
 
   /// Inspects and repairs imeta tags that have local file paths.
