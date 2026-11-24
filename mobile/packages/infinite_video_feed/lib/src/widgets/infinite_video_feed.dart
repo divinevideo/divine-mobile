@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/widgets.dart';
 import 'package:infinite_video_feed/src/models/builders.dart';
 import 'package:infinite_video_feed/src/models/feed_first_frame_metric.dart';
+import 'package:infinite_video_feed/src/models/feed_playback_session_metric.dart';
 import 'package:infinite_video_feed/src/models/feed_playback_telemetry.dart';
 import 'package:infinite_video_feed/src/models/video_error_type.dart';
 import 'package:infinite_video_feed/src/models/video_retry_result.dart';
@@ -679,6 +680,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     );
 
     _terminalErrorTypesByVideoId.clear();
+    _endPlaybackSession(FeedPlaybackSessionEnd.replaced);
     final sameVideos = identical(widget.videos, oldWidget.videos);
     _teardownAllControllers(
       keepViewerHeaders: sameVideos && bunnyRoutingChanged,
@@ -762,7 +764,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   @override
   void dispose() {
-    _activeFirstFrameTimer?.finish(outcome: FeedPlaybackOutcome.cancelled);
+    _endPlaybackSession(FeedPlaybackSessionEnd.closed);
     _cancelPreloadGraceTimers();
     _telemetryLoads.clear();
     for (final subscription in _networkSubscriptions.values) {
@@ -853,7 +855,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         unawaited(_onIndexChanged(_currentIndex));
       }
     } else {
-      _activeFirstFrameTimer?.finish(outcome: FeedPlaybackOutcome.cancelled);
+      _endPlaybackSession(FeedPlaybackSessionEnd.hidden);
       _cancelPreloadGraceTimers();
       _pauseCurrentPlayback();
       _cancelAutoRetry(_currentIndex);
@@ -971,6 +973,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final isAllowed = _canAutoPlayAt(_currentIndex);
     _lastAppliedGate = isAllowed;
     if (wasAllowed == null || wasAllowed == isAllowed) return;
+    _firstFrameTimerFor(_currentIndex)?.markAutoPlay(allowed: isAllowed);
     if (isAllowed) {
       _resumeCurrentPlaybackIfReady();
     } else {
@@ -1001,6 +1004,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     if (!stillOwnsController() || !controller.isInitialized) return;
     final allowed = _canAutoPlayAt(index);
     if (index == _currentIndex) _lastAppliedGate = allowed;
+    _firstFrameTimerFor(index)?.markAutoPlay(allowed: allowed);
     if (!allowed) return;
     if (applyVolume) {
       await controller.setVolume(_volume);
@@ -1112,16 +1116,24 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     };
   }
 
+  /// Ends the active video's playback session, which publishes its sample.
+  void _endPlaybackSession(FeedPlaybackSessionEnd reason) {
+    final timer = _activeFirstFrameTimer;
+    if (timer == null) return;
+    _activeFirstFrameTimer = null;
+    timer.end(reason, loadedFromCache: _loadedFromCache.contains(timer.index));
+  }
+
   void _beginFirstFrameMeasurement(int index) {
-    _activeFirstFrameTimer?.finish(outcome: FeedPlaybackOutcome.cancelled);
-    if (index < 0 || index >= widget.videos.length || !_isActive) {
-      _activeFirstFrameTimer = null;
-      return;
-    }
-    _activeFirstFrameTimer = FeedFirstFrameMetrics.start(
-      videoId: widget.videos[index].id,
-      index: index,
-    )..attachLoad(_telemetryLoads[index]);
+    _endPlaybackSession(FeedPlaybackSessionEnd.swipe);
+    if (index < 0 || index >= widget.videos.length || !_isActive) return;
+    _activeFirstFrameTimer =
+        FeedFirstFrameMetrics.start(
+            videoId: widget.videos[index].id,
+            index: index,
+          )
+          ..attachLoad(_telemetryLoads[index])
+          ..markAutoPlay(allowed: _canAutoPlayAt(index));
   }
 
   FeedFirstFrameTimer? _firstFrameTimerFor(int index) {
@@ -1147,8 +1159,15 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         !identical(_activeFirstFrameTimer, timer)) {
       return;
     }
-    timer.complete(loadedFromCache: _loadedFromCache.contains(index));
+    timer
+      ..complete(loadedFromCache: _loadedFromCache.contains(index))
+      ..observePlayback(controller, reportsStalls: _reportsStalls);
   }
+
+  /// Whether the player reports a wait for data as buffering. AVPlayer keeps
+  /// its rate while it waits, so iOS and macOS report such a wait as playing.
+  static bool get _reportsStalls =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   Future<void> _updatePlayerWindow(int index) async {
     final generation = ++_playerWindowGeneration;
