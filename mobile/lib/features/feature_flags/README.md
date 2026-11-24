@@ -1,7 +1,7 @@
 # Feature Flags System
 
 Status: Current
-Validated against: feature flag package structure on 2026-03-19.
+Validated against: feature flag package structure on 2026-11-22.
 
 A comprehensive TDD-built feature flag system for Divine, providing build-time configuration, runtime management, and user override capabilities.
 
@@ -16,42 +16,50 @@ The feature flag system follows clean architecture principles with clear separat
 
 ## Available Feature Flags
 
-- `enhancedVideoPlayer` - Improved video playback engine with better performance
-- `enhancedAnalytics` - Detailed usage tracking and insights
-- `debugTools` - Developer debugging utilities and diagnostics
+The current inventory is defined by [FeatureFlag](models/feature_flag.dart),
+with build defaults in [BuildConfiguration](services/build_configuration.dart).
+Internal flags allow device overrides only in Developer Mode.
+
+Video replies and profile tip/support links are always on and are not feature
+flags.
 
 ## Quick Start
 
 ### 1. Conditional UI Rendering
 
 ```dart
-import 'package:openvine/features/feature_flags/widgets/feature_flag_widget.dart';
+import 'package:flutter/widgets.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/widgets/feature_flag_widget.dart';
+import 'package:openvine/screens/settings/bluesky_settings_screen.dart';
 
 FeatureFlagWidget(
-  flag: FeatureFlag.enhancedAnalytics,
-  disabled: const StandardCameraWidget(),
-  child: const EnhancedCameraWidget(),
+  flag: FeatureFlag.blueskyPublishing,
+  disabled: const SizedBox.shrink(),
+  child: const BlueskySettingsScreen(),
 )
 ```
 
 ### 2. Programmatic Flag Checking
 
 ```dart
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/screens/settings/bluesky_settings_screen.dart';
 
 class MyWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isNewCameraEnabled = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.enhancedAnalytics)
+    final isBlueskyEnabled = ref.watch(
+      isFeatureEnabledProvider(FeatureFlag.blueskyPublishing)
     );
     
-    if (isNewCameraEnabled) {
-      return const EnhancedCameraWidget();
+    if (isBlueskyEnabled) {
+      return const BlueskySettingsScreen();
     } else {
-      return const StandardCameraWidget();
+      return const SizedBox.shrink();
     }
   }
 }
@@ -75,9 +83,9 @@ Feature flags have build-time defaults that can be configured per environment:
 bool getDefault(FeatureFlag flag) {
   switch (flag) {
     case FeatureFlag.debugTools:
-      return kDebugMode; // Only enabled in debug builds
-    case FeatureFlag.enhancedAnalytics:
-      return false; // Disabled by default
+      return const bool.fromEnvironment('FF_DEBUG_TOOLS', defaultValue: true);
+    case FeatureFlag.blueskyPublishing:
+      return const bool.fromEnvironment('FF_BLUESKY_PUBLISHING');
     // ... other flags
   }
 }
@@ -106,31 +114,7 @@ The service gracefully handles storage errors:
 
 ## Testing
 
-Comprehensive test coverage with 47 tests across:
-- Unit tests for models, services, and providers
-- Widget tests for UI components
-- Integration tests for end-to-end workflows
-- Error scenario testing
-
-### Test Example
-
-```dart
-testWidgets('should show enhanced feature when flag enabled', (tester) async {
-  final mockPrefs = MockSharedPreferences();
-  when(mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
-  
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(mockPrefs),
-      ],
-      child: MyApp(),
-    ),
-  );
-  
-  expect(find.text('Enhanced Camera'), findsOneWidget);
-});
-```
+The widget tests use the Bluesky flag to exercise both enabled and disabled states. The service tests cover reading and writing saved overrides. [Widget tests](../../../test/widgets/feature_flag_widget_test.dart) · [Service tests](../../../test/services/feature_flag_service_test.dart)
 
 ## Best Practices
 
@@ -237,3 +221,26 @@ continue through the canonical upload flow, and signed post URLs remain canonica
 a newly published video can select Bunny after server enrollment is verified.
 Deploy the selection endpoint and verified publisher before testing this flag.
 There is no visual change outside the developer flag entry.
+
+## Song catalog
+
+`songCatalog` is an internal prototype: it adds a Songs list to the editor's
+sound picker, with the most played songs and a search by title or artist. The
+songs come from the Apple Music API catalog and play as its previews.
+
+The flag exists only in a build made with a MusicKit developer token; any
+other build does not list it and ignores a stored value:
+
+```bash
+flutter run --dart-define=APPLE_MUSIC_DEVELOPER_TOKEN=<token> --dart-define=FF_SONG_CATALOG=true
+```
+
+Without `FF_SONG_CATALOG` the flag is off by default; enable Developer Mode,
+then turn on **Songs (Apple Music previews)** in Feature Flags. The token is a
+signed JWT that expires after at most six months, so a build stops listing
+songs once its token does. Keep the token out of the repository.
+
+A picked song is added like any provider sound: the editor trims it to the
+video and renders it into the file. Its terms forbid derivatives, so a video
+made with one never offers its audio or itself for reuse. Publishing still
+posts the video publicly, with a sound credit that links to the song's page.

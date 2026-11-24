@@ -19,6 +19,7 @@ import 'sound_import/incompetech.dart';
 import 'sound_import/sound_candidate.dart';
 import 'sound_import/sound_event_builder.dart';
 import 'sound_import/sound_publisher.dart';
+import 'sound_import/source_download.dart';
 
 const _usage = '''
 Imports freely licensed sounds into Divine's sound library.
@@ -245,7 +246,7 @@ Future<void> _prepare(Directory work, ArgResults args) async {
   final sources = Directory('${work.path}/src')..createSync(recursive: true);
   final outputs = Directory('${work.path}/out')..createSync(recursive: true);
   final pipeline = AudioPipeline();
-  final client = http.Client();
+  final downloader = SourceDownloader();
   var lastDownload = DateTime.fromMillisecondsSinceEpoch(0);
   try {
     for (final (index, candidate) in batch.indexed) {
@@ -259,7 +260,11 @@ Future<void> _prepare(Directory work, ArgResults args) async {
           final wait = interval - DateTime.now().difference(lastDownload);
           if (wait > Duration.zero) await Future<void>.delayed(wait);
           lastDownload = DateTime.now();
-          await _download(client, candidate.downloadUrl, sourceFile);
+          await downloader.download(
+            candidate.downloadUrl,
+            sourceFile,
+            userAgent: _userAgent,
+          );
         }
         final sourceSha = await _sha256Of(sourceFile);
         final original = state.preparedFromSource(sourceSha);
@@ -322,7 +327,7 @@ Future<void> _prepare(Directory work, ArgResults args) async {
       state.save();
     }
   } finally {
-    client.close();
+    downloader.close();
   }
   _printSummary(state);
 }
@@ -567,27 +572,6 @@ Future<Object?> _getJson(http.Client client, String url) async {
     throw HttpException('GET $url answered ${response.statusCode}');
   }
   return jsonDecode(utf8.decode(response.bodyBytes));
-}
-
-/// Downloads [url] to [file], retrying a busy server with growing pauses.
-Future<void> _download(http.Client client, String url, File file) async {
-  for (var attempt = 1; ; attempt++) {
-    final response = await client.get(
-      Uri.parse(url),
-      headers: {'User-Agent': _userAgent},
-    );
-    if (response.statusCode == 200) {
-      final partial = File('${file.path}.part')
-        ..writeAsBytesSync(response.bodyBytes);
-      partial.renameSync(file.path);
-      return;
-    }
-    final retryable = response.statusCode == 429 || response.statusCode >= 500;
-    if (!retryable || attempt == 4) {
-      throw HttpException('GET $url answered ${response.statusCode}');
-    }
-    await Future<void>.delayed(Duration(seconds: 5 * attempt * attempt));
-  }
 }
 
 Future<String> _sha256Of(File file) async =>

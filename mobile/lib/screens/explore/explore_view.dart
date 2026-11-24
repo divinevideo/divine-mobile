@@ -30,6 +30,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_apps_platform_support.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/nav_rounded_shell.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// The explore screen body. Provided an [ExploreTabsCubit] by [ExploreScreen].
@@ -70,7 +71,7 @@ class _ExploreViewState extends ConsumerState<ExploreView>
   /// Refetches the featured configuration on foreground so a backend kill
   /// switch lands without waiting out the poll interval.
   late final AppLifecycleListener _lifecycleListener;
-  ProviderSubscription<bool>? _featuredTabAgeGateSubscription;
+  ProviderSubscription<FeaturedTabAudience>? _featuredTabAgeGateSubscription;
 
   ExploreTabsCubit get _tabs => context.read<ExploreTabsCubit>();
   ExploreTabsState get _tabsState => _tabs.state;
@@ -135,10 +136,10 @@ class _ExploreViewState extends ConsumerState<ExploreView>
         category: LogCategory.ui,
       ),
     );
-    _featuredTabAgeGateSubscription = ref.listenManual<bool>(
+    _featuredTabAgeGateSubscription = ref.listenManual(
       featuredTabAgeGateProvider,
       (previous, next) {
-        if (previous != null && previous != next) {
+        if (previous != next) {
           runDetached(
             context.read<FeaturedTabsCubit>().refresh(),
             'refresh featured tabs after age gate change',
@@ -290,6 +291,9 @@ class _ExploreViewState extends ConsumerState<ExploreView>
         nostrAppsSandboxSupported &&
         ref.watch(isFeatureEnabledProvider(FeatureFlag.integratedApps));
 
+    // The audience listener clears the cubit's tab synchronously. Rebuild in
+    // that same frame rather than waiting for its asynchronous stream event.
+    ref.watch(featuredTabAgeGateProvider);
     final featuredTab = context.select(
       (FeaturedTabsCubit cubit) => cubit.state.tab,
     );
@@ -339,7 +343,7 @@ class _ExploreViewState extends ConsumerState<ExploreView>
       return _buildContent();
     }
 
-    return NavRoundedShell(
+    final grid = NavRoundedShell(
       child: Column(
         children: [
           SafeArea(
@@ -382,6 +386,8 @@ class _ExploreViewState extends ConsumerState<ExploreView>
         ],
       ),
     );
+    // The feed mode above has the fullscreen feed's own trace.
+    return ScreenFrameTraceScope(screen: .explore, child: grid);
   }
 
   void _onTabTap(int index) {

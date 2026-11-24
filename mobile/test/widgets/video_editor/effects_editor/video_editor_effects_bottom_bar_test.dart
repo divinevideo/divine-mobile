@@ -67,6 +67,7 @@ void main() {
       EditorEffectCategory.distort: l10n.videoEditorEffectCategoryDistort,
       EditorEffectCategory.light: l10n.videoEditorEffectCategoryLight,
       EditorEffectCategory.motion: l10n.videoEditorEffectCategoryMotion,
+      EditorEffectCategory.time: l10n.videoEditorEffectCategoryTime,
       EditorEffectCategory.particles: l10n.videoEditorEffectCategoryParticles,
       EditorEffectCategory.looks: l10n.videoEditorEffectCategoryLooks,
       EditorEffectCategory.intro: l10n.videoEditorEffectCategoryIntro,
@@ -430,6 +431,11 @@ void main() {
       expect(
         labels,
         containsAll([
+          l10n.videoEditorEffectTimeSplit,
+          l10n.videoEditorEffectLongExposure,
+          l10n.videoEditorEffectMotionOnly,
+          l10n.videoEditorEffectStutter,
+          l10n.videoEditorEffectTimeWarp,
           l10n.videoEditorEffectEightBit,
           l10n.videoEditorEffectAnaglyph,
           l10n.videoEditorEffectRiso,
@@ -471,11 +477,13 @@ void main() {
       );
     });
 
-    test('draws the tile of every effect Divine renders but the echo with '
-        'its shader', () {
+    test('draws the tile of every effect Divine renders but the echo and the '
+        'stutter with its shader', () {
       for (final type in EditorEffectType.values) {
         final tile = shaderTileOf(type);
-        if (type.builtIn != null || type == EditorEffectType.echo) {
+        if (type.builtIn != null ||
+            type == EditorEffectType.echo ||
+            type == EditorEffectType.stutter) {
           expect(tile, isNull, reason: type.name);
         } else {
           expect(tile?.asset, startsWith('shaders/'), reason: type.name);
@@ -603,6 +611,37 @@ void main() {
                 path: 'missing.jpg',
                 type: EditorEffectType.outroFade,
               ),
+            ),
+          );
+          await tester.pump(const Duration(milliseconds: 100));
+
+          expect(tester.hasRunningAnimations, !reduceMotion);
+        },
+      );
+    }
+
+    test('pans the stutter tile in held steps, from side to side', () {
+      final shifts = [
+        for (var step = 0; step < 36; step++) stutterTileShift(step / 36),
+      ];
+      // Two moments of the same step show the same shift: the pan holds.
+      for (var step = 0; step < 36; step += 2) {
+        expect(shifts[step + 1], shifts[step], reason: 'step $step');
+      }
+      expect(shifts.toSet().length, greaterThan(8));
+      expect(shifts.reduce(max), closeTo(0.08, 0.01));
+      expect(shifts.reduce(min), closeTo(-0.08, 0.01));
+    });
+
+    for (final reduceMotion in [false, true]) {
+      testWidgets(
+        'pans the stutter tile unless motion is reduced '
+        '(reduceMotion: $reduceMotion)',
+        (tester) async {
+          await tester.pumpWidget(
+            MediaQuery(
+              data: MediaQueryData(disableAnimations: reduceMotion),
+              child: const StutterTile(path: 'missing.jpg'),
             ),
           );
           await tester.pump(const Duration(milliseconds: 100));

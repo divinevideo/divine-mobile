@@ -21,7 +21,11 @@ class VideoRouteRef {
     this.addressableId,
     this.addressablePubkey,
     this.stableId,
-  });
+    this.isNaddr = false,
+  }) : assert(
+         !isNaddr || addressableId != null,
+         'an naddr reference names a coordinate',
+       );
 
   /// The 64-character hex event id, when the reference names a concrete event.
   ///
@@ -41,6 +45,11 @@ class VideoRouteRef {
   /// The first-party API resolves this like an event id, which is what makes
   /// an `naddr1` addressable without a prior coordinate lookup.
   final String? stableId;
+
+  /// Whether [addressableId] came from an `naddr1`, whose kind must match
+  /// exactly. A raw coordinate may carry the 34236 alias Divine once used for
+  /// kind 34235 videos, so [matchesEvent] accepts any kind for it.
+  final bool isNaddr;
 
   /// Decodes a raw `/video/:id` path segment, or null when it is empty.
   ///
@@ -104,6 +113,7 @@ class VideoRouteRef {
           pubkey: decoded.author,
           dTag: decoded.id,
         ).toAString(),
+        isNaddr: true,
         addressablePubkey: decoded.author,
         stableId: decoded.id,
       );
@@ -133,6 +143,24 @@ class VideoRouteRef {
     }
 
     return VideoRouteRef(stableId: trimmed);
+  }
+
+  /// Checks the full identity before accepting a cache or REST result.
+  /// Legacy bare IDs remain ambiguous for compatibility; a NIP-19 reference
+  /// never degrades to a different kind or to a matching free-form d tag.
+  bool matchesEvent(Event event) {
+    final coordinate = addressableId;
+    if (coordinate != null) {
+      final address = AId.fromString(coordinate);
+      if (address == null) return false;
+      return (!isNaddr || event.kind == address.kind) &&
+          event.pubkey == address.pubkey &&
+          event.tags.any(
+            (tag) => tag.length > 1 && tag[0] == 'd' && tag[1] == address.dTag,
+          );
+    }
+    if (eventId != null && stableId == null) return event.id == eventId;
+    return true;
   }
 
   /// The identifier to address this video by in first-party REST calls.

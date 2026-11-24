@@ -59,16 +59,25 @@ class RepliesCurationUnavailableException implements Exception {
 
 /// Whether the video an Add yours names as its chain's first starts that
 /// chain, as [VideoResponsesRepository.chainStart] reads it.
-enum AddYoursChainStart {
-  /// It carries an Add yours of its own with the hashtag.
-  starts,
+class AddYoursChainStart {
+  const AddYoursChainStart._(this.video);
+
+  /// The video that started the chain, from the same read that confirmed it.
+  const AddYoursChainStart.starts(VideoEvent video) : this._(video);
+
+  /// The confirmed first video, if there is one.
+  final VideoEvent? video;
 
   /// Every relay answered, and it carries no such Add yours, or is not there.
-  doesNotStart,
+  static const doesNotStart = AddYoursChainStart._(null);
 
   /// It was not read starting the chain, and a relay did not answer in full:
   /// that relay may hold it.
-  unconfirmed,
+  static const unconfirmed = _UnconfirmedAddYoursChainStart();
+}
+
+class _UnconfirmedAddYoursChainStart extends AddYoursChainStart {
+  const _UnconfirmedAddYoursChainStart() : super._(null);
 }
 
 /// Whether a video starts an Add yours chain could not be read: no relay
@@ -190,16 +199,7 @@ class VideoResponsesRepository {
     int limit = 20,
     List<VideoEvent> Function(List<VideoEvent> answers)? filter,
   }) async {
-    bool joined(VideoEvent answer) =>
-        answer.addressableId != chainRoot &&
-        answer.hashtags.contains(hashtag) &&
-        answer.nostrEventTags.any(
-          (tag) =>
-              tag.length >= 4 &&
-              tag[0] == 'a' &&
-              tag[1] == chainRoot &&
-              tag[3].toLowerCase() == _mentionMarker,
-        );
+    bool joined(VideoEvent answer) => _joins(answer, chainRoot, hashtag);
 
     final dTag = chainRoot.split(':').skip(2).join(':');
     final server = await _fetchFromServer(
@@ -229,6 +229,63 @@ class VideoResponsesRepository {
       filter: filter,
     );
   }
+
+  /// Every answer [author] gave to the Add yours chain starting at the video
+  /// at [chainRoot], one part of their series each: those naming it in an
+  /// `a` tag marked `mention` and carrying [hashtag]. The newest first, at
+  /// most [limit] of them, and how many there are.
+  ///
+  /// Read from the relays alone: the server counts one answer per person.
+  Future<VideoResponses> fetchSeriesBy({
+    required String chainRoot,
+    required String hashtag,
+    required String author,
+    int limit = 50,
+  }) async {
+    final read = await _nostrClient.readEvents([
+      Filter(
+        kinds: [NIP71VideoKinds.addressableShortVideo],
+        authors: [author],
+        a: [chainRoot],
+        t: [hashtag],
+        limit: maxResponsesRead,
+      ),
+    ]);
+    return _responsesIn(
+      read.events,
+      limit: limit,
+      possiblyCapped: read.possiblyCapped,
+      where: (answer) =>
+          answer.pubkey.toLowerCase() == author.toLowerCase() &&
+          _joins(answer, chainRoot, hashtag),
+    );
+  }
+
+  /// The newest version of the video at [address], `<kind>:<pubkey>:<d>`,
+  /// or `null` when no relay has it or [address] is not one.
+  Future<VideoEvent?> fetchVideoAt(String address) async {
+    if (!RepliesCuration.isAddress(address)) return null;
+    final events = await _nostrClient.queryEvents([_filterFor(address)]);
+    return _responsesIn(
+      events,
+      limit: 1,
+      where: (video) => video.addressableId == address,
+    ).videos.firstOrNull;
+  }
+
+  /// Whether [answer] joined the Add yours chain starting at the video at
+  /// [chainRoot]: it names that video in an `a` tag marked `mention` and
+  /// carries [hashtag], and is not that video itself.
+  static bool _joins(VideoEvent answer, String chainRoot, String hashtag) =>
+      answer.addressableId != chainRoot &&
+      answer.hashtags.contains(hashtag) &&
+      answer.nostrEventTags.any(
+        (tag) =>
+            tag.length >= 4 &&
+            tag[0] == 'a' &&
+            tag[1] == chainRoot &&
+            tag[3].toLowerCase() == _mentionMarker,
+      );
 
   /// The videos that use a clip of the video at [addressableId]: those whose
   /// `a` tag marked `clip-source` names it. The newest version of each, the
@@ -316,7 +373,7 @@ class VideoResponsesRepository {
               region.promptHashtag == hashtag,
         ) ??
         false;
-    if (starts) return AddYoursChainStart.starts;
+    if (starts && first != null) return AddYoursChainStart.starts(first);
     return read.endedBy == QueryEnd.complete
         ? AddYoursChainStart.doesNotStart
         : AddYoursChainStart.unconfirmed;

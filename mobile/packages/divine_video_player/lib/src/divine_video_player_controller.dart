@@ -179,7 +179,9 @@ class DivineVideoPlayerController {
 
   static const _globalChannel = MethodChannel('divine_video_player');
 
-  /// Factory used to create the Linux backend implementation.
+  /// Factory for the media_kit backend used on Linux and Windows.
+  ///
+  /// Keeps its original Linux name for compatibility with existing callers.
   @visibleForTesting
   static LinuxVideoPlayerBackendFactory linuxBackendFactory =
       MediaKitLinuxVideoPlayerBackend.new;
@@ -287,9 +289,11 @@ class DivineVideoPlayerController {
   /// the sweep is still process-wide. Either is correct for the startup
   /// caller, whose zombies belong to its own engine.
   ///
-  /// No-op on web and Linux where no native channel is registered.
+  /// No-op on web, Linux and Windows where no native channel is registered.
   static Future<void> disposeAll() {
-    if (kIsWeb || defaultTargetPlatform == TargetPlatform.linux) {
+    if (kIsWeb ||
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.windows) {
       return Future.value();
     }
     return _globalChannel.invokeMethod<void>('disposeAll');
@@ -377,7 +381,9 @@ class DivineVideoPlayerController {
   /// `true`.
   int? get textureId => _textureId;
 
-  /// Whether this controller instance is backed by the Linux Dart backend.
+  /// Whether this instance uses the media_kit backend on Linux or Windows.
+  ///
+  /// The name is retained for compatibility with the original Linux backend.
   bool get usesLinuxBackend => _isLinuxBackend;
 
   /// Whether this controller instance is backed by the web HTML backend.
@@ -397,10 +403,19 @@ class DivineVideoPlayerController {
   /// Resets each time [setClips] or [setSource] loads new media.
   /// Safe to await multiple times — a completed future stays completed
   /// until the next source change.
-  Future<bool> get firstFrameRendered => _firstFrameCompleter.future;
+  /// On desktop, follows the accepted output while a replacement validates,
+  /// and completes false if that output fails, stops or retires before
+  /// rendering.
+  Future<bool> get firstFrameRendered => switch (_linuxBackend) {
+    final DesktopVideoFrameReadiness backend => backend.firstFrameRendered,
+    _ => _firstFrameCompleter.future,
+  };
 
   /// Whether [initialize] has completed successfully.
   bool get isInitialized => _initialized;
+
+  /// Whether disposal of this controller has begun.
+  bool get isDisposed => _disposed;
 
   /// The platform view type identifier used to render this player's video.
   String get viewType => 'divine_video_player_view';
@@ -528,7 +543,8 @@ class DivineVideoPlayerController {
     if (clips.isEmpty) {
       throw ArgumentError.value(clips, 'clips', 'must not be empty');
     }
-    if (_firstFrameCompleter.isCompleted) {
+    if (_linuxBackend is! DesktopVideoFrameReadiness &&
+        _firstFrameCompleter.isCompleted) {
       _firstFrameCompleter = Completer<bool>();
     }
     if (_isWebBackend) {
@@ -906,9 +922,11 @@ class DivineVideoPlayerController {
   }
 
   bool get _usesLinuxBackend =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.windows);
 
-  /// Builds the Linux video surface for this controller instance.
+  /// Builds the media_kit video surface on Linux or Windows.
   @internal
   Widget buildLinuxView() {
     if (!_isLinuxBackend || _linuxBackend == null) {

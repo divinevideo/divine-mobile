@@ -15,6 +15,184 @@ void main() {
 
     // ------------------------------------------------------------------
     group('subscribeToPlaybackErrors', () {
+      test('a command owns its failure until the next load', () async {
+        final controller = FakeController();
+        addTearDown(controller.dispose);
+        var inFlight = true;
+        final errors = <String?>[];
+        subs
+          ..subscribeToPlaybackErrors(
+            0,
+            controller,
+            isAlreadyError: () => inFlight,
+            onError: (_, message) => errors.add(message),
+          )
+          // A harmless acknowledgement must not hide the next error.
+          ..recheckPlaybackErrors(0, handledByCommand: true);
+        const failure = DivineVideoPlayerState(
+          status: PlaybackStatus.error,
+          errorMessage: 'Synthetic native failure',
+        );
+        controller.pushState(failure);
+        await pumpEventQueue();
+        expect(errors, isEmpty);
+        subs.recheckPlaybackErrors(0, handledByCommand: true);
+        inFlight = false;
+        subs.recheckPlaybackErrors(0);
+        controller.pushState(failure);
+        await pumpEventQueue();
+        expect(errors, isEmpty);
+
+        controller
+          ..pushState(
+            const DivineVideoPlayerState(status: PlaybackStatus.buffering),
+          )
+          ..pushState(failure);
+        await pumpEventQueue();
+
+        expect(errors, ['Synthetic native failure']);
+      });
+
+      test('rechecks an outstanding error without another notification', () {
+        final controller = FakeController()
+          ..pushState(
+            const DivineVideoPlayerState(
+              status: PlaybackStatus.error,
+              errorMessage: 'Synthetic guarded failure',
+            ),
+          );
+        addTearDown(controller.dispose);
+        var inFlight = true;
+        final errors = <String?>[];
+        subs.subscribeToPlaybackErrors(
+          0,
+          controller,
+          isAlreadyError: () => inFlight,
+          onError: (_, message) => errors.add(message),
+        );
+        expect(errors, isEmpty);
+        inFlight = false;
+
+        subs
+          ..recheckPlaybackErrors(0)
+          ..recheckPlaybackErrors(0);
+
+        expect(errors, ['Synthetic guarded failure']);
+      });
+
+      for (final unsubscribe in [false, true]) {
+        test(
+          'does not recheck a retired controller (unsubscribe $unsubscribe)',
+          () {
+            final controller = FakeController()
+              ..pushState(
+                const DivineVideoPlayerState(status: PlaybackStatus.error),
+              );
+            addTearDown(controller.dispose);
+            var inFlight = true;
+            final errors = <String?>[];
+            subs.subscribeToPlaybackErrors(
+              0,
+              controller,
+              isAlreadyError: () => inFlight,
+              onError: (_, message) => errors.add(message),
+            );
+            if (unsubscribe) {
+              subs.unsubscribe(0);
+            } else {
+              subs.disposeAll();
+            }
+            inFlight = false;
+
+            subs.recheckPlaybackErrors(0);
+
+            expect(errors, isEmpty);
+          },
+        );
+      }
+
+      test('reconsiders an error skipped during a temporary guard', () async {
+        final controller = FakeController();
+        addTearDown(controller.dispose);
+        final errors = <String?>[];
+        var inFlight = true;
+        subs.subscribeToPlaybackErrors(
+          0,
+          controller,
+          isAlreadyError: () => inFlight,
+          onError: (_, message) => errors.add(message),
+        );
+        const failure = DivineVideoPlayerState(
+          status: PlaybackStatus.error,
+          errorMessage: 'Synthetic replacement failure',
+        );
+        controller.pushState(failure);
+        await pumpEventQueue();
+        expect(errors, isEmpty);
+        inFlight = false;
+        controller.pushState(failure);
+        await pumpEventQueue();
+
+        expect(errors, ['Synthetic replacement failure']);
+      });
+
+      test(
+        'handles an existing failure once and observes a later failure',
+        () async {
+          final controller = FakeController();
+          addTearDown(controller.dispose);
+          const failure = DivineVideoPlayerState(
+            status: PlaybackStatus.error,
+            errorMessage: 'Synthetic renderer unavailable',
+          );
+          controller.pushState(failure);
+          final errors = <String?>[];
+
+          subs.subscribeToPlaybackErrors(
+            0,
+            controller,
+            isAlreadyError: () => false,
+            onError: (_, message) => errors.add(message),
+          );
+          expect(errors, ['Synthetic renderer unavailable']);
+          controller.pushState(failure);
+          await pumpEventQueue();
+          expect(errors, hasLength(1));
+
+          controller
+            ..pushState(
+              const DivineVideoPlayerState(status: PlaybackStatus.playing),
+            )
+            ..pushState(failure);
+          await pumpEventQueue();
+          expect(errors, [
+            'Synthetic renderer unavailable',
+            'Synthetic renderer unavailable',
+          ]);
+        },
+      );
+
+      test(
+        'does not repeat an existing failure already handled by the feed',
+        () {
+          final controller = FakeController()
+            ..pushState(
+              const DivineVideoPlayerState(status: PlaybackStatus.error),
+            );
+          addTearDown(controller.dispose);
+          final errors = <String?>[];
+
+          subs.subscribeToPlaybackErrors(
+            0,
+            controller,
+            isAlreadyError: () => true,
+            onError: (_, message) => errors.add(message),
+          );
+
+          expect(errors, isEmpty);
+        },
+      );
+
       test('fires onError when controller emits error state', () async {
         final controller = FakeController();
         final errors = <(NativePlayerErrorCode?, String?)>[];

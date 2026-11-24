@@ -65,11 +65,11 @@ void main() {
 
     group('initialization', () {
       test('should load saved flags from preferences', () async {
-        when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
+        when(() => mockPrefs.getBool('ff_blueskyPublishing')).thenReturn(true);
 
         await service.initialize();
 
-        expect(service.isEnabled(FeatureFlag.enhancedAnalytics), isTrue);
+        expect(service.isEnabled(FeatureFlag.blueskyPublishing), isTrue);
         expect(service.isEnabled(FeatureFlag.accountSwitching), isFalse);
       });
 
@@ -86,11 +86,11 @@ void main() {
 
       test('should prefer user settings over build defaults', () async {
         // Build default is false, user set to true
-        when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
+        when(() => mockPrefs.getBool('ff_blueskyPublishing')).thenReturn(true);
 
         await service.initialize();
 
-        expect(service.isEnabled(FeatureFlag.enhancedAnalytics), isTrue);
+        expect(service.isEnabled(FeatureFlag.blueskyPublishing), isTrue);
       });
 
       test(
@@ -152,29 +152,29 @@ void main() {
         'keeps user-facing flag overrides when internal access is off',
         () async {
           when(
-            () => mockPrefs.getBool('ff_enhancedAnalytics'),
+            () => mockPrefs.getBool('ff_blueskyPublishing'),
           ).thenReturn(true);
           when(
-            () => mockPrefs.containsKey('ff_enhancedAnalytics'),
+            () => mockPrefs.containsKey('ff_blueskyPublishing'),
           ).thenReturn(true);
 
           await service.initialize();
 
-          expect(service.isEnabled(FeatureFlag.enhancedAnalytics), isTrue);
+          expect(service.isEnabled(FeatureFlag.blueskyPublishing), isTrue);
           expect(
-            service.hasUserOverride(FeatureFlag.enhancedAnalytics),
+            service.hasUserOverride(FeatureFlag.blueskyPublishing),
             isTrue,
           );
-          verifyNever(() => mockPrefs.remove('ff_enhancedAnalytics'));
+          verifyNever(() => mockPrefs.remove('ff_blueskyPublishing'));
         },
       );
     });
 
     group('flag management', () {
       test('should save flag changes to preferences', () async {
-        await service.setFlag(FeatureFlag.enhancedAnalytics, true);
+        await service.setFlag(FeatureFlag.blueskyPublishing, true);
 
-        verify(() => mockPrefs.setBool('ff_enhancedAnalytics', true)).called(1);
+        verify(() => mockPrefs.setBool('ff_blueskyPublishing', true)).called(1);
       });
 
       test(
@@ -216,18 +216,18 @@ void main() {
 
       test('should reset flag to build default', () async {
         when(
-          () => mockPrefs.remove('ff_enhancedAnalytics'),
+          () => mockPrefs.remove('ff_blueskyPublishing'),
         ).thenAnswer((_) async => true);
 
-        await service.setFlag(FeatureFlag.enhancedAnalytics, true);
-        await service.resetFlag(FeatureFlag.enhancedAnalytics);
+        await service.setFlag(FeatureFlag.blueskyPublishing, true);
+        await service.resetFlag(FeatureFlag.blueskyPublishing);
 
-        verify(() => mockPrefs.remove('ff_enhancedAnalytics')).called(1);
+        verify(() => mockPrefs.remove('ff_blueskyPublishing')).called(1);
         expect(
-          service.isEnabled(FeatureFlag.enhancedAnalytics),
+          service.isEnabled(FeatureFlag.blueskyPublishing),
           equals(
             const BuildConfiguration().getDefault(
-              FeatureFlag.enhancedAnalytics,
+              FeatureFlag.blueskyPublishing,
             ),
           ),
         );
@@ -236,7 +236,7 @@ void main() {
       test('should reset all flags', () async {
         when(() => mockPrefs.remove(any())).thenAnswer((_) async => true);
 
-        await service.setFlag(FeatureFlag.enhancedAnalytics, true);
+        await service.setFlag(FeatureFlag.blueskyPublishing, true);
         await service.setFlag(FeatureFlag.accountSwitching, true);
 
         await service.resetAllFlags();
@@ -278,38 +278,38 @@ void main() {
 
     group('state queries', () {
       test('exposes user and internal flag metadata', () {
-        final analytics = service.getFlagMetadata(
-          FeatureFlag.enhancedAnalytics,
+        final bluesky = service.getFlagMetadata(
+          FeatureFlag.blueskyPublishing,
         );
         final contentWarnings = service.getFlagMetadata(
           FeatureFlag.communityContentWarnings,
         );
 
-        expect(analytics.flag.displayName, equals('Enhanced Analytics'));
+        expect(bluesky.flag.displayName, equals('Bluesky Publishing'));
         expect(
           contentWarnings.flag.displayName,
           equals('Community Content Warnings'),
         );
-        expect(analytics.isEnabled, isFalse);
+        expect(bluesky.isEnabled, isFalse);
         expect(contentWarnings.isEnabled, isFalse);
       });
 
       test('should identify user overrides', () async {
         when(
-          () => mockPrefs.containsKey('ff_enhancedAnalytics'),
+          () => mockPrefs.containsKey('ff_blueskyPublishing'),
         ).thenReturn(true);
 
-        expect(service.hasUserOverride(FeatureFlag.enhancedAnalytics), isTrue);
+        expect(service.hasUserOverride(FeatureFlag.blueskyPublishing), isTrue);
         expect(service.hasUserOverride(FeatureFlag.accountSwitching), isFalse);
       });
 
       test('should provide flag metadata', () {
-        final metadata = service.getFlagMetadata(FeatureFlag.enhancedAnalytics);
+        final metadata = service.getFlagMetadata(FeatureFlag.blueskyPublishing);
 
-        expect(metadata.flag, equals(FeatureFlag.enhancedAnalytics));
-        expect(metadata.isEnabled, isNotNull);
-        expect(metadata.hasUserOverride, isNotNull);
-        expect(metadata.buildDefault, isNotNull);
+        expect(metadata.flag, equals(FeatureFlag.blueskyPublishing));
+        expect(metadata.isEnabled, isFalse);
+        expect(metadata.hasUserOverride, isFalse);
+        expect(metadata.buildDefault, isFalse);
       });
     });
 
@@ -327,11 +327,11 @@ void main() {
       test('should update state when flags change', () async {
         final initialState = service.currentState;
 
-        await service.setFlag(FeatureFlag.enhancedAnalytics, true);
+        await service.setFlag(FeatureFlag.blueskyPublishing, true);
 
         final newState = service.currentState;
         expect(newState, isNot(equals(initialState)));
-        expect(newState.isEnabled(FeatureFlag.enhancedAnalytics), isTrue);
+        expect(newState.isEnabled(FeatureFlag.blueskyPublishing), isTrue);
       });
     });
 
@@ -347,13 +347,13 @@ void main() {
       });
 
       test('notifies listeners when a flag is set', () async {
-        await service.setFlag(FeatureFlag.enhancedAnalytics, true);
+        await service.setFlag(FeatureFlag.blueskyPublishing, true);
 
         expect(notifications, equals(1));
       });
 
       test('notifies listeners when a flag is reset', () async {
-        await service.resetFlag(FeatureFlag.enhancedAnalytics);
+        await service.resetFlag(FeatureFlag.blueskyPublishing);
 
         expect(notifications, equals(1));
       });

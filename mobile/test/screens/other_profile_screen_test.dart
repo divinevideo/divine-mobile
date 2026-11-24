@@ -21,8 +21,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -291,12 +289,6 @@ void main() {
         fetchUserProfileProvider(
           targetPubkey,
         ).overrideWith((ref) async => profile()),
-        isFeatureEnabledProvider(
-          FeatureFlag.videoReplies,
-        ).overrideWith((ref) => false),
-        isFeatureEnabledProvider(
-          FeatureFlag.profileMonetizationLinks,
-        ).overrideWith((ref) => false),
         // Element-level, since the standard overrides already claim the
         // family and Riverpod rejects a second family override.
         if (isVanished)
@@ -493,17 +485,12 @@ void main() {
     );
 
     testWidgets(
-      're-fetches raw Kind 0 when the monetization flag flips while mounted',
+      'loads support links on mount without a feature flag',
       (tester) async {
-        // Regression: the flag both gates the Tip/Support button AND gates
-        // OtherProfileBloc.loadSupportLinks (relay Kind 0, which carries the
-        // monetization links, vs the REST projection that strips them). A
-        // keyless BlocProvider captured the first flag value forever, so
-        // enabling the flag on an already-mounted profile never re-fetched the
-        // raw Kind 0 and the button never appeared.
+        // Support links come only from the raw Kind 0, which the REST
+        // projection strips, so mounting the screen must fetch it.
         const targetNpub =
             'npub1424242424242424242424242424242424242424242424242424qamrcaj';
-        final flag = StateProvider<bool>((ref) => false);
         final identityClaims = _MockIdentityClaimsRepository();
         final profileRepo = MockProfileRepository();
         when(
@@ -578,12 +565,6 @@ void main() {
             fetchUserProfileProvider(
               targetPubkey,
             ).overrideWith((ref) async => profile()),
-            isFeatureEnabledProvider(
-              FeatureFlag.videoReplies,
-            ).overrideWith((ref) => false),
-            isFeatureEnabledProvider(
-              FeatureFlag.profileMonetizationLinks,
-            ).overrideWith((ref) => ref.watch(flag)),
           ],
         );
         addTearDown(container.dispose);
@@ -604,16 +585,6 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 50));
 
-        verifyNever(
-          () => profileRepo.fetchRawProfileForDisplay(pubkey: targetPubkey),
-        );
-        expect(find.byKey(const Key('profile-support-button')), findsNothing);
-
-        container.read(flag.notifier).state = true;
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
-
-        // Flipping the flag must recreate the bloc and re-fetch the raw Kind 0.
         verify(
           () => profileRepo.fetchRawProfileForDisplay(pubkey: targetPubkey),
         ).called(1);
@@ -635,6 +606,121 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
         expect(find.byKey(const Key('profile-support-button')), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      're-creates the profile bloc when a repository it captured changes',
+      (tester) async {
+        const targetNpub =
+            'npub1424242424242424242424242424242424242424242424242424qamrcaj';
+        _MockIdentityClaimsRepository noClaims() {
+          final claims = _MockIdentityClaimsRepository();
+          when(
+            () => claims.cachedVerifiedClaims(
+              pubkey: any(named: 'pubkey'),
+              tags: any(named: 'tags'),
+            ),
+          ).thenAnswer((_) async => null);
+          when(
+            () => claims.resolveClaims(
+              pubkey: any(named: 'pubkey'),
+              freshTags: any(named: 'freshTags'),
+              cached: any(named: 'cached'),
+              renderedClaims: any(named: 'renderedClaims'),
+            ),
+          ).thenAnswer((_) async => const <IdentityClaim>[]);
+          return claims;
+        }
+
+        final claims = StateProvider<IdentityClaimsRepository>(
+          (ref) => noClaims(),
+        );
+        final profileRepo = MockProfileRepository();
+        when(
+          () => profileRepo.getCachedProfile(pubkey: any(named: 'pubkey')),
+        ).thenAnswer((_) async => null);
+        when(() => profileRepo.isVanished(any())).thenReturn(false);
+        when(
+          () => profileRepo.watchProfile(pubkey: any(named: 'pubkey')),
+        ).thenAnswer((_) => const Stream<UserProfile?>.empty());
+        when(
+          () => profileRepo.fetchFreshProfile(pubkey: any(named: 'pubkey')),
+        ).thenAnswer((_) async => profile());
+        when(
+          () => profileRepo.fetchRawProfileForDisplay(
+            pubkey: any(named: 'pubkey'),
+          ),
+        ).thenAnswer((_) async => null);
+        when(
+          () => profileRepo.cachedIdentityTags(any()),
+        ).thenAnswer((_) async => null);
+        when(
+          () => profileRepo.freshIdentityTags(
+            pubkey: any(named: 'pubkey'),
+            kind0Tags: any(named: 'kind0Tags'),
+          ),
+        ).thenAnswer((_) async => const <List<String>>[]);
+
+        final container = ProviderContainer(
+          overrides: [
+            ...getStandardTestOverrides(
+              mockAuthService: authService,
+              mockNostrService: nostrClient,
+              mockFollowRepository: followRepository,
+              mockProfileRepository: profileRepo,
+            ),
+            identityClaimsRepositoryProvider.overrideWith(
+              (ref) => ref.watch(claims),
+            ),
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              blocklistRepository,
+            ),
+            likesRepositoryProvider.overrideWithValue(likesRepository),
+            repostsRepositoryProvider.overrideWithValue(repostsRepository),
+            commentsRepositoryProvider.overrideWithValue(commentsRepository),
+            videosRepositoryProvider.overrideWithValue(videosRepository),
+            videoEventServiceProvider.overrideWithValue(videoEventService),
+            officialAccountsServiceProvider.overrideWithValue(officials),
+            isDmRestrictedProvider.overrideWith((ref) => false),
+            userProfileStatsReactiveProvider(
+              targetPubkey,
+            ).overrideWith((ref) => const Stream<ProfileStats?>.empty()),
+            fetchUserProfileProvider(
+              targetPubkey,
+            ).overrideWith((ref) async => profile()),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: VineTheme.theme,
+              home: BlocProvider<PeopleListsBloc>.value(
+                value: peopleListsBloc,
+                child: const OtherProfileScreen(npub: targetNpub),
+              ),
+            ),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 50));
+        verify(
+          () => profileRepo.fetchRawProfileForDisplay(pubkey: targetPubkey),
+        ).called(1);
+
+        // An account switch hands the screen a new repository; the bloc
+        // holding the old one must be replaced and load again.
+        container.read(claims.notifier).state = noClaims();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        verify(
+          () => profileRepo.fetchRawProfileForDisplay(pubkey: targetPubkey),
+        ).called(1);
       },
     );
 

@@ -1417,8 +1417,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     EditorReadyTrace trace,
     DivineVideoPlayerController player,
   ) async {
-    await player.firstFrameRendered;
-    if (!mounted || !identical(_videoPlayer, player)) return;
+    final rendered = await player.firstFrameRendered;
+    if (!rendered || !mounted || !identical(_videoPlayer, player)) return;
     trace.previewFirstFrame();
   }
 
@@ -2251,10 +2251,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// strikes clear of the flashes of the built-in effects the preview shows,
   /// as in the export (see `lightningStrikesOnOutput`).
   ///
-  /// The looks come after the other effects, and the Adjust sets'
-  /// highlights, shadows, vibrance and sharpening last, as in the export
-  /// (see `looksLast` and `adjustVideoEffectsOf`); while the Adjust editor is
-  /// open its sliders stand in for them.
+  /// The effects that read earlier frames come first, the looks after the
+  /// other effects, and the Adjust sets' highlights, shadows, vibrance and
+  /// sharpening last, as in the export (see `customVideoEffectsInRenderOrder`
+  /// and `adjustVideoEffectsOf`); while the Adjust editor is open its sliders
+  /// stand in for them.
   void _syncFrameEffects() {
     final player = _videoPlayer;
     if (player == null || !mounted) return;
@@ -2266,7 +2267,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         context.read<VideoEditorMainBloc>().state.openSubEditor ==
         SubEditorType.tune;
     final effects = [
-      ...looksLast(state.previewCustomEffects),
+      ...customVideoEffectsInRenderOrder(state.previewCustomEffects),
       ...previewAdjustVideoEffects(
         applied:
             VideoEditorScope.of(

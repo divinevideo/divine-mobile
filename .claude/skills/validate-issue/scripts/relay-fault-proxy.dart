@@ -21,6 +21,10 @@
 //   --delay-eose-ms MS      hold every ["EOSE", ...] frame for MS
 //   --delay-ms MS           hold every relay-to-client frame for MS
 //   --never-eose            swallow every EOSE (a REQ that never terminates)
+//   --notice-count          answer every client COUNT with ["NOTICE",
+//                           "ERROR: bad msg: unknown cmd"] without forwarding
+//                           it: a relay without NIP-45, as strfry before 1.1
+//                           answers. The NOTICE names no subscription
 //   --hold-retraction-eose  swallow only the EOSE of a vote-retraction read: a
 //                           REQ whose every filter is kinds [5] with an #e
 //                           naming a kind-7 event this proxy has delivered.
@@ -93,6 +97,7 @@ const _knownOptions = {
   'stall-after-count',
   'bind-all',
   'max-seconds',
+  'notice-count',
 };
 
 const _injectedCloseCode = 4000;
@@ -214,6 +219,7 @@ Future<void> main(List<String> args) async {
   final delayEose = _count(options, 'delay-eose-ms');
   final delayAll = _count(options, 'delay-ms');
   final neverEose = options.containsKey('never-eose');
+  final noticeCount = options.containsKey('notice-count');
   final closePrefix = options['close-req'];
   var closeCount = closePrefix == null
       ? 0
@@ -340,6 +346,11 @@ Future<void> main(List<String> args) async {
         }
         if (stalled) {
           logClientFrame(data, type, 'dropped: stalled');
+          return;
+        }
+        if (type == 'COUNT' && noticeCount) {
+          client.add(jsonEncode(['NOTICE', 'ERROR: bad msg: unknown cmd']));
+          logClientFrame(data, type, 'answered-with-NOTICE');
           return;
         }
         final sub = type == 'REQ' ? _subscriptionId(data as String) : null;

@@ -322,7 +322,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'ప్రజలు నిజంగా ఏమి వాడుతున్నారో చూడటానికి ఇది మాకు సహాయపడుతుంది. దీన్ని ఆఫ్ చేస్తే, ఈ పరికరంలో వేచి ఉన్న డేటా తొలగించబడుతుంది.';
+      'ప్రజలు నిజంగా ఏమి వాడుతున్నారో చూడటానికి ఇది మాకు సహాయపడుతుంది. దీన్ని ఆఫ్ చేస్తే, ఈ పరికరంలో వేచి ఉన్న డేటా తొలగించబడుతుంది. బగ్‌లను సరిచేయడానికి క్రాష్ నివేదికలు ఇప్పటికీ పంపబడతాయి.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -2173,6 +2173,14 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => 'మీ వంతు';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => 'సిరీస్ చూడండి';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'సిరీస్ చూడండి: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -4628,6 +4636,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'రిలే నవీకరణను అంగీకరించదు. క్షణంలో మళ్లీ ప్రయత్నించండి.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'ఈ వీడియో మరొక పరికరంలో మార్చబడింది, ఇప్పుడు దీనికి చాలా ఎక్కువ ట్యాగ్‌లు లేదా సహకారులు ఉన్నాయి. దాన్ని మళ్లీ తెరిచి కొన్నింటిని తీసివేయండి.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'ఈ వీడియోని అప్‌డేట్ చేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.';
 
@@ -4721,6 +4733,18 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get soundsNoSoundsFoundDescription =>
       'వేరొక శోధన పదాన్ని ప్రయత్నించండి';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count శబ్దాలు కనుగొనబడ్డాయి',
+      one: '$count శబ్దం కనుగొనబడింది',
+      zero: 'శబ్దాలు ఏవీ కనుగొనబడలేదు',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'సౌండ్‌లకు సేవ్ చేయబడింది';
@@ -9660,6 +9684,21 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectEcho => 'ప్రతిధ్వని';
 
   @override
+  String get videoEditorEffectTimeSplit => 'టైమ్ స్ప్లిట్';
+
+  @override
+  String get videoEditorEffectLongExposure => 'లాంగ్ ఎక్స్‌పోజర్';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'కదలిక మాత్రమే';
+
+  @override
+  String get videoEditorEffectStutter => 'తడబాటు';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'టైమ్ వార్ప్';
+
+  @override
   String get videoEditorEffectFisheye => 'ఫిష్‌ఐ';
 
   @override
@@ -9861,6 +9900,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'కదలిక';
 
   @override
+  String get videoEditorEffectCategoryTime => 'సమయం';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'కణాలు';
 
   @override
@@ -9966,6 +10008,14 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'ఒకసారి ఒక సమయం ఎఫెక్ట్ మాత్రమే. రెండు కలిపితే ఎక్స్‌పోర్ట్ తర్వాత వేరేలా కనిపిస్తాయి, అందుకే ఇక్కడ మరొకదాన్ని మార్చాం.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'ఒకసారి ఒక సమయం ఎఫెక్ట్ మాత్రమే. రెండు కలిపితే ఎక్స్‌పోర్ట్ తర్వాత వేరేలా కనిపిస్తాయి.';
 
   @override
   String get videoEditorEffectsOnBeat => 'బీట్‌కు అనుగుణంగా';
@@ -11889,6 +11939,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => 'నా సౌండ్స్';
 
   @override
+  String get videoEditorAudioCategorySongs => 'Songs';
+
+  @override
   String get videoEditorAudioFilterEffects => 'సౌండ్ ఎఫెక్ట్స్';
 
   @override
@@ -12112,6 +12165,34 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'ఈ వీడియోకు వీడియోతో ఎవరు ప్రత్యుత్తరం ఇచ్చారో చూపిస్తుంది. వీక్షకులు దాన్ని ట్యాప్ చేసి ప్రత్యుత్తరాలను చూస్తారు.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'ఎవరు సమాధానం ఇవ్వగలరు';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'అందరూ';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'స్నేహితులు';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'నేను మాత్రమే';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'మీరు ఫాలో అయ్యేవారు మాత్రమే పాల్గొనగలరు. ఎవరైనా పాల్గొన్న తర్వాత మిగతా వారందరికీ స్టిక్కర్ కనిపిస్తుంది.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'మీరు ఫాలో అయ్యేవారి వీడియో ప్రత్యుత్తరాలను మాత్రమే స్టిక్కర్ చూపిస్తుంది. వారిలో ఎవరైనా ప్రత్యుత్తరం ఇచ్చిన తర్వాత మిగతా వారందరికీ అది కనిపిస్తుంది.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'మీరు మాత్రమే పాల్గొనగలరు. మీరు పాల్గొనే వరకు ఇంకెవరికీ స్టిక్కర్ కనిపించదు.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'మీ వీడియో ప్రత్యుత్తరాలను మాత్రమే స్టిక్కర్ చూపిస్తుంది. మీరు ప్రత్యుత్తరం ఇచ్చే వరకు ఇంకెవరికీ అది కనిపించదు.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>
@@ -13933,6 +14014,29 @@ class AppLocalizationsTe extends AppLocalizations {
       'ప్రొటెక్టెడ్-మైనర్ ఓవర్‌రైడ్ క్లియర్ చేయబడింది';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedTitle =>
+      'Act as if Confirmation is required';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedSubtitle =>
+      'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.';
+
+  @override
   String get commentsRecordVideoButtonLabel =>
       'వీడియో వ్యాఖ్యను రికార్డ్ చేయండి';
 
@@ -15018,6 +15122,65 @@ class AppLocalizationsTe extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'అన్‌లింక్ చేయండి $platformఖాతా $identity';
   }
@@ -15049,7 +15212,26 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'ఒక్కసారి నొక్కండి';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -15162,6 +15344,18 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'ధృవీకరించబడింది, కానీ ఏ రిలే నవీకరణను తీసుకోలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -15759,6 +15953,13 @@ class AppLocalizationsTe extends AppLocalizations {
   String get updateAction => 'అప్‌డేట్ చేయండి';
 
   @override
+  String get announcementViewContest => 'పోటీని చూడండి';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'ఈ ఫీచర్ చేసిన ఫీడ్ ఇక అందుబాటులో లేదు.';
+
+  @override
   String updateNewIn(String version) {
     return '$versionలో కొత్తవి:';
   }
@@ -15909,6 +16110,16 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get settingsHelpAboutSubtitle =>
       'సహాయం, చట్టపరమైన సమాచారం, యాప్ వివరాలు';
+
+  @override
+  String get settingsDiscordTitle => 'మా Discord సర్వర్‌లో చేరండి';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Divine బృందం, కమ్యూనిటీ సభ్యులతో మాట్లాడండి';
+
+  @override
+  String get settingsDiscordOpenError => 'Discordను తెరవలేకపోయాం';
 
   @override
   String listLoopsCount(int count, String formatted) {

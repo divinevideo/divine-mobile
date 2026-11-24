@@ -35,6 +35,7 @@
 		585C97B07D77BB406F5134B2 /* DiscoVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0207C4E316818E3DC6F1AADA /* DiscoVideoEffect.swift */; };
 		DA859FDF5B1E90DDAF58C88B /* LaserVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44B28BF476AD5B5A4FFAAD7D /* LaserVideoEffect.swift */; };
 		1CA9AAE24C17E459DFE1F97D /* LightningVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCFF38C1B986C9CB40F13D85 /* LightningVideoEffect.swift */; };
+		7E11B0A1C0DE4A1B9E2D3F02 /* TimeVideoEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E11B0A1C0DE4A1B9E2D3F01 /* TimeVideoEffects.swift */; };
 		10C59DB5BE473BAEFF595D4F /* IntroOutroVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBF385F940D6CB5D17D919A6 /* IntroOutroVideoEffect.swift */; };
 		B9B5C812774B10BFFDB3B6B4 /* EightBitVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = B88A20642EA46A86199B5636 /* EightBitVideoEffect.swift */; };
 		A02F891F3B3263D54D54ADED /* AnaglyphVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DA314775520081EF37670FE /* AnaglyphVideoEffect.swift */; };
@@ -187,6 +188,7 @@
 		0207C4E316818E3DC6F1AADA /* DiscoVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DiscoVideoEffect.swift; sourceTree = "<group>"; };
 		44B28BF476AD5B5A4FFAAD7D /* LaserVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LaserVideoEffect.swift; sourceTree = "<group>"; };
 		FCFF38C1B986C9CB40F13D85 /* LightningVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LightningVideoEffect.swift; sourceTree = "<group>"; };
+		7E11B0A1C0DE4A1B9E2D3F01 /* TimeVideoEffects.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TimeVideoEffects.swift; sourceTree = "<group>"; };
 		FBF385F940D6CB5D17D919A6 /* IntroOutroVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IntroOutroVideoEffect.swift; sourceTree = "<group>"; };
 		B88A20642EA46A86199B5636 /* EightBitVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EightBitVideoEffect.swift; sourceTree = "<group>"; };
 		6DA314775520081EF37670FE /* AnaglyphVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnaglyphVideoEffect.swift; sourceTree = "<group>"; };
@@ -462,6 +464,7 @@
 				0207C4E316818E3DC6F1AADA /* DiscoVideoEffect.swift */,
 				44B28BF476AD5B5A4FFAAD7D /* LaserVideoEffect.swift */,
 				FCFF38C1B986C9CB40F13D85 /* LightningVideoEffect.swift */,
+				7E11B0A1C0DE4A1B9E2D3F01 /* TimeVideoEffects.swift */,
 				FBF385F940D6CB5D17D919A6 /* IntroOutroVideoEffect.swift */,
 				B88A20642EA46A86199B5636 /* EightBitVideoEffect.swift */,
 				6DA314775520081EF37670FE /* AnaglyphVideoEffect.swift */,
@@ -989,6 +992,7 @@
 				585C97B07D77BB406F5134B2 /* DiscoVideoEffect.swift in Sources */,
 				DA859FDF5B1E90DDAF58C88B /* LaserVideoEffect.swift in Sources */,
 				1CA9AAE24C17E459DFE1F97D /* LightningVideoEffect.swift in Sources */,
+				7E11B0A1C0DE4A1B9E2D3F02 /* TimeVideoEffects.swift in Sources */,
 				10C59DB5BE473BAEFF595D4F /* IntroOutroVideoEffect.swift in Sources */,
 				B9B5C812774B10BFFDB3B6B4 /* EightBitVideoEffect.swift in Sources */,
 				A02F891F3B3263D54D54ADED /* AnaglyphVideoEffect.swift in Sources */,

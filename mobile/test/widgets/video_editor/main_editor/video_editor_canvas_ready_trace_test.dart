@@ -1,10 +1,12 @@
 // ABOUTME: Pins what the canvas tells the editor_ready trace about its first
 // ABOUTME: clip load: ready only once the player shows a frame, or failed.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_video_player/divine_video_player.dart';
+import 'package:divine_video_player/src/linux/linux_video_player_backend.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,6 +44,50 @@ class _MockClipEditorBloc extends MockBloc<ClipEditorEvent, ClipEditorState>
 class _MockTimelineOverlayBloc
     extends MockBloc<TimelineOverlayEvent, TimelineOverlayState>
     implements TimelineOverlayBloc {}
+
+class _TraceDesktopBackend extends Fake
+    implements LinuxVideoPlayerBackend, DesktopVideoFrameReadiness {
+  final frame = Completer<bool>();
+  int loads = 0;
+
+  @override
+  Future<bool> get firstFrameRendered => frame.future;
+
+  @override
+  Future<void> initialize({
+    required void Function(DivineVideoPlayerState state) onStateChanged,
+    required void Function(Object error) onError,
+  }) async {}
+
+  @override
+  Future<void> setClips(
+    List<VideoClip> clips, {
+    Duration? startPosition,
+  }) async {
+    loads++;
+  }
+
+  @override
+  Future<void> setVolume(double volume) async {}
+
+  @override
+  Future<void> setLooping({required bool looping}) async {}
+
+  @override
+  Future<void> setPlaybackSpeed(double speed) async {}
+
+  @override
+  Future<void> play() async {}
+
+  @override
+  Future<void> pause() async {}
+
+  @override
+  Future<void> dispose() async {}
+
+  @override
+  Widget buildView() => const SizedBox.shrink();
+}
 
 /// Seeds the editor with [clips] instead of the recorder's session.
 class _SeededClipManagerNotifier extends ClipManagerNotifier {
@@ -249,6 +295,37 @@ void main() {
     }
 
     group('editor_ready', () {
+      testWidgets('keeps waiting when desktop first-frame work is cancelled', (
+        tester,
+      ) async {
+        final originalFactory = DivineVideoPlayerController.linuxBackendFactory;
+        final originalForce =
+            DivineVideoPlayerController.debugForceLinuxBackend;
+        final backend = _TraceDesktopBackend();
+        DivineVideoPlayerController.debugForceLinuxBackend = true;
+        DivineVideoPlayerController.linuxBackendFactory = () => backend;
+        try {
+          final readyTrace = EditorReadyTrace(
+            monitor,
+            entry: EditorEntry.recording,
+          )..clipsLoaded(clipCount: 1, stopMotion: false);
+          await pumpCanvas(tester, readyTrace);
+          expect(backend.loads, 1);
+          expect(monitor.traces.single.stops, 0);
+
+          backend.frame.complete(false);
+          await tester.pump();
+
+          expect(readyTrace.isPending, isTrue);
+          expect(monitor.traces.single.stops, 0);
+          expect(tester.takeException(), isNull);
+        } finally {
+          await unmount(tester);
+          DivineVideoPlayerController.linuxBackendFactory = originalFactory;
+          DivineVideoPlayerController.debugForceLinuxBackend = originalForce;
+        }
+      });
+
       testWidgets('ends ready only once the preview shows its first frame', (
         tester,
       ) async {

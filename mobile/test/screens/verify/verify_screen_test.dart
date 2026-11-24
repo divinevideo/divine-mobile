@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for the verify dashboard — verdict pills, unlinking,
 // ABOUTME: and the platforms still on offer.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
@@ -10,20 +12,30 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/verify/confirmation_requirement.dart';
 import 'package:openvine/blocs/verify/verify_connect_cubit.dart';
 import 'package:openvine/blocs/verify/verify_cubit.dart';
+import 'package:openvine/features/confirmation/confirmation_access_providers.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/supporter_providers.dart';
+import 'package:openvine/screens/verify/verify_confirmation_screen.dart';
 import 'package:openvine/screens/verify/verify_connect_screen.dart';
 import 'package:openvine/screens/verify/verify_screen.dart';
 import 'package:openvine/screens/verify/widgets/verify_claim_row.dart';
 import 'package:openvine/screens/verify/widgets/verify_platform_row.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:verifier_client/verifier_client.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -82,6 +94,8 @@ void main() {
     setUp(() {
       cubit = _MockVerifyCubit();
       when(cubit.load).thenAnswer((_) async {});
+      when(cubit.rereadConfirmationAccess).thenAnswer((_) async {});
+      when(() => cubit.isClosed).thenReturn(false);
       when(() => cubit.removeClaim(any())).thenAnswer((_) async {});
       originalReporter = detachedFailureReporter;
       reporter = _RecordingCrashReporter();
@@ -108,6 +122,10 @@ void main() {
       bool settle = true,
       // Whether this device can run a sign-in; off unless a test is about it.
       bool oauthUsable = false,
+      // Whether the `confirmationSignIn` flag is on, and whether this build
+      // can buy; the flag is off unless a test is about it.
+      bool confirmationSignIn = false,
+      bool canBuy = true,
     }) async {
       when(() => cubit.state).thenReturn(state);
       // Mounted at the production paths: the view pushes the connect flow by
@@ -119,9 +137,27 @@ void main() {
             path: VerifyPage.path,
             builder: (context, _) => BlocProvider<VerifyCubit>.value(
               value: cubit,
-              child: VerifyView(oauthUsable: oauthUsable),
+              child: VerifyView(
+                oauthUsable: oauthUsable,
+                confirmationSignIn: confirmationSignIn,
+                canBuy: canBuy,
+              ),
             ),
             routes: [
+              GoRoute(
+                path: VerifyConfirmationPage.path,
+                builder: (context, _) => Scaffold(
+                  body: Column(
+                    children: [
+                      const Text('confirmation screen'),
+                      TextButton(
+                        onPressed: context.pop,
+                        child: const Text('leave confirmation'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               GoRoute(
                 path: VerifyConnectPage.path,
                 name: VerifyConnectPage.routeName,
@@ -269,6 +305,22 @@ void main() {
 
         expect(find.text(l10n.verifyStatusAccountChanged), findsOneWidget);
         expect(find.text(l10n.verifyStatusSignInExpired), findsNothing);
+      });
+
+      testWidgets('says a link needs Confirmation and offers no sign-in', (
+        tester,
+      ) async {
+        await pump(
+          tester,
+          ready(
+            signInCodes: const {'twitter:jack': SignInLapse.needsConfirmation},
+          ),
+          oauthUsable: true,
+        );
+
+        expect(find.text(l10n.verifyStatusNeedsConfirmation), findsOneWidget);
+        expect(find.text(l10n.verifyStatusUnverified), findsNothing);
+        expect(find.text(l10n.verifySignInAgain), findsNothing);
       });
 
       testWidgets('says not verified when the verifier gave no reason', (
@@ -612,6 +664,24 @@ void main() {
       verifyNever(() => cubit.claimLinked(any()));
     });
 
+    testWidgets('takes the remembered access answer when the flow returns, '
+        'linked or not', (tester) async {
+      await pump(tester, ready());
+
+      await tester.tap(find.text('Mastodon'));
+      await tester.pumpAndSettle();
+      verifyNever(cubit.rereadConfirmationAccess);
+      tester.state<NavigatorState>(find.byType(Navigator).last).pop();
+      await tester.pumpAndSettle();
+      verify(cubit.rereadConfirmationAccess).called(1);
+
+      await tester.tap(find.text('Mastodon'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('finish link'));
+      await tester.pumpAndSettle();
+      verify(cubit.rereadConfirmationAccess).called(1);
+    });
+
     testWidgets('explains the handshake on demand', (tester) async {
       await pump(tester, ready());
 
@@ -634,6 +704,277 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('connect mastodon'), findsOneWidget);
+    });
+
+    group('Divine Confirmation', () {
+      const gated = [
+        VerifierPlatform(
+          key: 'bluesky',
+          label: 'Bluesky',
+          supported: true,
+          oauth: true,
+          signinRequires: SigninRequirement.confirmation,
+        ),
+        VerifierPlatform(
+          key: 'twitter',
+          label: 'Twitter / X',
+          supported: true,
+          oauth: true,
+        ),
+        VerifierPlatform(key: 'github', label: 'GitHub', supported: true),
+      ];
+
+      VerifyState offers({
+        ConfirmationAccess access = ConfirmationAccess.hasNot,
+      }) => VerifyState(
+        status: VerifyStatus.ready,
+        platforms: gated,
+        confirmationAccess: access,
+      );
+
+      Finder badgeOn(String label) => find.descendant(
+        of: find.ancestor(
+          of: find.text(label),
+          matching: find.byType(VerifyPlatformRow),
+        ),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              (widget.data == l10n.verifyOneTapBadge ||
+                  widget.data == l10n.verifyOneTapWithConfirmationBadge),
+        ),
+      );
+
+      String badgeText(String label) =>
+          (badgeOn(label).evaluate().single.widget as Text).data!;
+
+      testWidgets('a gated platform reads "One tap with Confirmation" for '
+          'hasNot', (tester) async {
+        await pump(
+          tester,
+          offers(),
+          oauthUsable: true,
+          confirmationSignIn: true,
+        );
+
+        expect(
+          badgeText('Bluesky'),
+          equals(l10n.verifyOneTapWithConfirmationBadge),
+        );
+        // A platform the verifier does not gate stays "One tap".
+        expect(badgeText('Twitter / X'), equals(l10n.verifyOneTapBadge));
+        expect(badgeOn('GitHub'), findsNothing);
+      });
+
+      // The badge itself is hidden from screen readers, so the row's label
+      // carries the requirement.
+      testWidgets('a screen reader hears that a gated platform needs '
+          'Confirmation', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await pump(
+          tester,
+          offers(),
+          oauthUsable: true,
+          confirmationSignIn: true,
+        );
+
+        expect(
+          find.bySemanticsLabel(
+            l10n.verifyLinkNeedsConfirmationSemanticLabel('Bluesky'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(l10n.verifyLinkSemanticLabel('Twitter / X')),
+          findsOneWidget,
+        );
+        semantics.dispose();
+      });
+
+      for (final access in [
+        ConfirmationAccess.has,
+        ConfirmationAccess.unknown,
+      ]) {
+        testWidgets('the badge stays "One tap" for ${access.name}', (
+          tester,
+        ) async {
+          await pump(
+            tester,
+            offers(access: access),
+            oauthUsable: true,
+            confirmationSignIn: true,
+          );
+
+          expect(badgeText('Bluesky'), equals(l10n.verifyOneTapBadge));
+        });
+      }
+
+      testWidgets('the badge stays "One tap" with the flag off', (
+        tester,
+      ) async {
+        await pump(tester, offers(), oauthUsable: true);
+
+        expect(badgeText('Bluesky'), equals(l10n.verifyOneTapBadge));
+      });
+
+      testWidgets('the badge stays "One tap" where sign-in is hidden', (
+        tester,
+      ) async {
+        await pump(tester, offers(), confirmationSignIn: true);
+
+        expect(badgeText('Bluesky'), equals(l10n.verifyOneTapBadge));
+      });
+
+      group('renew', () {
+        VerifyState needsIt() => ready(
+          signInCodes: const {'twitter:jack': SignInLapse.needsConfirmation},
+        );
+
+        final renewLabel = l10n.verifyRenewConfirmationSemanticLabel(
+          'Twitter / X',
+          'jack',
+        );
+
+        testWidgets('a link that needs Confirmation offers Renew '
+            'Confirmation with the flag on', (tester) async {
+          await pump(
+            tester,
+            needsIt(),
+            oauthUsable: true,
+            confirmationSignIn: true,
+          );
+
+          expect(find.text(l10n.verifyRenewConfirmation), findsOneWidget);
+          expect(find.bySemanticsLabel(renewLabel), findsOneWidget);
+          // Renewing restores the link; signing in again would not.
+          expect(find.text(l10n.verifySignInAgain), findsNothing);
+          expect(find.text(l10n.verifyStatusNeedsConfirmation), findsOneWidget);
+        });
+
+        testWidgets('opens the Confirmation screen, not a sign-in', (
+          tester,
+        ) async {
+          await pump(
+            tester,
+            needsIt(),
+            oauthUsable: true,
+            confirmationSignIn: true,
+          );
+
+          await tester.tap(find.text(l10n.verifyRenewConfirmation));
+          await tester.pumpAndSettle();
+
+          expect(find.text('confirmation screen'), findsOneWidget);
+          expect(find.text('connect twitter'), findsNothing);
+        });
+
+        testWidgets('refreshes access and the verdicts on return', (
+          tester,
+        ) async {
+          await pump(
+            tester,
+            needsIt(),
+            oauthUsable: true,
+            confirmationSignIn: true,
+          );
+          when(cubit.refreshQuietly).thenAnswer((_) async {});
+
+          await tester.tap(find.text(l10n.verifyRenewConfirmation));
+          await tester.pumpAndSettle();
+          verifyNever(cubit.refreshQuietly);
+
+          await tester.tap(find.text('leave confirmation'));
+          await tester.pumpAndSettle();
+
+          verify(cubit.refreshQuietly).called(1);
+        });
+
+        testWidgets('an expired sign-in offers Sign in again, not Renew', (
+          tester,
+        ) async {
+          await pump(
+            tester,
+            ready(),
+            oauthUsable: true,
+            confirmationSignIn: true,
+          );
+
+          expect(find.text(l10n.verifySignInAgain), findsOneWidget);
+          expect(find.text(l10n.verifyRenewConfirmation), findsNothing);
+        });
+
+        testWidgets('a verified sign-in carrying the code offers no Renew', (
+          tester,
+        ) async {
+          await pump(
+            tester,
+            ready(
+              verifiedKeys: const {'github:octocat', 'twitter:jack'},
+              signInCodes: const {
+                'twitter:jack': SignInLapse.needsConfirmation,
+              },
+            ),
+            oauthUsable: true,
+            confirmationSignIn: true,
+          );
+
+          expect(find.text(l10n.verifyRenewConfirmation), findsNothing);
+        });
+
+        testWidgets('with the flag off the pill shows and no renew action', (
+          tester,
+        ) async {
+          await pump(tester, needsIt(), oauthUsable: true);
+
+          expect(find.text(l10n.verifyStatusNeedsConfirmation), findsOneWidget);
+          expect(find.text(l10n.verifyRenewConfirmation), findsNothing);
+          expect(find.text(l10n.verifyConfirmationStoreOnly), findsNothing);
+        });
+
+        testWidgets('iOS below 17.4 shows the pill and no renew action', (
+          tester,
+        ) async {
+          await pump(tester, needsIt(), confirmationSignIn: true);
+
+          expect(find.text(l10n.verifyStatusNeedsConfirmation), findsOneWidget);
+          expect(find.text(l10n.verifyRenewConfirmation), findsNothing);
+          expect(find.text(l10n.verifyConfirmationStoreOnly), findsNothing);
+        });
+
+        testWidgets('is not offered while an unlink is in flight', (
+          tester,
+        ) async {
+          await pump(
+            tester,
+            ready(
+              signInCodes: const {
+                'twitter:jack': SignInLapse.needsConfirmation,
+              },
+              removingKey: 'github:octocat',
+            ),
+            oauthUsable: true,
+            confirmationSignIn: true,
+            settle: false,
+          );
+
+          expect(find.text(l10n.verifyRenewConfirmation), findsNothing);
+        });
+
+        testWidgets('a build that cannot buy shows the store note instead of '
+            'Renew', (tester) async {
+          await pump(
+            tester,
+            needsIt(),
+            oauthUsable: true,
+            confirmationSignIn: true,
+            canBuy: false,
+          );
+
+          expect(find.text(l10n.verifyConfirmationStoreOnly), findsOneWidget);
+          expect(find.text(l10n.verifyRenewConfirmation), findsNothing);
+          expect(find.text(l10n.verifyStatusNeedsConfirmation), findsOneWidget);
+        });
+      });
     });
 
     group('sign in again', () {
@@ -746,8 +1087,66 @@ void main() {
     });
   });
 
+  group(VerifyClaimRow, () {
+    Future<void> pumpRow(
+      WidgetTester tester, {
+      VoidCallback? onRenewConfirmation,
+      bool renewNeedsStore = false,
+    }) => tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: VineTheme.theme,
+        home: Scaffold(
+          body: VerifyClaimRow(
+            claim: _twitter,
+            isVerified: false,
+            isRemoving: false,
+            onRemove: () {},
+            lapse: SignInLapse.needsConfirmation,
+            onRenewConfirmation: onRenewConfirmation,
+            renewNeedsStore: renewNeedsStore,
+          ),
+        ),
+      ),
+    );
+
+    testWidgets('shows only the store text when a build cannot buy, even '
+        'with a renew action given', (tester) async {
+      await pumpRow(
+        tester,
+        onRenewConfirmation: () {},
+        renewNeedsStore: true,
+      );
+
+      expect(find.text(l10n.verifyConfirmationStoreOnly), findsOneWidget);
+      expect(find.text(l10n.verifyRenewConfirmation), findsNothing);
+    });
+
+    testWidgets('shows the renew button when the build can buy', (
+      tester,
+    ) async {
+      await pumpRow(tester, onRenewConfirmation: () {});
+
+      expect(find.text(l10n.verifyRenewConfirmation), findsOneWidget);
+      expect(find.text(l10n.verifyConfirmationStoreOnly), findsNothing);
+    });
+  });
+
   group(VerifyPage, () {
     late _MockIdentityClaimsRepository repository;
+
+    // The flag is off, so Divine Confirmation changes nothing here.
+    final confirmationOverrides = [
+      supporterStoreBillingAvailableProvider.overrideWithValue(true),
+      isFeatureEnabledProvider(
+        FeatureFlag.confirmationSignIn,
+      ).overrideWithValue(false),
+      confirmationAccessReaderProvider.overrideWithValue(
+        ({bool refresh = false}) async => ConfirmationAccess.unknown,
+      ),
+      simulateConfirmationRequirementProvider.overrideWithValue(false),
+    ];
 
     setUp(() {
       repository = _MockIdentityClaimsRepository();
@@ -772,6 +1171,7 @@ void main() {
         ProviderScope(
           overrides: [
             identityClaimsRepositoryProvider.overrideWithValue(repository),
+            ...confirmationOverrides,
             authServiceProvider.overrideWithValue(
               createMockAuthService(
                 authState: AuthState.authenticated,
@@ -794,6 +1194,378 @@ void main() {
 
       verify(() => repository.claimsWithVerdicts(_pubkey)).called(1);
       expect(find.text('octocat'), findsOneWidget);
+    });
+
+    group('Divine Confirmation', () {
+      late _MockIdentityClaimsRepository secondRepository;
+
+      setUp(() {
+        secondRepository = _MockIdentityClaimsRepository();
+        for (final repo in [repository, secondRepository]) {
+          when(repo.supportedPlatforms).thenAnswer(
+            (_) async => const [
+              VerifierPlatform(
+                key: 'bluesky',
+                label: 'Bluesky',
+                supported: true,
+                oauth: true,
+                signinRequires: SigninRequirement.confirmation,
+              ),
+            ],
+          );
+          when(() => repo.claimsWithVerdicts(any())).thenAnswer(
+            (_) async => const IdentityClaimStatus(
+              claims: [],
+              verifiedKeys: {},
+              verifierReachable: true,
+            ),
+          );
+        }
+      });
+
+      Widget app(
+        _MockIdentityClaimsRepository repo,
+        ConfirmationAccessReader reader,
+      ) => ProviderScope(
+        overrides: [
+          identityClaimsRepositoryProvider.overrideWithValue(repo),
+          supporterStoreBillingAvailableProvider.overrideWithValue(true),
+          isFeatureEnabledProvider(
+            FeatureFlag.confirmationSignIn,
+          ).overrideWithValue(true),
+          confirmationAccessReaderProvider.overrideWithValue(reader),
+          simulateConfirmationRequirementProvider.overrideWithValue(false),
+          authServiceProvider.overrideWithValue(
+            createMockAuthService(
+              authState: AuthState.authenticated,
+              currentPublicKeyHex: _pubkey,
+            ),
+          ),
+          currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+          appOAuthSupportProvider.overrideWith((ref) async => true),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: VineTheme.theme,
+          home: const VerifyPage(),
+        ),
+      );
+
+      group('returning from the Confirmation screen', () {
+        const needsIt = IdentityClaimStatus(
+          claims: [_twitter],
+          verifiedKeys: {},
+          verifierReachable: true,
+          signInCodes: {'twitter:jack': SignInLapse.needsConfirmation},
+        );
+
+        Future<void> pumpApp(WidgetTester tester) async {
+          when(repository.supportedPlatforms).thenAnswer(
+            (_) async => const [
+              VerifierPlatform(
+                key: 'twitter',
+                label: 'Twitter / X',
+                supported: true,
+                oauth: true,
+                signinRequires: SigninRequirement.confirmation,
+              ),
+            ],
+          );
+          when(
+            () => repository.claimsWithVerdicts(any()),
+          ).thenAnswer((_) async => needsIt);
+          final router = GoRouter(
+            initialLocation: VerifyPage.path,
+            routes: [
+              GoRoute(
+                path: VerifyPage.path,
+                builder: (context, _) => const VerifyPage(),
+                routes: [
+                  GoRoute(
+                    path: VerifyConfirmationPage.path,
+                    builder: (context, _) => Scaffold(
+                      body: TextButton(
+                        onPressed: context.pop,
+                        child: const Text('leave confirmation'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                identityClaimsRepositoryProvider.overrideWithValue(repository),
+                supporterStoreBillingAvailableProvider.overrideWithValue(true),
+                isFeatureEnabledProvider(
+                  FeatureFlag.confirmationSignIn,
+                ).overrideWithValue(true),
+                confirmationAccessReaderProvider.overrideWithValue(
+                  ({bool refresh = false}) async => ConfirmationAccess.hasNot,
+                ),
+                simulateConfirmationRequirementProvider.overrideWithValue(
+                  false,
+                ),
+                authServiceProvider.overrideWithValue(
+                  createMockAuthService(
+                    authState: AuthState.authenticated,
+                    currentPublicKeyHex: _pubkey,
+                  ),
+                ),
+                currentAuthStateProvider.overrideWithValue(
+                  AuthState.authenticated,
+                ),
+                appOAuthSupportProvider.overrideWith((ref) async => true),
+              ],
+              child: MaterialApp.router(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                theme: VineTheme.theme,
+                routerConfig: router,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+        }
+
+        testWidgets('keeps the list on screen while it re-reads', (
+          tester,
+        ) async {
+          await pumpApp(tester);
+          final reread = Completer<IdentityClaimStatus>();
+          when(
+            () => repository.claimsWithVerdicts(any()),
+          ).thenAnswer((_) => reread.future);
+
+          await tester.tap(find.text(l10n.verifyRenewConfirmation));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('leave confirmation'));
+          await tester.pumpAndSettle();
+
+          // The read is still pending, and the list never left.
+          expect(find.byType(BrandedLoadingIndicator), findsNothing);
+          expect(find.text('jack'), findsOneWidget);
+          expect(find.text(l10n.verifyRenewConfirmation), findsOneWidget);
+
+          reread.complete(needsIt);
+          await tester.pumpAndSettle();
+          expect(find.text('jack'), findsOneWidget);
+        });
+
+        testWidgets('keeps the list and says so when the re-read fails', (
+          tester,
+        ) async {
+          await pumpApp(tester);
+          when(
+            () => repository.claimsWithVerdicts(any()),
+          ).thenThrow(StateError('relay down'));
+
+          await tester.tap(find.text(l10n.verifyRenewConfirmation));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('leave confirmation'));
+          await tester.pumpAndSettle();
+
+          expect(find.text('jack'), findsOneWidget);
+          expect(find.text(l10n.verifyLoadFailed), findsOneWidget);
+        });
+      });
+
+      testWidgets("reads access from the signed-in account's reader, and a "
+          'new account gets its own', (tester) async {
+        final firstReads = <bool>[];
+        final secondReads = <bool>[];
+
+        await tester.pumpWidget(
+          app(repository, ({bool refresh = false}) async {
+            firstReads.add(refresh);
+            return ConfirmationAccess.hasNot;
+          }),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.text(l10n.verifyOneTapWithConfirmationBadge),
+          findsOneWidget,
+        );
+        expect(firstReads, equals([false]));
+
+        // Another account: a new repository, so a new cubit with the new
+        // reader, whose answer replaces the first account's.
+        await tester.pumpWidget(
+          app(secondRepository, ({bool refresh = false}) async {
+            secondReads.add(refresh);
+            return ConfirmationAccess.has;
+          }),
+        );
+        await tester.pumpAndSettle();
+
+        expect(secondReads, equals([false]));
+        expect(firstReads, equals([false]));
+        expect(find.text(l10n.verifyOneTapBadge), findsOneWidget);
+        expect(find.text(l10n.verifyOneTapWithConfirmationBadge), findsNothing);
+      });
+
+      testWidgets('a changed developer override starts a new read', (
+        tester,
+      ) async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final reads = <bool>[];
+        when(repository.supportedPlatforms).thenAnswer(
+          (_) async => const [
+            VerifierPlatform(
+              key: 'bluesky',
+              label: 'Bluesky',
+              supported: true,
+              oauth: true,
+              signinRequires: SigninRequirement.confirmation,
+            ),
+          ],
+        );
+        when(() => repository.claimsWithVerdicts(any())).thenAnswer(
+          (_) async => const IdentityClaimStatus(
+            claims: [],
+            verifiedKeys: {},
+            verifierReachable: true,
+          ),
+        );
+        when(
+          () => repository.confirmationAccess(refresh: any(named: 'refresh')),
+        ).thenAnswer((invocation) async {
+          reads.add(invocation.namedArguments[#refresh]! as bool);
+          return ConfirmationAccess.has;
+        });
+
+        // The real reader, so the override's notifier is what swaps it.
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              identityClaimsRepositoryProvider.overrideWithValue(repository),
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              confirmationAccessDebugBuildProvider.overrideWithValue(true),
+              supporterStoreBillingAvailableProvider.overrideWithValue(true),
+              isFeatureEnabledProvider(
+                FeatureFlag.confirmationSignIn,
+              ).overrideWithValue(true),
+              authServiceProvider.overrideWithValue(
+                createMockAuthService(
+                  authState: AuthState.authenticated,
+                  currentPublicKeyHex: _pubkey,
+                ),
+              ),
+              currentAuthStateProvider.overrideWithValue(
+                AuthState.authenticated,
+              ),
+              appOAuthSupportProvider.overrideWith((ref) async => true),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: VineTheme.theme,
+              home: const VerifyPage(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.verifyOneTapBadge), findsOneWidget);
+        expect(reads, equals([false]));
+
+        await ProviderScope.containerOf(tester.element(find.byType(VerifyPage)))
+            .read(confirmationAccessOverrideProvider.notifier)
+            .set(ConfirmationAccess.hasNot);
+        await tester.pumpAndSettle();
+
+        // A new cubit, not the old one with a stale answer: the forced answer
+        // shows, and the repository wasn't asked again.
+        expect(
+          find.text(l10n.verifyOneTapWithConfirmationBadge),
+          findsOneWidget,
+        );
+        expect(reads, equals([false]));
+      });
+
+      testWidgets(
+        'turning on the simulated requirement shows the Confirmation badge '
+        'on a verifier that names none',
+        (tester) async {
+          SharedPreferences.setMockInitialValues({});
+          final prefs = await SharedPreferences.getInstance();
+          final reads = <bool>[];
+          when(repository.supportedPlatforms).thenAnswer(
+            (_) async => const [
+              VerifierPlatform(
+                key: 'bluesky',
+                label: 'Bluesky',
+                supported: true,
+                oauth: true,
+              ),
+            ],
+          );
+          when(() => repository.claimsWithVerdicts(any())).thenAnswer(
+            (_) async => const IdentityClaimStatus(
+              claims: [],
+              verifiedKeys: {},
+              verifierReachable: true,
+            ),
+          );
+          when(
+            () => repository.confirmationAccess(refresh: any(named: 'refresh')),
+          ).thenAnswer((invocation) async {
+            reads.add(invocation.namedArguments[#refresh]! as bool);
+            return ConfirmationAccess.hasNot;
+          });
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                identityClaimsRepositoryProvider.overrideWithValue(repository),
+                sharedPreferencesProvider.overrideWithValue(prefs),
+                confirmationAccessDebugBuildProvider.overrideWithValue(true),
+                supporterStoreBillingAvailableProvider.overrideWithValue(true),
+                isFeatureEnabledProvider(
+                  FeatureFlag.confirmationSignIn,
+                ).overrideWithValue(true),
+                authServiceProvider.overrideWithValue(
+                  createMockAuthService(
+                    authState: AuthState.authenticated,
+                    currentPublicKeyHex: _pubkey,
+                  ),
+                ),
+                currentAuthStateProvider.overrideWithValue(
+                  AuthState.authenticated,
+                ),
+                appOAuthSupportProvider.overrideWith((ref) async => true),
+              ],
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                theme: VineTheme.theme,
+                home: const VerifyPage(),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          // The verifier names no requirement, so nothing is gated or read.
+          expect(find.text(l10n.verifyOneTapBadge), findsOneWidget);
+          expect(reads, isEmpty);
+
+          await ProviderScope.containerOf(
+                tester.element(find.byType(VerifyPage)),
+              )
+              .read(confirmationRequirementSimulatedProvider.notifier)
+              .set(on: true);
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(l10n.verifyOneTapWithConfirmationBadge),
+            findsOneWidget,
+          );
+          expect(reads, equals([false]));
+        },
+      );
     });
 
     group('sign in again', () {
@@ -827,6 +1599,7 @@ void main() {
           ProviderScope(
             overrides: [
               identityClaimsRepositoryProvider.overrideWithValue(repository),
+              ...confirmationOverrides,
               authServiceProvider.overrideWithValue(
                 createMockAuthService(
                   authState: AuthState.authenticated,

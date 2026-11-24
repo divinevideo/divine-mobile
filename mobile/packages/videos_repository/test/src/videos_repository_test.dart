@@ -9674,6 +9674,46 @@ void main() {
       });
     });
 
+    group('visibleVideoFromEvent', () {
+      final event = _createVideoEvent(
+        id: 'dtag1',
+        pubkey: 'pubkey1',
+        videoUrl: 'https://example.com/video.mp4',
+        createdAt: 1704067200,
+      );
+
+      test('returns the video this viewer may see', () {
+        final video = repository.visibleVideoFromEvent(event);
+
+        expect(video?.id, equals(event.id));
+        expect(video?.vineId, equals('dtag1'));
+        verifyNever(() => mockNostrClient.readEvents(any()));
+      });
+
+      test('leaves out a video whose author the viewer blocked', () {
+        final blocking = VideosRepository(
+          nostrClient: mockNostrClient,
+          blockFilter: (pubkey) => pubkey == 'pubkey1',
+        );
+
+        expect(blocking.visibleVideoFromEvent(event), isNull);
+      });
+
+      test('leaves out an event that is no video', () {
+        final note = Event.fromJson({
+          'id': 'a' * 64,
+          'pubkey': 'pubkey1',
+          'created_at': 1704067200,
+          'kind': EventKind.textNote,
+          'tags': const <List<String>>[],
+          'content': 'hello',
+          'sig': '',
+        });
+
+        expect(repository.visibleVideoFromEvent(note), isNull);
+      });
+    });
+
     group('video event filtering (stage 2)', () {
       test('filters videos with NSFW hashtag when filter is active', () async {
         final nsfwFilter = TestNsfwFilter();
@@ -14288,6 +14328,73 @@ void main() {
         expect(result, isNotNull);
         expect(result!.id, equals(eventId));
       });
+
+      for (final source in ['REST', 'cache', 'relay']) {
+        test(
+          'an naddr rejects the same author and d tag under the wrong kind '
+          'from $source',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            final author = 'a' * 64;
+            final event = _createVideoEventWithDTag(
+              id: 'b' * 64,
+              pubkey: author,
+              dTag: 'shared-kind',
+              videoUrl: 'https://example.com/video.mp4',
+              createdAt: 1739350000,
+            );
+            // A relay answers every filter the event satisfies, so only the
+            // naddr's exact-kind query keeps it out.
+            _answerQueriesFrom(mockNostrClient, [
+              if (source == 'relay') event,
+            ]);
+            when(
+              () => mockFunnelcakeClient.getVideoEvent('shared-kind'),
+            ).thenAnswer((_) async => source == 'REST' ? event : null);
+            final local = MockVideoLocalStorage();
+            when(
+              () => local.getEventsByDTag('shared-kind'),
+            ).thenAnswer((_) async => [event]);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+              localStorage: source == 'cache' ? local : null,
+            );
+            final reference = NIP19Tlv.encodeNaddr(
+              Naddr(id: 'shared-kind', author: author, kind: 34235),
+            );
+            expect(await repo.fetchVideoWithStatsForRouteId(reference), isNull);
+          },
+        );
+      }
+
+      test(
+        'an nevent rejects a REST event whose d tag equals '
+        'the requested event ID',
+        () async {
+          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+          final id = 'a' * 64;
+          final impostor = _createVideoEventWithDTag(
+            id: 'b' * 64,
+            pubkey: 'c' * 64,
+            dTag: id,
+            videoUrl: 'https://example.com/video.mp4',
+            createdAt: 1739350000,
+          );
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+          when(
+            () => mockFunnelcakeClient.getVideoEvent(id),
+          ).thenAnswer((_) async => impostor);
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+          final reference = NIP19Tlv.encodeNevent(Nevent(id: id));
+          expect(await repo.fetchVideoWithStatsForRouteId(reference), isNull);
+        },
+      );
 
       test('resolves naddr route IDs via addressable lookup', () async {
         const eventId =

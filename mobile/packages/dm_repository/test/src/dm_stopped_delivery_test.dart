@@ -16,6 +16,8 @@ import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart' as nostr_filter;
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
+import 'support/transaction_probe.dart';
+
 class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockMessageService extends Mock implements NIP17MessageService {}
@@ -48,6 +50,7 @@ void main() {
   // the test typed.
   group('a delivery the sender stopped', () {
     late AppDatabase db;
+    late TransactionProbe probe;
     late DirectMessagesDao messagesDao;
     late ConversationsDao conversationsDao;
     late OutgoingDmsDao outgoingDao;
@@ -86,9 +89,12 @@ void main() {
 
     setUp(() {
       db = AppDatabase.test(NativeDatabase.memory());
+      probe = TransactionProbe();
       messagesDao = DirectMessagesDao(db);
-      conversationsDao = ConversationsDao(db);
-      outgoingDao = db.outgoingDmsDao;
+      // Real DAOs that also say whether each call ran inside the
+      // transaction (#8408); they behave exactly as the plain ones.
+      conversationsDao = ProbedConversationsDao(db, probe);
+      outgoingDao = ProbedOutgoingDmsDao(db, probe);
       nostrClient = _MockNostrClient();
       messageService = _MockMessageService();
       wire = <String>[];
@@ -298,6 +304,21 @@ void main() {
     }
 
     group('cancelOutgoingSend', () {
+      test('reads the row and stops it inside one transaction', () async {
+        final sent = await sendReachingOnlyA();
+        probe.reset();
+
+        expect(
+          await repository.cancelOutgoingSend(rumorId: sent.rowForB),
+          isTrue,
+        );
+
+        // A recovery landing between the read and the write would otherwise
+        // see a row this cancel has already decided about (#8408).
+        expect(probe.ranOnlyInside('getById'), isTrue);
+        expect(probe.ranOnlyInside('markRecipientCancelled'), isTrue);
+      });
+
       test('keeps a record of the member when the message is stored', () async {
         final sent = await sendReachingOnlyA();
 
@@ -636,6 +657,20 @@ void main() {
       Future<bool> stop(String rowId) =>
           repository.stopHeldMemberDelivery(rumorId: rowId, maxRetries: budget);
 
+      test('re-reads the row and stops it inside one transaction', () async {
+        unreadable.add(_memberB);
+        final sent = await sendToAAndB();
+        final held = await heldRowFor(sent.conversationId, _memberB);
+        probe.reset();
+
+        expect(await stop(held.id), isTrue);
+
+        // The candidate read before the inbox lookup stays outside; the
+        // re-check that decides, and the stop, run inside (#8408).
+        expect(probe.inside['getById'], 1);
+        expect(probe.ranOnlyInside('markRecipientCancelled'), isTrue);
+      });
+
       test(
         'keeps a record of a held member when the message is stored',
         () async {
@@ -944,6 +979,38 @@ void main() {
     });
 
     group('cancelOutgoingBatch', () {
+      test('removes every sibling inside one transaction', () async {
+        final sent = await sendToAAndB(
+          outcomes: {_memberA: refusedByRelay, _memberB: refusedByRelay},
+        );
+        probe.reset();
+
+        expect(
+          await repository.cancelOutgoingBatch(rumorId: sent.messageId),
+          equals(2),
+        );
+
+        expect(probe.inside['deleteById'], 2);
+        expect(probe.ranOnlyInside('deleteById'), isTrue);
+      });
+
+      test('keeps every sibling when one removal fails', () async {
+        final sent = await sendToAAndB(
+          outcomes: {_memberA: refusedByRelay, _memberB: refusedByRelay},
+        );
+        expect(await queueRows(sent.conversationId), hasLength(2));
+        probe.failOn('deleteById', skip: 1);
+
+        await expectLater(
+          repository.cancelOutgoingBatch(rumorId: sent.messageId),
+          throwsStateError,
+        );
+
+        // Half a cancelled batch would keep delivering the message the user
+        // deleted to the members whose rows survived (#8408).
+        expect(await queueRows(sent.conversationId), hasLength(2));
+      });
+
       test('keeps the members who were not reached and drops the member who '
           'only lacks the sender copy', () async {
         messageWrap = (rumor, recipient) => switch (recipient) {

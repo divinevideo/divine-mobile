@@ -300,8 +300,17 @@ class _ProfileSetupListenersState extends ConsumerState<ProfileSetupListeners> {
               if (isNewUser) {
                 Navigator.of(context).popUntil((route) => route.isFirst);
               } else {
+                final editorRoute = ModalRoute.of(context);
+                if (editorRoute == null || !editorRoute.isActive) return;
+                // Pop cancels each overlay with its own nullable result type.
+                // Only the editor may receive the successful-save boolean.
+                final navigator = editorRoute.navigator!;
+                navigator.popUntil(
+                  (route) =>
+                      route == editorRoute && !route.willHandlePopInternally,
+                );
                 if (context.canPop()) {
-                  context.pop(true);
+                  navigator.pop(true);
                 } else {
                   context.go(RoutePaths.root);
                 }

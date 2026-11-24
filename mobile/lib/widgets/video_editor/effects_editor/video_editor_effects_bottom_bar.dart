@@ -2,6 +2,7 @@
 // ABOUTME: preview tiles, each showing its effect on the first clip.
 
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -27,7 +28,8 @@ import 'package:unified_logger/unified_logger.dart';
 /// Each tile shows its effect on the first clip's thumbnail, at full strength
 /// and at the start of the effect, where the glitch always bursts. An intro or
 /// outro tile plays it over and over instead, so an intro and the outro of the
-/// same look can be told apart; see [IntroOutroTile].
+/// same look can be told apart; see [IntroOutroTile]. The stutter tile pans in
+/// steps, as a still has no frames to hold; see [StutterTile].
 class VideoEditorEffectsBottomBar extends ConsumerWidget {
   const VideoEditorEffectsBottomBar({super.key});
 
@@ -88,6 +90,8 @@ class _EffectItem extends StatelessWidget {
           ? const SizedBox.expand()
           : type == EditorEffectType.echo
           ? _EchoThumbnail(path: path)
+          : type == EditorEffectType.stutter
+          ? StutterTile(path: path)
           : type.isIntroOutro
           ? IntroOutroTile(path: path, type: type)
           : switch (shaderTileOf(type)) {
@@ -160,6 +164,82 @@ class _EchoThumbnail extends StatelessWidget {
   }
 }
 
+/// The stutter tile: a still has no frames to hold, so the thumbnail pans
+/// back and forth in steps instead, as a moving picture plays under the
+/// stutter, a few frames a second.
+///
+/// With reduced motion it stands still.
+@visibleForTesting
+class StutterTile extends StatefulWidget {
+  const StutterTile({required this.path, super.key});
+
+  /// How long one round of the pan takes.
+  static const loop = Duration(milliseconds: 2400);
+
+  final String path;
+
+  @override
+  State<StutterTile> createState() => _StutterTileState();
+}
+
+class _StutterTileState extends State<StutterTile>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: StutterTile.loop,
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.stop();
+      return;
+    }
+    if (!_controller.isAnimating) _controller.repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final thumbnail = Transform.scale(
+      scale: _stutterTileZoom,
+      child: _Thumbnail(path: widget.path),
+    );
+    if (MediaQuery.disableAnimationsOf(context)) return thumbnail;
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) => FractionalTranslation(
+        translation: Offset(stutterTileShift(_controller.value), 0),
+        child: child,
+      ),
+      child: thumbnail,
+    );
+  }
+}
+
+/// How much the stutter tile zooms into the thumbnail, so its pan never shows
+/// an edge.
+const _stutterTileZoom = 1.2;
+
+/// How many steps one round of the stutter tile's pan takes: 7.5 a second,
+/// in the middle of what the stutter plays at.
+const _stutterTileSteps = 18;
+
+/// Where the stutter tile's thumbnail stands, as a share of its width,
+/// [loopValue] of the way through its round: a sway from side to side, held
+/// at each of [_stutterTileSteps] steps.
+@visibleForTesting
+double stutterTileShift(double loopValue) {
+  final step = (loopValue * _stutterTileSteps).floor() / _stutterTileSteps;
+  return 0.08 * math.sin(2 * math.pi * step);
+}
+
 /// How the tile of an effect Divine draws itself shows it: the thumbnail
 /// through [asset], the same shader the native effect runs, with [values] for
 /// the uniforms after the texture size.
@@ -184,7 +264,10 @@ final List<double> _lightningTileValues = [0.45, 1.0, ...lightningBolt(0)];
 /// `CIBumpDistortion` scale `FisheyeVideoEffect` uses at intensity 1; night
 /// vision shows its first noise pattern; the drops show the default settings at
 /// a moment where two of them flow into each other; disco and laser show their
-/// first colours with the ball or the fan where it starts; lightning shows its
+/// first colours with the ball or the fan where it starts; the Time effects
+/// stand the thumbnail in for their earlier frames, shifted as if the picture
+/// moved to the right by their last value, a share of its width each frame;
+/// lightning shows its
 /// first bolt (see [lightningBolt]) just after it strikes; the particles' last
 /// value is the style the native `ParticlesVideoEffect` draws; watercolour and oil
 /// paint share one shader, told apart by their last value. The looks share one
@@ -192,6 +275,22 @@ final List<double> _lightningTileValues = [0.45, 1.0, ...lightningBolt(0)];
 /// shader reads its glyphs from [asciiGlyphsAsset] (see [shaderTileTextureOf]).
 @visibleForTesting
 ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
+  timeSplitVideoEffectId => (
+    asset: 'shaders/time_split.frag',
+    values: const [1.0, 0.012],
+  ),
+  longExposureVideoEffectId => (
+    asset: 'shaders/long_exposure.frag',
+    values: const [1.0, 0.008],
+  ),
+  motionOnlyVideoEffectId => (
+    asset: 'shaders/motion_only.frag',
+    values: const [1.0, 0.03],
+  ),
+  timeWarpVideoEffectId => (
+    asset: 'shaders/time_warp.frag',
+    values: const [7.0, 0.009],
+  ),
   fisheyeVideoEffectId => (asset: 'shaders/fisheye.frag', values: const [0.8]),
   dropsVideoEffectId => (asset: 'shaders/drops.frag', values: _dropsTileValues),
   lightLeakVideoEffectId => (
@@ -644,6 +743,11 @@ String videoEffectLabel(BuildContext context, EditorEffectType? type) {
   }
   // The others Divine renders itself.
   return switch (type.customId) {
+    timeSplitVideoEffectId => context.l10n.videoEditorEffectTimeSplit,
+    longExposureVideoEffectId => context.l10n.videoEditorEffectLongExposure,
+    motionOnlyVideoEffectId => context.l10n.videoEditorEffectMotionOnly,
+    stutterVideoEffectId => context.l10n.videoEditorEffectStutter,
+    timeWarpVideoEffectId => context.l10n.videoEditorEffectTimeWarp,
     fisheyeVideoEffectId => context.l10n.videoEditorEffectFisheye,
     dropsVideoEffectId => context.l10n.videoEditorEffectDrops,
     lightLeakVideoEffectId => context.l10n.videoEditorEffectLightLeak,
@@ -730,6 +834,7 @@ String _categoryLabel(
   EditorEffectCategory.distort => context.l10n.videoEditorEffectCategoryDistort,
   EditorEffectCategory.light => context.l10n.videoEditorEffectCategoryLight,
   EditorEffectCategory.motion => context.l10n.videoEditorEffectCategoryMotion,
+  EditorEffectCategory.time => context.l10n.videoEditorEffectCategoryTime,
   EditorEffectCategory.particles =>
     context.l10n.videoEditorEffectCategoryParticles,
   EditorEffectCategory.looks => context.l10n.videoEditorEffectCategoryLooks,

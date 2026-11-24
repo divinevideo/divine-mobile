@@ -2,7 +2,9 @@
 // ABOUTME: Verifies firebase permission races don't escape the async listener.
 
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:app_update_repository/app_update_repository.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/services.dart';
@@ -15,7 +17,9 @@ import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
@@ -492,6 +496,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
@@ -531,6 +538,83 @@ void main() {
         );
       },
     );
+
+    test('registers the release metadata of this install', () async {
+      final token = Completer<String?>();
+      final tokenRefreshController = StreamController<String>.broadcast();
+      addTearDown(tokenRefreshController.close);
+      final signer = _MockNostrSigner();
+      final identity = KeycastNostrIdentity(pubkey: pubkeyA, rpcSigner: signer);
+      final event = _FakeEvent();
+      when(
+        () => messaging.getNotificationSettings(),
+      ).thenAnswer((_) async => _settings(AuthorizationStatus.authorized));
+      when(() => messaging.getToken()).thenAnswer((_) => token.future);
+      when(
+        () => messaging.onTokenRefresh,
+      ).thenAnswer((_) => tokenRefreshController.stream);
+      when(
+        () => signer.nip44Encrypt(any(), any()),
+      ).thenAnswer((_) async => 'encrypted-registration');
+      when(
+        () => authService.createAndSignEvent(
+          kind: PushNotificationService.pushRegistrationKind,
+          content: 'encrypted-registration',
+          tags: any(named: 'tags'),
+        ),
+      ).thenAnswer((_) async => event);
+      when(
+        () => nostrClient.publishEventAwaitOk(
+          event,
+          targetRelays: any(named: 'targetRelays'),
+          timeout: any(named: 'timeout'),
+        ),
+      ).thenAnswer(
+        (_) async => _acceptedOutcome(event, pushEnvironment.relayUrl),
+      );
+
+      final nostrSession = _TestNostrSession(
+        const NostrSessionReadiness.signedOut(),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          installSourceProvider.overrideWithValue(InstallSource.playStore),
+          appVersionProvider.overrideWithValue('1.4.0'),
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+          firebaseMessagingProvider.overrideWithValue(messaging),
+          authServiceProvider.overrideWithValue(authService),
+          notificationPreferencesStoreProvider.overrideWithValue(
+            preferenceStore,
+          ),
+          notificationServiceProvider.overrideWithValue(
+            _MockNotificationService(),
+          ),
+          currentEnvironmentProvider.overrideWithValue(pushEnvironment),
+          nostrSessionProvider.overrideWith(() => nostrSession),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(pushNotificationSyncProvider);
+
+      await emitReady(nostrSession, pubkeyA);
+      when(() => authService.currentIdentity).thenReturn(identity);
+      token.complete('fcm-token');
+      await pumpEventQueue(times: 4);
+
+      final plaintext =
+          verify(
+                () => signer.nip44Encrypt(any(), captureAny()),
+              ).captured.single
+              as String;
+      expect(
+        jsonDecode(plaintext),
+        allOf(
+          containsPair('platform', 'android'),
+          containsPair('installChannel', 'google_play'),
+          containsPair('appVersion', '1.4.0'),
+        ),
+      );
+    });
 
     test('registers only after Nostr session is ready', () async {
       when(
@@ -1805,6 +1889,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
@@ -1896,6 +1983,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
@@ -1998,6 +2088,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
@@ -2147,6 +2240,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
@@ -2280,6 +2376,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),

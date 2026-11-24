@@ -152,7 +152,7 @@ recipe, run against a debug app (VM service protocol 4.21):
 WS=<wsUri>
 rpc() { jq -nc --arg m "$1" --argjson p "$2" '{jsonrpc: "2.0", id: 1, method: $m, params: $p}' \
   | perl -e 'alarm 20; exec @ARGV' websocat -n1 -B 50000000 "$WS"; }
-ISO=$(rpc getVM '{}' | jq -r '.result.isolates[0].id')
+ISO=$(rpc getVM '{}' | jq -r '.result.isolates[] | select(.name == "main") | .id')
 LIB=$(rpc getIsolate "$(jq -nc --arg i "$ISO" '{isolateId: $i}')" \
   | jq -r '.result.libraries[] | select(.uri | test("like_action_button.dart$")) | .id')
 ev() { rpc evaluate "$(jq -nc --arg i "$ISO" --arg t "$LIB" --arg e "$1" '{isolateId: $i, targetId: $t, expression: $e}')" \
@@ -166,6 +166,7 @@ ev 'WidgetsBinding.instance.rootElement?.widget.runtimeType.toString()'
 - It cannot await: a `Future` comes back as `Instance of 'Future<…>'`. Use `.then((v) => Log.info('PROBE $v'))` and read the log.
 - A returned string is cut at about 135 characters. Log long values instead of returning them.
 - Object ids from one `evaluate` expire quickly; do the whole probe in one call rather than chaining ids.
+- Evaluate in the isolate named `main`. The app runs other isolates too, and `isolates[0]` was one of them on an Android emulator (debug, 2026-11-22): every `evaluate` there came back `UnhandledException`, because the libraries and bindings the probe needs live in `main`.
 - `evaluate` can land mid-frame: the VM services it as an interrupt, even inside `drawFrame`. Run every probe that reads layout or hit-testing, and every one that changes anything (typing, taps, focus, navigation, `emit`), inside a post-frame callback, and report through `Log.info`. `addPostFrameCallback` does not request a frame, so follow it with `WidgetsBinding.instance.ensureVisualUpdate()`: a still screen draws none, and the probe would wait for whatever draws next. A write that lands mid-frame can corrupt the rest of the run (below).
 - The call hangs while the app is backgrounded or the phone is locked (hence the `alarm`). Foreground the app with `devicectl device process launch` first. A backgrounded app also tears down its route subtree, so a widget walk finds nothing.
 

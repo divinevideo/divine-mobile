@@ -246,7 +246,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      '사람들이 실제로 무엇을 쓰는지 파악하는 데 도움이 돼요. 끄면 이 기기에서 전송을 기다리던 데이터는 삭제돼요.';
+      '사람들이 실제로 무엇을 쓰는지 파악하는 데 도움이 돼요. 끄면 이 기기에서 전송을 기다리던 데이터는 삭제돼요. 충돌 보고서는 버그를 고칠 수 있도록 계속 전송돼요.';
 
   @override
   String get privacySettingsSaveFailed => '저장하지 못했어요. 사용 데이터는 당분간 꺼진 상태예요.';
@@ -1972,6 +1972,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => '나도 참여';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => '시리즈 보기';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return '시리즈 보기: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -4209,6 +4217,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '릴레이가 업데이트를 받지 않았어요. 잠시 후 다시 시도해보세요.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      '이 영상이 다른 기기에서 변경되어 태그나 콜라보레이터가 너무 많아요. 다시 열어서 몇 개를 지워 주세요.';
+
+  @override
   String get videoUpdateErrorGeneric => '이 영상을 업데이트하지 못했어요. 다시 시도해보세요.';
 
   @override
@@ -4297,6 +4309,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get soundsNoSoundsFoundDescription => '다른 검색어로 시도해 보세요';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '사운드 $count개를 찾았어요',
+      zero: '사운드를 찾을 수 없어요',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => '사운드에 저장됨';
@@ -8958,6 +8981,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectEcho => '에코';
 
   @override
+  String get videoEditorEffectTimeSplit => '타임 스플릿';
+
+  @override
+  String get videoEditorEffectLongExposure => '장노출';
+
+  @override
+  String get videoEditorEffectMotionOnly => '움직임만';
+
+  @override
+  String get videoEditorEffectStutter => '스터터';
+
+  @override
+  String get videoEditorEffectTimeWarp => '타임 워프';
+
+  @override
   String get videoEditorEffectFisheye => '피시아이';
 
   @override
@@ -9159,6 +9197,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => '모션';
 
   @override
+  String get videoEditorEffectCategoryTime => '시간';
+
+  @override
   String get videoEditorEffectCategoryParticles => '파티클';
 
   @override
@@ -9264,6 +9305,14 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       '깜빡이는 효과는 한 번에 하나만 쓸 수 있어요. 깜빡임이 너무 많으면 민감한 사람에게 해로울 수 있어요.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      '시간 효과는 한 번에 하나만 쓸 수 있어요. 두 개를 함께 쓰면 내보낸 뒤 모습이 달라져서 여기서는 다른 효과를 바꿨어요.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      '시간 효과는 한 번에 하나만 쓸 수 있어요. 두 개를 함께 쓰면 내보낸 뒤 모습이 달라져요.';
 
   @override
   String get videoEditorEffectsOnBeat => '비트에 맞추기';
@@ -11063,6 +11112,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => '내 사운드';
 
   @override
+  String get videoEditorAudioCategorySongs => 'Songs';
+
+  @override
   String get videoEditorAudioFilterEffects => '효과음';
 
   @override
@@ -11272,6 +11324,34 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       '이 영상에 영상으로 답글을 단 사람을 보여 줘요. 시청자가 탭하면 답글을 볼 수 있어요.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => '답할 수 있는 사람';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => '모두';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => '친구';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => '나만';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      '내가 팔로우하는 사람만 참여할 수 있어요. 다른 사람에게는 누군가 참여하면 스티커가 보여요.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      '스티커에는 내가 팔로우하는 사람의 영상 답글만 보여요. 다른 사람에게는 그중 누군가 답글을 달면 스티커가 보여요.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      '나만 참여할 수 있어요. 내가 참여하기 전까지 다른 사람에게는 스티커가 보이지 않아요.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      '스티커에는 내 영상 답글만 보여요. 내가 답글을 달기 전까지 다른 사람에게는 스티커가 보이지 않아요.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>
@@ -12978,6 +13058,29 @@ class AppLocalizationsKo extends AppLocalizations {
   String get devOptionsProtectedMinorClearedToast => '보호 대상 미성년자 재정의를 해제했어요';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedTitle =>
+      'Act as if Confirmation is required';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedSubtitle =>
+      'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.';
+
+  @override
   String get commentsRecordVideoButtonLabel => '영상 댓글 녹화';
 
   @override
@@ -13972,6 +14075,65 @@ class AppLocalizationsKo extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return '$platform 계정 $identity 연결 해제';
   }
@@ -14003,7 +14165,26 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => '한 번 탭';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -14112,6 +14293,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get verifyErrorPublishFailed => '인증은 됐는데 업데이트를 받아준 릴레이가 없어. 다시 시도해.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -14684,6 +14877,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get updateAction => '업데이트';
 
   @override
+  String get announcementViewContest => '콘테스트 보기';
+
+  @override
+  String get featuredFeedUnavailable => '이 추천 피드는 더 이상 이용할 수 없어요.';
+
+  @override
   String updateNewIn(String version) {
     return '$version의 새로운 기능:';
   }
@@ -14823,6 +15022,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get settingsHelpAboutSubtitle => '지원, 법률 정보 및 앱 세부 정보';
+
+  @override
+  String get settingsDiscordTitle => 'Discord 서버에 참여하기';
+
+  @override
+  String get settingsDiscordSubtitle => 'Divine 팀과 커뮤니티 사람들과 이야기해 보세요';
+
+  @override
+  String get settingsDiscordOpenError => 'Discord를 열 수 없어요';
 
   @override
   String listLoopsCount(int count, String formatted) {

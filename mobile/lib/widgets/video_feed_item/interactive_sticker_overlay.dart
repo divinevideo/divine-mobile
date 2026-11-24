@@ -16,6 +16,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/sticker_responses_filter_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/routes/interactive_sticker_routes.dart';
@@ -34,6 +35,10 @@ import 'package:unified_logger/unified_logger.dart';
 /// Only the active video reads who joined or replied, so the videos the feed
 /// loads ahead ask for nothing. [onInteraction] is called when the viewer
 /// taps it, so the feed does not move on under them.
+///
+/// An Add yours or replies sticker only some may answer is in no frame: it
+/// shows once the video plays, to whoever may answer and to everyone else
+/// once someone did, and only they may join an Add yours.
 class InteractiveStickerOverlay extends ConsumerWidget {
   const InteractiveStickerOverlay({
     required this.region,
@@ -56,6 +61,8 @@ class InteractiveStickerOverlay extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!isActive) {
+      // Nothing in the frames to cover, and who may see it is not read yet.
+      if (data.isLeftOutOfFrames) return const SizedBox.shrink();
       return IgnorePointer(child: InteractiveStickerCopy(data: data));
     }
     final viewer = ref.watch(nostrSessionProvider).pubkey;
@@ -77,18 +84,29 @@ class InteractiveStickerOverlay extends ConsumerWidget {
       );
     }
     final repository = ref.watch(videoResponsesRepositoryProvider);
+    final followRepository = ref.watch(followRepositoryProvider);
     // Rebuilt when the viewer's blocks, mutes or content filters change, so
     // the responses are read again under the new policy.
     final filter = ref.watch(stickerResponsesFilterProvider);
     return BlocProvider(
-      // Another account has its own blocks, and the creator their own view.
-      key: ValueKey((repository, filter, region, video.id)),
+      // Another account has its own blocks, may answer or not, and the
+      // creator has their own view.
+      key: ValueKey((
+        repository,
+        followRepository,
+        filter,
+        viewer,
+        region,
+        video.id,
+      )),
       create: (_) {
         final cubit = StickerResponsesCubit(
           repository: repository,
           filter: filter,
+          followRepository: followRepository,
           video: video,
           region: region,
+          viewer: viewer,
         );
         runDetached(
           cubit.load(),
@@ -165,6 +183,10 @@ class _ResponsesSticker extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = context.watch<StickerResponsesCubit>().state;
+    if ((data.isLeftOutOfFrames || state.audience.isRestricted) &&
+        !state.isShown) {
+      return const SizedBox.shrink();
+    }
     final responses = state.status == StickerResponsesStatus.loaded
         ? StickerResponses(
             count: state.total,
@@ -192,23 +214,24 @@ class _ResponsesSticker extends ConsumerWidget {
     return InteractiveStickerCopy(
       data: data,
       responses: responses,
-      // Once the chain it joins is known.
-      onJoin: isAddYours && state.chainRoot != null
+      // Once the chain it joins is known, and by whoever may answer.
+      onJoin: isAddYours && state.chainRoot != null && state.canAnswer
           ? () {
               onInteraction?.call();
-              _join(context, ref, chainRoot: state.chainRoot!);
+              _join(context, ref, state);
             }
           : null,
+      // Anyone who may not join is invited to watch the series instead.
+      watchOnly: isAddYours && !state.canAnswer,
       onOpenResponses: () {
         onInteraction?.call();
-        _open(context, ref, state.videos);
+        _open(context, ref, state);
       },
     );
   }
 
-  /// Opens the camera to answer the Add yours, joining the chain starting at
-  /// [chainRoot].
-  void _join(BuildContext context, WidgetRef ref, {required String chainRoot}) {
+  /// Opens the camera to answer the Add yours with the resolved audience.
+  void _join(BuildContext context, WidgetRef ref, StickerResponsesState state) {
     if (!isSignedIn) {
       _showSnackbar(context, context.l10n.videoStickerAddYoursSignIn);
       return;
@@ -218,9 +241,10 @@ class _ResponsesSticker extends ConsumerWidget {
     final notifier = ref.read(addYoursContextProvider.notifier)
       ..set(
         AddYoursContext(
-          chainRoot: chainRoot,
+          chainRoot: state.chainRoot!,
           prompt: data.prompt ?? '',
           hashtag: hashtag,
+          audience: state.audience,
         ),
       );
     runDetached(
@@ -238,8 +262,9 @@ class _ResponsesSticker extends ConsumerWidget {
   }
 
   /// Opens who joined or replied: the creator manages their replies, anyone
-  /// else watches them.
-  void _open(BuildContext context, WidgetRef ref, List<VideoEvent> videos) {
+  /// else watches them. A series only its creator adds to opens in the order
+  /// it was posted, at the part the sticker is on.
+  void _open(BuildContext context, WidgetRef ref, StickerResponsesState state) {
     final address = video.addressableId;
     if (region.kind == VideoStickerKind.replies && isCreator) {
       if (address == null) return;
@@ -253,11 +278,18 @@ class _ResponsesSticker extends ConsumerWidget {
       );
       return;
     }
+    final series = state.series;
+    final at = series.indexWhere(
+      (part) =>
+          part.id == video.id ||
+          (address != null && part.addressableId == address),
+    );
     runDetached(
       openVideoResponsesFeed(
         context,
         feedRepository: ref.read(feedRepositoryProvider),
-        videos: videos,
+        videos: series.isEmpty ? state.videos : series,
+        index: at < 0 ? 0 : at,
         // The replies, or the answers under the prompt they answer.
         title: region.kind == VideoStickerKind.replies
             ? context.l10n.videoStickerRepliesManageTitle
@@ -265,6 +297,7 @@ class _ResponsesSticker extends ConsumerWidget {
         sourceDetail: region.kind == VideoStickerKind.replies
             ? 'video_replies'
             : 'add_yours',
+        isAddYoursSeries: region.kind == VideoStickerKind.prompt,
       ),
       'watch who joined or replied',
       logName: 'InteractiveStickerOverlay',

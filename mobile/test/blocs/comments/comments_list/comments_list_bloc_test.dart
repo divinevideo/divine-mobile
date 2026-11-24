@@ -29,6 +29,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(<Comment>[]);
+      registerFallbackValue(const Stream<Set<String>>.empty());
     });
 
     setUp(() {
@@ -40,20 +41,19 @@ void main() {
           rootAddressableId: any(named: 'rootAddressableId'),
           since: any(named: 'since'),
           onEose: any(named: 'onEose'),
+          includeVideoReplies: any(named: 'includeVideoReplies'),
         ),
       ).thenAnswer((_) => const Stream<Comment>.empty());
       when(
         () => mockCommentsRepository.watchCommentDeletions(
           rootEventId: any(named: 'rootEventId'),
+          commentAuthors: any(named: 'commentAuthors'),
           includeVideoReplies: any(named: 'includeVideoReplies'),
         ),
       ).thenAnswer((_) => const Stream<CommentDeletion>.empty());
       when(
         () => mockCommentsRepository.findAuthorDeletedComments(any()),
       ).thenAnswer((_) async => <String>{});
-      when(
-        () => mockCommentsRepository.stopWatchingComments(),
-      ).thenAnswer((_) async {});
     });
 
     Comment makeComment(
@@ -121,6 +121,7 @@ void main() {
               rootEventKind: any(named: 'rootEventKind'),
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenAnswer((_) async => thread);
         },
@@ -143,6 +144,7 @@ void main() {
               rootEventKind: any(named: 'rootEventKind'),
               rootAddressableId: 'fake-addr',
               limit: any(named: 'limit'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).called(1);
         },
@@ -157,6 +159,7 @@ void main() {
               rootEventKind: any(named: 'rootEventKind'),
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenThrow(const LoadCommentsFailedException('boom'));
         },
@@ -184,6 +187,7 @@ void main() {
               rootEventKind: any(named: 'rootEventKind'),
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenThrow(const LoadCommentsFailedException('boom'));
         },
@@ -243,6 +247,7 @@ void main() {
               rootAddressableId: any(named: 'rootAddressableId'),
               since: any(named: 'since'),
               onEose: any(named: 'onEose'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenAnswer((_) => liveController.stream);
           when(
@@ -251,6 +256,7 @@ void main() {
               rootEventKind: any(named: 'rootEventKind'),
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenAnswer((_) => loadCompleter.future);
 
@@ -280,6 +286,79 @@ void main() {
         },
       );
 
+      test('loads and watches video replies with the thread', () async {
+        final comment = makeComment(validId('c1'));
+        final videoReply = makeComment(
+          validId('video-reply'),
+          authorPubkey: validId('video-author'),
+          videoUrl: 'https://cdn.example.com/reply.mp4',
+        );
+        when(
+          () => mockCommentsRepository.loadComments(
+            rootEventId: any(named: 'rootEventId'),
+            rootEventKind: any(named: 'rootEventKind'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+            limit: any(named: 'limit'),
+            includeVideoReplies: any(named: 'includeVideoReplies'),
+          ),
+        ).thenAnswer(
+          (_) async => CommentThread(
+            rootEventId: validId('root'),
+            comments: [comment, videoReply],
+            totalCount: 2,
+            commentCache: {comment.id: comment, videoReply.id: videoReply},
+          ),
+        );
+
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const CommentsLoadRequested());
+        await expectLater(
+          bloc.stream,
+          emitsThrough(
+            isA<CommentsListState>().having(
+              (s) => s.status,
+              'status',
+              CommentsStatus.success,
+            ),
+          ),
+        );
+        await pumpEventQueue();
+
+        verify(
+          () => mockCommentsRepository.loadComments(
+            rootEventId: any(named: 'rootEventId'),
+            rootEventKind: any(named: 'rootEventKind'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+            limit: any(named: 'limit'),
+            includeVideoReplies: true,
+          ),
+        ).called(1);
+        verify(
+          () => mockCommentsRepository.watchComments(
+            rootEventId: any(named: 'rootEventId'),
+            rootEventKind: any(named: 'rootEventKind'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+            includeVideoReplies: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).called(1);
+        final deletionWatch = verify(
+          () => mockCommentsRepository.watchCommentDeletions(
+            rootEventId: any(named: 'rootEventId'),
+            commentAuthors: captureAny(named: 'commentAuthors'),
+            includeVideoReplies: true,
+          ),
+        );
+        deletionWatch.called(1);
+        final deletionAuthors =
+            deletionWatch.captured.single as Stream<Set<String>>;
+        expect(
+          await deletionAuthors.first,
+          unorderedEquals([comment.authorPubkey, videoReply.authorPubkey]),
+        );
+      });
+
       test('starts live watch after initial load populates comments', () async {
         final loadCompleter = Completer<CommentThread>();
         final comment = makeComment(validId('c1'));
@@ -289,6 +368,7 @@ void main() {
             rootEventKind: any(named: 'rootEventKind'),
             rootAddressableId: any(named: 'rootAddressableId'),
             limit: any(named: 'limit'),
+            includeVideoReplies: any(named: 'includeVideoReplies'),
           ),
         ).thenAnswer((_) => loadCompleter.future);
 
@@ -313,6 +393,7 @@ void main() {
             rootAddressableId: any(named: 'rootAddressableId'),
             since: any(named: 'since'),
             onEose: any(named: 'onEose'),
+            includeVideoReplies: any(named: 'includeVideoReplies'),
           ),
         );
 
@@ -340,6 +421,7 @@ void main() {
             rootAddressableId: any(named: 'rootAddressableId'),
             since: any(named: 'since'),
             onEose: any(named: 'onEose'),
+            includeVideoReplies: any(named: 'includeVideoReplies'),
           ),
         ).called(1);
       });
@@ -382,6 +464,7 @@ void main() {
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
               before: any(named: 'before'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenAnswer((_) async => thread);
         },
@@ -400,6 +483,16 @@ void main() {
         verify: (b) {
           expect(b.state.commentsById.length, 2);
           expect(b.state.isLoadingMore, isFalse);
+          verify(
+            () => mockCommentsRepository.loadComments(
+              rootEventId: any(named: 'rootEventId'),
+              rootEventKind: any(named: 'rootEventKind'),
+              rootAddressableId: any(named: 'rootAddressableId'),
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+              includeVideoReplies: true,
+            ),
+          ).called(1);
         },
       );
 
@@ -438,6 +531,7 @@ void main() {
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
               before: any(named: 'before'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenThrow(const LoadCommentsFailedException('boom'));
         },
@@ -466,6 +560,7 @@ void main() {
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
               before: any(named: 'before'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenAnswer((_) async => CommentThread.empty(validId('root')));
         },
@@ -496,6 +591,7 @@ void main() {
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
               before: any(named: 'before'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenAnswer((_) async => CommentThread.empty(validId('root')));
         },
@@ -539,6 +635,7 @@ void main() {
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
               before: DateTime.fromMillisecondsSinceEpoch(1000),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).called(1);
         },
@@ -570,6 +667,7 @@ void main() {
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
               before: any(named: 'before'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           );
         },
@@ -597,6 +695,7 @@ void main() {
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
               before: any(named: 'before'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenAnswer(
             (_) async => CommentThread(
@@ -1239,6 +1338,7 @@ void main() {
             rootAddressableId: any(named: 'rootAddressableId'),
             since: any(named: 'since'),
             onEose: any(named: 'onEose'),
+            includeVideoReplies: any(named: 'includeVideoReplies'),
           ),
         ).thenAnswer((_) => streamController.stream);
         when(
@@ -1247,6 +1347,7 @@ void main() {
             rootEventKind: any(named: 'rootEventKind'),
             rootAddressableId: any(named: 'rootAddressableId'),
             limit: any(named: 'limit'),
+            includeVideoReplies: any(named: 'includeVideoReplies'),
           ),
         ).thenAnswer((_) async => CommentThread.empty(validId('root')));
 
@@ -1261,6 +1362,7 @@ void main() {
             rootAddressableId: any(named: 'rootAddressableId'),
             since: any(named: 'since'),
             onEose: any(named: 'onEose'),
+            includeVideoReplies: any(named: 'includeVideoReplies'),
           ),
         ).called(1);
 
@@ -1268,23 +1370,36 @@ void main() {
         await bloc.close();
       });
 
-      test('stopWatchingComments is awaited in close()', () async {
+      test('stops watching comments when closed', () async {
+        final comments = StreamController<Comment>.broadcast();
+        addTearDown(comments.close);
+        when(
+          () => mockCommentsRepository.watchComments(
+            rootEventId: any(named: 'rootEventId'),
+            rootEventKind: any(named: 'rootEventKind'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+            since: any(named: 'since'),
+            onEose: any(named: 'onEose'),
+            includeVideoReplies: true,
+          ),
+        ).thenAnswer((_) => comments.stream);
         when(
           () => mockCommentsRepository.loadComments(
             rootEventId: any(named: 'rootEventId'),
             rootEventKind: any(named: 'rootEventKind'),
             rootAddressableId: any(named: 'rootAddressableId'),
             limit: any(named: 'limit'),
+            includeVideoReplies: any(named: 'includeVideoReplies'),
           ),
         ).thenAnswer((_) async => CommentThread.empty(validId('root')));
 
-        final bloc = createBloc();
-        bloc.add(const CommentsLoadRequested());
+        final bloc = createBloc()..add(const CommentsLoadRequested());
         await pumpEventQueue();
+        expect(comments.hasListener, isTrue);
 
         await bloc.close();
 
-        verify(() => mockCommentsRepository.stopWatchingComments()).called(1);
+        expect(comments.hasListener, isFalse);
       });
 
       test(
@@ -1298,6 +1413,7 @@ void main() {
               rootAddressableId: any(named: 'rootAddressableId'),
               since: any(named: 'since'),
               onEose: any(named: 'onEose'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenAnswer((_) => streamController.stream);
           when(
@@ -1306,6 +1422,7 @@ void main() {
               rootEventKind: any(named: 'rootEventKind'),
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenAnswer((_) async => CommentThread.empty(validId('root')));
 
@@ -1415,6 +1532,7 @@ void main() {
         when(
           () => mockCommentsRepository.watchCommentDeletions(
             rootEventId: any(named: 'rootEventId'),
+            commentAuthors: any(named: 'commentAuthors'),
             includeVideoReplies: any(named: 'includeVideoReplies'),
           ),
         ).thenAnswer((_) => deletions.stream);
@@ -1424,6 +1542,7 @@ void main() {
             rootEventKind: any(named: 'rootEventKind'),
             rootAddressableId: any(named: 'rootAddressableId'),
             limit: any(named: 'limit'),
+            includeVideoReplies: any(named: 'includeVideoReplies'),
           ),
         ).thenAnswer(
           (_) async => CommentThread(
@@ -1461,6 +1580,38 @@ void main() {
 
         expect(deletions.hasListener, isFalse);
       });
+
+      test('watches requests by the authors of the listed comments', () async {
+        Stream<Set<String>>? commentAuthors;
+        when(
+          () => mockCommentsRepository.watchCommentDeletions(
+            rootEventId: any(named: 'rootEventId'),
+            commentAuthors: any(named: 'commentAuthors'),
+            includeVideoReplies: any(named: 'includeVideoReplies'),
+          ),
+        ).thenAnswer((invocation) {
+          commentAuthors =
+              invocation.namedArguments[#commentAuthors] as Stream<Set<String>>;
+          return deletions.stream;
+        });
+        final bloc = createBloc()..add(const CommentsLoadRequested());
+        addTearDown(bloc.close);
+        await pumpEventQueue();
+        final listed = <Set<String>>[];
+        final subscription = commentAuthors!.listen(listed.add);
+        addTearDown(subscription.cancel);
+        await pumpEventQueue();
+        expect(listed.last, equals({validId('a1')}));
+
+        bloc.add(
+          NewCommentsBatchReceived([
+            makeComment(validId('c2'), authorPubkey: validId('a2')),
+          ]),
+        );
+        await pumpEventQueue();
+
+        expect(listed.last, equals({validId('a1'), validId('a2')}));
+      });
     });
 
     group('author deletions found after loading', () {
@@ -1476,6 +1627,7 @@ void main() {
               rootEventKind: any(named: 'rootEventKind'),
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenAnswer(
             (_) async => CommentThread(
@@ -1522,6 +1674,7 @@ void main() {
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
               before: any(named: 'before'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenAnswer(
             (_) async => CommentThread(
@@ -1662,6 +1815,7 @@ void main() {
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
               before: any(named: 'before'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenAnswer(
             (_) async => CommentThread(
@@ -1742,6 +1896,7 @@ void main() {
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
               before: any(named: 'before'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenAnswer((invocation) async {
             final page = invocation.namedArguments[#before] == null
@@ -1825,6 +1980,7 @@ void main() {
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
               before: any(named: 'before', that: isNotNull),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).called(2);
         },

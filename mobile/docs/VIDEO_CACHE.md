@@ -102,7 +102,8 @@ swiped past before its first frame, or one that fails, records nothing, so the
 rate leaves out the slowest starts.
 
 In distributed release builds (store, TestFlight and Zapstore installs, not a
-local `flutter run --release`), each sample goes to Firebase Performance as the
+local `flutter run --release`), and only while **Share usage data** is on
+(#11398), each sample goes to Firebase Performance as the
 `video_first_frame` trace, with a `cache` attribute (`hit` or `miss`), a
 `position` attribute (`initial` or `subsequent`) and the time to first frame in
 `ttff_ms` (`lib/observability/feed_playback_performance.dart`). That is the

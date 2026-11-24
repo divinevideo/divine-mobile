@@ -40,6 +40,7 @@ class ProvenanceCredentialsTest(unittest.TestCase):
         self.assertEqual(selected, {'ios-build': 'store_release_credentials',
                                     'ios-scheduled-build': 'store_release_credentials',
                                     'android-build': 'store_release_credentials',
+                                    'macos-build': 'store_release_credentials',
                                     'zapstore-publish': 'store_release_credentials'})
 
     def test_forwarded_policy_does_not_require_actions_variables_permission(self):

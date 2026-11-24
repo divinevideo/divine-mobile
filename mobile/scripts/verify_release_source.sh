@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 if [ -z "${RELEASE_EXPECTED_SHA:-}" ]; then
-  echo 'Direct Codemagic native starts are unsupported: start iOS TestFlight Release or Android Store Release in GitHub Actions on main so scoped credentials refresh.' >&2
+  echo 'Direct Codemagic native starts are unsupported: start iOS TestFlight Release, Android Store Release, or macOS TestFlight Release in GitHub Actions on main so scoped credentials refresh.' >&2
   exit 1
 fi
 head_sha=$(git rev-parse HEAD)

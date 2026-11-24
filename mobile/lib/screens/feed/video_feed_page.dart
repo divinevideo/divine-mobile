@@ -39,6 +39,7 @@ import 'package:openvine/utils/video_nostr_enrichment.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
 import 'package:openvine/widgets/nav_rounded_shell.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:openvine/widgets/video_feed_item/feed_comments_panel.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
 import 'package:rxdart/rxdart.dart';
@@ -110,11 +111,14 @@ class VideoFeedPage extends ConsumerWidget {
     final feedTuningRepository = ref.watch(feedTuningRepositoryProvider);
     final badgeRepository = ref.watch(badgeRepositoryProvider);
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
+    // Stable for the app's lifetime and follows identity changes itself, so
+    // a read here cannot go stale (#9341).
+    final unavailabilityGate = ref.read(feedUnavailabilityGateProvider);
 
     final persistence = ref
         .watch(feedModePersistenceRegistryProvider)
         .forAccount(viewerPubkey);
-    return RepositoryProvider<FeedModePersistenceCoordinator>.value(
+    final feed = RepositoryProvider<FeedModePersistenceCoordinator>.value(
       key: ValueKey((viewerPubkey, sharedPreferences)),
       value: persistence,
       child: MultiBlocProvider(
@@ -139,11 +143,18 @@ class VideoFeedPage extends ConsumerWidget {
                 VideoFeedBloc(
                   videosRepository: videosRepository,
                   removedIdsStream: videosRepository.removedVideoIds,
+                  replacedVideosStream: videosRepository.replacedVideos,
                   removalRepositoryStream: ref.read(
                     videosRepositoryIdentityStreamProvider,
                   ),
+                  unavailableFilter: unavailabilityGate.isVideoBroken,
+                  unavailableVideoIds: unavailabilityGate.markedVideoIds,
                   classicSession: useAdaptiveClassics
-                      ? _homeClassicSession(ref, viewerPubkey)
+                      ? _homeClassicSession(
+                          ref,
+                          viewerPubkey,
+                          isUnavailable: unavailabilityGate.isVideoBroken,
+                        )
                       : null,
                   followRepository: followRepository,
                   curatedListRepository: curatedListRepository,
@@ -183,6 +194,9 @@ class VideoFeedPage extends ConsumerWidget {
         child: VideoFeedView(initialIndex: initialIndex),
       ),
     );
+    // Above the keyed providers, so a filter change, which replaces the
+    // feed's blocs, does not split the visit.
+    return ScreenFrameTraceScope(screen: .homeFeed, child: feed);
   }
 }
 
@@ -804,7 +818,11 @@ class _KeyboardStableBottomInsetState
 /// the provider: the old service emits a privacy change synchronously while it
 /// is disposed, and Riverpod rejects re-reading the provider inside that
 /// disposal. Such a read sees the disposed service and sends no identity.
-ClassicFeedSession _homeClassicSession(WidgetRef ref, String? viewerPubkey) {
+ClassicFeedSession _homeClassicSession(
+  WidgetRef ref,
+  String? viewerPubkey, {
+  required bool Function(String videoId) isUnavailable,
+}) {
   var analytics = ref.read(analyticsServiceProvider);
   return ClassicFeedSession(
     loadPage: (request) {
@@ -832,6 +850,7 @@ ClassicFeedSession _homeClassicSession(WidgetRef ref, String? viewerPubkey) {
         .read(analyticsServiceIdentityStreamProvider)
         .doOnData((current) => analytics = current)
         .switchMap((current) => current.privacyChanges),
+    isUnavailable: isUnavailable,
     filter: (videos) {
       final repository = ref.read(videosRepositoryProvider);
       return repository

@@ -165,6 +165,7 @@ class VideoStickerTapAreas extends StatefulWidget {
     this.onOpen = openVideoSticker,
     this.canSetReminders = !kIsWeb,
     this.isActive = true,
+    this.isAddYoursSeries = false,
     this.onVoteStarted,
     super.key,
   });
@@ -184,6 +185,12 @@ class VideoStickerTapAreas extends StatefulWidget {
 
   /// Whether the video is the one the feed plays, whose polls are read.
   final bool isActive;
+
+  /// Whether the feed is the series an Add yours collects, opened from its
+  /// sticker. Every answer carries the same sticker; one only the player
+  /// draws, which only some may answer, is left out there, as the viewer is
+  /// watching the series already. One in the frames is still drawn over.
+  final bool isAddYoursSeries;
 
   /// Called when a viewer starts to vote on a poll, quiz or slider.
   final VoidCallback? onVoteStarted;
@@ -212,7 +219,8 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
   void didUpdateWidget(VideoStickerTapAreas oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller ||
-        oldWidget.video.stickerRegions != widget.video.stickerRegions) {
+        oldWidget.video.stickerRegions != widget.video.stickerRegions ||
+        oldWidget.isAddYoursSeries != widget.isAddYoursSeries) {
       unawaited(_subscription?.cancel());
       _subscribe();
     }
@@ -280,6 +288,9 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
       region.target.isNotEmpty || widget.video.audioEventId != null,
     VideoStickerKind.poll || VideoStickerKind.quiz || VideoStickerKind.slider =>
       region.target.isNotEmpty && SocialStickerData.ofRegion(region) != null,
+    VideoStickerKind.prompt
+        when widget.isAddYoursSeries && region.audience.isRestricted =>
+      false,
     VideoStickerKind.question ||
     VideoStickerKind.prompt ||
     VideoStickerKind.replies => SocialStickerData.ofRegion(region) != null,

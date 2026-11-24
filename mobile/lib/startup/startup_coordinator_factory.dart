@@ -22,6 +22,7 @@ import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/shorebird_availability_provider.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
+import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/bandwidth_tracker_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/notification_helpers.dart'
@@ -170,12 +171,17 @@ StartupCoordinator createStartupCoordinator(
     name: 'PerformanceMonitoring',
     phase: StartupPhase.critical,
     initialize: () async {
-      // Read here rather than at registration: both providers are
+      // Read here rather than at registration: these providers are
       // override-only, and the coordinator is also built in tests that never
       // run this phase.
       final distributedBuild = PerformanceMonitoringService.isDistributedBuild(
         shorebirdAvailable: container.read(shorebirdAvailableProvider),
         installSource: container.read(installSourceProvider),
+      );
+      // The stored decision, because `AnalyticsService` has not loaded it yet
+      // and traces start in this phase (#11398).
+      final analyticsConsent = AnalyticsService.storedAnalyticsConsent(
+        container.read(sharedPreferencesProvider),
       );
       await runTimedStartupTask(
         startupPerformance: startupPerformance,
@@ -184,7 +190,10 @@ StartupCoordinator createStartupCoordinator(
         initializationStep: 'Initializing performance monitoring',
         task: () => container
             .read(performanceMonitoringServiceProvider)
-            .initialize(distributedBuild: distributedBuild),
+            .initialize(
+              distributedBuild: distributedBuild,
+              analyticsConsent: analyticsConsent,
+            ),
       );
       final monitor = container.read(performanceMonitoringServiceProvider);
       if (monitor.isEnabled) {
@@ -233,18 +242,20 @@ StartupCoordinator createStartupCoordinator(
     optional: true,
   );
 
-  coordinator.registerService(
-    name: 'SeedDataPreload',
-    phase: StartupPhase.deferred,
-    initialize: () => initializeSeedDataPreload(
-      container,
-      startupPerformance: startupPerformance,
-      crashReporting: crashReporting,
-    ),
-    optional: true,
-  );
-
   if (!kIsWeb) {
+    // On web, loading the bundled seed JSON is an HTTP download and `compute`
+    // decodes it on the main thread, both on the first-boot path.
+    coordinator.registerService(
+      name: 'SeedDataPreload',
+      phase: StartupPhase.deferred,
+      initialize: () => initializeSeedDataPreload(
+        container,
+        startupPerformance: startupPerformance,
+        crashReporting: crashReporting,
+      ),
+      optional: true,
+    );
+
     coordinator.registerService(
       name: 'C2paDebrisSweep',
       phase: StartupPhase.deferred,

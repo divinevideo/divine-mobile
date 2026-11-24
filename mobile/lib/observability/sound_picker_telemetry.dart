@@ -15,7 +15,7 @@ enum SoundPickerTab { forYou, popular, newest, mySounds }
 
 /// Where a picked sound came from: one of the picker's tabs, or a file the
 /// user imported.
-enum SoundPickSource { forYou, popular, newest, mySounds, imported }
+enum SoundPickSource { forYou, popular, newest, songs, mySounds, imported }
 
 /// How picking a sound ended.
 enum SoundPickOutcome {
@@ -87,7 +87,7 @@ class SoundPickerTelemetry {
   /// Returns whether timing started.
   bool startTabLoad(SoundPickerTab tab, {required bool isFirstTab}) {
     if (_loadingTab == tab) return false;
-    _dismissTabLoad();
+    dismissTabLoad();
     if (_shownTabs.contains(tab)) return false;
     _loadingTab = tab;
     _surfaceTracker.startSurfaceLoad(
@@ -213,11 +213,14 @@ class SoundPickerTelemetry {
   /// Ends whatever is still being timed: a loading tab as dismissed, a
   /// search in flight as abandoned.
   void dispose() {
-    _dismissTabLoad();
+    dismissTabLoad();
     abandonSearch();
   }
 
-  void _dismissTabLoad() {
+  /// Reports the tab being timed dismissed: the user left it before its list
+  /// showed. For leaving it for a tab that is not timed itself; [startTabLoad]
+  /// does this for one that is.
+  void dismissTabLoad() {
     if (_loadingTab == null) return;
     _loadingTab = null;
     unawaited(
@@ -279,6 +282,7 @@ class SoundPickerTelemetry {
     SoundPickSource.forYou => 'for_you',
     SoundPickSource.popular => 'popular',
     SoundPickSource.newest => 'newest',
+    SoundPickSource.songs => 'songs',
     SoundPickSource.mySounds => 'my_sounds',
     SoundPickSource.imported => 'import',
   };

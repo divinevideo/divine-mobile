@@ -5,9 +5,15 @@
 import 'dart:io';
 
 import 'package:app_update_repository/app_update_repository.dart';
+import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
+
+class _MockFirebasePerformance extends Mock implements FirebasePerformance {}
+
+class _MockTrace extends Mock implements Trace {}
 
 /// The value `FIREBASE_PERFORMANCE_COLLECTION_DEACTIVATED` resolves to in the
 /// xcconfig at [path], or `null` when it is never assigned.
@@ -198,7 +204,10 @@ void main() {
       // because initialize() was called and swallowed a failure.
       expect(service.isEnabled, isFalse);
 
-      await service.initialize(distributedBuild: true);
+      await service.initialize(
+        distributedBuild: true,
+        analyticsConsent: true,
+      );
 
       expect(service.isEnabled, isFalse);
     });
@@ -206,7 +215,10 @@ void main() {
     test(
       'startOperationTrace returns a handle that tags and stops cleanly',
       () async {
-        await service.initialize(distributedBuild: true);
+        await service.initialize(
+          distributedBuild: true,
+          analyticsConsent: true,
+        );
 
         final trace = service.startOperationTrace('test_operation');
 
@@ -218,6 +230,75 @@ void main() {
         await expectLater(trace.stop(), completes);
       },
     );
+  });
+
+  group('analytics consent', () {
+    late _MockFirebasePerformance performance;
+    late _MockTrace trace;
+    late PerformanceMonitoringService service;
+
+    setUp(() {
+      performance = _MockFirebasePerformance();
+      trace = _MockTrace();
+      when(
+        () => performance.setPerformanceCollectionEnabled(any()),
+      ).thenAnswer((_) async {});
+      when(() => performance.newTrace(any())).thenReturn(trace);
+      when(trace.start).thenAnswer((_) async {});
+      // A distributed release build, the one population that reports, so
+      // consent is the only thing left to turn collection off.
+      service = PerformanceMonitoringService(
+        performance: () => performance,
+        releaseBuild: true,
+      );
+    });
+
+    test('a stored opt-out keeps a reporting build from collecting', () async {
+      // #11398: collection depended on the build alone, so someone who had
+      // switched analytics off still sent every trace.
+      await service.initialize(
+        distributedBuild: true,
+        analyticsConsent: false,
+      );
+
+      verify(() => performance.setPerformanceCollectionEnabled(false))
+          .called(1);
+      verifyNever(() => performance.setPerformanceCollectionEnabled(true));
+      expect(service.isEnabled, isFalse);
+
+      service.startOperationTrace('feed_load_homeFeed');
+
+      verifyNever(() => performance.newTrace(any()));
+    });
+
+    test('withdrawal stops collection in the running session', () async {
+      await service.initialize(distributedBuild: true, analyticsConsent: true);
+      verify(() => performance.setPerformanceCollectionEnabled(true)).called(1);
+
+      await service.setAnalyticsConsent(enabled: false);
+
+      // The plugin applies the SDK flag from the next launch, so new Dart
+      // traces and HTTP metrics have to stop here and now, through isEnabled.
+      verify(() => performance.setPerformanceCollectionEnabled(false))
+          .called(1);
+      expect(service.isEnabled, isFalse);
+      service.startOperationTrace('feed_load_homeFeed');
+      verifyNever(() => performance.newTrace(any()));
+    });
+
+    test('opting back in resumes collection', () async {
+      await service.initialize(
+        distributedBuild: true,
+        analyticsConsent: false,
+      );
+
+      await service.setAnalyticsConsent(enabled: true);
+
+      verify(() => performance.setPerformanceCollectionEnabled(true)).called(1);
+      expect(service.isEnabled, isTrue);
+      service.startOperationTrace('feed_load_homeFeed');
+      verify(() => performance.newTrace('feed_load_homeFeed')).called(1);
+    });
   });
 
   group(NoOpPerformanceTraceMonitor, () {

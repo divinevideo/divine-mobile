@@ -73,6 +73,13 @@ void main() {
       when(() => mockFollowRepository.isFollowing(any())).thenReturn(false);
       // Default: not a deleted account. The vanish group below overrides this.
       when(() => mockProfileRepository.isVanished(any())).thenReturn(false);
+      // Default: no raw kind 0 to read support links from. The support-link
+      // groups below override this.
+      when(
+        () => mockProfileRepository.fetchRawProfileForDisplay(
+          pubkey: any(named: 'pubkey'),
+        ),
+      ).thenAnswer((_) async => null);
     });
 
     OtherProfileBloc createBloc({String pubkey = testPubkey}) =>
@@ -1644,7 +1651,6 @@ void main() {
         contentBlocklistRepository: mockBlocklistRepository,
         currentUserPubkey: testCurrentUserPubkey,
         followRepository: mockFollowRepository,
-        loadSupportLinks: true,
       );
 
       void stubSupportReads(UserProfile normal, Future<UserProfile?> raw) {
@@ -1770,7 +1776,6 @@ void main() {
             contentBlocklistRepository: mockBlocklistRepository,
             currentUserPubkey: testCurrentUserPubkey,
             followRepository: mockFollowRepository,
-            loadSupportLinks: true,
             identityClaimsRepository: claims,
           );
           addTearDown(bloc.close);
@@ -2050,7 +2055,6 @@ void main() {
             contentBlocklistRepository: mockBlocklistRepository,
             currentUserPubkey: testCurrentUserPubkey,
             followRepository: mockFollowRepository,
-            loadSupportLinks: true,
             identityClaimsRepository: claims,
           );
           addTearDown(bloc.close);
@@ -2115,7 +2119,6 @@ void main() {
             contentBlocklistRepository: mockBlocklistRepository,
             currentUserPubkey: testCurrentUserPubkey,
             followRepository: mockFollowRepository,
-            loadSupportLinks: true,
             identityClaimsRepository: claims,
           );
           addTearDown(bloc.close);
@@ -2169,7 +2172,6 @@ void main() {
             contentBlocklistRepository: mockBlocklistRepository,
             currentUserPubkey: testCurrentUserPubkey,
             followRepository: mockFollowRepository,
-            loadSupportLinks: true,
           );
           addTearDown(() async {
             if (!raw.isCompleted) raw.complete(null);
@@ -2215,7 +2217,6 @@ void main() {
             contentBlocklistRepository: mockBlocklistRepository,
             currentUserPubkey: testCurrentUserPubkey,
             followRepository: mockFollowRepository,
-            loadSupportLinks: true,
           );
         },
         act: (bloc) => bloc.add(const OtherProfileLoadRequested()),
@@ -2230,40 +2231,6 @@ void main() {
               pubkey: testPubkey,
             ),
           ).called(1);
-        },
-      );
-
-      blocTest<OtherProfileBloc, OtherProfileState>(
-        'does not re-fetch when the monetization flag is off',
-        build: () {
-          when(
-            () => mockProfileRepository.getCachedProfile(
-              pubkey: any(named: 'pubkey'),
-            ),
-          ).thenAnswer(
-            (_) async => createTestProfile(eventId: 'rest-$testPubkey'),
-          );
-          when(
-            () => mockProfileRepository.fetchFreshProfile(
-              pubkey: any(named: 'pubkey'),
-              requireRawKind0: any(named: 'requireRawKind0'),
-              rawKind0RetryDelays: any(named: 'rawKind0RetryDelays'),
-            ),
-          ).thenAnswer((_) async => null);
-          return OtherProfileBloc(
-            profileRepository: mockProfileRepository,
-            pubkey: testPubkey,
-            contentBlocklistRepository: mockBlocklistRepository,
-            currentUserPubkey: testCurrentUserPubkey,
-            followRepository: mockFollowRepository,
-          );
-        },
-        act: (bloc) => bloc.add(const OtherProfileLoadRequested()),
-        verify: (_) {
-          // Omitting requireRawKind0 matches the default (false) call only.
-          verify(
-            () => mockProfileRepository.fetchFreshProfile(pubkey: testPubkey),
-          ).called(1); // only the initial load; no self-heal retries
         },
       );
     });

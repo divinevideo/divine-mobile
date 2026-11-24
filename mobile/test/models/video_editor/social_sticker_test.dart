@@ -4,7 +4,12 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart'
-    show AudioEvent, UserProfile, VideoStickerKind, VideoStickerRegion;
+    show
+        AudioEvent,
+        UserProfile,
+        VideoStickerAudience,
+        VideoStickerKind,
+        VideoStickerRegion;
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_reply_context.dart';
@@ -712,6 +717,64 @@ void main() {
             reason: sticker.kind.name,
           );
         }
+      });
+
+      test('keep who may answer an Add yours or replies sticker in a draft, '
+          'and in no other kind', () {
+        final restricted = addYours.copyWith(
+          audience: VideoStickerAudience.following,
+        );
+
+        expect(
+          SocialStickerData.fromMeta(restricted.toMeta()),
+          equals(restricted),
+        );
+        expect(restricted.isLeftOutOfFrames, isTrue);
+        expect(addYours.isLeftOutOfFrames, isFalse);
+        final question = SocialStickerData.interactive(
+          SocialStickerKind.question,
+          prompt: 'Ask me anything',
+        ).copyWith(audience: VideoStickerAudience.creator);
+        expect(question.isLeftOutOfFrames, isFalse);
+        expect(question.toMeta(), isNot(contains('audience')));
+      });
+
+      test('keep a draft out of the frames when it names an audience this '
+          'version does not know', () {
+        final draft = SocialStickerData.fromMeta({
+          ...addYours.toMeta(),
+          'audience': 'mutuals',
+        });
+
+        expect(draft?.audience, equals(VideoStickerAudience.creator));
+        expect(draft?.isLeftOutOfFrames, isTrue);
+      });
+
+      test('come back from a tag published without a look when only some '
+          'may answer', () {
+        final region = VideoStickerRegion.fromTag(
+          const VideoStickerRegion(
+            kind: VideoStickerKind.replies,
+            target: '',
+            centerX: 0.5,
+            centerY: 0.5,
+            width: 0.6,
+            height: 0.3,
+            label: 'Reply with a video',
+            audience: VideoStickerAudience.creator,
+          ).toTag(),
+        );
+
+        expect(
+          SocialStickerData.ofRegion(region!),
+          equals(
+            const SocialStickerData(
+              kind: SocialStickerKind.replies,
+              prompt: 'Reply with a video',
+              audience: VideoStickerAudience.creator,
+            ),
+          ),
+        );
       });
 
       test('an Add yours points at its chain, or at nothing on its first '

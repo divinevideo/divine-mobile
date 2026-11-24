@@ -7,6 +7,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart' show NIP71VideoKinds;
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/features/crossposting/crossposting_navigation.dart';
 import 'package:openvine/features/post_publish/post_publish_experiment.dart';
@@ -17,11 +18,14 @@ import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/post_publish_providers.dart';
+import 'package:openvine/providers/short_link_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/share_position_origin.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
 import 'package:openvine/widgets/upload_failure_sheet.dart';
@@ -244,12 +248,17 @@ bool _showPublishSuccess(
         thumbnailBytes: video.thumbnailBytes,
         onView: () =>
             _onConfirmationView(container, offer, stableId, authorPubkey),
-        onShare: () => _onConfirmationShare(
-          navContext,
-          container,
-          offer,
-          stableId,
-          authorPubkey,
+        onShare: () => runDetached(
+          _onConfirmationShare(
+            navContext,
+            container,
+            offer,
+            stableId,
+            authorPubkey,
+          ),
+          'share the published video',
+          logName: 'UploadFailureListener',
+          category: LogCategory.system,
         ),
         crosspostSection: eventId != null
             ? _postPublishCrosspost(navContext, container, eventId)
@@ -337,27 +346,28 @@ void _onConfirmationView(
   );
 }
 
-void _onConfirmationShare(
+Future<void> _onConfirmationShare(
   BuildContext context,
   ProviderContainer container,
   PostPublishConfirmationOffer offer,
   String stableId,
   String? authorPubkey,
-) {
+) async {
   unawaited(container.read(postPublishExperimentProvider).shareTapped(offer));
-  // Preserve the OS-share behavior assigned to the active `viewShare`
-  // experiment arm. Moving this action into the in-app share menu changes the
-  // treatment and must be introduced as a separately named variant.
-  unawaited(
-    showShareSheet(
-      context,
-      ShareParams(
-        text: VideoSharingService.shareUrlForStableId(
-          stableId,
-          authorPubkey: authorPubkey,
-        ),
-      ),
-    ),
+  final canonical = VideoSharingService.shareUrlForStableId(
+    stableId,
+    authorPubkey: authorPubkey,
+    kind: NIP71VideoKinds.getPreferredAddressableKind(),
+  );
+  final sharePositionOrigin = shareAnchorForContext(context);
+  final shortener = container.read(shortLinkClientProvider);
+  final url = await (shortener?.shorten(canonical) ?? Future.value(canonical));
+  if (!context.mounted) return;
+  // The viewShare arm's treatment is the OS share sheet; moving Share into the
+  // in-app share menu is a new, separately named variant.
+  await showShareSheetAtOrigin(
+    ShareParams(text: url),
+    sharePositionOrigin: sharePositionOrigin,
   );
 }
 

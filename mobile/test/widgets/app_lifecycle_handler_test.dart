@@ -83,7 +83,10 @@ class _FlushTrackingVideoEditorNotifier extends VideoEditorNotifier {
   }
 }
 
-Future<ProviderContainer> _pumpHandler(WidgetTester tester) async {
+Future<ProviderContainer> _pumpHandler(
+  WidgetTester tester, {
+  NostrClient? nostrClient,
+}) async {
   final authService = _MockAuthService();
   when(() => authService.isAuthenticated).thenReturn(true);
   when(
@@ -97,16 +100,18 @@ Future<ProviderContainer> _pumpHandler(WidgetTester tester) async {
   ).thenAnswer((_) async => 0);
   final draftStorageService = _MockDraftStorageService();
   when(draftStorageService.migrateOldDrafts).thenAnswer((_) async {});
-  final nostrClient = _MockNostrClient();
-  when(
-    nostrClient.forceReconnectAll,
-  ).thenAnswer((_) async => ForceReconnectOutcome.completed);
-  when(() => nostrClient.connectedRelayCount).thenReturn(0);
-  when(() => nostrClient.configuredRelayCount).thenReturn(0);
+  final client = nostrClient ?? _MockNostrClient();
+  if (nostrClient == null) {
+    when(
+      client.forceReconnectAll,
+    ).thenAnswer((_) async => ForceReconnectOutcome.completed);
+    when(() => client.connectedRelayCount).thenReturn(0);
+    when(() => client.configuredRelayCount).thenReturn(0);
+  }
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        nostrServiceProvider.overrideWithValue(nostrClient),
+        nostrServiceProvider.overrideWithValue(client),
         notificationRefreshCoordinatorProvider.overrideWithValue(null),
         authServiceProvider.overrideWithValue(authService),
         videoPublishProvider.overrideWith(_NoopVideoPublishNotifier.new),
@@ -761,6 +766,87 @@ void main() {
         messages,
         isNot(contains('📱 Relay connections restored after app resume')),
       );
+    });
+
+    Future<_MockNostrClient> pumpWithClient(WidgetTester tester) async {
+      final nostrClient = _MockNostrClient();
+      when(
+        nostrClient.forceReconnectAll,
+      ).thenAnswer((_) async => ForceReconnectOutcome.completed);
+      when(() => nostrClient.connectedRelayCount).thenReturn(1);
+      when(() => nostrClient.configuredRelayCount).thenReturn(1);
+      await _pumpHandler(tester, nostrClient: nostrClient);
+      await tester.pump();
+      return nostrClient;
+    }
+
+    for (final platform in [
+      TargetPlatform.android,
+      TargetPlatform.iOS,
+      TargetPlatform.macOS,
+    ]) {
+      testWidgets('keeps relay sockets when an alert closes on $platform, '
+          'and reconnects after a real background', (tester) async {
+        debugDefaultTargetPlatformOverride = platform;
+        final nostrClient = await pumpWithClient(tester);
+
+        // A system alert, the notification shade or a window losing focus
+        // takes the app to inactive and back, nothing more.
+        tester.binding
+          ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+          ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+        await tester.pump();
+        verifyNever(nostrClient.forceReconnectAll);
+
+        // The framework walks a real background through hidden and paused.
+        tester.binding
+          ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+          ..handleAppLifecycleStateChanged(AppLifecycleState.hidden)
+          ..handleAppLifecycleStateChanged(AppLifecycleState.paused)
+          ..handleAppLifecycleStateChanged(AppLifecycleState.hidden)
+          ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+          ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+        await tester.pump();
+        verify(nostrClient.forceReconnectAll).called(1);
+
+        // That resume cleared the background, so the next alert is inert.
+        tester.binding
+          ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+          ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+        await tester.pump();
+        verifyNever(nostrClient.forceReconnectAll);
+        await tester.pump(const Duration(seconds: 31));
+        debugDefaultTargetPlatformOverride = null;
+      });
+    }
+
+    testWidgets('reconnects when a hidden window comes back without '
+        'pausing', (tester) async {
+      final nostrClient = await pumpWithClient(tester);
+
+      // A macOS window unlocked behind another app is hidden, never paused.
+      tester.binding
+        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+        ..handleAppLifecycleStateChanged(AppLifecycleState.hidden)
+        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      verify(nostrClient.forceReconnectAll).called(1);
+      await tester.pump(const Duration(seconds: 31));
+    });
+
+    testWidgets('reconnects on the first resume when it mounts outside the '
+        'foreground', (tester) async {
+      // A silent push launches the app straight into the background: it
+      // mounts while inactive and never sees hidden or paused before iOS
+      // suspends it, so the first resume is all there is to go on.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      final nostrClient = await pumpWithClient(tester);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      verify(nostrClient.forceReconnectAll).called(1);
+      await tester.pump(const Duration(seconds: 31));
     });
   });
 }

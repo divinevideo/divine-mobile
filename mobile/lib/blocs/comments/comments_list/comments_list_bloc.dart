@@ -10,6 +10,7 @@ import 'package:openvine/blocs/comments/comments_list/batched_subscription.dart'
 import 'package:openvine/blocs/comments/comments_list/comments_list_helpers.dart';
 import 'package:openvine/blocs/comments/comments_list/reportable_sites.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 part 'comments_list_event.dart';
@@ -18,9 +19,10 @@ part 'comments_list_state.dart';
 /// BLoC owning the canonical store of [Comment]s for one video.
 ///
 /// Loads, paginates, sorts, and watches the live stream of comments for one
-/// video. Mutations from [CommentComposerBloc] and [CommentReactionsBloc]
-/// flow in through UI [BlocListener]s as Optimistic*/CommentReplacedInStore /
-/// CommentRemovedFromStore / CommentsRemovedByAuthorFromStore events.
+/// video, video replies included. Mutations from [CommentComposerBloc] and
+/// [CommentReactionsBloc] flow in through UI [BlocListener]s as
+/// Optimistic*/CommentReplacedInStore / CommentRemovedFromStore /
+/// CommentsRemovedByAuthorFromStore events.
 /// Top sort needs vote counts from [CommentReactionsBloc]; see
 /// [CommentsListState.displayCommentsWith].
 ///
@@ -36,7 +38,6 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     required String rootAuthorPubkey,
     String? rootAddressableId,
     int? initialTotalCount,
-    bool includeVideoReplies = false,
     String? focusCommentId,
     CommentModerationRepository? commentModerationRepository,
     String? viewerPubkey,
@@ -45,7 +46,6 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   }) : _commentsRepository = commentsRepository,
        _commentModerationRepository = commentModerationRepository,
        _initialTotalCount = initialTotalCount,
-       _includeVideoReplies = includeVideoReplies,
        super(
          CommentsListState(
            rootEventId: rootEventId,
@@ -116,7 +116,6 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   final CommentsRepository _commentsRepository;
   final CommentModerationRepository? _commentModerationRepository;
   StreamSubscription<Set<String>>? _viewerBlocksSubscription;
-  final bool _includeVideoReplies;
   BatchedSubscription<Comment>? _commentStreamSubscription;
   StreamSubscription<CommentDeletion>? _commentDeletionSubscription;
 
@@ -171,9 +170,12 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         rootEventKind: state.rootEventKind,
         rootAddressableId: state.rootAddressableId,
         limit: _pageSize,
-        includeVideoReplies: _includeVideoReplies,
+        includeVideoReplies: true,
       );
       final loadedModeration = await moderation;
+      // The sheet can close while the page loads: a watch opened now would
+      // have no owner left to close it (#9689).
+      if (isClosed) return;
 
       final commentsById = {
         ...state.commentsById,
@@ -267,7 +269,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         limit: _pageSize,
         before: cursor,
         offset: state.nextOffset ?? 0,
-        includeVideoReplies: _includeVideoReplies,
+        includeVideoReplies: true,
       );
 
       final loadedBefore = state.commentsById.length;
@@ -868,7 +870,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         rootEventId: state.rootEventId,
         rootEventKind: state.rootEventKind,
         rootAddressableId: state.rootAddressableId,
-        includeVideoReplies: _includeVideoReplies,
+        includeVideoReplies: true,
         onEose: () {
           // The stored comments are still in the open window; take them in
           // first, or the backfill would be called complete before they
@@ -894,7 +896,10 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       _commentDeletionSubscription = _commentsRepository
           .watchCommentDeletions(
             rootEventId: state.rootEventId,
-            includeVideoReplies: _includeVideoReplies,
+            commentAuthors: this.stream
+                .map((state) => state.commentAuthors)
+                .startWith(state.commentAuthors),
+            includeVideoReplies: true,
           )
           .listen(
             (deletion) {
@@ -926,11 +931,15 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
 
   @override
   Future<void> close() async {
-    await _commentStreamSubscription?.cancel();
-    await _commentDeletionSubscription?.cancel();
-    await _viewerBlocksSubscription?.cancel();
-    await _commentsRepository.stopWatchingComments();
-    return super.close();
+    // Cancelling a watch closes its relay subscription. Nothing is awaited
+    // before super.close(), which flips isClosed at once: a page that lands
+    // during an earlier await would open a watch past these cancels (#9689).
+    final cancels = [
+      _commentStreamSubscription?.cancel(),
+      _commentDeletionSubscription?.cancel(),
+      _viewerBlocksSubscription?.cancel(),
+    ];
+    await Future.wait([super.close(), ...cancels.nonNulls]);
   }
 
   bool _hasMoreContent({

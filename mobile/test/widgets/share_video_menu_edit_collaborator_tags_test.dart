@@ -9,6 +9,7 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
@@ -35,6 +36,8 @@ class _MockVideoEventService extends Mock implements VideoEventService {}
 class _MockSignedEventRelayPublisher extends Mock
     implements SignedEventRelayPublisher {}
 
+class _MockNostrClient extends Mock implements NostrClient {}
+
 class _FakeEvent extends Fake implements Event {}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
@@ -52,8 +55,10 @@ VideoEvent _testVideo({
     videoUrl: 'https://cdn.example.com/video.mp4',
     title: 'Test Video Title',
     vineId: 'video-d-tag',
+    addressableDTag: 'video-d-tag',
     collaboratorPubkeys: [collaboratorPubkey],
     nostrEventTags: const [
+      ['d', 'video-d-tag'],
       ['imeta', 'url https://cdn.example.com/video.mp4', 'm video/mp4'],
     ],
   );
@@ -117,6 +122,31 @@ void main() {
       () => mockPersonalEventCacheService.cacheUserEvent(any()),
     ).thenReturn(null);
     when(() => mockVideoEventService.updateVideoEvent(any())).thenReturn(null);
+    // The relays' newest revision is the one being edited.
+    final nostrClient = _MockNostrClient();
+    when(
+      () => nostrClient.readCurrentVersion(
+        kind: any(named: 'kind'),
+        pubkey: any(named: 'pubkey'),
+        dTag: any(named: 'dTag'),
+      ),
+    ).thenAnswer(
+      (_) async => CurrentVersionFound(
+        Event.fromJson({
+          'id': 'event-id',
+          'pubkey': ownerPubkey,
+          'created_at': 1757385263,
+          'kind': 34236,
+          'tags': [
+            ['d', 'video-d-tag'],
+            ['imeta', 'url https://cdn.example.com/video.mp4', 'm video/mp4'],
+            buildCollaboratorPTag(collaboratorPubkey),
+          ],
+          'content': 'Test video content',
+          'sig': '',
+        }),
+      ),
+    );
 
     service = VideoMetadataUpdateService(
       authService: mockAuthService,
@@ -124,6 +154,7 @@ void main() {
       relayPublisher: mockRelayPublisher,
       personalEventCache: mockPersonalEventCacheService,
       videoEventService: mockVideoEventService,
+      nostrClient: nostrClient,
       collaboratorInviteService: CollaboratorInviteService(
         dmRepository: mockDmRepository,
         l10n: lookupAppLocalizations(const Locale('en')),

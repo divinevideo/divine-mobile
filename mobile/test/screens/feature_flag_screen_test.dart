@@ -61,6 +61,27 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    testWidgets('lists no Video Replies, Profile Monetization Links or '
+        'Enhanced Analytics flag', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 6000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(buildSubject(isDeveloperMode: true));
+      await initializeFeatureFlags(tester);
+
+      expect(
+        find.text(FeatureFlag.blueskyPublishing.displayName),
+        findsOneWidget,
+      );
+      expect(find.text('Enhanced Analytics'), findsNothing);
+      expect(find.text('Video Replies'), findsNothing);
+      expect(find.text('Profile Monetization Links'), findsNothing);
+    });
+
     testWidgets('constrains menu content width on wide screens', (
       tester,
     ) async {
@@ -88,7 +109,7 @@ void main() {
       await initializeFeatureFlags(tester);
 
       expect(
-        find.text(FeatureFlag.enhancedAnalytics.displayName),
+        find.text(FeatureFlag.blueskyPublishing.displayName),
         findsOneWidget,
       );
       expect(
@@ -150,7 +171,7 @@ void main() {
       await initializeFeatureFlags(tester);
 
       expect(
-        find.text(FeatureFlag.enhancedAnalytics.displayName),
+        find.text(FeatureFlag.blueskyPublishing.displayName),
         findsOneWidget,
       );
       expect(
@@ -177,7 +198,7 @@ void main() {
         isNot(contains('shortLinksSharing')),
       );
       expect(
-        find.text(FeatureFlag.enhancedAnalytics.displayName),
+        find.text(FeatureFlag.blueskyPublishing.displayName),
         findsOneWidget,
       );
       expect(find.text('Short Links'), findsNothing);
@@ -234,9 +255,9 @@ void main() {
 
     testWidgets('should show override indicators', (tester) async {
       // Set up one flag as having user override
-      when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
+      when(() => mockPrefs.getBool('ff_blueskyPublishing')).thenReturn(true);
       when(
-        () => mockPrefs.containsKey('ff_enhancedAnalytics'),
+        () => mockPrefs.containsKey('ff_blueskyPublishing'),
       ).thenReturn(true);
 
       await tester.pumpWidget(
@@ -258,10 +279,10 @@ void main() {
       await service.initialize();
       await tester.pumpAndSettle();
 
-      // Find the switch for enhancedAnalytics specifically
+      // Find the switch for blueskyPublishing specifically
       final flagSwitch = find.descendant(
         of: find.ancestor(
-          of: find.text('Enhanced Analytics'),
+          of: find.text('Bluesky Publishing'),
           matching: find.byType(Card),
         ),
         matching: find.byType(Switch),
@@ -315,9 +336,9 @@ void main() {
 
     testWidgets('should handle individual flag reset', (tester) async {
       // Set up a flag with user override
-      when(() => mockPrefs.getBool('ff_enhancedAnalytics')).thenReturn(true);
+      when(() => mockPrefs.getBool('ff_blueskyPublishing')).thenReturn(true);
       when(
-        () => mockPrefs.containsKey('ff_enhancedAnalytics'),
+        () => mockPrefs.containsKey('ff_blueskyPublishing'),
       ).thenReturn(true);
 
       await tester.pumpWidget(
@@ -349,7 +370,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      verify(() => mockPrefs.remove('ff_enhancedAnalytics')).called(1);
+      verify(() => mockPrefs.remove('ff_blueskyPublishing')).called(1);
     });
 
     testWidgets('should be scrollable with many flags', (tester) async {

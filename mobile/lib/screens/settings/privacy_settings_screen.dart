@@ -21,8 +21,10 @@ import 'package:unified_logger/unified_logger.dart';
 /// Until #7982 the analytics consent preference had no affordance at all — it
 /// could only be changed by calling `AnalyticsService.setAnalyticsEnabled`
 /// from code. The switch governs every non-essential usage analytics path:
-/// the first-party queue, the durable Kind 22236 view outbox, and Firebase
-/// collection. What the shipped default should be is still decided in #7978.
+/// the first-party queue, the durable Kind 22236 view outbox, Firebase
+/// Analytics, and Firebase Performance (#11398). Crash reporting stays on as
+/// an operational need, and the switch's copy says so. What the shipped
+/// default should be is still decided in #7978.
 class PrivacySettingsScreen extends StatelessWidget {
   static const routeName = 'privacy-settings';
   static const String path = RoutePaths.privacySettings;

@@ -22,6 +22,7 @@ import 'package:openvine/screens/search_results/widgets/search_results_app_bar.d
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_search_query.dart';
 import 'package:openvine/widgets/retained_bloc_provider.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -100,13 +101,15 @@ class _SearchResultsPageState extends ConsumerState<SearchResultsPage> {
   @override
   Widget build(BuildContext context) {
     // Query and category belong to the page, including readiness gaps.
-    return BlocProvider(
+    final page = BlocProvider(
       create: (_) => SearchResultsFilterCubit(),
       child: _SearchResultsScope(
         controller: _controller,
         requestFocusOnMount: widget.requestFocusOnMount,
       ),
     );
+    // Above the readiness gate, whose muted tickers are not a route on top.
+    return ScreenFrameTraceScope(screen: .search, child: page);
   }
 }
 

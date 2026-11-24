@@ -8,6 +8,7 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 
@@ -81,16 +82,19 @@ void main() {
       expect(content, contains('collaborate'));
       expect(
         content,
-        contains('https://divine.video/video/video-id'),
+        contains(
+          divineVideoShareUrl(
+            'video-id',
+            authorPubkey: creatorPubkey,
+            kind: 34236,
+          ),
+        ),
         reason:
             'Plaintext fallback must include a divine.video URL so non-Divine '
             'Nostr clients can preview the video and verify the invite '
-            'matches a real video before accepting (#3942).',
-      );
-      // The d tag alone can name another account's video (#10929).
-      expect(
-        content,
-        contains('https://divine.video/video/video-id?author=$creatorPubkey'),
+            'matches a real video before accepting (#3942). The link names '
+            'its author because the d tag alone can name another '
+            "account's video (#10929).",
       );
       expect(_containsTag(tags, const ['divine', 'collab-invite']), isTrue);
       expect(
@@ -237,7 +241,16 @@ void main() {
               ).captured.single
               as String;
 
-      expect(captured, contains('https://divine.video/video/video-id'));
+      expect(
+        captured,
+        contains(
+          divineVideoShareUrl(
+            'video-id',
+            authorPubkey: creatorPubkey,
+            kind: 34236,
+          ),
+        ),
+      );
       expect(
         captured.endsWith(CollaboratorInviteService.invitePlaintextSuffix),
         isTrue,
@@ -285,14 +298,26 @@ void main() {
 
       expect(
         captured,
-        contains('https://divine.video/video/custom-d-tag'),
-        reason:
-            'URL must use the d-tag (third segment of the parameterized '
-            'addressable) so it deep-links via the existing /video/:id route.',
+        contains(
+          divineVideoShareUrl(
+            'custom-d-tag',
+            authorPubkey: 'c' * 64,
+            kind: 34236,
+          ),
+        ),
+        reason: 'The address must retain the actual author and d tag.',
       );
       expect(
         captured,
-        isNot(contains('https://divine.video/video/video-id')),
+        isNot(
+          contains(
+            divineVideoShareUrl(
+              'video-id',
+              authorPubkey: creatorPubkey,
+              kind: 34236,
+            ),
+          ),
+        ),
         reason: 'URL must reflect the videoAddress passed in, not a default.',
       );
     });
@@ -315,8 +340,8 @@ void main() {
       );
 
       // NIP-01 doesn't reserve `:` in d-tags. A naive split-on-colon parser
-      // truncates everything past the third segment, producing
-      // `https://divine.video/video/foo` for a stableId of `foo:bar`.
+      // truncates everything past the third segment, encoding a d tag of
+      // `foo` instead of `foo:bar`.
       const colonyVideoAddress =
           '34236:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc:foo:bar';
 
@@ -341,10 +366,12 @@ void main() {
 
       expect(
         captured,
-        contains('https://divine.video/video/foo:bar'),
+        contains(
+          divineVideoShareUrl('foo:bar', authorPubkey: 'c' * 64, kind: 34236),
+        ),
         reason:
             'd-tag is everything after kind:pubkey: — colons within it must '
-            'survive into the URL so divine.video can resolve the stableId.',
+            'survive into the encoded address.',
       );
     });
 
@@ -394,7 +421,16 @@ void main() {
                 ).captured.single
                 as String;
 
-        expect(captured, contains('https://divine.video/video/video-id'));
+        expect(
+          captured,
+          contains(
+            divineVideoShareUrl(
+              'video-id',
+              authorPubkey: creatorPubkey,
+              kind: 34236,
+            ),
+          ),
+        );
         expect(captured, contains('Skate loop'));
         // Sanity-check that we actually produced the Spanish body — not
         // the English fallback that lookupAppLocalizations could silently
@@ -448,7 +484,16 @@ void main() {
                 ).captured.single
                 as String;
 
-        expect(captured, contains('https://divine.video/video/video-id'));
+        expect(
+          captured,
+          contains(
+            divineVideoShareUrl(
+              'video-id',
+              authorPubkey: creatorPubkey,
+              kind: 34236,
+            ),
+          ),
+        );
       },
     );
 
@@ -473,6 +518,66 @@ void main() {
 
       expect(result.success, isFalse);
       expect(result.error, 'relay unavailable');
+    });
+  });
+
+  group('sendInvite video link', () {
+    Future<String> sentBody(
+      CollaboratorInviteService service,
+      String address,
+    ) async {
+      when(
+        () => dmRepository.sendMessage(
+          recipientPubkey: any(named: 'recipientPubkey'),
+          content: any(named: 'content'),
+          replyToId: any(named: 'replyToId'),
+          additionalTags: any(named: 'additionalTags'),
+          skipNip04Fallback: any(named: 'skipNip04Fallback'),
+        ),
+      ).thenAnswer(
+        (_) async => NIP17SendResult.success(
+          rumorEventId: 'rumor-id',
+          messageEventId: 'message-id',
+          recipientPubkey: collaboratorPubkey,
+        ),
+      );
+      await service.sendInvite(
+        collaboratorPubkey: collaboratorPubkey,
+        creatorPubkey: creatorPubkey,
+        videoAddress: address,
+        title: 'Wide shot',
+      );
+      return verify(
+            () => dmRepository.sendMessage(
+              recipientPubkey: collaboratorPubkey,
+              content: captureAny(named: 'content'),
+              replyToId: any(named: 'replyToId'),
+              additionalTags: any(named: 'additionalTags'),
+              skipNip04Fallback: any(named: 'skipNip04Fallback'),
+            ),
+          ).captured.single
+          as String;
+    }
+
+    test('names a kind 34235 video under its own kind', () async {
+      final body = await sentBody(service, '34235:$creatorPubkey:video-id');
+
+      final url = divineVideoUrlRegex.firstMatch(body)!.group(0)!;
+      final address = NIP19Tlv.decodeNaddr(Uri.parse(url).pathSegments.last)!;
+      expect(address.kind, 34235);
+      expect(address.id, 'video-id');
+    });
+
+    test('builds the link on a configured base', () async {
+      final staging = CollaboratorInviteService(
+        dmRepository: dmRepository,
+        videoLinkBase: 'https://staging.divine.video/video',
+      );
+
+      final body = await sentBody(staging, videoAddress);
+
+      expect(body, contains('https://staging.divine.video/video/naddr1'));
+      expect(body, isNot(contains('https://divine.video/video/')));
     });
   });
 

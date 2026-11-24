@@ -241,13 +241,14 @@ class VideoSharingService {
     required String recipientPubkey,
     required String content,
   }) async {
+    final identity = divineVideoShareIdentity(video);
     final result = await _dmRepository.sendSharedVideo(
       backgroundDelivery: true,
       recipientPubkey: recipientPubkey,
       baseContent: content,
-      videoKind: video.shareKind,
+      videoKind: identity.kind,
       videoAuthorPubkey: video.pubkey,
-      videoDTag: video.vineId,
+      videoDTag: identity.dTag,
       videoEventId: video.id,
       relayHint: video.sourceRelay,
       // A shared video is a NIP-17-native action. Skip the plaintext kind-4
@@ -345,29 +346,30 @@ class VideoSharingService {
     return results;
   }
 
-  /// Generate external share URL from a [VideoEvent.stableId].
+  /// External share URL for a video known only by its real `d` tag.
   ///
-  /// Callers that hold a hydrated event should use [generateShareUrl]. This
-  /// exists for the post-publish confirmation, which knows the freshly
-  /// published video only by its `d` tag — seconds after publish the event
-  /// is often not yet resolvable from Funnelcake or any relay.
-  ///
-  /// [authorPubkey] goes into the link's `author` query, so the link opens
-  /// that account's video rather than whichever account posted last under
-  /// the same `d` tag (#10929).
-  static String shareUrlForStableId(String stableId, {String? authorPubkey}) =>
-      divineVideoShareUrl(stableId, authorPubkey: authorPubkey);
+  /// Callers that hold a hydrated event should use [generateShareUrl]: a
+  /// [VideoEvent.stableId] can be the event-id fallback, which this would
+  /// encode as a `d` tag. This exists for the post-publish confirmation, which
+  /// knows the freshly published video only by its `d` tag — seconds after
+  /// publish the event is often not yet resolvable from Funnelcake or any
+  /// relay. Without a hex [authorPubkey] the link falls back to the legacy
+  /// `/video/<d tag>` shape; see [divineVideoShareUrl].
+  static String shareUrlForStableId(
+    String stableId, {
+    required int kind,
+    String? authorPubkey,
+  }) => divineVideoShareUrl(stableId, authorPubkey: authorPubkey, kind: kind);
 
   /// Generate external share URL for the video.
   ///
-  /// Always emits an `https://divine.video/video/...` URL naming the video's
-  /// author. The route accepts raw event IDs, d-tags, and NIP-19 references,
-  /// and [VideoEvent.stableId] falls back to the event ID when a `d` tag is
-  /// missing — so this never returns a non-routable URL.
+  /// Addressable videos use `naddr`; regular events and videos without a
+  /// real `d` tag use `nevent`.
   String generateShareUrl(VideoEvent video) =>
-      shareUrlForStableId(video.stableId, authorPubkey: video.pubkey);
+      divineVideoShareUrlForEvent(video);
 
-  /// Shorten only explicit external shares; protocol and DM builders stay canonical.
+  /// Shortens [url] for a link that leaves the app; message bodies and
+  /// protocol payloads stay canonical.
   Future<String> shortenExternalUrl(String url) =>
       _shortLinkClient?.shorten(url) ?? Future.value(url);
 

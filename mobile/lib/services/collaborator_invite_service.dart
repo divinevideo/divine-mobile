@@ -5,7 +5,7 @@ import 'dart:ui' show Locale;
 
 import 'package:dm_repository/dm_repository.dart';
 import 'package:equatable/equatable.dart';
-import 'package:models/models.dart' show divineVideoUrlWithAuthor;
+import 'package:models/models.dart' show divineVideoShareUrl;
 import 'package:openvine/l10n/l10n.dart';
 
 class CollaboratorInviteResult extends Equatable {
@@ -61,17 +61,8 @@ class CollaboratorInviteService {
   final String videoLinkBase;
   final String defaultRelayHint;
 
-  /// Base URL the plaintext fallback uses to link back to the invited
-  /// video. The full URL is `<videoLinkBase>/<stableId>`, where
-  /// `stableId` is the video's d-tag (parameterized addressable per
-  /// NIP-71). Matches the canonical divine.video share-link shape —
-  /// the divine.video web frontend serves d-tag lookups today, so
-  /// non-Divine clients always see a tappable preview.
-  /// In-app deep-link routing from this d-tag URL on cold start
-  /// depends on the route-ref resolver landing in #3932; until that
-  /// merges, the path inside Divine for recipients is the structured
-  /// `CollaboratorInviteCard` produced from the invite tags by
-  /// `CollaboratorInviteParser`, not URL deep-linking.
+  /// Base URL of the plaintext fallback's video link, which lets non-Divine
+  /// clients preview the invited video.
   static const String defaultVideoLinkBase = 'https://divine.video/video';
 
   /// Suffix that uniquely identifies the plaintext fallback body of an
@@ -170,18 +161,15 @@ class CollaboratorInviteService {
   }
 
   String _videoUrlFor(String videoAddress) {
-    // Parameterized addressable format: `<kind>:<pubkey>:<dTag>`. The
-    // d-tag is the video's [VideoEvent.stableId], which divine.video
-    // routes via `/video/:id`. NIP-01 doesn't forbid `:` inside a d-tag,
-    // so re-join everything past the kind/pubkey prefix to keep colons
-    // in the stableId intact.
+    // A d tag may contain `:`, so rejoin everything after kind and pubkey.
     final parts = videoAddress.split(':');
-    final stableId = parts.length >= 3 ? parts.sublist(2).join(':') : '';
-    // The coordinate names the author, so the link does too (#10929).
-    return divineVideoUrlWithAuthor(
-      '$videoLinkBase/$stableId',
-      parts.length >= 3 ? parts[1] : null,
+    final url = divineVideoShareUrl(
+      parts.length >= 3 ? parts.sublist(2).join(':') : '',
+      authorPubkey: parts.length >= 3 ? parts[1] : null,
+      kind: int.tryParse(parts.first),
     );
+    // divineVideoShareUrl always builds on defaultVideoLinkBase.
+    return url.replaceFirst(defaultVideoLinkBase, videoLinkBase);
   }
 
   List<List<String>> _buildTags({

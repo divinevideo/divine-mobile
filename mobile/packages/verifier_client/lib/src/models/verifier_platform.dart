@@ -4,6 +4,15 @@
 import 'package:equatable/equatable.dart';
 import 'package:meta/meta.dart';
 
+/// What a person needs before a sign-in link counts on a platform.
+///
+/// Mirrors `PlatformInfo.signin_requires` in
+/// `divine-identify-verification-service/src/types.ts`.
+enum SigninRequirement {
+  /// Divine Confirmation, while the verifier's gate is on.
+  confirmation,
+}
+
 /// A platform the verifier can check identity claims against.
 ///
 /// Mirrors `PlatformInfo` in
@@ -18,6 +27,7 @@ class VerifierPlatform extends Equatable {
     required this.supported,
     this.oauth,
     this.signinExpiresAfterDays,
+    this.signinRequires,
   });
 
   /// Parses one entry of the `platforms` map returned by `GET /platforms`.
@@ -37,6 +47,12 @@ class VerifierPlatform extends Equatable {
       // wrong number.
       signinExpiresAfterDays: switch (json['signin_expires_after_days']) {
         final int value when value > 0 => value,
+        _ => null,
+      },
+      // Anything but a requirement this app knows is read as none, so a newer
+      // verifier's value does not fail the list.
+      signinRequires: switch (json['signin_requires']) {
+        'confirmation' => SigninRequirement.confirmation,
         _ => null,
       },
     );
@@ -69,6 +85,13 @@ class VerifierPlatform extends Equatable {
   /// the field.
   final int? signinExpiresAfterDays;
 
+  /// What a person needs before a sign-in link counts here, while the
+  /// verifier's Divine Confirmation gate is on.
+  ///
+  /// Null when the verifier does not report one: platforms without a sign-in,
+  /// a gate that is off, and a verifier older than the field.
+  final SigninRequirement? signinRequires;
+
   /// Whether this platform can be linked through an OAuth login instead of a
   /// proof post.
   ///
@@ -99,5 +122,6 @@ class VerifierPlatform extends Equatable {
     supported,
     oauth,
     signinExpiresAfterDays,
+    signinRequires,
   ];
 }

@@ -24,7 +24,7 @@ void main() {
 
       // When the env vars are not set, these flags default to false
       expect(config.getDefault(FeatureFlag.accountSwitching), isFalse);
-      expect(config.getDefault(FeatureFlag.enhancedAnalytics), isFalse);
+      expect(config.getDefault(FeatureFlag.blueskyPublishing), isFalse);
     });
 
     test('should have debug tools enabled by default in debug builds', () {
@@ -32,18 +32,6 @@ void main() {
 
       // Debug tools should be enabled by default for development
       expect(config.getDefault(FeatureFlag.debugTools), isTrue);
-    });
-
-    test('videoReplies should be enabled by default in all builds', () {
-      const config = BuildConfiguration();
-
-      expect(config.getDefault(FeatureFlag.videoReplies), isTrue);
-    });
-
-    test('profile support links are enabled by default in all builds', () {
-      const config = BuildConfiguration();
-
-      expect(config.getDefault(FeatureFlag.profileMonetizationLinks), isTrue);
     });
 
     test('should provide all flags with defaults', () {
@@ -82,8 +70,8 @@ void main() {
         equals('FF_DEBUG_TOOLS'),
       );
       expect(
-        config.getEnvironmentKey(FeatureFlag.videoReplies),
-        equals('FF_VIDEO_REPLIES'),
+        config.getEnvironmentKey(FeatureFlag.blueskyPublishing),
+        equals('FF_BLUESKY_PUBLISHING'),
       );
     });
 

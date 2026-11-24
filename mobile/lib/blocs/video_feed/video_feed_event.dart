@@ -283,6 +283,31 @@ final class VideoFeedVideoRemoved extends VideoFeedEvent {
   List<Object?> get props => [videoId, removalGeneration];
 }
 
+/// A video its owner republished from this device, announced on
+/// [VideosRepository.replacedVideos], to show in place of an older revision
+/// the feed holds (#11250).
+final class VideoFeedVideoReplaced extends VideoFeedEvent {
+  const VideoFeedVideoReplaced(this.video);
+
+  /// The republished revision.
+  final VideoEvent video;
+
+  @override
+  List<Object?> get props => [video];
+}
+
+/// A video whose media was confirmed unavailable. Home drops it only while the
+/// viewer has not reached it: removing the current or an earlier video would
+/// restart the one being watched, and later reads leave it out anyway.
+final class VideoFeedVideoUnavailable extends VideoFeedEvent {
+  const VideoFeedVideoUnavailable(this.videoId);
+
+  final String videoId;
+
+  @override
+  List<Object?> get props => [videoId];
+}
+
 /// Independent Classics queue changed after request-only feedback.
 final class VideoFeedClassicsSessionChanged extends VideoFeedEvent {
   const VideoFeedClassicsSessionChanged(this.snapshot);

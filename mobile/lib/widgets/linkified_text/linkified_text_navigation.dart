@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/router/nav_extensions.dart';
+import 'package:openvine/router/navigation/hashtag_feed_navigation.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/router/routes/search_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
@@ -19,9 +20,10 @@ final class LinkifiedTextNavigation {
     VoidCallback? beforeNavigate,
   }) {
     beforeNavigate?.call();
-    _pushDetached(
+    openHashtagFeed(
       context,
-      HashtagRouteData(tag: hashtag).location,
+      hashtag,
+      logName: 'LinkifiedTextNavigation',
       description: 'navigate to hashtag feed',
     );
   }
@@ -166,11 +168,19 @@ final class LinkifiedTextNavigation {
     );
   }
 
+  /// Closes the modal holding [context], then runs [navigate] from the root.
+  ///
+  /// Does nothing once that modal is no longer the current route. A mention
+  /// navigates only after a profile lookup, by which time the modal may be
+  /// closing, dismissed by the viewer or popped by an earlier tap. Popping
+  /// then removes the page beneath it, and popping the last page leaves
+  /// go_router with no matches.
   static void _afterModalPop(
     BuildContext context, {
     required void Function(BuildContext hostContext) navigate,
     VoidCallback? beforeNavigate,
   }) {
+    if (ModalRoute.isCurrentOf(context) != true) return;
     final hostContext = Navigator.of(context, rootNavigator: true).context;
     beforeNavigate?.call();
     Navigator.of(context).pop();

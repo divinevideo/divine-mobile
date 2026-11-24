@@ -6,7 +6,7 @@ import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
-import 'package:models/models.dart' show UserProfile;
+import 'package:models/models.dart' show UserProfile, VideoStickerAudience;
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:poll_repository/poll_repository.dart' show Poll;
@@ -205,6 +205,10 @@ class SocialStickerCubit extends Cubit<SocialStickerState> {
       ),
     );
   }
+
+  /// Lets [audience] answer an Add yours or replies sticker.
+  void audienceChanged(VideoStickerAudience audience) =>
+      emit(state.copyWith(data: state.data.copyWith(audience: audience)));
 
   /// Shares [text] among an Add yours's answers as their hashtag, the way it
   /// would be published.

@@ -319,7 +319,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Ci aiuta a capire cosa si usa davvero. Se lo disattivi, i dati in coda su questo dispositivo vengono eliminati.';
+      'Ci aiuta a capire cosa si usa davvero. Se lo disattivi, i dati in coda su questo dispositivo vengono eliminati. I report degli arresti anomali vengono comunque inviati, così possiamo correggere i bug.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -2164,6 +2164,14 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => 'Tocca a te';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => 'Guarda la serie';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Guarda la serie: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -4529,6 +4537,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Il relay non ha accettato la modifica. Riprova tra poco.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Questo video è stato modificato su un altro dispositivo e ora ha troppi tag o troppe persone che collaborano. Riaprilo e fai un po\' di pulizia.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Impossibile aggiornare questo video. Riprova.';
 
@@ -4621,6 +4633,19 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get soundsNoSoundsFoundDescription =>
       'Prova un termine di ricerca diverso';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count suoni trovati',
+      many: '$count di suoni trovati',
+      one: '$count suono trovato',
+      zero: 'Nessun suono trovato',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'Salvato in Suoni';
@@ -9516,6 +9541,21 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorEffectEcho => 'Eco';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Tempo diviso';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Lunga esposizione';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Solo movimento';
+
+  @override
+  String get videoEditorEffectStutter => 'A scatti';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Distorsione temporale';
+
+  @override
   String get videoEditorEffectFisheye => 'Occhio di pesce';
 
   @override
@@ -9717,6 +9757,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'Movimento';
 
   @override
+  String get videoEditorEffectCategoryTime => 'Tempo';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'Particelle';
 
   @override
@@ -9823,6 +9866,14 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'Un solo effetto lampeggiante alla volta. Troppi lampeggiamenti possono fare male alle persone sensibili.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Un solo effetto Tempo alla volta. Due insieme apparirebbero diversi una volta esportati, quindi qui abbiamo sostituito l\'altro.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Un solo effetto Tempo alla volta. Due insieme apparirebbero diversi una volta esportati.';
 
   @override
   String get videoEditorEffectsOnBeat => 'A tempo';
@@ -11732,6 +11783,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => 'I miei suoni';
 
   @override
+  String get videoEditorAudioCategorySongs => 'Songs';
+
+  @override
   String get videoEditorAudioFilterEffects => 'Effetti';
 
   @override
@@ -11955,6 +12009,34 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Mostra chi ha risposto a questo video con un video. Chi guarda lo tocca per vedere le risposte.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'Chi può rispondere';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Chiunque';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Chi segui';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Solo io';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Possono partecipare solo le persone che segui. Le altre vedono lo sticker non appena qualcuno ha partecipato.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Lo sticker mostra solo le risposte video delle persone che segui. Le altre persone lo vedono non appena una di loro ha risposto.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Puoi partecipare solo tu. Lo sticker resta invisibile a chiunque altro finché non partecipi.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Lo sticker mostra solo le tue risposte video. Resta invisibile a chiunque altro finché non rispondi.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>
@@ -13784,6 +13866,29 @@ class AppLocalizationsIt extends AppLocalizations {
       'Forzatura minore protetto azzerata';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedTitle =>
+      'Act as if Confirmation is required';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedSubtitle =>
+      'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.';
+
+  @override
   String get commentsRecordVideoButtonLabel => 'Registra un commento video';
 
   @override
@@ -14851,6 +14956,65 @@ class AppLocalizationsIt extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Scollega l\'account $platform $identity';
   }
@@ -14882,7 +15046,26 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'Un tap';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -14994,6 +15177,18 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'Verificato, ma nessun relay ha accettato l\'aggiornamento. Riprova.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -15590,6 +15785,13 @@ class AppLocalizationsIt extends AppLocalizations {
   String get updateAction => 'Aggiorna';
 
   @override
+  String get announcementViewContest => 'Vedi il concorso';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Questo feed in evidenza non è più disponibile.';
+
+  @override
   String updateNewIn(String version) {
     return 'Novità nella versione $version:';
   }
@@ -15740,6 +15942,16 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get settingsHelpAboutSubtitle =>
       'Assistenza, informazioni legali e dettagli dell’app';
+
+  @override
+  String get settingsDiscordTitle => 'Unisciti al nostro server Discord';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Parla con il team e la community di Divine';
+
+  @override
+  String get settingsDiscordOpenError => 'Impossibile aprire Discord';
 
   @override
   String listLoopsCount(int count, String formatted) {

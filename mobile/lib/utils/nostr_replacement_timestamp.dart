@@ -10,8 +10,13 @@ import 'package:nostr_sdk/utils/nostr_timestamp.dart';
 /// stable `published_at` tag. [VideoEvent.createdAt] intentionally prefers
 /// `published_at` for app display/feed ordering, so replacement publishes must
 /// use [VideoEvent.nostrCreatedAt] instead.
-int nextReplacementCreatedAt(VideoEvent previousEvent) {
+int nextReplacementCreatedAt(VideoEvent previousEvent) =>
+    nextReplacementCreatedAtAfter(previousEvent.nostrCreatedAt);
+
+/// Returns the next `created_at` to use when replacing a raw event stamped
+/// [previousCreatedAt].
+int nextReplacementCreatedAtAfter(int previousCreatedAt) {
   final now = NostrTimestamp.now();
-  final nextAfterPrevious = previousEvent.nostrCreatedAt + 1;
+  final nextAfterPrevious = previousCreatedAt + 1;
   return now > nextAfterPrevious ? now : nextAfterPrevious;
 }

@@ -285,6 +285,56 @@ void main() {
       },
     );
 
+    // Home is fed over REST, so the repository's replacement stream is the
+    // only way a republish from this device reaches its tile.
+    test('forwards every video the service reports republished', () async {
+      final provenance = _MockProvenanceFilter();
+      when(() => provenance.showVerifiedOnly).thenReturn(false);
+      final container = ProviderContainer(
+        overrides: [
+          appVersionProvider.overrideWithValue('test'),
+          videoLocalStorageProvider.overrideWithValue(_MockVideoLocalStorage()),
+          sharedPreferencesProvider.overrideWithValue(mockPrefs),
+          nostrServiceProvider.overrideWithValue(mockNostrClient),
+          contentFilterServiceProvider.overrideWithValue(mockContentFilter),
+          feedAspectRatioPreferenceServiceProvider.overrideWithValue(
+            mockAspectRatio,
+          ),
+          contentFilterVersionProvider.overrideWith(
+            _StaticContentFilterVersion.new,
+          ),
+          divineHostFilterVersionProvider.overrideWith(
+            _StaticDivineHostFilterVersion.new,
+          ),
+          divineHostFilterServiceProvider.overrideWithValue(mockDivineHost),
+          videoProvenanceFilterServiceProvider.overrideWithValue(provenance),
+        ],
+      );
+      addTearDown(container.dispose);
+      final repository = container.read(videosRepositoryProvider);
+      final replaced = <String>[];
+      final subscription = repository.replacedVideos.listen(
+        (video) => replaced.add(video.id),
+      );
+      addTearDown(subscription.cancel);
+
+      container
+          .read(videoEventServiceProvider)
+          .updateVideoEvent(
+            VideoEvent(
+              id: 'e' * 64,
+              pubkey: 'a' * 64,
+              createdAt: 1770000000,
+              timestamp: DateTime.utc(2026),
+              content: '',
+              videoUrl: 'https://example.com/video.mp4',
+            ),
+          );
+      await pumpEventQueue();
+
+      expect(replaced, ['e' * 64]);
+    });
+
     for (final provenance in [false, true]) {
       test(
         'canonical filters replace ${provenance ? 'provenance' : 'host'} service instances',

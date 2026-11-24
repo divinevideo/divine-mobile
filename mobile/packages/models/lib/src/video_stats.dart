@@ -3,6 +3,7 @@
 // ABOUTME: ClickHouse-backed analytics API.
 
 import 'package:meta/meta.dart';
+import 'package:models/src/caption_text_track.dart';
 import 'package:models/src/engagement_count_parser.dart';
 import 'package:models/src/video_attribution.dart';
 import 'package:models/src/video_event.dart';
@@ -48,6 +49,7 @@ class VideoStats {
     this.rawTags = const {},
     this.contentWarningLabels = const [],
     this.textTrackRef,
+    this.textTrackRefs = const [],
     this.textTrackLang,
     this.textTrackContent,
     this.categories = const [],
@@ -189,12 +191,13 @@ class VideoStats {
 
     // Parse text-track fields from API response (text_track_ref,
     // text_track_content are top-level fields on video endpoints).
-    var textTrackRef =
+    final indexedTextTrackRef =
         json['text_track_ref']?.toString() ??
         eventData['text_track_ref']?.toString() ??
         statsData['text_track_ref']?.toString();
-    if (textTrackRef != null && textTrackRef.isEmpty) textTrackRef = null;
 
+    final captionRefs = <String>{};
+    final nonCaptionRefs = <String>{};
     String? textTrackLang;
 
     var textTrackContent =
@@ -286,11 +289,18 @@ class VideoStats {
           if (tagName == 'views' && views == null) {
             views = int.tryParse(tagValue);
           }
-          if (tagName == 'text-track') {
-            textTrackRef ??= tagValue;
-            if (textTrackLang == null && tag.length > 4) {
-              final rawLang = tag[4].toString().trim();
-              if (rawLang.isNotEmpty) textTrackLang = rawLang.split('-').first;
+          if (tagName == 'text-track' && tagValue.isNotEmpty) {
+            final type = normalizedTag.length > 3 ? normalizedTag[3] : null;
+            if (isCaptionTextTrackType(type)) {
+              captionRefs.add(tagValue);
+              if (textTrackLang == null && normalizedTag.length > 4) {
+                final rawLang = normalizedTag[4].trim();
+                if (rawLang.isNotEmpty) {
+                  textTrackLang = rawLang.split('-').first;
+                }
+              }
+            } else {
+              nonCaptionRefs.add(tagValue);
             }
           }
           if (tagName == 'content-warning' &&
@@ -318,6 +328,15 @@ class VideoStats {
           }
         }
       }
+    }
+
+    // Keep the event's own track first so playback can compare its file hash
+    // with embedded captions from the independently indexed subtitle event.
+    // The API fallback has no type, but the event can identify it as chapters.
+    if (indexedTextTrackRef != null &&
+        indexedTextTrackRef.isNotEmpty &&
+        !nonCaptionRefs.contains(indexedTextTrackRef)) {
+      captionRefs.add(indexedTextTrackRef);
     }
 
     // Fall back to summary tag if content is empty
@@ -455,7 +474,8 @@ class VideoStats {
       categories: categories,
       contentWarningLabels: contentWarningLabels,
       collaboratorPubkeys: collaboratorPubkeys,
-      textTrackRef: textTrackRef,
+      textTrackRef: captionRefs.firstOrNull,
+      textTrackRefs: List.unmodifiable(captionRefs),
       textTrackLang: textTrackLang,
       textTrackContent: textTrackContent,
       moderationLabels: moderationLabels,
@@ -576,9 +596,11 @@ class VideoStats {
   /// or when the REST payload did not include tag data.
   final List<String> collaboratorPubkeys;
 
-  /// Addressable coordinates for subtitle event (from `text-track` tag or
-  /// API `text_track_ref` field).
+  /// Primary caption ref, either a file URL or subtitle event address.
   final String? textTrackRef;
+
+  /// Caption refs in playback order, including the indexed fallback.
+  final List<String> textTrackRefs;
 
   /// Source language from the subtitle text-track tag.
   final String? textTrackLang;
@@ -703,6 +725,7 @@ class VideoStats {
       altText: rawTags['alt'],
       duration: int.tryParse(rawTags['duration'] ?? ''),
       textTrackRef: textTrackRef,
+      textTrackRefs: textTrackRefs,
       textTrackLang: textTrackLang,
       textTrackContent: textTrackContent,
       categories: categories,

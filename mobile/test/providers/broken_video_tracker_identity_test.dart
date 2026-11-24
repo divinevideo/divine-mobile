@@ -81,6 +81,19 @@ void main() {
       },
     );
 
+    test('a rebuild ends the retired tracker mark stream', () async {
+      // Every auth transition rebuilds the tracker; the retired one must not
+      // leave its mark stream open.
+      final retired = await container.read(brokenVideoTrackerProvider.future);
+      final announced = retired.markedVideoIds.toList();
+
+      container.invalidate(brokenVideoTrackerProvider);
+      final current = await container.read(brokenVideoTrackerProvider.future);
+
+      expect(current, isNot(same(retired)));
+      expect(await announced.timeout(const Duration(seconds: 5)), isEmpty);
+    });
+
     test('a mark made through deadMediaFeedGuardProvider.confirmAndMarkMissing '
         'is reflected by VideoEventService.filterVideoList', () async {
       // Rebuild the container with deadMediaFeedGuardProvider overridden to

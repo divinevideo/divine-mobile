@@ -150,6 +150,11 @@ class LocalPeopleListsCache {
 
   /// Emits [collect] over the box immediately, then again after each box
   /// mutation whose key [affects] accepts.
+  ///
+  /// Ends when the box closes. Closing still delivers the mutations queued
+  /// before it, such as the deletion per row a cache repair's `clear()`
+  /// announces right before it deletes the box, so those are skipped: the
+  /// closed box can no longer be read.
   Stream<List<T>> _watch<T>({
     required bool Function(String key) affects,
     required List<T> Function(Box<dynamic> box) collect,
@@ -163,11 +168,18 @@ class LocalPeopleListsCache {
         final box = await _box();
         if (canceled || controller.isClosed) return;
         controller.add(collect(box));
-        subscription = box.watch().listen((event) {
-          final key = event.key;
-          if (key is! String || !affects(key)) return;
-          controller.add(collect(box));
-        });
+        subscription = box.watch().listen(
+          (event) {
+            final key = event.key;
+            if (key is! String || !affects(key) || !box.isOpen) return;
+            try {
+              controller.add(collect(box));
+            } on Object catch (error, stackTrace) {
+              controller.addError(error, stackTrace);
+            }
+          },
+          onDone: () => unawaited(controller.close()),
+        );
       } on Object catch (error, stackTrace) {
         if (!controller.isClosed) {
           controller.addError(error, stackTrace);

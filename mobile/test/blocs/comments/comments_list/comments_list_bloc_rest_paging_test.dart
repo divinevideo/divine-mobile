@@ -47,6 +47,7 @@ void main() {
           limit: any(named: 'limit'),
           before: any(named: 'before'),
           offset: any(named: 'offset'),
+          includeVideoReplies: any(named: 'includeVideoReplies'),
         ),
       ).thenAnswer((_) async => thread);
     }
@@ -81,24 +82,24 @@ void main() {
           rootAddressableId: any(named: 'rootAddressableId'),
           since: any(named: 'since'),
           onEose: any(named: 'onEose'),
+          includeVideoReplies: any(named: 'includeVideoReplies'),
         ),
       ).thenAnswer((_) => const Stream<Comment>.empty());
       when(
         () => commentsRepository.watchCommentDeletions(
           rootEventId: any(named: 'rootEventId'),
+          commentAuthors: any(named: 'commentAuthors'),
           includeVideoReplies: any(named: 'includeVideoReplies'),
         ),
       ).thenAnswer((_) => const Stream<CommentDeletion>.empty());
       when(
         () => commentsRepository.findAuthorDeletedComments(any()),
       ).thenAnswer((_) async => <String>{});
-      when(
-        () => commentsRepository.stopWatchingComments(),
-      ).thenAnswer((_) async {});
     });
 
     setUpAll(() {
       registerFallbackValue(<Comment>[]);
+      registerFallbackValue(const Stream<Set<String>>.empty());
     });
 
     group('CommentsLoadRequested', () {
@@ -111,6 +112,7 @@ void main() {
               rootEventKind: any(named: 'rootEventKind'),
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenAnswer(
             (_) async =>
@@ -133,6 +135,7 @@ void main() {
               rootEventKind: any(named: 'rootEventKind'),
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenAnswer(
             (_) async =>
@@ -146,6 +149,7 @@ void main() {
               limit: any(named: 'limit'),
               before: any(named: 'before'),
               offset: 50,
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).thenAnswer(
             (_) async =>
@@ -186,6 +190,7 @@ void main() {
               limit: any(named: 'limit'),
               before: any(named: 'before'),
               offset: 50,
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).called(1);
           expect(bloc.state.nextOffset, 100);
@@ -207,6 +212,7 @@ void main() {
               limit: any(named: 'limit'),
               before: any(named: 'before'),
               offset: captureAny(named: 'offset'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
             ),
           ).captured;
           expect(offsets, [0]);

@@ -19,6 +19,12 @@ const _databaseName = 'divine_db';
 const _legacyDataKey = 'moor_db_str_$_databaseName';
 const _legacyVersionKey = 'moor_db_version_$_databaseName';
 
+// web/_headers serves *.wasm as immutable for a year, so the URL carries the
+// sqlite3 version: otherwise a returning browser reuses an older wasm that the
+// current drift_worker.js cannot link. update_web_sqlite_assets.sh rewrites it.
+// The worker URL stays fixed so every tab shares one drift worker.
+const _sqlite3Wasm = 'sqlite3.wasm?v=3.3.4';
+
 /// Open a database connection for web platform.
 ///
 /// Hosts SQLite in a worker when browser support allows it. The legacy SQLite
@@ -28,8 +34,7 @@ QueryExecutor openConnection({Uri? assetBase}) {
     Future(() async {
       final probe = await WasmDatabase.probe(
         databaseName: _databaseName,
-        sqlite3Uri:
-            assetBase?.resolve('sqlite3.wasm') ?? Uri.parse('sqlite3.wasm'),
+        sqlite3Uri: assetBase?.resolve(_sqlite3Wasm) ?? Uri.parse(_sqlite3Wasm),
         driftWorkerUri:
             assetBase?.resolve('drift_worker.js') ??
             Uri.parse('drift_worker.js'),

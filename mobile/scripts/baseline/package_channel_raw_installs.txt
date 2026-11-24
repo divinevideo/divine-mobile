@@ -6,6 +6,5 @@
 # (growth fails CI vs origin/main). Fix an entry by nulling the handler in tearDown
 # (or tagging the file @Tags(['skip_very_good_optimization'])), then shrink this
 # baseline. Packages analogue of check_shared_channel_overrides.sh (#5738).
-packages/divine_video_player/test/src/divine_video_player_controller_test.dart
 packages/divine_video_player/test/src/divine_video_player_widget_test.dart
 packages/nostr_key_manager/test/src/secure_key_storage_delete_test.dart

@@ -325,7 +325,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Pomaga nam zobaczyć, z czego ludzie naprawdę korzystają. Po wyłączeniu dane czekające na tym urządzeniu zostaną usunięte.';
+      'Pomaga nam zobaczyć, z czego ludzie naprawdę korzystają. Po wyłączeniu dane czekające na tym urządzeniu zostaną usunięte. Raporty o awariach są nadal wysyłane, żebyśmy mogli naprawiać błędy.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -2191,6 +2191,14 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => 'Twoja kolej';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => 'Obejrzyj serię';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Obejrzyj serię: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -4607,6 +4615,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Przekaźnik nie przyjął zmiany. Spróbuj za chwilę.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Ten film zmienił się na innym urządzeniu i ma teraz za dużo tagów lub osób współtworzących. Otwórz go ponownie i usuń część.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Nie udało się zaktualizować tego filmu. Spróbuj ponownie.';
 
@@ -4697,6 +4709,20 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get soundsNoSoundsFoundDescription => 'Spróbuj innego wyszukiwania';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Znaleziono $count dźwięku',
+      many: 'Znaleziono $count dźwięków',
+      few: 'Znaleziono $count dźwięki',
+      one: 'Znaleziono $count dźwięk',
+      zero: 'Nie znaleziono dźwięków',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'Zapisano w Dźwiękach';
@@ -9622,6 +9648,21 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorEffectEcho => 'Echo';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Rozszczepiony czas';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Długa ekspozycja';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Tylko ruch';
+
+  @override
+  String get videoEditorEffectStutter => 'Klatkowanie';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Zakrzywienie czasu';
+
+  @override
   String get videoEditorEffectFisheye => 'Rybie oko';
 
   @override
@@ -9823,6 +9864,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'Ruch';
 
   @override
+  String get videoEditorEffectCategoryTime => 'Czas';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'Cząsteczki';
 
   @override
@@ -9929,6 +9973,14 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'Tylko jeden migający efekt naraz. Zbyt dużo migania może szkodzić osobom wrażliwym.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Tylko jeden efekt z grupy Czas naraz. Dwa razem wyglądałyby inaczej po eksporcie, więc zastąpiliśmy tutaj ten drugi.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Tylko jeden efekt z grupy Czas naraz. Dwa razem wyglądałyby inaczej po eksporcie.';
 
   @override
   String get videoEditorEffectsOnBeat => 'W rytm';
@@ -11824,6 +11876,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => 'Moje dźwięki';
 
   @override
+  String get videoEditorAudioCategorySongs => 'Songs';
+
+  @override
   String get videoEditorAudioFilterEffects => 'Efekty';
 
   @override
@@ -12047,6 +12102,34 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get videoEditorSocialStickerRepliesNote =>
       'Pokazuje odpowiedzi wideo na ten film. Stuknięcie otwiera odpowiedzi.';
+
+  @override
+  String get videoEditorSocialStickerAudienceTitle => 'Kto może odpowiadać';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Każda osoba';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Krąg znajomych';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Tylko ja';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Dołączyć mogą tylko osoby, które obserwujesz. Reszta widzi naklejkę, gdy ktoś już dołączy.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Naklejka pokazuje tylko odpowiedzi filmem od osób, które obserwujesz. Reszta widzi ją, gdy któraś z tych osób odpowie.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Dołączyć możesz tylko ty. Dla reszty naklejka pozostaje niewidoczna, dopóki tego nie zrobisz.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Naklejka pokazuje tylko twoje odpowiedzi filmem. Dla reszty pozostaje niewidoczna, dopóki nie odpowiesz.';
 
   @override
   String get videoEditorInteractiveCardAreaHint =>
@@ -13875,6 +13958,29 @@ class AppLocalizationsPl extends AppLocalizations {
       'Wyczyszczono nadpisanie chronionej osoby niepełnoletniej';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedTitle =>
+      'Act as if Confirmation is required';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedSubtitle =>
+      'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.';
+
+  @override
   String get commentsRecordVideoButtonLabel => 'Nagraj komentarz wideo';
 
   @override
@@ -14960,6 +15066,65 @@ class AppLocalizationsPl extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Odłącz konto $platform $identity';
   }
@@ -14991,7 +15156,26 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'Jedno tapnięcie';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -15103,6 +15287,18 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'Zweryfikowane, ale żaden przekaźnik nie przyjął aktualizacji. Spróbuj ponownie.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -15709,6 +15905,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get updateAction => 'Aktualizuj';
 
   @override
+  String get announcementViewContest => 'Zobacz konkurs';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Ten polecany kanał nie jest już dostępny.';
+
+  @override
   String updateNewIn(String version) {
     return 'Nowości w wersji $version:';
   }
@@ -15861,6 +16064,16 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get settingsHelpAboutSubtitle =>
       'Pomoc, informacje prawne i szczegóły aplikacji';
+
+  @override
+  String get settingsDiscordTitle => 'Dołącz do naszego serwera na Discordzie';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Porozmawiaj z zespołem i społecznością Divine';
+
+  @override
+  String get settingsDiscordOpenError => 'Nie udało się otworzyć Discorda';
 
   @override
   String listLoopsCount(int count, String formatted) {

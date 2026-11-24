@@ -43,7 +43,7 @@ void main() {
     });
   });
 
-  group('withoutFlashingOverlaps', () {
+  group('withoutExclusiveOverlaps', () {
     Duration s(num seconds) => Duration(milliseconds: (seconds * 1000).round());
 
     EditorVideoEffect effect(
@@ -74,7 +74,7 @@ void main() {
       ];
 
       expect(
-        withoutFlashingOverlaps(
+        withoutExclusiveOverlaps(
           effects,
           keepId: 'glitch',
           createId: createId,
@@ -91,7 +91,7 @@ void main() {
       ];
 
       expect(
-        withoutFlashingOverlaps(
+        withoutExclusiveOverlaps(
           effects,
           keepId: 'strobe',
           createId: createId,
@@ -107,7 +107,7 @@ void main() {
         effect('strobe', .strobe),
       ];
 
-      final result = withoutFlashingOverlaps(
+      final result = withoutExclusiveOverlaps(
         effects,
         keepId: 'strobe',
         createId: createId,
@@ -123,7 +123,7 @@ void main() {
         effect('negative', .negativeFlash, s(2), s(3)),
       ];
 
-      final result = withoutFlashingOverlaps(
+      final result = withoutExclusiveOverlaps(
         effects,
         keepId: 'negative',
         createId: createId,
@@ -138,7 +138,7 @@ void main() {
     });
 
     test('keeps both pieces of a cut effect on the beat on the beat', () {
-      final result = withoutFlashingOverlaps(
+      final result = withoutExclusiveOverlaps(
         [
           const EditorVideoEffect(
             id: 'negative',
@@ -165,7 +165,7 @@ void main() {
         effect('negative', .negativeFlash, s(1), s(3)),
       ];
 
-      final result = withoutFlashingOverlaps(
+      final result = withoutExclusiveOverlaps(
         effects,
         keepId: 'negative',
         createId: createId,
@@ -175,7 +175,88 @@ void main() {
     });
   });
 
-  group('withoutFlashingOverlaps with lightning', () {
+  group('withoutExclusiveOverlaps with Time effects', () {
+    Duration s(num seconds) => Duration(milliseconds: (seconds * 1000).round());
+
+    EditorVideoEffect time(
+      String id,
+      EditorEffectType type, {
+      Duration? start,
+      Duration? end,
+      bool onBeat = false,
+    }) => EditorVideoEffect.of(
+      id: id,
+      type: type,
+      intensity: 0.6,
+      startTime: start,
+      endTime: end,
+      onBeat: onBeat,
+    );
+
+    test('cuts another Time effect out of the window of a Time effect, and '
+        'leaves flashing and other effects alone', () {
+      final result = withoutExclusiveOverlaps(
+        [
+          time('echo', EditorEffectType.echo),
+          time(
+            'stutter',
+            EditorEffectType.stutter,
+            start: s(2),
+            end: s(4),
+            onBeat: true,
+          ),
+          const EditorVideoEffect(id: 'strobe', effect: VideoEffect.strobe()),
+          time('comic', EditorEffectType.comic),
+        ],
+        keepId: 'stutter',
+        createId: () => 'piece',
+      );
+
+      expect(
+        [for (final e in result!) (e.id, e.startTime, e.endTime)],
+        [
+          ('echo', Duration.zero, s(2)),
+          ('piece', s(4), null),
+          ('stutter', s(2), s(4)),
+          ('strobe', null, null),
+          ('comic', null, null),
+        ],
+      );
+      final piece = result.firstWhere((e) => e.id == 'piece');
+      expect(piece.type, EditorEffectType.echo);
+      expect(piece.intensity, 0.6);
+    });
+
+    test('a flashing effect leaves Time effects alone', () {
+      expect(
+        withoutExclusiveOverlaps(
+          [
+            time('echo', EditorEffectType.echo),
+            const EditorVideoEffect(id: 'strobe', effect: VideoEffect.strobe()),
+          ],
+          keepId: 'strobe',
+          createId: () => 'piece',
+        ),
+        isNull,
+      );
+    });
+
+    test('groups the flashing effects and the Time effects, and no other', () {
+      for (final type in EditorEffectType.values) {
+        expect(
+          type.exclusiveGroup,
+          type.isFlashing
+              ? EditorEffectExclusiveGroup.flashing
+              : type.category == EditorEffectCategory.time
+              ? EditorEffectExclusiveGroup.earlierFrames
+              : isNull,
+          reason: type.name,
+        );
+      }
+    });
+  });
+
+  group('withoutExclusiveOverlaps with lightning', () {
     Duration s(num seconds) => Duration(milliseconds: (seconds * 1000).round());
 
     EditorVideoEffect lightning({
@@ -199,7 +280,7 @@ void main() {
         intensity: 0.7,
       );
 
-      final result = withoutFlashingOverlaps(
+      final result = withoutExclusiveOverlaps(
         [
           const EditorVideoEffect(id: 'strobe', effect: VideoEffect.strobe()),
           lightning(start: s(2), end: s(4)),
@@ -222,7 +303,7 @@ void main() {
 
     test('cuts lightning out of the window of a strobe, keeping its '
         'strength and its beat', () {
-      final result = withoutFlashingOverlaps(
+      final result = withoutExclusiveOverlaps(
         [
           EditorVideoEffect(
             id: 'strobe',
@@ -1548,20 +1629,24 @@ void main() {
       });
     });
 
-    group('looksLast', () {
+    group('customVideoEffectsInRenderOrder', () {
       CustomVideoEffect effect(String id) => CustomVideoEffect(id: id);
 
-      test('moves the looks after the other effects, keeping the order '
-          'within each', () {
+      test('runs the effects that read earlier frames first and the looks '
+          'last, keeping the order within each', () {
         expect(
-          looksLast([
+          customVideoEffectsInRenderOrder([
             effect(silverLookId),
-            effect(echoVideoEffectId),
+            effect(comicVideoEffectId),
+            effect(stutterVideoEffectId),
             effect(tealOrangeLookId),
             effect(snowVideoEffectId),
+            effect(echoVideoEffectId),
           ]).map((effect) => effect.id),
           [
+            stutterVideoEffectId,
             echoVideoEffectId,
+            comicVideoEffectId,
             snowVideoEffectId,
             silverLookId,
             tealOrangeLookId,
@@ -1569,9 +1654,82 @@ void main() {
         );
       });
 
-      test('leaves a list without looks as it is', () {
-        final effects = [effect(snowVideoEffectId), effect(echoVideoEffectId)];
-        expect(looksLast(effects), effects);
+      test('leaves a list already in that order as it is', () {
+        final effects = [
+          effect(timeWarpVideoEffectId),
+          effect(snowVideoEffectId),
+          effect(matteLookId),
+        ];
+        expect(customVideoEffectsInRenderOrder(effects), effects);
+      });
+
+      test('runs a Time effect that starts later ahead of one that ends '
+          'where it starts', () {
+        // On Android the time split keeps frames from 200 ms before its
+        // start, inside the window of the motion only; running first, it
+        // keeps them before the motion only draws on them.
+        const motionOnly = CustomVideoEffect(
+          id: motionOnlyVideoEffectId,
+          endTime: Duration(seconds: 1),
+        );
+        const timeSplit = CustomVideoEffect(
+          id: timeSplitVideoEffectId,
+          startTime: Duration(seconds: 1),
+          endTime: Duration(seconds: 2),
+        );
+
+        expect(
+          customVideoEffectsInRenderOrder([motionOnly, timeSplit]),
+          [timeSplit, motionOnly],
+        );
+      });
+
+      test('puts every Time effect behind those that start once it ended, '
+          'after one was cut out of another', () {
+        final separated = withoutExclusiveOverlaps(
+          [
+            EditorVideoEffect.of(
+              id: 'echo',
+              type: EditorEffectType.echo,
+              intensity: 0.5,
+            ),
+            EditorVideoEffect.of(
+              id: 'stutter',
+              type: EditorEffectType.stutter,
+              intensity: 0.5,
+              startTime: const Duration(seconds: 2),
+              endTime: const Duration(seconds: 4),
+            ),
+          ],
+          keepId: 'stutter',
+          createId: () => 'echo-after',
+        )!;
+
+        final ordered = customVideoEffectsInRenderOrder([
+          for (final effect in separated) effect.custom!,
+        ]);
+
+        expect(
+          [for (final e in ordered) (e.id, e.startTime, e.endTime)],
+          [
+            (echoVideoEffectId, const Duration(seconds: 4), null),
+            (
+              stutterVideoEffectId,
+              const Duration(seconds: 2),
+              const Duration(seconds: 4),
+            ),
+            (echoVideoEffectId, Duration.zero, const Duration(seconds: 2)),
+          ],
+        );
+        for (var i = 0; i < ordered.length; i++) {
+          for (final later in ordered.skip(i + 1)) {
+            expect(
+              ordered[i].startTime! >= later.endTime!,
+              isTrue,
+              reason: '${ordered[i].startTime} before ${later.endTime}',
+            );
+          }
+        }
       });
     });
   });
@@ -1673,7 +1831,7 @@ void main() {
         for (final type in EditorEffectType.values)
           if (type.customId != null) type,
       ];
-      expect(custom, hasLength(72));
+      expect(custom, hasLength(77));
       for (final type in custom) {
         final effect = EditorVideoEffect.of(
           id: 'x',
@@ -1687,10 +1845,13 @@ void main() {
       }
     });
 
-    test('only the zoom blur, the spin blur, the tunnels, disco, laser and '
-        'lightning of the custom effects fire on the beat', () {
+    test('only the zoom blur, the spin blur, the time split, the stutter, the '
+        'tunnels, disco, laser and lightning of the custom effects fire on '
+        'the beat', () {
       for (final type in [
         EditorEffectType.zoomBlur,
+        EditorEffectType.timeSplit,
+        EditorEffectType.stutter,
         EditorEffectType.tunnel,
         EditorEffectType.spiralTunnel,
         EditorEffectType.disco,
@@ -1709,6 +1870,9 @@ void main() {
       expect(spinBlur.custom!.params[EditorVideoEffect.onBeatParam], isTrue);
       for (final type in [
         EditorEffectType.echo,
+        EditorEffectType.longExposure,
+        EditorEffectType.motionOnly,
+        EditorEffectType.timeWarp,
         EditorEffectType.drops,
         EditorEffectType.lightLeak,
         EditorEffectType.confetti,
@@ -1768,7 +1932,7 @@ void main() {
     test('never counts as flashing', () {
       expect(EditorEffectType.echo.isFlashing, isFalse);
       expect(
-        withoutFlashingOverlaps(
+        withoutExclusiveOverlaps(
           [echo],
           keepId: 'echo-1',
           createId: () => 'new',
@@ -1788,6 +1952,29 @@ void main() {
       for (final category in EditorEffectCategory.values) {
         expect(category.types, isNotEmpty, reason: category.name);
       }
+    });
+
+    test('lists the echo and the other effects built on earlier frames '
+        'under time, and only those read earlier frames', () {
+      expect(EditorEffectCategory.time.types, [
+        EditorEffectType.echo,
+        EditorEffectType.timeSplit,
+        EditorEffectType.longExposure,
+        EditorEffectType.motionOnly,
+        EditorEffectType.stutter,
+        EditorEffectType.timeWarp,
+      ]);
+      expect(
+        [
+          for (final type in EditorEffectType.values)
+            if (type.readsEarlierFrames) type,
+        ],
+        EditorEffectCategory.time.types,
+      );
+      expect(
+        EditorEffectCategory.values.indexOf(EditorEffectCategory.time),
+        EditorEffectCategory.values.indexOf(EditorEffectCategory.motion) + 1,
+      );
     });
 
     test('lists the swirl, ripple, fluted glass and the tunnels under '
@@ -1882,7 +2069,7 @@ void main() {
 
     test('lists the intros under intro and the outros under outro, last, '
         'each look in the same order', () {
-      expect(EditorEffectCategory.values.sublist(8), [
+      expect(EditorEffectCategory.values.sublist(9), [
         EditorEffectCategory.intro,
         EditorEffectCategory.outro,
       ]);

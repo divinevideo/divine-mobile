@@ -42,11 +42,14 @@ final nip07ServiceProvider = Provider<Nip07Service>((ref) => Nip07Service());
 
 /// Provides the app's [PerformanceMonitoringService].
 ///
-/// Replaces the former `PerformanceMonitoringService.instance` singleton. A
-/// single shared instance is kept alive. Typed to the concrete class (not
-/// [PerformanceTraceMonitor]) because app startup calls the concrete-only
-/// [PerformanceMonitoringService.initialize]; consumers that only need the
-/// trace API accept a [PerformanceTraceMonitor] in their constructor.
+/// Replaces the former `PerformanceMonitoringService.instance` singleton.
+/// Production always receives the instance startup initializes through
+/// `DeviceScope`, which every container is built from; this fallback serves
+/// containers built without one, such as tests. Typed to the concrete class
+/// (not [PerformanceTraceMonitor]) because app startup calls the
+/// concrete-only [PerformanceMonitoringService.initialize]; consumers that
+/// only need the trace API accept a [PerformanceTraceMonitor] in their
+/// constructor.
 final performanceMonitoringServiceProvider =
     Provider<PerformanceMonitoringService>(
       (ref) => PerformanceMonitoringService(),

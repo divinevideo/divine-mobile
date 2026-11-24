@@ -152,7 +152,7 @@ conventions.
 | `t` | `["t", "summer"]` | A hashtag sticker's hashtag, written with the post's own hashtags. |
 | `p` | `["p", "<pubkey>", "<relay>", "mention"]` | A mention sticker's profile, written like a caption mention. |
 | `r` | `["r", "https://example.com/page", "link"]` | The web page of a link sticker. The `link` marker is required: an unmarked `r` tag on a video event is read as one of the video's own media URLs. |
-| `sticker` | `["sticker", "<kind>", "<target>", "<cx> <cy> <w> <h>", "<degrees>", "<start ms>", "<end ms>", "<style>", "<label>"]` | Where a tappable sticker stands on the video and how it looks, so a viewer can tap it and, for most kinds, draw it again. |
+| `sticker` | `["sticker", "<kind>", "<target>", "<cx> <cy> <w> <h>", "<degrees>", "<start ms>", "<end ms>", "<style>", "<label>", "<audience>"]` | Where a tappable sticker stands on the video and how it looks, so a viewer can tap it and, for most kinds, draw it again. |
 
 The `sticker` tag's fields:
 
@@ -194,6 +194,11 @@ The `sticker` tag's fields:
   question's question; for a `prompt`, its prompt and then the hashtag its
   answers share, without `#`, one per line; a replies sticker's title. A
   `question`, `prompt` or `replies` tag without that text is dropped.
+- `audience`, on a `prompt` or `replies` sticker only, says who may answer it
+  with a video: `following` (the creator and the people they follow) or
+  `creator` (the creator alone). It is left out when anyone may, and a reader
+  ignores it on any other kind. See
+  [Who may answer](#who-may-answer).
 
 A reader drops the whole tag when:
 
@@ -214,7 +219,10 @@ A reader drops the whole tag when:
   no part of the turned sticker can reach the frame;
 - the angle is not a finite number;
 - a time is not a whole number of milliseconds of zero or more, or the end is
-  not after the start.
+  not after the start;
+- a `prompt` or `replies` sticker names an `audience` other than `everyone`,
+  `following` or `creator`, since it may be meant for fewer people than a
+  reader would show it to.
 
 A label longer than 300 characters is dropped and the button kept; a poll,
 quiz or slider whose label is that long is dropped as a whole, as its label
@@ -264,7 +272,11 @@ frames:
   unless every such character is an emoji and the creator's app drew it in
   Noto Color Emoji, as a viewer's phone could draw it differently;
 - a sticker with another layer over it at the same time, as a copy would hide
-  that layer.
+  that layer;
+- a `prompt` or `replies` sticker only some may answer, which is in no frame:
+  a client that does not know `audience` would otherwise show it to everyone,
+  and without a style it draws nothing. Divine draws it in its kind's only
+  look, the white card.
 
 A sticker drawn fully transparent gets no tag. A sticker that moves across the
 video (keyframes, tracking or an animation) is never published with an area,
@@ -375,6 +387,38 @@ request, and shows the count with a plus, as a floor, when a relay may have
 stopped at its result-size limit.
 Reading lives in `mobile/packages/video_responses_repository`; the player's
 copy is `mobile/lib/widgets/video_feed_item/interactive_sticker_overlay.dart`.
+
+#### Who may answer
+
+The creator of an Add yours or replies sticker picks who may answer it with a
+video: everyone (the default), the people they follow, or only themselves. A
+sticker only some may answer is left out of the video's frames and published
+with its `audience` and no `style` (see above). Nostr cannot stop anyone from
+publishing an answer, so the Divine player holds to it:
+
+- It shows the sticker to whoever may answer straight away, and to everyone
+  else only once someone who may has answered. Until the video plays and that
+  is read, it shows nothing.
+- It counts and shows only the answers of whoever may answer, and from those
+  read only: the count is then a floor.
+- Only whoever may answer gets the Add yours button. Anyone else sees the
+  latest answers' thumbnails and "Watch the series" in place of who joined and
+  the button, and a tap opens the answers. On a video with a replies sticker,
+  only whoever may answer is offered a video reply in the comments. A video
+  reply posted from an older version or another client still shows in the
+  comments, so the editor says which replies the sticker shows, not who can
+  reply.
+- In the series a tap on an Add yours opens, the answers' copies of a sticker
+  only some may answer are left out: each answer carries the same sticker,
+  and the viewer is watching the series already. It shows in every other
+  feed.
+- Who the creator follows is read from their kind 3 contact list. For an Add
+  yours, the creator is whoever started the chain the sticker counts, and an
+  answer carries the chain's `audience` on to its own sticker. The player
+  reads the chain's first video too and goes by the stricter of the two, so
+  an answer published without that `audience` does not open the chain to
+  anyone the first video does not let answer. When the first video cannot be
+  read, the answer's own `audience` holds.
 
 #### Polls
 

@@ -5,12 +5,17 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/verify/confirmation_requirement.dart';
 import 'package:openvine/blocs/verify/verify_connect_cubit.dart';
 import 'package:openvine/blocs/verify/verify_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
+import 'package:openvine/features/confirmation/confirmation_access_providers.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/verify/verify_platform_labels.dart';
 import 'package:openvine/screens/verify/widgets/verify_claim_row.dart';
@@ -45,6 +50,22 @@ class VerifyPage extends ConsumerWidget {
     // As on the connect screen: iOS below 17.4 can report a completed sign-in
     // as a cancel, so no sign-in is offered there.
     final oauthUsable = ref.watch(appOAuthSupportProvider).value ?? false;
+    // Watched for drawing only; the cubit reads the flag once (see below).
+    final confirmationSignIn = ref.watch(
+      isFeatureEnabledProvider(FeatureFlag.confirmationSignIn),
+    );
+    // Gates only the buy controls: a build no store can bill says where to get
+    // Divine Confirmation in place of the renew button.
+    final canBuy = ref.watch(supporterStoreBillingAvailableProvider);
+    // Watched so that the developer override, which swaps the reader, makes a
+    // new cubit. Tear-offs of one instance compare equal, so nothing else
+    // re-keys it.
+    final readConfirmationAccess = ref.watch(confirmationAccessReaderProvider);
+    // Watched and in the key for the same reason: turning the developer
+    // setting over starts over with the platforms as it shows them.
+    final simulateConfirmationRequirement = ref.watch(
+      simulateConfirmationRequirementProvider,
+    );
 
     if (pubkey == null || pubkey.isEmpty) {
       return const _VerifyScaffold(body: _VerifySignedOut());
@@ -52,10 +73,30 @@ class VerifyPage extends ConsumerWidget {
 
     return BlocProvider(
       // Re-create on a repository swap: the captured signer and client belong
-      // to the identity that was current when the flow opened.
-      key: ValueKey((repository, pubkey)),
+      // to the identity that was current when the flow opened. The reader and
+      // the simulated requirement are in the key too, so changing either
+      // developer setting starts over.
+      key: ValueKey((
+        repository,
+        pubkey,
+        readConfirmationAccess,
+        simulateConfirmationRequirement,
+      )),
       create: (_) {
-        final cubit = VerifyCubit(repository: repository, pubkey: pubkey);
+        final cubit = VerifyCubit(
+          repository: repository,
+          pubkey: pubkey,
+          // Read once and kept out of the ValueKey: turning the flag over
+          // must not rebuild the list under the user.
+          confirmationSignIn: ref.read(
+            isFeatureEnabledProvider(FeatureFlag.confirmationSignIn),
+          ),
+          // In the ValueKey with the repository, so an account change makes a
+          // new cubit with the new account's reader rather than keeping the
+          // old account's remembered answer.
+          readConfirmationAccess: readConfirmationAccess,
+          simulateConfirmationRequirement: simulateConfirmationRequirement,
+        );
         runDetached(
           cubit.load(),
           'load identity claims',
@@ -64,7 +105,11 @@ class VerifyPage extends ConsumerWidget {
         );
         return cubit;
       },
-      child: VerifyView(oauthUsable: oauthUsable),
+      child: VerifyView(
+        oauthUsable: oauthUsable,
+        confirmationSignIn: confirmationSignIn,
+        canBuy: canBuy,
+      ),
     );
   }
 }
@@ -73,10 +118,24 @@ class VerifyPage extends ConsumerWidget {
 class VerifyView extends StatelessWidget {
   /// Creates a [VerifyView].
   @visibleForTesting
-  const VerifyView({this.oauthUsable = false, super.key});
+  const VerifyView({
+    this.oauthUsable = false,
+    this.confirmationSignIn = false,
+    this.canBuy = true,
+    super.key,
+  });
 
   /// Whether this device can run a platform sign-in.
   final bool oauthUsable;
+
+  /// The internal `confirmationSignIn` flag. With it off there is no
+  /// Confirmation badge or Renew action, but a link the verifier reports as
+  /// needing Confirmation still says so on its pill.
+  final bool confirmationSignIn;
+
+  /// Whether this build can buy Divine Confirmation. Gates only the buy
+  /// controls, never whether the requirement is mentioned.
+  final bool canBuy;
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +143,13 @@ class VerifyView extends StatelessWidget {
       listenWhen: (previous, current) =>
           previous.errorAttempt != current.errorAttempt,
       listener: _onError,
-      child: _VerifyScaffold(body: _VerifyBody(oauthUsable: oauthUsable)),
+      child: _VerifyScaffold(
+        body: _VerifyBody(
+          oauthUsable: oauthUsable,
+          confirmationSignIn: confirmationSignIn,
+          canBuy: canBuy,
+        ),
+      ),
     );
   }
 
@@ -142,9 +207,15 @@ class _VerifySignedOut extends StatelessWidget {
 }
 
 class _VerifyBody extends StatelessWidget {
-  const _VerifyBody({required this.oauthUsable});
+  const _VerifyBody({
+    required this.oauthUsable,
+    required this.confirmationSignIn,
+    required this.canBuy,
+  });
 
   final bool oauthUsable;
+  final bool confirmationSignIn;
+  final bool canBuy;
 
   @override
   Widget build(BuildContext context) {
@@ -154,7 +225,11 @@ class _VerifyBody extends StatelessWidget {
       VerifyStatus.initial ||
       VerifyStatus.loading => const Center(child: BrandedLoadingIndicator()),
       VerifyStatus.failure => const _VerifyLoadFailure(),
-      VerifyStatus.ready => _VerifyContent(oauthUsable: oauthUsable),
+      VerifyStatus.ready => _VerifyContent(
+        oauthUsable: oauthUsable,
+        confirmationSignIn: confirmationSignIn,
+        canBuy: canBuy,
+      ),
     };
   }
 }
@@ -197,9 +272,15 @@ class _VerifyLoadFailure extends StatelessWidget {
 }
 
 class _VerifyContent extends StatelessWidget {
-  const _VerifyContent({required this.oauthUsable});
+  const _VerifyContent({
+    required this.oauthUsable,
+    required this.confirmationSignIn,
+    required this.canBuy,
+  });
 
   final bool oauthUsable;
+  final bool confirmationSignIn;
+  final bool canBuy;
 
   @override
   Widget build(BuildContext context) {
@@ -222,6 +303,17 @@ class _VerifyContent extends StatelessWidget {
     );
     final canSignInAgain = context.select(
       (VerifyCubit cubit) => cubit.state.canSignInAgain,
+    );
+    final canRenewState = context.select(
+      (VerifyCubit cubit) => cubit.state.canRenewConfirmation,
+    );
+    bool canRenewConfirmation(IdentityClaim claim) => canRenewState(
+      claim,
+      flagOn: confirmationSignIn,
+      oauthUsable: oauthUsable,
+    );
+    final confirmationAccess = context.select(
+      (VerifyCubit cubit) => cubit.state.confirmationAccess,
     );
 
     return ListView(
@@ -261,6 +353,12 @@ class _VerifyContent extends StatelessWidget {
                   ? () =>
                         _openConnect(context, claim.platform, replacing: claim)
                   : null,
+              // Rules in canRenewConfirmation; where this build cannot buy,
+              // the row shows the store note instead of the button.
+              onRenewConfirmation: canRenewConfirmation(claim)
+                  ? () => _openConfirmation(context)
+                  : null,
+              renewNeedsStore: !canBuy && canRenewConfirmation(claim),
             ),
           const SizedBox(height: 24),
         ],
@@ -274,9 +372,32 @@ class _VerifyContent extends StatelessWidget {
           for (final platform in linkable)
             VerifyPlatformRow(
               platform: platform,
+              needsConfirmation: showsConfirmationUpsell(
+                required: confirmationSignInRequired(
+                  flagOn: confirmationSignIn,
+                  platform: platform,
+                  oauthUsable: oauthUsable,
+                ),
+                access: confirmationAccess,
+              ),
               onTap: () => _openConnect(context, platform.key),
             ),
       ],
+    );
+  }
+
+  /// Opens the Divine Confirmation screen, then re-reads the links and asks
+  /// again whether the user holds it, skipping the remembered answer, so a
+  /// purchase made there shows at once. The list stays on screen meanwhile.
+  Future<void> _openConfirmation(BuildContext context) async {
+    final cubit = context.read<VerifyCubit>();
+    await const VerifyConfirmationRouteData().push<void>(context);
+    if (cubit.isClosed) return;
+    runDetached(
+      cubit.refreshQuietly(),
+      'refresh links after Divine Confirmation',
+      logName: 'VerifyView',
+      category: LogCategory.auth,
     );
   }
 
@@ -319,6 +440,17 @@ class _VerifyContent extends StatelessWidget {
       platform: platformKey,
       replacing: replacing?.identity,
     ).push<VerifyConnectResult>(context);
+    // The flow may have re-checked Divine Confirmation (on coming back from
+    // the Confirmation screen), whether or not it linked anything; the
+    // badges take that answer from the repository.
+    if (!cubit.isClosed) {
+      runDetached(
+        cubit.rereadConfirmationAccess(),
+        'reread Divine Confirmation access after connect',
+        logName: 'VerifyView',
+        category: LogCategory.auth,
+      );
+    }
     if (result == null || !context.mounted) return;
     final linked = result.linked;
 

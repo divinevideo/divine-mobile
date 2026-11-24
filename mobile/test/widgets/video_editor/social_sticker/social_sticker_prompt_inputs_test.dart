@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show VideoStickerAudience;
 import 'package:openvine/blocs/video_editor/social_sticker/social_sticker_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
@@ -21,10 +22,11 @@ void main() {
 
     Future<SocialStickerCubit> pump(
       WidgetTester tester,
-      SocialStickerKind kind,
-    ) async {
+      SocialStickerKind kind, {
+      SocialStickerData? initial,
+    }) async {
       final cubit = SocialStickerCubit(
-        initial: SocialStickerData.interactive(kind),
+        initial: initial ?? SocialStickerData.interactive(kind),
         blocklistRepository: _MockContentBlocklistRepository(),
       );
       addTearDown(cubit.close);
@@ -70,6 +72,33 @@ void main() {
           findsOneWidget,
         );
       });
+
+      testWidgets('no choice of who may answer a question, or an answer '
+          'that keeps the one its chain started with', (tester) async {
+        await pump(tester, SocialStickerKind.question);
+
+        expect(
+          find.text(l10n.videoEditorSocialStickerAudienceTitle),
+          findsNothing,
+        );
+
+        await pump(
+          tester,
+          SocialStickerKind.addYours,
+          initial: const SocialStickerData(
+            kind: SocialStickerKind.addYours,
+            prompt: 'Show your desk',
+            hashtag: 'desksetup',
+            chainRoot: '34236:pubkey:chain',
+            audience: VideoStickerAudience.following,
+          ),
+        );
+
+        expect(
+          find.text(l10n.videoEditorSocialStickerAudienceTitle),
+          findsNothing,
+        );
+      });
     });
 
     group('interactions', () {
@@ -102,6 +131,40 @@ void main() {
               .focusNode
               .hasFocus,
           isTrue,
+        );
+      });
+
+      testWidgets('picks who may answer a replies sticker, and says who sees '
+          'it', (tester) async {
+        final cubit = await pump(tester, SocialStickerKind.replies);
+
+        expect(
+          cubit.state.data.audience,
+          equals(VideoStickerAudience.everyone),
+        );
+        await tester.tap(
+          find.text(l10n.videoEditorSocialStickerAudienceCreator),
+        );
+        await tester.pump();
+
+        expect(cubit.state.data.audience, equals(VideoStickerAudience.creator));
+        expect(
+          find.text(l10n.videoEditorSocialStickerAudienceCreatorRepliesNote),
+          findsOneWidget,
+        );
+
+        await tester.tap(
+          find.text(l10n.videoEditorSocialStickerAudienceFollowing),
+        );
+        await tester.pump();
+
+        expect(
+          cubit.state.data.audience,
+          equals(VideoStickerAudience.following),
+        );
+        expect(
+          find.text(l10n.videoEditorSocialStickerAudienceFollowingRepliesNote),
+          findsOneWidget,
         );
       });
 

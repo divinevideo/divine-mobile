@@ -167,11 +167,9 @@ class CommentsRepository {
   /// [_maxRememberedDeletionRequests] comments, oldest forgotten first.
   final Map<String, Set<String>> _deletionRequesters = {};
 
-  /// Subscription ID for the active comment watch, if any.
-  String? _watchSubscriptionId;
-
-  /// Subscription ID for the active comment-deletion watch, if any.
-  String? _deletionWatchSubscriptionId;
+  /// Characters in the token that gives each watch a subscription id of its
+  /// own.
+  static const _watchTokenLength = 8;
 
   /// How far before now the live deletion watch starts, so a request published
   /// while the first page was loading is still seen.
@@ -550,7 +548,7 @@ class CommentsRepository {
   ///   (format: `kind:pubkey:d-tag`). When provided, counts comments from both
   ///   E and A tag queries to get an accurate total.
   /// - [includeVideoReplies]: Whether to include Kind 34236 video replies in
-  ///   the count. Defaults to `false` so flag-off callers do not inflate the
+  ///   the count. Defaults to `false` so text-only callers do not inflate the
   ///   comment badge with reply-only videos.
   ///
   /// Returns the number of comments on the event, or `null` when the count is
@@ -1071,7 +1069,8 @@ class CommentsRepository {
   /// - [includeVideoReplies]: Whether Kind 34236 video replies are watched too
   ///
   /// Returns a [Stream<Comment>] that emits new comments as they arrive.
-  /// Call [stopWatchingComments] to close the subscription.
+  /// Each call opens a relay subscription of its own, which cancelling the
+  /// stream's subscription closes.
   ///
   /// Throws [WatchCommentsFailedException] if the subscription fails.
   Stream<Comment> watchComments({
@@ -1107,14 +1106,9 @@ class CommentsRepository {
           ),
       ];
 
-      _watchSubscriptionId = scopedSubscriptionId(
-        'comments_watch',
-        rootEventId,
-      );
-
       final eventStream = _nostrClient.subscribe(
         filters,
-        subscriptionId: _watchSubscriptionId,
+        subscriptionId: _watchSubscriptionId('comments_watch', rootEventId),
         onEose: onEose,
       );
 
@@ -1144,60 +1138,172 @@ class CommentsRepository {
     }
   }
 
-  /// Watches for NIP-09 deletion requests of comments, live.
+  /// Watches for NIP-09 deletion requests of comments by [commentAuthors],
+  /// live.
+  ///
+  /// Only a comment's author can delete it, so the relay is asked only for
+  /// the requests of [commentAuthors], the authors of the listed comments,
+  /// emitted again whenever that list changes. Nothing is asked while none is
+  /// listed, and a request published from a minute before the watch began is
+  /// delivered once its author is listed.
   ///
   /// Emits one [CommentDeletion] per `e` tag of each request whose `k` tag
-  /// names a comment (kind 1111, and kind 34236 when [includeVideoReplies]),
-  /// published from a minute before now. The stream carries no author check:
-  /// hide a comment only when [CommentDeletion.appliesTo] holds. A request
-  /// without a `k` tag is not seen here; [findAuthorDeletedComments] still
-  /// finds it.
+  /// names a comment (kind 1111, and kind 34236 when [includeVideoReplies]).
+  /// The stream carries no author check: hide a comment only when
+  /// [CommentDeletion.appliesTo] holds. A request without a `k` tag is not
+  /// seen here; [findAuthorDeletedComments] still finds it.
   ///
-  /// Call [stopWatchingComments] to close the subscription.
-  ///
-  /// Throws [WatchCommentsFailedException] if the subscription fails.
+  /// The watch retains the previous relay subscription until its replacement
+  /// finishes backfill. Cancelling the stream closes both. A subscription
+  /// refusal reaches the stream as a [WatchCommentsFailedException]. A new
+  /// request is sent only when an author is listed for the first time, so a
+  /// watch the relay refuses or closes stays off until another author is
+  /// listed or a new watch is opened.
   Stream<CommentDeletion> watchCommentDeletions({
     required String rootEventId,
+    required Stream<Set<String>> commentAuthors,
     bool includeVideoReplies = false,
   }) {
-    try {
-      final since = _now().subtract(_liveDeletionLookback);
-      _deletionWatchSubscriptionId = scopedSubscriptionId(
-        'comment_deletions_watch',
-        rootEventId,
-      );
-      return _nostrClient
-          .subscribe(
-            [
-              Filter(
-                kinds: const [_deletionKind],
-                k: [
-                  _commentKind.toString(),
-                  if (includeVideoReplies) EventKind.videoVertical.toString(),
-                ],
-                since: since.millisecondsSinceEpoch ~/ 1000,
-              ),
-            ],
-            subscriptionId: _deletionWatchSubscriptionId,
-            handleDeletionRequests: false,
-          )
-          .where((event) => event.kind == _deletionKind)
-          .expand(
-            (request) => [
-              for (final tag in request.tags)
-                if (tag.length >= 2 && tag[0] == 'e')
-                  CommentDeletion(
-                    commentId: tag[1],
-                    requesterPubkey: request.pubkey,
-                  ),
-            ],
-          )
-          .map(_rememberDeletionRequest);
-    } on Exception catch (e) {
-      throw WatchCommentsFailedException(
-        'Failed to watch comment deletions: $e',
+    final since = _now().subtract(_liveDeletionLookback);
+    final commentKinds = [
+      _commentKind.toString(),
+      if (includeVideoReplies) EventKind.videoVertical.toString(),
+    ];
+    final seenAuthors = <String>{};
+    StreamSubscription<Set<String>>? authorsSubscription;
+    StreamSubscription<CommentDeletion>? requests;
+    StreamSubscription<CommentDeletion>? pending;
+    late final StreamController<CommentDeletion> deletions;
+
+    void reportFailure(Object error, StackTrace stackTrace) {
+      deletions.addError(
+        WatchCommentsFailedException(
+          'Failed to watch comment deletions: $error',
+        ),
+        stackTrace,
       );
     }
+
+    void cancelDetached(StreamSubscription<CommentDeletion>? subscription) {
+      unawaited(subscription?.cancel().catchError(reportFailure));
+    }
+
+    void watch(Set<String> authors) {
+      // Relays match authors as lowercase hex, and a REST key can arrive in
+      // upper case.
+      final listed = {for (final author in authors) author.toLowerCase()};
+      // Unrelated sheet state changes must not retry a refused filter.
+      if (seenAuthors.containsAll(listed)) return;
+      seenAuthors.addAll(listed);
+      late final StreamSubscription<CommentDeletion> opened;
+      try {
+        opened =
+            _commentDeletionRequests(
+              rootEventId: rootEventId,
+              authors: seenAuthors.toList(),
+              commentKinds: commentKinds,
+              since: since,
+              onEose: () {
+                if (!identical(pending, opened)) return;
+                final replaced = requests;
+                requests = opened;
+                pending = null;
+                cancelDetached(replaced);
+              },
+            ).listen(
+              deletions.add,
+              onError: reportFailure,
+              onDone: () {
+                if (identical(pending, opened)) {
+                  pending = null;
+                }
+                if (identical(requests, opened)) {
+                  requests = null;
+                }
+              },
+            );
+      } on Exception catch (error, stackTrace) {
+        reportFailure(error, stackTrace);
+        return;
+      }
+      final superseded = pending;
+      pending = opened;
+      cancelDetached(superseded);
+    }
+
+    deletions = StreamController<CommentDeletion>(
+      onListen: () => authorsSubscription = commentAuthors.listen(
+        watch,
+        onError: deletions.addError,
+      ),
+      onCancel: () async {
+        final candidate = pending;
+        pending = null;
+        await Future.wait(
+          [
+            authorsSubscription?.cancel(),
+            requests?.cancel(),
+            candidate?.cancel(),
+          ].nonNulls,
+        );
+      },
+    );
+    return deletions.stream;
+  }
+
+  /// The relay's deletion requests by [authors] for comments of
+  /// [commentKinds], published from [since].
+  Stream<CommentDeletion> _commentDeletionRequests({
+    required String rootEventId,
+    required List<String> authors,
+    required List<String> commentKinds,
+    required DateTime since,
+    required void Function() onEose,
+  }) => _nostrClient
+      .subscribe(
+        [
+          Filter(
+            kinds: const [_deletionKind],
+            authors: authors,
+            k: commentKinds,
+            since: since.millisecondsSinceEpoch ~/ 1000,
+          ),
+        ],
+        subscriptionId: _watchSubscriptionId(
+          'comment_deletions_watch',
+          rootEventId,
+        ),
+        handleDeletionRequests: false,
+        onEose: onEose,
+      )
+      .where((event) => event.kind == _deletionKind)
+      .expand(
+        (request) => [
+          for (final tag in request.tags)
+            if (tag.length >= 2 && tag[0] == 'e')
+              CommentDeletion(
+                commentId: tag[1],
+                requesterPubkey: request.pubkey,
+              ),
+        ],
+      )
+      .map(_rememberDeletionRequest);
+
+  /// A subscription id of its own for one watch of [rootEventId].
+  ///
+  /// The client hands a second caller of an open id the same subscription,
+  /// without its stored events or EOSE, and closing it ends it for both
+  /// (#9690).
+  static String _watchSubscriptionId(String prefix, String rootEventId) {
+    final id =
+        '${scopedSubscriptionId(prefix, rootEventId)}_'
+        '${StringUtil.rndSecureNameStr(_watchTokenLength)}';
+    assert(
+      id.length <= nip01MaxSubscriptionIdLength,
+      'Subscription id "$id" is ${id.length} characters, over NIP-01\'s '
+      '$nip01MaxSubscriptionIdLength',
+    );
+    return id;
   }
 
   CommentDeletion _rememberDeletionRequest(CommentDeletion deletion) {
@@ -1221,23 +1327,6 @@ class CommentsRepository {
       _deletedCommentIds.contains(commentId) ||
       (_deletionRequesters[commentId]?.contains(authorPubkey.toLowerCase()) ??
           false);
-
-  /// Stops watching for new comments and comment deletions.
-  ///
-  /// Closes the persistent Nostr subscriptions opened by [watchComments] and
-  /// [watchCommentDeletions].
-  Future<void> stopWatchingComments() async {
-    final id = _watchSubscriptionId;
-    if (id != null) {
-      await _nostrClient.unsubscribe(id);
-      _watchSubscriptionId = null;
-    }
-    final deletionId = _deletionWatchSubscriptionId;
-    if (deletionId != null) {
-      await _nostrClient.unsubscribe(deletionId);
-      _deletionWatchSubscriptionId = null;
-    }
-  }
 
   /// Loads comments authored by a specific user across all videos.
   ///

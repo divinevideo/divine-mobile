@@ -15,6 +15,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
+import 'package:openvine/router/navigation/hashtag_feed_navigation.dart';
 import 'package:openvine/router/routes/search_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
@@ -377,9 +378,7 @@ class _MessageBubbleState extends State<MessageBubble> {
 
   @override
   Widget build(BuildContext context) {
-    final videoStableId = _content.videoTarget?.stableId;
-    final videoAuthorPubkey = _content.videoTarget?.authorPubkey;
-    final videoKind = _content.videoTarget?.videoKind;
+    final videoTarget = _content.videoTarget;
     final personalMessage = _content.personalMessage;
     final textAfterUrl = _content.textAfterUrl;
     final senderName = widget.senderName;
@@ -389,7 +388,7 @@ class _MessageBubbleState extends State<MessageBubble> {
     // bubble from the same sender. Force first-and-last-in-group so
     // they get their own timestamp header, the tail corner on the
     // sender's side, and the full 8 px outer padding above and below.
-    final hasVideo = videoStableId != null;
+    final hasVideo = videoTarget != null;
     // A received (or own) kind 15 video DM renders an encrypted card. Its
     // content on the wire is the ciphertext URL, so it must never fall through
     // to the text renderer.
@@ -582,11 +581,9 @@ class _MessageBubbleState extends State<MessageBubble> {
                                     ? null
                                     : onOpenEncryptedVideo,
                               ),
-                            ] else if (videoStableId != null) ...[
+                            ] else if (videoTarget != null) ...[
                               _VideoLinkPreview(
-                                videoStableId: videoStableId,
-                                authorPubkey: videoAuthorPubkey,
-                                videoKind: videoKind,
+                                target: videoTarget,
                                 isSent: isSent,
                                 enableTap: !isFailedOwnSend,
                                 dmReplyContext: dmReplyContext,
@@ -1025,11 +1022,11 @@ class _MessageTextState extends ConsumerState<_MessageText> {
   }
 
   void _navigateToHashtag(String hashtag) {
-    runDetached(
-      HashtagRouteData(tag: hashtag).push<void>(context),
-      'open hashtag from DM',
+    openHashtagFeed(
+      context,
+      hashtag,
       logName: 'MessageBubble',
-      category: LogCategory.ui,
+      description: 'open hashtag from DM',
     );
   }
 
@@ -1084,22 +1081,18 @@ class _MessageTextState extends ConsumerState<_MessageText> {
 /// the video cannot be resolved.
 class _VideoLinkPreview extends ConsumerWidget {
   const _VideoLinkPreview({
-    required this.videoStableId,
+    required this.target,
     required this.isSent,
     required this.enableTap,
-    this.authorPubkey,
-    this.videoKind,
     this.dmReplyContext,
   });
 
-  final String videoStableId;
+  final DmVideoTarget target;
   final bool isSent;
 
   /// Whether the resolved [_VideoCard] opens the reel on tap. False on a
   /// failed own send so the outer bubble's resend affordance owns the tap.
   final bool enableTap;
-  final String? authorPubkey;
-  final int? videoKind;
   final DmReplyContext? dmReplyContext;
 
   @override
@@ -1111,10 +1104,8 @@ class _VideoLinkPreview extends ConsumerWidget {
     return BlocProvider(
       key: ValueKey(videosRepository),
       create: (_) => VideoLinkPreviewCubit(
-        videoStableId: videoStableId,
+        target: target,
         videosRepository: videosRepository,
-        authorPubkey: authorPubkey,
-        videoKind: videoKind,
       ),
       child: BlocBuilder<VideoLinkPreviewCubit, VideoLinkPreviewState>(
         builder: (context, state) => switch (state) {
@@ -1209,10 +1200,8 @@ class _QuotedVideoPreview extends ConsumerWidget {
     return BlocProvider(
       key: ValueKey(videosRepository),
       create: (_) => VideoLinkPreviewCubit(
-        videoStableId: target.stableId,
+        target: target,
         videosRepository: videosRepository,
-        authorPubkey: target.authorPubkey,
-        videoKind: target.videoKind,
       ),
       child: BlocBuilder<VideoLinkPreviewCubit, VideoLinkPreviewState>(
         builder: (context, state) => switch (state) {

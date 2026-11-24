@@ -1,8 +1,14 @@
 // ABOUTME: Unit tests for resolveDmVideoTarget and DmVideoTarget.
 // ABOUTME: Covers legacy Divine URL and structured NIP-18 q-reference resolution.
 
+import 'dart:convert';
+
+import 'package:bech32/bech32.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/nip19.dart';
+import 'package:nostr_sdk/nip19/nip19_tlv.dart';
+import 'package:nostr_sdk/nip19/tlv_util.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 
 void main() {
@@ -12,6 +18,182 @@ void main() {
       'aabbccddaabbccddaabbccddaabbccddaabbccddaabbccddaabbccddaabbccdd';
 
   group('resolveDmVideoTarget', () {
+    test('opens and copies a complete naddr without a citation', () {
+      final reference = NIP19Tlv.encodeNaddr(
+        Naddr(id: 'folder/clip:1', author: author, kind: 34235),
+      );
+      final url = 'https://divine.video/video/$reference';
+      final target = resolveDmVideoTarget(content: 'watch $url');
+      expect(target!.stableId, 'folder/clip:1');
+      expect(target.authorPubkey, author);
+      expect(target.videoKind, 34235);
+      expect(target.routeId, reference);
+      expect(target.canonicalUrl, url);
+    });
+
+    test(
+      'the embedded naddr author wins over a conflicting query and citation',
+      () {
+        final url = divineVideoShareUrl(
+          'clip',
+          authorPubkey: author,
+          kind: 34236,
+        );
+        final target = resolveDmVideoTarget(
+          content: '$url?author=${'b' * 64}',
+          sharedVideoRef: DmSharedVideoRef(
+            coordinateOrId: '34236:${'b' * 64}:clip',
+            videoKind: DmSharedVideoKind.addressableShortVideo,
+          ),
+        );
+        expect(target!.authorPubkey, author);
+        expect(target.stableId, 'clip');
+        expect(target.videoKind, 34236);
+        expect(target.routeId, Uri.parse(url).pathSegments.last);
+      },
+    );
+
+    group('a reference that repeats a field', () {
+      // Decoders disagree on a repeated entry: this one keeps the last,
+      // nostr-tools (divine.video) the first. Copying the sender's raw string
+      // would open another video in a browser than the card previews.
+      String crafted(String hrp, void Function(List<int> buf) write) {
+        final buf = <int>[];
+        write(buf);
+        return Bech32Encoder().convert(
+          Bech32(hrp, Nip19.convertBits(buf, 8, 5, true)),
+          2000,
+        );
+      }
+
+      test('copies and routes the naddr it previews', () {
+        final reference = crafted('naddr', (buf) {
+          TLVUtil.writeTLVEntry(buf, TLVType.defaultType, utf8.encode('clip'));
+          TLVUtil.writeTLVEntry(buf, TLVType.author, List.filled(32, 0xaa));
+          TLVUtil.writeTLVEntry(buf, TLVType.author, List.filled(32, 0xbb));
+          TLVUtil.writeTLVEntry(buf, TLVType.kind, [0, 0, 0x85, 0xbc]);
+        });
+        final target = resolveDmVideoTarget(
+          content: 'https://divine.video/video/$reference',
+        );
+
+        final previewed = NIP19Tlv.encodeNaddr(
+          Naddr(id: 'clip', author: 'bb' * 32, kind: 34236),
+        );
+        expect(target!.authorPubkey, 'bb' * 32);
+        expect(target.routeId, previewed);
+        expect(target.canonicalUrl, 'https://divine.video/video/$previewed');
+      });
+
+      test('copies and routes the nevent it previews', () {
+        final reference = crafted('nevent', (buf) {
+          TLVUtil.writeTLVEntry(buf, TLVType.defaultType, List.filled(32, 1));
+          TLVUtil.writeTLVEntry(buf, TLVType.defaultType, List.filled(32, 2));
+        });
+        final target = resolveDmVideoTarget(
+          content: 'https://divine.video/video/$reference',
+        );
+
+        final previewed = NIP19Tlv.encodeNevent(Nevent(id: '02' * 32));
+        expect(target!.stableId, '02' * 32);
+        expect(target.routeId, previewed);
+        expect(target.canonicalUrl, 'https://divine.video/video/$previewed');
+      });
+    });
+
+    group('a NIP-19 link that cannot name a video', () {
+      String link(String reference) => 'https://divine.video/video/$reference';
+
+      test('resolves nothing for an naddr of a non-addressable kind', () {
+        for (final kind in [22, 30023]) {
+          final reference = NIP19Tlv.encodeNaddr(
+            Naddr(id: 'clip', author: author, kind: kind),
+          );
+          expect(resolveDmVideoTarget(content: link(reference)), isNull);
+        }
+      });
+
+      test('resolves nothing for an naddr whose author is not a key', () {
+        final reference = NIP19Tlv.encodeNaddr(
+          Naddr(id: 'clip', author: 'ab' * 16, kind: 34236),
+        );
+        expect(resolveDmVideoTarget(content: link(reference)), isNull);
+      });
+
+      test('resolves nothing for an nevent whose id is not an event id', () {
+        final reference = NIP19Tlv.encodeNevent(Nevent(id: 'ab' * 16));
+        expect(resolveDmVideoTarget(content: link(reference)), isNull);
+      });
+    });
+
+    group('an nevent link without an author', () {
+      final url = divineVideoShareUrl(eventId, kind: 22);
+
+      test('takes the author of a regular citation of the same event', () {
+        final target = resolveDmVideoTarget(
+          content: url,
+          sharedVideoRef: const DmSharedVideoRef(
+            coordinateOrId: eventId,
+            videoKind: DmSharedVideoKind.shortVideo,
+            authorPubkey: author,
+          ),
+        );
+        expect(target!.authorPubkey, author);
+      });
+
+      test('ignores a regular citation of another event', () {
+        final target = resolveDmVideoTarget(
+          content: url,
+          sharedVideoRef: DmSharedVideoRef(
+            coordinateOrId: 'cc' * 32,
+            videoKind: DmSharedVideoKind.shortVideo,
+            authorPubkey: author,
+          ),
+        );
+        expect(target!.authorPubkey, isNull);
+      });
+
+      test('ignores an addressable citation whose d tag is the event id', () {
+        final target = resolveDmVideoTarget(
+          content: url,
+          sharedVideoRef: const DmSharedVideoRef(
+            coordinateOrId: '34236:$author:$eventId',
+            videoKind: DmSharedVideoKind.addressableShortVideo,
+          ),
+        );
+        expect(target!.authorPubkey, isNull);
+      });
+    });
+
+    test('opens an nevent as an exact event rather than a d tag', () {
+      final url = divineVideoShareUrl(eventId, kind: 22);
+      final target = resolveDmVideoTarget(content: url);
+      expect(target!.stableId, eventId);
+      expect(target.videoKind, 22);
+      expect(target.canonicalUrl, url);
+    });
+
+    test(
+      'rejects a broken or truncated naddr instead of looking it up as a d tag',
+      () {
+        expect(
+          resolveDmVideoTarget(
+            content: 'https://divine.video/video/naddr1broken',
+          ),
+          isNull,
+        );
+        final url = divineVideoShareUrl(
+          'clip',
+          authorPubkey: author,
+          kind: 34236,
+        );
+        expect(
+          resolveDmVideoTarget(content: url, contentIsTruncated: true),
+          isNull,
+        );
+      },
+    );
+
     test('resolves a canonical Divine URL', () {
       final target = resolveDmVideoTarget(
         content: 'watch https://divine.video/video/skate-loop',
@@ -43,14 +225,39 @@ void main() {
       expect(target!.stableId, eventId);
       expect(target.authorPubkey, author);
       expect(target.videoKind, 22);
-      expect(target.routeId, eventId);
-      // A hex route is also looked up as a d tag, so the author travels with it.
+      expect(target.routeId, NIP19Tlv.encodeNevent(Nevent(id: eventId)));
+      // The nevent is exact, but the lookup is still held to the cited author.
       expect(target.routeAuthor, author);
       expect(
         target.canonicalUrl,
-        'https://divine.video/video/$eventId?author=$author',
+        divineVideoShareUrl(eventId, authorPubkey: author, kind: 22),
       );
     });
+
+    test(
+      'keeps a hex d-tag URL a d-tag lookup when a regular citation names '
+      'another event',
+      () {
+        // An earlier app linked a regular video by its d tag and cited it by
+        // its event id; the d tag here is hex, so it reads like an event id.
+        final dTag = 'b' * 64;
+        final target = resolveDmVideoTarget(
+          content: 'https://divine.video/video/$dTag?author=$author',
+          sharedVideoRef: const DmSharedVideoRef(
+            coordinateOrId: eventId,
+            videoKind: DmSharedVideoKind.shortVideo,
+            authorPubkey: author,
+          ),
+        );
+
+        expect(target!.routeId, dTag);
+        expect(target.routeAuthor, author);
+        expect(
+          target.canonicalUrl,
+          'https://divine.video/video/$dTag?author=$author',
+        );
+      },
+    );
 
     test('resolves an addressable structured reference', () {
       final target = resolveDmVideoTarget(
@@ -72,7 +279,7 @@ void main() {
       // The copied link names the author too (#10929).
       expect(
         target.canonicalUrl,
-        'https://divine.video/video/skate-loop?author=$author',
+        divineVideoShareUrl('skate-loop', authorPubkey: author, kind: null),
       );
     });
 
@@ -289,7 +496,7 @@ void main() {
       expect(target.routeId, equals('34236:$author:$dTag'));
       expect(
         target.canonicalUrl,
-        equals('https://divine.video/video/$dTag?author=$author'),
+        equals(divineVideoShareUrl(dTag, authorPubkey: author, kind: null)),
       );
     });
 

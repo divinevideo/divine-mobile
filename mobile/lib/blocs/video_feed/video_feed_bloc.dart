@@ -75,9 +75,14 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Future<Iterable<String>> Function()? badgeAuthors,
     Stream<void>? badgeSubscriptionChanges,
     Stream<String>? removedIdsStream,
-    // Rebind only deletion notifications/policy when a same-account service
+    Stream<VideoEvent>? replacedVideosStream,
+    // Rebind video update notifications and policy when a same-account service
     // rebuild replaces the repository. Do not reset feed or playback state.
     Stream<VideosRepository>? removalRepositoryStream,
+    // Videos confirmed unavailable (dead media) leave Home like deletions:
+    // filtered from every fetched page, and dropped live once marked.
+    bool Function(String videoId)? unavailableFilter,
+    Stream<String>? unavailableVideoIds,
   }) : _videosRepository = videosRepository,
        _removalRepository = videosRepository,
        _classicSession = classicSession,
@@ -95,6 +100,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
        _feedTuningRepository = feedTuningRepository,
        _badgeAuthors = badgeAuthors,
        _badgeSubscriptionChanges = badgeSubscriptionChanges,
+       _unavailableFilter = unavailableFilter,
        _resumeManager = HomeFeedResumeManager(
          cache: homeFeedCache ?? const HomeFeedCache(),
          videosRepository: videosRepository,
@@ -147,11 +153,19 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     on<VideoFeedTuningSwipeCommitted>(_onTuningSwipeCommitted);
     on<VideoFeedTuningUndoRequested>(_onTuningUndoRequested);
     on<VideoFeedVideoRemoved>(_onVideoRemoved, transformer: sequential());
+    on<VideoFeedVideoReplaced>(_onVideoReplaced, transformer: sequential());
+    on<VideoFeedVideoUnavailable>(_onVideoUnavailable);
     _watchRemovedVideoIds(
       removedIdsStream ??
           (removalRepositoryStream == null
               ? null
               : videosRepository.removedVideoIds),
+    );
+    _watchReplacedVideos(
+      replacedVideosStream ??
+          (removalRepositoryStream == null
+              ? null
+              : videosRepository.replacedVideos),
     );
     _removalRepositorySubscription = removalRepositoryStream?.listen(
       (repository) {
@@ -165,6 +179,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           keep: (video) => !repository.isVideoKnownDeleted(video),
         );
         _watchRemovedVideoIds(repository.removedVideoIds);
+        _watchReplacedVideos(repository.replacedVideos);
         // Tombstones hydrate before the service is published, and broadcasts
         // do not replay. Reconcile its snapshot as well as future removals.
         for (final video in state.videos) {
@@ -177,6 +192,15 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           );
           break; // One event rechecks all visible versions through this policy.
         }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (!_isClosing && !isClosed) addError(error, stackTrace);
+      },
+    );
+    _unavailableIdsSubscription = unavailableVideoIds?.listen(
+      (videoId) {
+        if (_isClosing || isClosed) return;
+        add(VideoFeedVideoUnavailable(videoId));
       },
       onError: (Object error, StackTrace stackTrace) {
         if (!_isClosing && !isClosed) addError(error, stackTrace);
@@ -206,6 +230,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     final snapshot = _classicSession?.state ?? event.snapshot;
     final videos = _withoutRemovedVideos(
       _removalRepository.applyContentPreferences(snapshot.videos),
+      // The session keeps the playing prefix stable during live marks.
+      filterUnavailable: _classicSession == null,
     );
     final activeKey = state.videos.isEmpty
         ? null
@@ -247,6 +273,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   final Stream<void>? _badgeSubscriptionChanges;
   StreamSubscription<void>? _badgeSubscriptionsSubscription;
   StreamSubscription<String>? _removedIdsSubscription;
+  StreamSubscription<VideoEvent>? _replacedVideosSubscription;
+  final bool Function(String videoId)? _unavailableFilter;
+  StreamSubscription<String>? _unavailableIdsSubscription;
 
   late final _followingFeed = FollowingVideoFeedSession(
     videosRepository: _videosRepository,
@@ -850,6 +879,24 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     );
   }
 
+  /// Follows [replacements], so a video republished from this device shows
+  /// its new revision in place of the one the feed holds (#11250).
+  void _watchReplacedVideos(Stream<VideoEvent>? replacements) {
+    final previous = _replacedVideosSubscription;
+    _replacedVideosSubscription = replacements?.listen((video) {
+      if (_isClosing || isClosed) return;
+      add(VideoFeedVideoReplaced(video));
+    });
+    if (previous != null) {
+      runDetached(
+        previous.cancel(),
+        'cancel the retired Home replacement subscription',
+        logName: 'VideoFeedBloc',
+        category: LogCategory.video,
+      );
+    }
+  }
+
   @override
   Future<void> close() async {
     _isClosing = true;
@@ -861,6 +908,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     final cleanup = <Future<void>?>[
       _removalRepositorySubscription?.cancel(),
       _removedIdsSubscription?.cancel(),
+      _replacedVideosSubscription?.cancel(),
+      _unavailableIdsSubscription?.cancel(),
       ..._pendingRemovalCancellations,
       _classicSessionSubscription?.cancel(),
       _classicSession?.dispose(),
@@ -873,6 +922,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     ];
     _removalRepositorySubscription = null;
     _removedIdsSubscription = null;
+    _replacedVideosSubscription = null;
+    _unavailableIdsSubscription = null;
     _followingSubscription = null;
     _curatedListsSubscription = null;
     _followedPeopleListsSubscription = null;
@@ -1772,12 +1823,90 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     }
   }
 
-  /// Drops late results for removals that were deletions. Block and mute
-  /// sweeps share the bus but are reversible, so an unblocked author's video
-  /// may come back on a later read.
-  List<VideoEvent> _withoutRemovedVideos(Iterable<VideoEvent> videos) {
+  void _onVideoReplaced(
+    VideoFeedVideoReplaced event,
+    Emitter<VideoFeedBlocState> emit,
+  ) {
+    final republished = event.video;
+    final address = republished.addressableId;
+    if (address == null) return;
+    _classicSession?.replaceVideoRevision(republished);
+    final index = state.videos.indexWhere(
+      (video) =>
+          video.addressableId == address &&
+          isNewerVideoRevision(republished, video),
+    );
+    if (index == -1) return;
+
+    final previous = state.videos[index];
+    final merged = mergeRepublishedVideo(previous, republished);
+    final allowed = _removalRepository.applyContentPreferences([merged]);
+    if (allowed.isEmpty) {
+      _onVideoRemoved(VideoFeedVideoRemoved(previous.id), emit);
+      return;
+    }
+    final videos = [...state.videos];
+    videos[index] = allowed.single;
+    final listSources = Map.of(state.videoListSources);
+    final listOnlyIds = {...state.listOnlyVideoIds};
+    if (listSources.remove(previous.id) case final sources?) {
+      listSources[republished.id] = sources;
+    }
+    if (listOnlyIds.remove(previous.id)) listOnlyIds.add(republished.id);
+    emit(
+      state.copyWith(
+        videos: videos,
+        videoListSources: listSources,
+        listOnlyVideoIds: listOnlyIds,
+      ),
+    );
+
+    if (_usesHomeFeedCache(state.source)) {
+      _resumeManager.persistNow(
+        pubkey: _userPubkey,
+        mode: state.source.mode.name,
+        videos: videos,
+        activeIndex: state.currentIndex,
+      );
+    }
+  }
+
+  /// Drops a confirmed-unavailable video the viewer has not reached yet,
+  /// through the deletion path. The current video and earlier ones stay:
+  /// removing them tears down the player that is playing, and every later
+  /// read filters them out.
+  void _onVideoUnavailable(
+    VideoFeedVideoUnavailable event,
+    Emitter<VideoFeedBlocState> emit,
+  ) {
+    final videoId = event.videoId.toLowerCase();
+    final classicSession = state.source.type == VideoFeedSourceType.classic
+        ? _classicSession
+        : null;
+    final snapshot = classicSession?.state;
+    final index = (snapshot?.videos ?? state.videos).indexWhere(
+      (video) => video.id.toLowerCase() == videoId,
+    );
+    if (index <= (snapshot?.currentIndex ?? state.currentIndex)) return;
+    if (classicSession != null) {
+      classicSession.reapplyFilters();
+      return;
+    }
+    _onVideoRemoved(VideoFeedVideoRemoved(event.videoId), emit);
+  }
+
+  /// Drops late results for removals that were deletions, and videos whose
+  /// media was confirmed unavailable. Block and mute sweeps share the bus but
+  /// are reversible, so an unblocked author's video may come back on a later
+  /// read.
+  List<VideoEvent> _withoutRemovedVideos(
+    Iterable<VideoEvent> videos, {
+    bool filterUnavailable = true,
+  }) {
+    final isUnavailable = filterUnavailable ? _unavailableFilter : null;
     return videos
         .where((video) => !_removalRepository.isVideoKnownDeleted(video))
+        .where((video) => isUnavailable == null || !isUnavailable(video.id))
         .toList();
   }
 
@@ -1932,7 +2061,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           : validVideos;
       final displayedVideos =
           source.type == VideoFeedSourceType.classic && _classicSession != null
-          ? _withoutRemovedVideos(_classicSession.state.videos)
+          ? _withoutRemovedVideos(
+              _classicSession.state.videos,
+              filterUnavailable: false,
+            )
           : source.type == VideoFeedSourceType.newVideos
           ? filterNewFeedVideos(mergedVideos)
           : mergedVideos;

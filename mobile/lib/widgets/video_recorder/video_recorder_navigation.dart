@@ -16,6 +16,7 @@ import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/collab_room/call/collab_room_call_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/observability/editor_ready_trace.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -108,9 +109,12 @@ Future<void> openVideoEditorFromRecorder(
   // handles the event within this tap's microtasks, before the next tap is
   // delivered.
   if (bloc.isClosed || bloc.state.editorNavigationInProgress) return;
+  // Started at the tap, so the editor's `editor_ready` trace also covers the
+  // awaits below.
+  final openRequest = EditorOpenRequest();
   bloc.add(const VideoRecorderEditorNavigationStarted());
   try {
-    await _openVideoEditorFromRecorder(context, ref, bloc);
+    await _openVideoEditorFromRecorder(context, ref, bloc, openRequest);
   } finally {
     bloc.addIfOpen(const VideoRecorderEditorNavigationEnded());
   }
@@ -120,6 +124,7 @@ Future<void> _openVideoEditorFromRecorder(
   BuildContext context,
   WidgetRef ref,
   VideoRecorderBloc bloc,
+  EditorOpenRequest openRequest,
 ) async {
   if (!await _ensureAuthenticatedForRecorderExit(context, ref)) return;
   if (!context.mounted) return;
@@ -183,7 +188,7 @@ Future<void> _openVideoEditorFromRecorder(
   bloc.add(const VideoRecorderRecordingLockedForNavigation());
 
   final navigation = recorderMode.hasVideoEditor
-      ? const VideoEditorRouteData().push<void>(context)
+      ? VideoEditorRouteData($extra: openRequest).push<void>(context)
       : const VideoMetadataRouteData().push<void>(context);
 
   // A route popped during its entrance animation never covers the recorder, so

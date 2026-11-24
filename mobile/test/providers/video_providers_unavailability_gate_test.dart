@@ -1,6 +1,8 @@
 // ABOUTME: Pins that feedUnavailabilityGateProvider hands out one stable gate
 // ABOUTME: that follows the per-identity tracker and guard as they rebuild.
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -29,6 +31,12 @@ void main() {
         final guards = [_MockGuard(), _MockGuard()];
         when(() => trackers[0].isVideoBroken(_videoId)).thenReturn(true);
         when(() => trackers[1].isVideoBroken(_videoId)).thenReturn(false);
+        for (final tracker in trackers) {
+          when(
+            () => tracker.markedVideoIds,
+          ).thenAnswer((_) => const Stream<String>.empty());
+          when(() => tracker.brokenVideoIds).thenReturn(const []);
+        }
         for (final (index, guard) in guards.indexed) {
           when(
             () => guard.isConfirmedUnavailable(
@@ -82,5 +90,29 @@ void main() {
         );
       },
     );
+
+    test('disposing the container ends the gate mark stream', () async {
+      final container = ProviderContainer(
+        overrides: [
+          videoEventServiceProvider.overrideWithValue(
+            createMockVideoEventService(),
+          ),
+          brokenVideoTrackerProvider.overrideWith(
+            (ref) => Completer<BrokenVideoTracker>().future,
+          ),
+          deadMediaFeedGuardProvider.overrideWith(
+            (ref) => Completer<DeadMediaFeedGuard>().future,
+          ),
+        ],
+      );
+      final marks = container
+          .read(feedUnavailabilityGateProvider)
+          .markedVideoIds
+          .toList();
+
+      container.dispose();
+
+      expect(await marks.timeout(const Duration(seconds: 5)), isEmpty);
+    });
   });
 }

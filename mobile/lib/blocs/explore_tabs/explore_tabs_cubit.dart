@@ -28,12 +28,15 @@ class ExploreTabsCubit extends Cubit<ExploreTabsState> {
   /// shared), and tests inject fakes. [topHashtags] defaults to a standalone
   /// instance; [screenAnalytics] is required because a private instance would
   /// never see the session the navigator observer started.
+  /// [reserveFeaturedSlot] holds the featured tab for a campaign link before
+  /// its feed resolves.
   ExploreTabsCubit({
     required ScreenAnalyticsService screenAnalytics,
     TopHashtagsLoader? topHashtags,
+    bool reserveFeaturedSlot = false,
   }) : _screenAnalytics = screenAnalytics,
        _topHashtags = topHashtags ?? TopHashtagsService(),
-       super(const ExploreTabsState());
+       super(ExploreTabsState(reserveFeaturedSlot: reserveFeaturedSlot));
 
   static const _screenName = 'explore_screen';
 

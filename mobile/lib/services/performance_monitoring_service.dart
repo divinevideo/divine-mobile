@@ -105,6 +105,15 @@ class _FirebasePerformanceTrace implements PerformanceTrace {
   }
 }
 
+/// Receives the person's analytics consent decision.
+///
+/// `AnalyticsService` owns the decision and pushes it down, as it does for its
+/// other collectors; nothing here reads it back.
+abstract class PerformanceConsentControl {
+  /// Applies the decision to performance collection.
+  Future<void> setAnalyticsConsent({required bool enabled});
+}
+
 /// No-op [PerformanceTraceMonitor] used as the default when no real monitor is
 /// injected (e.g. in tests). Mirrors the prior behaviour of the uninitialised
 /// singleton, whose methods early-returned without touching Firebase.
@@ -116,9 +125,20 @@ class NoOpPerformanceTraceMonitor implements PerformanceTraceMonitor {
       const _NoOpPerformanceTrace();
 }
 
-/// Performance monitoring service for tracking app performance
-class PerformanceMonitoringService implements PerformanceTraceMonitor {
-  PerformanceMonitoringService();
+/// Performance monitoring service for tracking app performance.
+///
+/// Collects only while the build may report and the person has not opted out
+/// of analytics (#11398).
+class PerformanceMonitoringService
+    implements PerformanceTraceMonitor, PerformanceConsentControl {
+  PerformanceMonitoringService({
+    @visibleForTesting FirebasePerformance Function()? performance,
+    @visibleForTesting bool releaseBuild = collectionEnabled,
+  }) : _performanceFactory = performance ?? _firebasePerformance,
+       _releaseBuild = releaseBuild;
+
+  static FirebasePerformance _firebasePerformance() =>
+      FirebasePerformance.instance;
 
   /// Whether this build may report to the production Firebase Performance
   /// dataset.
@@ -169,39 +189,69 @@ class PerformanceMonitoringService implements PerformanceTraceMonitor {
     required InstallSource installSource,
   }) => shorebirdAvailable || installSource == InstallSource.zapstore;
 
-  late final FirebasePerformance _performance;
+  final FirebasePerformance Function() _performanceFactory;
+
+  /// [collectionEnabled], injectable so tests can exercise a release build.
+  final bool _releaseBuild;
+
+  /// Set at the start of [initialize], so a consent decision that lands while
+  /// it is still in flight reaches the SDK instead of waiting for a launch.
+  FirebasePerformance? _performance;
   bool _initialized = false;
 
-  /// Whether [initialize] has completed and Firebase Performance is usable.
+  /// Whether this build may report at all. Settled by [initialize].
+  bool _buildMayReport = false;
+
+  /// The person's analytics consent, or null until [initialize] or
+  /// [setAnalyticsConsent] supplies it.
+  bool? _analyticsConsent;
+
+  bool get _collecting => _buildMayReport && _analyticsConsent == true;
+
+  /// Whether Firebase Performance is usable and the person has not opted out
+  /// of analytics.
   ///
   /// Sampled per operation by consumers built before startup finishes — an
   /// instrumented HTTP client is constructed with the provider graph, well
-  /// before [initialize] resolves.
-  bool get isEnabled => _initialized;
+  /// before [initialize] resolves — so an opt-out also stops the ones already
+  /// running.
+  bool get isEnabled => _initialized && _analyticsConsent == true;
 
   /// Initialize performance monitoring.
   ///
   /// [distributedBuild] is [isDistributedBuild] evaluated by the caller, which
   /// has the container; it only matters when [distributedBuildsOnly] holds.
-  Future<void> initialize({required bool distributedBuild}) async {
+  ///
+  /// [analyticsConsent] is the stored consent decision, read by the caller:
+  /// `AnalyticsService` initializes long after this, and waiting for it would
+  /// let every startup trace report for someone who opted out. A decision
+  /// already pushed through [setAnalyticsConsent] is at least as recent, so it
+  /// wins.
+  Future<void> initialize({
+    required bool distributedBuild,
+    required bool analyticsConsent,
+  }) async {
     if (_initialized || !isFirebaseSupported) return;
 
-    final collect =
-        collectionEnabled && (!distributedBuildsOnly || distributedBuild);
+    _buildMayReport =
+        _releaseBuild && (!distributedBuildsOnly || distributedBuild);
+    _analyticsConsent ??= analyticsConsent;
     try {
-      _performance = FirebasePerformance.instance;
+      final performance = _performance = _performanceFactory();
 
       // Always assert the flag rather than skipping the call when collection
       // is off: the SDK persists it across launches, so a device that ran an
       // earlier build — which enabled collection unconditionally — keeps
       // reporting until something actively sets it back to false.
-      await _performance.setPerformanceCollectionEnabled(collect);
+      final collect = _collecting;
+      await performance.setPerformanceCollectionEnabled(collect);
 
       _initialized = true;
       Log.info(
         'Performance monitoring initialized successfully '
-        '(collection enabled: $collect, release: $collectionEnabled, '
-        'distributed build: $distributedBuild)',
+        '(collection enabled: $collect, release: $_releaseBuild, '
+        'distributed build: $distributedBuild, '
+        'analytics consent: $_analyticsConsent)',
         name: 'PerformanceMonitoring',
       );
     } catch (e) {
@@ -210,6 +260,36 @@ class PerformanceMonitoringService implements PerformanceTraceMonitor {
         name: 'PerformanceMonitoring',
       );
       // Don't throw - app should continue even if performance monitoring fails
+    }
+  }
+
+  /// Applies the person's analytics consent right away.
+  ///
+  /// New traces and HTTP metrics stop at once through [isEnabled]. The SDK
+  /// flag is re-asserted as well, because it governs what the SDK records
+  /// natively (`_app_start`, screen rendering, native network requests). The
+  /// plugin documents that flag as applying to future launches, so the native
+  /// traces may only stop at the next one.
+  @override
+  Future<void> setAnalyticsConsent({required bool enabled}) async {
+    _analyticsConsent = enabled;
+    final performance = _performance;
+    // Not started yet: [initialize] applies the decision.
+    if (performance == null) return;
+
+    final collect = _collecting;
+    try {
+      await performance.setPerformanceCollectionEnabled(collect);
+      Log.info(
+        'Applied analytics consent to performance monitoring '
+        '(consent: $enabled, collection enabled: $collect)',
+        name: 'PerformanceMonitoring',
+      );
+    } catch (e) {
+      Log.error(
+        'Failed to apply analytics consent to performance monitoring: $e',
+        name: 'PerformanceMonitoring',
+      );
     }
   }
 
@@ -223,10 +303,13 @@ class PerformanceMonitoringService implements PerformanceTraceMonitor {
   /// short operation cannot end its trace before the platform opened it.
   @override
   PerformanceTrace startOperationTrace(String traceName) {
-    if (!_initialized) return const _NoOpPerformanceTrace();
+    final performance = _performance;
+    if (!isEnabled || performance == null) {
+      return const _NoOpPerformanceTrace();
+    }
 
     try {
-      final trace = _performance.newTrace(traceName);
+      final trace = performance.newTrace(traceName);
       final started = trace.start().catchError((Object e) {
         Log.error(
           'Failed to start trace $traceName: $e',

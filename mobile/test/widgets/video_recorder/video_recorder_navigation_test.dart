@@ -22,6 +22,7 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
+import 'package:openvine/observability/editor_ready_trace.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -435,6 +436,46 @@ void main() {
         expect(find.text(l10n.videoRecorderClipUndoLabel), findsNothing);
       });
 
+      testWidgets('openVideoEditorFromRecorder hands the editor the moment '
+          '"Next" was tapped', (tester) async {
+        fakeClipManager
+          ..initialPendingDeletion = ClipPendingDeletion(
+            clip: DivineVideoClip(
+              id: 'pending-clip',
+              video: EditorVideo.file('/path/to/video.mp4'),
+              duration: const Duration(seconds: 1),
+              recordedAt: DateTime(2026),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+            originalIndex: 0,
+          )
+          ..commitGate = Completer<void>();
+
+        await tester.pumpWidget(buildHarness());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('open-editor')));
+        await tester.pump();
+        // The pending deletion holds the editor back after the tap.
+        await tester.pump(const Duration(milliseconds: 400));
+        fakeClipManager.commitGate!.complete();
+        // The editor's first frame, before its entrance animation runs: no
+        // time has passed since the push, so the 400 ms come from the tap.
+        await tester.pump();
+        await tester.pump();
+
+        final extra = GoRouterState.of(
+          tester.element(find.text('editor')),
+        ).extra;
+        expect(extra, isA<EditorOpenRequest>());
+        expect(
+          (extra! as EditorOpenRequest).elapsedMs,
+          greaterThanOrEqualTo(400),
+        );
+        await tester.pumpAndSettle();
+      });
+
       testWidgets('openVideoEditorFromRecorder resets the session for a mode '
           'without a video editor (routes to metadata)', (tester) async {
         when(() => recorderBloc.state).thenReturn(
@@ -843,6 +884,7 @@ void main() {
 class _FakeClipManagerNotifier extends ClipManagerNotifier {
   bool muteAllClipsCalled = false;
   int commitPendingDeletionCalls = 0;
+  Completer<void>? commitGate;
   ClipPendingDeletion? initialPendingDeletion;
   List<DivineVideoClip> initialClips = const [];
 
@@ -864,6 +906,7 @@ class _FakeClipManagerNotifier extends ClipManagerNotifier {
   @override
   Future<void> commitPendingDeletion() async {
     commitPendingDeletionCalls++;
+    await commitGate?.future;
     state = state.copyWith(clearPendingDeletion: true);
   }
 }

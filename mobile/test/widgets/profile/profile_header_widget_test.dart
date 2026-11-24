@@ -30,8 +30,6 @@ import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
 import 'package:openvine/blocs/others_followers/others_followers_bloc.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/monetization/monetization_storefront_policy.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/view/people_list_membership_indicator.dart';
@@ -464,7 +462,6 @@ void main() {
       Stream<BackgroundPublishState>? backgroundPublishStream,
       List<ProfileBadgeViewData> acceptedProfileBadges = const [],
       MockGoRouter? goRouter,
-      bool monetizationLinksEnabled = false,
       ThemeData? theme,
       bool disableAnimations = false,
       bool accessibleNavigation = false,
@@ -630,9 +627,6 @@ void main() {
           }),
           badgeRepositoryProvider.overrideWithValue(badgeRepository),
           currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
-          isFeatureEnabledProvider(
-            FeatureFlag.profileMonetizationLinks,
-          ).overrideWith((ref) => monetizationLinksEnabled),
         ],
         child: MaterialApp(
           localizationsDelegates: [
@@ -2728,7 +2722,6 @@ void main() {
             isOwnProfile: true,
             profile: staleProfile,
             suppliedProfile: savedProfile,
-            monetizationLinksEnabled: true,
           ),
         );
         await tester.pumpAndSettle();
@@ -2832,7 +2825,6 @@ void main() {
           userIdHex: testUserHex,
           isOwnProfile: false,
           suppliedProfile: creatorProfile,
-          monetizationLinksEnabled: true,
         ),
       );
       await tester.pumpAndSettle();
@@ -2885,7 +2877,6 @@ void main() {
           userIdHex: testUserHex,
           isOwnProfile: false,
           suppliedProfile: withoutLinks,
-          monetizationLinksEnabled: true,
         ),
       );
       await tester.pumpAndSettle();
@@ -2898,7 +2889,6 @@ void main() {
           userIdHex: testUserHex,
           isOwnProfile: false,
           suppliedProfile: withLinks,
-          monetizationLinksEnabled: true,
         ),
       );
       await tester.pump();
@@ -2909,35 +2899,6 @@ void main() {
       // stranded this button at zero width.
       expect(supportButton, findsOneWidget);
       expect(tester.getRect(supportButton).width, greaterThan(0));
-    });
-
-    testWidgets('hides support affordance when monetization flag is off', (
-      tester,
-    ) async {
-      final creatorProfile = createTestProfile(
-        displayName: 'Creator',
-        rawData: {
-          divineMonetizationLinksKey: [
-            const MonetizationLink(
-              provider: MonetizationLinkProvider.cashApp,
-              category: MonetizationLinkCategory.tip,
-              url: r'https://cash.app/$creator',
-              enabled: true,
-            ).toJson(),
-          ],
-        },
-      );
-
-      await tester.pumpWidget(
-        buildTestWidget(
-          userIdHex: testUserHex,
-          isOwnProfile: false,
-          suppliedProfile: creatorProfile,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(const Key('profile-support-button')), findsNothing);
     });
 
     testWidgets('hides subscription-only support links on iOS storefronts', (
@@ -2965,7 +2926,6 @@ void main() {
           userIdHex: testUserHex,
           isOwnProfile: false,
           suppliedProfile: creatorProfile,
-          monetizationLinksEnabled: true,
         ),
       );
       await tester.pumpAndSettle();
@@ -2997,7 +2957,6 @@ void main() {
           userIdHex: testUserHex,
           isOwnProfile: false,
           suppliedProfile: creatorProfile,
-          monetizationLinksEnabled: true,
         ),
       );
       await tester.pumpAndSettle();

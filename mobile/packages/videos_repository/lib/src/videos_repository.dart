@@ -16,6 +16,7 @@ import 'package:videos_repository/src/author_feed_result.dart';
 import 'package:videos_repository/src/badge_video_pager.dart';
 import 'package:videos_repository/src/home_feed_result.dart';
 import 'package:videos_repository/src/in_memory_feed_cache.dart';
+import 'package:videos_repository/src/latest_video_revision.dart';
 import 'package:videos_repository/src/popular_videos_page.dart';
 import 'package:videos_repository/src/profile_video_merge.dart';
 import 'package:videos_repository/src/recommendation_session_seed.dart';
@@ -225,6 +226,7 @@ class VideosRepository {
     BlockedVideoFilter? blockFilter,
     DeletedVideoFilter? deletedFilter,
     this.removedVideoIds = const Stream<String>.empty(),
+    this.replacedVideos = const Stream<VideoEvent>.empty(),
     VideoContentFilter? contentFilter,
     VideoContentFilter? feedShapeFilter,
     VideoWarningLabelsResolver? warningLabelsResolver,
@@ -259,6 +261,10 @@ class VideosRepository {
 
   /// Emits IDs for videos removed by deletion handling.
   final Stream<String> removedVideoIds;
+
+  /// Emits each video its owner republished from this device, so a feed
+  /// holding an older revision can show the new one (#11250).
+  final Stream<VideoEvent> replacedVideos;
 
   final VideoContentFilter? _contentFilter;
   final VideoContentFilter? _feedShapeFilter;
@@ -555,11 +561,7 @@ class VideosRepository {
       } else if (videos.isNotEmpty) {
         seenOnlyPages++;
       }
-      _appendUniqueVideos(
-        visible,
-        unseenVideos,
-        seenVideoKeys: seenVideoKeys,
-      );
+      _appendUniqueVideos(visible, unseenVideos, seenVideoKeys: seenVideoKeys);
       // Trust the server's flag rather than the row count: the client drops
       // malformed rows, and a short page would otherwise end the feed early.
       if (!response.hasMore) break;
@@ -1248,10 +1250,7 @@ class VideosRepository {
   }
 
   Future<({List<VideoEvent> videos, int? nextBefore})>
-  _fetchVisibleRecentVideosFromRelays({
-    required int limit,
-    int? until,
-  }) async {
+  _fetchVisibleRecentVideosFromRelays({required int limit, int? until}) async {
     var cursor = until;
     final visible = <VideoEvent>[];
     final seenVideoKeys = <String>{};
@@ -2092,6 +2091,20 @@ class VideosRepository {
     }
   }
 
+  /// [event] as the video this viewer may see, or `null` when it is no
+  /// video or this viewer's blocks, deletions or content filters leave it
+  /// out: the rules [getVideosFromRelaysByAddressableIds] applies to what
+  /// the relays return, for a video event another source handed over.
+  /// [includeFeedShape] works as for [getVideosByAddressableIds].
+  VideoEvent? visibleVideoFromEvent(
+    Event event, {
+    bool includeFeedShape = true,
+  }) => _tryParseAndFilter(
+    event,
+    permissive: true,
+    includeFeedShape: includeFeedShape,
+  );
+
   /// The videos at [addressableIds] as the relays alone hold them, in that
   /// order, and whether every relay answered in full.
   ///
@@ -2126,6 +2139,36 @@ class VideosRepository {
       ],
       complete: reads.every((read) => read.isComplete),
     );
+  }
+
+  /// The newest revision the relays hold at the video [addressableId]
+  /// (`kind:pubkey:d-tag`), for a caller about to replace it.
+  ///
+  /// Reads from every configured relay without the local cache, as required
+  /// before replacing an event (#11250). An incomplete read is retried on
+  /// fresh connections. A refusal or any other missing answer on that retry
+  /// leaves the revision [LatestVideoRevisionUnknown].
+  ///
+  /// Throws [ArgumentError] when [addressableId] is not a Kind 34235 or
+  /// 34236 address.
+  Future<LatestVideoRevision> fetchLatestVideoRevision(
+    String addressableId,
+  ) async {
+    final address = AId.fromString(addressableId);
+    if (address == null ||
+        !NIP71VideoKinds.isAddressableVideoKind(address.kind)) {
+      throw ArgumentError.value(
+        addressableId,
+        'addressableId',
+        'is not a video address',
+      );
+    }
+    final read = await _nostrClient.readCurrentVersion(
+      kind: address.kind,
+      pubkey: address.pubkey,
+      dTag: address.dTag,
+    );
+    return LatestVideoRevision.fromCurrentVersion(read);
   }
 
   /// The video addresses among [addressableIds], in their order: Kind 34236
@@ -3220,20 +3263,17 @@ class VideosRepository {
         start < authors.length;
         start += _membersFeedRelayFilterAuthors
       )
-        _nostrClient.queryEventsDetailed(
-          [
-            Filter(
-              kinds: [_videoKind],
-              authors: authors
-                  .skip(start)
-                  .take(_membersFeedRelayFilterAuthors)
-                  .toList(),
-              limit: limit,
-              until: until,
-            ),
-          ],
-          requireAllRelaysSettled: true,
-        ),
+        _nostrClient.queryEventsDetailed([
+          Filter(
+            kinds: [_videoKind],
+            authors: authors
+                .skip(start)
+                .take(_membersFeedRelayFilterAuthors)
+                .toList(),
+            limit: limit,
+            until: until,
+          ),
+        ], requireAllRelaysSettled: true),
     ]);
     final events = <Event>[];
     for (final read in reads) {
@@ -3667,6 +3707,10 @@ class VideosRepository {
   /// the author an author-named [routeId] (a coordinate or `naddr1`) names.
   /// Any other [expectedAuthor] value is ignored. A candidate that names a
   /// different author is skipped (#10384).
+  ///
+  /// An `naddr1` or `nevent1` is held to its exact identity — kind, author and
+  /// `d` tag, or event id — by [VideoRouteRef.matchesEvent], and an `naddr1`
+  /// skips the any-kind `d`-tag relay lookup.
   Future<VideoRouteLookupResult> lookupVideoForRouteId(
     String routeId, {
     List<String> fallbackRouteIds = const [],
@@ -3785,9 +3829,7 @@ class VideosRepository {
         final byFunnelcake = await _fetchVideoFromRouteApi(
           funnelcakeRouteId,
           expectedPubkey: author,
-          expectedEventId: candidate.stableId == null
-              ? candidate.eventId
-              : null,
+          expectedRoute: candidate,
           permissive: true,
           onContentFiltered: onContentFiltered,
         );
@@ -3829,7 +3871,7 @@ class VideosRepository {
       missed.add('relayAddressable');
     }
 
-    if (candidate.stableId != null) {
+    if (candidate.stableId != null && !candidate.isNaddr) {
       final byStableId = await _fetchVideoByStableIdFromRelay(
         candidate.stableId!,
         author: author,
@@ -4321,14 +4363,33 @@ class VideosRepository {
       );
     }
 
-    if (author != null) {
-      candidates.removeWhere((event) => event.pubkey != author);
-    }
+    candidates.removeWhere((event) {
+      if (author != null && event.pubkey != author) return true;
+      if (candidate.matchesEvent(event)) return false;
+      _logRouteIdentityMismatch('cached', event, candidate);
+      return true;
+    });
 
     if (candidates.isEmpty) return null;
     return _parseAndHydrateFirstRouteVideo(
       candidates,
       onContentFiltered: onContentFiltered,
+    );
+  }
+
+  /// Logs a result [VideoRouteRef.matchesEvent] rejected, so a kind alias or
+  /// an impostor `d` tag does not read as a route that found nothing.
+  void _logRouteIdentityMismatch(
+    String source,
+    Event event,
+    VideoRouteRef route,
+  ) {
+    Log.info(
+      'Route lookup rejected the $source event ${event.id} (kind '
+      '${event.kind}, author ${pubkeyForLogs(event.pubkey)}): it does not '
+      'match ${route.addressableId ?? route.eventId}',
+      name: 'VideosRepository',
+      category: LogCategory.video,
     );
   }
 
@@ -4433,7 +4494,7 @@ class VideosRepository {
   Future<VideoEvent?> _fetchVideoFromRouteApi(
     String routeId, {
     String? expectedPubkey,
-    String? expectedEventId,
+    VideoRouteRef? expectedRoute,
     bool permissive = false,
     void Function(VideoEvent video)? onContentFiltered,
   }) async {
@@ -4442,13 +4503,14 @@ class VideosRepository {
     }
 
     final event = await _funnelcakeApiClient.getVideoEvent(routeId);
-    if (event == null ||
-        (expectedEventId != null && event.id != expectedEventId)) {
-      return null;
-    }
+    if (event == null) return null;
     // Checked before content filtering, so another author's filtered video
     // is not reported back as this route's hidden video.
     if (expectedPubkey != null && event.pubkey != expectedPubkey) return null;
+    if (expectedRoute != null && !expectedRoute.matchesEvent(event)) {
+      _logRouteIdentityMismatch('REST', event, expectedRoute);
+      return null;
+    }
 
     final video = _tryParseAndFilter(
       event,
