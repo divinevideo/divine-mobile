@@ -101,11 +101,12 @@ const String kSoundLibraryPubkeyHex =
 /// Accounts that publish Divine's imported sound library: thousands of
 /// freely licensed effects and songs (`tools/import_free_sounds.dart`).
 ///
-/// Kept apart from [kDivineSoundPublisherPubkeys] so the bulk import does
-/// not take the Divine boost: its sounds show without the community mark, in
-/// every list like the community's. A sound picked for the boost is published
-/// by a Divine sound account instead. `mobile/docs/DIVINE_SOUNDS.md`
-/// describes it.
+/// Kept apart from [kDivineSoundPublisherPubkeys] so its thousands of sounds
+/// are not listed beside Divine's own in For you: they show without the
+/// community mark, in every list like the community's. Funnelcake's search
+/// still ranks them with Divine's own (`SEARCH_DIVINE_SOUND_PUBKEYS`). A
+/// library sound picked to sit beside Divine's own is published again by a
+/// Divine sound account. `mobile/docs/DIVINE_SOUNDS.md` describes it.
 const Set<String> kSoundLibraryPublisherPubkeys = {kSoundLibraryPubkeyHex};
 
 /// The Divine team and Divine's own accounts, by pubkey. Drives the profile

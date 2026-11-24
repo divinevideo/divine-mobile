@@ -18,7 +18,8 @@ extension DivineSound on AudioEvent {
 
   /// Part of Divine's imported library: published on its own by an account
   /// in [kSoundLibraryPublisherPubkeys]. Like [isDivine] it is curated, so
-  /// it carries no community mark, but it gets no Divine boost.
+  /// it carries no community mark, but the picker does not list it beside
+  /// Divine's own sounds.
   bool get isLibrary =>
       kSoundLibraryPublisherPubkeys.contains(pubkey) &&
       sourceVideoReference == null;

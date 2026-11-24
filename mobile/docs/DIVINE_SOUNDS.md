@@ -63,13 +63,13 @@ Publishing a sound again with the same `divine_sound` id replaces the link; the 
 
 ## The imported library
 
-Besides the curated sounds above, Divine publishes a library of freely licensed effects and music, thousands of sounds at once. It is signed by its own account, in `kSoundLibraryPublisherPubkeys` (`lib/config/official_accounts.dart`), not by a Divine sound account, so the bulk does not take the Divine boost:
+Besides the curated sounds above, Divine publishes a library of freely licensed effects and music, thousands of sounds at once. It is signed by its own account, in `kSoundLibraryPublisherPubkeys` (`lib/config/official_accounts.dart`), not by a Divine sound account, so the app does not list its thousands of sounds beside Divine's own in For you:
 
 - `AudioEvent.isLibrary` (`lib/extensions/divine_sound_extensions.dart`) marks it, by signer and without an `a` tag, as `isDivine` does.
 - It shows in every list the community's sounds do: New, Popular, search, and For you for a viewer who follows the library account. It shows without the community mark.
-- A library sound picked for the boost is published again by a Divine sound account.
+- A library sound picked to sit beside Divine's own in For you is published again by a Divine sound account.
 - The library account is `npub1n0dqg6d7t8ejzcc0awlhz4sgxxsrg28q37dp5ktxze0t9hs8s9jqncrx0a` (hex `9bda0469be59f321630febbf71560831a03428e08f9a1a5966165eb2de078164`, `kSoundLibraryPubkeyHex`). An app version from before it was added shows the library with the community mark.
-- Funnelcake's search boost (`SEARCH_DIVINE_SOUND_PUBKEYS`) should not list the library account either.
+- Funnelcake's search boost (`SEARCH_DIVINE_SOUND_PUBKEYS`) lists the library account beside Divine HQ (divinevideo/divine-iac-coreconfig#2880), so its sounds rank first among equally good search matches. Funnelcake writes the boost into each sound's search document, and its nightly backfill re-indexes every sound, so a change to the list applies from the next run.
 
 ### Sources
 
