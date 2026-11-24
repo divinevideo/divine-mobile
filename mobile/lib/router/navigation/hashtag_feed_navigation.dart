@@ -1,5 +1,5 @@
-// ABOUTME: Opens a hashtag feed at most once per frame for every control that
-// ABOUTME: links to one, so a quick second tap cannot stack a copy (#9980)
+// ABOUTME: Opens a hashtag feed at most once per frame, and only from the page
+// ABOUTME: on top, so a quick second tap cannot stack a copy (#9980)
 
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
@@ -16,6 +16,8 @@ final Expando<bool> _openedThisFrame = Expando<bool>('openHashtagFeed');
 ///
 /// A go_router push lands at once, but its page takes taps only from the next
 /// frame, and a finger already down on the link still lifts onto it (#9980).
+/// Checking the page subscribes [context], and each navigator above it, to
+/// its route's `isCurrent`, so they rebuild when their page is covered.
 ///
 /// A failed push is logged under [logName] as "Failed to [description]".
 void openHashtagFeed(
