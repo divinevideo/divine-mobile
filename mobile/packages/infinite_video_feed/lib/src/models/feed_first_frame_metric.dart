@@ -272,10 +272,10 @@ class FeedFirstFrameTimer {
     required bool loadedFromCache,
   }) {
     if (_ended) return null;
+    _stopwatch.stop();
     final active = _stopwatch.elapsed;
     _finishAttempt(outcome: FeedPlaybackOutcome.cancelled, elapsed: active);
     _ended = true;
-    _stopwatch.stop();
     final playback = _playback?..close();
     final firstFrame = _firstFrameAt;
     if (firstFrame == null && _autoPlayBlocked) return null;
@@ -330,7 +330,10 @@ final class _PlaybackClock {
     _controller = controller;
     unawaited(_subscription?.cancel());
     _apply(controller.state);
-    _subscription = controller.stateStream.listen(_apply);
+    _subscription = controller.stateStream.listen(
+      _apply,
+      onDone: () => _apply(const DivineVideoPlayerState()),
+    );
   }
 
   void _apply(DivineVideoPlayerState state) {

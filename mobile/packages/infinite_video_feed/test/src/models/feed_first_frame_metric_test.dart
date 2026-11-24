@@ -450,6 +450,37 @@ void main() {
           unawaited(sub.cancel());
         });
       });
+
+      test('stops counting watch and stall time when the followed controller '
+          'closes', () {
+        fakeAsync((async) {
+          final controller = FakeController();
+          final timer =
+              FeedFirstFrameMetrics.start(
+                  videoId: 'synthetic',
+                  index: 0,
+                )
+                ..complete(loadedFromCache: false)
+                ..observePlayback(controller, reportsStalls: true);
+          push(async, controller, _playing);
+          async.elapse(const Duration(milliseconds: 300));
+          push(async, controller, _buffering);
+          async.elapse(const Duration(milliseconds: 200));
+          unawaited(controller.dispose());
+          async.flushMicrotasks();
+          async.elapse(const Duration(milliseconds: 1000));
+
+          final metric = timer.end(
+            FeedPlaybackSessionEnd.swipe,
+            loadedFromCache: false,
+          )!;
+
+          expect(metric.watched, const Duration(milliseconds: 300));
+          expect(metric.stallCount, 1);
+          expect(metric.stalled, const Duration(milliseconds: 200));
+          expect(metric.active, const Duration(milliseconds: 1500));
+        });
+      });
     });
   });
 }
