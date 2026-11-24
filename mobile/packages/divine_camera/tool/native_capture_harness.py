@@ -498,11 +498,13 @@ def trace_capture_failure(command, app, env):
 
 
 def native_failure_status(line):
-    status = re.search(r'capture-status (create|initialize|error|record_start|record_stop|other|event_type|event_status|negotiate|preview|mirror_effect|mirror_(?:source|record_index|preview_index|factory|class|category|control|mode|add)):(0x[89a-fA-F][0-9a-fA-F]{7})(?![0-9a-fA-F])', line)
+    status = re.search(r'capture-status (create|initialize|error|record_start|record_stop|other|event_type|event_status|negotiate|preview|mirror_effect|mirror_(?:source|record_index|preview_index|factory|class|category|flags|control|mode|add)):(0x[89a-fA-F][0-9a-fA-F]{7})(?![0-9a-fA-F])', line)
     return status.groups() if status else None
 
 
 def require_capture_success(result, platform, capture_case, command, app, env):
+    if env.get('DIVINE_CAPTURE_TEST_EFFECT_FLAGS') == '1' and 'capture-stage effect_flags_applied' not in (result.stdout + result.stderr):
+        raise RuntimeError('Effect flags variant was not applied')
     if result.returncode != 0 or 'DIVINE_CAPTURE_PASS' not in result.stdout:
         if platform == 'windows' and capture_case == 'audio' and 'DIVINE_CAPTURE_FAIL initialization' in (result.stdout + result.stderr):
             trace_capture_failure(command, app, env)
@@ -514,7 +516,11 @@ def main():
     parser.add_argument('--platform', choices=['linux', 'windows'], required=True)
     parser.add_argument('--case', choices=['video', 'audio', 'audio-unavailable', 'texture-unavailable', 'startup-failure', 'mirrored-video', 'mirror-timeout', 'mirror-error', 'mirror-status', 'mirror-start-timeout', 'mirror-no-frames', 'mirror-frame-before-start-timeout', 'mirror-valid-frame-deadline'], default='video')
     parser.add_argument('--workspace', type=Path, help='Optional private incremental build directory.')
+    parser.add_argument('--test-effect-flags', action='store_true',
+                        help='Compare explicit synchronous transform flags in the Windows Debug fixture.')
     args = parser.parse_args()
+    if args.test_effect_flags and (args.platform != 'windows' or args.case != 'mirrored-video'):
+        parser.error('Effect flag comparison requires the Windows mirrored-video case')
     flutter = ['flutter']
     if os.name == 'nt':
         sdk = Path(shutil.which('flutter')).resolve().parent.parent
@@ -597,6 +603,9 @@ dependencies:
         native_temp.mkdir()
         env = dict(os.environ, G_MESSAGES_DEBUG='all', DIVINE_CAPTURE_CASE=args.case, DIVINE_CAPTURE_OUTPUT=str(output),
                    TMPDIR=str(native_temp), TEMP=str(native_temp), TMP=str(native_temp))
+        env.pop('DIVINE_CAPTURE_TEST_EFFECT_FLAGS', None)
+        if args.test_effect_flags:
+            env['DIVINE_CAPTURE_TEST_EFFECT_FLAGS'] = '1'
         if args.platform == 'windows':
             env['CAMERA_DESKTOP_LOG'] = '1'
         if args.case == 'audio-unavailable':
@@ -635,6 +644,8 @@ dependencies:
                 print('DIVINE_CAPTURE_NATIVE_STATUS', status[0], status[1], flush=True)
             if 'capture-stage timeout' in line:
                 print('DIVINE_CAPTURE_NATIVE_STAGE timeout', flush=True)
+            if 'capture-stage effect_flags_applied' in line:
+                print('DIVINE_CAPTURE_EFFECT_FLAGS_APPLIED', flush=True)
             if line.startswith('DIVINE_CAPTURE_') or 'GStreamer error:' in line or 'RecordHandler::Setup failed:' in line or 'Audio setup failed:' in line:
                 print(line, flush=True)
         require_capture_success(result, args.platform, args.case, command, app, env)

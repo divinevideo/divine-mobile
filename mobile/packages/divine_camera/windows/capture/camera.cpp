@@ -685,6 +685,15 @@ HRESULT Camera::ConfigureOutputMirroring() {
   hr = TraceMirrorStatus("category", output_mirror_activation_->SetGUID(
       MF_TRANSFORM_CATEGORY_Attribute, MFT_CATEGORY_VIDEO_PROCESSOR));
   if (FAILED(hr)) return hr;
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+  char effect_flags[2];
+  if (GetEnvironmentVariableA("DIVINE_CAPTURE_TEST_EFFECT_FLAGS", effect_flags, sizeof(effect_flags))) {
+    hr = TraceMirrorStatus("flags", output_mirror_activation_->SetUINT32(
+        MF_TRANSFORM_FLAGS_Attribute, MFT_ENUM_FLAG_SYNCMFT));
+    if (FAILED(hr)) return hr;
+    DebugLog("capture-stage effect_flags_applied");
+  }
+#endif
   hr = TraceMirrorStatus("control", output_mirror_activation_->ActivateObject(IID_PPV_ARGS(&output_mirror_effect_)));
   if (FAILED(hr)) return hr;
   hr = TraceMirrorStatus("mode", output_mirror_effect_->SetMirror(MIRROR_HORIZONTAL));
