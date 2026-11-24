@@ -1444,6 +1444,7 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         )
         groups = workflow["environment"]["groups"]
         self.assertIn("macos_signing_credentials", groups)
+        self.assertEqual(groups[-1], "store_release_credentials")
         for other_name, other_workflow in resolved.items():
             if other_name == "macos-build":
                 continue
