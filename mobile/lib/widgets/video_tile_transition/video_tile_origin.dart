@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:models/models.dart';
 import 'package:openvine/widgets/video_feed_item/blurred_video_backdrop.dart';
+import 'package:openvine/widgets/video_tile_transition/laid_out_transform_path.dart';
 import 'package:openvine/widgets/video_tile_transition/rounded_by_clips.dart';
 
 /// Marks the thumbnail a fullscreen player grows out of.
@@ -199,11 +200,12 @@ class VideoTileOrigin {
   /// fitted to `contain` is only the part it paints. Drawing [takeImage]
   /// covering this rect at [alignment] reproduces the tile.
   Rect? get rect {
-    if (!_boundary.attached || !_boundary.hasSize) return null;
+    if (!hasLaidOutTransformPath(_boundary)) return null;
     final tile = _boundary.localToGlobal(Offset.zero) & _boundary.size;
     final image = _liveImage;
     final decoded = image?.image;
     if (image == null || decoded == null || !image.hasSize) return tile;
+    if (!hasLaidOutTransformPath(image, ancestor: _boundary)) return null;
     final box = image.localToGlobal(Offset.zero) & image.size;
     final fitted = applyBoxFit(
       image.fit ?? BoxFit.scaleDown,
@@ -227,7 +229,7 @@ class VideoTileOrigin {
   /// Clips inside the scrolling content, such as the tile's own, scroll with
   /// it and play no part.
   RRect? get visibleBounds {
-    if (!_boundary.attached || !_boundary.hasSize) return null;
+    if (!hasLaidOutTransformPath(_boundary)) return null;
     Rect? shown;
     final clips = <RenderClipRRect>[];
     for (
@@ -252,7 +254,7 @@ class VideoTileOrigin {
   /// or `null` when the tile has none or is no longer laid out.
   Rect? get scrimRect {
     final scrim = _scrim;
-    if (scrim == null || !scrim.attached || !scrim.hasSize) return null;
+    if (scrim == null || !hasLaidOutTransformPath(scrim)) return null;
     return scrim.localToGlobal(Offset.zero) & scrim.size;
   }
 

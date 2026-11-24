@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' show VideoEvent;
@@ -291,6 +292,78 @@ void main() {
           equals(const Rect.fromLTRB(20, 180, 140, 220)),
         );
       });
+    });
+
+    group('ancestor layout', () {
+      for (final property in ['rect', 'visibleBounds', 'scrimRect']) {
+        testWidgets('$property waits for a newly grafted ancestor layout', (
+          tester,
+        ) async {
+          late BuildContext tileContext;
+          final tile = SingleChildScrollView(
+            key: GlobalKey(),
+            child: SizedBox(
+              height: 600,
+              child: _Tile(
+                rect: _tileRect,
+                withScrim: true,
+                onContext: (c) => tileContext = c,
+              ),
+            ),
+          );
+          Widget tree(List<Widget> children) => Directionality(
+            textDirection: TextDirection.ltr,
+            child: Stack(children: children),
+          );
+          await tester.pumpWidget(tree([tile]));
+          final origin = VideoTileOrigin.capture(tileContext, videoId: 'v')!;
+          addTearDown(() => origin.takeImage()?.dispose());
+          Object? read() => switch (property) {
+            'rect' => origin.rect,
+            'visibleBounds' => origin.visibleBounds,
+            _ => origin.scrimRect,
+          };
+          expect(read(), isNotNull);
+          final boundary = tester.renderObject<RenderRepaintBoundary>(
+            find.descendant(
+              of: find.byType(VideoTileThumbnailBoundary),
+              matching: find.byType(RepaintBoundary),
+            ),
+          );
+          final translationKey = GlobalKey();
+          Object? duringBuild;
+          var readDuringBuild = false;
+          await tester.pumpWidget(
+            tree([
+              FractionalTranslation(
+                key: translationKey,
+                translation: const Offset(0, 0.1),
+                child: tile,
+              ),
+              Builder(
+                builder: (_) {
+                  final ancestor =
+                      translationKey.currentContext!.findRenderObject()!
+                          as RenderFractionalTranslation;
+                  expect(ancestor.attached, isTrue);
+                  expect(ancestor.hasSize, isFalse);
+                  expect(boundary.attached, isTrue);
+                  expect(boundary.hasSize, isTrue);
+                  duringBuild = read();
+                  readDuringBuild = true;
+                  return const SizedBox.shrink();
+                },
+              ),
+            ]),
+          );
+
+          expect(tester.takeException(), isNull);
+          expect(readDuringBuild, isTrue);
+          expect(duringBuild, isNull);
+          expect(read(), isNotNull);
+          expect(origin.rect, _tileRect.shift(const Offset(0, 60)));
+        });
+      }
     });
 
     group('rect', () {
