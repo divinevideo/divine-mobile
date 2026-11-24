@@ -269,6 +269,36 @@ void main() {
       return (captured[0] as IdentityClaim, captured[1] as String?);
     }
 
+    group('starting platform', () {
+      const twitterOpen = VerifierPlatform(
+        key: 'twitter',
+        label: 'Twitter / X',
+        supported: true,
+        oauth: true,
+      );
+      const twitterGated = VerifierPlatform(
+        key: 'twitter',
+        label: 'Twitter / X',
+        supported: true,
+        oauth: true,
+        signinRequires: SigninRequirement.confirmation,
+      );
+
+      test(
+        'with the requirement simulated, starts from a gated platform',
+        () async {
+          final cubit = build(
+            twitterOpen,
+            confirmationSignIn: true,
+            simulateConfirmationRequirement: true,
+          );
+          addTearDown(cubit.close);
+
+          expect(cubit.state.platform, equals(twitterGated));
+        },
+      );
+    });
+
     group('loadPlatform', () {
       // What the screen starts from when no platform list was loaded: sign-in
       // hidden until the verifier says.
@@ -350,20 +380,6 @@ void main() {
             expect(cubit.state.platform, equals(twitterGated));
             expect(accessReader.reads, equals([false]));
             expect(cubit.state.confirmationAccess, ConfirmationAccess.hasNot);
-          },
-        );
-
-        test(
-          'with the requirement simulated, starts from a gated platform',
-          () async {
-            final cubit = build(
-              twitterOpen,
-              confirmationSignIn: true,
-              simulateConfirmationRequirement: true,
-            );
-            addTearDown(cubit.close);
-
-            expect(cubit.state.platform, equals(twitterGated));
           },
         );
 
