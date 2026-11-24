@@ -698,6 +698,7 @@ void Camera::Initialize(
             st = self->state_;
           }
           if (st == CameraState::kInitializing) {
+            DebugLog("capture-stage timeout");
             DebugLog("Camera::Initialize: timed out in kInitializing, no engine "
                      "event received");
             self->CompleteInit(false, "Camera initialization timed out");
@@ -741,6 +742,7 @@ void Camera::OnEngineEvent(IMFMediaEvent* event) {
   GUID event_type = GUID_NULL;
   HRESULT get_type_hr = event->GetExtendedType(&event_type);
   if (FAILED(get_type_hr)) {
+    DebugLog("capture-status event_type:" + HrToString(get_type_hr));
     DebugLog("OnEngineEvent: GetExtendedType failed " + HrToString(get_type_hr));
     return;
   }
@@ -748,6 +750,7 @@ void Camera::OnEngineEvent(IMFMediaEvent* event) {
   HRESULT event_hr = S_OK;
   HRESULT get_status_hr = event->GetStatus(&event_hr);
   if (FAILED(get_status_hr)) {
+    DebugLog("capture-status event_status:" + HrToString(get_status_hr));
     DebugLog("OnEngineEvent: GetStatus failed " + HrToString(get_status_hr));
   }
   if (FAILED(event_hr)) {
@@ -785,6 +788,7 @@ void Camera::OnEngineEvent(IMFMediaEvent* event) {
 
     HRESULT hr = FindBaseMediaTypes();
     if (FAILED(hr)) {
+      DebugLog("capture-status negotiate:" + HrToString(hr));
       CompleteInit(false, "Failed to enumerate camera media types");
       return;
     }
@@ -793,6 +797,7 @@ void Camera::OnEngineEvent(IMFMediaEvent* event) {
 
     hr = StartPreviewInternal();
     if (FAILED(hr)) {
+      DebugLog("capture-status preview:" + HrToString(hr));
       CompleteInit(false, "Failed to start camera preview");
       return;
     }
