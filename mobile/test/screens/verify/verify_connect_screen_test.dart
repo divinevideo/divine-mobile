@@ -410,16 +410,23 @@ void main() {
           VerifyConnectCubit cubit() => tester
               .element(find.byType(VerifyConnectView))
               .read<VerifyConnectCubit>();
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(VerifyConnectPage)),
+          );
           final before = cubit();
 
-          await ProviderScope.containerOf(
-                tester.element(find.byType(VerifyConnectPage)),
-              )
+          await container
               .read(confirmationRequirementSimulatedProvider.notifier)
               .set(on: true);
           await tester.pump();
 
+          expect(
+            container.read(simulateConfirmationRequirementProvider),
+            isTrue,
+          );
           expect(cubit(), same(before));
+          expect(before.isClosed, isFalse);
+          expect(cubit().state.platform, equals(twitterOpen));
         },
       );
 
