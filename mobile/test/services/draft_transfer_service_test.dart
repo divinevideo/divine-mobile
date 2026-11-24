@@ -295,6 +295,68 @@ void main() {
         expect(imported.inspiredByVideo, inspiration);
       });
 
+      test('keeps only credits that name a published video', () async {
+        const artist =
+            'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+        const other =
+            'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+        const stranger =
+            '2222222222222222222222222222222222222222222222222222222222222222';
+        const video = ClipSourceCredit(
+          authorPubkey: artist,
+          addressableId: '34236:$artist:original',
+        );
+        const legacyVideo = ClipSourceCredit(
+          authorPubkey: other,
+          eventId: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+        );
+        // Names an account but no video, and a real video under someone
+        // else's pubkey: neither is a fact the recipient can stand behind.
+        const accountOnly = ClipSourceCredit(authorPubkey: stranger);
+        const wrongAuthor = ClipSourceCredit(
+          authorPubkey: stranger,
+          addressableId: '34236:$artist:other-video',
+        );
+        final draft = makeDraft();
+        final credited = draft.copyWith(
+          clipSourceCredits: const [video, accountOnly, wrongAuthor],
+          clips: [
+            draft.clips.first.copyWith(
+              sourceCredits: const [
+                video,
+                legacyVideo,
+                accountOnly,
+                wrongAuthor,
+              ],
+            ),
+          ],
+        );
+        final package = await transfer.exportDraft(
+          credited,
+          temporaryDirectory: outbox,
+        );
+
+        final imported = await transfer.importDraft(
+          messageId: 'forged-credit-message',
+          senderPubkey: _sender,
+          storage: recipientStorage,
+          download: package.readAsBytes,
+          stillWanted: () => true,
+        );
+
+        final clip = imported.clips.single;
+        expect(clip.sourceCredits, const [
+          video,
+          legacyVideo,
+          ClipSourceCredit(authorPubkey: _sender),
+        ]);
+        expect(clip.sourceAuthorPubkey, artist);
+        expect(imported.clipSourceCredits, const [
+          video,
+          ClipSourceCredit(authorPubkey: _sender),
+        ]);
+      });
+
       test(
         'encrypted project round trips, opens in the editor, edits and returns',
         () async {
@@ -426,39 +488,43 @@ void main() {
         },
       );
 
+      Future<({Map<String, dynamic> manifest, Uint8List media})>
+      exported() async {
+        final package = await transfer.exportDraft(
+          makeDraft(),
+          temporaryDirectory: outbox,
+        );
+        final bytes = package.readAsBytesSync();
+        final end = 8 + ByteData.sublistView(bytes, 0, 8).getUint32(4);
+        return (
+          manifest: jsonDecode(
+            utf8.decode(bytes.sublist(8, end)),
+          ) as Map<String, dynamic>,
+          media: Uint8List.fromList(bytes.sublist(end)),
+        );
+      }
+
+      Uint8List pack(
+        Map<String, dynamic> manifest,
+        List<int> media, {
+        int? manifestSize,
+      }) {
+        final json = utf8.encode(jsonEncode(manifest));
+        final header = ByteData(8)
+          ..setUint32(0, 0x44564431)
+          ..setUint32(4, manifestSize ?? json.length);
+        return Uint8List.fromList([
+          ...header.buffer.asUint8List(),
+          ...json,
+          ...media,
+        ]);
+      }
+
+      Map<String, dynamic> firstClip(Map<String, dynamic> manifest) =>
+          ((manifest['project'] as Map)['clips'] as List).first
+              as Map<String, dynamic>;
+
       group('rejects a tampered package', () {
-        Future<({Map<String, dynamic> manifest, Uint8List media})>
-        exported() async {
-          final package = await transfer.exportDraft(
-            makeDraft(),
-            temporaryDirectory: outbox,
-          );
-          final bytes = package.readAsBytesSync();
-          final end = 8 + ByteData.sublistView(bytes, 0, 8).getUint32(4);
-          return (
-            manifest: jsonDecode(
-              utf8.decode(bytes.sublist(8, end)),
-            ) as Map<String, dynamic>,
-            media: Uint8List.fromList(bytes.sublist(end)),
-          );
-        }
-
-        Uint8List pack(
-          Map<String, dynamic> manifest,
-          List<int> media, {
-          int? manifestSize,
-        }) {
-          final json = utf8.encode(jsonEncode(manifest));
-          final header = ByteData(8)
-            ..setUint32(0, 0x44564431)
-            ..setUint32(4, manifestSize ?? json.length);
-          return Uint8List.fromList([
-            ...header.buffer.asUint8List(),
-            ...json,
-            ...media,
-          ]);
-        }
-
         Future<void> expectRejected(Uint8List bundle) async {
           final before = directory.listSync(recursive: true).length;
           await expectLater(
@@ -474,10 +540,6 @@ void main() {
           expect(await recipientStorage.getDraftCount(), 0);
           expect(directory.listSync(recursive: true).length, before);
         }
-
-        Map<String, dynamic> firstClip(Map<String, dynamic> manifest) =>
-            ((manifest['project'] as Map)['clips'] as List).first
-                as Map<String, dynamic>;
 
         test('a media extension that is not on the allowlist', () async {
           final (:manifest, :media) = await exported();
@@ -539,6 +601,25 @@ void main() {
           };
           await expectRejected(pack(manifest, media));
         });
+      });
+
+      test('drops a forged single credit on a clip', () async {
+        const stranger =
+            '2222222222222222222222222222222222222222222222222222222222222222';
+        final (:manifest, :media) = await exported();
+        firstClip(manifest)['sourceAuthorPubkey'] = stranger;
+
+        final imported = await transfer.importDraft(
+          messageId: '5' * 64,
+          senderPubkey: _sender,
+          storage: recipientStorage,
+          download: () async => pack(manifest, media),
+          stillWanted: () => true,
+        );
+
+        expect(imported.clips.first.sourceCredits, const [
+          ClipSourceCredit(authorPubkey: _sender),
+        ]);
       });
     });
     group('readCoverBlurhash', () {

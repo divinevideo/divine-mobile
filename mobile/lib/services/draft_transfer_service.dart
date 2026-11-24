@@ -309,7 +309,7 @@ class DraftTransferService {
         'lastModified': now,
         'publishStatus': PublishStatus.draft.name,
         'clipSourceCredits': _creditSender(
-          restored['clipSourceCredits'],
+          ClipSourceCredit.listFromJson(restored['clipSourceCredits']),
           senderPubkey,
         ),
       }, documentsPath);
@@ -402,9 +402,12 @@ class DraftTransferService {
               result['importedSource'] = true;
               if (senderPubkey != null) {
                 result['sourceCredits'] = _creditSender(
-                  map['sourceCredits'],
+                  _clipCredits(map),
                   senderPubkey,
                 );
+                // Folded into sourceCredits above, so a dropped credit cannot
+                // come back through the clip's single-credit fields.
+                _legacyClipCreditKeys.forEach(result.remove);
               }
             }
             final audioEvent =
@@ -451,20 +454,71 @@ class DraftTransferService {
           })!
           as Map<String, dynamic>;
 
+  static const _legacyClipCreditKeys = [
+    'sourceAuthorPubkey',
+    'sourceEventId',
+    'sourceAddressableId',
+    'sourceRelayHint',
+  ];
+
+  /// Every credit a clip map carries: its list, and the single credit of a
+  /// clip saved before the list existed.
+  static List<ClipSourceCredit> _clipCredits(Map<dynamic, dynamic> clip) {
+    String? field(String key) {
+      final value = clip[key];
+      return value is String && value.isNotEmpty ? value : null;
+    }
+
+    final author = field('sourceAuthorPubkey');
+    final addressable = field('sourceAddressableId');
+    return [
+      ...ClipSourceCredit.listFromJson(clip['sourceCredits']),
+      if (author != null)
+        ClipSourceCredit(
+          authorPubkey: author,
+          eventId: field('sourceEventId'),
+          addressableId: addressable,
+          relayUrl: field('sourceRelayHint'),
+        )
+      else if (addressable != null)
+        ClipSourceCredit.fromAddressableId(
+          addressableId: addressable,
+          eventId: field('sourceEventId'),
+          relayUrl: field('sourceRelayHint'),
+        ),
+    ];
+  }
+
+  /// Keeps the credits that name a published video and adds the sender.
+  ///
+  /// Credits become locked rows in the recipient's post form and `p`/`a` tags
+  /// that notify the credited account, published under the recipient's name.
+  /// A credit naming only an account is the sender's word alone, so it is
+  /// dropped; the sender is credited for what they shared.
   static List<Map<String, dynamic>> _creditSender(
-    Object? raw,
+    Iterable<ClipSourceCredit> credits,
     String senderPubkey,
   ) {
-    final sender = ClipSourceCredit(authorPubkey: senderPubkey);
-    final credits = ClipSourceCredit.listFromJson(raw);
+    final kept = credits.where(_namesPublishedVideo).toList();
     // The first entry backs the original author's pubkey and source event.
     return [
-      for (final credit in credits) credit.toJson(),
-      if (!credits.any(
+      for (final credit in kept) credit.toJson(),
+      if (!kept.any(
         (credit) => pubkeysEqual(credit.authorPubkey, senderPubkey),
       ))
-        sender.toJson(),
+        ClipSourceCredit(authorPubkey: senderPubkey).toJson(),
     ];
+  }
+
+  /// Whether [credit] names the published video a clip was reused from. A
+  /// video's coordinate names its author, so an `a` credit must credit them.
+  static bool _namesPublishedVideo(ClipSourceCredit credit) {
+    if (credit.inspiredByInfo case final video?) {
+      final author = video.creatorPubkey;
+      return author.isNotEmpty && pubkeysEqual(author, credit.authorPubkey);
+    }
+    final eventId = credit.eventId;
+    return eventId != null && eventId.isNotEmpty;
   }
 
   /// A saved history shares identical metadata across undo steps. Restoring
