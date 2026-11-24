@@ -124,6 +124,10 @@ class Camera {
   };
   std::shared_ptr<PhotoWork> photo_work_ = std::make_shared<PhotoWork>();
 
+  // Main-loop callbacks may remain queued after the streaming thread stops.
+  // Reset only after that thread joins, before borrowed camera/channel teardown.
+  std::shared_ptr<void> callback_lifetime_ = std::make_shared<int>(0);
+
   int camera_id_;
   int64_t texture_id_;
   // state_ is written from the GStreamer streaming thread (OnNewSample) and

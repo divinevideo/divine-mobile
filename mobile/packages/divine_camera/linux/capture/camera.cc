@@ -1,6 +1,7 @@
 #include "camera.h"
 #include "photo_handler.h"
 #include "pixel_utils.h"
+#include "../../native/include/capture_callbacks.h"
 
 #include <gio/gio.h>
 #include <glib/gstdio.h>
@@ -401,10 +402,14 @@ GstFlowReturn Camera::OnNewSample(GstAppSink* sink, gpointer user_data) {
         int width;
         int height;
         size_t size;
+        ~ImageStreamData() {
+          in_flight->fetch_sub(1);
+          g_free(pixels);
+        }
       };
 
       self->image_stream_in_flight_->fetch_add(1);
-      auto* stream_data = new ImageStreamData();
+      auto stream_data = std::make_shared<ImageStreamData>();
       stream_data->in_flight = self->image_stream_in_flight_;
       stream_data->channel = self->method_channel_;
       stream_data->camera_id = self->camera_id_;
@@ -413,30 +418,23 @@ GstFlowReturn Camera::OnNewSample(GstAppSink* sink, gpointer user_data) {
       stream_data->height = height;
       stream_data->size = frame_size;
 
-      g_idle_add(
-          [](gpointer user_data) -> gboolean {
-            auto* data = static_cast<ImageStreamData*>(user_data);
-            data->in_flight->fetch_sub(1);
+      PostCaptureCallback(self->callback_lifetime_, [stream_data]() {
+        auto* data = stream_data.get();
 
-            g_autoptr(FlValue) args = fl_value_new_map();
-            fl_value_set_string_take(args, "cameraId",
-                                     fl_value_new_int(data->camera_id));
-            fl_value_set_string_take(args, "width",
-                                     fl_value_new_int(data->width));
-            fl_value_set_string_take(args, "height",
-                                     fl_value_new_int(data->height));
-            fl_value_set_string_take(
-                args, "bytes",
-                fl_value_new_uint8_list(data->pixels, data->size));
+        g_autoptr(FlValue) args = fl_value_new_map();
+        fl_value_set_string_take(args, "cameraId",
+                                 fl_value_new_int(data->camera_id));
+        fl_value_set_string_take(args, "width",
+                                 fl_value_new_int(data->width));
+        fl_value_set_string_take(args, "height",
+                                 fl_value_new_int(data->height));
+        fl_value_set_string_take(
+            args, "bytes",
+            fl_value_new_uint8_list(data->pixels, data->size));
 
-            fl_method_channel_invoke_method(data->channel, "imageStreamFrame",
-                                            args, nullptr, nullptr, nullptr);
-
-            g_free(data->pixels);
-            delete data;
-            return G_SOURCE_REMOVE;
-          },
-          stream_data);
+        fl_method_channel_invoke_method(data->channel, "imageStreamFrame",
+                                        args, nullptr, nullptr, nullptr);
+      });
     }
   }
 
@@ -447,13 +445,9 @@ GstFlowReturn Camera::OnNewSample(GstAppSink* sink, gpointer user_data) {
   // GStreamer streaming thread, but fl_method_call_respond_* must be called
   // from the main GLib thread).
   if (is_first_frame) {
-    g_idle_add(
-        [](gpointer user_data) -> gboolean {
-          Camera* cam = static_cast<Camera*>(user_data);
-          cam->RespondToPendingInit(true, nullptr);
-          return G_SOURCE_REMOVE;
-        },
-        self);
+    PostCaptureCallback(self->callback_lifetime_, [self]() {
+      self->RespondToPendingInit(true, nullptr);
+    });
   }
 
   return GST_FLOW_OK;
@@ -816,6 +810,10 @@ void Camera::Dispose() {
   // (which runs OnNewSample and accesses image_stream_buffer_) is fully
   // stopped. Freeing before this point was a use-after-free.
   ReleasePipeline();
+
+  // Pending idle work holds no camera/channel ownership and must not run after
+  // teardown. The producer has joined, so no thread can still copy this token.
+  callback_lifetime_.reset();
 
   // Now safe: the GStreamer streaming thread is guaranteed to have exited
   // OnNewSample and will never access image_stream_buffer_ again.
