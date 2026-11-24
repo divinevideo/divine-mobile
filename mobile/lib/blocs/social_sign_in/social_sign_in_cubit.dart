@@ -1,5 +1,5 @@
-// ABOUTME: Runs a Google or Apple sign-in from the welcome or sign-in screen:
-// ABOUTME: terms, provider token, Keycast session, app sign-in.
+// ABOUTME: Runs a Google or Apple sign-in from the welcome screen: terms,
+// ABOUTME: provider token, Keycast session, app sign-in.
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,8 +17,7 @@ part 'social_sign_in_state.dart';
 /// Signs in with Google or Apple.
 ///
 /// Tapping a provider counts as accepting the terms, like the other buttons
-/// on the welcome screen; the sign-in screen is only reached after accepting
-/// them, so accepting again there changes nothing. On success the auth state flips and the router
+/// on the welcome screen. On success the auth state flips and the router
 /// leaves the screen; this cubit only reports progress and failures.
 class SocialSignInCubit extends Cubit<SocialSignInState>
     with CloseGuardedEmit<SocialSignInState> {

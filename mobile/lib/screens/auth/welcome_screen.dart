@@ -374,6 +374,9 @@ class _ReturningUserLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final account = state.selectedAccount;
     if (account == null) return const SizedBox.shrink();
+    final socialSignInBusy = context.select(
+      (SocialSignInCubit cubit) => cubit.state.isBusy,
+    );
     final displayName =
         account.profile?.bestDisplayName ??
         UserProfile.defaultDisplayNameFor(account.pubkeyHex);
@@ -421,12 +424,17 @@ class _ReturningUserLayout extends StatelessWidget {
                 isLoading: isLoading,
                 expanded: true,
                 semanticIdentifier: SemanticIds.authContinueAsButton,
-                onPressed: () => context.read<WelcomeBloc>().add(
-                  const WelcomeLogBackInRequested(),
-                ),
+                onPressed: socialSignInBusy
+                    ? null
+                    : () => context.read<WelcomeBloc>().add(
+                        const WelcomeLogBackInRequested(),
+                      ),
               ),
 
               const SizedBox(height: 12),
+
+              // Sign in to another account with Apple or Google.
+              SocialSignInButtons(enabled: !isLoading),
 
               // Login with another account.
               DivineButton(
@@ -434,7 +442,7 @@ class _ReturningUserLayout extends StatelessWidget {
                 expanded: true,
                 type: .secondary,
                 semanticIdentifier: SemanticIds.authUseAnotherAccountButton,
-                onPressed: isLoading
+                onPressed: isLoading || socialSignInBusy
                     ? null
                     : () => context.read<WelcomeBloc>().add(
                         const WelcomeLoginOptionsRequested(),
@@ -449,7 +457,7 @@ class _ReturningUserLayout extends StatelessWidget {
                 expanded: true,
                 type: .secondary,
                 semanticIdentifier: SemanticIds.authCreateAccountButton,
-                onPressed: isLoading
+                onPressed: isLoading || socialSignInBusy
                     ? null
                     : () => context.read<WelcomeBloc>().add(
                         const WelcomeCreateAccountRequested(),

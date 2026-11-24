@@ -2,6 +2,8 @@
 // ABOUTME: Verifies default variant, returning-user variant, button interactions,
 // ABOUTME: terms notice, error display, and loading states
 
+import 'dart:async';
+
 import 'package:db_client/db_client.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/rendering.dart';
@@ -122,6 +124,11 @@ void main() {
     when(
       () => socialSignInRepository.isAvailable(any()),
     ).thenReturn(offerSocialSignIn);
+    // A provider sign-in stays running, so a test can look at the screen
+    // while it does.
+    when(
+      () => socialSignInRepository.signIn(any()),
+    ).thenAnswer((_) => Completer<KeycastSession>().future);
     final app = MaterialApp.router(
       locale: locale,
       localizationsDelegates: appLocalizationsDelegates,
@@ -598,6 +605,54 @@ void main() {
           find.bySemanticsIdentifier(SemanticIds.authCreateAccountButton),
           findsOneWidget,
         );
+      });
+
+      testWidgets('offers Apple and Google right under "Continue as"', (
+        tester,
+      ) async {
+        await tester.binding.setSurfaceSize(const Size(393, 852));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(createTestWidget(offerSocialSignIn: true));
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        double top(String label) =>
+            tester.getTopLeft(find.widgetWithText(DivineButton, label)).dy;
+
+        expect(tester.takeException(), isNull);
+        expect(
+          top('Continue as Test User'),
+          lessThan(top(l10n.authContinueWithApple)),
+        );
+        expect(
+          top(l10n.authContinueWithApple),
+          lessThan(top(l10n.authContinueWithGoogle)),
+        );
+        expect(
+          top(l10n.authContinueWithGoogle),
+          lessThan(top(l10n.authUseAnotherAccount)),
+        );
+      });
+
+      testWidgets('locks the other options while a provider sign-in runs', (
+        tester,
+      ) async {
+        await tester.binding.setSurfaceSize(const Size(800, 1200));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(createTestWidget(offerSocialSignIn: true));
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.authContinueWithApple));
+        await tester.pump();
+
+        DivineButton button(String label) => tester.widget<DivineButton>(
+          find.widgetWithText(DivineButton, label),
+        );
+        expect(button(l10n.authContinueWithApple).isLoading, isTrue);
+        expect(button('Continue as Test User').onPressed, isNull);
+        expect(button(l10n.authUseAnotherAccount).onPressed, isNull);
+        expect(button(l10n.authCreateNewAccountShort).onPressed, isNull);
       });
 
       testWidgets('shows terms notice above returning-user action buttons', (
