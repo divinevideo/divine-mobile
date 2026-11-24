@@ -277,8 +277,8 @@ void main() {
 
       await service.setAnalyticsConsent(enabled: false);
 
-      // The SDK flag only governs native traces from the next launch, so new
-      // Dart traces and HTTP metrics have to stop here and now.
+      // The plugin applies the SDK flag from the next launch, so new Dart
+      // traces and HTTP metrics have to stop here and now, through isEnabled.
       verify(() => performance.setPerformanceCollectionEnabled(false))
           .called(1);
       expect(service.isEnabled, isFalse);
