@@ -1282,11 +1282,7 @@ class _MainCommentInputState extends ConsumerState<MainCommentInput> {
                     )
                     ..add(const MentionSuggestionsCleared());
                 },
-                onVideoReplyPressed:
-                    mayReplyWithVideo &&
-                        ref.watch(
-                          isFeatureEnabledProvider(FeatureFlag.videoReplies),
-                        )
+                onVideoReplyPressed: mayReplyWithVideo
                     ? () => _openVideoReplyCamera(
                         context,
                         state,

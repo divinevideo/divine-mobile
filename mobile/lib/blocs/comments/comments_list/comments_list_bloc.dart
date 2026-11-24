@@ -899,7 +899,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
             commentAuthors: this.stream
                 .map((state) => state.commentAuthors)
                 .startWith(state.commentAuthors),
-            includeVideoReplies: _includeVideoReplies,
+            includeVideoReplies: true,
           )
           .listen(
             (deletion) {

@@ -288,6 +288,11 @@ void main() {
 
       test('loads and watches video replies with the thread', () async {
         final comment = makeComment(validId('c1'));
+        final videoReply = makeComment(
+          validId('video-reply'),
+          authorPubkey: validId('video-author'),
+          videoUrl: 'https://cdn.example.com/reply.mp4',
+        );
         when(
           () => mockCommentsRepository.loadComments(
             rootEventId: any(named: 'rootEventId'),
@@ -299,9 +304,9 @@ void main() {
         ).thenAnswer(
           (_) async => CommentThread(
             rootEventId: validId('root'),
-            comments: [comment],
-            totalCount: 1,
-            commentCache: {comment.id: comment},
+            comments: [comment, videoReply],
+            totalCount: 2,
+            commentCache: {comment.id: comment, videoReply.id: videoReply},
           ),
         );
 
@@ -338,12 +343,20 @@ void main() {
             onEose: any(named: 'onEose'),
           ),
         ).called(1);
-        verify(
+        final deletionWatch = verify(
           () => mockCommentsRepository.watchCommentDeletions(
             rootEventId: any(named: 'rootEventId'),
+            commentAuthors: captureAny(named: 'commentAuthors'),
             includeVideoReplies: true,
           ),
-        ).called(1);
+        );
+        deletionWatch.called(1);
+        final deletionAuthors =
+            deletionWatch.captured.single as Stream<Set<String>>;
+        expect(
+          await deletionAuthors.first,
+          unorderedEquals([comment.authorPubkey, videoReply.authorPubkey]),
+        );
       });
 
       test('starts live watch after initial load populates comments', () async {
@@ -1367,6 +1380,7 @@ void main() {
             rootAddressableId: any(named: 'rootAddressableId'),
             since: any(named: 'since'),
             onEose: any(named: 'onEose'),
+            includeVideoReplies: true,
           ),
         ).thenAnswer((_) => comments.stream);
         when(
