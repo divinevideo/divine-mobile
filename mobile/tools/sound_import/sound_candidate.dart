@@ -43,7 +43,15 @@ class SoundLicense {
     requiresAttribution: true,
   );
 
-  static const List<SoundLicense> _known = [cc0, ccBy4];
+  /// Creative Commons Attribution 3.0, which one of the app's own sounds
+  /// carries.
+  static const ccBy3 = SoundLicense(
+    name: 'CC BY 3.0',
+    url: 'https://creativecommons.org/licenses/by/3.0/',
+    requiresAttribution: true,
+  );
+
+  static const List<SoundLicense> _known = [cc0, ccBy4, ccBy3];
 
   final String name;
   final String url;
@@ -78,6 +86,7 @@ class SoundCandidate {
     this.summary,
     this.creditLines = const [],
     this.expectedBytes,
+    this.divineSoundId,
   });
 
   factory SoundCandidate.fromJson(Map<String, dynamic> json) {
@@ -96,6 +105,7 @@ class SoundCandidate {
       creditLines: (json['creditLines'] as List<dynamic>? ?? const [])
           .cast<String>(),
       expectedBytes: json['expectedBytes'] as int?,
+      divineSoundId: json['divineSoundId'] as String?,
     );
   }
 
@@ -132,6 +142,12 @@ class SoundCandidate {
   /// The original file's size, when the listing says, for dry runs.
   final int? expectedBytes;
 
+  /// The id of the sound the app ships that this one is, from the app's
+  /// `sounds_manifest.json`; null for every other source. Published as the
+  /// `divine_sound` tag, which names the shipped file. The app ties only the
+  /// Divine sound accounts' events to it, so not the library's yet.
+  final String? divineSoundId;
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'downloadUrl': downloadUrl,
@@ -146,6 +162,7 @@ class SoundCandidate {
     'summary': ?summary,
     if (creditLines.isNotEmpty) 'creditLines': creditLines,
     'expectedBytes': ?expectedBytes,
+    'divineSoundId': ?divineSoundId,
   };
 }
 

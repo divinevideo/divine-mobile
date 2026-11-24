@@ -8,7 +8,7 @@ import 'package:models/models.dart'
     show AudioEvent, SoundKind, VideoEvent, searchTermsOf;
 import 'package:nostr_sdk/nostr_sdk.dart' show AId;
 import 'package:openvine/config/official_accounts.dart'
-    show kDivineSoundPublisherPubkeys, kSoundLibraryPublisherPubkeys;
+    show kDivineSoundPublisherPubkeys;
 import 'package:openvine/extensions/divine_sound_extensions.dart';
 import 'package:openvine/models/paged_sounds.dart';
 import 'package:openvine/models/sound_cover.dart';
@@ -60,10 +60,6 @@ SoundsRepository soundsRepository(Ref ref) {
     nostrClient: nostrClient,
     funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
     divineSoundPublishers: kDivineSoundPublisherPubkeys,
-    // Empty until the library account exists, so it equals the default for
-    // now; wired already so that adding the account's pubkey is enough.
-    // ignore: avoid_redundant_argument_values
-    librarySoundPublishers: kSoundLibraryPublisherPubkeys,
     // The same rule the feed hides blocked and muted accounts by.
     blockFilter: createBlockedAuthorFilter(ref),
   );
@@ -112,9 +108,6 @@ class TrendingSounds extends _$TrendingSounds with _LoadsMoreSounds {
     _fillAScreen();
     _pager = _CursorPager(
       (cursor) => repository.fetchNewestSounds(cursor: cursor),
-      // The imported library would fill the newest pages; it is reached
-      // through search and Popular instead.
-      keep: repository.withoutLibrarySounds,
     );
     return PagedSounds.first(await _pager.next());
   }
@@ -288,12 +281,10 @@ class SoundsOfKind extends _$SoundsOfKind with _LoadsMoreSounds {
           cursor: cursor,
         ),
       },
-      // As the lists without a kind: the imported library is reached through
-      // search and Popular, and Divine's own sounds sit beside For you.
+      // As the list without a kind: Divine's own sounds sit beside For you.
       keep: switch (list) {
-        SoundListOfKind.newest => repository.withoutLibrarySounds,
-        SoundListOfKind.popular => null,
-        SoundListOfKind.followed => _withoutLibraryOrDivineSounds(repository),
+        SoundListOfKind.newest || SoundListOfKind.popular => null,
+        SoundListOfKind.followed => _withoutDivineSounds,
       },
     );
     return PagedSounds.first(await _pager.next());
@@ -303,17 +294,13 @@ class SoundsOfKind extends _$SoundsOfKind with _LoadsMoreSounds {
   Future<SoundPage> _nextPage() => _pager.next();
 }
 
-/// Narrows a page of For you to the sounds it shows: not the imported
-/// library, which search and Popular reach, nor Divine's own sounds, which
-/// the picker lists beside it from [divineSounds], tied to the ones the app
-/// ships, and would otherwise show twice.
-List<AudioEvent> Function(List<AudioEvent>) _withoutLibraryOrDivineSounds(
-  SoundsRepository repository,
-) =>
-    (sounds) => [
-      for (final sound in repository.withoutLibrarySounds(sounds))
-        if (!sound.isDivine) sound,
-    ];
+/// Narrows a page of For you to the sounds it shows: not Divine's own
+/// sounds, which the picker lists beside it from [divineSounds], tied to the
+/// ones the app ships, and would otherwise show twice.
+List<AudioEvent> _withoutDivineSounds(List<AudioEvent> sounds) => [
+  for (final sound in sounds)
+    if (!sound.isDivine) sound,
+];
 
 /// Walks the pages of a list that follows a cursor, each holding only sounds
 /// the pages before it did not.
@@ -490,7 +477,7 @@ class ForYouSounds extends _$ForYouSounds with _LoadsMoreSounds {
     _fillAScreen();
     _pager = _CursorPager(
       (cursor) => repository.fetchFollowedSounds(following, cursor: cursor),
-      keep: _withoutLibraryOrDivineSounds(repository),
+      keep: _withoutDivineSounds,
     );
     if (following.isEmpty) return const PagedSounds(pages: [[]]);
     return PagedSounds.first(await _pager.next());

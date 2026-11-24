@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/nip19/nip19.dart';
 
+import 'sound_import/app_sounds.dart';
 import 'sound_import/audio_pipeline.dart';
 import 'sound_import/blossom_client.dart';
 import 'sound_import/cc0_packs.dart';
@@ -93,7 +94,7 @@ ArgParser _parser() {
   parser.addCommand('catalog')
     ..addOption(
       'source',
-      allowed: ['all', 'cc0', 'incompetech'],
+      allowed: ['all', 'cc0', 'incompetech', 'app'],
       defaultsTo: 'all',
     )
     ..addMultiOption(
@@ -193,6 +194,15 @@ Future<void> _catalog(Directory work, ArgResults args) async {
       final music = incompetechCandidates(pieces! as List<dynamic>);
       candidates.addAll(limit == null ? music : music.take(limit));
       stdout.writeln('incompetech: ${music.length} candidates');
+    }
+    if (source == 'all' || source == 'app') {
+      final manifest = await _getJson(client, appSoundsManifestUrl);
+      final shipped = appSoundCandidates(manifest! as Map<String, dynamic>);
+      candidates.addAll(limit == null ? shipped : shipped.take(limit));
+      stdout.writeln(
+        "app: ${shipped.length} of the app's own sounds at commit "
+        '$appSoundsCommit',
+      );
     }
   } finally {
     client.close();
