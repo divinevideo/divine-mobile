@@ -29,6 +29,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:wakelock_plus_platform_interface/wakelock_plus_platform_interface.dart';
 
 import '../../mocks/mock_path_provider_platform.dart';
+import 'helpers/start_observing_recorder.dart';
 
 class _MockDualCameraService extends Mock
     implements CameraService, DualCameraCapture {}
@@ -1016,7 +1017,13 @@ void main() {
       });
 
       test("deletes both cameras' files", () async {
-        final bloc = buildBloc();
+        final bloc = StartObservingRecorder(
+          readClipManager: () => clipManager,
+          readVideoEditor: _MockVideoEditor.new,
+          readVideoEditorState: VideoEditorProviderState.new,
+          readSharedPreferences: () => prefs,
+          cameraService: camera,
+        );
         addTearDown(bloc.close);
         bloc.add(const VideoRecorderRecordingStartRequested());
         await pumpEventQueue();
@@ -1024,7 +1031,7 @@ void main() {
         await pumpEventQueue();
 
         started.complete(true);
-        await pumpEventQueue();
+        await bloc.startDone.future;
 
         expect(bloc.state.isRecording, isFalse);
         expect(mainFile.existsSync(), isFalse);
