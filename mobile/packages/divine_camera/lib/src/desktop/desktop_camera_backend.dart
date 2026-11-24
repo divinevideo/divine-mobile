@@ -5,11 +5,24 @@ import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+/// Output configuration absent from the generic camera platform contract.
+// This optional capability must be detectable on an injected CameraPlatform.
+// ignore: one_member_abstracts
+abstract interface class DesktopCameraOutputSettings {
+  /// Binds output orientation before the native source is initialized.
+  Future<int> createCameraWithOutputSettings(
+    CameraDescription cameraDescription,
+    MediaSettings mediaSettings, {
+    bool mirrorOutput = false,
+  });
+}
+
 /// Native desktop capture with file ownership established before capture.
 ///
 /// The matching native channel must acknowledge disposal after releasing every
 /// writer. A failed stop retains its private directory until that boundary.
-class DesktopCameraBackend extends CameraPlatform {
+class DesktopCameraBackend extends CameraPlatform
+    implements DesktopCameraOutputSettings {
   /// Creates an explicitly owned backend without acquiring a device.
   DesktopCameraBackend({
     MethodChannel channel = const MethodChannel('video.divine/desktop_capture'),
@@ -153,12 +166,28 @@ class DesktopCameraBackend extends CameraPlatform {
   }
 
   @override
+  Future<int> createCameraWithOutputSettings(
+    CameraDescription cameraDescription,
+    MediaSettings mediaSettings, {
+    bool mirrorOutput = false,
+  }) => createCameraWithSettings(
+    cameraDescription,
+    mediaSettings,
+    mirrorOutput: mirrorOutput,
+  );
+
+  @override
   Future<int> createCameraWithSettings(
     CameraDescription cameraDescription,
-    MediaSettings mediaSettings,
-  ) async {
+    MediaSettings mediaSettings, {
+    bool mirrorOutput = false,
+  }) async {
     _checkOpen();
-    final opening = _createCamera(cameraDescription, mediaSettings);
+    final opening = _createCamera(
+      cameraDescription,
+      mediaSettings,
+      mirrorOutput,
+    );
     _opening.add(opening);
     try {
       return await opening;
@@ -170,12 +199,14 @@ class DesktopCameraBackend extends CameraPlatform {
   Future<int> _createCamera(
     CameraDescription cameraDescription,
     MediaSettings mediaSettings,
+    bool mirrorOutput,
   ) async {
     final result = await _invoke<Map<Object?, Object?>>('create', {
       'cameraName': cameraDescription.name,
       'resolutionPreset':
           mediaSettings.resolutionPreset?.index ?? ResolutionPreset.max.index,
       'enableAudio': mediaSettings.enableAudio,
+      'mirrorOutput': mirrorOutput,
       'fps': mediaSettings.fps,
       'videoBitrate': mediaSettings.videoBitrate,
       'audioBitrate': mediaSettings.audioBitrate,

@@ -129,6 +129,23 @@ void main() {
     });
 
     group('native camera contract', () {
+      test(
+        'binds output mirroring before native camera initialization',
+        () async {
+          await backend.createCameraWithSettings(
+            const CameraDescription(
+              name: 'synthetic',
+              lensDirection: CameraLensDirection.front,
+              sensorOrientation: 0,
+            ),
+            const MediaSettings(enableAudio: true),
+            mirrorOutput: true,
+          );
+          final creation = calls.lastWhere((call) => call.method == 'create');
+          expect((creation.arguments as Map)['mirrorOutput'], isTrue);
+        },
+      );
+
       test('rejects malformed camera descriptors', () async {
         for (final malformed in <Object?>[
           42,

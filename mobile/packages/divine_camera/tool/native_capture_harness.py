@@ -21,7 +21,7 @@ import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:divine_camera/src/desktop/desktop_camera_backend.dart';
 
 const channel = MethodChannel('video.divine/desktop_capture');
-final previewFrames = <int, Completer<void>>{};
+final previewFrames = <int, Completer<Map>>{};
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   channel.setMethodCallHandler((call) async {
@@ -30,14 +30,14 @@ Future<void> main() async {
       final pending = previewFrames[frame['cameraId']];
       if (pending != null && !pending.isCompleted && (frame['width'] as num) > 0 &&
           (frame['height'] as num) > 0 && (frame['bytes'] as List).isNotEmpty) {
-        pending.complete();
+        pending.complete(frame);
       }
     }
   });
   runApp(const SizedBox());
   final root = Directory(Platform.environment['DIVINE_CAPTURE_OUTPUT']!);
   final testCase = Platform.environment['DIVINE_CAPTURE_CASE'] ?? 'video';
-  final audio = testCase != 'video' && testCase != 'startup-failure';
+  final audio = testCase == 'audio' || testCase == 'audio-unavailable';
   int? id;
   var stage = 'enumeration';
   void setStage(String value) {
@@ -65,7 +65,7 @@ Future<void> main() async {
     try {
       created = await channel.invokeMapMethod<String, Object?>('create', {
         'cameraName': device['name'], 'resolutionPreset': 1,
-        'enableAudio': audio, 'fps': 30,
+        'enableAudio': audio, 'fps': 30, 'mirrorOutput': Platform.environment['DIVINE_CAPTURE_CASE'] == 'mirrored-video',
       });
     } on PlatformException catch (error) {
       if (testCase != 'texture-unavailable' || error.code != 'texture_registration_failed') rethrow;
@@ -93,6 +93,18 @@ Future<void> main() async {
     if (testCase == 'startup-failure') throw StateError('Pipeline startup failure was ignored');
     if ((initialized!['previewWidth']! as num) <= 0) throw StateError('No preview');
     await verifyFirstPreviewFrame(id);
+    setStage('independent-output-orientation');
+    final capabilities = await channel.invokeMapMethod<String, Object?>('getPlatformCapabilities');
+    if (capabilities?['supportsMirrorControl'] != false) {
+      throw StateError('Native preview mirroring can alter saved-output orientation');
+    }
+    var nativeMirrorRejected = false;
+    try {
+      await channel.invokeMethod<void>('setMirror', {'cameraId': id, 'mirrored': false});
+    } on PlatformException catch (error) {
+      nativeMirrorRejected = error.code == 'unsupported';
+    }
+    if (!nativeMirrorRejected) throw StateError('Native preview mirror override was accepted');
     if (testCase == 'audio-unavailable') {
       setStage('audio-unavailable');
       final directory = await Directory.fromUri(root.uri.resolve('failed-audio/')).create();
@@ -134,6 +146,7 @@ Future<void> main() async {
       throw StateError('Native capture overwrote an existing output');
     }
     await photo.copy(File.fromUri(root.uri.resolve('photo.jpg')).path);
+    await verifyFirstPreviewFrame(id);
     setStage('repeated-recording');
     for (var index = 0; index < 2; index++) {
       setStage('recording-$index-start');
@@ -154,6 +167,7 @@ Future<void> main() async {
       await verifyWriterReleased(file);
       await file.copy(File.fromUri(root.uri.resolve('take$index.mp4')).path);
     }
+    await verifyFirstPreviewFrame(id);
     setStage('photo-disposal-writer-release');
     if (Platform.isLinux) {
       await verifyPhotoRelease(root, id);
@@ -183,10 +197,21 @@ Future<void> main() async {
 }
 
 Future<void> verifyFirstPreviewFrame(int id) async {
-  final first = previewFrames[id] = Completer<void>();
+  final first = previewFrames[id] = Completer<Map>();
   try {
     await channel.invokeMethod<void>('startImageStream', {'cameraId': id});
-    await first.future.timeout(const Duration(seconds: 15));
+    final frame = await first.future.timeout(const Duration(seconds: 15));
+    final width = (frame['width'] as num).toInt();
+    final height = (frame['height'] as num).toInt();
+    final pixels = frame['bytes'] as List;
+    if (pixels.length != width * height * 4) throw StateError('Invalid stream frame size');
+    final left = (height ~/ 10 * width + width ~/ 14) * 4;
+    final right = (height ~/ 10 * width + width * 13 ~/ 14) * 4;
+    // The native BGRA stream stays natural; Flutter owns preview mirroring.
+    if ((pixels[left + 2] as int) < (pixels[right + 2] as int) + 120 ||
+        (Platform.isWindows && (pixels[right] as int) < (pixels[left] as int) + 120)) {
+      throw StateError('Saved-output mirroring changed the native preview');
+    }
   } finally {
     await channel.invokeMethod<void>('stopImageStream', {'cameraId': id});
     previewFrames.remove(id);
@@ -213,7 +238,7 @@ Future<void> verifyConcurrentStop(Map<Object?, Object?> device, bool audio) asyn
   for (var index = 0; index < 5; index++) {
     stdout.writeln('DIVINE_CAPTURE_CYCLE $index');
     final created = await channel.invokeMapMethod<String, Object?>('create', {
-      'cameraName': device['name'], 'resolutionPreset': 1, 'enableAudio': audio, 'fps': 30,
+      'cameraName': device['name'], 'resolutionPreset': 1, 'enableAudio': audio, 'fps': 30, 'mirrorOutput': Platform.environment['DIVINE_CAPTURE_CASE'] == 'mirrored-video',
     });
     final id = created!['cameraId']! as int;
     await channel.invokeMethod<Object?>('initialize', {'cameraId': id});
@@ -435,7 +460,7 @@ def require_capture_success(result, platform, capture_case, command, app, env):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--platform', choices=['linux', 'windows'], required=True)
-    parser.add_argument('--case', choices=['video', 'audio', 'audio-unavailable', 'texture-unavailable', 'startup-failure'], default='video')
+    parser.add_argument('--case', choices=['video', 'audio', 'audio-unavailable', 'texture-unavailable', 'startup-failure', 'mirrored-video'], default='video')
     parser.add_argument('--workspace', type=Path, help='Optional private incremental build directory.')
     args = parser.parse_args()
     flutter = ['flutter']
@@ -571,7 +596,13 @@ dependencies:
             width, height = video['width'], video['height']
             left = (height // 10 * width + width // 14) * 3
             right = (height // 10 * width + width * 13 // 14) * 3
-            if args.platform == 'linux':
+            if args.case == 'mirrored-video':
+                if args.platform == 'linux':
+                    if frame[right] < frame[left] + 120:
+                        raise RuntimeError('Saved capture did not honor mirrored output')
+                elif frame[right] < frame[right + 2] + 120 or frame[left + 2] < frame[left] + 120:
+                    raise RuntimeError('Saved capture did not honor mirrored output')
+            elif args.platform == 'linux':
                 # SMPTE bars are white on the left and blue on the right.
                 # This checks the captured image, independently of preview/UI transforms.
                 if frame[left] < frame[right] + 120:

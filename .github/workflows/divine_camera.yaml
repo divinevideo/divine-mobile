@@ -88,7 +88,7 @@ jobs:
           ctest --test-dir "$RUNNER_TEMP/divine-capture-core" --output-on-failure
       - name: Verify actual Flutter capture and writer release
         run: |
-          for capture_case in video audio audio-unavailable startup-failure; do
+          for capture_case in video mirrored-video audio audio-unavailable startup-failure; do
             python tool/native_capture_harness.py --platform linux --case "$capture_case" --workspace "$RUNNER_TEMP/divine-capture-consumer"
           done
 

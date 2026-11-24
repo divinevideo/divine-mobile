@@ -43,6 +43,7 @@ class DivineCameraDesktop extends DivineCameraPlatform
   int? _cameraId;
   final _previewCameraId = ValueNotifier<int?>(null);
   bool _audioEnabled = false;
+  bool _mirrorFrontCameraOutput = false;
   int? _recordingCameraId;
   int _generation = 0;
   Completer<void>? _initializationCancellation;
@@ -145,6 +146,7 @@ class DivineCameraDesktop extends DivineCameraPlatform
     _resumeOnForeground = false;
     _resumeLens = lens;
     _videoQuality = videoQuality;
+    _mirrorFrontCameraOutput = mirrorFrontCameraOutput;
     final generation = ++_generation;
     final cancelling = _isFinalizing
         ? fileInspector.cancelPending()
@@ -194,23 +196,38 @@ class DivineCameraDesktop extends DivineCameraPlatform
       (camera) => _lens(camera) == lens,
       orElse: () => cameras.first,
     );
-    final cameraId = await _cameraPlatform.createCameraWithSettings(
-      selected,
-      capture.MediaSettings(
-        resolutionPreset: switch (videoQuality) {
-          DivineVideoQuality.lowest => capture.ResolutionPreset.low,
-          DivineVideoQuality.sd => capture.ResolutionPreset.medium,
-          DivineVideoQuality.hd => capture.ResolutionPreset.high,
-          DivineVideoQuality.fhd => capture.ResolutionPreset.veryHigh,
-          DivineVideoQuality.uhd => capture.ResolutionPreset.ultraHigh,
-          DivineVideoQuality.highest => capture.ResolutionPreset.max,
-        },
-        enableAudio: enableAudio,
-        fps: 30,
-        videoBitrate: videoQuality.bitrate,
-        audioBitrate: 128000,
-      ),
+    final settings = capture.MediaSettings(
+      resolutionPreset: switch (videoQuality) {
+        DivineVideoQuality.lowest => capture.ResolutionPreset.low,
+        DivineVideoQuality.sd => capture.ResolutionPreset.medium,
+        DivineVideoQuality.hd => capture.ResolutionPreset.high,
+        DivineVideoQuality.fhd => capture.ResolutionPreset.veryHigh,
+        DivineVideoQuality.uhd => capture.ResolutionPreset.ultraHigh,
+        DivineVideoQuality.highest => capture.ResolutionPreset.max,
+      },
+      enableAudio: enableAudio,
+      fps: 30,
+      videoBitrate: videoQuality.bitrate,
+      audioBitrate: 128000,
     );
+    final backend = _cameraPlatform;
+    final mirrorOutput =
+        _mirrorFrontCameraOutput && _lens(selected) == DivineCameraLens.front;
+    late final int cameraId;
+    if (backend case final DesktopCameraOutputSettings outputSettings) {
+      cameraId = await outputSettings.createCameraWithOutputSettings(
+        selected,
+        settings,
+        mirrorOutput: mirrorOutput,
+      );
+    } else {
+      if (mirrorOutput) {
+        throw UnsupportedError(
+          'This camera backend cannot mirror saved output.',
+        );
+      }
+      cameraId = await backend.createCameraWithSettings(selected, settings);
+    }
     final initialized = Completer<capture.CameraInitializedEvent>();
     final cancellation = Completer<void>();
     final failed = Completer<void>();

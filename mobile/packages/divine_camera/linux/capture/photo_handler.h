@@ -12,7 +12,7 @@ class PhotoHandler {
   // Returns true on success; sets |error| on failure.
   static bool TakePicture(GstElement* appsink,
                           const std::string& output_path,
-                          GError** error);
+                          GError** error, bool mirror_output = false);
 };
 
 #endif  // PHOTO_HANDLER_H_

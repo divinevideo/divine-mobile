@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:divine_camera/divine_camera.dart';
 import 'package:divine_camera/divine_camera_platform_interface.dart';
+import 'package:divine_camera/src/desktop/desktop_camera_backend.dart';
 import 'package:divine_camera/src/desktop/desktop_video_file_inspector.dart';
 import 'package:divine_camera/src/desktop/divine_camera_desktop.dart';
 import 'package:fake_async/fake_async.dart';
@@ -155,6 +156,101 @@ void main() {
           expect(backend.activeCameraIds, {7});
         },
       );
+      test(
+        'applies the saved front-camera output mirroring preference',
+        () async {
+          try {
+            await camera.initializeCamera();
+            expect(backend.outputMirrored, isTrue);
+          } finally {
+            await camera.disposeCamera();
+          }
+        },
+      );
+
+      test(
+        'keeps saved output natural when the preference is disabled',
+        () async {
+          try {
+            await camera.initializeCamera(mirrorFrontCameraOutput: false);
+            expect(backend.outputMirrored, isFalse);
+            expect((await camera.getCameraState()).isInitialized, isTrue);
+          } finally {
+            await camera.disposeCamera();
+          }
+        },
+      );
+
+      test('does not mirror a back-facing camera', () async {
+        backend.cameras = const [
+          CameraDescription(
+            name: 'rear-webcam',
+            lensDirection: CameraLensDirection.back,
+            sensorOrientation: 0,
+          ),
+        ];
+        try {
+          await camera.initializeCamera();
+          expect(backend.outputMirrored, isFalse);
+          expect((await camera.getCameraState()).lens, DivineCameraLens.back);
+        } finally {
+          await camera.disposeCamera();
+        }
+      });
+
+      test(
+        'restores output mirroring after background device release',
+        () async {
+          try {
+            await camera.initializeCamera();
+            await camera.pausePreview();
+            expect(backend.activeCameraIds, isEmpty);
+            backend.outputMirrored = false;
+            await camera.resumePreview();
+            expect(backend.outputMirrored, isTrue);
+            expect((await camera.getCameraState()).isInitialized, isTrue);
+          } finally {
+            await camera.disposeCamera();
+          }
+        },
+      );
+
+      test(
+        'rejects mirroring when the injected backend cannot provide it',
+        () async {
+          final generic = DivineCameraDesktop(
+            cameraPlatform: _GenericCameraBackend(backend),
+          );
+          try {
+            await expectLater(
+              generic.initializeCamera(),
+              throwsUnsupportedError,
+            );
+            expect(backend.activeCameraIds, isEmpty);
+            expect((await generic.getCameraState()).isInitialized, isFalse);
+          } finally {
+            await generic.disposeCamera();
+          }
+        },
+      );
+
+      test(
+        'allows natural output through the generic camera contract',
+        () async {
+          final generic = DivineCameraDesktop(
+            cameraPlatform: _GenericCameraBackend(backend),
+          );
+          try {
+            await generic.initializeCamera(mirrorFrontCameraOutput: false);
+            expect((await generic.getCameraState()).isInitialized, isTrue);
+            expect(backend.activeCameraIds, {7});
+          } finally {
+            await generic.disposeCamera();
+          }
+          expect(backend.activeCameraIds, isEmpty);
+        },
+      );
+
       test('reports missing hardware without retaining a device', () async {
         backend.cameras = [];
 
@@ -1987,12 +2083,14 @@ class _FileInspector extends DesktopVideoFileInspector {
   }
 }
 
-class _CameraBackend extends CameraPlatform {
+class _CameraBackend extends CameraPlatform
+    implements DesktopCameraOutputSettings {
   final initialized = StreamController<CameraInitializedEvent>.broadcast();
   final errors = StreamController<CameraErrorEvent>.broadcast();
   final closing = StreamController<CameraClosingEvent>.broadcast();
   final activeCameraIds = <int>{};
   MediaSettings? settings;
+  bool outputMirrored = false;
   CameraDescription? selectedCamera;
   CameraException? enumerationError;
   CameraException? creationError;
@@ -2034,10 +2132,23 @@ class _CameraBackend extends CameraPlatform {
   }
 
   @override
+  Future<int> createCameraWithOutputSettings(
+    CameraDescription description,
+    MediaSettings mediaSettings, {
+    bool mirrorOutput = false,
+  }) => createCameraWithSettings(
+    description,
+    mediaSettings,
+    mirrorOutput: mirrorOutput,
+  );
+
+  @override
   Future<int> createCameraWithSettings(
     CameraDescription description,
-    MediaSettings mediaSettings,
-  ) async {
+    MediaSettings mediaSettings, {
+    bool mirrorOutput = false,
+  }) async {
+    outputMirrored = mirrorOutput;
     if (creationError case final error?) throw error;
     settings = mediaSettings;
     selectedCamera = description;
@@ -2171,4 +2282,32 @@ class _CopyGateFile extends XFile {
     }
     await finish.future;
   }
+}
+
+class _GenericCameraBackend extends CameraPlatform {
+  _GenericCameraBackend(this.delegate);
+  final _CameraBackend delegate;
+  @override
+  Future<List<CameraDescription>> availableCameras() =>
+      delegate.availableCameras();
+  @override
+  Future<int> createCameraWithSettings(
+    CameraDescription camera,
+    MediaSettings settings,
+  ) => delegate.createCameraWithSettings(camera, settings);
+  @override
+  Future<void> initializeCamera(
+    int id, {
+    ImageFormatGroup imageFormatGroup = ImageFormatGroup.unknown,
+  }) => delegate.initializeCamera(id, imageFormatGroup: imageFormatGroup);
+  @override
+  Stream<CameraInitializedEvent> onCameraInitialized(int id) =>
+      delegate.onCameraInitialized(id);
+  @override
+  Stream<CameraErrorEvent> onCameraError(int id) => delegate.onCameraError(id);
+  @override
+  Stream<CameraClosingEvent> onCameraClosing(int id) =>
+      delegate.onCameraClosing(id);
+  @override
+  Future<void> dispose(int id) => delegate.dispose(id);
 }

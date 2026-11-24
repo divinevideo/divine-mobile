@@ -39,6 +39,7 @@ struct CameraConfig {
   std::string device_path;
   int resolution_preset;
   bool enable_audio;
+  bool mirror_output = false;
   int target_width;
   int target_height;
   int target_fps;
@@ -94,9 +95,6 @@ class Camera {
   void RegisterImageStreamCallback(void (*callback)(int32_t));
   void UnregisterImageStreamCallback();
 
-  // Toggles horizontal mirroring on the live video feed.
-  void SetMirror(bool mirrored);
-
   // Tears down the pipeline and releases all resources.
   void Dispose();
 
@@ -140,7 +138,6 @@ class Camera {
   GstElement* pipeline_;
   GstElement* tee_;       // For branching preview + recording.
   GstElement* appsink_;
-  GstElement* videoflip_;  // Named element in pipeline for mirror toggle.
   guint bus_watch_id_;
   guint init_timeout_id_;
 

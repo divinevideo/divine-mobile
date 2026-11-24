@@ -55,7 +55,8 @@ class RecordHandler {
   // Returns true on success; sets |error| on failure.
   bool Setup(GstElement* pipeline, GstElement* tee,
              int width, int height, int fps, int video_bitrate,
-             int audio_bitrate, bool enable_audio, GError** error);
+             int audio_bitrate, bool enable_audio, GError** error,
+             bool mirror_output = false);
 
   // Starts recording to the given file path.
   // Returns true on success; sets |error| on failure.
@@ -94,6 +95,7 @@ class RecordHandler {
   GstElement* tee_;          // Not owned.
   GstElement* queue_;        // Owned by pipeline.
   GstElement* valve_;        // Owned by pipeline.
+  GstElement* videoflip_ = nullptr;
   GstElement* videoconvert_; // Owned by pipeline.
   GstElement* encoder_;      // Owned by pipeline.
   GstElement* h264parse_;    // Owned by pipeline.

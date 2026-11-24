@@ -46,7 +46,6 @@ Camera::Camera(int camera_id,
       pipeline_(nullptr),
       tee_(nullptr),
       appsink_(nullptr),
-      videoflip_(nullptr),
       bus_watch_id_(0),
       init_timeout_id_(0),
       record_handler_(std::make_unique<RecordHandler>()),
@@ -140,7 +139,6 @@ bool Camera::BuildPipeline(GError** error) {
   gchar preview_tail[512];
   g_snprintf(
       preview_tail, sizeof(preview_tail),
-      "! videoflip name=flip method=none "
       "! videoscale ! videorate "
       "! video/x-raw,format=RGBA,width=%d,height=%d,framerate=%d/1 "
       "! tee name=t "
@@ -218,15 +216,6 @@ bool Camera::BuildPipeline(GError** error) {
   }
   // Release our ref (pipeline holds one).
   gst_object_unref(tee_);
-
-  // Get the videoflip element for runtime mirror toggling.
-  videoflip_ = gst_bin_get_by_name(GST_BIN(pipeline_), "flip");
-  if (videoflip_) {
-    gst_object_unref(videoflip_);  // Pipeline holds the ref.
-  } else {
-    g_info("[camera_desktop] Camera %d: videoflip element not found in pipeline"
-           " (mirror toggling will be unavailable)", camera_id_);
-  }
 
   // Get the appsink element.
   appsink_ = gst_bin_get_by_name(GST_BIN(pipeline_), "sink");
@@ -599,6 +588,7 @@ void Camera::TakePicture(FlMethodCall* method_call) {
     std::string output_path;
     std::string error_message;
     bool success;
+    bool mirror_output;
     FlMethodCall* method_call;  // holds a g_object_ref
   };
 
@@ -608,6 +598,7 @@ void Camera::TakePicture(FlMethodCall* method_call) {
   d->appsink = GST_ELEMENT(gst_object_ref(appsink_));
   d->output_path = tmp_path;
   d->success = false;
+  d->mirror_output = config_.mirror_output;
   d->method_call = FL_METHOD_CALL(g_object_ref(method_call));
   g_free(tmp_path);
 
@@ -619,7 +610,7 @@ void Camera::TakePicture(FlMethodCall* method_call) {
          GCancellable* /*cancel*/) {
         auto* d = static_cast<TakePictureData*>(task_data);
         GError* err = nullptr;
-        d->success = PhotoHandler::TakePicture(d->appsink, d->output_path, &err);
+        d->success = PhotoHandler::TakePicture(d->appsink, d->output_path, &err, d->mirror_output);
         gst_object_unref(d->appsink);
         d->appsink = nullptr;
         if (!d->success && err) {
@@ -687,7 +678,7 @@ void Camera::StartVideoRecording(FlMethodCall* method_call) {
                                 config_.target_fps,
                                 config_.target_bitrate,
                                 config_.audio_bitrate,
-                                config_.enable_audio, &error)) {
+                                config_.enable_audio, &error, config_.mirror_output)) {
       g_info("[camera_desktop] Camera %d: RecordHandler::Setup failed: %s",
              camera_id_, error ? error->message : "unknown error");
       g_autoptr(FlValue) details = fl_value_new_null();
@@ -784,18 +775,6 @@ void Camera::ResumePreview() {
   preview_paused_.store(false);
 }
 
-void Camera::SetMirror(bool mirrored) {
-  if (!videoflip_) {
-    g_info("[camera_desktop] Camera %d: SetMirror(%s) ignored, videoflip_ is null",
-           camera_id_, mirrored ? "true" : "false");
-    return;
-  }
-  g_info("[camera_desktop] Camera %d: SetMirror(%s)", camera_id_,
-         mirrored ? "true" : "false");
-  // GstVideoFlipMethod: 0 = none (identity), 4 = horizontal-flip
-  g_object_set(videoflip_, "method", mirrored ? 4 : 0, nullptr);
-}
-
 void Camera::ReleasePipeline() {
   if (bus_watch_id_ > 0) {
     g_source_remove(bus_watch_id_);
@@ -807,7 +786,6 @@ void Camera::ReleasePipeline() {
     pipeline_ = nullptr;
   }
   appsink_ = nullptr;
-  videoflip_ = nullptr;
   tee_ = nullptr;
 }
 

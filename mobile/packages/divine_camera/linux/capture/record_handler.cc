@@ -117,7 +117,7 @@ std::string RecordHandler::DetectAudioEncoder() {
 bool RecordHandler::Setup(GstElement* pipeline, GstElement* tee,
                           int width, int height, int fps, int video_bitrate,
                           int audio_bitrate, bool enable_audio,
-                          GError** error) {
+                          GError** error, bool mirror_output) {
   if (is_setup_) return true;
 
   encoder_name_ = DetectEncoder();
@@ -135,6 +135,8 @@ bool RecordHandler::Setup(GstElement* pipeline, GstElement* tee,
   // Create video recording branch elements.
   queue_ = gst_element_factory_make("queue", "rec_queue");
   valve_ = gst_element_factory_make("valve", "rec_valve");
+  videoflip_ = gst_element_factory_make("videoflip", "rec_flip");
+  if (videoflip_) g_object_set(videoflip_, "method", mirror_output ? 4 : 0, nullptr);
   videoconvert_ = gst_element_factory_make("videoconvert", "rec_convert");
   encoder_ = gst_element_factory_make(encoder_name_.c_str(), "rec_encoder");
   h264parse_ = gst_element_factory_make("h264parse", "rec_h264parse");
@@ -150,7 +152,7 @@ bool RecordHandler::Setup(GstElement* pipeline, GstElement* tee,
 
   filesink_ = gst_element_factory_make("filesink", "rec_filesink");
 
-  if (!queue_ || !valve_ || !videoconvert_ || !encoder_ || !h264parse_ ||
+  if (!queue_ || !valve_ || !videoflip_ || !videoconvert_ || !encoder_ || !h264parse_ ||
       !muxer_ || !filesink_) {
     g_set_error(error, G_IO_ERROR, G_IO_ERROR_FAILED,
                 "Failed to create recording pipeline elements");
@@ -200,12 +202,12 @@ bool RecordHandler::Setup(GstElement* pipeline, GstElement* tee,
   }
 
   // Add all video elements to the pipeline.
-  gst_bin_add_many(GST_BIN(pipeline_), queue_, valve_, videoconvert_,
+  gst_bin_add_many(GST_BIN(pipeline_), queue_, valve_, videoflip_, videoconvert_,
                    encoder_, h264parse_, muxer_, filesink_, nullptr);
 
   // The valve isolates the live tee from downstream flushing/EOS while a
   // recording branch is reset. It must stay active even between takes.
-  if (!gst_element_link_many(valve_, queue_, videoconvert_, encoder_,
+  if (!gst_element_link_many(valve_, queue_, videoflip_, videoconvert_, encoder_,
                              h264parse_, muxer_, filesink_, nullptr)) {
     g_set_error(error, G_IO_ERROR, G_IO_ERROR_FAILED,
                 "Failed to link recording pipeline elements");
@@ -270,7 +272,7 @@ void RecordHandler::ClearSetup() {
   }
   GstElement** elements[] = {&audio_source_, &audio_queue_, &audio_valve_,
       &audio_convert_, &audio_resample_, &audio_encoder_, &queue_, &valve_,
-      &videoconvert_, &encoder_, &h264parse_, &muxer_, &filesink_};
+      &videoflip_, &videoconvert_, &encoder_, &h264parse_, &muxer_, &filesink_};
   for (auto** element : elements) {
     if (!*element) continue;
     gst_element_set_state(*element, GST_STATE_NULL);
@@ -408,7 +410,7 @@ bool RecordHandler::StartRecording(const std::string& output_path,
   // encoder and queue. Reset the complete chain before a subsequent take.
   // Assign the destination before starting any sink (Setup keeps it NULL).
   g_object_set(valve_, "drop", TRUE, nullptr);
-  GstElement* elements[] = {queue_, videoconvert_, encoder_,
+  GstElement* elements[] = {queue_, videoflip_, videoconvert_, encoder_,
       h264parse_, audio_source_, audio_queue_, audio_valve_,
       audio_convert_, audio_resample_, audio_encoder_, muxer_, filesink_};
   for (auto* element : elements) {

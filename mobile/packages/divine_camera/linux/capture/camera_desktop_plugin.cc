@@ -94,7 +94,7 @@ static void handle_available_cameras(CameraDesktopPlugin* self,
 static void handle_get_platform_capabilities(FlMethodCall* method_call) {
   g_autoptr(FlValue) result = fl_value_new_map();
   fl_value_set_string_take(result, "supportsMirrorControl",
-                           fl_value_new_bool(true));
+                           fl_value_new_bool(false));
   fl_value_set_string_take(result, "supportsVideoFpsControl",
                            fl_value_new_bool(true));
   fl_value_set_string_take(result, "supportsVideoBitrateControl",
@@ -216,6 +216,9 @@ static void handle_create(CameraDesktopPlugin* self,
   config.device_path = device_path;
   config.resolution_preset = resolution_preset;
   config.enable_audio = enable_audio;
+  FlValue* mirror = fl_value_lookup_string(args, "mirrorOutput");
+  config.mirror_output = mirror && fl_value_get_type(mirror) == FL_VALUE_TYPE_BOOL &&
+      fl_value_get_bool(mirror);
   config.target_width = selected.width;
   config.target_height = selected.height;
   config.target_fps = target_fps > 0 ? target_fps : selected.max_fps;
@@ -358,15 +361,9 @@ static void handle_set_mirror(CameraDesktopPlugin* self,
   Camera* camera = find_camera(self, method_call);
   if (!camera) return;
 
-  FlValue* args = fl_method_call_get_args(method_call);
-  int camera_id = fl_value_get_int(fl_value_lookup_string(args, "cameraId"));
-  FlValue* mirrored_val = fl_value_lookup_string(args, "mirrored");
-  bool mirrored = mirrored_val ? fl_value_get_bool(mirrored_val) : true;
-
-  g_info("[camera_desktop] Camera %d: setMirror(%s)", camera_id,
-         mirrored ? "true" : "false");
-  camera->SetMirror(mirrored);
-  fl_method_call_respond_success(method_call, fl_value_new_null(), nullptr);
+  fl_method_call_respond_error(method_call, "unsupported",
+      "Preview mirroring is handled by Flutter; saved orientation is bound at creation.",
+      nullptr, nullptr);
 }
 
 static void handle_dispose(CameraDesktopPlugin* self,

@@ -1,5 +1,6 @@
 #include "photo_handler.h"
 #include "private_capture_file.h"
+#include "../../native/include/pixel_transform.h"
 
 #include <gio/gio.h>
 #include <gst/app/gstappsink.h>
@@ -9,7 +10,7 @@
 
 bool PhotoHandler::TakePicture(GstElement* appsink,
                                const std::string& output_path,
-                               GError** error) {
+                               GError** error, bool mirror_output) {
   if (!appsink) {
     g_set_error(error, G_IO_ERROR, G_IO_ERROR_FAILED,
                 "Appsink is null, camera not initialized");
@@ -24,6 +25,36 @@ bool PhotoHandler::TakePicture(GstElement* appsink,
     g_set_error(error, G_IO_ERROR, G_IO_ERROR_FAILED,
                 "No frame available for capture");
     return false;
+  }
+
+  if (mirror_output) {
+    GstCaps* caps = gst_sample_get_caps(sample);
+    GstVideoInfo info;
+    GstBuffer* source = gst_sample_get_buffer(sample);
+    GstBuffer* copy = source ? gst_buffer_copy_deep(source) : nullptr;
+    GstVideoFrame frame;
+    const bool mapped = copy && caps && gst_video_info_from_caps(&info, caps) &&
+        GST_VIDEO_INFO_FORMAT(&info) == GST_VIDEO_FORMAT_RGBA &&
+        gst_video_frame_map(&frame, &info, copy, GST_MAP_READWRITE);
+    bool mirrored = false;
+    if (mapped) {
+      mirrored = divine_capture::MirrorFourByteRows(
+          static_cast<uint8_t*>(GST_VIDEO_FRAME_PLANE_DATA(&frame, 0)),
+          GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0),
+          GST_VIDEO_FRAME_WIDTH(&frame), GST_VIDEO_FRAME_HEIGHT(&frame));
+      gst_video_frame_unmap(&frame);
+    }
+    GstSample* output = mirrored
+        ? gst_sample_new(copy, caps, gst_sample_get_segment(sample), nullptr)
+        : nullptr;
+    if (copy) gst_buffer_unref(copy);
+    gst_sample_unref(sample);
+    if (!output) {
+      g_set_error(error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                  "Failed to mirror the captured frame");
+      return false;
+    }
+    sample = output;
   }
 
   // Convert the RGBA sample to JPEG.
