@@ -15581,6 +15581,13 @@ class AppLocalizationsMs extends AppLocalizations {
   String get updateAction => 'Kemas kini';
 
   @override
+  String get announcementViewContest => 'Lihat pertandingan';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Suapan pilihan ini tidak lagi tersedia.';
+
+  @override
   String updateNewIn(String version) {
     return 'Baharu dalam $version:';
   }

@@ -1,18 +1,24 @@
 // ABOUTME: Full-screen official announcement, with plain selectable body text.
-// ABOUTME: Withdrawn or missing announcements render a safe unavailable state.
+// ABOUTME: Withdrawn announcements render unavailable; failed lookups retry.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/notifications/cubit/announcement_detail_cubit.dart';
 import 'package:openvine/router/route_paths.dart';
 
-/// Displays a current, validated catalog announcement.
+/// Displays a current, validated catalog announcement, or its lookup [status]
+/// while there is none.
 class AnnouncementDetailScreen extends StatelessWidget {
   const AnnouncementDetailScreen({
     this.announcement,
+    this.status = AnnouncementDetailStatus.unavailable,
+    this.onRetry,
     this.onLearnMore,
+    this.actionLabel,
+    this.onAction,
     super.key,
   });
 
@@ -20,7 +26,13 @@ class AnnouncementDetailScreen extends StatelessWidget {
   static const path = '${RoutePaths.announcementDetailBase}/:id';
 
   final AnnouncementNotification? announcement;
+
+  /// Lookup state, shown only while [announcement] is null.
+  final AnnouncementDetailStatus status;
+  final Future<void> Function()? onRetry;
   final Future<void> Function(Uri url)? onLearnMore;
+  final String? actionLabel;
+  final Future<void> Function()? onAction;
 
   static String pathForId(String id) => RoutePaths.announcementDetailForId(id);
 
@@ -43,12 +55,9 @@ class AnnouncementDetailScreen extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
             child: item == null
-                ? Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(
-                      l10n.announcementUnavailable,
-                      style: VineTheme.bodyMediumFont(color: colors.onSurface),
-                    ),
+                ? _AnnouncementLookupStatus(
+                    status: status,
+                    onRetry: onRetry,
                   )
                 : ListView(
                     padding: const EdgeInsets.all(24),
@@ -64,6 +73,16 @@ class AnnouncementDetailScreen extends StatelessWidget {
                         item.body,
                         style: VineTheme.bodyLargeFont(color: colors.onSurface),
                       ),
+                      if (actionLabel != null && onAction != null) ...[
+                        const SizedBox(height: 24),
+                        Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: DivineButton(
+                            label: actionLabel!,
+                            onPressed: onAction,
+                          ),
+                        ),
+                      ],
                       if (item.learnMoreUrl case final Uri url) ...[
                         const SizedBox(height: 24),
                         Align(
@@ -80,6 +99,42 @@ class AnnouncementDetailScreen extends StatelessWidget {
                   ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AnnouncementLookupStatus extends StatelessWidget {
+  const _AnnouncementLookupStatus({required this.status, this.onRetry});
+
+  final AnnouncementDetailStatus status;
+  final Future<void> Function()? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    if (status == AnnouncementDetailStatus.loading) {
+      return const Center(child: DivineCircularProgressIndicator());
+    }
+    final l10n = context.l10n;
+    final failed = status == AnnouncementDetailStatus.failed;
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 12,
+        children: [
+          Text(
+            failed
+                ? l10n.commonSomethingWentWrong
+                : l10n.announcementUnavailable,
+            style: VineTheme.bodyMediumFont(
+              color: context.vineColors.onSurface,
+            ),
+          ),
+          if (failed && onRetry != null)
+            DivineButton(label: l10n.commonRetry, onPressed: onRetry),
+        ],
       ),
     );
   }

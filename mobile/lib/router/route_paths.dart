@@ -196,6 +196,17 @@ abstract final class RoutePaths {
 
   static String exploreForIndex(int? index) =>
       index == null ? explore : '$explore/$index';
+
+  /// The featured Explore tab bound to the campaign feed [feedId], which shows
+  /// that feed or an unavailable state and never another featured feed.
+  ///
+  /// `featured` is the internal tab name, not a server slug; Explore ignores
+  /// that segment while `campaignFeedId` is set.
+  static String exploreFeaturedCampaign(String feedId) => Uri(
+    path: '$explore/tab/featured',
+    queryParameters: {ExploreQueryParameters.campaignFeedId: feedId},
+  ).toString();
+
   static String followersForPubkey(String pubkey) => '$followersBase/$pubkey';
   static String followingForPubkey(String pubkey) => '$followingBase/$pubkey';
   static String hashtagForTag(String tag) {
@@ -239,6 +250,12 @@ abstract final class RoutePaths {
       '$videoRepliesBase/${Uri.encodeComponent(videoId)}';
   static String videoMetadataEditFor(String videoId) =>
       '$videoMetadataEdit/${Uri.encodeComponent(videoId)}';
+}
+
+/// Query-parameter keys the Explore routes read.
+abstract final class ExploreQueryParameters {
+  /// Featured-feed configuration id a campaign push requires.
+  static const campaignFeedId = 'campaignFeedId';
 }
 
 /// Query-parameter keys the authentication routes read and write.

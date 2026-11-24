@@ -8,6 +8,7 @@ import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/repositories/featured_tabs_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
 
@@ -62,6 +63,102 @@ void main() {
         const FunnelcakeException('offline'),
       );
     }
+
+    test(
+      'campaign selects the second active feed and clears it when removed',
+      () async {
+        final repository = buildRepository();
+        stubTabs([_tab(id: 'ft_a'), _tab(id: 'ft_b')]);
+        final selected = await repository.refresh(
+          gateAgeRestrictedContent: false,
+          requiredFeaturedFeedId: 'ft_b',
+        );
+        expect(selected.tab?.id, 'ft_b');
+        stubTabs([_tab(id: 'ft_a')]);
+        final removed = await repository.refresh(
+          gateAgeRestrictedContent: false,
+          requiredFeaturedFeedId: 'ft_b',
+        );
+        expect(removed.tab, isNull);
+      },
+    );
+
+    test(
+      'campaign cache retains selection and never falls back after removal',
+      () async {
+        final repository = buildRepository();
+        stubTabs([_tab(id: 'ft_a'), _tab(id: 'ft_b')]);
+        await repository.refresh(gateAgeRestrictedContent: false);
+        stubFailure();
+        expect(
+          (await repository.refresh(
+            gateAgeRestrictedContent: false,
+            requiredFeaturedFeedId: 'ft_b',
+          )).tab?.id,
+          'ft_b',
+        );
+        stubTabs([_tab(id: 'ft_a')]);
+        await repository.refresh(gateAgeRestrictedContent: false);
+        stubFailure();
+        expect(
+          (await repository.refresh(
+            gateAgeRestrictedContent: false,
+            requiredFeaturedFeedId: 'ft_b',
+          )).tab,
+          isNull,
+        );
+      },
+    );
+
+    test('required campaign feed still passes age and expiry gates', () async {
+      final repository = buildRepository();
+      stubTabs([_tab(id: 'ft_a', visibleToMinors: true), _tab(id: 'ft_b')]);
+      expect(
+        (await repository.refresh(
+          gateAgeRestrictedContent: true,
+          requiredFeaturedFeedId: 'ft_b',
+        )).tab,
+        isNull,
+      );
+      stubTabs([
+        _tab(id: 'ft_a'),
+        _tab(id: 'ft_b', endsAt: clock.subtract(const Duration(minutes: 1))),
+      ]);
+      expect(
+        (await repository.refresh(
+          gateAgeRestrictedContent: false,
+          requiredFeaturedFeedId: 'ft_b',
+        )).tab,
+        isNull,
+      );
+    });
+
+    test(
+      'distinguishes audience-hidden tabs from withdrawal and expiry',
+      () async {
+        final repository = buildRepository();
+        stubTabs([_tab()]);
+        final hidden = await repository.refresh(gateAgeRestrictedContent: true);
+        expect(hidden.tab, isNull);
+        expect(hidden.hiddenByAudience, isTrue);
+        final adult = await repository.refresh(gateAgeRestrictedContent: false);
+        expect(adult.tab, isNotNull);
+        expect(adult.hiddenByAudience, isFalse);
+
+        stubTabs([_tab(endsAt: clock)]);
+        final expired = await repository.refresh(
+          gateAgeRestrictedContent: true,
+        );
+        expect(expired.tab, isNull);
+        expect(expired.hiddenByAudience, isFalse);
+        stubTabs([]);
+        final withdrawn = await repository.refresh(
+          gateAgeRestrictedContent: true,
+        );
+        expect(withdrawn.tab, isNull);
+        expect(withdrawn.hiddenByAudience, isFalse);
+      },
+    );
 
     group('eligibility', () {
       test('returns the tab when every gate passes', () async {
@@ -198,6 +295,20 @@ void main() {
         expect(snapshot.hasTab, isTrue);
       });
 
+      test('logs why a fetch failed', () async {
+        await LogCaptureService().clearAllLogs();
+        final repository = buildRepository();
+        stubFailure();
+        await repository.refresh(gateAgeRestrictedContent: false);
+
+        expect(
+          LogCaptureService()
+              .getRecentLogs(minLevel: LogLevel.warning)
+              .map((entry) => entry.message),
+          contains(contains('Featured tabs fetch failed')),
+        );
+      });
+
       test('drops the tab once the cache passes its TTL', () async {
         final repository = buildRepository();
         stubTabs([_tab()]);
@@ -278,15 +389,25 @@ void main() {
         );
       });
 
-      test('returns no tab when the first fetch fails with no cache', () async {
-        stubFailure();
+      test(
+        'distinguishes a cold fetch failure from confirmed absence',
+        () async {
+          final repository = buildRepository();
+          stubFailure();
+          final failed = await repository.refresh(
+            gateAgeRestrictedContent: false,
+          );
+          expect(failed.hasTab, isFalse);
+          expect(failed.hasResolvedCatalog, isFalse);
 
-        final snapshot = await buildRepository().refresh(
-          gateAgeRestrictedContent: false,
-        );
-
-        expect(snapshot.hasTab, isFalse);
-      });
+          stubTabs(const []);
+          final empty = await repository.refresh(
+            gateAgeRestrictedContent: false,
+          );
+          expect(empty.hasTab, isFalse);
+          expect(empty.hasResolvedCatalog, isTrue);
+        },
+      );
 
       test('recovers on the next successful fetch after expiry', () async {
         final repository = buildRepository();

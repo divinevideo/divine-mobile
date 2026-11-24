@@ -1,19 +1,30 @@
 // ABOUTME: Fetches, caches, and gates the server-driven featured Explore tab.
-// ABOUTME: Owns TTL/staleness policy so the BLoC consumes a resolved answer.
+// ABOUTME: Owns TTL/staleness policy; reports when no catalog backs an answer.
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
+import 'package:unified_logger/unified_logger.dart';
 
-/// Resolved featured-tab answer for one refresh.
+/// Featured-tab answer for one refresh, with whether a catalog backs it.
 class FeaturedTabsSnapshot {
   /// Creates a snapshot carrying the renderable tab, if any.
   const FeaturedTabsSnapshot({
     this.tab,
+    this.hasResolvedCatalog = true,
+    this.hiddenByAudience = false,
     this.pollInterval = FeaturedTabsResponse.defaultPollInterval,
   });
 
-  /// The single tab that should render, or `null` when none is eligible.
+  /// The single tab that should render, or `null` when none is eligible or
+  /// [hasResolvedCatalog] is false.
   final FeaturedTabConfig? tab;
+
+  /// Whether this answer came from a successful fetch or a usable cache.
+  final bool hasResolvedCatalog;
+
+  /// An otherwise eligible matching tab exists but the viewer cannot see it.
+  /// False distinguishes withdrawal or expiry from pending audience checks.
+  final bool hiddenByAudience;
 
   /// Cadence at which the caller should refresh.
   final Duration pollInterval;
@@ -59,7 +70,7 @@ class FeaturedTabVideosPage {
 /// * **Eligibility.** A tab renders only when it is enabled, inside its
 ///   window, has server-side content, and passes the viewer audience rule.
 /// * **Selection.** The payload is a list; v1 renders at most one tab, so the
-///   first eligible entry wins.
+///   first eligible entry wins unless a campaign requires a specific feed.
 class FeaturedTabsRepository {
   /// Creates a repository over [apiClient].
   ///
@@ -92,15 +103,19 @@ class FeaturedTabsRepository {
   /// Fetches and resolves the featured tab for the current viewer.
   ///
   /// Never throws: a failed fetch degrades to the cached config while it is
-  /// fresher than [cacheTtl], and to an empty snapshot once that has elapsed.
-  /// Callers get a resolved answer, not an error to interpret.
+  /// fresher than [cacheTtl], and otherwise returns a snapshot whose
+  /// [FeaturedTabsSnapshot.hasResolvedCatalog] is false.
   ///
   /// [gateAgeRestrictedContent] hides tabs whose dashboard configuration does
   /// not allow viewers under 18. The public config endpoint is shared-cacheable
   /// and therefore not personalized, so this gate is the client's
   /// responsibility.
+  ///
+  /// [requiredFeaturedFeedId] selects only that feed, retaining all eligibility
+  /// gates and returning no tab if it is absent or ineligible.
   Future<FeaturedTabsSnapshot> refresh({
     required bool gateAgeRestrictedContent,
+    String? requiredFeaturedFeedId,
   }) async {
     final sequence = ++_refreshSequence;
     try {
@@ -117,9 +132,18 @@ class FeaturedTabsRepository {
       return _resolve(
         response,
         gateAgeRestrictedContent: gateAgeRestrictedContent,
+        requiredFeaturedFeedId: requiredFeaturedFeedId,
       );
-    } on FunnelcakeException {
-      return _fromCache(gateAgeRestrictedContent: gateAgeRestrictedContent);
+    } on FunnelcakeException catch (error) {
+      Log.warning(
+        'Featured tabs fetch failed: $error',
+        name: 'FeaturedTabsRepository',
+        category: LogCategory.api,
+      );
+      return _fromCache(
+        gateAgeRestrictedContent: gateAgeRestrictedContent,
+        requiredFeaturedFeedId: requiredFeaturedFeedId,
+      );
     }
   }
 
@@ -182,37 +206,51 @@ class FeaturedTabsRepository {
     _cachedAt = null;
   }
 
-  FeaturedTabsSnapshot _fromCache({required bool gateAgeRestrictedContent}) {
+  FeaturedTabsSnapshot _fromCache({
+    required bool gateAgeRestrictedContent,
+    String? requiredFeaturedFeedId,
+  }) {
     final cached = _cached;
     final cachedAt = _cachedAt;
     if (cached == null || cachedAt == null) {
-      return const FeaturedTabsSnapshot();
+      return const FeaturedTabsSnapshot(hasResolvedCatalog: false);
     }
     if (_now().difference(cachedAt) >= cacheTtl) {
       clearCache();
-      return const FeaturedTabsSnapshot();
+      return const FeaturedTabsSnapshot(hasResolvedCatalog: false);
     }
-    return _resolve(cached, gateAgeRestrictedContent: gateAgeRestrictedContent);
+    return _resolve(
+      cached,
+      gateAgeRestrictedContent: gateAgeRestrictedContent,
+      requiredFeaturedFeedId: requiredFeaturedFeedId,
+    );
   }
 
   FeaturedTabsSnapshot _resolve(
     FeaturedTabsResponse response, {
     required bool gateAgeRestrictedContent,
+    String? requiredFeaturedFeedId,
   }) {
     final now = _now();
     FeaturedTabConfig? eligible;
+    var hiddenByAudience = false;
     for (final tab in response.tabs) {
-      if (_isEligible(
+      if (requiredFeaturedFeedId != null && tab.id != requiredFeaturedFeedId) {
+        continue;
+      }
+      if (!_isEligible(tab, now: now)) continue;
+      if (featuredTabPassesAudience(
         tab,
-        now: now,
         gateAgeRestrictedContent: gateAgeRestrictedContent,
       )) {
         eligible = tab;
         break;
       }
+      hiddenByAudience = true;
     }
     return FeaturedTabsSnapshot(
       tab: eligible,
+      hiddenByAudience: eligible == null && hiddenByAudience,
       pollInterval: response.pollInterval,
     );
   }
@@ -220,14 +258,20 @@ class FeaturedTabsRepository {
   bool _isEligible(
     FeaturedTabConfig tab, {
     required DateTime now,
-    required bool gateAgeRestrictedContent,
   }) {
     if (!tab.enabled) return false;
     if (!tab.hasContent) return false;
     if (!tab.isWithinWindow(now)) return false;
-    if (gateAgeRestrictedContent && !tab.visibleToMinors) return false;
     // The tab bar's label is compiled client-side, so the renderability floor
     // is an id to fetch and attribute the tab with.
     return tab.id.isNotEmpty;
   }
 }
+
+/// Whether a tab's audience rule permits the current viewer.
+///
+/// Shared by catalog selection and immediate removal of a previously shown tab.
+bool featuredTabPassesAudience(
+  FeaturedTabConfig tab, {
+  required bool gateAgeRestrictedContent,
+}) => !gateAgeRestrictedContent || tab.visibleToMinors;

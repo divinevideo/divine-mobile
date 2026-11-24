@@ -15522,6 +15522,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get updateAction => 'Cập nhật';
 
   @override
+  String get announcementViewContest => 'Xem cuộc thi';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Bảng tin nổi bật này không còn khả dụng.';
+
+  @override
   String updateNewIn(String version) {
     return 'Điểm mới trong $version:';
   }

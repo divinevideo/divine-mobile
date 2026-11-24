@@ -15833,6 +15833,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get updateAction => 'Mettre à jour';
 
   @override
+  String get announcementViewContest => 'Voir le concours';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Ce fil à la une n’est plus disponible.';
+
+  @override
   String updateNewIn(String version) {
     return 'Nouveautés de la version $version :';
   }

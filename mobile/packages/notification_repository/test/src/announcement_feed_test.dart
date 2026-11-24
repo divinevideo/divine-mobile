@@ -40,7 +40,7 @@ void main() {
     when(announcements.watchSnapshot).thenAnswer((_) => catalog.stream);
     when(() => announcements.items).thenAnswer((_) => catalog.value);
     when(() => announcements.markSeen(any())).thenAnswer((_) async {});
-    when(announcements.refresh).thenAnswer((_) async {});
+    when(announcements.refresh).thenAnswer((_) async => true);
     when(announcements.close).thenAnswer((_) async {});
     repository = NotificationRepository(
       funnelcakeApiClient: api,
