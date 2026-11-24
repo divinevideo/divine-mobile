@@ -126,6 +126,21 @@ reading; polling backoff contributes to `total_ms`. This does not change timeout
 retry, signing, deletion, or UI behavior. Telemetry completion is not awaited by
 the user operation, and new trace failures are contained.
 
+**How long the main screens take to show their content is an Analytics event,
+not a trace.** Profile, notifications, the inbox's Messages pane, search
+results, Explore and video links report `surface_load` once per open, from the
+first load until the screen shows content, its empty state or its error; see
+[Analytics observability](../../docs/ANALYTICS_OBSERVABILITY.md#main-screens).
+They get no Firebase Performance trace on purpose. These screens open far more
+often than the recorder or the editor, and a trace per open would draw on the
+shared per-device budget described below, which `http_operation` already fills
+one sample per request; the busiest devices would lose samples of the
+existing traces. `surface_load` costs none of that budget, and its
+percentiles come from the BigQuery export. What it lacks is the Performance
+console's duration alerts. If one screen needs those, its bloc already marks
+the boundary: a trace can start and stop at the same `ScreenLoadTelemetry`
+calls.
+
 ## Reports and release comparisons
 
 The SQL in `scripts/performance/` reads the existing iOS and Android Firebase
