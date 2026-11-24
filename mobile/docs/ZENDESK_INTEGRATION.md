@@ -70,13 +70,13 @@ If Zendesk is unavailable:
 
 ### Identity Upgrade Flow
 
-When the app launches or the user is not yet authenticated, the service registers an **anonymous identity** with the Zendesk SDK so ticket creation still works.
+When the user signs in, the service first registers an **anonymous identity** with the Zendesk SDK, which needs no network call. Divine's SDK app authenticates with JWT (#1294), so the SDK refuses that identity when it creates a ticket.
 
 Once the user authenticates (login or registration), the service upgrades to a **JWT pre-auth identity**:
 
 1. The service calls the relay-manager API to fetch a Zendesk JWT token scoped to the authenticated user.
 2. On success, it replaces the anonymous identity with the JWT identity via the platform channel. Existing tickets become associated with the authenticated user.
-3. **Fallback**: If the JWT token fetch fails (network error, server error, expired session), the service logs the failure and retries with the anonymous identity so the user can still reach support. The upgrade is reattempted on the next app foreground or manual support-center open.
+3. **Fallback**: If the JWT token fetch fails (network error, server error, expired session), the service logs the failure and the anonymous identity stays set. `createTicket` refreshes the JWT before each attempt, and once the bridge reports that the app expects JWT it does not retry with the anonymous identity. The upgrade is reattempted on the next app foreground or manual support-center open.
 
 ## Configuration
 

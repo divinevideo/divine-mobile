@@ -20,6 +20,7 @@ import 'package:openvine/providers/feed_mode_persistence_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
 import 'package:openvine/providers/player_cache_budget_provider.dart';
+import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/shorebird_availability_provider.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
@@ -27,6 +28,7 @@ import 'package:openvine/services/account_state_write_barrier.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/database_corruption_service.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
+import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
 // Override lives in riverpod's misc barrel; flutter_riverpod does not
@@ -77,7 +79,10 @@ class DeviceScope {
     this.playerCacheBudgetBytes = kDefaultCacheMaxSizeBytes,
     this.accountOverrides = const [],
     AccountStateWriteBarrier? accountStateWrites,
-  }) : accountStateWrites = accountStateWrites ?? AccountStateWriteBarrier();
+    PerformanceMonitoringService? performanceMonitoring,
+  }) : accountStateWrites = accountStateWrites ?? AccountStateWriteBarrier(),
+       performanceMonitoring =
+           performanceMonitoring ?? PerformanceMonitoringService();
 
   /// The single open database connection, shared across every container.
   ///
@@ -115,6 +120,12 @@ class DeviceScope {
   /// Constructed in `app_bootstrap` before any container exists, because it
   /// times the bootstrap itself (#4743).
   final StartupPerformanceService startupPerformance;
+
+  /// Wraps Firebase Performance, a process-wide SDK that startup initializes
+  /// once. A per-container instance would never be initialized, so every
+  /// trace after an account switch would be dropped, and an analytics opt-out
+  /// made there would never reach the SDK flag (#11398).
+  final PerformanceMonitoringService performanceMonitoring;
 
   /// Reports crashes and non-fatals. Device-scoped because Crashlytics owns
   /// one process-wide handler chain; a per-container instance would reinstall
@@ -179,6 +190,9 @@ class DeviceScope {
     shorebirdAvailableProvider.overrideWithValue(shorebirdAvailable),
     playerCacheBudgetBytesProvider.overrideWithValue(playerCacheBudgetBytes),
     startupPerformanceServiceProvider.overrideWithValue(startupPerformance),
+    performanceMonitoringServiceProvider.overrideWithValue(
+      performanceMonitoring,
+    ),
     crashReportingServiceProvider.overrideWithValue(crashReporting),
     logMessageBatcherProvider.overrideWithValue(logMessageBatcher),
     deviceScopeProvider.overrideWithValue(this),

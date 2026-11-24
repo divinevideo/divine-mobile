@@ -1,13 +1,15 @@
 // ABOUTME: Verifies the screen hook starts and ends screen_frames visits.
-// ABOUTME: Covers closing, an opaque route on top, a transparent one, background.
+// ABOUTME: Covers closing, routes on top, shell tab switches, background.
 
 import 'dart:ui' show AppLifecycleState, FrameTiming, TimingsCallback;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/observability/screen_frame_trace.dart';
 import 'package:openvine/providers/service_providers.dart';
+import 'package:openvine/router/app_shell.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 
@@ -160,6 +162,156 @@ void main() {
 
         expect(traces(), isEmpty);
         expect(timings.callbacks, hasLength(1));
+      });
+    });
+
+    group('tabs of the app shell', () {
+      final rootNavigator = GlobalKey<NavigatorState>();
+      final homeNavigator = GlobalKey<NavigatorState>();
+      final profileNavigator = GlobalKey<NavigatorState>();
+
+      // Two tabs as the shell builds them: a navigator each, with its screen
+      // on its first page.
+      Widget shell(ValueListenable<int> selectedTab) {
+        Widget tab(GlobalKey<NavigatorState> key, TracedScreen screen) =>
+            Navigator(
+              key: key,
+              onGenerateRoute: (_) => PageRouteBuilder<void>(
+                pageBuilder: (_, _, _) => ScreenFrameTraceScope(
+                  screen: screen,
+                  timings: timings,
+                  child: const SizedBox.expand(),
+                ),
+              ),
+            );
+        return ProviderScope(
+          overrides: [
+            performanceMonitoringServiceProvider.overrideWithValue(
+              monitoring,
+            ),
+          ],
+          child: MediaQuery(
+            data: const MediaQueryData(),
+            child: Directionality(
+              textDirection: TextDirection.ltr,
+              child: Navigator(
+                key: rootNavigator,
+                onGenerateRoute: (_) => PageRouteBuilder<void>(
+                  pageBuilder: (_, _, _) => ValueListenableBuilder<int>(
+                    valueListenable: selectedTab,
+                    builder: (_, index, _) => AppShellBranchContainer(
+                      currentIndex: index,
+                      children: [
+                        tab(homeNavigator, .homeFeed),
+                        tab(profileNavigator, .profile),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      testWidgets('ends the visit as a tab switch and starts the new tab', (
+        tester,
+      ) async {
+        final selectedTab = ValueNotifier(0);
+        addTearDown(selectedTab.dispose);
+        await tester.pumpWidget(shell(selectedTab));
+
+        // The hidden tab is mounted but shows no visit.
+        expect(timings.callbacks, hasLength(1));
+
+        timings.reportFrames(1, 20);
+        await tester.pump(const Duration(seconds: 2));
+        timings.frameNumber = 21;
+        selectedTab.value = 1;
+        await tester.pumpAndSettle();
+
+        expect(traces(), hasLength(1));
+        expect(traces().single.attributes, {
+          'screen': 'home_feed',
+          'refresh': '60',
+          'end': 'tab_switch',
+        });
+        expect(traces().single.metrics['frames'], 20);
+        expect(timings.callbacks, hasLength(1));
+
+        timings.reportFrames(21, 40);
+        await tester.pump(const Duration(seconds: 2));
+        timings.frameNumber = 41;
+        selectedTab.value = 0;
+        await tester.pumpAndSettle();
+
+        expect(traces(), hasLength(2));
+        expect(traces().last.attributes['screen'], 'profile');
+        expect(traces().last.attributes['end'], 'tab_switch');
+        expect(traces().last.metrics['frames'], 20);
+        expect(timings.callbacks, hasLength(1));
+      });
+
+      testWidgets('ends the visit as covered under a route above the shell', (
+        tester,
+      ) async {
+        final selectedTab = ValueNotifier(0);
+        addTearDown(selectedTab.dispose);
+        await tester.pumpWidget(shell(selectedTab));
+        timings.reportFrames(1, 20);
+        await tester.pump(const Duration(seconds: 2));
+        timings.frameNumber = 21;
+
+        rootNavigator.currentState!.push(
+          PageRouteBuilder<void>(
+            pageBuilder: (_, _, _) => const SizedBox.expand(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(traces(), hasLength(1));
+        expect(traces().single.attributes['screen'], 'home_feed');
+        expect(traces().single.attributes['end'], 'covered');
+        expect(timings.callbacks, isEmpty);
+
+        rootNavigator.currentState!.pop();
+        await tester.pumpAndSettle();
+
+        expect(timings.callbacks, hasLength(1));
+      });
+
+      testWidgets('ends the visit as covered under a route in its own tab', (
+        tester,
+      ) async {
+        final selectedTab = ValueNotifier(0);
+        addTearDown(selectedTab.dispose);
+        await tester.pumpWidget(shell(selectedTab));
+        timings.reportFrames(1, 20);
+        await tester.pump(const Duration(seconds: 2));
+        timings.frameNumber = 21;
+
+        homeNavigator.currentState!.push(
+          PageRouteBuilder<void>(
+            pageBuilder: (_, _, _) => const SizedBox.expand(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(traces(), hasLength(1));
+        expect(traces().single.attributes['end'], 'covered');
+
+        // Leaving the tab and coming back keeps the covered screen hidden.
+        selectedTab.value = 1;
+        await tester.pumpAndSettle();
+        timings.reportFrames(21, 40);
+        await tester.pump(const Duration(seconds: 2));
+        timings.frameNumber = 41;
+        selectedTab.value = 0;
+        await tester.pumpAndSettle();
+
+        expect(traces(), hasLength(2));
+        expect(traces().last.attributes['screen'], 'profile');
+        expect(timings.callbacks, isEmpty);
       });
     });
 

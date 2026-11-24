@@ -285,7 +285,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Giúp bọn mình thấy mọi người thực sự dùng gì. Nếu bạn tắt, dữ liệu đang chờ trên thiết bị này sẽ bị xóa.';
+      'Giúp bọn mình thấy mọi người thực sự dùng gì. Nếu bạn tắt, dữ liệu đang chờ trên thiết bị này sẽ bị xóa. Báo cáo sự cố vẫn được gửi để bọn mình sửa lỗi.';
 
   @override
   String get privacySettingsSaveFailed =>

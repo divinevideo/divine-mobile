@@ -559,10 +559,10 @@ abstract class AppLocalizations {
   /// **'Share usage data'**
   String get privacySettingsShareUsage;
 
-  /// Supporting copy under the analytics consent switch. Second sentence is load-bearing: turning the switch off also discards analytics still queued on the device.
+  /// Supporting copy under the analytics consent switch. Second sentence is load-bearing: turning the switch off also discards analytics still queued on the device. Third sentence is load-bearing too: crash reporting stays on whichever way the switch is set, so the copy must not suggest it stops.
   ///
   /// In en, this message translates to:
-  /// **'Helps us see what people actually use. Switch it off and queued data is deleted.'**
+  /// **'Helps us see what people actually use. Switch it off and queued data is deleted. Crash reports are still sent so we can fix bugs.'**
   String get privacySettingsShareUsageSubtitle;
 
   /// Snackbar shown when the analytics consent switch could not be saved. Both failure directions settle as opted out, so the second sentence is true either way.

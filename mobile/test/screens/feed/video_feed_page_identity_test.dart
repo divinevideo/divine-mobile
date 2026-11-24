@@ -16,6 +16,7 @@ import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit
 import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/observability/screen_frame_trace.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
@@ -24,6 +25,7 @@ import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/broken_video_tracker.dart';
 import 'package:openvine/services/startup_performance_service.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
@@ -364,6 +366,32 @@ void main() {
           previousFeed = feed;
         }
         expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.runAsync(pumpEventQueue);
+      },
+    );
+
+    testWidgets(
+      'keeps one home feed visit while a filter change replaces Home',
+      (tester) async {
+        final home = await _mountSafetyPolicyHome(tester);
+        final scope = tester.state(find.byType(ScreenFrameTraceScope));
+        expect(
+          (scope.widget as ScreenFrameTraceScope).screen,
+          TracedScreen.homeFeed,
+        );
+
+        final flags = home.container.read(featureFlagServiceProvider);
+        await flags.setFlag(
+          FeatureFlag.clientSeenFiltering,
+          !flags.isEnabled(FeatureFlag.clientSeenFiltering),
+        );
+        await tester.pumpAndSettle();
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+
+        expect(home.originalFeed.isClosed, isTrue);
+        expect(tester.state(find.byType(ScreenFrameTraceScope)), same(scope));
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.runAsync(pumpEventQueue);
       },

@@ -3649,7 +3649,7 @@
   "settingsPrivacySubtitle": "التحكم في بيانات الاستخدام التي تتم مشاركتها",
   "privacySettingsAnalyticsSection": "التحليلات",
   "privacySettingsShareUsage": "مشاركة بيانات الاستخدام",
-  "privacySettingsShareUsageSubtitle": "تساعدنا على معرفة ما يستخدمه الناس فعلاً. عند الإيقاف، تُحذف البيانات المنتظرة على هذا الجهاز.",
+  "privacySettingsShareUsageSubtitle": "تساعدنا على معرفة ما يستخدمه الناس فعلاً. عند الإيقاف، تُحذف البيانات المنتظرة على هذا الجهاز. لا تزال تقارير الأعطال تُرسَل حتى نتمكن من إصلاح الأخطاء.",
   "privacySettingsSaveFailed": "تعذّر حفظ هذا التغيير. تبقى بيانات الاستخدام معطّلة في الوقت الحالي.",
   "generalSettingsSectionIntegrations": "التكاملات",
   "generalSettingsSectionViewing": "المشاهدة",

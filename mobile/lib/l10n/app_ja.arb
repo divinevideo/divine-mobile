@@ -3649,7 +3649,7 @@
   "settingsPrivacySubtitle": "共有する利用データを選択できます",
   "privacySettingsAnalyticsSection": "分析",
   "privacySettingsShareUsage": "利用データを共有",
-  "privacySettingsShareUsageSubtitle": "何が実際に使われているかを把握するのに役立ちます。オフにすると、この端末で送信待ちのデータは削除されます。",
+  "privacySettingsShareUsageSubtitle": "何が実際に使われているかを把握するのに役立ちます。オフにすると、この端末で送信待ちのデータは削除されます。不具合を修正するため、クラッシュレポートは引き続き送信されます。",
   "privacySettingsSaveFailed": "保存できませんでした。利用データは今のところオフのままです。",
   "generalSettingsSectionIntegrations": "連携",
   "generalSettingsSectionViewing": "視聴",

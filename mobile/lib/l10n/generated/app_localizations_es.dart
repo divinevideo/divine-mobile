@@ -316,7 +316,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Nos ayuda a ver qué usa la gente de verdad. Si lo apagás, se borran los datos en espera de este dispositivo.';
+      'Nos ayuda a ver qué usa la gente de verdad. Si lo apagás, se borran los datos en espera de este dispositivo. Los reportes de fallas se siguen enviando para que podamos corregir errores.';
 
   @override
   String get privacySettingsSaveFailed =>

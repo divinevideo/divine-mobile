@@ -285,7 +285,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Membantu kami melihat apa yang benar-benar digunakan orang. Jika anda matikan, data yang menunggu pada peranti ini dipadam.';
+      'Membantu kami melihat apa yang benar-benar digunakan orang. Jika anda matikan, data yang menunggu pada peranti ini dipadam. Laporan ranap tetap dihantar supaya kami boleh membaiki pepijat.';
 
   @override
   String get privacySettingsSaveFailed =>

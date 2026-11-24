@@ -316,7 +316,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'یہ ہمیں دیکھنے میں مدد دیتا ہے کہ لوگ واقعی کیا استعمال کرتے ہیں۔ بند کرنے پر اس ڈیوائس پر قطار میں موجود ڈیٹا حذف ہو جاتا ہے۔';
+      'یہ ہمیں دیکھنے میں مدد دیتا ہے کہ لوگ واقعی کیا استعمال کرتے ہیں۔ بند کرنے پر اس ڈیوائس پر قطار میں موجود ڈیٹا حذف ہو جاتا ہے۔ خرابیاں ٹھیک کرنے کے لیے کریش رپورٹس اب بھی بھیجی جاتی ہیں۔';
 
   @override
   String get privacySettingsSaveFailed =>

@@ -3656,7 +3656,7 @@
   "settingsPrivacySubtitle": "Wähle, welche Nutzungsdaten du teilst",
   "privacySettingsAnalyticsSection": "ANALYTICS",
   "privacySettingsShareUsage": "Nutzungsdaten teilen",
-  "privacySettingsShareUsageSubtitle": "Hilft uns zu sehen, was wirklich genutzt wird. Schaltest du es aus, werden wartende Daten auf diesem Gerät gelöscht.",
+  "privacySettingsShareUsageSubtitle": "Hilft uns zu sehen, was wirklich genutzt wird. Schaltest du es aus, werden wartende Daten auf diesem Gerät gelöscht. Absturzberichte werden weiter gesendet, damit wir Fehler beheben können.",
   "privacySettingsSaveFailed": "Wir konnten das nicht speichern. Nutzungsdaten bleiben vorerst aus.",
   "generalSettingsSectionIntegrations": "INTEGRATIONEN",
   "generalSettingsSectionViewing": "ANSEHEN",
