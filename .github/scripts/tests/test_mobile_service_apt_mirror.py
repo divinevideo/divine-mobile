@@ -19,7 +19,7 @@ class MobileServiceAptMirrorTest(unittest.TestCase):
         self.sandbox = Path(self.temporary.name)
         self.source = self.sandbox / "ubuntu.sources"
 
-    def test_setup_routes_ec2_downloads_before_apt_update(self):
+    def run_setup(self, source_uri):
         # Run the real workflow shell and normalizer; only privilege, package
         # installation and Flutter configuration are replaced at the boundary.
         workflow = json.loads(subprocess.check_output([
@@ -31,28 +31,41 @@ class MobileServiceAptMirrorTest(unittest.TestCase):
                      if step.get("name") == "🧰 Linux desktop toolchain")
         self.source.write_text(
             "Types: deb\n"
-            "URIs: http://us-east-2.ec2.archive.ubuntu.com/ubuntu\n"
+            f"URIs: {source_uri}\n"
             "Suites: noble noble-updates noble-backports\n"
             "Components: main restricted universe multiverse\n"
             "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n"
+        )
+        mirrors = self.sandbox / "apt-mirrors.txt"
+        # Matches runner-images/configure-apt-sources.sh: Ubuntu sources point
+        # at this priority-ordered list on the GitHub-hosted x64 runner.
+        mirrors.write_text(
+            "http://us-east-2.ec2.archive.ubuntu.com/ubuntu/\tpriority:1\n"
+            "https://archive.ubuntu.com/ubuntu/\tpriority:2\n"
+            "https://security.ubuntu.com/ubuntu/\tpriority:3\n"
         )
         bin_dir = self.sandbox / "bin"
         bin_dir.mkdir()
         sudo = bin_dir / "sudo"
         sudo.write_text("""#!/usr/bin/env python3
+import json
 import os
 from pathlib import Path
 import sys
 
 args = sys.argv[1:]
 source = os.environ['APT_MIRROR_TEST_SOURCE_FILE']
+mirrors = os.environ['APT_MIRROR_TEST_MIRROR_FILE']
 if args[0] == 'python3':
-    args = [source if arg == '/etc/apt/sources.list.d/ubuntu.sources' else arg
-            for arg in args]
+    paths = {'/etc/apt/sources.list.d/ubuntu.sources': source,
+             '/etc/apt/apt-mirrors.txt': mirrors}
+    args = [paths.get(arg, arg) for arg in args]
     os.execvp(args[0], args)
 elif args == ['apt-get', 'update']:
-    Path(os.environ['APT_MIRROR_TEST_UPDATE_SNAPSHOT']).write_bytes(
-        Path(source).read_bytes())
+    Path(os.environ['APT_MIRROR_TEST_UPDATE_SNAPSHOT']).write_text(json.dumps({
+        'sources': Path(source).read_text(),
+        'mirrors': Path(mirrors).read_text(),
+    }))
 elif args[:2] != ['apt-get', 'install']:
     raise SystemExit('Unexpected privileged command: ' + repr(args))
 """)
@@ -67,16 +80,36 @@ elif args[:2] != ['apt-get', 'install']:
             cwd=ROOT / "mobile",
             env={**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}",
                  "APT_MIRROR_TEST_SOURCE_FILE": str(self.source),
+                 "APT_MIRROR_TEST_MIRROR_FILE": str(mirrors),
                  "APT_MIRROR_TEST_UPDATE_SNAPSHOT": str(snapshot)},
             check=True, capture_output=True, text=True,
         )
+        return json.loads(snapshot.read_text())
 
-        self.assertEqual(snapshot.read_text(),
+    def test_setup_routes_ec2_downloads_before_apt_update(self):
+        snapshot = self.run_setup(
+            "http://us-east-2.ec2.archive.ubuntu.com/ubuntu"
+        )
+        self.assertEqual(snapshot["sources"],
                          "Types: deb\n"
                          "URIs: https://archive.ubuntu.com/ubuntu/\n"
                          "Suites: noble noble-updates noble-backports\n"
                          "Components: main restricted universe multiverse\n"
                          "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n")
+
+    def test_setup_routes_github_mirror_list_before_apt_update(self):
+        snapshot = self.run_setup("mirror+file:/etc/apt/apt-mirrors.txt")
+
+        self.assertEqual(snapshot["sources"],
+                         "Types: deb\n"
+                         "URIs: mirror+file:/etc/apt/apt-mirrors.txt\n"
+                         "Suites: noble noble-updates noble-backports\n"
+                         "Components: main restricted universe multiverse\n"
+                         "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n")
+        self.assertEqual(snapshot["mirrors"],
+                         "https://archive.ubuntu.com/ubuntu/\tpriority:1\n"
+                         "https://archive.ubuntu.com/ubuntu/\tpriority:2\n"
+                         "https://security.ubuntu.com/ubuntu/\tpriority:3\n")
 
     def test_changes_only_ec2_archive_uri_tokens_and_is_idempotent(self):
         original = (
