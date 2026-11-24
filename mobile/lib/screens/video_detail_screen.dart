@@ -1,6 +1,7 @@
 // ABOUTME: Screen for viewing a specific video by ID (from deep links)
 // ABOUTME: Fetches video from Nostr and displays it in full-screen player
 
+import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter/foundation.dart';
@@ -15,6 +16,7 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/feed_viewer_preference_hints.dart';
@@ -121,6 +123,11 @@ class VideoDetailScreen extends ConsumerWidget {
             .map(
               (statuses) => statuses.values.any((status) => status.isConnected),
             ),
+        loadTelemetry: ScreenLoadTelemetry(
+          tracker: ref.read(surfacePerformanceTrackerProvider),
+          surface: AnalyticsSurface.videoDetail,
+          entryPoint: ScreenLoadEntryPoint.link,
+        ),
       ),
       child: _VideoDetailView(screen: this),
     );

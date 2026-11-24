@@ -149,8 +149,14 @@ class _ExploreViewState extends ConsumerState<ExploreView>
       },
     );
 
-    // Track Explore-specific data load completion from child tabs.
-    _tabs.trackScreenLoad();
+    // Track Explore-specific data load completion from child tabs. A
+    // featured-tab link opens on a tab whose configuration is still loading,
+    // so its launch tab is not known yet.
+    _tabs.trackScreenLoad(
+      initialTabName: _pendingFeaturedSlug != null
+          ? null
+          : _pendingInitialTabName ?? ref.read(exploreTabNameProvider),
+    );
 
     // Load top hashtags for trending navigation
     runDetached(

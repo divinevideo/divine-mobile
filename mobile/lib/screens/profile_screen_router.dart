@@ -17,6 +17,7 @@ import 'package:openvine/blocs/profile_feed/profile_tab_retap_cubit.dart';
 import 'package:openvine/blocs/profile_link/profile_link_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
@@ -406,8 +407,11 @@ class _ProfileContentView extends ConsumerWidget {
       return BlockedUserScreen(onBack: context.safePop, userIdHex: userIdHex);
     }
 
+    // Opening a video from the grid is not opening the profile.
+    final isGrid = routeContext.videoIndex == null;
     final profile = ProfileFeedScope(
       userIdHex: userIdHex,
+      loadEntryPoint: isGrid ? ScreenLoadEntryPoint.ownProfile : null,
       child: _ProfileDataView(
         npub: npub,
         userIdHex: userIdHex,
@@ -422,8 +426,7 @@ class _ProfileContentView extends ConsumerWidget {
       ),
     );
 
-    // Opening a video from the grid is not opening the profile.
-    if (routeContext.videoIndex != null) return profile;
+    if (!isGrid) return profile;
     return _OwnProfileLoadSession(child: profile);
   }
 }

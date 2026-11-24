@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,6 +12,8 @@ import 'package:openvine/blocs/nostr_id_search/nostr_id_search_cubit.dart';
 import 'package:openvine/blocs/search_results_filter/search_results_filter.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
@@ -161,6 +164,11 @@ class _SearchResultsScope extends ConsumerWidget {
                   BlocProvider(
                     create: (_) => VideoSearchBloc(
                       videosRepository: videosRepository,
+                      loadTelemetry: ScreenLoadTelemetry(
+                        tracker: ref.read(surfacePerformanceTrackerProvider),
+                        surface: AnalyticsSurface.searchResults,
+                        entryPoint: ScreenLoadEntryPoint.query,
+                      ),
                     ),
                   ),
                   BlocProvider(

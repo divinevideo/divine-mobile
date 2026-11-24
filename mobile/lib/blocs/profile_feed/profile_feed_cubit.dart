@@ -19,6 +19,7 @@ import 'package:openvine/blocs/profile_feed/profile_video_snapshot_cache.dart';
 import 'package:openvine/blocs/profile_shared/profile_tab_sync_completion.dart';
 import 'package:openvine/blocs/profile_shared/profile_video_offset_snapshot.dart';
 import 'package:openvine/constants/app_constants.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
 import 'package:openvine/repositories/profile_pins_repository.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:stream_transform/stream_transform.dart';
@@ -66,12 +67,14 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     required ProfilePinsRepository profilePinsRepository,
     required EnrichVideos enrichVideos,
     Stream<void> retryTriggers = const Stream<void>.empty(),
+    ScreenLoadTelemetry? loadTelemetry,
   }) : _authorPubkey = authorPubkey,
        _videosRepository = videosRepository,
        _videoEventService = videoEventService,
        _blocklistRepository = blocklistRepository,
        _pinsRepository = profilePinsRepository,
        _enrichVideos = enrichVideos,
+       _loadTelemetry = loadTelemetry,
        super(const ProfileFeedState()) {
     on<ProfileFeedStarted>(_onStarted, transformer: sequential());
     on<ProfileFeedLoadMoreRequested>(_onLoadMore, transformer: droppable());
@@ -133,6 +136,9 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
   final ContentBlocklistRepository _blocklistRepository;
   final ProfilePinsRepository _pinsRepository;
   final EnrichVideos _enrichVideos;
+
+  /// Times the profile until its Videos tab shows; null where unmeasured.
+  final ScreenLoadTelemetry? _loadTelemetry;
 
   /// Best-effort stale-while-revalidate persistence for the Videos tab.
   late final ProfileVideoSnapshotCache _snapshotCache =
@@ -206,6 +212,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     ProfileFeedStarted event,
     Emitter<ProfileFeedState> emit,
   ) async {
+    _loadTelemetry?.start();
     emit(state.copyWith(status: ProfileFeedStatus.loading));
 
     final relaySeed = _relayVideosSnapshot();
@@ -1143,8 +1150,29 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     _snapshotCache.writeSnapshot(snapshot);
   }
 
+  /// Completes the load once the Videos tab replaces its loading skeleton:
+  /// with videos from the persisted snapshot, the relay or REST, with the
+  /// empty state, or with the load error.
+  @override
+  void onChange(Change<ProfileFeedState> change) {
+    super.onChange(change);
+    final telemetry = _loadTelemetry;
+    if (telemetry == null || !telemetry.isTiming) return;
+    final next = change.nextState;
+    if (next.isLoadingVideos) return;
+    if (next.status == ProfileFeedStatus.failure) {
+      telemetry.completeFailure();
+    } else {
+      telemetry.completeLoaded(
+        itemCount: next.videos.length,
+        hasMore: next.hasMoreContent,
+      );
+    }
+  }
+
   @override
   Future<void> close() async {
+    _loadTelemetry?.dismiss();
     _removeChangeListener?.call();
     _unregisterUpdate?.call();
     unawaited(_retryTriggerSubscription.cancel());

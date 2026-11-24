@@ -1,6 +1,7 @@
 // ABOUTME: Riverpod->BLoC bridge that provides a keyed ProfileFeedCubit.
 // ABOUTME: Reused at every profile-feed entry point (in-shell and off-shell).
 
+import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_retry_triggers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -43,11 +46,17 @@ class ProfileFeedScope extends ConsumerWidget {
   const ProfileFeedScope({
     required this.userIdHex,
     required this.child,
+    this.loadEntryPoint,
     super.key,
   });
 
   /// The author's hex pubkey.
   final String userIdHex;
+
+  /// The [ScreenLoadEntryPoint] to time this profile's load as, when this
+  /// scope is a profile screen rather than one of its other uses (the
+  /// fullscreen feed opened from the grid, the unavailable pins page).
+  final String? loadEntryPoint;
 
   /// The subtree that consumes the provided [ProfileFeedCubit].
   final Widget child;
@@ -63,6 +72,7 @@ class ProfileFeedScope extends ConsumerWidget {
     final profilePinsRepository = ref.watch(profilePinsRepositoryProvider);
     final retryTriggers = ref.watch(profileFeedRetryTriggersProvider);
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
+    final loadEntryPoint = this.loadEntryPoint;
 
     return BlocProvider<ProfileFeedCubit>(
       key: ValueKey((
@@ -88,6 +98,13 @@ class ProfileFeedScope extends ConsumerWidget {
           attemptTracker: enrichmentAttemptTracker,
         ),
         retryTriggers: retryTriggers,
+        loadTelemetry: loadEntryPoint == null
+            ? null
+            : ScreenLoadTelemetry(
+                tracker: ref.read(surfacePerformanceTrackerProvider),
+                surface: AnalyticsSurface.profile,
+                entryPoint: loadEntryPoint,
+              ),
       ),
       child: ProfileFeedFeedbackListeners(
         child: _BlocklistVersionForwarder(
