@@ -11,8 +11,8 @@ import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/config/zendesk_config.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
+import 'package:openvine/services/zendesk_native_ticket_failure.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 typedef JwtIdentityRefresh = Future<bool> Function({
@@ -825,14 +825,16 @@ class ZendeskSupportService {
       // thrown away the identity it held, so the next attempt must not trust
       // the refresh-reuse window. No ticket exists after either failure, so
       // the retry cannot file a duplicate.
-      if (_needsAnotherIdentity(e)) {
+      if (ZendeskNativeTicketFailure(e).needsAnotherIdentity) {
         _lastJwtRefreshAt = null;
         Log.info(
           '🔄 Zendesk SDK needs another identity (${e.code}), retrying',
           category: LogCategory.system,
         );
         try {
-          final identitySet = await _setIdentityForRetry(e);
+          final identitySet = await _setIdentityForRetry(
+            ZendeskNativeTicketFailure(e),
+          );
           if (!ownsTicket()) return failed;
           if (identitySet) {
             final retryResult = await _channel.invokeMethod(
@@ -869,8 +871,9 @@ class ZendeskSupportService {
       // Release builds ship no REST API token, so there the SDK was the only
       // way to deliver this ticket.
       if (!ZendeskConfig.isRestApiConfigured) {
-        _reportNativeTicketFailure(reportedError);
-        return _outcomeOf(reportedError);
+        final failure = ZendeskNativeTicketFailure(reportedError);
+        _reportNativeTicketFailure(failure);
+        return failure.isRefusal ? ZendeskTicketOutcome.rejected : failed;
       }
       Log.info(
         '🔄 Falling back to REST API after SDK error',
@@ -903,26 +906,8 @@ class ZendeskSupportService {
     }
   }
 
-  /// Whether a native `createTicket` failure means the SDK could not
-  /// authenticate its identity, as both bridges flag it in `authFailed`.
-  ///
-  /// Neither SDK says so in a way Dart could read from the message: Android
-  /// reports a failed token exchange as a 400, and iOS reports it, and an
-  /// identity of the wrong type, without an HTTP status at all.
-  static bool _isNativeAuthFailure(PlatformException e) {
-    final details = e.details;
-    return details is Map && details['authFailed'] == true;
-  }
-
-  /// Whether a native `createTicket` failure can succeed with another
-  /// identity: the bridge found none on the SDK, or the SDK could not
-  /// authenticate the one it had.
-  static bool _needsAnotherIdentity(PlatformException e) =>
-      e.code == 'NO_IDENTITY' ||
-      (e.code == 'CREATE_FAILED' && _isNativeAuthFailure(e));
-
-  /// Sets the identity a retry after [e] needs, and returns whether one was
-  /// set.
+  /// Sets the identity a retry after [failure] needs, and returns whether one
+  /// was set.
   ///
   /// Divine's SDK app authenticates with JWT (#1294). There both SDKs refuse
   /// an anonymous identity, so a fresh JWT comes first. The anonymous identity
@@ -930,81 +915,35 @@ class ZendeskSupportService {
   /// expects one, or when no JWT can be set and the bridge has not said the
   /// app expects JWT. Both bridges name the expected type of a refused
   /// identity; iOS names it for every authentication failure.
-  static Future<bool> _setIdentityForRetry(PlatformException e) async {
-    final details = e.details;
-    final expectedAuth = details is Map ? details['expectedAuth'] : null;
+  static Future<bool> _setIdentityForRetry(
+    ZendeskNativeTicketFailure failure,
+  ) async {
+    final expectedAuth = failure.expectedAuth;
     if (expectedAuth == 'anonymous') return setAnonymousIdentityWithUserInfo();
     if (await _ensureFreshJwt(force: true)) return true;
     if (expectedAuth == 'jwt') return false;
     return setAnonymousIdentityWithUserInfo();
   }
 
-  /// HTTP 4xx statuses that do not mean Zendesk refused the ticket: an
-  /// identity to authenticate again, a timeout, and throttling.
-  static const Set<int> _retryableClientErrorStatuses = {401, 408, 429};
-
-  /// Whether a ticket the native SDK failed to create can succeed later.
-  ///
-  /// The Android SDK answers a failed authentication with a synthetic 400, and
-  /// the iOS bridge passes the status of a failed token exchange, so a 4xx
-  /// counts as a refusal only when it is not flagged as an auth or network
-  /// failure.
-  static ZendeskTicketOutcome _outcomeOf(PlatformException e) {
-    final details = e.details;
-    if (details is! Map ||
-        details['networkError'] == true ||
-        details['authFailed'] == true) {
-      return ZendeskTicketOutcome.failed;
-    }
-    final status = details['status'];
-    if (status is int &&
-        status >= 400 &&
-        status < 500 &&
-        !_retryableClientErrorStatuses.contains(status)) {
-      return ZendeskTicketOutcome.rejected;
-    }
-    return ZendeskTicketOutcome.failed;
-  }
-
   /// Reports a ticket the native SDK failed to create when nothing else can
-  /// deliver it.
+  /// deliver it, once per session for each way it failed: the report outbox
+  /// retries a failed ticket on every sweep, and it fails the same way.
   ///
   /// A network failure is only logged: it is expected offline, and a content
-  /// report stays queued for its next attempt. The report names the error
-  /// code, HTTP status, the iOS error domain and code, the identity type the
-  /// SDK held and the one the app expects, and the SDK reason, never the
-  /// ticket itself.
-  static void _reportNativeTicketFailure(PlatformException e) {
-    final details = e.details is Map ? e.details as Map : const {};
-    if (details['networkError'] == true) {
+  /// report stays queued for its next attempt.
+  static void _reportNativeTicketFailure(ZendeskNativeTicketFailure failure) {
+    if (failure.isNetworkError) {
       Log.warning(
         'Zendesk ticket not created: network error',
         category: LogCategory.system,
       );
       return;
     }
-    final status = details['status'];
-    final errorDomain = details['errorDomain'];
-    final errorCode = details['errorCode'];
-    final identity = details['identity'];
-    final expectedAuth = details['expectedAuth'];
-    final context = [
-      if (status is int && status > 0) 'HTTP $status',
-      if (errorDomain is String && errorCode is int) '$errorDomain $errorCode',
-      if (identity is String) 'identity $identity',
-      if (expectedAuth is String) 'expects $expectedAuth',
-    ];
-    final summary =
-        'Zendesk SDK could not create ticket: ${e.code}'
-        '${context.isEmpty ? '' : ' (${context.join(', ')})'}';
-    final message = e.message;
-    final reason = message == null || message.isEmpty
-        ? null
-        : sanitizeForCrashReport(message);
-    crashlytics.log(reason == null ? summary : '$summary - $reason');
-    // The report outbox retries a failed ticket on every sweep, and it fails
-    // the same way each time: only the first is news.
-    final reported = _withReportedReason(summary, reason);
+    final reason = failure.reason;
+    crashlytics.log(
+      reason == null ? failure.summary : '${failure.summary} - $reason',
+    );
+    final reported = failure.reportedMessage;
     if (!_reportedTicketFailures.add(reported)) return;
     unawaited(
       crashlytics.recordError(
@@ -1014,16 +953,6 @@ class ZendeskSupportService {
       ),
     );
   }
-
-  static String _withReportedReason(String summary, String? reason) {
-    if (reason == null) return summary;
-    if (reason.length <= _maxReportedReasonLength) return '$summary: $reason';
-    return '$summary: ${reason.substring(0, _maxReportedReasonLength)}...';
-  }
-
-  /// How much of the SDK reason the recorded error carries; the log line
-  /// before it carries all of it.
-  static const int _maxReportedReasonLength = 200;
 
   /// The failures this session has already reported to the crash reporter.
   static final Set<String> _reportedTicketFailures = {};
