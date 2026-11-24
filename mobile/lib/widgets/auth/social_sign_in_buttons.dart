@@ -1,5 +1,5 @@
-// ABOUTME: "Continue with Apple / Google" buttons for the welcome screen, and
-// ABOUTME: the scope that provides their SocialSignInCubit.
+// ABOUTME: "Continue with Apple / Google" buttons for the welcome and sign-in
+// ABOUTME: screens, and the scope that provides their SocialSignInCubit.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -34,10 +34,13 @@ class SocialSignInScope extends ConsumerWidget {
 }
 
 /// One full-width button per provider this device offers, followed by the
-/// same gap the welcome screen leaves between its buttons. Renders nothing
+/// same gap the auth screens leave between their buttons. Renders nothing
 /// when no provider is offered.
 class SocialSignInButtons extends StatelessWidget {
-  const SocialSignInButtons({super.key});
+  const SocialSignInButtons({this.enabled = true, super.key});
+
+  /// False while another sign-in on the same screen is running.
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +69,7 @@ class SocialSignInButtons extends StatelessWidget {
                 _ProviderButton(
                   provider: provider,
                   isLoading: state.isBusy && state.activeProvider == provider,
-                  enabled: !state.isBusy,
+                  enabled: enabled && !state.isBusy,
                 ),
             ],
           ),

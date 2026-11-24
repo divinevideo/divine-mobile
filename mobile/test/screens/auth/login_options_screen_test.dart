@@ -16,12 +16,15 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/social_sign_in_providers.dart';
+import 'package:openvine/repositories/social_sign_in_repository.dart';
 import 'package:openvine/screens/auth/login_options_screen.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/pending_verification_service.dart';
 import 'package:openvine/widgets/auth_back_button.dart';
 
+import '../../helpers/scroll.dart';
 import '../../helpers/test_provider_overrides.dart';
 
 class _MockKeycastOAuth extends Mock implements KeycastOAuth {}
@@ -30,6 +33,9 @@ class _MockAuthService extends Mock implements AuthService {}
 
 class _MockPendingVerificationService extends Mock
     implements PendingVerificationService {}
+
+class _MockSocialSignInRepository extends Mock
+    implements SocialSignInRepository {}
 
 /// Where the harness mounts the screen; it does not need the app's route.
 const _loginOptionsPath = '/login-options';
@@ -47,13 +53,18 @@ void main() {
   late _MockKeycastOAuth mockOAuth;
   late _MockAuthService mockAuthService;
   late _MockPendingVerificationService mockPendingVerification;
+  late _MockSocialSignInRepository socialSignInRepository;
   Map<String, String>? verifyEmailQuery;
+
+  setUpAll(() => registerFallbackValue(SocialProvider.apple));
 
   setUp(() {
     verifyEmailQuery = null;
     mockOAuth = _MockKeycastOAuth();
     mockAuthService = _MockAuthService();
     mockPendingVerification = _MockPendingVerificationService();
+    socialSignInRepository = _MockSocialSignInRepository();
+    when(() => socialSignInRepository.isAvailable(any())).thenReturn(false);
     when(() => mockAuthService.isNip07Available).thenReturn(false);
     when(
       () => mockAuthService.authStateStream,
@@ -67,6 +78,9 @@ void main() {
         oauthClientProvider.overrideWithValue(mockOAuth),
         pendingVerificationServiceProvider.overrideWithValue(
           mockPendingVerification,
+        ),
+        socialSignInRepositoryProvider.overrideWithValue(
+          socialSignInRepository,
         ),
       ],
       child: MaterialApp.router(
@@ -701,6 +715,58 @@ void main() {
             'verifier': 'test-verifier',
             'email': 'test@example.com',
           }),
+        );
+      });
+    });
+
+    group('social sign-in', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      setUp(() {
+        when(() => socialSignInRepository.isAvailable(any())).thenReturn(true);
+        when(() => mockAuthService.acceptTerms()).thenAnswer((_) async {});
+      });
+
+      testWidgets('offers Apple and Google next to the other methods', (
+        tester,
+      ) async {
+        await tester.pumpWidget(createTestWidget());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.authContinueWithApple), findsOneWidget);
+        expect(find.text(l10n.authContinueWithGoogle), findsOneWidget);
+      });
+
+      testWidgets('locks the email sign-in while a provider sign-in runs', (
+        tester,
+      ) async {
+        when(
+          () => socialSignInRepository.signIn(SocialProvider.apple),
+        ).thenAnswer((_) => Completer<KeycastSession>().future);
+
+        await tester.pumpWidget(createTestWidget());
+        await tester.pumpAndSettle();
+
+        final apple = find.text(l10n.authContinueWithApple);
+        await scrollUntilTappable(
+          tester,
+          apple,
+          120,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.tap(apple);
+        await tester.pump();
+
+        verify(
+          () => socialSignInRepository.signIn(SocialProvider.apple),
+        ).called(1);
+        expect(
+          tester
+              .widget<DivineButton>(
+                find.widgetWithText(DivineButton, l10n.authSignInButton),
+              )
+              .onPressed,
+          isNull,
         );
       });
     });

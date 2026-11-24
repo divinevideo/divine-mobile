@@ -51,14 +51,15 @@ void main() {
 
     setUpAll(() => registerFallbackValue(SocialProvider.google));
 
-    Future<void> pumpButtons(WidgetTester tester) => tester.pumpWidget(
-      _app(
-        BlocProvider<SocialSignInCubit>.value(
-          value: cubit,
-          child: const SocialSignInButtons(),
-        ),
-      ),
-    );
+    Future<void> pumpButtons(WidgetTester tester, {bool enabled = true}) =>
+        tester.pumpWidget(
+          _app(
+            BlocProvider<SocialSignInCubit>.value(
+              value: cubit,
+              child: SocialSignInButtons(enabled: enabled),
+            ),
+          ),
+        );
 
     group('renders', () {
       testWidgets('nothing when no provider is offered', (tester) async {
@@ -99,6 +100,17 @@ void main() {
 
         expect(_button(tester, _l10n.authContinueWithGoogle).isLoading, isTrue);
         expect(_button(tester, _l10n.authContinueWithApple).onPressed, isNull);
+      });
+
+      testWidgets('no taps while another sign-in on the screen runs', (
+        tester,
+      ) async {
+        when(() => cubit.state).thenReturn(bothProviders);
+
+        await pumpButtons(tester, enabled: false);
+
+        expect(_button(tester, _l10n.authContinueWithApple).onPressed, isNull);
+        expect(_button(tester, _l10n.authContinueWithGoogle).onPressed, isNull);
       });
     });
 
