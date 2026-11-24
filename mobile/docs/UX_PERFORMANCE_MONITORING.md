@@ -54,10 +54,13 @@ tab's feed; `fullscreen_feed`, the player opened from a grid, which Explore, a
 profile, search, hashtags, lists, sounds, Classics and video links share;
 `explore`, Explore's tabs and grids; `search`, search and its results; and
 `profile`, a profile's header and grids, the account's own or someone else's.
-A grid that gives way to its feed in the same tab, as Explore and the own
-profile do, ends its visit as `closed`, and the feed starts a `fullscreen_feed`
-visit. The bottom navigation keeps every tab it has shown mounted, so selecting
-another tab ends the visit as `tab_switch` and coming back starts a new one; the
+Tapping a video in a grid opens the fullscreen feed on top of the whole app, so
+the grid's visit ends as `covered` and a new one starts when the feed closes.
+Explore and the own profile can also show their feed in place of the grid when
+their URL carries a video index, as a link can; then the grid's visit ends as
+`closed`, and the feed starts a `fullscreen_feed` visit. The bottom navigation
+keeps every tab it has shown mounted, so selecting another tab ends the visit
+as `tab_switch` and coming back starts a new one; the
 cross-fade between the two counts for the tab being selected. `covered` is a
 route on top, pushed over the whole shell or inside the tab. The inbox,
 notifications, settings and the hashtag, list and sound grids are not traced.
