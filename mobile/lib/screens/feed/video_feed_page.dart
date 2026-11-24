@@ -39,6 +39,7 @@ import 'package:openvine/utils/video_nostr_enrichment.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
 import 'package:openvine/widgets/nav_rounded_shell.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:openvine/widgets/video_feed_item/feed_comments_panel.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
 import 'package:rxdart/rxdart.dart';
@@ -117,7 +118,7 @@ class VideoFeedPage extends ConsumerWidget {
     final persistence = ref
         .watch(feedModePersistenceRegistryProvider)
         .forAccount(viewerPubkey);
-    return RepositoryProvider<FeedModePersistenceCoordinator>.value(
+    final feed = RepositoryProvider<FeedModePersistenceCoordinator>.value(
       key: ValueKey((viewerPubkey, sharedPreferences)),
       value: persistence,
       child: MultiBlocProvider(
@@ -193,6 +194,9 @@ class VideoFeedPage extends ConsumerWidget {
         child: VideoFeedView(initialIndex: initialIndex),
       ),
     );
+    // Above the keyed providers, so a filter or account change does not
+    // split the visit.
+    return ScreenFrameTraceScope(screen: .homeFeed, child: feed);
   }
 }
 

@@ -41,6 +41,7 @@ import 'package:openvine/widgets/profile/profile_tab_kind.dart';
 import 'package:openvine/widgets/profile/profile_tab_loading_state.dart';
 import 'package:openvine/widgets/profile/profile_videos_grid.dart';
 import 'package:openvine/widgets/profile/profile_videos_grid_skeleton.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 
 /// Profile grid view showing header, stats, action buttons, and tabbed content.
 class ProfileGridView extends ConsumerStatefulWidget {
@@ -1035,8 +1036,9 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
     // Provide OthersFollowersBloc only for other profiles so the follow
     // button can optimistically update the followers count after a
     // follow/unfollow action.
+    Widget grid = content;
     if (!widget.isOwnProfile) {
-      return BlocProvider<OthersFollowersBloc>(
+      grid = BlocProvider<OthersFollowersBloc>(
         key: ValueKey((
           followRepository,
           contentBlocklistRepository,
@@ -1052,7 +1054,7 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
       );
     }
 
-    return content;
+    return ScreenFrameTraceScope(screen: .profile, child: grid);
   }
 }
 

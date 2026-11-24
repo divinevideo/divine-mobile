@@ -1,5 +1,5 @@
 // ABOUTME: Reports a screen_frames trace for the screen it wraps.
-// ABOUTME: Ends each visit when an opaque route covers it or the app leaves.
+// ABOUTME: Ends a visit on an opaque route, a tab switch, or the app leaving.
 
 import 'dart:ui' show FlutterView;
 
@@ -13,9 +13,14 @@ import 'package:openvine/providers/service_providers.dart';
 /// [ScreenFrameTrace] for [screen].
 ///
 /// The screen counts as covered while its tickers are off, which is what an
-/// opaque route on top does once its transition ends. Dialogs and sheets are
-/// not opaque, so their frames count towards the screen beneath them, as do
-/// the frames of a transition to or from the screen.
+/// opaque route on top does once its transition ends, and what the app shell
+/// does to the tabs that are not selected; under a [ScreenFrameTraceTab] the
+/// latter ends the visit as a tab switch. Dialogs and sheets are not opaque,
+/// so their frames count towards the screen beneath them, as do the frames of
+/// a transition to or from the screen.
+///
+/// Frames are drawn for the whole app, so a scope must not sit inside
+/// another: both would count the same frames.
 class ScreenFrameTraceScope extends ConsumerStatefulWidget {
   const ScreenFrameTraceScope({
     required this.screen,
@@ -36,6 +41,32 @@ class ScreenFrameTraceScope extends ConsumerStatefulWidget {
       _ScreenFrameTraceScopeState();
 }
 
+/// Tells the [ScreenFrameTraceScope]s in one tab of the app shell whether
+/// that tab is selected, so that leaving it ends their visit as a tab switch
+/// rather than as covered.
+///
+/// Must sit above the [TickerMode] that mutes the tab: the scopes read it the
+/// moment their tickers go off.
+class ScreenFrameTraceTab extends InheritedWidget {
+  const ScreenFrameTraceTab({
+    required this.selected,
+    required super.child,
+    super.key,
+  });
+
+  /// Whether the tab is the one on screen.
+  final bool selected;
+
+  /// Whether [context] is in a tab of the app shell that is not selected.
+  static bool isInUnselectedTab(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<ScreenFrameTraceTab>()?.selected ==
+      false;
+
+  // Read without a dependency, when the tickers below change.
+  @override
+  bool updateShouldNotify(ScreenFrameTraceTab oldWidget) => false;
+}
+
 class _ScreenFrameTraceScopeState extends ConsumerState<ScreenFrameTraceScope> {
   ScreenFrameTrace? _trace;
   AppLifecycleListener? _lifecycle;
@@ -43,8 +74,24 @@ class _ScreenFrameTraceScopeState extends ConsumerState<ScreenFrameTraceScope> {
   FlutterView? _view;
 
   @override
+  void didUpdateWidget(ScreenFrameTraceScope oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    assert(
+      widget.screen == oldWidget.screen,
+      'Key each ScreenFrameTraceScope by its screen: the trace keeps the '
+      'screen it was created for.',
+    );
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    assert(
+      _trace != null ||
+          context.findAncestorStateOfType<_ScreenFrameTraceScopeState>() ==
+              null,
+      'A ScreenFrameTraceScope inside another counts the same frames twice.',
+    );
     _view = View.of(context);
     final state = WidgetsBinding.instance.lifecycleState;
     _trace ??= ScreenFrameTrace(
@@ -86,7 +133,11 @@ class _ScreenFrameTraceScopeState extends ConsumerState<ScreenFrameTraceScope> {
         !_canReadCoverage(WidgetsBinding.instance.lifecycleState)) {
       return;
     }
-    _trace?.setCovered(!tickerMode.value.enabled);
+    final covered = !tickerMode.value.enabled;
+    _trace?.setCovered(
+      covered,
+      byTabSwitch: covered && ScreenFrameTraceTab.isInUnselectedTab(context),
+    );
   }
 
   // The app can mute every route's tickers while inactive, even though the

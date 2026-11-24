@@ -43,6 +43,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
 import 'package:openvine/widgets/nav_rounded_shell.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:openvine/widgets/video_feed_item/feed_comments_panel.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
@@ -326,7 +327,7 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
         .read(analyticsServiceProvider)
         .recordRecommendationInteraction(feedback);
 
-    return MultiBlocProvider(
+    final feed = MultiBlocProvider(
       providers: [
         BlocProvider(
           create: (_) => FullscreenFeedBloc(
@@ -375,6 +376,8 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
         onBack: onBack,
       ),
     );
+    // Not around the classics page above, whose own feed lands here.
+    return ScreenFrameTraceScope(screen: .fullscreenFeed, child: feed);
   }
 }
 
