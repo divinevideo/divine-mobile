@@ -7,6 +7,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/explore_tabs/explore_tabs_cubit.dart';
 import 'package:openvine/services/top_hashtags_service.dart';
 
+import '../../helpers/screen_load_recorder.dart';
+
 class _MockTopHashtagsLoader extends Mock implements TopHashtagsLoader {}
 
 class _RecordingAnalyticsSink implements AnalyticsEventSink {
@@ -189,6 +191,90 @@ void main() {
         await cubit.loadHashtags();
 
         verify(() => topHashtags.loadTopHashtags()).called(1);
+      });
+    });
+
+    group('load telemetry', () {
+      late ScreenLoadRecorder recorder;
+      late ExploreTabsCubit cubit;
+
+      setUp(() {
+        recorder = ScreenLoadRecorder();
+        cubit = ExploreTabsCubit(
+          screenAnalytics: ScreenAnalyticsService(
+            history: PageLoadHistory(),
+            sink: const NoOpAnalyticsEventSink(),
+          ),
+          loadTelemetry: recorder.telemetry(AnalyticsSurface.explore),
+        );
+        addTearDown(cubit.close);
+      });
+
+      test('completes when the tab Explore opened on shows its grid', () async {
+        cubit
+          ..trackScreenLoad(initialTabName: exploreDefaultTabName)
+          ..reportFeedTabShown(
+            exploreDefaultTabName,
+            itemCount: 30,
+            hasMore: true,
+          );
+        await pumpEventQueue();
+
+        expect(recorder.results, [SurfaceLoadResult.success]);
+        expect(
+          recorder.loads.single,
+          allOf(
+            containsPair(AnalyticsParam.tab, exploreDefaultTabName),
+            containsPair(AnalyticsParam.itemCount, 30),
+          ),
+        );
+      });
+
+      test('reports empty for a tab with no videos', () async {
+        cubit
+          ..trackScreenLoad(initialTabName: explorePopularTabName)
+          ..reportFeedTabShown(explorePopularTabName, itemCount: 0);
+        await pumpEventQueue();
+
+        expect(recorder.results, [SurfaceLoadResult.empty]);
+      });
+
+      test('reports failure when the tab shows its error', () async {
+        cubit
+          ..trackScreenLoad(initialTabName: exploreDefaultTabName)
+          ..reportFeedTabFailed(exploreDefaultTabName);
+        await pumpEventQueue();
+
+        expect(recorder.results, [SurfaceLoadResult.failure]);
+      });
+
+      test('reports dismissed when the user leaves the tab first, and ignores '
+          'the tab they moved to', () async {
+        cubit
+          ..trackScreenLoad(initialTabName: exploreDefaultTabName)
+          ..trackTabChange(explorePopularTabName)
+          ..reportFeedTabShown(explorePopularTabName, itemCount: 12);
+        await pumpEventQueue();
+
+        expect(recorder.results, [SurfaceLoadResult.dismissed]);
+      });
+
+      test('reports dismissed when closed before the grid showed', () async {
+        cubit.trackScreenLoad(initialTabName: exploreDefaultTabName);
+        await cubit.close();
+        await pumpEventQueue();
+
+        expect(recorder.results, [SurfaceLoadResult.dismissed]);
+      });
+
+      test('does not time a tab that reports no grid', () async {
+        cubit
+          ..trackScreenLoad(initialTabName: exploreClassicsTabName)
+          ..reportFeedTabShown(exploreDefaultTabName, itemCount: 30);
+        await cubit.close();
+        await pumpEventQueue();
+
+        expect(recorder.loads, isEmpty);
       });
     });
   });

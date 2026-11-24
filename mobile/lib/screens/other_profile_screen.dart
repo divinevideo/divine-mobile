@@ -17,6 +17,7 @@ import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/models/people_list_entry_point.dart';
 import 'package:openvine/features/people_lists/view/add_to_people_lists_sheet.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -440,6 +441,7 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
 
     return ProfileFeedScope(
       userIdHex: widget.pubkey,
+      loadEntryPoint: ScreenLoadEntryPoint.otherProfile,
       child: Builder(
         builder: (context) {
           final feedState = context.watch<ProfileFeedCubit>().state;

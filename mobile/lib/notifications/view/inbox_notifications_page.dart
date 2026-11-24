@@ -1,6 +1,7 @@
 // ABOUTME: Inbox notifications scaffold — six filter tabs plus actionable
 // ABOUTME: pending-badge banner wrapping NotificationsView.
 
+import 'package:analytics/analytics.dart';
 import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,6 +18,7 @@ import 'package:openvine/notifications/bloc/notification_feed_bloc.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/notifications/view/notifications_view.dart';
 import 'package:openvine/notifications/view/pending_badge_awards_view.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -284,6 +286,15 @@ class _NotificationTabState extends ConsumerState<_NotificationTab>
         appBadgeClearer: appBadgeClearer,
         consumptionAnalytics: ref.read(consumptionAnalyticsTrackerProvider),
         filter: widget.filter,
+        // Only the All tab, which the inbox opens on, is timed: the surface
+        // has one session, which a filter tab opening would take over.
+        loadTelemetry: widget.filter == null
+            ? ScreenLoadTelemetry(
+                tracker: ref.read(surfacePerformanceTrackerProvider),
+                surface: AnalyticsSurface.notifications,
+                entryPoint: ScreenLoadEntryPoint.inboxTab,
+              )
+            : null,
       )..add(const NotificationFeedStarted()),
       child: _NotificationVisibilityDispatcher(
         isVisible: widget.isVisible,

@@ -19,6 +19,7 @@ import 'package:openvine/blocs/dm/dm_peer_account_predicate.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/models/moderation_presentation.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -52,6 +53,7 @@ class ConversationListBloc
     ModerationPresentationResolver moderationPresentation =
         _ordinaryModerationPresentation,
     DmPeerAccountPredicate retiredModerationAccount = neverDmPeerAccount,
+    ScreenLoadTelemetry? loadTelemetry,
   }) : _dmRepository = dmRepository,
        _followRepository = followRepository,
        _blocklistRepository = contentBlocklistRepository,
@@ -61,6 +63,7 @@ class ConversationListBloc
        _supportRowPubkey = supportRowPubkey,
        _moderationPresentation = moderationPresentation,
        _retiredModerationAccount = retiredModerationAccount,
+       _loadTelemetry = loadTelemetry,
        super(const ConversationListState()) {
     on<ConversationListStarted>(_onStarted, transformer: restartable());
     on<ConversationListLoadMore>(_onLoadMore, transformer: droppable());
@@ -137,6 +140,9 @@ class ConversationListBloc
 
   final Duration _recomputeDebounce;
 
+  /// Times the first open until the list shows; null where unmeasured.
+  final ScreenLoadTelemetry? _loadTelemetry;
+
   Future<void> _onStarted(
     ConversationListStarted event,
     Emitter<ConversationListState> emit,
@@ -162,6 +168,7 @@ class ConversationListBloc
 
     switch (state.status) {
       case ConversationListStatus.initial:
+        _loadTelemetry?.start();
         emit(
           state.copyWith(
             status: ConversationListStatus.loading,
@@ -1162,8 +1169,32 @@ class ConversationListBloc
     );
   }
 
+  /// Completes the first load once the list or its error state shows.
+  @override
+  void onChange(Change<ConversationListState> change) {
+    super.onChange(change);
+    final telemetry = _loadTelemetry;
+    if (telemetry == null || !telemetry.isTiming) return;
+    final next = change.nextState;
+    switch (next.status) {
+      case ConversationListStatus.loaded:
+        telemetry.completeLoaded(
+          itemCount:
+              next.visibleConversations.length +
+              (next.pinnedSupport == null ? 0 : 1),
+          hasMore: next.hasMore,
+        );
+      case ConversationListStatus.error:
+        telemetry.completeFailure();
+      case ConversationListStatus.initial:
+      case ConversationListStatus.loading:
+        break;
+    }
+  }
+
   @override
   Future<void> close() {
+    _loadTelemetry?.dismiss();
     unawaited(_vanishedSubscription?.cancel());
     // The gift-wrap subscription is owned by `dmRepositoryProvider` for the
     // whole authenticated session — do NOT stop it here. See #2931.
