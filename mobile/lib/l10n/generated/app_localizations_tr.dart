@@ -15510,6 +15510,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get updateAction => 'Güncelle';
 
   @override
+  String get announcementViewContest => 'Yarışmayı görüntüle';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Bu öne çıkan akış artık kullanılamıyor.';
+
+  @override
   String updateNewIn(String version) {
     return '$version sürümündeki yenilikler:';
   }

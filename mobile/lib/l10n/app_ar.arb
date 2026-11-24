@@ -5983,6 +5983,8 @@
   "updateUrgentTitle": "تفوتك إصلاحات مهمة",
   "updateNotNow": "ليس الآن",
   "updateAction": "تحديث",
+  "announcementViewContest": "عرض المسابقة",
+  "featuredFeedUnavailable": "هذه الخلاصة المميزة لم تعد متاحة.",
   "updateNewIn": "الجديد في {version}:",
   "settingsUpdateAvailable": "يتوفر تحديث",
   "soundUploadChooseFile": "اختيار ملف صوتي",

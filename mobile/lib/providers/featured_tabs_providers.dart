@@ -2,10 +2,14 @@
 // ABOUTME: Rebuilds with the Funnelcake client so an env swap propagates.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/blocs/featured_tabs/featured_tabs_cubit.dart';
+import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/repositories/featured_tabs_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Repository backing the server-configured featured Explore tab.
 ///
@@ -29,21 +33,45 @@ final featuredTabViewerIsAdultProvider = FutureProvider<bool>((ref) async {
   ref
     ..watch(currentAuthStateProvider)
     ..watch(adultContentVerificationVersionProvider);
+  final isProtectedMinor = ref.watch(isProtectedMinorProvider);
+  if (isProtectedMinor) return false;
   final service = ref.watch(ageVerificationServiceProvider);
-  await service.initialized;
+  try {
+    await service.initialized;
+  } on Object catch (error) {
+    Log.warning(
+      'Featured tab 18+ check failed: $error',
+      name: 'FeaturedTabsProviders',
+      category: LogCategory.system,
+    );
+    rethrow;
+  }
   return service.isAdultContentVerified;
 });
 
-/// Whether featured tabs marked unavailable to under-18 viewers stay hidden.
+/// The viewer's audience for featured tabs reserved for verified adults.
 ///
-/// Loading and unverified states fail closed. Protected-minor accounts also
-/// stay gated because [AgeVerificationService] prevents them from completing
-/// adult-content verification.
-final featuredTabAgeGateProvider = Provider<bool>((ref) {
-  final viewerIsAdult = ref.watch(featuredTabViewerIsAdultProvider);
-  return viewerIsAdult.when(
-    data: (isAdult) => !isAdult,
-    error: (_, _) => true,
-    loading: () => true,
-  );
+/// Everything but [FeaturedTabAudience.adult] fails closed: a pending auth or
+/// verification check is `loading`, a failed check is `failed`, and a
+/// signed-out viewer is `unverified`. Protected-minor accounts also
+/// stay gated when their live designation changes, even if adult-content
+/// verification was previously completed.
+final featuredTabAgeGateProvider = Provider<FeaturedTabAudience>((ref) {
+  final auth = ref.watch(currentAuthStateProvider);
+  if (auth == AuthState.authenticating || auth == AuthState.checking) {
+    return FeaturedTabAudience.loading;
+  }
+  if (auth != AuthState.authenticated) return FeaturedTabAudience.unverified;
+  return ref
+      .watch(featuredTabViewerIsAdultProvider)
+      .when(
+        // Report loading while the next account's answer is pending; the
+        // default would keep showing the previous answer during the refresh.
+        skipLoadingOnRefresh: false,
+        data: (isAdult) => isAdult
+            ? FeaturedTabAudience.adult
+            : FeaturedTabAudience.unverified,
+        error: (_, _) => FeaturedTabAudience.failed,
+        loading: () => FeaturedTabAudience.loading,
+      );
 });

@@ -5983,6 +5983,8 @@
   "updateUrgentTitle": "重要な修正が適用されていません",
   "updateNotNow": "後で",
   "updateAction": "アップデート",
+  "announcementViewContest": "コンテストを見る",
+  "featuredFeedUnavailable": "このおすすめフィードは利用できなくなりました。",
   "updateNewIn": "{version} の新機能:",
   "settingsUpdateAvailable": "アップデートがあります",
   "soundUploadChooseFile": "音声ファイルを選ぶ",

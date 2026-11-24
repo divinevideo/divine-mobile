@@ -91,7 +91,7 @@ void main() {
       );
       featuredTabsCubit = FeaturedTabsCubit(
         repository: featuredRepository,
-        gateAgeRestrictedContent: () => false,
+        audience: () => FeaturedTabAudience.adult,
       );
       addTearDown(featuredTabsCubit.close);
       when(

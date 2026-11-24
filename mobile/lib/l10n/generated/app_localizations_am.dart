@@ -15215,6 +15215,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get updateAction => 'ያዘምኑ';
 
   @override
+  String get announcementViewContest => 'ውድድሩን ይመልከቱ';
+
+  @override
+  String get featuredFeedUnavailable => 'ይህ ተለይቶ የቀረበ ፊድ ከእንግዲህ አይገኝም።';
+
+  @override
   String updateNewIn(String version) {
     return 'በ$version አዲስ፦';
   }

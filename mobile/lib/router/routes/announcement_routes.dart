@@ -2,16 +2,21 @@
 // ABOUTME: Route extras cannot impersonate or retain a withdrawn announcement.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/notification_item.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/notifications/announcement_action_destination.dart';
 import 'package:openvine/notifications/cubit/announcement_detail_cubit.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/notifications/view/announcement_detail_screen.dart';
+import 'package:openvine/providers/app_version_provider.dart';
+import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/router/fade_upwards_page.dart';
+import 'package:openvine/services/push_device_metadata.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 part 'announcement_routes.g.dart';
@@ -43,21 +48,52 @@ class _AnnouncementDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref
-        .watch(notificationRepositoryProvider)
-        ?.announcementsRepository;
-    if (repository == null) return const AnnouncementDetailScreen();
+    final notifications = ref.watch(notificationRepositoryProvider);
+    if (notifications == null) {
+      return const AnnouncementDetailScreen(
+        status: AnnouncementDetailStatus.loading,
+      );
+    }
+    final repository = notifications.announcementsRepository;
+    if (repository == null) {
+      return const AnnouncementDetailScreen(
+        status: AnnouncementDetailStatus.failed,
+      );
+    }
     return BlocProvider(
       key: ValueKey((repository, announcementId)),
       create: (_) => AnnouncementDetailCubit(
         announcementId: announcementId,
-        initialItems: repository.items,
-        snapshots: repository.watchSnapshot(),
+        repository: repository,
       ),
-      child: BlocBuilder<AnnouncementDetailCubit, AnnouncementNotification?>(
-        builder: (context, announcement) => AnnouncementDetailScreen(
-          announcement: announcement,
-          onLearnMore: (url) => _openLearnMore(context, url),
+      child: BlocBuilder<AnnouncementDetailCubit, AnnouncementDetailState>(
+        builder: (context, state) => Consumer(
+          builder: (context, ref, _) {
+            final action = state.announcement?.action;
+            final device = action is UpdateAppAnnouncementAction && !kIsWeb
+                ? PushDeviceMetadata.resolve(
+                    platform: defaultTargetPlatform,
+                    source: ref.watch(installSourceProvider),
+                    appVersion: ref.watch(appVersionProvider),
+                  )
+                : null;
+            final destination = announcementActionDestination(action, device);
+            return AnnouncementDetailScreen(
+              announcement: state.announcement,
+              status: state.status,
+              onRetry: context.read<AnnouncementDetailCubit>().refresh,
+              actionLabel: destination == null
+                  ? null
+                  : action is UpdateAppAnnouncementAction
+                  ? context.l10n.updateAction
+                  : context.l10n.announcementViewContest,
+              onAction: switch (destination) {
+                final Uri url => () => _openLearnMore(context, url),
+                null => null,
+              },
+              onLearnMore: (url) => _openLearnMore(context, url),
+            );
+          },
         ),
       ),
     );
