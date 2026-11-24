@@ -2191,6 +2191,7 @@
   "soundsSearchResults": "Kết quả tìm kiếm",
   "soundsNoSoundsFound": "Không tìm thấy âm thanh nào",
   "soundsNoSoundsFoundDescription": "Thử từ khóa khác nhé",
+  "soundsSearchResultCount": "{count, plural, =0{Không tìm thấy âm thanh nào} other{Tìm thấy {count} âm thanh}}",
   "soundsSavedToLibrary": "Đã lưu vào Âm thanh",
   "soundsAlreadySavedToLibrary": "Đã có trong Âm thanh",
   "soundsAddSound": "Thêm âm thanh",

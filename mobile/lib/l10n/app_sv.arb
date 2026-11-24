@@ -1585,6 +1585,7 @@
   "soundsSearchResults": "Sökresultat",
   "soundsNoSoundsFound": "Inga ljud hittades",
   "soundsNoSoundsFoundDescription": "Testa en annan sökterm",
+  "soundsSearchResultCount": "{count, plural, =0{Inga ljud hittades} one{{count} ljud hittades} other{{count} ljud hittades}}",
   "profileTitle": "Profil",
   "profileMoreOptions": "Fler alternativ",
   "profileBlockedUser": "Blockerade {name}",

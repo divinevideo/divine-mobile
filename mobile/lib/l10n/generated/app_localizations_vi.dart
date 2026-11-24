@@ -4538,6 +4538,17 @@ class AppLocalizationsVi extends AppLocalizations {
   String get soundsNoSoundsFoundDescription => 'Thử từ khóa khác nhé';
 
   @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Tìm thấy $count âm thanh',
+      zero: 'Không tìm thấy âm thanh nào',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get soundsSavedToLibrary => 'Đã lưu vào Âm thanh';
 
   @override

@@ -1121,6 +1121,7 @@
   "soundsSearchResults": "검색 결과",
   "soundsNoSoundsFound": "사운드를 찾을 수 없어요",
   "soundsNoSoundsFoundDescription": "다른 검색어로 시도해 보세요",
+  "soundsSearchResultCount": "{count, plural, =0{사운드를 찾을 수 없어요} other{사운드 {count}개를 찾았어요}}",
   "profileTitle": "프로필",
   "profileMoreOptions": "더 보기",
   "profileBlockedUser": "{name}님을 차단했어요",

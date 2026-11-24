@@ -4293,6 +4293,17 @@ class AppLocalizationsJa extends AppLocalizations {
   String get soundsNoSoundsFoundDescription => '別のキーワードで検索してみて';
 
   @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'サウンドが$count件見つかった',
+      zero: 'サウンドが見つからない',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get soundsSavedToLibrary => 'サウンドに保存しました';
 
   @override

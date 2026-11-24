@@ -4582,6 +4582,18 @@ class AppLocalizationsUr extends AppLocalizations {
       'کوئی اور تلاش کی اصطلاح آزمائیں';
 
   @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count آوازیں ملیں',
+      one: '$count آواز ملی',
+      zero: 'کوئی آواز نہیں ملی',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get soundsSavedToLibrary => 'آوازوں میں محفوظ ہو گئی';
 
   @override

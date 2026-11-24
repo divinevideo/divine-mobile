@@ -4716,6 +4716,19 @@ class AppLocalizationsRo extends AppLocalizations {
   String get soundsNoSoundsFoundDescription => 'Încearcă alt termen de căutare';
 
   @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de sunete găsite',
+      few: '$count sunete găsite',
+      one: '$count sunet găsit',
+      zero: 'Niciun sunet găsit',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get soundsSavedToLibrary => 'Salvat în Sunete';
 
   @override

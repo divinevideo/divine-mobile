@@ -4612,6 +4612,19 @@ class AppLocalizationsPt extends AppLocalizations {
   String get soundsNoSoundsFoundDescription => 'Tente outro termo de busca';
 
   @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sons encontrados',
+      many: '$count de sons encontrados',
+      one: '$count som encontrado',
+      zero: 'Nenhum som encontrado',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get soundsSavedToLibrary => 'Salvo em Sons';
 
   @override

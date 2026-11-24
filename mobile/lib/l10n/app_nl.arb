@@ -1585,6 +1585,7 @@
   "soundsSearchResults": "Zoekresultaten",
   "soundsNoSoundsFound": "Geen geluiden gevonden",
   "soundsNoSoundsFoundDescription": "Probeer een andere zoekterm",
+  "soundsSearchResultCount": "{count, plural, =0{Geen geluiden gevonden} one{{count} geluid gevonden} other{{count} geluiden gevonden}}",
   "profileTitle": "Profiel",
   "profileMoreOptions": "Meer opties",
   "profileBlockedUser": "{name} geblokkeerd",

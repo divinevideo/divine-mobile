@@ -1585,6 +1585,7 @@
   "soundsSearchResults": "Rezultatele căutării",
   "soundsNoSoundsFound": "Niciun sunet găsit",
   "soundsNoSoundsFoundDescription": "Încearcă alt termen de căutare",
+  "soundsSearchResultCount": "{count, plural, =0{Niciun sunet găsit} one{{count} sunet găsit} few{{count} sunete găsite} other{{count} de sunete găsite}}",
   "profileTitle": "Profil",
   "profileMoreOptions": "Mai multe opțiuni",
   "profileBlockedUser": "L-ai blocat pe {name}",

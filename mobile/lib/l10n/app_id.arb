@@ -1582,6 +1582,7 @@
   "soundsSearchResults": "Hasil Pencarian",
   "soundsNoSoundsFound": "Tidak ada suara ditemukan",
   "soundsNoSoundsFoundDescription": "Coba istilah pencarian lain",
+  "soundsSearchResultCount": "{count, plural, =0{Tidak ada suara ditemukan} other{{count} suara ditemukan}}",
   "profileTitle": "Profil",
   "profileMoreOptions": "Opsi lainnya",
   "profileBlockedUser": "Memblokir {name}",

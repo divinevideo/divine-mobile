@@ -4574,6 +4574,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get soundsNoSoundsFoundDescription => 'جرِّب كلمة بحث مختلفة';
 
   @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'عُثر على $count صوت',
+      many: 'عُثر على $count صوتًا',
+      few: 'عُثر على $count أصوات',
+      two: 'عُثر على صوتين',
+      one: 'عُثر على صوت واحد',
+      zero: 'لم يُعثر على أصوات',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get soundsSavedToLibrary => 'حُفظ في الأصوات';
 
   @override

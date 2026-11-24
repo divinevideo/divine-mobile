@@ -1204,6 +1204,7 @@
   "soundsSearchResults": "Mga Resulta ng Paghahanap",
   "soundsNoSoundsFound": "Walang nahanap na sound",
   "soundsNoSoundsFoundDescription": "Subukan ang ibang search term",
+  "soundsSearchResultCount": "{count, plural, =0{Walang nahanap na sound} one{{count} sound ang nahanap} other{{count} sound ang nahanap}}",
   "profileTitle": "Profile",
   "profileMoreOptions": "Iba pang opsyon",
   "profileBlockedUser": "Na-block si {name}",

@@ -1575,6 +1575,7 @@
   "soundsSearchResults": "نتائج البحث",
   "soundsNoSoundsFound": "لم يُعثر على أصوات",
   "soundsNoSoundsFoundDescription": "جرِّب كلمة بحث مختلفة",
+  "soundsSearchResultCount": "{count, plural, =0{لم يُعثر على أصوات} one{عُثر على صوت واحد} two{عُثر على صوتين} few{عُثر على {count} أصوات} many{عُثر على {count} صوتًا} other{عُثر على {count} صوت}}",
   "profileTitle": "الملف الشخصي",
   "profileMoreOptions": "خيارات أخرى",
   "profileBlockedUser": "تم حظر {name}",

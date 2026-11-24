@@ -3147,6 +3147,15 @@
   "soundsSearchResults": "Search Results",
   "soundsNoSoundsFound": "No sounds found",
   "soundsNoSoundsFoundDescription": "Try a different search term",
+  "soundsSearchResultCount": "{count, plural, =0{No sounds found} =1{{count} sound found} other{{count} sounds found}}",
+  "@soundsSearchResultCount": {
+    "description": "Screen-reader announcement when a search in the sound picker has answered, saying how many sounds the list now shows.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "soundsSavedToLibrary": "Saved to Sounds",
   "soundsAlreadySavedToLibrary": "Already in Sounds",
   "soundsSavedEmptyTitle": "No saved sounds yet",

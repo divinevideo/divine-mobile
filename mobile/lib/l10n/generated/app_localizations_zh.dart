@@ -4274,6 +4274,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get soundsNoSoundsFoundDescription => '换个搜索词试试';
 
   @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '找到 $count 个声音',
+      zero: '没有找到声音',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get soundsSavedToLibrary => '已存入声音库';
 
   @override

@@ -1761,6 +1761,7 @@
   "soundsSearchResults": "Резултати от търсенето",
   "soundsNoSoundsFound": "Няма намерени звуци",
   "soundsNoSoundsFoundDescription": "Пробвай с друго търсене",
+  "soundsSearchResultCount": "{count, plural, =0{Няма намерени звуци} one{Намерен е {count} звук} other{Намерени са {count} звука}}",
   "profileTitle": "Профил",
   "profileMoreOptions": "Още опции",
   "profileBlockedUser": "Блокиран {name}",

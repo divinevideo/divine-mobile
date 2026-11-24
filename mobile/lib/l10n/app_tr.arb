@@ -1582,6 +1582,7 @@
   "soundsSearchResults": "Arama Sonuçları",
   "soundsNoSoundsFound": "Hiç ses bulunamadı",
   "soundsNoSoundsFoundDescription": "Farklı bir arama terimi dene",
+  "soundsSearchResultCount": "{count, plural, =0{Hiç ses bulunamadı} one{{count} ses bulundu} other{{count} ses bulundu}}",
   "profileTitle": "Profil",
   "profileMoreOptions": "Daha fazla seçenek",
   "profileBlockedUser": "{name} engellendi",
