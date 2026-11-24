@@ -391,6 +391,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   final _loadingSourceFailures = <int>{};
   final _errorTypes = <int, VideoErrorType>{};
   final _terminalErrorTypesByVideoId = <String, VideoErrorType>{};
+  final _terminalPlaybackErrorsByVideoId = <String, FeedPlaybackError>{};
   // Viewer auth headers per index, applied to every resolved playback source
   // for that index. The age-gate token is a hash-bound BUD-01 (kind 24242)
   // auth, valid for any variant URL of the same blob, so one header set covers
@@ -680,6 +681,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     );
 
     _terminalErrorTypesByVideoId.clear();
+    _terminalPlaybackErrorsByVideoId.clear();
     _endPlaybackSession(FeedPlaybackSessionEnd.replaced);
     final sameVideos = identical(widget.videos, oldWidget.videos);
     _teardownAllControllers(
@@ -750,9 +752,11 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   ) {
     for (var i = startIndex; i < oldWidget.videos.length; i++) {
       _terminalErrorTypesByVideoId.remove(oldWidget.videos[i].id);
+      _terminalPlaybackErrorsByVideoId.remove(oldWidget.videos[i].id);
     }
     for (var i = startIndex; i < newWidget.videos.length; i++) {
       _terminalErrorTypesByVideoId.remove(newWidget.videos[i].id);
+      _terminalPlaybackErrorsByVideoId.remove(newWidget.videos[i].id);
     }
     for (var i = startIndex; i < oldWidget.videos.length; i++) {
       _errors.remove(i);
@@ -1770,6 +1774,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final videoId = _videoIdAt(index);
     if (videoId != null) {
       _terminalErrorTypesByVideoId.remove(videoId);
+      _terminalPlaybackErrorsByVideoId.remove(videoId);
     }
     if (httpHeaders.isEmpty) {
       _httpHeadersByIndex.remove(index);
@@ -2132,6 +2137,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final videoId = _videoIdAt(index);
     if (videoId != null) {
       _terminalErrorTypesByVideoId[videoId] = type;
+      _terminalPlaybackErrorsByVideoId[videoId] = errorCategory;
     }
     _cancelAutoRetry(index);
     unawaited(_controllers[index]?.stop());
@@ -2161,6 +2167,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _firstFrameTimerFor(index)?.finish(
       outcome: FeedPlaybackOutcome.error,
       errorCategory: FeedPlaybackError.source,
+      sessionErrorCategory: _terminalPlaybackErrorsByVideoId[videoId],
     );
     _rebuildPage(index);
     return true;

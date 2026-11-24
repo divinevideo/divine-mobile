@@ -482,6 +482,37 @@ void main() {
           expect(metric.active, const Duration(milliseconds: 1500));
         });
       });
+
+      test('keeps operational and session error categories independent when '
+          'overridden', () {
+        fakeAsync((async) {
+          FeedPlaybackTelemetry.configure(enabled: true);
+          final events = <Map<String, Object?>>[];
+          final sub = FeedPlaybackTelemetry.events.listen(events.add);
+          addTearDown(() async {
+            FeedPlaybackTelemetry.configure(enabled: false);
+            await sub.cancel();
+          });
+
+          final timer =
+              FeedFirstFrameMetrics.start(
+                videoId: 'synthetic',
+                index: 0,
+              )..finish(
+                outcome: FeedPlaybackOutcome.error,
+                errorCategory: FeedPlaybackError.source,
+                sessionErrorCategory: FeedPlaybackError.initialization,
+              );
+          final metric = timer.end(
+            FeedPlaybackSessionEnd.swipe,
+            loadedFromCache: false,
+          )!;
+
+          expect(events.single['error_category'], 'source');
+          expect(metric.outcome, FeedPlaybackSessionOutcome.failed);
+          expect(metric.error, FeedPlaybackError.initialization);
+        });
+      });
     });
   });
 }

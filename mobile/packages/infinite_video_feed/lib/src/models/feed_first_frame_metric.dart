@@ -150,13 +150,16 @@ class FeedFirstFrameTimer {
   /// Terminates operational telemetry without creating a success trace.
   ///
   /// A retry or late first frame can still [complete] the success measurement.
+  /// When [sessionErrorCategory] is given, the session metric keeps that
+  /// error category while operational telemetry receives [errorCategory].
   void finish({
     required FeedPlaybackOutcome outcome,
     FeedPlaybackError errorCategory = FeedPlaybackError.none,
+    FeedPlaybackError? sessionErrorCategory,
     String localCache = 'unknown',
   }) {
     if (!_ended && outcome == FeedPlaybackOutcome.error) {
-      _failure = errorCategory;
+      _failure = sessionErrorCategory ?? errorCategory;
     }
     _finishAttempt(
       outcome: outcome,

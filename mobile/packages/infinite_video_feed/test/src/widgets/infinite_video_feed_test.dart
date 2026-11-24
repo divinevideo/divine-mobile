@@ -3147,6 +3147,58 @@ void main() {
             }
           },
         );
+
+        testWidgets(
+          'preserves original error category on terminal revisit',
+          (tester) async {
+            await start(tester);
+            final key = GlobalKey<InfiniteVideoFeedState>();
+            final videos = [_makeVideo('terminal_revisit'), _makeVideo('next')];
+            harness.setClipsFailures[0] = <Exception>[
+              PlatformException(
+                code: 'COMPOSITION_ERROR',
+                message: 'No playable video tracks found.',
+              ),
+            ];
+            try {
+              await tester.pumpWidget(
+                _wrapFeed(
+                  InfiniteVideoFeed(
+                    key: key,
+                    videos: videos,
+                    cache: cache,
+                    prefetchCount: 0,
+                    autoRetryMaxAttempts: 0,
+                    preloadGracePeriod: Duration.zero,
+                  ),
+                ),
+              );
+              await tester.pump();
+              await tester.pump();
+
+              key.currentState!.debugActivatePage(1);
+              await tester.pump();
+              key.currentState!.debugActivatePage(0);
+              await tester.pump();
+
+              await tester.pumpWidget(const SizedBox.shrink());
+
+              expect(sessions, hasLength(3));
+              expect(sessions.first.outcome, FeedPlaybackSessionOutcome.failed);
+              expect(
+                sessions.first.error,
+                FeedPlaybackError.initialization,
+              );
+              expect(sessions.last.outcome, FeedPlaybackSessionOutcome.failed);
+              expect(
+                sessions.last.error,
+                FeedPlaybackError.initialization,
+              );
+            } finally {
+              await stop(tester);
+            }
+          },
+        );
       });
 
       testWidgets('does not autoplay when canAutoPlay returns false', (
