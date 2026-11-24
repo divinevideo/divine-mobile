@@ -153,7 +153,7 @@ def findings_for(platform, base, source):
     return findings
 
 
-def check_candidate(action, snapshot, approval):
+def check_candidate(action, snapshot, approvals):
     platform = action['platform']
     build = action['build']
     source = build.get('sha')
@@ -170,7 +170,7 @@ def check_candidate(action, snapshot, approval):
         raise ProviderError(f'{label}: {error}') from None
     label += f" against production {baseline['version']}+{number} ({baseline['sha']})"
     if not findings:
-        return f'{label}: no issues detected by the source preflight.'
+        return None, f'{label}: no issues detected by the source preflight.'
     digest = hashlib.sha256(json.dumps([
         platform,
         [build['version'], build['number'], source, build.get('id')],
@@ -178,8 +178,8 @@ def check_candidate(action, snapshot, approval):
         findings,
     ]).encode()).hexdigest()
     token = f'{platform}-{digest}'
-    if approval == token:
-        return f'{label}: release operator confirmed the flagged checks. {" ".join(findings)}'
+    if token in approvals:
+        return token, f'{label}: release operator confirmed the flagged checks. {" ".join(findings)}'
     raise ProviderError(
         f'{label}: review required. {" ".join(findings)} '
         f'After verifying the exact build and store listing, dispatch the release train with '
@@ -187,19 +187,31 @@ def check_candidate(action, snapshot, approval):
     )
 
 
-def screen(plan, snapshot, approval, *, dry):
-    """Remove blocked submissions before journaling and describe them in the run summary."""
+def screen(plan, snapshot, approval, *, dry, confirmed=None):
+    """Remove blocked submissions before journaling and describe them in the run summary.
+
+    `confirmed` maps a platform to the confirmation a live dispatch already gave,
+    so a deferred or retried submission keeps it while its build, baseline and
+    findings are unchanged. Returns the confirmations this live run accepted.
+    """
+    confirmed = confirmed or {}
+    accepted = {}
     for key in ('actions', 'proposed'):
         actions = plan.get(key, [])
         for action in list(actions):
             if action['kind'] not in STORE_ACTIONS:
                 continue
-            prefix = action['platform'] + ' store review preflight: '
+            platform = action['platform']
+            prefix = platform + ' store review preflight: '
             preview = dry or key == 'proposed'
+            approvals = {confirmed.get(platform)} | (set() if preview else {approval})
             try:
-                result = check_candidate(action, snapshot, '' if preview else approval)
+                token, result = check_candidate(action, snapshot, approvals - {None, ''})
             except ProviderError as error:
                 actions.remove(action)
                 plan['reasons' if preview else 'errors'].append(prefix + str(error))
             else:
+                if token and not preview:
+                    accepted[platform] = token
                 plan['reasons'].append(prefix + result)
+    return accepted

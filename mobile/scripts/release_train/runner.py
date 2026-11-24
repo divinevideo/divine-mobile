@@ -43,7 +43,7 @@ from release_train.providers import (
     request_json,
     verify_bundle,
 )
-from release_train.store_review import screen as screen_store_review
+from release_train.store_review import STORE_ACTIONS, screen as screen_store_review
 from release_train.versions import parse_version
 
 STATE_PATH = "coordinator/state-v1.json"
@@ -261,6 +261,9 @@ def execute_plan(plan, state, snapshot, store, provider):
             state["operations"][key]["status"] = (
                 "deferred" if action["kind"] == "android-distribution" else "done")
             state["operations"][key]["result"] = result
+            if action["kind"] in STORE_ACTIONS:
+                # The store took this build, so its review confirmation is spent.
+                state.get("store_review_confirmations", {}).pop(action["platform"], None)
         except BeforeStoreMutationError as error:
             # No store request has occurred, so preserve the prior retryable
             # intent rather than manufacturing an ambiguous submission hold.
@@ -1541,8 +1544,13 @@ def main(env=os.environ):
         env.get("RELEASE_APPROVE_STORE_REVIEW", "")
         if env.get("GITHUB_EVENT_NAME") == "workflow_dispatch" else ""
     )
-    screen_store_review(plan, snapshot, store_review_approval, dry=dry)
+    confirmations = screen_store_review(
+        plan, snapshot, store_review_approval, dry=dry,
+        confirmed=state.get("store_review_confirmations", {}),
+    )
     if not dry:
+        if confirmations:
+            state.setdefault("store_review_confirmations", {}).update(confirmations)
         runtime.store.save(state)
         audit_snapshot = dict(snapshot)
         for platform in ["ios", "android"]:

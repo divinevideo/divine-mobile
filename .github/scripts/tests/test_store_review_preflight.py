@@ -1,3 +1,4 @@
+import copy
 import io
 import plistlib
 import subprocess
@@ -9,6 +10,7 @@ from unittest.mock import Mock, patch
 
 import release_train_fakes  # adds repository scripts to sys.path
 from release_train import runner, store_review
+from release_train.providers import BeforeStoreMutationError, DeferredReview
 
 
 class StoreReviewTest(unittest.TestCase):
@@ -58,6 +60,44 @@ class StoreReviewTest(unittest.TestCase):
         plan = {'actions': list(actions), 'proposed': list(proposed), 'errors': [], 'reasons': []}
         store_review.screen(plan, self.snapshot(baseline or self.base), approval, dry=dry)
         return plan
+
+    def token_for(self, action):
+        report = self.screen([action])
+        return report['errors'][0].split('approve_store_review=')[1].split('`')[0]
+
+    def ticks(self, steps):
+        """Run the coordinator once per (event, approval, action, outcome), keeping its state."""
+        saved = [{}]
+        env = {
+            'GITHUB_REPOSITORY': 'owner/repo',
+            'GITHUB_REF': 'refs/heads/main',
+            'GITHUB_SHA': self.base,
+            'GITHUB_WORKFLOW_SHA': self.base,
+            'GITHUB_WORKFLOW_REF': 'owner/repo/.github/workflows/release_train.yml@refs/heads/main',
+            'RELEASE_TRAIN_ANDROID': 'production',
+            'RELEASE_DRY_RUN': 'false',
+        }
+        results = []
+        for event, approval, action, outcome in steps:
+            runtime = Mock()
+            runtime.snapshot.return_value = self.snapshot(self.base)
+            runtime.store.load.side_effect = lambda: copy.deepcopy(saved[-1])
+            runtime.store.save.side_effect = lambda state: saved.append(copy.deepcopy(state))
+            runtime.ledger.paths.return_value = []
+            runtime.execute.side_effect = outcome
+            with (
+                patch.object(runner, 'Runtime', return_value=runtime),
+                patch.object(runner.subprocess, 'check_output', return_value=self.base),
+                patch.object(runner, 'observe', side_effect=lambda snapshot, state: state),
+                patch.object(runner, 'reconcile'),
+                patch.object(runner, 'plan_tick', side_effect=lambda *_: {
+                    'actions': [copy.deepcopy(action)], 'errors': [], 'reasons': []}),
+                redirect_stdout(io.StringIO()),
+            ):
+                status = runner.main(env | {
+                    'GITHUB_EVENT_NAME': event, 'RELEASE_APPROVE_STORE_REVIEW': approval})
+            results.append((status, runtime.execute.called, copy.deepcopy(saved[-1])))
+        return results
 
     def test_detects_an_exact_candidate_regression_even_if_head_was_fixed(self):
         self.plist({'UIBackgroundModes': ['fetch', 'audio', 'bluetooth-central']})
@@ -231,3 +271,33 @@ class StoreReviewTest(unittest.TestCase):
                               output.getvalue())
                 if dry:
                     runtime.store.save.assert_not_called()
+
+    def test_confirmed_submission_retries_on_schedule_after_a_deferral_or_refusal(self):
+        self.write('mobile/lib/widgets/report_content_dialog.dart', 'changed report UI')
+        action = self.action('android', self.commit())
+        token = self.token_for(action)
+        for setback in [DeferredReview('CHANGES_ALREADY_IN_REVIEW'),
+                        BeforeStoreMutationError('Google Play validate edit failed')]:
+            with self.subTest(setback=type(setback).__name__):
+                first, retry = self.ticks([
+                    ('workflow_dispatch', token, action, setback),
+                    ('schedule', '', action, None),
+                ])
+                self.assertTrue(first[1])
+                self.assertEqual(first[2]['store_review_confirmations'], {'android': token})
+                self.assertEqual(retry[0], 0)
+                self.assertTrue(retry[1])
+                self.assertEqual(retry[2]['store_review_confirmations'], {})
+
+    def test_kept_confirmation_does_not_cover_another_build(self):
+        self.write('mobile/lib/widgets/report_content_dialog.dart', 'changed report UI')
+        candidate = self.commit()
+        action = self.action('android', candidate)
+        replacement = self.action('android', candidate, number=3)
+        _, other_build = self.ticks([
+            ('workflow_dispatch', self.token_for(action), action,
+             DeferredReview('CHANGES_ALREADY_IN_REVIEW')),
+            ('schedule', '', replacement, None),
+        ])
+        self.assertEqual(other_build[0], 1)
+        self.assertFalse(other_build[1])
