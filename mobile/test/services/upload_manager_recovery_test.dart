@@ -48,7 +48,7 @@ const _okResult = BlossomUploadResult(
 /// `ProVideoEditor.instance` on real timers, so from a test that ends
 /// mid-upload those calls reach whatever fake editor a later test in the
 /// merged CI isolate has installed.
-Future<ThumbnailFileResult?> _noThumbnail({
+Future<ThumbnailResult?> _noThumbnail({
   required String videoPath,
   required Duration targetTimestamp,
   required int quality,

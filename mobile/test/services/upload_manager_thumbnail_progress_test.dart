@@ -35,6 +35,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(File(''));
+      registerFallbackValue(Uint8List(0));
     });
 
     setUp(() async {
@@ -59,9 +60,8 @@ void main() {
       thumbnailStarted = Completer<void>();
       mockBlossom = _MockBlossomUploadService();
 
-      // Stands in for the native extractor: writes a real file so the
+      // Stands in for the native extractor: hands back a frame so the
       // thumbnail leg proceeds to the upload step.
-      final thumbnailPath = '${testDir.path}/thumb.jpg';
       uploadManager = UploadManager(
         backgroundActivityManager: BackgroundActivityManager(),
         blossomService: mockBlossom,
@@ -76,13 +76,10 @@ void main() {
               required String videoPath,
               required Duration targetTimestamp,
               required int quality,
-            }) async {
-              File(thumbnailPath).writeAsBytesSync([0xFF, 0xD8, 0xFF]);
-              return ThumbnailFileResult(
-                path: thumbnailPath,
-                timestamp: targetTimestamp,
-              );
-            },
+            }) async => ThumbnailResult(
+              bytes: Uint8List.fromList([0xFF, 0xD8, 0xFF]),
+              timestamp: targetTimestamp,
+            ),
       );
       await uploadManager.initialize();
     });
@@ -101,9 +98,10 @@ void main() {
     /// Stubs the image upload to announce its start via [thumbnailStarted].
     void stubThumbnailUpload() {
       when(
-        () => mockBlossom.uploadImage(
-          imageFile: any(named: 'imageFile'),
+        () => mockBlossom.uploadImageBytes(
+          bytes: any(named: 'bytes'),
           nostrPubkey: any(named: 'nostrPubkey'),
+          filename: any(named: 'filename'),
           allowResumable: any(named: 'allowResumable'),
         ),
       ).thenAnswer((_) async {
@@ -186,9 +184,10 @@ void main() {
     test('does not re-upload the thumbnail after a failed transfer', () async {
       var thumbnailUploads = 0;
       when(
-        () => mockBlossom.uploadImage(
-          imageFile: any(named: 'imageFile'),
+        () => mockBlossom.uploadImageBytes(
+          bytes: any(named: 'bytes'),
           nostrPubkey: any(named: 'nostrPubkey'),
+          filename: any(named: 'filename'),
           allowResumable: any(named: 'allowResumable'),
         ),
       ).thenAnswer((_) async {

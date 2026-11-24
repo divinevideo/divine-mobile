@@ -5540,6 +5540,80 @@ void main() {
       );
 
       test(
+        'sends in-memory image bytes as one PUT when allowResumable is false',
+        () async {
+          when(() => mockAuthProvider.isAuthenticated).thenReturn(true);
+          when(
+            () => mockAuthProvider.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                _signedEvent(_testPublicKey, 24242, const [], 'upload'),
+          );
+
+          // Stubbed so a stray probe would surface as a verify failure rather
+          // than a null-return crash.
+          when(
+            () => mockDio.head<dynamic>(any(), options: any(named: 'options')),
+          ).thenAnswer(
+            (_) async => Response(
+              requestOptions: RequestOptions(path: '/upload'),
+              statusCode: 200,
+              headers: Headers.fromMap({
+                DivineUploadHeaders.extensions: [
+                  DivineUploadExtensions.resumableSessions,
+                ],
+                DivineUploadHeaders.dataHost: ['https://upload.divine.video'],
+              }),
+            ),
+          );
+
+          final putUrls = <String>[];
+          when(
+            () => mockDio.put<dynamic>(
+              any(),
+              data: any(named: 'data'),
+              options: any(named: 'options'),
+              onSendProgress: any(named: 'onSendProgress'),
+            ),
+          ).thenAnswer((invocation) async {
+            putUrls.add(invocation.positionalArguments.first as String);
+            return Response(
+              requestOptions: RequestOptions(path: '/upload'),
+              statusCode: 200,
+              data: {
+                'url': 'https://media.divine.video/hash',
+                'fallbackUrl': 'https://media.divine.video/hash',
+              },
+            );
+          });
+
+          final result = await service.uploadImageBytes(
+            bytes: Uint8List.fromList([0xFF, 0xD8, 0xFF]),
+            nostrPubkey: _testPublicKey,
+            filename: 'thumbnail.jpg',
+            allowResumable: false,
+          );
+
+          expect(result.success, isTrue);
+          expect(putUrls, contains('https://media.divine.video/upload'));
+          verifyNever(
+            () => mockDio.head<dynamic>(any(), options: any(named: 'options')),
+          );
+          verifyNever(
+            () => mockDio.post<dynamic>(
+              any(),
+              data: any(named: 'data'),
+              options: any(named: 'options'),
+            ),
+          );
+        },
+      );
+
+      test(
         'falls back to legacy upload when Divine image resumable init fails',
         () async {
           when(() => mockAuthProvider.isAuthenticated).thenReturn(true);

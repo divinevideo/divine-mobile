@@ -50,6 +50,10 @@ class ThumbnailLegUploader {
   /// Extracts a thumbnail from [videoFile], uploads it to Blossom, and derives
   /// the blurhash from the same decoded frame.
   ///
+  /// The frame stays in memory from the decoder to the PUT. The video leg only
+  /// reads the disk, so the thumbnail must not be the one leg a failed file
+  /// write can sink after the video has landed.
+  ///
   /// Never throws: when there is no CDN URL, the result's `failure` says
   /// why. Reports no progress: it runs in parallel with the video transfer,
   /// which owns the bar alone. See [videoProgressShare].
@@ -77,7 +81,10 @@ class ThumbnailLegUploader {
       extractWatch.stop();
       _telemetry(UploadPhases.uploadThumbnailExtract, extractWatch.elapsed);
 
-      if (thumbnailExtraction == null) {
+      final thumbnailBytes = thumbnailExtraction?.bytes;
+      // An empty frame is what a decoder that could not produce one hands
+      // back on iOS; uploading it would publish a broken image.
+      if (thumbnailBytes == null || thumbnailBytes.isEmpty) {
         Log.warning(
           '❌ Failed to extract thumbnail from video',
           name: 'UploadManager',
@@ -93,23 +100,6 @@ class ThumbnailLegUploader {
         );
       }
 
-      final thumbnailFile = File(thumbnailExtraction.path);
-      if (!thumbnailFile.existsSync()) {
-        Log.warning(
-          '❌ Thumbnail file not found after extraction',
-          name: 'UploadManager',
-          category: LogCategory.video,
-        );
-        return (
-          cdnUrl: null,
-          blurhash: null,
-          failure: const ThumbnailUploadException(
-            ThumbnailUploadFailureStage.extraction,
-            'the extracted thumbnail file is missing',
-          ),
-        );
-      }
-
       Log.info(
         '✅ Thumbnail extracted, uploading to Blossom server',
         name: 'UploadManager',
@@ -119,9 +109,7 @@ class ThumbnailLegUploader {
       // Derive the blurhash from the frame we just decoded. Publishing used to
       // decode the video a second time for this, on the critical path.
       final blurhashWatch = Stopwatch()..start();
-      final blurhash = await _blurhashGenerator(
-        thumbnailFile.readAsBytesSync(),
-      );
+      final blurhash = await _blurhashGenerator(thumbnailBytes);
       blurhashWatch.stop();
       _telemetry(UploadPhases.uploadThumbnailBlurhash, blurhashWatch.elapsed);
 
@@ -129,12 +117,12 @@ class ThumbnailLegUploader {
       // a CDN thumbnail, so keep the image upload's own retry enabled here.
       // UploadRepository retries a transient failure after that on its own;
       // the outer retry policy never re-uploads the whole video for it.
-      final thumbnailBytes = thumbnailFile.lengthSync();
       stage = ThumbnailUploadFailureStage.upload;
       final putWatch = Stopwatch()..start();
-      final uploadResult = await _blossomService.uploadImage(
-        imageFile: thumbnailFile,
+      final uploadResult = await _blossomService.uploadImageBytes(
+        bytes: thumbnailBytes,
         nostrPubkey: nostrPubkey,
+        filename: 'thumbnail.jpg',
         // A thumbnail is a few KB — a single PUT avoids the resumable
         // init/chunk/complete handshake (two extra round-trips plus extra auth
         // signings) that otherwise dominated short-clip publish time.
@@ -144,24 +132,8 @@ class ThumbnailLegUploader {
       _telemetry(
         UploadPhases.uploadThumbnailPut,
         putWatch.elapsed,
-        bytes: thumbnailBytes,
+        bytes: thumbnailBytes.length,
       );
-
-      // Clean up local thumbnail file
-      try {
-        await thumbnailFile.delete();
-        Log.debug(
-          '🧹 Cleaned up local thumbnail file',
-          name: 'UploadManager',
-          category: LogCategory.video,
-        );
-      } catch (e) {
-        Log.warning(
-          'Failed to clean up thumbnail file: $e',
-          name: 'UploadManager',
-          category: LogCategory.video,
-        );
-      }
 
       if (uploadResult.success && uploadResult.cdnUrl != null) {
         return (cdnUrl: uploadResult.cdnUrl, blurhash: blurhash, failure: null);
