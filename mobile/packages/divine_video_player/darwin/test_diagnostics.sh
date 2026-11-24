@@ -6,12 +6,27 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCES="$SCRIPT_DIR/divine_video_player/Sources/divine_video_player"
 DIAGNOSTICS_DIR="$(mktemp -d)"
-trap 'rm -f "$DIAGNOSTICS_DIR/playback_network_tests" "$DIAGNOSTICS_DIR/http_playback_error_tests" "$DIAGNOSTICS_DIR/tests" "$DIAGNOSTICS_DIR/loop_pcm_tests" "$DIAGNOSTICS_DIR/audio_overlay_fade_tests" "$DIAGNOSTICS_DIR/audio_overlay_entry_tests" "$DIAGNOSTICS_DIR/audio_overlay_seek_lead_tests" "$DIAGNOSTICS_DIR/audio_equalizer_tests" "$DIAGNOSTICS_DIR/equalized_audio_file_tests" "$DIAGNOSTICS_DIR/video_frame_effects_tests" "$DIAGNOSTICS_DIR/clip_audio_loop_tests" "$DIAGNOSTICS_DIR/shown_frame_tests" "$DIAGNOSTICS_DIR/paused_frame_pull_tests" "$DIAGNOSTICS_DIR/paused_frame_redelivery_tests"; rmdir "$DIAGNOSTICS_DIR"' EXIT
+trap 'rm -f "$DIAGNOSTICS_DIR/playback_network_tests" "$DIAGNOSTICS_DIR/http_playback_error_tests" "$DIAGNOSTICS_DIR/tests" "$DIAGNOSTICS_DIR/loop_pcm_tests" "$DIAGNOSTICS_DIR/audio_overlay_fade_tests" "$DIAGNOSTICS_DIR/audio_overlay_entry_tests" "$DIAGNOSTICS_DIR/audio_overlay_seek_lead_tests" "$DIAGNOSTICS_DIR/audio_equalizer_tests" "$DIAGNOSTICS_DIR/equalized_audio_file_tests" "$DIAGNOSTICS_DIR/video_frame_effects_tests" "$DIAGNOSTICS_DIR/clip_audio_loop_tests" "$DIAGNOSTICS_DIR/shown_frame_tests" "$DIAGNOSTICS_DIR/reported_playback_status_tests" "$DIAGNOSTICS_DIR/frozen_picture_tests" "$DIAGNOSTICS_DIR/data_wait_tests" "$DIAGNOSTICS_DIR/paused_frame_pull_tests" "$DIAGNOSTICS_DIR/paused_frame_redelivery_tests"; rmdir "$DIAGNOSTICS_DIR"' EXIT
 
 xcrun swiftc -parse-as-library "$SOURCES/ShownFrame.swift" \
   "$SCRIPT_DIR/Tests/ShownFrameTests.swift" \
   -o "$DIAGNOSTICS_DIR/shown_frame_tests"
 "$DIAGNOSTICS_DIR/shown_frame_tests"
+
+xcrun swiftc -parse-as-library "$SOURCES/ReportedPlaybackStatus.swift" \
+  "$SCRIPT_DIR/Tests/ReportedPlaybackStatusTests.swift" \
+  -o "$DIAGNOSTICS_DIR/reported_playback_status_tests"
+"$DIAGNOSTICS_DIR/reported_playback_status_tests"
+
+xcrun swiftc -parse-as-library "$SOURCES/DataWait.swift" \
+  "$SCRIPT_DIR/Tests/DataWaitTests.swift" \
+  -o "$DIAGNOSTICS_DIR/data_wait_tests"
+"$DIAGNOSTICS_DIR/data_wait_tests"
+
+xcrun swiftc -parse-as-library "$SOURCES/FrozenPicture.swift" \
+  "$SCRIPT_DIR/Tests/FrozenPictureTests.swift" \
+  -o "$DIAGNOSTICS_DIR/frozen_picture_tests"
+"$DIAGNOSTICS_DIR/frozen_picture_tests"
 
 xcrun swiftc -parse-as-library "$SOURCES/PausedFramePull.swift" \
   "$SCRIPT_DIR/Tests/PausedFramePullTests.swift" \

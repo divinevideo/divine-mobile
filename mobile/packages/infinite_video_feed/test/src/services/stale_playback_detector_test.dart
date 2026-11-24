@@ -9,10 +9,12 @@ StalePlaybackDetector _makeDetector({
   List<(int, int)>? seekEvents,
   List<int>? failoverEvents,
   List<String>? logs,
+  bool watchesBuffering = false,
 }) => StalePlaybackDetector(
   onSeekRecovery: (i, pos) => seekEvents?.add((i, pos)),
   onSourceFailover: (i) => failoverEvents?.add(i),
   log: (msg) => logs?.add(msg),
+  watchesBuffering: watchesBuffering,
 );
 
 /// Advances time to trigger [ticks] heartbeat intervals.
@@ -347,6 +349,85 @@ void main() {
           });
         },
       );
+    });
+
+    group('watchesBuffering', () {
+      const playing = DivineVideoPlayerState(
+        status: PlaybackStatus.playing,
+        position: Duration(seconds: 1),
+      );
+      const waiting = DivineVideoPlayerState(
+        status: PlaybackStatus.buffering,
+        position: Duration(seconds: 1),
+      );
+      const threshold = StalePlaybackDetector.heartbeatThreshold;
+
+      test('recovers a wait for data after playback started', () {
+        fakeAsync((async) {
+          final seeks = <(int, int)>[];
+          final failovers = <int>[];
+          final controller = FakeController()..pushState(playing);
+          final det = _makeDetector(
+            seekEvents: seeks,
+            failoverEvents: failovers,
+            watchesBuffering: true,
+          )..start(0, controller);
+
+          controller.pushState(waiting);
+          _tick(async, StalePlaybackDetector.graceAfterPlay + threshold);
+          expect(seeks, [(0, 1000)]);
+
+          // Two seeks later the wait still holds: try the next source.
+          _tick(async, 2 * (StalePlaybackDetector.graceAfterPlay + threshold));
+          expect(seeks, hasLength(StalePlaybackDetector.maxRecoveryAttempts));
+          expect(failovers, [0]);
+          det.disposeAll();
+        });
+      });
+
+      test('leaves buffering before playback started alone', () {
+        fakeAsync((async) {
+          final seeks = <(int, int)>[];
+          final controller = FakeController()..pushState(waiting);
+          final det = _makeDetector(seekEvents: seeks, watchesBuffering: true)
+            ..start(0, controller);
+
+          _tick(async, StalePlaybackDetector.graceAfterPlay + threshold + 2);
+          expect(async.periodicTimerCount, 0);
+          expect(seeks, isEmpty);
+          det.disposeAll();
+        });
+      });
+
+      test('treats the next source as not yet played after resetGrace', () {
+        fakeAsync((async) {
+          final controller = FakeController()..pushState(playing);
+          final det = _makeDetector(watchesBuffering: true)
+            ..start(0, controller);
+          controller.pushState(waiting);
+          async.flushMicrotasks();
+          expect(async.periodicTimerCount, 1);
+
+          det.resetGrace();
+          controller.pushState(waiting);
+          async.flushMicrotasks();
+          expect(async.periodicTimerCount, 0);
+          det.disposeAll();
+        });
+      });
+
+      test('is off by default, so buffering pauses the heartbeat', () {
+        fakeAsync((async) {
+          final controller = FakeController()..pushState(playing);
+          final det = _makeDetector()..start(0, controller);
+          expect(async.periodicTimerCount, 1);
+
+          controller.pushState(waiting);
+          async.flushMicrotasks();
+          expect(async.periodicTimerCount, 0);
+          det.disposeAll();
+        });
+      });
     });
   });
 }

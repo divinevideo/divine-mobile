@@ -460,6 +460,16 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   late final StalePlaybackDetector _staleDetector;
   late final ControllerSubscriptions _subscriptions;
 
+  /// Whether a wait for data after playback started still goes through the
+  /// stale detector's recovery: on iOS and macOS, where AVPlayer reported
+  /// such waits as playing until it reported them as buffering.
+  static bool get _staleDetectorWatchesBuffering =>
+      !kIsWeb &&
+      {
+        TargetPlatform.iOS,
+        TargetPlatform.macOS,
+      }.contains(defaultTargetPlatform);
+
   // ─── Public API ─────────────────────────────────────────────────────────
 
   /// The feed index of the currently active (visible) video.
@@ -613,6 +623,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         _retryWithNextSource(index, detectedStall: true),
       ),
       log: _log,
+      watchesBuffering: _staleDetectorWatchesBuffering,
     );
     // coverage:ignore-end
     _subscriptions = ControllerSubscriptions();
