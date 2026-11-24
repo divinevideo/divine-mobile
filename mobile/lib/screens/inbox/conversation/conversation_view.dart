@@ -14,7 +14,8 @@ import 'package:dm_repository/dm_repository.dart'
         parseSoundRequestMessage;
 import 'package:equatable/equatable.dart';
 import 'package:flutter/semantics.dart' show SemanticsService;
-import 'package:flutter/services.dart' show HapticFeedback;
+import 'package:flutter/services.dart'
+    show Clipboard, ClipboardData, HapticFeedback;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:follow_repository/follow_repository.dart'
@@ -44,6 +45,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
+import 'package:openvine/providers/short_link_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
@@ -1866,7 +1868,19 @@ class _MessageList extends StatelessWidget {
         await ClipboardUtils.copy(context, message.content);
       case MessageAction.copyVideoUrl:
         if (videoTarget == null) return;
-        await ClipboardUtils.copy(context, videoTarget.canonicalUrl);
+        final canonical = videoTarget.canonicalUrl;
+        final shortener = ProviderScope.containerOf(
+          context,
+          listen: false,
+        ).read(shortLinkClientProvider);
+        final url =
+            await (shortener?.shorten(canonical) ?? Future.value(canonical));
+        if (context.mounted) {
+          await ClipboardUtils.copy(context, url);
+        } else {
+          // The chat closed while the link was shortening; still copy it.
+          await Clipboard.setData(ClipboardData(text: url));
+        }
       case MessageAction.playVideo:
         await DmVideoPlayPage.open(
           context,

@@ -3707,6 +3707,10 @@ class VideosRepository {
   /// the author an author-named [routeId] (a coordinate or `naddr1`) names.
   /// Any other [expectedAuthor] value is ignored. A candidate that names a
   /// different author is skipped (#10384).
+  ///
+  /// An `naddr1` or `nevent1` is held to its exact identity — kind, author and
+  /// `d` tag, or event id — by [VideoRouteRef.matchesEvent], and an `naddr1`
+  /// skips the any-kind `d`-tag relay lookup.
   Future<VideoRouteLookupResult> lookupVideoForRouteId(
     String routeId, {
     List<String> fallbackRouteIds = const [],
@@ -3825,9 +3829,7 @@ class VideosRepository {
         final byFunnelcake = await _fetchVideoFromRouteApi(
           funnelcakeRouteId,
           expectedPubkey: author,
-          expectedEventId: candidate.stableId == null
-              ? candidate.eventId
-              : null,
+          expectedRoute: candidate,
           permissive: true,
           onContentFiltered: onContentFiltered,
         );
@@ -3869,7 +3871,7 @@ class VideosRepository {
       missed.add('relayAddressable');
     }
 
-    if (candidate.stableId != null) {
+    if (candidate.stableId != null && !candidate.isNaddr) {
       final byStableId = await _fetchVideoByStableIdFromRelay(
         candidate.stableId!,
         author: author,
@@ -4361,14 +4363,33 @@ class VideosRepository {
       );
     }
 
-    if (author != null) {
-      candidates.removeWhere((event) => event.pubkey != author);
-    }
+    candidates.removeWhere((event) {
+      if (author != null && event.pubkey != author) return true;
+      if (candidate.matchesEvent(event)) return false;
+      _logRouteIdentityMismatch('cached', event, candidate);
+      return true;
+    });
 
     if (candidates.isEmpty) return null;
     return _parseAndHydrateFirstRouteVideo(
       candidates,
       onContentFiltered: onContentFiltered,
+    );
+  }
+
+  /// Logs a result [VideoRouteRef.matchesEvent] rejected, so a kind alias or
+  /// an impostor `d` tag does not read as a route that found nothing.
+  void _logRouteIdentityMismatch(
+    String source,
+    Event event,
+    VideoRouteRef route,
+  ) {
+    Log.info(
+      'Route lookup rejected the $source event ${event.id} (kind '
+      '${event.kind}, author ${pubkeyForLogs(event.pubkey)}): it does not '
+      'match ${route.addressableId ?? route.eventId}',
+      name: 'VideosRepository',
+      category: LogCategory.video,
     );
   }
 
@@ -4473,7 +4494,7 @@ class VideosRepository {
   Future<VideoEvent?> _fetchVideoFromRouteApi(
     String routeId, {
     String? expectedPubkey,
-    String? expectedEventId,
+    VideoRouteRef? expectedRoute,
     bool permissive = false,
     void Function(VideoEvent video)? onContentFiltered,
   }) async {
@@ -4482,13 +4503,14 @@ class VideosRepository {
     }
 
     final event = await _funnelcakeApiClient.getVideoEvent(routeId);
-    if (event == null ||
-        (expectedEventId != null && event.id != expectedEventId)) {
-      return null;
-    }
+    if (event == null) return null;
     // Checked before content filtering, so another author's filtered video
     // is not reported back as this route's hidden video.
     if (expectedPubkey != null && event.pubkey != expectedPubkey) return null;
+    if (expectedRoute != null && !expectedRoute.matchesEvent(event)) {
+      _logRouteIdentityMismatch('REST', event, expectedRoute);
+      return null;
+    }
 
     final video = _tryParseAndFilter(
       event,

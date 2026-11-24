@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/short_link_client.dart';
@@ -814,11 +815,156 @@ void main() {
   });
 
   group('sharing utilities', () {
+    for (final dTag in <String?>[null, 'actual-coordinate', '🙂' * 64]) {
+      test(
+        'URL and DM citation share the same real identity for '
+        '${dTag == null
+            ? 'no d tag'
+            : dTag.length > 32
+            ? 'an over-long d tag'
+            : 'd=$dTag'}',
+        () async {
+          final video = VideoEvent(
+            id: _testVideoId,
+            pubkey: _testPubkey,
+            createdAt: 1,
+            timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
+            content: '',
+            eventKind: 34236,
+            addressableDTag: dTag,
+            vineId: 'legacy-vine-id',
+            rawTags: const {'vine_id': 'legacy-vine-id'},
+          );
+          when(() => mockAuthService.isAuthenticated).thenReturn(true);
+          when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
+          stubSharesSucceed();
+          await service.shareVideoWithUser(
+            video: video,
+            recipientPubkey: _recipientPubkey,
+          );
+          final captured = verify(
+            () => mockDmRepository.sendSharedVideo(
+              backgroundDelivery: true,
+              recipientPubkey: _recipientPubkey,
+              baseContent: captureAny(named: 'baseContent'),
+              videoKind: 34236,
+              videoAuthorPubkey: _testPubkey,
+              videoDTag: captureAny(named: 'videoDTag'),
+              videoEventId: _testVideoId,
+              relayHint: any(named: 'relayHint'),
+              skipNip04Fallback: true,
+            ),
+          ).captured;
+          final url = divineVideoUrlRegex
+              .firstMatch(captured[0] as String)!
+              .group(0)!;
+          final reference = Uri.parse(url).pathSegments.last;
+          if (dTag == 'actual-coordinate') {
+            expect(captured[1], dTag);
+            expect(NIP19Tlv.decodeNaddr(reference)!.id, dTag);
+          } else {
+            expect(captured[1], isNull);
+            expect(NIP19Tlv.decodeNevent(reference)!.id, _testVideoId);
+          }
+        },
+      );
+    }
+
+    test(
+      'a video with no kind or d tag cites its exact event as kind 22',
+      () async {
+        final video = VideoEvent(
+          id: _testVideoId,
+          pubkey: _testPubkey,
+          createdAt: 1,
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
+          content: '',
+        );
+        when(() => mockAuthService.isAuthenticated).thenReturn(true);
+        when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
+        stubSharesSucceed();
+
+        await service.shareVideoWithUser(
+          video: video,
+          recipientPubkey: _recipientPubkey,
+        );
+
+        verify(
+          () => mockDmRepository.sendSharedVideo(
+            backgroundDelivery: true,
+            recipientPubkey: _recipientPubkey,
+            baseContent: any(named: 'baseContent'),
+            videoKind: 22,
+            videoAuthorPubkey: _testPubkey,
+            videoEventId: _testVideoId,
+            relayHint: any(named: 'relayHint'),
+            skipNip04Fallback: true,
+          ),
+        ).called(1);
+      },
+    );
+
+    test('a legacy vine_id without a real d tag shares the exact event', () {
+      final video = VideoEvent(
+        id: _testVideoId,
+        pubkey: _testPubkey,
+        createdAt: 1,
+        timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
+        content: '',
+        eventKind: 34236,
+        vineId: 'old-vine-id',
+        rawTags: const {'vine_id': 'old-vine-id'},
+      );
+      final url = service.generateShareUrl(video);
+      expect(
+        NIP19Tlv.decodeNevent(Uri.parse(url).pathSegments.last)!.id,
+        _testVideoId,
+      );
+    });
+
+    test('a regular event with a d tag still shares its exact event ID', () {
+      final video = VideoEvent(
+        id: _testVideoId,
+        pubkey: _testPubkey,
+        createdAt: 1,
+        timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
+        content: '',
+        eventKind: 22,
+        vineId: 'incidental',
+        rawTags: const {'d': 'incidental'},
+      );
+      final url = service.generateShareUrl(video);
+      expect(
+        NIP19Tlv.decodeNevent(Uri.parse(url).pathSegments.last)!.id,
+        _testVideoId,
+      );
+    });
+
+    test('an addressable event keeps its actual kind and d tag', () {
+      final video = VideoEvent(
+        id: _testVideoId,
+        pubkey: _testPubkey,
+        createdAt: 1,
+        timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
+        content: '',
+        eventKind: 34235,
+        addressableDTag: 'clip:one',
+      );
+      final url = service.generateShareUrl(video);
+      final address = NIP19Tlv.decodeNaddr(Uri.parse(url).pathSegments.last)!;
+      expect(address.kind, 34235);
+      expect(address.author, _testPubkey);
+      expect(address.id, 'clip:one');
+    });
+
     test(
       'external shortening preserves the canonical URL in DM messages',
       () async {
-        const canonical =
-            'https://divine.video/video/synthetic-video?author=$_testPubkey';
+        final canonical = divineVideoShareUrl(
+          'synthetic-video',
+          authorPubkey: _testPubkey,
+          kind: 34236,
+        );
         const shortened = 'https://divine.video/l/Abc12345';
         final httpClient = MockClient(
           (_) async => http.Response(
@@ -861,13 +1007,18 @@ void main() {
         httpClient.close();
       },
     );
+
     test('external shares keep the full URL without a shortener', () async {
-      const canonical =
-          'https://divine.video/video/synthetic-video?author=$_testPubkey';
+      final canonical = divineVideoShareUrl(
+        'synthetic-video',
+        authorPubkey: _testPubkey,
+        kind: 34236,
+      );
 
       expect(await service.shortenExternalUrl(canonical), canonical);
     });
-    test('generateShareUrl uses stableId and names the author', () {
+
+    test('generateShareUrl includes the complete NIP-19 address', () {
       final now = DateTime.now();
       final video = VideoEvent(
         id: _testVideoId,
@@ -884,7 +1035,13 @@ void main() {
       // The d tag alone can name another account's video (#10929).
       expect(
         url,
-        equals('https://divine.video/video/my-vine-id?author=$_testPubkey'),
+        equals(
+          divineVideoShareUrl(
+            'my-vine-id',
+            authorPubkey: _testPubkey,
+            kind: 34236,
+          ),
+        ),
       );
     });
 
@@ -903,11 +1060,11 @@ void main() {
 
       final url = service.generateShareUrl(video);
 
-      // Always emits an https URL — never a nostr: URI. The route
-      // handler accepts raw event IDs as well as d-tags / NIP-19 refs.
+      // Always an https URL, never a nostr: URI; a missing d tag shares the
+      // exact event as an nevent.
       expect(
         url,
-        equals('https://divine.video/video/$eventId?author=$_testPubkey'),
+        equals(divineVideoShareUrl(eventId, kind: 22)),
       );
     });
 
@@ -931,6 +1088,7 @@ void main() {
         VideoSharingService.shareUrlForStableId(
           'my-vine-id',
           authorPubkey: _testPubkey,
+          kind: 34236,
         ),
         equals(service.generateShareUrl(video)),
       );

@@ -16,6 +16,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/collaborator_invite.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/comments/widgets/video_comment_player.dart';
+import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/video_link_preview_cubit.dart';
 import 'package:openvine/services/collaborator_invite_state_store.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -195,9 +196,11 @@ class _CardChrome extends ConsumerWidget {
           child: BlocProvider(
             key: ValueKey(videosRepository),
             create: (_) => VideoLinkPreviewCubit(
-              videoStableId: invite.videoDTag,
-              authorPubkey: invite.creatorPubkey,
-              videoKind: invite.videoKind,
+              target: DmVideoTarget(
+                stableId: invite.videoDTag,
+                authorPubkey: invite.creatorPubkey,
+                videoKind: invite.videoKind,
+              ),
               videosRepository: videosRepository,
             ),
             child: _InviteVideoContent(
