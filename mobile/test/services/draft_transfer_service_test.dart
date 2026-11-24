@@ -26,6 +26,7 @@ import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/draft_transfer_service.dart';
 import 'package:openvine/utils/draft_audio_path_resolver.dart';
+import 'package:openvine/utils/editor_state_history_compaction.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -424,6 +425,121 @@ void main() {
           expect(directory.listSync().length, before);
         },
       );
+
+      group('rejects a tampered package', () {
+        Future<({Map<String, dynamic> manifest, Uint8List media})>
+        exported() async {
+          final package = await transfer.exportDraft(
+            makeDraft(),
+            temporaryDirectory: outbox,
+          );
+          final bytes = package.readAsBytesSync();
+          final end = 8 + ByteData.sublistView(bytes, 0, 8).getUint32(4);
+          return (
+            manifest: jsonDecode(
+              utf8.decode(bytes.sublist(8, end)),
+            ) as Map<String, dynamic>,
+            media: Uint8List.fromList(bytes.sublist(end)),
+          );
+        }
+
+        Uint8List pack(
+          Map<String, dynamic> manifest,
+          List<int> media, {
+          int? manifestSize,
+        }) {
+          final json = utf8.encode(jsonEncode(manifest));
+          final header = ByteData(8)
+            ..setUint32(0, 0x44564431)
+            ..setUint32(4, manifestSize ?? json.length);
+          return Uint8List.fromList([
+            ...header.buffer.asUint8List(),
+            ...json,
+            ...media,
+          ]);
+        }
+
+        Future<void> expectRejected(Uint8List bundle) async {
+          final before = directory.listSync(recursive: true).length;
+          await expectLater(
+            transfer.importDraft(
+              messageId: '4' * 64,
+              senderPubkey: _sender,
+              storage: recipientStorage,
+              download: () async => bundle,
+              stillWanted: () => true,
+            ),
+            throwsFormatException,
+          );
+          expect(await recipientStorage.getDraftCount(), 0);
+          expect(directory.listSync(recursive: true).length, before);
+        }
+
+        Map<String, dynamic> firstClip(Map<String, dynamic> manifest) =>
+            ((manifest['project'] as Map)['clips'] as List).first
+                as Map<String, dynamic>;
+
+        test('a media extension that is not on the allowlist', () async {
+          final (:manifest, :media) = await exported();
+          ((manifest['files'] as List).first as Map)['extension'] =
+              '/../../escaped.mp4';
+          await expectRejected(pack(manifest, media));
+        });
+
+        test('a media reference past the last file', () async {
+          final (:manifest, :media) = await exported();
+          firstClip(manifest)['filePath'] = '@99';
+          await expectRejected(pack(manifest, media));
+        });
+
+        test('bytes after the last listed file', () async {
+          final (:manifest, :media) = await exported();
+          await expectRejected(pack(manifest, [...media, 0]));
+        });
+
+        test('a listed file that nothing references', () async {
+          final (:manifest, :media) = await exported();
+          (manifest['files'] as List).add({'extension': '.mp4', 'size': 1});
+          await expectRejected(pack(manifest, [...media, 0]));
+        });
+
+        test('a layer that points at a file URL', () async {
+          final (:manifest, :media) = await exported();
+          firstClip(manifest)['layer'] = {'fileUrl': 'file:///etc/hosts'};
+          await expectRejected(pack(manifest, media));
+        });
+
+        test('a manifest size larger than the package', () async {
+          final (:manifest, :media) = await exported();
+          // Under the 8 MiB manifest cap, so only the package-length bound
+          // can catch it.
+          final json = utf8.encode(jsonEncode(manifest));
+          await expectRejected(
+            pack(manifest, media, manifestSize: json.length + media.length + 1),
+          );
+        });
+
+        test('a project nested deeper than the limit', () async {
+          final (:manifest, :media) = await exported();
+          Object nested = 'leaf';
+          for (var i = 0; i < 80; i++) {
+            nested = {'n': nested};
+          }
+          firstClip(manifest)['extra'] = nested;
+          await expectRejected(pack(manifest, media));
+        });
+
+        test('an editor history entry that refers forward', () async {
+          final (:manifest, :media) = await exported();
+          (manifest['project'] as Map)['editorStateHistory'] = {
+            'history': [
+              {'meta': <String, dynamic>{}},
+              {historyMetaRefKey: 5},
+            ],
+          };
+          await expectRejected(pack(manifest, media));
+        });
+      });
     });
     group('readCoverBlurhash', () {
       test("encodes the draft's cover", () async {
