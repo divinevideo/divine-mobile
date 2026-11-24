@@ -32,6 +32,7 @@ from start_ios_release import (
 
 WORKFLOW_FILE = 'macos_testflight_release.yml'
 WORKFLOW_ID = 'macos-build'
+MACOS_WORKFLOWS = {'macos-build', 'macos-scheduled-build'}
 ALLOWED_ENVS = {'PRODUCTION', 'STAGING', 'POC'}
 
 
@@ -45,7 +46,7 @@ def validate_macos_build(build, expected_sha, *, require_main=True):
     if (
         not isinstance(build, dict)
         or build.get('app_id') != APP_ID
-        or (build.get('workflow') or {}).get('id') != WORKFLOW_ID
+        or (build.get('workflow') or {}).get('id') not in MACOS_WORKFLOWS
         or (require_main and ((build.get('branch') != 'main' and not source_pending) or build.get('tag')))
     ):
         raise ReleaseError('Codemagic build identity does not match the requested main macOS release.')
@@ -165,10 +166,13 @@ def run_release(
             query['cursor'] = cursor
         page = cm('GET', '/teams/' + TEAM_ID + '/builds?' + urllib.parse.urlencode(query))
         for item in page['data']:
-            if (item.get('workflow') or {}).get('id') != WORKFLOW_ID:
+            workflow_id = (item.get('workflow') or {}).get('id')
+            if workflow_id not in MACOS_WORKFLOWS:
                 if label in item.get('labels', []):
                     raise ReleaseError('Matching build label has an unexpected workflow.')
                 continue
+            if label in item.get('labels', []) and workflow_id != WORKFLOW_ID:
+                raise ReleaseError('Matching build label has an unexpected workflow.')
             expected = source if label in item.get('labels', []) else (item.get('commit') or {}).get('hash')
             status, asc, _ = validate_macos_build(
                 item, expected, require_main=label in item.get('labels', [])

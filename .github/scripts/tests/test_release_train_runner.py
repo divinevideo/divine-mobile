@@ -463,7 +463,7 @@ class SnapshotChangesTest(unittest.TestCase):
         state = {'last_built_source': {'ios': 'a' * 40, 'android': 'a' * 40}}
         with patch('release_train.runner.subprocess.check_output', return_value='mobile/lib/main.dart\n'):
             snapshot = runtime.snapshot(state, {'ios': 'off', 'android': 'off'})
-        self.assertEqual(snapshot['changes'], {'ios': True, 'android': True})
+        self.assertEqual(snapshot['changes'], {'ios': True, 'macos': True, 'android': True})
 
 
 class StoreAuthorizationRefreshTest(unittest.TestCase):

@@ -123,7 +123,7 @@ def validate_localizations(notes, *, limit, required=()):
 def _validate_bundle(bundle, source=None, platform=None, baseline=None):
     if not isinstance(bundle, dict) or bundle.get("schema") != 1:
         raise ReleaseNotesError("Invalid release-note bundle schema")
-    if bundle.get("platform") not in {"ios", "android"} or (
+    if bundle.get("platform") not in {"ios", "macos", "android"} or (
         platform and bundle["platform"] != platform
     ):
         raise ReleaseNotesError("Release-note platform mismatch")
@@ -199,7 +199,7 @@ def bundle_for_native(bundle):
 
 
 def production_build(platform, data):
-    if platform == "ios":
+    if platform in {"ios", "macos"}:
         live = [
             v
             for v in data.get("versions", [])
@@ -251,11 +251,16 @@ def _identity(ledger, platform, number, version=None):
     path, match = matches[0]
     record = ledger.read_json(path)
     actual_version = match[1]
+    integrity_ok = (
+        bool(re.fullmatch(r"[0-9a-f]{64}", record.get("pkg_sha256") or ""))
+        if platform == "macos"
+        else bool(record.get("record_hmac"))
+    )
     if (
         record.get("platform") != platform
         or record.get("release_version") != f"{actual_version}+{number}"
         or (version and version != actual_version)
-        or not record.get("record_hmac")
+        or not integrity_ok
     ):
         raise ReleaseNotesError(
             "Production source provenance conflicts with provider identity"
@@ -282,10 +287,11 @@ def _production_data(platform, env, ledger):
                           for n in r["numbers"]})
         return {"production": [_identity(ledger, "android", n) for n in numbers]}
     apple = _apple(env)
+    asc_platform = "MAC_OS" if platform == "macos" else "IOS"
     released = [
         item
         for item in apple.pages(
-            "/apps/" + APP_ID + "/appStoreVersions?filter[platform]=IOS"
+            "/apps/" + APP_ID + "/appStoreVersions?filter[platform]=" + asc_platform
         )
         if (
             item["attributes"].get("appVersionState")
@@ -302,7 +308,7 @@ def _production_data(platform, env, ledger):
     if not build:
         raise ReleaseNotesError("Live App Store version has no build")
     identity = _identity(
-        ledger, "ios", int(build["attributes"]["version"]), attrs["versionString"]
+        ledger, platform, int(build["attributes"]["version"]), attrs["versionString"]
     )
     return {
         "versions": [{
@@ -507,8 +513,9 @@ def source_inventory(base, source, platform=None):
         ):
             return False
         return not (
-            (platform == "android" and path.startswith("mobile/ios/"))
-            or (platform == "ios" and path.startswith("mobile/android/"))
+            (platform == "android" and path.startswith(("mobile/ios/", "mobile/macos/")))
+            or (platform == "ios" and path.startswith(("mobile/android/", "mobile/macos/")))
+            or (platform == "macos" and path.startswith(("mobile/android/", "mobile/ios/")))
         )
 
     changes = []
@@ -532,13 +539,13 @@ def _generate(platform, source, baseline, locales, env):
             "Configure protected RELEASE_NOTES_LUNAROUTE_API_KEY; no notes generated"
         )
     changes = source_inventory(baseline["sha"], source, platform)
-    channels = ("testflight", "app_store") if platform == "ios" else ("google_play",)
+    channels = ("testflight", "app_store") if platform in {"ios", "macos"} else ("google_play",)
     context = {
         "platform": platform,
         "baseline": baseline,
         "source_sha": source,
         "changes": changes,
-        "locales": locales if platform == "ios" else list(PLAY_LOCALES),
+        "locales": locales if platform in {"ios", "macos"} else list(PLAY_LOCALES),
     }
     instructions = (
         POLICY.read_text()
@@ -608,7 +615,7 @@ def ensure_bundle(platform, source_sha, data=None, *, env, ledger):
 
 
 def _ensure_bundle(platform, source_sha, data=None, *, env, ledger):
-    if platform not in {"ios", "android"} or not SHA.fullmatch(source_sha or ""):
+    if platform not in {"ios", "macos", "android"} or not SHA.fullmatch(source_sha or ""):
         raise ReleaseNotesError("Invalid release-note source/platform")
     prefix = f"release-notes/{platform}/{source_sha}/"
     candidates = [
@@ -623,12 +630,19 @@ def _ensure_bundle(platform, source_sha, data=None, *, env, ledger):
     if candidates:
         return _validate_bundle(ledger.read_json(candidates[0]), source_sha, platform)
     data = data if data is not None else _production_data(platform, env, ledger)
-    baseline = production_baseline(platform, data)
+    try:
+        baseline = production_baseline(platform, data)
+    except ReleaseNotesError:
+        if platform != "macos":
+            raise
+        # Before macOS has its own live Mac App Store version, anchor release
+        # notes against the live iOS baseline sharing the same marketing train.
+        baseline = production_baseline("ios", _production_data("ios", env, ledger))
     _check_ancestry(baseline["sha"], source_sha)
     path = bundle_path(platform, source_sha, baseline["sha"])
     if path in ledger.paths():
         return _validate_bundle(ledger.read_json(path), source_sha, platform, baseline)
-    locales = _apple_locales(env, data) if platform == "ios" else []
+    locales = _apple_locales(env, data) if platform in {"ios", "macos"} else []
     bundle = _generate(platform, source_sha, baseline, locales, env)
     _validate_bundle(bundle, source_sha, platform, baseline)
     if not ledger.create_json(

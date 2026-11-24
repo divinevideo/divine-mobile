@@ -47,6 +47,7 @@ jobs:
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'workflow_dispatch' ||
        (vars.RELEASE_TRAIN_IOS != '' && vars.RELEASE_TRAIN_IOS != 'off') ||
+       (vars.RELEASE_TRAIN_MACOS != '' && vars.RELEASE_TRAIN_MACOS != 'off') ||
        (vars.RELEASE_TRAIN_ANDROID != '' && vars.RELEASE_TRAIN_ANDROID != 'off'))
     environment: store-release
     runs-on: ubuntu-24.04
@@ -97,6 +98,7 @@ jobs:
           ENGAGEMENT_DRAFT_ACCESS_CLIENT_ID: ${{ secrets.ENGAGEMENT_DRAFT_ACCESS_CLIENT_ID }}
           ENGAGEMENT_DRAFT_ACCESS_CLIENT_SECRET: ${{ secrets.ENGAGEMENT_DRAFT_ACCESS_CLIENT_SECRET }}
           RELEASE_TRAIN_IOS: ${{ vars.RELEASE_TRAIN_IOS }}
+          RELEASE_TRAIN_MACOS: ${{ vars.RELEASE_TRAIN_MACOS }}
           RELEASE_TRAIN_ANDROID: ${{ vars.RELEASE_TRAIN_ANDROID }}
           RELEASE_DRY_RUN: ${{ inputs.dry_run || false }}
           RELEASE_ACKNOWLEDGE: ${{ inputs.acknowledge }}

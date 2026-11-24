@@ -49,7 +49,7 @@ def _parser():
     commands = parser.add_subparsers(dest="command", required=True)
 
     alloc = commands.add_parser("allocate", help="reserve a version and build number")
-    alloc.add_argument("--platform", choices=("ios", "android"), required=True)
+    alloc.add_argument("--platform", choices=("ios", "macos", "android"), required=True)
     alloc.add_argument("--pubspec", required=True)
     alloc.add_argument("--source-sha", required=True)
     alloc.add_argument("--reservation-key", required=True)
@@ -61,7 +61,7 @@ def _parser():
         default=0,
         help="minimum build number to allocate; separate from observed store uploads",
     )
-    alloc.add_argument("--shorebird-releases", required=True)
+    alloc.add_argument("--shorebird-releases")
     alloc.add_argument("--stable-tags", required=True)
     alloc.add_argument("--app-store-versions")
     alloc.add_argument("--play-production-track")
@@ -82,9 +82,10 @@ def _parser():
 
 
 def _check_platform_inputs(parser, args):
+    apple = args.platform in {"ios", "macos"}
     wanted, other = (
         ("app_store_versions", "play_production_track")
-        if args.platform == "ios"
+        if apple
         else ("play_production_track", "app_store_versions")
     )
     flag = lambda name: "--" + name.replace("_", "-")
@@ -92,6 +93,8 @@ def _check_platform_inputs(parser, args):
         parser.error(f"{flag(wanted)} is required for --platform {args.platform}")
     if getattr(args, other) is not None:
         parser.error(f"{flag(other)} is not valid for --platform {args.platform}")
+    if args.platform != "macos" and args.shorebird_releases is None:
+        parser.error(f"--shorebird-releases is required for --platform {args.platform}")
 
 
 def atomic_write(path, body):
@@ -122,10 +125,14 @@ def codemagic_owner_status(build_id, *, platform, source_sha):
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             build = json.load(response)["data"]
+        expected_workflows = {
+            "ios": {"ios-build", "ios-scheduled-build"},
+            "macos": {"macos-build", "macos-scheduled-build"},
+            "android": {"android-build"},
+        }.get(platform, set())
         if (build.get("id") != build_id
                 or build.get("app_id") != "69370e59eac15e6c367b661b"
-                or (build.get("workflow") or {}).get("id") not in (
-                    {"ios-build", "ios-scheduled-build"} if platform == "ios" else {"android-build"})
+                or (build.get("workflow") or {}).get("id") not in expected_workflows
                 or (build.get("commit") or {}).get("hash") not in (None, source_sha)):
             raise ValueError("owner identity mismatch")
         return build.get("status")
@@ -139,7 +146,14 @@ def _allocate(args, ledger, now):
                   codemagic_build_id=args.codemagic_build_id,
                   owner_status=lambda owner: codemagic_owner_status(
                       owner, platform=args.platform, source_sha=args.source_sha), now=now)
-    ios = args.platform == "ios"
+    apple = args.platform in {"ios", "macos"}
+    shorebird_versions = (
+        frozenset()
+        if args.platform == "macos" and not args.shorebird_releases
+        else shorebird_release_versions(
+            _json(args.shorebird_releases), args.platform
+        )
+    )
     result = allocate(
         args.platform,
         ledger=ledger,
@@ -149,17 +163,15 @@ def _allocate(args, ledger, now):
         codemagic_build_id=args.codemagic_build_id,
         store_latest=args.store_latest_build,
         build_floor=args.build_number_floor,
-        shorebird_versions=shorebird_release_versions(
-            _json(args.shorebird_releases), args.platform
-        ),
+        shorebird_versions=shorebird_versions,
         stable_tags=stable_tag_versions(
             Path(args.stable_tags).read_text().splitlines()
         ),
         store_versions=(
-            ios_submitted_versions(_json(args.app_store_versions)) if ios else ()
+            ios_submitted_versions(_json(args.app_store_versions)) if apple else ()
         ),
         store_version_codes=(
-            () if ios else play_production_version_codes(_json(args.play_production_track))
+            () if apple else play_production_version_codes(_json(args.play_production_track))
         ),
         now=now,
     )
