@@ -29,3 +29,7 @@ tags:
     timeout: 10m
 
 chain_stack_traces: true
+
+# Validation branch only: preserve all assertions and timeouts while avoiding
+# concurrent compilation starving wall-clock timeout regressions.
+concurrency: 1
