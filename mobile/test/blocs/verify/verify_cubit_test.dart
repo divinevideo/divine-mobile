@@ -376,8 +376,8 @@ void main() {
           act: (cubit) => cubit.load(),
           verify: (cubit) {
             expect(
-              cubit.state.platforms.map((p) => p.signinRequires),
-              everyElement(isNull),
+              cubit.state.platforms.map((p) => (p.key, p.signinRequires)),
+              equals([('github', null), ('twitter', null)]),
             );
             expect(accessReads, isEmpty);
           },
