@@ -1,4 +1,4 @@
-// ABOUTME: Owns the app-wide first-frame performance subscription.
+// ABOUTME: Owns the app-wide fullscreen-feed playback performance subscription.
 // ABOUTME: Cancels telemetry observation when its provider container is disposed.
 
 import 'dart:async';
@@ -11,9 +11,10 @@ import 'package:openvine/providers/startup_performance_provider.dart';
 
 final feedPlaybackPerformanceProvider = Provider<void>((ref) {
   final observer = FeedPlaybackPerformance(
-    FeedFirstFrameMetrics.events,
-    ref.watch(performanceMonitoringServiceProvider),
-    ref.watch(startupPerformanceServiceProvider),
+    firstFrames: FeedFirstFrameMetrics.events,
+    sessions: FeedFirstFrameMetrics.sessions,
+    monitor: ref.watch(performanceMonitoringServiceProvider),
+    startup: ref.watch(startupPerformanceServiceProvider),
   );
   ref.onDispose(() => unawaited(observer.dispose()));
 });

@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:infinite_video_feed/src/models/feed_first_frame_metric.dart';
+import 'package:infinite_video_feed/src/models/feed_playback_session_metric.dart';
 import 'package:infinite_video_feed/src/models/feed_playback_telemetry.dart';
 import 'package:infinite_video_feed/src/models/video_error_type.dart';
 import 'package:infinite_video_feed/src/models/video_retry_result.dart';
@@ -2759,6 +2760,445 @@ void main() {
           await tester.pump();
           await harness.dispose();
         }
+      });
+
+      group('playback sessions', () {
+        late List<FeedPlaybackSessionMetric> sessions;
+        late _NativePlayerHarness harness;
+
+        Future<void> start(
+          WidgetTester tester, {
+          bool firstFrameRenderedOnListen = false,
+        }) async {
+          sessions = [];
+          final subscription = FeedFirstFrameMetrics.sessions.listen(
+            sessions.add,
+          );
+          addTearDown(subscription.cancel);
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          harness = _NativePlayerHarness(tester);
+          await harness.install(
+            firstFrameRenderedOnListen: firstFrameRenderedOnListen,
+          );
+        }
+
+        Future<void> stop(WidgetTester tester) async {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+
+        testWidgets('reports a video swiped away before its first frame', (
+          tester,
+        ) async {
+          await start(tester);
+          final key = GlobalKey<InfiniteVideoFeedState>();
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  key: key,
+                  videos: [_makeVideo('first'), _makeVideo('second')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 700));
+
+            key.currentState!.debugActivatePage(1);
+
+            expect(sessions, hasLength(1));
+            expect(sessions.single.index, 0);
+            expect(
+              sessions.single.outcome,
+              FeedPlaybackSessionOutcome.abandoned,
+            );
+            expect(sessions.single.end, FeedPlaybackSessionEnd.swipe);
+            expect(
+              sessions.single.active,
+              greaterThanOrEqualTo(const Duration(milliseconds: 700)),
+            );
+            expect(sessions.single.timeToFirstFrame, isNull);
+          } finally {
+            await stop(tester);
+          }
+        });
+
+        testWidgets('reports a stall after the first frame', (tester) async {
+          await start(tester);
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('stalling')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            await harness.sendEvent(0, const <Object?, Object?>{
+              'status': 'playing',
+              'isFirstFrameRendered': true,
+            });
+            await tester.pump(const Duration(milliseconds: 500));
+            await harness.sendEvent(0, const <Object?, Object?>{
+              'status': 'buffering',
+              'isFirstFrameRendered': true,
+            });
+            await tester.pump(const Duration(milliseconds: 300));
+            await harness.sendEvent(0, const <Object?, Object?>{
+              'status': 'playing',
+              'isFirstFrameRendered': true,
+            });
+            await tester.pump(const Duration(milliseconds: 200));
+            expect(sessions, isEmpty, reason: 'the video is still active');
+
+            await tester.pumpWidget(const SizedBox.shrink());
+
+            final session = sessions.single;
+            expect(session.outcome, FeedPlaybackSessionOutcome.played);
+            expect(session.end, FeedPlaybackSessionEnd.closed);
+            expect(session.timeToFirstFrame, isNotNull);
+            expect(session.stallCount, 1);
+            expect(session.stalled, const Duration(milliseconds: 300));
+            expect(session.watched, const Duration(milliseconds: 700));
+          } finally {
+            await stop(tester);
+          }
+        });
+
+        testWidgets('reports a failed video when the feed is hidden', (
+          tester,
+        ) async {
+          await start(tester);
+          harness.setClipsFailures[0] = <Exception>[
+            PlatformException(code: 'service_unavailable'),
+          ];
+          Widget feed({required bool isActive}) => _wrapFeed(
+            InfiniteVideoFeed(
+              videos: [_makeVideo('failing')],
+              cache: cache,
+              isActive: isActive,
+              prefetchCount: 0,
+              autoRetryMaxAttempts: 0,
+              preloadGracePeriod: Duration.zero,
+            ),
+          );
+          try {
+            await tester.pumpWidget(feed(isActive: true));
+            await tester.pump();
+            await tester.pump();
+
+            await tester.pumpWidget(feed(isActive: false));
+
+            expect(sessions.single.outcome, FeedPlaybackSessionOutcome.failed);
+            expect(sessions.single.error, FeedPlaybackError.initialization);
+            expect(sessions.single.end, FeedPlaybackSessionEnd.hidden);
+          } finally {
+            await stop(tester);
+          }
+        });
+
+        testWidgets('skips a held-back video that never showed a frame', (
+          tester,
+        ) async {
+          await start(tester);
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('warned')],
+                  cache: cache,
+                  canAutoPlay: (_) => false,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+
+            await tester.pumpWidget(const SizedBox.shrink());
+
+            expect(sessions, isEmpty);
+          } finally {
+            await stop(tester);
+          }
+        });
+
+        testWidgets('ends the active session when the video list changes', (
+          tester,
+        ) async {
+          await start(tester, firstFrameRenderedOnListen: true);
+          Widget feed(String id) => _wrapFeed(
+            InfiniteVideoFeed(
+              videos: [_makeVideo(id)],
+              cache: cache,
+              prefetchCount: 0,
+              preloadGracePeriod: Duration.zero,
+            ),
+          );
+          try {
+            await tester.pumpWidget(feed('before'));
+            await tester.pump();
+            await tester.pump();
+
+            await tester.pumpWidget(feed('after'));
+
+            expect(sessions.single.outcome, FeedPlaybackSessionOutcome.played);
+            expect(sessions.single.end, FeedPlaybackSessionEnd.replaced);
+          } finally {
+            await stop(tester);
+          }
+        });
+
+        testWidgets(
+          'does not report an abandoned session when returning to a failed '
+          'video',
+          (tester) async {
+            await start(tester);
+            final videos = [_makeVideo('failing')];
+            harness.setClipsFailures[0] = <Exception>[
+              PlatformException(code: 'service_unavailable'),
+            ];
+            Widget feed({required bool isActive}) => _wrapFeed(
+              InfiniteVideoFeed(
+                videos: videos,
+                cache: cache,
+                isActive: isActive,
+                prefetchCount: 0,
+                autoRetryMaxAttempts: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            );
+            try {
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+              await tester.pump();
+
+              await tester.pumpWidget(feed(isActive: false));
+              expect(sessions, hasLength(1));
+              expect(
+                sessions.single.outcome,
+                FeedPlaybackSessionOutcome.failed,
+              );
+
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+              await tester.pumpWidget(const SizedBox.shrink());
+
+              expect(sessions, hasLength(1));
+            } finally {
+              await stop(tester);
+            }
+          },
+        );
+
+        testWidgets(
+          'does not start a new session when returning to a terminal error '
+          'with neighbour release',
+          (tester) async {
+            await start(tester);
+            final videos = [_makeVideo('terminal')];
+            harness.setClipsFailures[0] = <Exception>[
+              PlatformException(
+                code: 'COMPOSITION_ERROR',
+                message: 'No playable video tracks found.',
+              ),
+            ];
+            Widget feed({required bool isActive}) => _wrapFeed(
+              InfiniteVideoFeed(
+                videos: videos,
+                cache: cache,
+                isActive: isActive,
+                releaseNeighboursWhenInactive: true,
+                prefetchCount: 0,
+                autoRetryMaxAttempts: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            );
+            try {
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+              await tester.pump();
+
+              await tester.pumpWidget(feed(isActive: false));
+              expect(sessions, hasLength(1));
+              expect(
+                sessions.single.outcome,
+                FeedPlaybackSessionOutcome.failed,
+              );
+
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+              await tester.pumpWidget(const SizedBox.shrink());
+
+              expect(sessions, hasLength(1));
+            } finally {
+              await stop(tester);
+            }
+          },
+        );
+
+        testWidgets(
+          'reports initialization error for a terminal init failure',
+          (
+            tester,
+          ) async {
+            await start(tester);
+            harness.setClipsFailures[0] = <Exception>[
+              PlatformException(
+                code: 'COMPOSITION_ERROR',
+                message: 'No playable video tracks found.',
+              ),
+            ];
+            try {
+              await tester.pumpWidget(
+                _wrapFeed(
+                  InfiniteVideoFeed(
+                    videos: [_makeVideo('terminal_init')],
+                    cache: cache,
+                    prefetchCount: 0,
+                    autoRetryMaxAttempts: 0,
+                    preloadGracePeriod: Duration.zero,
+                  ),
+                ),
+              );
+              await tester.pump();
+              await tester.pump();
+
+              await tester.pumpWidget(const SizedBox.shrink());
+
+              expect(sessions, hasLength(1));
+              expect(
+                sessions.single.outcome,
+                FeedPlaybackSessionOutcome.failed,
+              );
+              expect(sessions.single.error, FeedPlaybackError.initialization);
+            } finally {
+              await stop(tester);
+            }
+          },
+        );
+
+        testWidgets(
+          'measures a manual retry after returning to a failed video',
+          (tester) async {
+            await start(tester);
+            final key = GlobalKey<InfiniteVideoFeedState>();
+            final videos = [_makeVideo('retry_after_return')];
+            final firstFrames = <FeedFirstFrameMetric>[];
+            final firstFrameSub = FeedFirstFrameMetrics.events.listen(
+              firstFrames.add,
+            );
+            addTearDown(firstFrameSub.cancel);
+            harness.setClipsFailures[0] = <Exception>[
+              PlatformException(code: 'service_unavailable'),
+            ];
+            Widget feed({required bool isActive}) => _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: videos,
+                cache: cache,
+                isActive: isActive,
+                prefetchCount: 0,
+                autoRetryMaxAttempts: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            );
+            try {
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+              await tester.pump();
+
+              await tester.pumpWidget(feed(isActive: false));
+              expect(sessions, hasLength(1));
+              expect(
+                sessions.single.outcome,
+                FeedPlaybackSessionOutcome.failed,
+              );
+
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+
+              await key.currentState!.retryAt(0);
+              await tester.pump();
+              await harness.sendEvent(1, const <Object?, Object?>{
+                'status': 'playing',
+                'isFirstFrameRendered': true,
+              });
+              await tester.pump(const Duration(milliseconds: 250));
+
+              await tester.pumpWidget(const SizedBox.shrink());
+
+              expect(firstFrames, hasLength(1));
+              expect(sessions, hasLength(2));
+              expect(sessions.last.outcome, FeedPlaybackSessionOutcome.played);
+              expect(sessions.last.end, FeedPlaybackSessionEnd.closed);
+              expect(sessions.last.timeToFirstFrame, isNotNull);
+              expect(sessions.last.watched, const Duration(milliseconds: 250));
+            } finally {
+              await stop(tester);
+            }
+          },
+        );
+
+        testWidgets(
+          'preserves original error category on terminal revisit',
+          (tester) async {
+            await start(tester);
+            final key = GlobalKey<InfiniteVideoFeedState>();
+            final videos = [_makeVideo('terminal_revisit'), _makeVideo('next')];
+            harness.setClipsFailures[0] = <Exception>[
+              PlatformException(
+                code: 'COMPOSITION_ERROR',
+                message: 'No playable video tracks found.',
+              ),
+            ];
+            try {
+              await tester.pumpWidget(
+                _wrapFeed(
+                  InfiniteVideoFeed(
+                    key: key,
+                    videos: videos,
+                    cache: cache,
+                    prefetchCount: 0,
+                    autoRetryMaxAttempts: 0,
+                    preloadGracePeriod: Duration.zero,
+                  ),
+                ),
+              );
+              await tester.pump();
+              await tester.pump();
+
+              key.currentState!.debugActivatePage(1);
+              await tester.pump();
+              key.currentState!.debugActivatePage(0);
+              await tester.pump();
+
+              await tester.pumpWidget(const SizedBox.shrink());
+
+              expect(sessions, hasLength(3));
+              expect(sessions.first.outcome, FeedPlaybackSessionOutcome.failed);
+              expect(
+                sessions.first.error,
+                FeedPlaybackError.initialization,
+              );
+              expect(sessions.last.outcome, FeedPlaybackSessionOutcome.failed);
+              expect(
+                sessions.last.error,
+                FeedPlaybackError.initialization,
+              );
+            } finally {
+              await stop(tester);
+            }
+          },
+        );
       });
 
       testWidgets('does not autoplay when canAutoPlay returns false', (
