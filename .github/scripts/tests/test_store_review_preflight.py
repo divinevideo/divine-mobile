@@ -264,6 +264,29 @@ class StoreReviewTest(unittest.TestCase):
                 self.assertEqual(len(plan['errors']), 2)
                 self.assertTrue(all(finding in error for error in plan['errors']))
 
+    def test_dependency_and_flutter_upgrades_prompt_permission_and_privacy_checks(self):
+        pin = 'environment:\n  flutter: {0}\n  vars:\n    FLUTTER_VERSION: {0}\n    OTHER: {1}\n'
+        self.write('codemagic.yaml', pin.format('3.47.9', 'x'))
+        baseline = self.commit()
+        cases = [
+            ('mobile/pubspec.lock', 'packages: {}\n', True, True),
+            ('codemagic.yaml', pin.format('3.47.9', 'y'), False, False),
+            ('codemagic.yaml', pin.format('3.48.0', 'y'), True, True),
+            ('mobile/ios/Podfile', "platform :ios, '16.0'\n", True, False),
+        ]
+        for path, contents, ios_flagged, android_flagged in cases:
+            with self.subTest(path=path, contents=contents):
+                self.write(path, contents)
+                source = self.commit()
+                ios, android = self.action('ios', source), self.action('android', source)
+                plan = self.screen([ios, android], baseline=baseline)
+                baseline = source
+                self.assertEqual(ios in plan['actions'], not ios_flagged)
+                self.assertEqual(android in plan['actions'], not android_flagged)
+                errors = ' '.join(plan['errors'])
+                self.assertEqual('privacy manifests' in errors, ios_flagged)
+                self.assertEqual('merged permissions' in errors, android_flagged)
+
     def test_main_releases_only_when_live_dispatch_confirms_the_exact_build(self):
         self.write('mobile/lib/widgets/report_content_dialog.dart', 'changed report UI')
         candidate = self.commit()

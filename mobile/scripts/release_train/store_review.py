@@ -16,6 +16,8 @@ PLAY = 'https://support.google.com/googleplay/android-developer/answer/9859455'
 PLAY_UGC = 'https://support.google.com/googleplay/android-developer/answer/9876937'
 IOS_PLIST = 'mobile/ios/Runner/Info.plist'
 IOS_PROJECT = 'mobile/ios/Runner.xcodeproj/project.pbxproj'
+# Release builds take their Flutter version, and with it Android's targetSdk, from here.
+CODEMAGIC = 'codemagic.yaml'
 STORE_ACTIONS = {'app-store', 'play-production'}
 # Screens and the blocs, services, providers and packages that carry out the flow.
 MODERATION_PATHS = (
@@ -93,7 +95,7 @@ def ios_plist(source):
     return data
 
 
-def ios_findings(base, source, paths):
+def ios_findings(base, source, paths, *, dependencies_changed):
     plist = ios_plist(source)
     modes = plist.get('UIBackgroundModes', [])
     if not isinstance(modes, list) or any(not isinstance(mode, str) for mode in modes):
@@ -124,10 +126,11 @@ def ios_findings(base, source, paths):
             )
     if any(path.endswith('/InfoPlist.strings') for path in paths):
         findings.append(f'Verify the localized iOS permission prompts explain the app’s actual use. {APPLE}')
-    if any(path.endswith(('.xcprivacy', '.entitlements')) for path in paths):
+    if (dependencies_changed or 'mobile/ios/Podfile' in paths
+            or any(path.endswith(('.xcprivacy', '.entitlements')) for path in paths)):
         findings.append(
-            'Check iOS privacy manifests and entitlements against the app and '
-            f'App Store Connect disclosures. {APPLE}'
+            'Check iOS privacy manifests and entitlements, including any a dependency or '
+            f'Flutter upgrade adds, against the app and App Store Connect disclosures. {APPLE}'
         )
 
     device_settings_changed = git(
@@ -154,8 +157,17 @@ def findings_for(platform, base, source):
         if path and not path.startswith(excluded)
         and '/example/' not in path and '/test/' not in path
     }
-    findings = ios_findings(base, source, paths) if platform == 'ios' else []
-    if platform == 'android' and any(
+    # Plugins merge permissions and privacy manifests into the bundle, and the
+    # pinned Flutter version sets Android's targetSdk.
+    dependencies_changed = 'mobile/pubspec.lock' in paths or bool(git(
+        'diff', '--name-only', '--no-renames', '-G', '(FLUTTER_VERSION|flutter):',
+        base, source, '--', CODEMAGIC,
+    ))
+    findings = (
+        ios_findings(base, source, paths, dependencies_changed=dependencies_changed)
+        if platform == 'ios' else []
+    )
+    if platform == 'android' and (dependencies_changed or any(
         (path.endswith('/AndroidManifest.xml') and not any(
             f'/src/{source_set}/' in path for source_set in ('debug', 'profile', 'androidTest')
         ))
@@ -165,7 +177,7 @@ def findings_for(platform, base, source):
         }
         or path.startswith('mobile/android/fastlane/')
         for path in paths
-    ):
+    )):
         findings.append(
             'Check the release bundle’s merged permissions, target API, Play '
             f'listing and App content declarations. {PLAY}'
