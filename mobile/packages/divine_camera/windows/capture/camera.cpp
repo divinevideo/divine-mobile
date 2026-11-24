@@ -99,6 +99,13 @@ class PreviewSampleCallback final
 
 namespace {
 
+HRESULT TraceMirrorStatus(const char* operation, HRESULT status) {
+  if (FAILED(status)) {
+    DebugLog(std::string("capture-status mirror_") + operation + ":" + HrToString(status));
+  }
+  return status;
+}
+
 // When false, FindBestMediaType logs only a per-call header and an aggregate
 // summary instead of one line per rejected device media type. Some webcams
 // expose 100+ modes (every resolution x every integer fps); logging each
@@ -661,27 +668,27 @@ HRESULT Camera::StartPreviewInternal() {
 // are compensated in OnPreviewSample so Flutter still receives natural pixels.
 HRESULT Camera::ConfigureOutputMirroring() {
   ComPtr<IMFCaptureSource> source;
-  HRESULT hr = capture_engine_->GetSource(&source);
+  HRESULT hr = TraceMirrorStatus("source", capture_engine_->GetSource(&source));
   if (FAILED(hr)) return hr;
   DWORD record_stream = 0, preview_stream = 0;
-  hr = source->GetStreamIndexFromFriendlyName(
-      static_cast<UINT32>(MF_CAPTURE_ENGINE_PREFERRED_SOURCE_STREAM_FOR_VIDEO_RECORD), &record_stream);
+  hr = TraceMirrorStatus("record_index", source->GetStreamIndexFromFriendlyName(
+      static_cast<UINT32>(MF_CAPTURE_ENGINE_PREFERRED_SOURCE_STREAM_FOR_VIDEO_RECORD), &record_stream));
   if (FAILED(hr)) return hr;
-  hr = source->GetStreamIndexFromFriendlyName(
-      static_cast<UINT32>(MF_CAPTURE_ENGINE_PREFERRED_SOURCE_STREAM_FOR_VIDEO_PREVIEW), &preview_stream);
+  hr = TraceMirrorStatus("preview_index", source->GetStreamIndexFromFriendlyName(
+      static_cast<UINT32>(MF_CAPTURE_ENGINE_PREFERRED_SOURCE_STREAM_FOR_VIDEO_PREVIEW), &preview_stream));
   if (FAILED(hr)) return hr;
-  hr = MFCreateTransformActivate(&output_mirror_activation_);
+  hr = TraceMirrorStatus("factory", MFCreateTransformActivate(&output_mirror_activation_));
   if (FAILED(hr)) return hr;
-  hr = output_mirror_activation_->SetGUID(MFT_TRANSFORM_CLSID_Attribute,
-                                          CLSID_VideoProcessorMFT);
+  hr = TraceMirrorStatus("class", output_mirror_activation_->SetGUID(MFT_TRANSFORM_CLSID_Attribute,
+                                          CLSID_VideoProcessorMFT));
   if (FAILED(hr)) return hr;
-  hr = output_mirror_activation_->ActivateObject(IID_PPV_ARGS(&output_mirror_effect_));
+  hr = TraceMirrorStatus("control", output_mirror_activation_->ActivateObject(IID_PPV_ARGS(&output_mirror_effect_)));
   if (FAILED(hr)) return hr;
-  hr = output_mirror_effect_->SetMirror(MIRROR_HORIZONTAL);
+  hr = TraceMirrorStatus("mode", output_mirror_effect_->SetMirror(MIRROR_HORIZONTAL));
   if (FAILED(hr)) return hr;
   preview_output_mirrored_.store(record_stream == preview_stream);
   output_mirror_pending_ = true;
-  hr = source->AddEffect(record_stream, output_mirror_activation_.Get());
+  hr = TraceMirrorStatus("add", source->AddEffect(record_stream, output_mirror_activation_.Get()));
   if (FAILED(hr)) output_mirror_pending_ = false;
   return hr;
 }

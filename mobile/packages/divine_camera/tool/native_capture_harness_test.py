@@ -7,7 +7,7 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from native_capture_harness import require_capture_success, trace_failure_signatures
+from native_capture_harness import native_failure_status, require_capture_success, trace_failure_signatures
 
 
 class TraceFailureSignaturesTest(unittest.TestCase):
@@ -36,6 +36,21 @@ class TraceFailureSignaturesTest(unittest.TestCase):
         text = 'CMFMediaEventDetours::GetStatus status=0x80070005\n' * 3
         self.assertEqual(trace_failure_signatures(text),
                          [('CMFMediaEventDetours::GetStatus', '0x80070005')])
+
+
+class NativeFailureStatusTest(unittest.TestCase):
+    def test_keeps_only_known_mirror_operation_and_hresult(self):
+        for stage in ['source', 'record_index', 'preview_index', 'factory', 'class', 'control', 'mode', 'add']:
+            with self.subTest(stage=stage):
+                self.assertEqual(native_failure_status('capture-status mirror_' + stage + ':0xc00d36e6 metadata=unused'),
+                                 ('mirror_' + stage, '0xc00d36e6'))
+
+    def test_discards_unknown_operation_success_and_oversized_hex(self):
+        for line in ['capture-status unrecognized:0x80070005',
+                     'capture-status mirror_source:0x00000000',
+                     'capture-status mirror_source:0x8007000500000000']:
+            with self.subTest(line=line):
+                self.assertIsNone(native_failure_status(line))
 
 
 class TraceRoutingTest(unittest.TestCase):

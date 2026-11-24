@@ -497,6 +497,11 @@ def trace_capture_failure(command, app, env):
         print('DIVINE_CAPTURE_TRACE_STATUS', symbol, code, flush=True)
 
 
+def native_failure_status(line):
+    status = re.search(r'capture-status (create|initialize|error|record_start|record_stop|other|event_type|event_status|negotiate|preview|mirror_effect|mirror_(?:source|record_index|preview_index|factory|class|control|mode|add)):(0x[89a-fA-F][0-9a-fA-F]{7})(?![0-9a-fA-F])', line)
+    return status.groups() if status else None
+
+
 def require_capture_success(result, platform, capture_case, command, app, env):
     if result.returncode != 0 or 'DIVINE_CAPTURE_PASS' not in result.stdout:
         if platform == 'windows' and capture_case == 'audio' and 'DIVINE_CAPTURE_FAIL initialization' in (result.stdout + result.stderr):
@@ -625,9 +630,9 @@ dependencies:
                             print(line, flush=True)
             raise RuntimeError('Native capture did not release before the harness deadline') from None
         for line in (result.stdout + result.stderr).splitlines():
-            status = re.search(r'capture-status (create|initialize|error|record_start|record_stop|other|event_type|event_status|negotiate|preview|mirror_effect):(0x[0-9a-fA-F]+)', line)
+            status = native_failure_status(line)
             if status:
-                print('DIVINE_CAPTURE_NATIVE_STATUS', status.group(1), status.group(2), flush=True)
+                print('DIVINE_CAPTURE_NATIVE_STATUS', status[0], status[1], flush=True)
             if 'capture-stage timeout' in line:
                 print('DIVINE_CAPTURE_NATIVE_STAGE timeout', flush=True)
             if line.startswith('DIVINE_CAPTURE_') or 'GStreamer error:' in line or 'RecordHandler::Setup failed:' in line or 'Audio setup failed:' in line:
