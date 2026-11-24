@@ -283,7 +283,6 @@ class DivineCameraDesktop extends DivineCameraPlatform
         hasFrontCamera: lenses.contains(DivineCameraLens.front),
         hasBackCamera: lenses.contains(DivineCameraLens.back),
         textureId: previewHandle ?? cameraId,
-        previewHandlesTransform: true,
       );
       _previewCameraId.value = cameraId;
       return _state;

@@ -166,6 +166,18 @@ void main() {
         expect((await camera.getCameraState()).isInitialized, isFalse);
       });
 
+      test('leaves natural webcam preview mirroring to Flutter', () async {
+        try {
+          final state = await camera.initializeCamera(
+            mirrorFrontCameraOutput: false,
+          );
+          expect(state.lens, DivineCameraLens.front);
+          expect(state.previewHandlesTransform, isFalse);
+        } finally {
+          await camera.disposeCamera();
+        }
+      });
+
       test('releases a device when initialization is denied', () async {
         backend.initializationError = CameraException(
           'camera_access_denied',
