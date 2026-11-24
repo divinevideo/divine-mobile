@@ -107,8 +107,9 @@ fi
 
 # Authorize Apple signing tools (`codesign`, `productbuild`, `productsign`) to
 # access the imported private key non-interactively (`keychain initialize` uses
-# an empty password by default).
-BUILD_KEYCHAIN="$(security default-keychain -d user | tr -d ' \t"')"
+# an empty password by default). `keychain get-default` prints the raw path on
+# stdout without mangling paths that contain spaces.
+BUILD_KEYCHAIN="$(keychain get-default)"
 security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$BUILD_KEYCHAIN" >/dev/null
 
 xcode-project use-profiles --project macos/Runner.xcodeproj
