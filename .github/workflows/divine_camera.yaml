@@ -114,6 +114,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Independent decoder installation failed.' }
       - name: Verify output ownership and writer release barriers
         run: |
+          foreach ($serviceName in @('Audiosrv', 'AudioEndpointBuilder')) {
+            $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+            $status = if ($null -eq $service) { 'unavailable' } else { $service.Status }
+            Write-Output "DIVINE_CAPTURE_ENV_SERVICE $serviceName $status"
+          }
+          foreach ($hive in @('HKLM', 'HKCU')) {
+            $consent = Get-ItemPropertyValue -LiteralPath "${hive}:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -ErrorAction SilentlyContinue
+            $status = if ($consent -in @('Allow', 'Deny')) { $consent } else { 'unspecified' }
+            Write-Output "DIVINE_CAPTURE_ENV_MICROPHONE $hive $status"
+          }
           $build = Join-Path $env:RUNNER_TEMP 'divine-capture-ownership'
           cmake -S windows/tests -B $build -A x64
           if ($LASTEXITCODE -ne 0) { throw 'Capture ownership configuration failed.' }
