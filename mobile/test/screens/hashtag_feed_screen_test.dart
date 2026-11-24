@@ -4,7 +4,7 @@
 import 'dart:async';
 
 import 'package:flutter/rendering.dart' show RenderParagraph;
-import 'package:flutter/widgets.dart' show Locale;
+import 'package:flutter/widgets.dart' show Locale, Offset;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -130,6 +130,48 @@ void main() {
   });
 
   group(HashtagFeedScreen, () {
+    testWidgets('loads more from a short grid and skips a duplicate page', (
+      tester,
+    ) async {
+      final first = _video('video-1');
+      final next = _video('video-2');
+      when(() => videosRepository.getHashtagFeedVideos(hashtag: 'loops'))
+          .thenAnswer(
+            (_) async => HashtagFeedVideosResult.success(
+              [first],
+              nextCursor: 'o:50',
+            ),
+          );
+      when(
+        () => videosRepository.getHashtagFeedVideos(
+          hashtag: 'loops',
+          cursor: 'o:50',
+        ),
+      ).thenAnswer(
+        (_) async => HashtagFeedVideosResult.success(
+          [first],
+          nextCursor: 'o:100',
+        ),
+      );
+      when(
+        () => videosRepository.getHashtagFeedVideos(
+          hashtag: 'loops',
+          cursor: 'o:100',
+        ),
+      ).thenAnswer((_) async => HashtagFeedVideosResult.success([next]));
+
+      await pumpScreen(tester, 'loops');
+      final grid = find.byType(ComposableVideoGrid);
+      expect(tester.widget<ComposableVideoGrid>(grid).videos, [first]);
+      expect(tester.widget<ComposableVideoGrid>(grid).hasMoreContent, isTrue);
+
+      await tester.drag(grid, const Offset(0, -300));
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<ComposableVideoGrid>(grid).videos, [first, next]);
+      expect(tester.widget<ComposableVideoGrid>(grid).hasMoreContent, isFalse);
+    });
+
     testWidgets('titles its app bar with the hashtag', (tester) async {
       await pumpScreen(tester, 'bitcoin');
 

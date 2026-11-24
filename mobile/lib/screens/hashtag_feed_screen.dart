@@ -5,22 +5,24 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/hashtag_feed/hashtag_feed_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/features/hashtag_follows/view/hashtag_follow_button.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class HashtagFeedScreen extends ConsumerStatefulWidget {
@@ -41,21 +43,33 @@ class HashtagFeedScreen extends ConsumerStatefulWidget {
 }
 
 class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
-  /// Distinguishes a pending REST request from a confirmed empty response.
-  bool _initialLoadCompleted = false;
-  bool _loadFailed = false;
-
-  /// Cached videos from Funnelcake REST API for popularity ordering.
-  /// When available, these provide engagement-based sorting.
-  List<VideoEvent>? _popularVideos;
+  late HashtagFeedCubit _feed;
 
   @override
   void initState() {
     super.initState();
-    // Subscribe to videos with this hashtag
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return; // Safety check: don't use ref if widget is disposed
+    _startFeed();
+  }
 
+  @override
+  void didUpdateWidget(HashtagFeedScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.hashtag == widget.hashtag) return;
+    _closeFeed();
+    _startFeed();
+  }
+
+  void _startFeed() {
+    final hashtag = widget.hashtag;
+    final feed = HashtagFeedCubit(
+      fetchPage: (cursor) => ref
+          .read(videosRepositoryProvider)
+          .getHashtagFeedVideos(hashtag: hashtag, cursor: cursor),
+      filterVideos: _applyFeedFilters,
+    );
+    _feed = feed;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _feed != feed) return;
       runDetached(
         _loadHashtagVideos(),
         'load hashtag videos',
@@ -67,36 +81,25 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
 
   @override
   void dispose() {
+    _closeFeed();
     super.dispose();
   }
 
-  /// Start independent sources together; neither gates the other.
-  Future<void> _loadHashtagVideos() async {
-    if (!mounted) return;
-
-    Log.info(
-      '🏷️ HashtagFeedScreen: Loading #${widget.hashtag}',
+  void _closeFeed() {
+    runDetached(
+      _feed.close(),
+      'close hashtag feed',
+      logName: 'HashtagFeedScreen',
       category: LogCategory.video,
     );
+  }
 
+  /// Start independent sources together; neither gates the other.
+  Future<void> _loadHashtagVideos({bool refresh = false}) async {
+    if (refresh) _clearHashtagCache();
     final hashtagService = ref.read(hashtagServiceProvider);
-    if (_initialLoadCompleted) {
-      _clearHashtagCache();
-    }
-
-    setState(() {
-      _initialLoadCompleted = false;
-      _loadFailed = false;
-    });
-    unawaited(_subscribeViaWebSocket(hashtagService));
-    try {
-      await _fetchFromFunnelcake();
-    } catch (_) {
-      if (mounted) setState(() => _loadFailed = true);
-      rethrow;
-    } finally {
-      if (mounted) setState(() => _initialLoadCompleted = true);
-    }
+    unawaited(_subscribeViaWebSocket(hashtagService, widget.hashtag));
+    await _feed.refresh();
   }
 
   void _clearHashtagCache() {
@@ -107,50 +110,16 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
         );
   }
 
-  /// Render the ranked REST page as soon as it arrives.
-  Future<void> _fetchFromFunnelcake() async {
-    final repository = ref.read(videosRepositoryProvider);
-    final result = await repository.getHashtagFeedVideos(
-      hashtag: widget.hashtag,
-    );
-
-    if (!mounted) return;
-
-    if (!result.succeeded) {
-      setState(() => _loadFailed = true);
-      Log.debug(
-        '🏷️ HashtagFeedScreen: REST load failed for #${widget.hashtag}; '
-        'retaining available cached videos',
-        category: LogCategory.video,
-      );
-      return;
-    }
-
-    final rankedVideos = result.videos;
-    Log.info(
-      '🏷️ HashtagFeedScreen: Got ${rankedVideos.length} ranked videos '
-      'from Funnelcake for #${widget.hashtag}',
-      category: LogCategory.video,
-    );
-
-    // Update immediately - don't wait for WebSocket
-    setState(() {
-      _loadFailed = false;
-      _popularVideos = rankedVideos;
-      // Mark as ready to show content if we have videos
-      if (rankedVideos.isNotEmpty) {
-        _initialLoadCompleted = true;
-      }
-    });
-  }
-
   /// Subscribe to hashtag via WebSocket for real-time updates.
-  Future<void> _subscribeViaWebSocket(HashtagService hashtagService) async {
+  Future<void> _subscribeViaWebSocket(
+    HashtagService hashtagService,
+    String hashtag,
+  ) async {
     try {
-      await hashtagService.subscribeToHashtagVideos([widget.hashtag]);
+      await hashtagService.subscribeToHashtagVideos([hashtag]);
       if (!mounted) return;
       Log.debug(
-        '🏷️ HashtagFeedScreen: WebSocket subscription complete for #${widget.hashtag}',
+        '🏷️ HashtagFeedScreen: WebSocket subscription complete for #$hashtag',
         category: LogCategory.video,
       );
     } catch (e) {
@@ -180,15 +149,19 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
   /// Combine and sort videos from Funnelcake and WebSocket sources.
   /// Funnelcake videos are shown first (already sorted by popularity).
   /// WebSocket-only videos are appended and sorted by local metrics.
-  List<VideoEvent> _combineAndSortVideos(List<VideoEvent> webSocketVideos) {
+  List<VideoEvent> _visibleVideos(List<VideoEvent> rankedVideos) {
+    final hashtagService = ref.read(hashtagServiceProvider);
+    final webSocketVideos = List<VideoEvent>.from(
+      hashtagService.getVideosByHashtags([widget.hashtag]),
+    );
     // If no Funnelcake data, just sort WebSocket videos locally
-    if (_popularVideos == null || _popularVideos!.isEmpty) {
+    if (rankedVideos.isEmpty) {
       webSocketVideos.sort(VideoEvent.compareByLoopsThenTime);
       return _applyFeedFilters(webSocketVideos);
     }
 
     final funnelcakeIds = <String>{};
-    for (final v in _popularVideos!) {
+    for (final v in rankedVideos) {
       if (v.id.isNotEmpty) funnelcakeIds.add(v.id.toLowerCase());
       if (v.vineId != null && v.vineId!.isNotEmpty) {
         funnelcakeIds.add(v.vineId!.toLowerCase());
@@ -213,7 +186,7 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
 
     // Return Funnelcake videos (already sorted by API) + additional WebSocket
     // videos, with blocked/muted authors removed from both sources.
-    return _applyFeedFilters([..._popularVideos!, ...additionalVideos]);
+    return _applyFeedFilters([...rankedVideos, ...additionalVideos]);
   }
 
   /// Navigate to fullscreen video feed through the hashtag [ViewSource].
@@ -230,12 +203,31 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
       'videoId=${videoList[index].id}',
       category: LogCategory.video,
     );
+    final feed = _feed;
+    List<VideoEvent> visibleVideos(HashtagFeedState state) =>
+        mounted && _feed == feed ? _visibleVideos(state.videos) : videoList;
+
+    final repository = StreamFeedRepository(
+      videos: Rx.defer(
+        () => feed.stream
+            .where((state) => !state.isLoading)
+            .map(visibleVideos)
+            .startWith(visibleVideos(feed.state)),
+      ),
+      hasMore: Rx.defer(
+        () => feed.stream
+            .map((state) => state.nextCursor != null)
+            .startWith(feed.state.nextCursor != null)
+            .distinct(),
+      ),
+      onLoadMore: feed.loadMore,
+    );
     runDetached(
       PooledFullscreenVideoFeedRouteData(
         video: videoList[index].id,
         $extra: PooledFullscreenVideoFeedArgs(
           source: HashtagViewSource(widget.hashtag),
-          feedRepository: ref.read(feedRepositoryProvider),
+          feedRepository: repository,
           initialIndex: index,
           initialVideoId: videoList[index].id,
           tileOrigin: tileOrigin,
@@ -253,120 +245,42 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
   @override
   Widget build(BuildContext context) {
     // The repository parse-gates the REST results, so the cached
-    // _popularVideos never hold a blocked author — an unblock can only
+    // ranked videos never hold a blocked author — an unblock can only
     // re-show their videos through a refetch. See #948.
     ref.listen<int>(blocklistVersionProvider, (previous, next) {
       if (previous == next || !mounted) return;
       _clearHashtagCache();
       runDetached(
-        _fetchFromFunnelcake(),
+        _feed.refresh(),
         'refresh hashtag videos',
         logName: 'HashtagFeedScreen',
         category: LogCategory.video,
       );
     });
 
+    ref.watch(hashtagServiceProvider);
+    // Reapply the visibility policy immediately on block or mute changes.
+    ref.watch(blocklistVersionProvider);
     final body = ListenableBuilder(
       listenable: ref.watch(videoEventServiceProvider),
-      builder: (context, _) {
-        Log.debug(
-          '🏷️ Building HashtagFeedScreen for #${widget.hashtag}',
-          category: LogCategory.video,
-        );
-        final hashtagService = ref.watch(hashtagServiceProvider);
+      builder: (context, _) => BlocBuilder<HashtagFeedCubit, HashtagFeedState>(
+        bloc: _feed,
+        builder: (context, state) {
+          final videos = _visibleVideos(state.videos);
+          final hasMore = state.nextCursor != null;
 
-        // Rebuild when block/unblock/mute actions occur so blocked authors
-        // disappear immediately (via _filterBlockedAuthors). See #4782.
-        ref.watch(blocklistVersionProvider);
-
-        // Combine Funnelcake videos (fast, pre-sorted) with WebSocket videos
-        final webSocketVideos = List<VideoEvent>.from(
-          hashtagService.getVideosByHashtags([widget.hashtag]),
-        );
-        final videos = _combineAndSortVideos(webSocketVideos);
-
-        Log.debug(
-          '🏷️ Found ${videos.length} videos for #${widget.hashtag} '
-          '(Funnelcake: ${_popularVideos?.length ?? 0}, WebSocket: ${webSocketVideos.length})',
-          category: LogCategory.video,
-        );
-
-        // Cached and live relay results can render while REST is pending.
-        final shouldShowLoading = !_initialLoadCompleted;
-
-        if (shouldShowLoading && videos.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const DivineCircularProgressIndicator(
-                  color: VineTheme.vineGreen,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  context.l10n.hashtagFeedLoadingTitle(widget.hashtag),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: context.vineColors.primaryText,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  context.l10n.hashtagFeedLoadingSubtitle,
-                  style: TextStyle(
-                    color: context.vineColors.secondaryText,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        if (videos.isEmpty && _loadFailed) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(context.l10n.feedFailedToLoadVideos),
-                const SizedBox(height: 16),
-                DivineButton(
-                  label: context.l10n.commonRetry,
-                  onPressed: () {
-                    runDetached(
-                      _loadHashtagVideos(),
-                      'load hashtag videos',
-                      logName: 'HashtagFeedScreen',
-                      category: LogCategory.video,
-                    );
-                  },
-                ),
-              ],
-            ),
-          );
-        }
-
-        if (videos.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+          // Cached and live relay results can render while REST is pending.
+          if (state.isLoading && videos.isEmpty) {
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.tag,
-                    size: 64,
-                    color: context.vineColors.secondaryText,
+                  const DivineCircularProgressIndicator(
+                    color: VineTheme.vineGreen,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   Text(
-                    context.l10n.hashtagFeedEmptyTitle(widget.hashtag),
-                    // Older events can carry thousands of characters in one
-                    // tag; the app bar already ellipsizes, so this does too.
+                    context.l10n.hashtagFeedLoadingTitle(widget.hashtag),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
@@ -378,7 +292,7 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    context.l10n.hashtagFeedEmptySubtitle,
+                    context.l10n.hashtagFeedLoadingSubtitle,
                     style: TextStyle(
                       color: context.vineColors.secondaryText,
                       fontSize: 14,
@@ -386,29 +300,118 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
                   ),
                 ],
               ),
+            );
+          }
+
+          if (videos.isEmpty && (state.failed || hasMore)) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (state.failed) ...[
+                    Text(context.l10n.feedFailedToLoadVideos),
+                    const SizedBox(height: 16),
+                  ],
+                  DivineButton(
+                    label: context.l10n.commonRetry,
+                    onPressed: () {
+                      runDetached(
+                        hasMore
+                            ? _feed.loadMore()
+                            : _loadHashtagVideos(refresh: true),
+                        'load hashtag videos',
+                        logName: 'HashtagFeedScreen',
+                        category: LogCategory.video,
+                      );
+                    },
+                  ),
+                ],
+              ),
+            );
+          }
+
+          if (videos.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.tag,
+                      size: 64,
+                      color: context.vineColors.secondaryText,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      context.l10n.hashtagFeedEmptyTitle(widget.hashtag),
+                      // Older events can carry thousands of characters in one
+                      // tag; the app bar already ellipsizes, so this does too.
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: context.vineColors.primaryText,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      context.l10n.hashtagFeedEmptySubtitle,
+                      style: TextStyle(
+                        color: context.vineColors.secondaryText,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          return NotificationListener<OverscrollNotification>(
+            onNotification: (notification) {
+              // A short grid can have no scroll extent on clamping physics.
+              if (hasMore &&
+                  !state.isLoading &&
+                  notification.depth == 0 &&
+                  notification.metrics.axis == Axis.vertical &&
+                  notification.dragDetails != null &&
+                  notification.overscroll > 0) {
+                runDetached(
+                  _feed.loadMore(),
+                  'load more hashtag videos',
+                  logName: 'HashtagFeedScreen',
+                  category: LogCategory.video,
+                );
+              }
+              return false;
+            },
+            child: ComposableVideoGrid(
+              videos: videos,
+              useMasonryLayout: true,
+              onVideoTap: (videoList, index, captureOrigin) {
+                final onVideoTap = widget.onVideoTap;
+                if (onVideoTap != null) {
+                  onVideoTap(videoList, index);
+                } else {
+                  _navigateToFullscreenFeed(
+                    context,
+                    videoList,
+                    index,
+                    captureOrigin(),
+                  );
+                }
+              },
+              onRefresh: () => _loadHashtagVideos(refresh: true),
+              hasMoreContent: hasMore,
+              isLoadingMore: hasMore && state.isLoading,
+              onLoadMore: _feed.loadMore,
             ),
           );
-        }
-
-        return ComposableVideoGrid(
-          videos: videos,
-          useMasonryLayout: true,
-          onVideoTap: (videoList, index, captureOrigin) {
-            final onVideoTap = widget.onVideoTap;
-            if (onVideoTap != null) {
-              onVideoTap(videoList, index);
-            } else {
-              _navigateToFullscreenFeed(
-                context,
-                videoList,
-                index,
-                captureOrigin(),
-              );
-            }
-          },
-          onRefresh: _loadHashtagVideos,
-        );
-      },
+        },
+      ),
     );
 
     // If embedded, return body only; otherwise wrap with Scaffold

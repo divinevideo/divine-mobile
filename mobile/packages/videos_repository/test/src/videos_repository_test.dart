@@ -11181,19 +11181,22 @@ void main() {
         final api = MockFunnelcakeApiClient();
         when(() => api.isAvailable).thenReturn(true);
         when(
-          () => api.getVideosByHashtag(
+          () => api.getVideosByHashtagPage(
             hashtag: 'fast',
             limit: any(named: 'limit'),
           ),
         ).thenAnswer(
-          (_) async => [
-            _createVideoStats(
-              id: 'fast-video',
-              pubkey: 'author',
-              dTag: 'fast',
-              videoUrl: 'https://example.com/fast.mp4',
-            ),
-          ],
+          (_) async => (
+            videos: [
+              _createVideoStats(
+                id: 'fast-video',
+                pubkey: 'author',
+                dTag: 'fast',
+                videoUrl: 'https://example.com/fast.mp4',
+              ),
+            ],
+            nextCursor: null,
+          ),
         );
         when(
           () => api.getClassicVideosByHashtag(
@@ -11220,25 +11223,36 @@ void main() {
       });
 
       test(
-        'revisiting a hashtag uses cached videos and reapplies blocking',
+        'caches the first page and cursor without intercepting later pages',
         () async {
           final api = MockFunnelcakeApiClient();
           var blocked = false;
           when(() => api.isAvailable).thenReturn(true);
           when(
-            () => api.getVideosByHashtag(
+            () => api.getVideosByHashtagPage(
               hashtag: 'fast',
               limit: any(named: 'limit'),
             ),
           ).thenAnswer(
-            (_) async => [
-              _createVideoStats(
-                id: 'fast-video',
-                pubkey: 'author',
-                dTag: 'fast',
-                videoUrl: 'https://example.com/fast.mp4',
-              ),
-            ],
+            (_) async => (
+              videos: [
+                _createVideoStats(
+                  id: 'fast-video',
+                  pubkey: 'author',
+                  dTag: 'fast',
+                  videoUrl: 'https://example.com/fast.mp4',
+                ),
+              ],
+              nextCursor: 'o:50',
+            ),
+          );
+          when(
+            () => api.getVideosByHashtagPage(
+              hashtag: 'fast',
+              cursor: 'o:50',
+            ),
+          ).thenAnswer(
+            (_) async => (videos: <VideoStats>[], nextCursor: 'o:100'),
           );
           final repo = VideosRepository(
             nostrClient: mockNostrClient,
@@ -11249,13 +11263,22 @@ void main() {
           await repo.getHashtagFeedVideos(hashtag: 'fast');
           final cached = await repo.getHashtagFeedVideos(hashtag: 'fast');
           expect(cached.videos.map((video) => video.id), ['fast-video']);
+          expect(cached.nextCursor, 'o:50');
+
           blocked = true;
-          expect(
-            (await repo.getHashtagFeedVideos(hashtag: 'fast')).videos,
-            isEmpty,
+          final filtered = await repo.getHashtagFeedVideos(hashtag: 'fast');
+          expect(filtered.videos, isEmpty);
+          expect(filtered.nextCursor, 'o:50');
+
+          final next = await repo.getHashtagFeedVideos(
+            hashtag: 'fast',
+            cursor: filtered.nextCursor,
           );
+          expect(next.succeeded, isTrue);
+          expect(next.videos, isEmpty);
+          expect(next.nextCursor, 'o:100');
           verify(
-            () => api.getVideosByHashtag(
+            () => api.getVideosByHashtagPage(
               hashtag: 'fast',
               limit: any(named: 'limit'),
             ),
@@ -11271,19 +11294,22 @@ void main() {
           final cache = InMemoryFeedCache(now: () => now);
           when(() => api.isAvailable).thenReturn(true);
           when(
-            () => api.getVideosByHashtag(
+            () => api.getVideosByHashtagPage(
               hashtag: 'fast',
               limit: any(named: 'limit'),
             ),
           ).thenAnswer(
-            (_) async => [
-              _createVideoStats(
-                id: 'fast-video',
-                pubkey: 'author',
-                dTag: 'fast',
-                videoUrl: 'https://example.com/fast.mp4',
-              ),
-            ],
+            (_) async => (
+              videos: [
+                _createVideoStats(
+                  id: 'fast-video',
+                  pubkey: 'author',
+                  dTag: 'fast',
+                  videoUrl: 'https://example.com/fast.mp4',
+                ),
+              ],
+              nextCursor: null,
+            ),
           );
           final repo = VideosRepository(
             nostrClient: mockNostrClient,
@@ -11296,7 +11322,7 @@ void main() {
           repo.clearInMemoryFeedCache(key: 'hashtag:fast');
           await repo.getHashtagFeedVideos(hashtag: 'fast');
           verify(
-            () => api.getVideosByHashtag(
+            () => api.getVideosByHashtagPage(
               hashtag: 'fast',
               limit: any(named: 'limit'),
             ),
@@ -11308,19 +11334,22 @@ void main() {
         final api = MockFunnelcakeApiClient();
         when(() => api.isAvailable).thenReturn(true);
         when(
-          () => api.getVideosByHashtag(
+          () => api.getVideosByHashtagPage(
             hashtag: any(named: 'hashtag'),
             limit: any(named: 'limit'),
           ),
         ).thenAnswer(
-          (_) async => [
-            _createVideoStats(
-              id: 'video',
-              pubkey: 'author',
-              dTag: 'video',
-              videoUrl: 'https://example.com/video.mp4',
-            ),
-          ],
+          (_) async => (
+            videos: [
+              _createVideoStats(
+                id: 'video',
+                pubkey: 'author',
+                dTag: 'video',
+                videoUrl: 'https://example.com/video.mp4',
+              ),
+            ],
+            nextCursor: null,
+          ),
         );
         final cache = InMemoryFeedCache();
         final repo = VideosRepository(
@@ -11373,25 +11402,28 @@ void main() {
           final mockFunnelcake = MockFunnelcakeApiClient();
           when(() => mockFunnelcake.isAvailable).thenReturn(true);
           when(
-            () => mockFunnelcake.getVideosByHashtag(
+            () => mockFunnelcake.getVideosByHashtagPage(
               hashtag: 'bts',
               limit: any(named: 'limit'),
             ),
           ).thenAnswer(
-            (_) async => [
-              _createVideoStats(
-                id: 'trend-1',
-                pubkey: 'pubkey-1',
-                dTag: 'dtag-t1',
-                videoUrl: 'https://example.com/t1.mp4',
-              ),
-              _createVideoStats(
-                id: 'trend-2',
-                pubkey: 'pubkey-2',
-                dTag: 'dtag-t2',
-                videoUrl: 'https://example.com/t2.mp4',
-              ),
-            ],
+            (_) async => (
+              videos: [
+                _createVideoStats(
+                  id: 'trend-1',
+                  pubkey: 'pubkey-1',
+                  dTag: 'dtag-t1',
+                  videoUrl: 'https://example.com/t1.mp4',
+                ),
+                _createVideoStats(
+                  id: 'trend-2',
+                  pubkey: 'pubkey-2',
+                  dTag: 'dtag-t2',
+                  videoUrl: 'https://example.com/t2.mp4',
+                ),
+              ],
+              nextCursor: null,
+            ),
           );
 
           final repoWithApi = VideosRepository(
@@ -11408,7 +11440,7 @@ void main() {
           ]);
           expect(
             verify(
-                  () => mockFunnelcake.getVideosByHashtag(
+                  () => mockFunnelcake.getVideosByHashtagPage(
                     hashtag: 'bts',
                     limit: captureAny(named: 'limit'),
                   ),
@@ -11425,25 +11457,28 @@ void main() {
           final mockFunnelcake = MockFunnelcakeApiClient();
           when(() => mockFunnelcake.isAvailable).thenReturn(true);
           when(
-            () => mockFunnelcake.getVideosByHashtag(
+            () => mockFunnelcake.getVideosByHashtagPage(
               hashtag: 'bts',
               limit: any(named: 'limit'),
             ),
           ).thenAnswer(
-            (_) async => [
-              _createVideoStats(
-                id: 'trend-blocked',
-                pubkey: 'blocked-pubkey',
-                dTag: 'dtag-tb',
-                videoUrl: 'https://example.com/tb.mp4',
-              ),
-              _createVideoStats(
-                id: 'trend-ok',
-                pubkey: 'allowed-pubkey',
-                dTag: 'dtag-to',
-                videoUrl: 'https://example.com/to.mp4',
-              ),
-            ],
+            (_) async => (
+              videos: [
+                _createVideoStats(
+                  id: 'trend-blocked',
+                  pubkey: 'blocked-pubkey',
+                  dTag: 'dtag-tb',
+                  videoUrl: 'https://example.com/tb.mp4',
+                ),
+                _createVideoStats(
+                  id: 'trend-ok',
+                  pubkey: 'allowed-pubkey',
+                  dTag: 'dtag-to',
+                  videoUrl: 'https://example.com/to.mp4',
+                ),
+              ],
+              nextCursor: null,
+            ),
           );
 
           final blockFilter = TestContentFilter(
@@ -11466,7 +11501,7 @@ void main() {
         final mockFunnelcake = MockFunnelcakeApiClient();
         when(() => mockFunnelcake.isAvailable).thenReturn(true);
         when(
-          () => mockFunnelcake.getVideosByHashtag(
+          () => mockFunnelcake.getVideosByHashtagPage(
             hashtag: 'bts',
             limit: any(named: 'limit'),
           ),

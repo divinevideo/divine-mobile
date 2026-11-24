@@ -143,12 +143,14 @@ const int _classicsMaxPageFetches = 3;
 /// Result of a hashtag REST feed fetch.
 class HashtagFeedVideosResult {
   /// Creates a successful hashtag feed result.
-  const HashtagFeedVideosResult.success(this.videos) : succeeded = true;
+  const HashtagFeedVideosResult.success(this.videos, {this.nextCursor})
+    : succeeded = true;
 
   /// Creates a failed or skipped hashtag feed result.
   const HashtagFeedVideosResult.failure()
     : videos = const [],
-      succeeded = false;
+      succeeded = false,
+      nextCursor = null;
 
   /// Videos returned by the REST feed in display order.
   final List<VideoEvent> videos;
@@ -159,6 +161,9 @@ class HashtagFeedVideosResult {
   /// this to distinguish a real empty feed from a transient failure, timeout,
   /// or unavailable client.
   final bool succeeded;
+
+  /// Opaque continuation for the next ranked page, if available.
+  final String? nextCursor;
 }
 
 String _encodePopularLegacyBeforeCursor(int before) =>
@@ -2816,15 +2821,16 @@ class VideosRepository {
   /// Fetches one ranked page, including classic videos already ranked by the
   /// endpoint. A separate classics query must not gate visible results.
   /// Results pass through the shared block, transport and content filters.
-  /// Nonempty pages are cached for one minute for immediate re-entry and
-  /// grid-to-player navigation. Call [clearInMemoryFeedCache] for refresh.
-  /// Cached reads reapply current visibility policy.
+  /// A nonempty first page is cached for one minute for immediate re-entry.
+  /// Cached reads reapply current visibility policy. Call
+  /// [clearInMemoryFeedCache] for refresh.
   ///
   /// Returns a failed result when [hashtag] is blank, the API client is
   /// unavailable, or the fetch fails or exceeds [timeout] — the REST feed
   /// is a fast-path enrichment; callers keep their relay source/cache.
   Future<HashtagFeedVideosResult> getHashtagFeedVideos({
     required String hashtag,
+    String? cursor,
     Duration timeout = const Duration(seconds: 5),
   }) async {
     final trimmed = hashtag.trim();
@@ -2834,21 +2840,22 @@ class VideosRepository {
     }
 
     final cacheKey = 'hashtag:${trimmed.toLowerCase()}';
-    final cached = _inMemoryFeedCache?.get(cacheKey);
+    final cached = cursor == null ? _inMemoryFeedCache?.get(cacheKey) : null;
     if (cached != null) {
       return HashtagFeedVideosResult.success(
         applyContentPreferences(
           cached.videos.where((video) => !video.isExpired).toList(),
         ),
+        nextCursor: cached.paginationCursor,
       );
     }
 
     try {
-      final videos = await getVideosByHashtag(
-        hashtag: trimmed,
-        limit: 50,
-      ).timeout(timeout);
-      if (videos.isNotEmpty && _inMemoryFeedCache != null) {
+      final page = await _funnelcakeApiClient
+          .getVideosByHashtagPage(hashtag: trimmed, cursor: cursor)
+          .timeout(timeout);
+      final videos = _transformVideoStats(page.videos, sortByCreatedAt: false);
+      if (cursor == null && videos.isNotEmpty && _inMemoryFeedCache != null) {
         _cachedHashtagKeys
           ..remove(cacheKey)
           ..add(cacheKey);
@@ -2859,11 +2866,17 @@ class VideosRepository {
         }
         _inMemoryFeedCache.set(
           cacheKey,
-          HomeFeedResult(videos: List.unmodifiable(videos)),
+          HomeFeedResult(
+            videos: List.unmodifiable(videos),
+            paginationCursor: page.nextCursor,
+          ),
           ttl: const Duration(minutes: 1),
         );
       }
-      return HashtagFeedVideosResult.success(videos);
+      return HashtagFeedVideosResult.success(
+        videos,
+        nextCursor: page.nextCursor,
+      );
     } on Exception catch (e, stackTrace) {
       Log.error(
         'getHashtagFeedVideos failed for "#$trimmed"',

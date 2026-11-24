@@ -2672,6 +2672,42 @@ void main() {
 ]
 ''';
 
+      test(
+        'passes the v2 cursor through even when no rows are usable',
+        () async {
+          when(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          ).thenAnswer(
+            (_) async => http.Response(
+              '{"data":[{}],"pagination":'
+              '{"has_more":true,"next_cursor":"o:75"}}',
+              200,
+            ),
+          );
+
+          final page = await client.getVideosByHashtagPage(
+            hashtag: '#Loops',
+            cursor: 'o:50',
+          );
+
+          expect(page.videos, isEmpty);
+          expect(page.nextCursor, 'o:75');
+          final uri =
+              verify(
+                    () => mockHttpClient.get(
+                      captureAny(),
+                      headers: any(named: 'headers'),
+                    ),
+                  ).captured.single
+                  as Uri;
+          expect(uri.path, '/api/v2/videos');
+          expect(uri.queryParameters, containsPair('tag', 'loops'));
+          expect(uri.queryParameters, containsPair('sort', 'trending'));
+          expect(uri.queryParameters, containsPair('cursor', 'o:50'));
+          expect(uri.queryParameters, containsPair('limit', '50'));
+        },
+      );
+
       test('returns videos on successful response', () async {
         when(
           () => mockHttpClient.get(any(), headers: any(named: 'headers')),

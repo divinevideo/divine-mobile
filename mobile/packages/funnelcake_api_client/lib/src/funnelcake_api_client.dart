@@ -1594,6 +1594,37 @@ class FunnelcakeApiClient {
     int limit = 50,
     int? before,
   }) async {
+    final page = await _getVideosByHashtag(
+      path: '/api/videos',
+      hashtag: hashtag,
+      limit: limit,
+      before: before,
+    );
+    return page.videos;
+  }
+
+  /// Fetches a ranked hashtag page with its opaque continuation cursor.
+  ///
+  /// The cursor comes from Funnelcake and survives client-side row filtering.
+  Future<({List<VideoStats> videos, String? nextCursor})>
+  getVideosByHashtagPage({
+    required String hashtag,
+    int limit = 50,
+    String? cursor,
+  }) => _getVideosByHashtag(
+    path: '/api/v2/videos',
+    hashtag: hashtag,
+    limit: limit,
+    cursor: cursor,
+  );
+
+  Future<({List<VideoStats> videos, String? nextCursor})> _getVideosByHashtag({
+    required String path,
+    required String hashtag,
+    required int limit,
+    String? cursor,
+    int? before,
+  }) async {
     if (!isAvailable) {
       throw const FunnelcakeNotConfiguredException();
     }
@@ -1607,27 +1638,32 @@ class FunnelcakeApiClient {
       'tag': normalizedTag,
       'sort': 'trending',
       'limit': limit.toString(),
+      'cursor': ?cursor,
     });
     if (before != null) {
       queryParams['before'] = before.toString();
     }
 
     final uri = Uri.parse(
-      '$_baseUrl/api/videos',
+      '$_baseUrl$path',
     ).replace(queryParameters: queryParams);
 
     try {
       final response = await _get(uri);
 
       if (response.statusCode == 200) {
-        final (:items, hasMore: _, nextCursor: _) = _unwrapListResponse(
+        final (:items, :hasMore, :nextCursor) = _unwrapListResponse(
           jsonDecode(response.body),
         );
 
-        return items
+        final videos = items
             .map((v) => VideoStats.fromJson(v as Map<String, dynamic>))
             .where((v) => v.id.isNotEmpty && v.videoUrl.isNotEmpty)
             .toList();
+        return (
+          videos: videos,
+          nextCursor: hasMore == false ? null : nextCursor,
+        );
       } else {
         throw FunnelcakeApiException(
           message: 'Failed to fetch videos by hashtag',
