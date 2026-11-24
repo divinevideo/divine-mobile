@@ -663,6 +663,7 @@ void Camera::Initialize(
 
     HRESULT hr = self->CreateCaptureEngine();
     if (FAILED(hr)) {
+      DebugLog("capture-status create:" + HrToString(hr));
       self->CompleteInit(false, "Failed to create capture engine");
       CoUninitialize();
       return;
@@ -748,6 +749,13 @@ void Camera::OnEngineEvent(IMFMediaEvent* event) {
   HRESULT get_status_hr = event->GetStatus(&event_hr);
   if (FAILED(get_status_hr)) {
     DebugLog("OnEngineEvent: GetStatus failed " + HrToString(get_status_hr));
+  }
+  if (FAILED(event_hr)) {
+    const char* stage = event_type == MF_CAPTURE_ENGINE_INITIALIZED ? "initialize" :
+        event_type == MF_CAPTURE_ENGINE_ERROR ? "error" :
+        event_type == MF_CAPTURE_ENGINE_RECORD_STARTED ? "record_start" :
+        event_type == MF_CAPTURE_ENGINE_RECORD_STOPPED ? "record_stop" : "other";
+    DebugLog(std::string("capture-status ") + stage + ":" + HrToString(event_hr));
   }
 
   // ── Engine error ──────────────────────────────────────────────────────

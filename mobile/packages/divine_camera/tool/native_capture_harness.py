@@ -3,6 +3,7 @@ import argparse
 import contextlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -430,6 +431,8 @@ dependencies:
         native_temp.mkdir()
         env = dict(os.environ, G_MESSAGES_DEBUG='all', DIVINE_CAPTURE_CASE=args.case, DIVINE_CAPTURE_OUTPUT=str(output),
                    TMPDIR=str(native_temp), TEMP=str(native_temp), TMP=str(native_temp))
+        if args.platform == 'windows':
+            env['CAMERA_DESKTOP_LOG'] = '1'
         if args.case == 'audio-unavailable':
             env['DIVINE_CAPTURE_TEST_AUDIO_UNAVAILABLE'] = '1'
         if args.case == 'texture-unavailable':
@@ -451,6 +454,9 @@ dependencies:
                             print(line, flush=True)
             raise RuntimeError('Native capture did not release before the harness deadline') from None
         for line in (result.stdout + result.stderr).splitlines():
+            status = re.search(r'capture-status (create|initialize|error|record_start|record_stop|other):(0x[0-9a-fA-F]+)', line)
+            if status:
+                print('DIVINE_CAPTURE_NATIVE_STATUS', status.group(1), status.group(2), flush=True)
             if line.startswith('DIVINE_CAPTURE_') or 'GStreamer error:' in line or 'RecordHandler::Setup failed:' in line or 'Audio setup failed:' in line:
                 print(line, flush=True)
         if result.returncode != 0 or 'DIVINE_CAPTURE_PASS' not in result.stdout:
