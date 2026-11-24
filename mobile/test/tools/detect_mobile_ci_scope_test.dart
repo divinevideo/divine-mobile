@@ -416,6 +416,18 @@ esac
       );
     });
 
+    test('push runs services for an apt mirror helper-only change', () {
+      expectScope(
+        runDetector(
+          event: 'push',
+          changedFiles: ['.github/scripts/use_ubuntu_archive_mirror.py'],
+        ),
+        app: false,
+        native: false,
+        also: const {'service': true},
+      );
+    });
+
     test('push compares github.event.before against github.sha', () {
       // The compared range is the whole point of the push path, and nothing
       // else observes it: the fake gh answers any /compare/ URL, so swapping
@@ -569,6 +581,8 @@ esac
         'service',
       },
       '.github/workflows/badge_repository.yaml': {'app', 'ci_config'},
+      '.github/scripts/use_ubuntu_archive_mirror.py': {'service'},
+      '.github/scripts/tests/test_mobile_service_apt_mirror.py': {},
       // `app` is what keeps mobile/test/tools/ running — the contract test
       // that pins this very workflow lives there, so without it the test
       // could not fire on a change to its own subject.

@@ -49,6 +49,7 @@ while IFS= read -r path; do
   case "$path" in
     # SHARED_SCOPE_START — parsed by service_suite_scope_detector.dart.
     .github/workflows/mobile_service_integration_tests.yaml|\
+    .github/scripts/use_ubuntu_archive_mirror.py|\
     mobile/scripts/ci/detect_service_suite_scope.sh|\
     mobile/scripts/ci/write_service_suite_bundle.sh|\
     mobile/scripts/check_service_suite_coverage.sh|\
