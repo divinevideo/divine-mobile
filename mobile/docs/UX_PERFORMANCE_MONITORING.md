@@ -95,7 +95,8 @@ means the first frame rendered during the activation, `failed` that the video
 showed an error and never rendered, and `abandoned` that the viewer left first.
 A video the feed held back from autoplay, such as one behind a content warning,
 sends nothing when it ends without a frame, and returning to a video that kept
-its frame while the feed was hidden starts no new sample. The `played` share of
+its frame while the feed was hidden — or to a failed video that is not
+re-initialized — starts no new sample (a manual retry starts one). The `played` share of
 all samples is the playback success rate; `active_ms` on `abandoned` shows how
 long viewers waited before leaving; the share of `played` samples with a
 `stall_count` above zero is the rebuffer frequency, and `stall_ms` over
@@ -119,8 +120,12 @@ release comparisons compare builds within one trace. Extending keeps `ttff_ms`
 and its milestones comparable: they are still set only when a first frame
 rendered, which is every sample older builds sent. Two things change at that
 release: the trace's sample count now counts all activations, so it rises, and
-older builds carry no `outcome`. Filter on `outcome=played`, or on samples that
-have `ttff_ms`, before comparing counts across it.
+older builds carry no `outcome` (their rows appear with `outcome = NULL` when
+grouping by `outcome`, as `custom-metrics.sql` does, whereas new builds carry
+`outcome=played`). Filter on `outcome=played`, or on samples that
+have `ttff_ms`, before comparing counts across it, and match new `outcome=played`
+rows with older `outcome IS NULL` rows when comparing `ttff_ms` across that
+boundary.
 
 **The recorder traces are live traces, emitted once per user action.** Read
 their duration or `total_ms`, the same span measured in Dart. Until this
