@@ -120,7 +120,8 @@ jobs:
             Write-Output "DIVINE_CAPTURE_ENV_SERVICE $serviceName $status"
           }
           foreach ($hive in @('HKLM', 'HKCU')) {
-            $consent = Get-ItemPropertyValue -LiteralPath "${hive}:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -Name Value -ErrorAction SilentlyContinue
+            $entry = Get-ItemProperty -LiteralPath "${hive}:\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone" -ErrorAction SilentlyContinue
+            $consent = $entry.Value
             $status = if ($consent -in @('Allow', 'Deny')) { $consent } else { 'unspecified' }
             Write-Output "DIVINE_CAPTURE_ENV_MICROPHONE $hive $status"
           }
@@ -131,6 +132,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Capture ownership build failed.' }
           ctest --test-dir $build -C Release --output-on-failure
           if ($LASTEXITCODE -ne 0) { throw 'Capture ownership tests failed.' }
+      - name: Start existing audio runtime for capture engine
+        run: |
+          Start-Service -Name AudioEndpointBuilder
+          Start-Service -Name Audiosrv
+          foreach ($serviceName in @('Audiosrv', 'AudioEndpointBuilder')) {
+            $service = Get-Service -Name $serviceName
+            Write-Output "DIVINE_CAPTURE_ENV_SERVICE_READY $serviceName $($service.Status)"
+            if ($service.Status -ne 'Running') { throw 'Audio runtime is unavailable.' }
+          }
       - name: Verify actual Flutter capture and source release
         run: |
           $workspace = Join-Path $env:RUNNER_TEMP 'divine-capture-consumer'
