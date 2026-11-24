@@ -157,6 +157,7 @@ class Camera : public std::enable_shared_from_this<Camera> {
   ComPtr<IMFMediaSource>        capture_video_source_;
   ComPtr<IMFMediaSource>        capture_audio_source_;
   ComPtr<IMFCapturePreviewSink> preview_sink_;
+  ComPtr<IMFActivate> output_mirror_activation_;
   ComPtr<IMFVideoProcessorControl> output_mirror_effect_;
   bool output_mirror_pending_ = false;  // Platform queue only.
   std::atomic<bool> preview_output_mirrored_{false};

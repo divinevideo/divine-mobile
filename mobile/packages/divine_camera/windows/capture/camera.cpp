@@ -4,6 +4,7 @@
 #include <flutter/standard_method_codec.h>
 #include <mfobjects.h>
 #include <mferror.h>
+#include <mftransform.h>
 #include <objbase.h>
 #include <windows.h>
 
@@ -669,14 +670,18 @@ HRESULT Camera::ConfigureOutputMirroring() {
   hr = source->GetStreamIndexFromFriendlyName(
       static_cast<UINT32>(MF_CAPTURE_ENGINE_PREFERRED_SOURCE_STREAM_FOR_VIDEO_PREVIEW), &preview_stream);
   if (FAILED(hr)) return hr;
-  hr = CoCreateInstance(CLSID_VideoProcessorMFT, nullptr, CLSCTX_INPROC_SERVER,
-                        IID_PPV_ARGS(&output_mirror_effect_));
+  hr = MFCreateTransformActivate(&output_mirror_activation_);
+  if (FAILED(hr)) return hr;
+  hr = output_mirror_activation_->SetGUID(MFT_TRANSFORM_CLSID_Attribute,
+                                          CLSID_VideoProcessorMFT);
+  if (FAILED(hr)) return hr;
+  hr = output_mirror_activation_->ActivateObject(IID_PPV_ARGS(&output_mirror_effect_));
   if (FAILED(hr)) return hr;
   hr = output_mirror_effect_->SetMirror(MIRROR_HORIZONTAL);
   if (FAILED(hr)) return hr;
   preview_output_mirrored_.store(record_stream == preview_stream);
   output_mirror_pending_ = true;
-  hr = source->AddEffect(record_stream, output_mirror_effect_.Get());
+  hr = source->AddEffect(record_stream, output_mirror_activation_.Get());
   if (FAILED(hr)) output_mirror_pending_ = false;
   return hr;
 }
@@ -1647,6 +1652,8 @@ void Camera::DisposeInternal() {
 
   preview_sink_.Reset();
   output_mirror_effect_.Reset();
+  if (output_mirror_activation_) output_mirror_activation_->ShutdownObject();
+  output_mirror_activation_.Reset();
   base_preview_media_type_.Reset();
   base_capture_media_type_.Reset();
   dxgi_device_manager_.Reset();
