@@ -51,12 +51,12 @@ abstract class NotificationPayloadKeys {
   /// Hex pubkey of the actor — used to route follows and unresolved taps.
   static const String senderPubkey = 'senderPubkey';
 
-  /// Campaign destination type: `app_route`, `video_address` or
-  /// `creator_profile` (see [NotificationWireValues]).
+  /// Campaign destination type, one of
+  /// [NotificationWireValues.campaignTargetTypes].
   static const String tapTargetType = 'tapTargetType';
 
-  /// Campaign destination value: an absolute in-app route, a kind-34236
-  /// coordinate, or a creator's hex pubkey.
+  /// Campaign destination value: an in-app route, a kind-34236 coordinate, a
+  /// hex pubkey or a catalog id, depending on [tapTargetType].
   static const String tapTargetValue = 'tapTargetValue';
 
   /// Immutable approved campaign revision used for consented attribution.
@@ -85,13 +85,20 @@ abstract class NotificationWireValues {
   /// Campaign `tapTargetType` value for a creator's hex pubkey.
   static const String creatorProfile = 'creator_profile';
 
-  /// Campaign target types advertised at push registration. Each needs a branch
-  /// in the router (an `app_route` opens only allowlisted paths), and a test
-  /// fails when a listed type routes nowhere.
+  /// Campaign `tapTargetType` value for an announcement catalog id.
+  static const String announcement = 'announcement';
+
+  /// Campaign `tapTargetType` value for a featured-feed configuration id.
+  static const String featuredFeed = 'featured_feed';
+
+  /// Every campaign `tapTargetType` this client routes, advertised at push
+  /// registration so the service only sends targets the tap parser handles.
   static const List<String> campaignTargetTypes = [
     appRoute,
     videoAddress,
     creatorProfile,
+    announcement,
+    featuredFeed,
   ];
 }
 

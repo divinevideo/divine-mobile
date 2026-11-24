@@ -15953,6 +15953,13 @@ class AppLocalizationsTe extends AppLocalizations {
   String get updateAction => 'అప్‌డేట్ చేయండి';
 
   @override
+  String get announcementViewContest => 'పోటీని చూడండి';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'ఈ ఫీచర్ చేసిన ఫీడ్ ఇక అందుబాటులో లేదు.';
+
+  @override
   String updateNewIn(String version) {
     return '$versionలో కొత్తవి:';
   }

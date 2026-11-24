@@ -88,6 +88,7 @@ final notificationRepositoryProvider = Provider<NotificationRepository?>((ref) {
               'Announcement catalog unavailable',
               name: 'Announcements',
             );
+            return false;
           }),
     );
     ref.onDispose(() => unawaited(sessions.release(userPubkey, announcements)));

@@ -4,6 +4,8 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:app_update_repository/app_update_repository.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -17,6 +19,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/notification_helpers.dart'
     show localNotificationTapPayload;
 import 'package:openvine/services/notification_service.dart';
+import 'package:openvine/services/push_device_metadata.dart';
 import 'package:openvine/services/push_notification_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -136,6 +139,11 @@ void main() {
       notificationService: mockNotificationService,
       environmentConfig: testEnvironment,
       getToken: getToken ?? () async => token,
+      deviceMetadata: PushDeviceMetadata.resolve(
+        platform: TargetPlatform.iOS,
+        source: InstallSource.appStore,
+        appVersion: '1.2.3',
+      ),
       isCurrent: isCurrent,
       timeZoneIdentifier: timeZoneIdentifier ?? () async => null,
       timeZoneOffsetMinutes:
@@ -245,11 +253,16 @@ void main() {
           registrationCapture.captured.single as String,
         ) as Map<String, dynamic>;
         expect(registrationJson['token'], testToken);
+        expect(registrationJson['platform'], 'ios');
+        expect(registrationJson['installChannel'], 'app_store');
+        expect(registrationJson['appVersion'], '1.2.3');
         expect(registrationJson['timezone'], 'Pacific/Auckland');
         expect(registrationJson['campaignTargetTypes'], [
           'app_route',
           'video_address',
           'creator_profile',
+          'announcement',
+          'featured_feed',
         ]);
         expect(
           registrationJson['timezoneOffsetMinutes'],

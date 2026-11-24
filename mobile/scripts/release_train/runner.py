@@ -19,6 +19,7 @@ from start_ios_release import APP_ID as CM_APP_ID
 from start_ios_release import TEAM_ID as CM_TEAM_ID
 
 from release_train.allocator import reconcile
+from release_train.campaign_drafts import publish_release_drafts
 from release_train.coordinator import (
     ACTIVE,
     affects_app,
@@ -1548,10 +1549,12 @@ def main(env=os.environ):
         runtime.audit_observations(audit_snapshot, state)
         runtime.store.save(state)
         execute_plan(plan, state, snapshot, runtime.store, runtime)
+    draft_messages = publish_release_drafts(snapshot, env, levels, dry_run=dry)
     summary = [
         "Release train " + ("dry run" if dry else "tick"),
         *plan["reasons"],
         *plan["errors"],
+        *draft_messages,
     ]
     summary += [a["platform"] + ": " + a["kind"] for a in plan["actions"]]
     summary += [

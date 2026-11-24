@@ -46,15 +46,29 @@ void main() {
     ) async {
       await tester.pumpWidget(const SizedBox());
       await cacheImage(tester, 'decoded_image_cache_background_test');
+      // Merged CI suites may retain lifecycle observers from other fixtures.
+      // Exercise the cache with an observer here as well.
+      final lifecycle = AppLifecycleListener();
+      addTearDown(lifecycle.dispose);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      addTearDown(() async {
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+      });
       expect(tester.binding.hasScheduledFrame, isFalse);
 
       clearDecodedImageCache();
 
       expect(cache.currentSizeBytes, isZero);
       expect(tester.binding.hasScheduledFrame, isFalse);
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-      await tester.pump();
     });
 
     testWidgets('keeps live images tracked unless asked to drop them', (

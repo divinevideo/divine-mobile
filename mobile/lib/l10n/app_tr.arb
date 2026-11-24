@@ -5983,6 +5983,8 @@
   "updateUrgentTitle": "Önemli düzeltmeleri kaçırıyorsun",
   "updateNotNow": "Şimdi değil",
   "updateAction": "Güncelle",
+  "announcementViewContest": "Yarışmayı görüntüle",
+  "featuredFeedUnavailable": "Bu öne çıkan akış artık kullanılamıyor.",
   "updateNewIn": "{version} sürümündeki yenilikler:",
   "settingsUpdateAvailable": "Güncelleme mevcut",
   "soundUploadChooseFile": "Bir ses dosyası seç",

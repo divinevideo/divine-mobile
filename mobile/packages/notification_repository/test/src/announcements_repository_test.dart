@@ -6,6 +6,7 @@ import 'package:clock/clock.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:models/notification_item.dart';
 import 'package:notification_repository/announcements_repository.dart';
 import 'package:test/test.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -91,6 +92,195 @@ void main() {
     now = DateTime.utc(2026, 10, 23);
   });
   tearDown(() async => repository.close());
+
+  group('announcement actions', () {
+    test(
+      'parses update and contest actions while old announcements omit them',
+      () async {
+        final update = announcement()
+          ..['action'] = {
+            'type': 'update_app',
+            'platform': 'ios',
+            'channel': 'app_store',
+            'version': '1.3.0',
+          };
+        final contest = announcement(id: secondId)
+          ..['action'] = {
+            'type': 'contest',
+            'url': 'https://divine-challenges.pages.dev/contests/loop-2026',
+          };
+        create(
+          MockClient((_) async => jsonResponse(catalog([update, contest]))),
+        );
+        await repository.refresh();
+        final action = repository.items
+            .firstWhere((x) => x.announcementId == firstId)
+            .action;
+        expect(
+          action,
+          const UpdateAppAnnouncementAction(
+            platform: 'ios',
+            channel: 'app_store',
+            version: '1.3.0',
+          ),
+        );
+        expect(
+          repository.items
+              .firstWhere((x) => x.announcementId == secondId)
+              .action,
+          ContestAnnouncementAction(
+            url: Uri.parse(
+              'https://divine-challenges.pages.dev/contests/loop-2026',
+            ),
+          ),
+        );
+        await repository.markSeen([repository.items.first.id]);
+        expect(repository.items.first.action, isNotNull);
+      },
+    );
+
+    for (final action in [
+      {
+        'type': 'update_app',
+        'platform': 'android',
+        'channel': 'app_store',
+        'version': '1.3.0',
+      },
+      {
+        'type': 'update_app',
+        'platform': 'ios',
+        'channel': 'app_store',
+        'version': '01.3.0',
+      },
+      {
+        'type': 'update_app',
+        'platform': 'ios',
+        'channel': 'app_store',
+        'version': '1.3.0+4',
+      },
+      {
+        'type': 'update_app',
+        'platform': 'ios',
+        'channel': 'app_store',
+        'version': '1000000.3.0',
+      },
+      for (final url in [
+        'http://divine-challenges.pages.dev/contests/loop',
+        'https://evil.example/contests/loop',
+        'https://divine-challenges.pages.dev:443/contests/loop',
+        'https://user@divine-challenges.pages.dev/contests/loop',
+        'https://divine-challenges.pages.dev/contests/loop?next=evil',
+        'https://divine-challenges.pages.dev/contests/loop#x',
+        'https://divine-challenges.pages.dev/contests/%6coop',
+        'https://divine-challenges.pages.dev/contests/loop/more',
+      ])
+        {'type': 'contest', 'url': url},
+    ]) {
+      test(
+        'invalid action cannot replace the valid catalog: $action',
+        () async {
+          var body = catalog();
+          create(MockClient((_) async => jsonResponse(body)));
+          await repository.refresh();
+          expect(repository.items.single.action, isNull);
+          body = catalog([announcement(id: secondId)..['action'] = action]);
+          await repository.refresh();
+          expect(repository.items.single.announcementId, firstId);
+        },
+      );
+    }
+  });
+
+  group('refresh reports whether the endpoint answered', () {
+    test('with a new snapshot', () async {
+      create(MockClient((_) async => jsonResponse(catalog())));
+      expect(await repository.refresh(), isTrue);
+      expect(repository.items, hasLength(1));
+    });
+
+    test('with not modified', () async {
+      var requests = 0;
+      create(
+        MockClient((_) async {
+          if (++requests == 1) {
+            return jsonResponse(catalog(), headers: {'etag': '"one"'});
+          }
+          return http.Response('', 304);
+        }),
+      );
+      expect(await repository.refresh(), isTrue);
+      expect(await repository.refresh(), isTrue);
+      expect(requests, 2);
+    });
+
+    test('not when it fails, even though the cached catalog stays', () async {
+      create(MockClient((_) async => jsonResponse(catalog())));
+      await repository.refresh();
+      await repository.close();
+      create(MockClient((_) async => throw Exception('offline')));
+      await repository.initialize();
+      expect(repository.hasCatalog, isTrue);
+
+      expect(await repository.refresh(), isFalse);
+      expect(repository.items, hasLength(1));
+    });
+
+    test('not when it rejects the response', () async {
+      create(MockClient((_) async => http.Response('nope', 503)));
+      expect(await repository.refresh(), isFalse);
+      expect(repository.hasCatalog, isFalse);
+    });
+
+    for (final invalid in {
+      'unsupported schema': jsonEncode({
+        'schemaVersion': 999,
+        'announcements': <Object?>[],
+      }),
+      'unsupported action': catalog([
+        announcement()..['action'] = {'type': 'future_action'},
+      ]),
+    }.entries) {
+      test('not when a cold HTTP 200 has ${invalid.key}', () async {
+        create(MockClient((_) async => jsonResponse(invalid.value)));
+
+        expect(await repository.refresh(), isFalse);
+        expect(repository.hasCatalog, isFalse);
+        expect(store.catalogWrites, 0);
+      });
+
+      test('not when HTTP 200 has ${invalid.key} over a valid cache', () async {
+        var response = catalog();
+        create(MockClient((_) async => jsonResponse(response)));
+        expect(await repository.refresh(), isTrue);
+        final cached = store.catalogValue;
+        expect(cached, isNotNull);
+        expect(repository.items, hasLength(1));
+        response = invalid.value;
+
+        expect(await repository.refresh(), isFalse);
+        expect(repository.hasCatalog, isTrue);
+        expect(repository.items.single.announcementId, firstId);
+        expect(store.catalogValue, cached);
+      });
+    }
+
+    test('not when close() cuts the request off', () async {
+      final client = _HangingClient();
+      create(client);
+      final refresh = repository.refresh();
+      await pumpEventQueue();
+      expect(client.sent, isTrue);
+
+      await repository.close();
+      expect(await refresh, isFalse);
+    });
+
+    test('not after close()', () async {
+      create(MockClient((_) async => jsonResponse(catalog())));
+      await repository.close();
+      expect(await repository.refresh(), isFalse);
+    });
+  });
 
   group('initialize, refresh, markSeen, and close', () {
     test('accepts the shared Worker catalog fixture', () async {
@@ -214,6 +404,26 @@ void main() {
       await repository.refresh();
       expect(repository.items, isEmpty);
       expect(store.catalogWrites, 0);
+    });
+
+    test('an empty catalog is resolved only after a valid response', () async {
+      var requests = 0;
+      create(
+        MockClient((_) async {
+          if (++requests == 1) return http.Response('', 503);
+          return jsonResponse(catalog(const []));
+        }),
+      );
+      await repository.refresh();
+      expect(repository.hasCatalog, isFalse);
+      expect(repository.items, isEmpty);
+
+      await repository.refresh();
+      expect(repository.hasCatalog, isTrue);
+      expect(repository.items, isEmpty);
+
+      await repository.close();
+      expect(repository.hasCatalog, isFalse);
     });
 
     test(

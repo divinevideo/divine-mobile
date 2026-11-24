@@ -10,9 +10,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
+import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/repository_providers.dart';
@@ -24,6 +26,7 @@ import 'package:openvine/services/notification_helpers.dart';
 import 'package:openvine/services/notification_preferences_service.dart';
 import 'package:openvine/services/notification_service.dart';
 import 'package:openvine/services/notification_target_resolver.dart';
+import 'package:openvine/services/push_device_metadata.dart';
 import 'package:openvine/services/push_notification_service.dart';
 import 'package:openvine/services/push_notification_session_coordinator.dart';
 import 'package:openvine/utils/platform_support.dart';
@@ -107,6 +110,11 @@ final pushNotificationServiceProvider = Provider<PushNotificationService?>((
     notificationService: notificationService,
     environmentConfig: envConfig,
     getToken: firebaseMessaging.getToken,
+    deviceMetadata: PushDeviceMetadata.resolve(
+      platform: defaultTargetPlatform,
+      source: ref.watch(installSourceProvider),
+      appVersion: ref.watch(appVersionProvider),
+    ),
     isCurrent: () {
       final currentReadiness = ref.read(nostrSessionProvider);
       return currentReadiness.isReadyForActiveClient &&

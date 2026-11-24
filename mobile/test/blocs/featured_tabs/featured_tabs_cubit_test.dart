@@ -43,7 +43,9 @@ void main() {
     FeaturedTabsCubit buildCubit({bool gateAgeRestrictedContent = false}) {
       return FeaturedTabsCubit(
         repository: repository,
-        gateAgeRestrictedContent: () => gateAgeRestrictedContent,
+        audience: () => gateAgeRestrictedContent
+            ? FeaturedTabAudience.unverified
+            : FeaturedTabAudience.adult,
       );
     }
 
@@ -54,7 +56,11 @@ void main() {
       act: (cubit) => cubit.refresh(),
       expect: () => const [
         FeaturedTabsState(status: FeaturedTabsStatus.loading),
-        FeaturedTabsState(status: FeaturedTabsStatus.resolved, tab: _tab),
+        FeaturedTabsState(
+          status: FeaturedTabsStatus.resolved,
+          tab: _tab,
+          resolvedFor: FeaturedTabAudience.adult,
+        ),
       ],
     );
 
@@ -65,7 +71,10 @@ void main() {
       act: (cubit) => cubit.refresh(),
       expect: () => const [
         FeaturedTabsState(status: FeaturedTabsStatus.loading),
-        FeaturedTabsState(status: FeaturedTabsStatus.resolved),
+        FeaturedTabsState(
+          status: FeaturedTabsStatus.resolved,
+          resolvedFor: FeaturedTabAudience.adult,
+        ),
       ],
     );
 
@@ -80,10 +89,79 @@ void main() {
       },
       expect: () => const [
         FeaturedTabsState(status: FeaturedTabsStatus.loading),
-        FeaturedTabsState(status: FeaturedTabsStatus.resolved, tab: _tab),
-        FeaturedTabsState(status: FeaturedTabsStatus.loading, tab: _tab),
-        FeaturedTabsState(status: FeaturedTabsStatus.resolved),
+        FeaturedTabsState(
+          status: FeaturedTabsStatus.resolved,
+          tab: _tab,
+          resolvedFor: FeaturedTabAudience.adult,
+        ),
+        FeaturedTabsState(
+          status: FeaturedTabsStatus.loading,
+          tab: _tab,
+          resolvedFor: FeaturedTabAudience.adult,
+        ),
+        FeaturedTabsState(
+          status: FeaturedTabsStatus.resolved,
+          resolvedFor: FeaturedTabAudience.adult,
+        ),
       ],
+    );
+
+    for (final audience in [
+      FeaturedTabAudience.loading,
+      FeaturedTabAudience.failed,
+    ]) {
+      test(
+        'confirmed withdrawal stays resolved for ${audience.name}',
+        () async {
+          when(
+            () => repository.refresh(
+              gateAgeRestrictedContent: true,
+              requiredFeaturedFeedId: _tab.id,
+            ),
+          ).thenAnswer((_) async => const FeaturedTabsSnapshot());
+          final cubit = FeaturedTabsCubit(
+            repository: repository,
+            audience: () => audience,
+            requiredFeaturedFeedId: _tab.id,
+          );
+          addTearDown(cubit.close);
+
+          await cubit.refresh();
+          expect(cubit.state.status, FeaturedTabsStatus.resolved);
+          await cubit.refresh();
+          expect(cubit.state.status, FeaturedTabsStatus.resolved);
+        },
+      );
+    }
+
+    test(
+      'resolved states preserve which audience confirmed the absence',
+      () async {
+        stubSnapshot(const FeaturedTabsSnapshot());
+        final adult = buildCubit();
+        final unverified = buildCubit(gateAgeRestrictedContent: true);
+        addTearDown(adult.close);
+        addTearDown(unverified.close);
+        await adult.refresh();
+        await unverified.refresh();
+        expect(adult.state.status, FeaturedTabsStatus.resolved);
+        expect(unverified.state.status, FeaturedTabsStatus.resolved);
+        expect(adult.state, isNot(unverified.state));
+      },
+    );
+
+    blocTest<FeaturedTabsCubit, FeaturedTabsState>(
+      'a seeded confirmed absence survives an offline refresh without loading',
+      setUp: () => stubSnapshot(
+        const FeaturedTabsSnapshot(hasResolvedCatalog: false),
+      ),
+      build: buildCubit,
+      seed: () => const FeaturedTabsState(
+        status: FeaturedTabsStatus.resolved,
+        resolvedFor: FeaturedTabAudience.adult,
+      ),
+      act: (cubit) => cubit.refresh(),
+      expect: () => <FeaturedTabsState>[],
     );
 
     test('passes the current viewer age gate to the repository', () async {
@@ -96,6 +174,51 @@ void main() {
       verify(
         () => repository.refresh(gateAgeRestrictedContent: true),
       ).called(1);
+    });
+
+    test('verification failure keeps a cold campaign inconclusive', () async {
+      when(
+        () => repository.refresh(
+          gateAgeRestrictedContent: true,
+          requiredFeaturedFeedId: _tab.id,
+        ),
+      ).thenAnswer(
+        (_) async => const FeaturedTabsSnapshot(hiddenByAudience: true),
+      );
+      final cubit = FeaturedTabsCubit(
+        repository: repository,
+        audience: () => FeaturedTabAudience.failed,
+        requiredFeaturedFeedId: _tab.id,
+      );
+      addTearDown(cubit.close);
+
+      await cubit.refresh();
+
+      expect(cubit.state.tab, isNull);
+      expect(cubit.state.status, FeaturedTabsStatus.failed);
+    });
+
+    test('passes the required campaign feed on every refresh', () async {
+      when(
+        () => repository.refresh(
+          gateAgeRestrictedContent: false,
+          requiredFeaturedFeedId: 'ft_b',
+        ),
+      ).thenAnswer((_) async => const FeaturedTabsSnapshot());
+      final cubit = FeaturedTabsCubit(
+        repository: repository,
+        audience: () => FeaturedTabAudience.adult,
+        requiredFeaturedFeedId: 'ft_b',
+      );
+      addTearDown(cubit.close);
+      await cubit.refresh();
+      await cubit.refresh();
+      verify(
+        () => repository.refresh(
+          gateAgeRestrictedContent: false,
+          requiredFeaturedFeedId: 'ft_b',
+        ),
+      ).called(2);
     });
 
     test('surfaces the server poll interval on the state', () async {
@@ -151,6 +274,182 @@ void main() {
         unawaited(cubit.close());
         async.flushMicrotasks();
       });
+    });
+
+    test('clears and refreshes a campaign at its configured end', () {
+      fakeAsync((async) {
+        final start = DateTime.utc(2026, 11, 17, 12);
+        final tab = FeaturedTabConfig(
+          id: _tab.id,
+          slug: _tab.slug,
+          label: _tab.label,
+          startsAt: start,
+          endsAt: start.add(const Duration(seconds: 1)),
+          enabled: true,
+          hasContent: true,
+        );
+        when(
+          () => repository.refresh(
+            gateAgeRestrictedContent: false,
+            requiredFeaturedFeedId: tab.id,
+          ),
+        ).thenAnswer(
+          (_) async => async.elapsed < const Duration(seconds: 1)
+              ? FeaturedTabsSnapshot(tab: tab)
+              : const FeaturedTabsSnapshot(),
+        );
+        final cubit = FeaturedTabsCubit(
+          repository: repository,
+          audience: () => FeaturedTabAudience.adult,
+          requiredFeaturedFeedId: tab.id,
+          now: () => start.add(async.elapsed),
+        );
+
+        unawaited(cubit.refresh());
+        async.flushMicrotasks();
+        expect(cubit.state.tab, tab);
+
+        async.elapse(const Duration(seconds: 1));
+        expect(cubit.state.tab, isNull);
+        expect(cubit.state.status, FeaturedTabsStatus.resolved);
+        verify(
+          () => repository.refresh(
+            gateAgeRestrictedContent: false,
+            requiredFeaturedFeedId: tab.id,
+          ),
+        ).called(2);
+
+        unawaited(cubit.close());
+        async.flushMicrotasks();
+      });
+    });
+
+    test('keeps a campaign that ends beyond the one-day timer cap', () {
+      fakeAsync((async) {
+        final start = DateTime.utc(2026, 11, 17, 12);
+        final tab = FeaturedTabConfig(
+          id: _tab.id,
+          slug: _tab.slug,
+          label: _tab.label,
+          startsAt: start,
+          endsAt: start.add(const Duration(days: 2)),
+          enabled: true,
+          hasContent: true,
+        );
+        // Polling off: only the expiry timer can clear or re-arm the tab.
+        when(
+          () => repository.refresh(
+            gateAgeRestrictedContent: false,
+            requiredFeaturedFeedId: tab.id,
+          ),
+        ).thenAnswer(
+          (_) async => async.elapsed < const Duration(days: 2)
+              ? FeaturedTabsSnapshot(tab: tab, pollInterval: Duration.zero)
+              : const FeaturedTabsSnapshot(pollInterval: Duration.zero),
+        );
+        final cubit = FeaturedTabsCubit(
+          repository: repository,
+          audience: () => FeaturedTabAudience.adult,
+          requiredFeaturedFeedId: tab.id,
+          now: () => start.add(async.elapsed),
+        );
+
+        unawaited(cubit.refresh());
+        async.flushMicrotasks();
+        expect(cubit.state.tab, tab);
+        final states = <FeaturedTabsState>[];
+        final subscription = cubit.stream.listen(states.add);
+
+        async.elapse(const Duration(days: 1, minutes: 1));
+        expect(states.where((state) => state.tab == null), isEmpty);
+        expect(cubit.state.tab, tab);
+        verify(
+          () => repository.refresh(
+            gateAgeRestrictedContent: false,
+            requiredFeaturedFeedId: tab.id,
+          ),
+        ).called(1);
+
+        async.elapse(const Duration(days: 1) - const Duration(minutes: 1));
+        expect(cubit.state.tab, isNull);
+
+        unawaited(subscription.cancel());
+        unawaited(cubit.close());
+        async.flushMicrotasks();
+      });
+    });
+
+    test('keeps an expired campaign resolved when the refresh is offline', () {
+      fakeAsync((async) {
+        final start = DateTime.utc(2026, 11, 17, 12);
+        final tab = FeaturedTabConfig(
+          id: _tab.id,
+          slug: _tab.slug,
+          label: _tab.label,
+          startsAt: start,
+          endsAt: start.add(const Duration(seconds: 1)),
+          enabled: true,
+          hasContent: true,
+        );
+        when(
+          () => repository.refresh(
+            gateAgeRestrictedContent: false,
+            requiredFeaturedFeedId: tab.id,
+          ),
+        ).thenAnswer(
+          (_) async => async.elapsed < const Duration(seconds: 1)
+              ? FeaturedTabsSnapshot(tab: tab)
+              : const FeaturedTabsSnapshot(hasResolvedCatalog: false),
+        );
+        final cubit = FeaturedTabsCubit(
+          repository: repository,
+          audience: () => FeaturedTabAudience.adult,
+          requiredFeaturedFeedId: tab.id,
+          now: () => start.add(async.elapsed),
+        );
+
+        unawaited(cubit.refresh());
+        async.flushMicrotasks();
+        expect(cubit.state.tab, tab);
+
+        async.elapse(const Duration(seconds: 1));
+        expect(cubit.state.tab, isNull);
+        expect(cubit.state.status, FeaturedTabsStatus.resolved);
+        verify(
+          () => repository.refresh(
+            gateAgeRestrictedContent: false,
+            requiredFeaturedFeedId: tab.id,
+          ),
+        ).called(2);
+
+        unawaited(cubit.close());
+        async.flushMicrotasks();
+      });
+    });
+
+    test('absence confirmed for one audience does not cover another', () async {
+      var audience = FeaturedTabAudience.unverified;
+      stubSnapshot(const FeaturedTabsSnapshot());
+      final cubit = FeaturedTabsCubit(
+        repository: repository,
+        audience: () => audience,
+      );
+      addTearDown(cubit.close);
+      await cubit.refresh();
+      expect(
+        cubit.state,
+        const FeaturedTabsState(
+          status: FeaturedTabsStatus.resolved,
+          resolvedFor: FeaturedTabAudience.unverified,
+        ),
+      );
+
+      audience = FeaturedTabAudience.adult;
+      stubSnapshot(const FeaturedTabsSnapshot(hasResolvedCatalog: false));
+      await cubit.refresh();
+
+      expect(cubit.state.tab, isNull);
+      expect(cubit.state.status, FeaturedTabsStatus.failed);
     });
 
     test('stops polling once closed', () {

@@ -15600,6 +15600,13 @@ class AppLocalizationsSv extends AppLocalizations {
   String get updateAction => 'Uppdatera';
 
   @override
+  String get announcementViewContest => 'Visa tävlingen';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Det här utvalda flödet är inte längre tillgängligt.';
+
+  @override
   String updateNewIn(String version) {
     return 'Nytt i $version:';
   }

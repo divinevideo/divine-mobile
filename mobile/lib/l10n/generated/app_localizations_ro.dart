@@ -15895,6 +15895,13 @@ class AppLocalizationsRo extends AppLocalizations {
   String get updateAction => 'Actualizează';
 
   @override
+  String get announcementViewContest => 'Vezi concursul';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Acest flux recomandat nu mai este disponibil.';
+
+  @override
   String updateNewIn(String version) {
     return 'Noutăți în $version:';
   }

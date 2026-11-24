@@ -70,7 +70,7 @@ class _ExploreViewState extends ConsumerState<ExploreView>
   /// Refetches the featured configuration on foreground so a backend kill
   /// switch lands without waiting out the poll interval.
   late final AppLifecycleListener _lifecycleListener;
-  ProviderSubscription<bool>? _featuredTabAgeGateSubscription;
+  ProviderSubscription<FeaturedTabAudience>? _featuredTabAgeGateSubscription;
 
   ExploreTabsCubit get _tabs => context.read<ExploreTabsCubit>();
   ExploreTabsState get _tabsState => _tabs.state;
@@ -135,10 +135,10 @@ class _ExploreViewState extends ConsumerState<ExploreView>
         category: LogCategory.ui,
       ),
     );
-    _featuredTabAgeGateSubscription = ref.listenManual<bool>(
+    _featuredTabAgeGateSubscription = ref.listenManual(
       featuredTabAgeGateProvider,
       (previous, next) {
-        if (previous != null && previous != next) {
+        if (previous != next) {
           runDetached(
             context.read<FeaturedTabsCubit>().refresh(),
             'refresh featured tabs after age gate change',
@@ -290,6 +290,9 @@ class _ExploreViewState extends ConsumerState<ExploreView>
         nostrAppsSandboxSupported &&
         ref.watch(isFeatureEnabledProvider(FeatureFlag.integratedApps));
 
+    // The audience listener clears the cubit's tab synchronously. Rebuild in
+    // that same frame rather than waiting for its asynchronous stream event.
+    ref.watch(featuredTabAgeGateProvider);
     final featuredTab = context.select(
       (FeaturedTabsCubit cubit) => cubit.state.tab,
     );
