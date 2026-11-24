@@ -117,127 +117,129 @@ Future<void> openGuest(
 }
 
 void main() {
-  testWidgets(
-    'explicit entry plays muted and reports the rendered frame and expires',
-    (tester) async {
-      final native = _NativePlayback(tester);
-      final observed = <GuestClassicsObservation>[];
-      var loads = 0;
-      await openGuest(
-        tester,
-        (_, {required muted}) async =>
-            ++loads == 1 ? manifest([1], validFor: 3) : null,
-        observe: observed.add,
-      );
-      expect(native.volumes.last, 0);
-      expect(native.calls, contains('play'));
-      expect(observed, isEmpty);
-      await native.firstFrame();
-      expect(observed, [GuestClassicsObservation.firstFrame]);
-      expect(
-        tester.getSize(find.byType(DivineVideoPlayer)).aspectRatio,
-        closeTo(16 / 9, .001),
-      );
-      await tester.pump(const Duration(seconds: 4));
-      await tester.pump();
-      expect(find.text('Creator 1'), findsNothing);
-      expect(find.text('Welcome'), findsOneWidget);
-    },
-  );
+  group(GuestClassicsEntry, () {
+    testWidgets(
+      'explicit entry plays muted and reports the rendered frame and expires',
+      (tester) async {
+        final native = _NativePlayback(tester);
+        final observed = <GuestClassicsObservation>[];
+        var loads = 0;
+        await openGuest(
+          tester,
+          (_, {required muted}) async =>
+              ++loads == 1 ? manifest([1], validFor: 3) : null,
+          observe: observed.add,
+        );
+        expect(native.volumes.last, 0);
+        expect(native.calls, contains('play'));
+        expect(observed, isEmpty);
+        await native.firstFrame();
+        expect(observed, [GuestClassicsObservation.firstFrame]);
+        expect(
+          tester.getSize(find.byType(DivineVideoPlayer)).aspectRatio,
+          closeTo(16 / 9, .001),
+        );
+        await tester.pump(const Duration(seconds: 4));
+        await tester.pump();
+        expect(find.text('Creator 1'), findsNothing);
+        expect(find.text('Welcome'), findsOneWidget);
+      },
+    );
 
-  testWidgets(
-    'a native frame while the surface is still preparing waits for presentation',
-    (tester) async {
-      final source = Completer<void>();
-      final native = _NativePlayback(tester, holdSource: source);
-      final observed = <GuestClassicsObservation>[];
-      await openGuest(
-        tester,
-        (_, {required muted}) async => manifest([1]),
-        observe: observed.add,
-      );
-      await native.firstFrame();
-      expect(observed, isEmpty);
-      expect(find.byType(DivineVideoPlayer), findsNothing);
-      source.complete();
-      await tester.pump();
-      await tester.pump();
-      expect(observed, [GuestClassicsObservation.firstFrame]);
-      expect(find.byType(DivineVideoPlayer), findsOneWidget);
-    },
-  );
+    testWidgets(
+      'a native frame while the surface is still preparing waits for presentation',
+      (tester) async {
+        final source = Completer<void>();
+        final native = _NativePlayback(tester, holdSource: source);
+        final observed = <GuestClassicsObservation>[];
+        await openGuest(
+          tester,
+          (_, {required muted}) async => manifest([1]),
+          observe: observed.add,
+        );
+        await native.firstFrame();
+        expect(observed, isEmpty);
+        expect(find.byType(DivineVideoPlayer), findsNothing);
+        source.complete();
+        await tester.pump();
+        await tester.pump();
+        expect(observed, [GuestClassicsObservation.firstFrame]);
+        expect(find.byType(DivineVideoPlayer), findsOneWidget);
+      },
+    );
 
-  testWidgets(
-    'unmute checks audible candidates and mute silences before the request finishes',
-    (tester) async {
-      final native = _NativePlayback(tester);
-      final pending = Completer<GuestClassicsManifest?>();
-      var audible = 0;
-      var mutedLoads = 0;
-      await openGuest(tester, (_, {required muted}) async {
-        if (muted) return ++mutedLoads == 1 ? manifest([1]) : pending.future;
-        return ++audible == 1 ? null : manifest([2]);
-      });
-      await tester.tap(find.bySemanticsLabel('Unmute video'));
-      await tester.pump();
-      expect(native.volumes.last, 0);
-      expect(find.text('Creator 1'), findsOneWidget);
-      await tester.tap(find.bySemanticsLabel('Unmute video'));
-      await tester.pump();
-      await tester.pump();
-      expect(native.volumes.last, 1);
-      expect(find.text('Creator 2'), findsOneWidget);
-      await tester.tap(find.bySemanticsLabel('Mute video'));
-      await tester.pump();
-      expect(native.volumes.last, 0);
-      expect(find.text('Creator 2'), findsNothing);
-      pending.complete(null);
-      await tester.pump();
-      expect(find.text('Welcome'), findsOneWidget);
-    },
-  );
+    testWidgets(
+      'unmute checks audible candidates and mute silences before the request finishes',
+      (tester) async {
+        final native = _NativePlayback(tester);
+        final pending = Completer<GuestClassicsManifest?>();
+        var audible = 0;
+        var mutedLoads = 0;
+        await openGuest(tester, (_, {required muted}) async {
+          if (muted) return ++mutedLoads == 1 ? manifest([1]) : pending.future;
+          return ++audible == 1 ? null : manifest([2]);
+        });
+        await tester.tap(find.bySemanticsLabel('Unmute video'));
+        await tester.pump();
+        expect(native.volumes.last, 0);
+        expect(find.text('Creator 1'), findsOneWidget);
+        await tester.tap(find.bySemanticsLabel('Unmute video'));
+        await tester.pump();
+        await tester.pump();
+        expect(native.volumes.last, 1);
+        expect(find.text('Creator 2'), findsOneWidget);
+        await tester.tap(find.bySemanticsLabel('Mute video'));
+        await tester.pump();
+        expect(native.volumes.last, 0);
+        expect(find.text('Creator 2'), findsNothing);
+        pending.complete(null);
+        await tester.pump();
+        expect(find.text('Welcome'), findsOneWidget);
+      },
+    );
 
-  testWidgets(
-    'swipe, close and reopen selects and plays the first unseen page',
-    (tester) async {
-      final native = _NativePlayback(tester);
-      final observed = <GuestClassicsObservation>[];
-      await openGuest(
-        tester,
-        (_, {required muted}) async => manifest([1, 2, 3]),
-        observe: observed.add,
-      );
-      await native.firstFrame();
-      await tester.drag(find.byType(PageView), const Offset(0, -500));
-      await tester.pumpAndSettle();
-      expect(find.text('Creator 2'), findsOneWidget);
-      await native.firstFrame();
-      expect(observed, [
-        GuestClassicsObservation.firstFrame,
-        GuestClassicsObservation.swipe,
-        GuestClassicsObservation.firstFrame,
-      ]);
-      await tester.tap(find.bySemanticsLabel('Close'));
-      await tester.pump();
-      await tester.tap(find.text('Welcome'));
-      await tester.pump();
-      await tester.pump();
-      expect(
-        find.text('Creator 3'),
-        findsOneWidget,
-        reason: tester
-            .widgetList<Text>(find.byType(Text))
-            .map((t) => t.data)
-            .join('/'),
-      );
-      await native.firstFrame();
-      expect(find.byType(DivineVideoPlayer), findsOneWidget);
-      expect(observed, [
-        GuestClassicsObservation.firstFrame,
-        GuestClassicsObservation.swipe,
-        GuestClassicsObservation.firstFrame,
-        GuestClassicsObservation.firstFrame,
-      ]);
-    },
-  );
+    testWidgets(
+      'swipe, close and reopen selects and plays the first unseen page',
+      (tester) async {
+        final native = _NativePlayback(tester);
+        final observed = <GuestClassicsObservation>[];
+        await openGuest(
+          tester,
+          (_, {required muted}) async => manifest([1, 2, 3]),
+          observe: observed.add,
+        );
+        await native.firstFrame();
+        await tester.drag(find.byType(PageView), const Offset(0, -500));
+        await tester.pumpAndSettle();
+        expect(find.text('Creator 2'), findsOneWidget);
+        await native.firstFrame();
+        expect(observed, [
+          GuestClassicsObservation.firstFrame,
+          GuestClassicsObservation.swipe,
+          GuestClassicsObservation.firstFrame,
+        ]);
+        await tester.tap(find.bySemanticsLabel('Close'));
+        await tester.pump();
+        await tester.tap(find.text('Welcome'));
+        await tester.pump();
+        await tester.pump();
+        expect(
+          find.text('Creator 3'),
+          findsOneWidget,
+          reason: tester
+              .widgetList<Text>(find.byType(Text))
+              .map((t) => t.data)
+              .join('/'),
+        );
+        await native.firstFrame();
+        expect(find.byType(DivineVideoPlayer), findsOneWidget);
+        expect(observed, [
+          GuestClassicsObservation.firstFrame,
+          GuestClassicsObservation.swipe,
+          GuestClassicsObservation.firstFrame,
+          GuestClassicsObservation.firstFrame,
+        ]);
+      },
+    );
+  });
 }
