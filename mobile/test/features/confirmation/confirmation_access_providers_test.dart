@@ -1,5 +1,5 @@
-// ABOUTME: Tests for where the app reads Divine Confirmation access from, and
-// ABOUTME: the developer override that forces an answer for testing.
+// ABOUTME: Tests for the Divine Confirmation access reader and the developer
+// ABOUTME: settings that force an answer or simulate the requirement.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
