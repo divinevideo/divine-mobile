@@ -336,8 +336,7 @@ void main() {
       );
     });
 
-    test("files the tagged person's own answer with them, as it would "
-        'have in order', () async {
+    test("files Bob's answer in an unreplied 1:1 with him", () async {
       final parent = hello();
       final reply = ccBob(parent);
       final bobAnswers = message(
@@ -356,6 +355,11 @@ void main() {
         await conversations(),
         equals('1:1(alice,me)=[cc bob; hello] | 1:1(bob,me)=[bob here]'),
       );
+      final withBob = await conversationsDao.getConversation(
+        _id([_owner, _bob]),
+        ownerPubkey: _owner,
+      );
+      expect(withBob?.currentUserHasSent, isFalse);
     });
 
     test('joins the one-to-one when its parent arrives on a later '
@@ -518,31 +522,6 @@ void main() {
         ownerPubkey: _owner,
       );
       expect(withBob?.isRead, isTrue);
-    });
-
-    // It holds only what others wrote, so it stays a potential request that
-    // the follow classifier routes, not an accepted conversation (#7684).
-    test('opens a conversation the user has not written in', () async {
-      final parent = hello();
-      final reply = ccBob(parent);
-      final bobAnswers = message(
-        author: _bob,
-        pTags: [_owner, _alice],
-        content: 'bob here',
-        replyTo: reply.id,
-        createdAt: reply.createdAt + 1,
-      );
-      await deliver(bobAnswers, authorSecret: _bobSecret);
-      await deliver(reply, authorSecret: _aliceSecret);
-
-      await deliver(parent, authorSecret: _aliceSecret);
-
-      final withBob = await conversationsDao.getConversation(
-        _id([_owner, _bob]),
-        ownerPubkey: _owner,
-      );
-      expect(withBob, isNotNull);
-      expect(withBob!.currentUserHasSent, isFalse);
     });
 
     test('tells whoever is showing the room where its messages went', () async {
