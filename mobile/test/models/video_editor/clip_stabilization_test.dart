@@ -54,16 +54,38 @@ void main() {
       expect(ClipStabilization.fromJson('garbage', '/new'), isNull);
     });
 
-    test('drops sources it cannot read instead of the whole record', () {
-      final restored = ClipStabilization.fromJson({
-        'rawSourcePath': 'take.mp4',
-        'sourceDurationUs': 3000000,
-        'sourceDerivedFrom': [
+    group('sourceDerivedFrom', () {
+      ClipStabilization? restore(List<Object?> sources) =>
+          ClipStabilization.fromJson({
+            'rawSourcePath': 'take.mp4',
+            'sourceDurationUs': 3000000,
+            'sourceDerivedFrom': sources,
+          }, '/new');
+
+      test('drops sources it cannot read instead of the whole record', () {
+        final restored = restore([
           {'kind': 'video'},
-        ],
-      }, '/new');
-      expect(restored?.rawSourcePath, '/new/take.mp4');
-      expect(restored?.sourceDerivedFrom, isNull);
+        ]);
+        expect(restored?.rawSourcePath, '/new/take.mp4');
+        expect(restored?.sourceDerivedFrom, isNull);
+      });
+
+      test('drops the whole list when an entry is not a map', () {
+        final restored = restore([
+          {'path': 'rec.mp4'},
+          'garbage',
+        ]);
+        expect(restored?.rawSourcePath, '/new/take.mp4');
+        expect(restored?.sourceDerivedFrom, isNull);
+      });
+
+      test('drops the whole list when an entry has a wrongly typed field', () {
+        final restored = restore([
+          {'path': 'rec.mp4', 'recordingSha256': 42},
+        ]);
+        expect(restored?.rawSourcePath, '/new/take.mp4');
+        expect(restored?.sourceDerivedFrom, isNull);
+      });
     });
   });
 }

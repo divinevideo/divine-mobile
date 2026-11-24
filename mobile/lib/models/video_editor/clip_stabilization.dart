@@ -43,31 +43,19 @@ class ClipStabilization {
       useOriginalPath: useOriginalPath,
     );
     if (rawSourcePath == null) return null;
-    final derivedFrom = json['sourceDerivedFrom'];
-    List<C2paEditSource>? sourceDerivedFrom;
-    if (derivedFrom is List) {
-      try {
-        sourceDerivedFrom = [
-          for (final source in derivedFrom.whereType<Map<String, dynamic>>())
-            C2paEditSource.fromJson(
-              source,
-              documentsPath,
-              useOriginalPath: useOriginalPath,
-            ),
-        ];
-      } on FormatException {
-        // An unreadable source list degrades to "the footage is its own
-        // source", as the clip's own derivedFrom does.
-        sourceDerivedFrom = null;
-      }
-    }
     return ClipStabilization(
       rawSourcePath: rawSourcePath,
       windowStart: _duration(json['windowStartUs']),
       sourceDuration: _duration(json['sourceDurationUs']),
       sourceMinTrimStart: _duration(json['sourceMinTrimStartUs']),
       sourceStartOffset: _duration(json['sourceStartOffsetUs']),
-      sourceDerivedFrom: sourceDerivedFrom,
+      // An unreadable source list degrades to "the footage is its own
+      // source", as the clip's own derivedFrom does.
+      sourceDerivedFrom: C2paEditSource.listFromJson(
+        json['sourceDerivedFrom'],
+        documentsPath,
+        useOriginalPath: useOriginalPath,
+      ),
     );
   }
 
