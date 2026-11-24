@@ -9,6 +9,7 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:notification_repository/notification_repository.dart';
+import 'package:openvine/features/confirmation/confirmation_access_providers.dart';
 import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
 import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/models/known_account.dart';
@@ -598,6 +599,19 @@ void main() {
               'trust followed accounts as labelers (#6985)',
         );
       });
+
+      test(
+        'keeps the simulated Confirmation requirement across an identity '
+        'change',
+        () async {
+          // A developer setting about the verifier, the same for every account.
+          await prefs.setBool(confirmationRequirementSimulatedKey, true);
+
+          await service.clearUserSpecificData(isIdentityChange: true);
+
+          expect(prefs.getBool(confirmationRequirementSimulatedKey), isTrue);
+        },
+      );
 
       test(
         'clears the outgoing account stats projection on an identity change',

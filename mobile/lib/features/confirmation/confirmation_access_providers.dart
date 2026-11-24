@@ -105,6 +105,12 @@ final confirmationRequirementSimulatedProvider =
 
 /// Holds and persists the developer setting that simulates the requirement.
 class ConfirmationRequirementSimulatedNotifier extends Notifier<bool> {
+  /// Kept across account switches, as [confirmationRequirementSimulatedKey]
+  /// explains.
+  static const List<String> deviceScopedPrefsKeys = [
+    confirmationRequirementSimulatedKey,
+  ];
+
   @override
   bool build() =>
       ref

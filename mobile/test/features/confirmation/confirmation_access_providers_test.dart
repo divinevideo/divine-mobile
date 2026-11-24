@@ -9,7 +9,6 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -268,13 +267,5 @@ void main() {
       expect(container.read(confirmationRequirementSimulatedProvider), isFalse);
       expect(prefs.containsKey(confirmationRequirementSimulatedKey), isFalse);
     });
-
-    test(
-      'is not swept on sign-out: it is about the verifier, not the account',
-      () => expect(
-        UserDataCleanupService.userSpecificKeys,
-        isNot(contains(confirmationRequirementSimulatedKey)),
-      ),
-    );
   });
 }
