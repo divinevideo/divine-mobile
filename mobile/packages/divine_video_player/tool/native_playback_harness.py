@@ -263,21 +263,36 @@ Future<void> main() async {
     passed = true;
     if (hold != null) {
       final gate = File(hold);
+      final ready = Completer<void>();
+      final waiting = ready.future.timeout(const Duration(seconds: 30));
+      void checkGate() {
+        if (gate.existsSync() && !ready.isCompleted) ready.complete();
+      }
+
+      final watcher = gate.parent.watch().listen(
+        (_) => checkGate(),
+        onError: (Object error, StackTrace stack) {
+          if (!ready.isCompleted) ready.completeError(error, stack);
+        },
+      );
       stdout.writeln('DIVINE_PLAYBACK_READY_FOR_RELOAD');
-      if (!await gate.exists()) {
-        await gate.parent
-            .watch()
-            .firstWhere((_) => gate.existsSync())
-            .timeout(const Duration(seconds: 30));
+      try {
+        checkGate();
+        await waiting;
+      } finally {
+        await watcher.cancel();
       }
     }
   } on ProbeFailure catch (error) {
+    passed = false;
     failure = error.code;
   } on TimeoutException {
+    passed = false;
     failure = 'timeout';
   } on Object {
     // Native errors can include paths or stream metadata. Expose the fixed
     // classification only, while still failing the owned probe process.
+    passed = false;
     failure = 'native';
   } finally {
     try {
