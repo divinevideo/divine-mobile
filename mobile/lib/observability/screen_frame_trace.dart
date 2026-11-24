@@ -21,8 +21,8 @@ enum TracedScreen {
   /// The home tab's feed.
   homeFeed('home_feed'),
 
-  /// The fullscreen feed opened from a grid: Explore, a profile, search, a
-  /// hashtag, a list, a sound.
+  /// The fullscreen feed, wherever it opens: from a grid, Classics, replies
+  /// or a video link.
   fullscreenFeed('fullscreen_feed'),
 
   /// Explore's tabs and grids, without the feed opened from them.
