@@ -4293,49 +4293,15 @@ class VideosRepository {
     required List<String> preferredLanguages,
     required String? viewerCountry,
     String? seedVideoId,
-  }) {
-    if (cursor == null && seedVideoId == null) {
-      return _funnelcakeApiClient!.getRecommendations(
-        pubkey: pubkey,
-        limit: limit,
-        seed: seed,
-        preferredLanguages: preferredLanguages,
-        viewerCountry: viewerCountry,
-      );
-    }
-
-    if (cursor == null) {
-      return _funnelcakeApiClient!.getRecommendations(
-        pubkey: pubkey,
-        limit: limit,
-        seed: seed,
-        seedVideoId: seedVideoId,
-        preferredLanguages: preferredLanguages,
-        viewerCountry: viewerCountry,
-      );
-    }
-
-    if (seedVideoId == null) {
-      return _funnelcakeApiClient!.getRecommendations(
-        pubkey: pubkey,
-        limit: limit,
-        cursor: cursor,
-        seed: seed,
-        preferredLanguages: preferredLanguages,
-        viewerCountry: viewerCountry,
-      );
-    }
-
-    return _funnelcakeApiClient!.getRecommendations(
-      pubkey: pubkey,
-      limit: limit,
-      cursor: cursor,
-      seed: seed,
-      seedVideoId: seedVideoId,
-      preferredLanguages: preferredLanguages,
-      viewerCountry: viewerCountry,
-    );
-  }
+  }) => _funnelcakeApiClient!.getRecommendations(
+    pubkey: pubkey,
+    limit: limit,
+    cursor: cursor,
+    seed: seed,
+    seedVideoId: seedVideoId,
+    preferredLanguages: preferredLanguages,
+    viewerCountry: viewerCountry,
+  );
 
   Future<HomeFeedResult> _buildRecommendedVideosResult({
     required RecommendationsResponse response,

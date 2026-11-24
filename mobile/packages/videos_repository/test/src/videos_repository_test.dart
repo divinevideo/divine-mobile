@@ -15685,6 +15685,119 @@ void main() {
       );
 
       test(
+        'decrements fallback cursor when popular page timestamp does not '
+        'advance',
+        () async {
+          final newerThanCursor = _createVideoStats(
+            id: 'popular-newer-than-cursor',
+            pubkey: 'popular-pubkey',
+            dTag: 'popular-dtag',
+            videoUrl: 'https://example.com/popular-newer.mp4',
+            createdAt: 1700000600,
+          );
+
+          when(
+            () => mockFunnelcakeClient.getRecommendations(
+              seed: any(named: 'seed'),
+              seedVideoId: any(named: 'seedVideoId'),
+              pubkey: any(named: 'pubkey'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+              fallback: any(named: 'fallback'),
+              category: any(named: 'category'),
+              preferredLanguages: any(named: 'preferredLanguages'),
+              viewerCountry: any(named: 'viewerCountry'),
+            ),
+          ).thenThrow(
+            const FunnelcakeTimeoutException(
+              'https://api.divine.video/api/users/user-pubkey/recommendations',
+            ),
+          );
+          when(
+            () => mockFunnelcakeClient.getWatchingVideos(
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer((_) async => [newerThanCursor]);
+
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          final page = await repo.getRecommendedVideos(
+            userPubkey: 'user-pubkey',
+            limit: 10,
+            cursor: 'recommended-fallback:1700000500',
+          );
+          expect(page.videos.single.id, 'popular-newer-than-cursor');
+          expect(page.paginationCursor, 'recommended-fallback:1700000499');
+          expect(page.hasMore, isTrue);
+        },
+      );
+
+      test(
+        'walks fallback popular pages past seen-only batches up to '
+        'maxSeenOnlyFeedPages',
+        () async {
+          when(
+            () => mockFunnelcakeClient.getRecommendations(
+              seed: any(named: 'seed'),
+              seedVideoId: any(named: 'seedVideoId'),
+              pubkey: any(named: 'pubkey'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+              fallback: any(named: 'fallback'),
+              category: any(named: 'category'),
+              preferredLanguages: any(named: 'preferredLanguages'),
+              viewerCountry: any(named: 'viewerCountry'),
+            ),
+          ).thenThrow(
+            const FunnelcakeTimeoutException(
+              'https://api.divine.video/api/users/user-pubkey/recommendations',
+            ),
+          );
+
+          var watchingCalls = 0;
+          when(
+            () => mockFunnelcakeClient.getWatchingVideos(
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer((_) async {
+            watchingCalls++;
+            return [
+              _createVideoStats(
+                id: 'seen-popular-$watchingCalls',
+                pubkey: 'popular-pubkey-$watchingCalls',
+                dTag: 'popular-dtag-$watchingCalls',
+                videoUrl: 'https://example.com/seen-$watchingCalls.mp4',
+                createdAt: 1700001000 - watchingCalls * 100,
+              ),
+            ];
+          });
+
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+            seenVideoLookup: SeenVideoLookup(
+              wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
+                  id.startsWith('seen-popular-'),
+            ),
+          );
+
+          final result = await repo.getRecommendedVideos(
+            userPubkey: 'user-pubkey',
+            limit: 10,
+          );
+          expect(watchingCalls, equals(maxSeenOnlyFeedPages));
+          expect(result.videos, isEmpty);
+          expect(result.hasMore, isTrue);
+          expect(result.paginationCursor, startsWith('recommended-fallback:'));
+        },
+      );
+
+      test(
         'attaches fallback continuation cursor when server marks '
         'recommendations page terminal',
         () async {
