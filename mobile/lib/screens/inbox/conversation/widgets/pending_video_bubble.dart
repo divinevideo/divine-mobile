@@ -65,7 +65,9 @@ class PendingVideoBubble extends StatelessWidget {
           entry.isDraft ? l10n.libraryDraftShareFailed : l10n.dmVideoSendFailed,
       },
     };
-    final semanticsLabel = isFailed
+    final semanticsLabel = entry.isDraft
+        ? null
+        : isFailed
         ? l10n.dmPendingVideoFailedSemantics
         : isUploading
         ? l10n.dmPendingVideoSemantics(percent)
@@ -101,7 +103,7 @@ class PendingVideoBubble extends StatelessWidget {
                     // does not; in flight the label already reads it.
                     if (statusText != null)
                       ExcludeSemantics(
-                        excluding: !isFailed,
+                        excluding: !entry.isDraft && !isFailed,
                         child: _StatusText(statusText),
                       ),
                   ],
