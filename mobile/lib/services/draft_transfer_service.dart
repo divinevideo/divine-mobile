@@ -8,7 +8,9 @@ import 'dart:typed_data';
 import 'package:blurhash_service/blurhash_service.dart';
 import 'package:crypto/crypto.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/aid.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/draft_storage_service.dart';
@@ -25,7 +27,11 @@ class DraftTransferService {
   DraftTransferService({required this.documentsPath});
 
   final String documentsPath;
-  final Map<String, Future<DivineVideoDraft>> _imports = {};
+  final Map<
+    String,
+    ({Future<DivineVideoDraft> job, bool Function() stillWanted})
+  >
+  _imports = {};
 
   static const _magic = 0x44564431; // DVD1
   static const _headerBytes = 8;
@@ -201,7 +207,22 @@ class DraftTransferService {
     final digest = sha256.convert(utf8.encode('$owner:$messageId'));
     final id = 'draft_shared_$digest';
     final active = _imports[id];
-    if (active != null) return active;
+    if (active != null) {
+      try {
+        return await active.job;
+      } on Object {
+        // An import its own caller gave up on fails on its way out. A later
+        // tap that still wants the draft starts over rather than sharing it.
+        if (active.stillWanted() || !stillWanted()) rethrow;
+      }
+      return importDraft(
+        messageId: messageId,
+        senderPubkey: senderPubkey,
+        storage: storage,
+        download: download,
+        stillWanted: stillWanted,
+      );
+    }
     final job = _importDraft(
       id: id,
       senderPubkey: senderPubkey,
@@ -209,11 +230,11 @@ class DraftTransferService {
       download: download,
       stillWanted: stillWanted,
     );
-    _imports[id] = job;
+    _imports[id] = (job: job, stillWanted: stillWanted);
     try {
       return await job;
     } finally {
-      _imports.removeWhere((key, _) => key == id);
+      if (identical(_imports[id]?.job, job)) _imports.remove(id);
     }
   }
 
@@ -319,6 +340,13 @@ class DraftTransferService {
               draft.clips.length) {
         throw const FormatException('Unusable draft timeline');
       }
+      final clips = [
+        for (final clip in draft.clips) ...[clip, ?clip.secondaryCamera?.clip],
+      ];
+      if (clips.any((clip) => !_isImportedCopy(clip, senderPubkey)) ||
+          !_creditsSanitized(draft.clipSourceCredits, senderPubkey)) {
+        throw const FormatException('Unsanitized clip');
+      }
       if (!stillWanted()) throw StateError('Draft import cancelled');
       await storage.saveDraft(draft);
       return draft;
@@ -398,22 +426,29 @@ class DraftTransferService {
               ..remove('recordingSha256')
               ..remove('galleryBackup')
               ..remove('assetRecoveryAttempts');
-            if (map.containsKey('filePath') && map.containsKey('recordedAt')) {
-              result['importedSource'] = true;
-              if (senderPubkey != null) {
+            final clip = _isClipJson(map);
+            if (clip) result['importedSource'] = true;
+            if (senderPubkey != null) {
+              // Folded into sourceCredits below, so a dropped credit cannot
+              // come back through a clip's single-credit fields, and no other
+              // map keeps a credit at all.
+              _clipCreditKeys.forEach(result.remove);
+              if (clip) {
                 result['sourceCredits'] = _creditSender(
                   _clipCredits(map),
                   senderPubkey,
                 );
-                // Folded into sourceCredits above, so a dropped credit cannot
-                // come back through the clip's single-credit fields.
-                _legacyClipCreditKeys.forEach(result.remove);
               }
             }
+            // Every audio map whose paths load rebased onto the documents
+            // directory, so none reaches a file the package did not carry.
+            final draftLocalAudio = isDraftLocalAudioJson(map);
             final audioEvent =
-                map['id'] is String &&
-                map.containsKey('pubkey') &&
-                map.containsKey('createdAt');
+                draftLocalAudio ||
+                playsProcessedCopyJson(map) ||
+                (map['id'] is String &&
+                    map.containsKey('pubkey') &&
+                    map.containsKey('createdAt'));
             for (final entry in map.entries) {
               final key = entry.key;
               final value = entry.value;
@@ -427,13 +462,9 @@ class DraftTransferService {
               if (key is! String || value is! String || value.isEmpty) continue;
               final audio =
                   audioEvent && (key == 'url' || key == 'originalUrl');
-              if (audio) {
-                final uri = Uri.tryParse(value);
-                if (uri?.scheme == 'https' ||
-                    uri?.scheme == 'http' ||
-                    uri?.scheme == 'asset') {
-                  continue;
-                }
+              // A draft-local track only ever plays a file the draft carries.
+              if (audio && !draftLocalAudio && _isSoundAddress(value)) {
+                continue;
               }
               final localMedia =
                   _clipMedia.contains(key) ||
@@ -454,12 +485,33 @@ class DraftTransferService {
           })!
           as Map<String, dynamic>;
 
-  static const _legacyClipCreditKeys = [
+  /// Whether [map] is a clip [DivineVideoClip.fromJson] can restore: a file
+  /// or stop-motion stills, and when it was made under either name.
+  static bool _isClipJson(Map<Object?, Object?> map) =>
+      (map.containsKey('filePath') || map.containsKey('stopMotionFrames')) &&
+      (map.containsKey('recordedAt') || map.containsKey('createdAt'));
+
+  /// Every key a clip keeps its credits under: the list, and the single
+  /// credit of a clip saved before the list existed.
+  static const _clipCreditKeys = [
+    'sourceCredits',
     'sourceAuthorPubkey',
     'sourceEventId',
     'sourceAddressableId',
     'sourceRelayHint',
   ];
+
+  /// Whether [value] is a network or bundled sound's address, which names no
+  /// file on this device.
+  ///
+  /// Only the hierarchical form counts: `http:/voice_over_recordings/a.m4a`
+  /// parses with a scheme but loads as a local path.
+  static bool _isSoundAddress(String value) {
+    final uri = Uri.tryParse(value);
+    return uri != null &&
+        uri.hasAuthority &&
+        const {'http', 'https', 'asset'}.contains(uri.scheme);
+  }
 
   /// Every credit a clip map carries: its list, and the single credit of a
   /// clip saved before the list existed.
@@ -514,12 +566,35 @@ class DraftTransferService {
 
   /// Whether [credit] names the published video a clip was reused from by a
   /// coordinate, which names that video's author, and credits that author.
+  ///
+  /// The coordinate must be a whole video address, `<kind>:<hex>:<d>`, since
+  /// it is published as an `a` tag beside the author's `p` tag.
   static bool _namesPublishedVideo(ClipSourceCredit credit) {
-    final author = credit.inspiredByInfo?.creatorPubkey;
-    return author != null &&
-        author.isNotEmpty &&
-        pubkeysEqual(author, credit.authorPubkey);
+    final address = credit.addressableId;
+    final coordinate = address == null ? null : AId.fromString(address);
+    return coordinate != null &&
+        NIP71VideoKinds.isAddressableVideoKind(coordinate.kind) &&
+        _hexPubkey.hasMatch(coordinate.pubkey) &&
+        coordinate.dTag.isNotEmpty &&
+        pubkeysEqual(coordinate.pubkey, credit.authorPubkey);
   }
+
+  static final _hexPubkey = RegExp(r'^[0-9a-fA-F]{64}$');
+
+  /// Whether [clip] reads as footage received from [senderPubkey], with only
+  /// the credits an import keeps.
+  static bool _isImportedCopy(DivineVideoClip clip, String senderPubkey) =>
+      clip.importedSource &&
+      _creditsSanitized(clip.sourceCredits, senderPubkey);
+
+  static bool _creditsSanitized(
+    List<ClipSourceCredit> credits,
+    String senderPubkey,
+  ) => credits.every(
+    (credit) =>
+        _namesPublishedVideo(credit) ||
+        credit == ClipSourceCredit(authorPubkey: senderPubkey),
+  );
 
   /// A saved history shares identical metadata across undo steps. Restoring
   /// it makes a distinct copy per step, so the transfer limit must also cover

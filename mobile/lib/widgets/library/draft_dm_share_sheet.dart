@@ -94,8 +94,9 @@ Future<void> showDraftDmShare(
                 ref.read(draftTransferServiceProvider).readCoverBlurhash(draft),
             ownsSession: () => route?.isCurrent == true && ownsSession(),
             sendPolicy: sendPolicy,
-            isBlocked: (pubkey) =>
-                ref.read(contentBlocklistRepositoryProvider).isBlocked(pubkey),
+            isBlocked: (pubkey) => ref
+                .read(contentBlocklistRepositoryProvider)
+                .isBlocked(pubkey.toLowerCase()),
             outbox: outbox,
           ),
           child: child,

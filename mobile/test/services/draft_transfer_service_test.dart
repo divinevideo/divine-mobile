@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -613,6 +614,23 @@ void main() {
           await expectRejected(pack(manifest, media));
         });
 
+        test('a local track that names a web address', () async {
+          final (:manifest, :media) = await exported();
+          // Loads rebased onto the recipient's own voice-over folder.
+          ((manifest['project'] as Map)['selectedSound'] as Map)['url'] =
+              'https://cdn.example/voice_over_recordings/take.m4a';
+          await expectRejected(pack(manifest, media));
+        });
+
+        test('a processed copy behind a web scheme with no host', () async {
+          final (:manifest, :media) = await exported();
+          ((manifest['project'] as Map)['selectedSound'] as Map)
+            ..['id'] = 'c' * 64
+            ..['originalUrl'] = 'https://cdn.example/sound.m4a'
+            ..['url'] = 'http:/voice_over_recordings/take.m4a';
+          await expectRejected(pack(manifest, media));
+        });
+
         test('two clips that share an id', () async {
           final (:manifest, :media) = await exported();
           final clips = (manifest['project'] as Map)['clips'] as List;
@@ -691,6 +709,90 @@ void main() {
         expect(imported.clips.first.sourceCredits, const [
           ClipSourceCredit(authorPubkey: _sender),
         ]);
+      });
+
+      group('drops forged credits on a clip', () {
+        const stranger =
+            '2222222222222222222222222222222222222222222222222222222222222222';
+        final forged = [
+          const ClipSourceCredit(authorPubkey: stranger).toJson(),
+          // A coordinate with no kind still names the stranger's pubkey.
+          const ClipSourceCredit(
+            authorPubkey: stranger,
+            addressableId: ':$stranger',
+          ).toJson(),
+        ];
+
+        Future<DivineVideoDraft> importForged(
+          Map<String, dynamic> Function(List<dynamic> clips) clipOf,
+        ) async {
+          final (:manifest, :media) = await exported();
+          clipOf((manifest['project'] as Map)['clips'] as List)
+            ..['sourceCredits'] = forged
+            ..['sourceAuthorPubkey'] = stranger;
+          return transfer.importDraft(
+            messageId: '5' * 64,
+            senderPubkey: _sender,
+            storage: recipientStorage,
+            download: () async => pack(manifest, media),
+            stillWanted: () => true,
+          );
+        }
+
+        test('dated by createdAt rather than recordedAt', () async {
+          final imported = await importForged((clips) {
+            final clip = clips.first as Map<String, dynamic>;
+            return clip..['createdAt'] = clip.remove('recordedAt');
+          });
+
+          expect(imported.clips.first.importedSource, isTrue);
+          expect(imported.clips.first.sourceCredits, const [
+            ClipSourceCredit(authorPubkey: _sender),
+          ]);
+        });
+
+        test('made of stop-motion stills with no file key', () async {
+          final imported = await importForged(
+            (clips) => (clips[1] as Map<String, dynamic>)..remove('filePath'),
+          );
+
+          expect(imported.clips[1].importedSource, isTrue);
+          expect(imported.clips[1].sourceCredits, const [
+            ClipSourceCredit(authorPubkey: _sender),
+          ]);
+        });
+      });
+
+      test('starts over for a tap made while a cancelled one ends', () async {
+        final package = await transfer.exportDraft(
+          makeDraft(),
+          temporaryDirectory: outbox,
+        );
+        final firstDownload = Completer<Uint8List>();
+        var firstWanted = true;
+        final first = transfer.importDraft(
+          messageId: '6' * 64,
+          senderPubkey: _sender,
+          storage: recipientStorage,
+          download: () => firstDownload.future,
+          stillWanted: () => firstWanted,
+        );
+        final firstFailure = expectLater(first, throwsStateError);
+        await pumpEventQueue();
+        final second = transfer.importDraft(
+          messageId: '6' * 64,
+          senderPubkey: _sender,
+          storage: recipientStorage,
+          download: package.readAsBytes,
+          stillWanted: () => true,
+        );
+
+        firstWanted = false;
+        firstDownload.complete(await package.readAsBytes());
+
+        await firstFailure;
+        final imported = await second;
+        expect(await recipientStorage.getDraftById(imported.id), isNotNull);
       });
     });
     group('readCoverBlurhash', () {
