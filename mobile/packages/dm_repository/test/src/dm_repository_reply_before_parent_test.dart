@@ -520,6 +520,31 @@ void main() {
       expect(withBob?.isRead, isTrue);
     });
 
+    // It holds only what others wrote, so it stays a potential request that
+    // the follow classifier routes, not an accepted conversation (#7684).
+    test('opens a conversation the user has not written in', () async {
+      final parent = hello();
+      final reply = ccBob(parent);
+      final bobAnswers = message(
+        author: _bob,
+        pTags: [_owner, _alice],
+        content: 'bob here',
+        replyTo: reply.id,
+        createdAt: reply.createdAt + 1,
+      );
+      await deliver(bobAnswers, authorSecret: _bobSecret);
+      await deliver(reply, authorSecret: _aliceSecret);
+
+      await deliver(parent, authorSecret: _aliceSecret);
+
+      final withBob = await conversationsDao.getConversation(
+        _id([_owner, _bob]),
+        ownerPubkey: _owner,
+      );
+      expect(withBob, isNotNull);
+      expect(withBob!.currentUserHasSent, isFalse);
+    });
+
     test('tells whoever is showing the room where its messages went', () async {
       final parent = hello();
       await deliver(ccBob(parent), authorSecret: _aliceSecret);
