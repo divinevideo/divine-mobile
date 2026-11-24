@@ -2,6 +2,8 @@
 #include <ges/ges.h>
 #include <atomic>
 #include <cmath>
+#include <vector>
+#include <utility>
 
 namespace divine_media {
 namespace {
@@ -14,6 +16,57 @@ void effect(GESClip* clip, const char* description) {
       clip, GES_BASE_EFFECT(owner.get()), -1, &error);
   g_clear_error(&error);
   if (!added) throw Failure{"encoder"};
+}
+
+struct PreparedClip {
+  Object<GESUriClip> clip;
+  GstClockTime inpoint;
+  GstClockTime duration;
+  DisplayGeometry geometry;
+  guint fps_numerator;
+  guint fps_denominator;
+};
+
+PreparedClip prepare_clip(JsonObject* source, bool enable_audio) {
+  static const char* supported[] = {"inputPath", "startUs", "endUs", "volume",
+      "playbackSpeed", "reverseVideo", "frameBlending", nullptr};
+  static const char* arrays[] = {"keyframes", nullptr};
+  static const char* nulls[] = {"equalizer", "speedRamp", "transition",
+      "timelineStartUs", "transform", "chromaKey", "stabilization", nullptr};
+  validate_fields(source, supported, arrays, nulls);
+  if (number(member(source, "volume"), 1) != 1 ||
+      number(member(source, "playbackSpeed"), 1) != 1 ||
+      boolean(member(source, "reverseVideo"), false) ||
+      boolean(member(source, "frameBlending"), false)) throw Failure{"unsupported"};
+  const fs::path input = fs::u8path(text(member(source, "inputPath")));
+  if (!input.is_absolute() || !fs::is_regular_file(input)) throw Failure{"input"};
+  const double start_us = number(member(source, "startUs"), 0);
+  const double end_us = number(member(source, "endUs"), -1);
+  if (start_us < 0 || start_us > 86400000000.0 ||
+      (end_us != -1 && (end_us <= start_us || end_us > 86400000000.0))) {
+    throw Failure{"request"};
+  }
+  auto* created = ges_uri_clip_new(file_uri(input).c_str());
+  if (!created) throw Failure{"decoder"};
+  Object<GESUriClip> clip(static_cast<GESUriClip*>(g_object_ref_sink(created)));
+  if (!enable_audio) ges_clip_set_supported_formats(GES_CLIP(clip.get()), GES_TRACK_TYPE_VIDEO);
+  const GstClockTime duration = ges_timeline_element_get_duration(GES_TIMELINE_ELEMENT(clip.get()));
+  const auto start = static_cast<GstClockTime>(start_us * GST_USECOND);
+  const auto end = end_us == -1 ? duration : static_cast<GstClockTime>(end_us * GST_USECOND);
+  if (duration == GST_CLOCK_TIME_NONE || end > duration || end <= start) throw Failure{"request"};
+  auto* asset = ges_extractable_get_asset(GES_EXTRACTABLE(clip.get()));
+  GstDiscovererInfo* info = ges_uri_clip_asset_get_info(GES_URI_CLIP_ASSET(asset));
+  GList* streams = gst_discoverer_info_get_video_streams(info);
+  if (!streams) throw Failure{"decoder"};
+  auto* video = GST_DISCOVERER_VIDEO_INFO(streams->data);
+  const auto geometry = display_geometry(video);
+  const auto numerator = gst_discoverer_video_info_get_framerate_num(video);
+  const auto denominator = gst_discoverer_video_info_get_framerate_denom(video);
+  gst_discoverer_stream_info_list_free(streams);
+  if (geometry.width == 0 || geometry.height == 0 || geometry.width > 8192 || geometry.height > 8192) {
+    throw Failure{"unsupported"};
+  }
+  return {std::move(clip), start, end - start, geometry, numerator, denominator};
 }
 
 void select_encoders(bool enable_audio) {
@@ -76,26 +129,7 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
   JsonNode* clips_node = member(args, "videoClips");
   if (!clips_node || !JSON_NODE_HOLDS_ARRAY(clips_node)) throw Failure{"request"};
   JsonArray* clips = json_node_get_array(clips_node);
-  if (json_array_get_length(clips) != 1) throw Failure{"unsupported"};
-  JsonObject* source = object(json_array_get_element(clips, 0));
-  static const char* clip_supported[] = {"inputPath", "startUs", "endUs", "volume",
-      "playbackSpeed", "reverseVideo", "frameBlending", nullptr};
-  static const char* clip_arrays[] = {"keyframes", nullptr};
-  static const char* clip_nulls[] = {"equalizer", "speedRamp",
-      "transition", "timelineStartUs", "transform", "chromaKey", "stabilization", nullptr};
-  validate_fields(source, clip_supported, clip_arrays, clip_nulls);
-  if (number(member(source, "volume"), 1) != 1 ||
-      number(member(source, "playbackSpeed"), 1) != 1 ||
-      boolean(member(source, "reverseVideo"), false) ||
-      boolean(member(source, "frameBlending"), false)) throw Failure{"unsupported"};
-  const fs::path input = fs::u8path(text(member(source, "inputPath")));
-  if (!input.is_absolute() || !fs::is_regular_file(input)) throw Failure{"input"};
-  const double start_us = number(member(source, "startUs"), 0);
-  const double end_us = number(member(source, "endUs"), -1);
-  if (start_us < 0 || start_us > 86400000000.0 ||
-      (end_us != -1 && (end_us <= start_us || end_us > 86400000000.0))) {
-    throw Failure{"request"};
-  }
+  if (json_array_get_length(clips) == 0) throw Failure{"unsupported"};
   const bool has_frame_cap = !absent(member(args, "maxFrameRate"));
   const double fps = number(member(args, "maxFrameRate"), 0);
   if ((has_frame_cap && fps < 1) || fps > 240 || fps != std::floor(fps)) {
@@ -109,6 +143,14 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
   JsonNode* format = member(args, "outputFormat");
   if (!absent(format) && text(format) != "mp4") throw Failure{"unsupported"};
 
+  std::vector<PreparedClip> prepared;
+  GstClockTime total_duration = 0;
+  for (guint index = 0; index < json_array_get_length(clips); ++index) {
+    auto clip = prepare_clip(object(json_array_get_element(clips, index)), enable_audio);
+    if (total_duration >= GST_CLOCK_TIME_NONE - clip.duration) throw Failure{"request"};
+    total_duration += clip.duration;
+    prepared.push_back(std::move(clip));
+  }
   select_encoders(enable_audio);
   MuxOptions mux{boolean(member(args, "shouldOptimizeForNetworkUse"), false),
       false, (directory / "mux-media.tmp").u8string()};
@@ -122,43 +164,27 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
     ~StopPipeline() { gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL); }
   } stop{pipeline.get()};
   GESLayer* layer = ges_timeline_append_layer(timeline.get());
-  const std::string uri = file_uri(input);
-  auto* created = ges_uri_clip_new(uri.c_str());
-  if (!created) throw Failure{"decoder"};
-  Object<GESUriClip> clip(static_cast<GESUriClip*>(g_object_ref_sink(created)));
-  if (!enable_audio) ges_clip_set_supported_formats(GES_CLIP(clip.get()), GES_TRACK_TYPE_VIDEO);
-  const GstClockTime duration = ges_timeline_element_get_duration(GES_TIMELINE_ELEMENT(clip.get()));
-  const auto start = static_cast<GstClockTime>(start_us * GST_USECOND);
-  const auto end = end_us == -1 ? duration : static_cast<GstClockTime>(end_us * GST_USECOND);
-  if (duration == GST_CLOCK_TIME_NONE || end > duration || end <= start) throw Failure{"request"};
-  if (!ges_timeline_element_set_inpoint(GES_TIMELINE_ELEMENT(clip.get()), start) ||
-      !ges_timeline_element_set_duration(GES_TIMELINE_ELEMENT(clip.get()), end - start)) {
-    throw Failure{"request"};
+  // Establish one output canvas/cadence before any source joins a track.
+  const auto width = prepared.front().geometry.width;
+  const auto height = prepared.front().geometry.height;
+  guint maximum_numerator = 0, maximum_denominator = 1;
+  bool unknown_rate = false;
+  for (const auto& clip : prepared) {
+    if (clip.fps_numerator == 0 || clip.fps_denominator == 0) {
+      unknown_rate = true;
+    } else if (static_cast<guint64>(clip.fps_numerator) * maximum_denominator >
+               static_cast<guint64>(maximum_numerator) * clip.fps_denominator) {
+      maximum_numerator = clip.fps_numerator;
+      maximum_denominator = clip.fps_denominator;
+    }
   }
-  // GES snapshots frame placement when a source joins a track. Restrict the
-  // track before adding the clip; changing caps afterward leaves placement
-  // based on GES's default landscape canvas and can render portrait video black.
-  auto* asset = ges_extractable_get_asset(GES_EXTRACTABLE(clip.get()));
-  GstDiscovererInfo* info = ges_uri_clip_asset_get_info(GES_URI_CLIP_ASSET(asset));
-  GList* streams = gst_discoverer_info_get_video_streams(info);
-  if (!streams) throw Failure{"decoder"};
-  auto* video_info = GST_DISCOVERER_VIDEO_INFO(streams->data);
-  const auto geometry = display_geometry(video_info);
-  const auto width = geometry.width;
-  const auto height = geometry.height;
-  const auto source_numerator = gst_discoverer_video_info_get_framerate_num(video_info);
-  const auto source_denominator = gst_discoverer_video_info_get_framerate_denom(video_info);
-  gst_discoverer_stream_info_list_free(streams);
-  if (width == 0 || height == 0 || width > 8192 || height > 8192) throw Failure{"unsupported"};
-  if (!has_frame_cap && (source_denominator == 0 || source_numerator == 0)) {
-    throw Failure{"decoder"};
-  }
+  if (!has_frame_cap && unknown_rate) throw Failure{"decoder"};
   guint output_numerator = static_cast<guint>(fps);
   guint output_denominator = 1;
-  if (source_denominator != 0 && source_numerator != 0 &&
-      (!has_frame_cap || static_cast<double>(source_numerator) / source_denominator < fps)) {
-    output_numerator = source_numerator;
-    output_denominator = source_denominator;
+  if (maximum_numerator != 0 && (!has_frame_cap ||
+      (!unknown_rate && static_cast<double>(maximum_numerator) / maximum_denominator < fps))) {
+    output_numerator = maximum_numerator;
+    output_denominator = maximum_denominator;
   }
   const std::string restriction = "video/x-raw,pixel-aspect-ratio=1/1,width=" + std::to_string(width) +
       ",height=" + std::to_string(height) + ",framerate=" + std::to_string(output_numerator) +
@@ -176,12 +202,22 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
   }
   g_list_free_full(tracks, g_object_unref);
   if (!tracks_configured) throw Failure{"encoder"};
-  GError* error = nullptr;
-  const bool added = ges_layer_add_clip_full(layer, GES_CLIP(clip.get()), &error);
-  g_clear_error(&error);
-  if (!added) throw Failure{"decoder"};
-  if (flip_x) effect(GES_CLIP(clip.get()), "videoflip method=horizontal-flip");
-  if (flip_y) effect(GES_CLIP(clip.get()), "videoflip method=vertical-flip");
+  GstClockTime cursor = 0;
+  for (auto& source : prepared) {
+    auto* clip = GES_CLIP(source.clip.get());
+    if (!ges_timeline_element_set_start(GES_TIMELINE_ELEMENT(clip), cursor) ||
+        !ges_timeline_element_set_inpoint(GES_TIMELINE_ELEMENT(clip), source.inpoint) ||
+        !ges_timeline_element_set_duration(GES_TIMELINE_ELEMENT(clip), source.duration)) {
+      throw Failure{"request"};
+    }
+    GError* error = nullptr;
+    const bool added = ges_layer_add_clip_full(layer, clip, &error);
+    g_clear_error(&error);
+    if (!added) throw Failure{"decoder"};
+    if (flip_x) effect(clip, "videoflip method=horizontal-flip");
+    if (flip_y) effect(clip, "videoflip method=vertical-flip");
+    cursor += source.duration;
+  }
 
   if (!ges_timeline_commit_sync(timeline.get())) throw Failure{"encoder"};
   Caps container_caps(gst_caps_from_string("video/quicktime,variant=iso"));
@@ -224,7 +260,7 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
     }
     gint64 position = 0;
     if (!finished && gst_element_query_position(GST_ELEMENT(pipeline.get()), GST_FORMAT_TIME, &position)) {
-      progress(std::min(0.99, std::max(0.0, static_cast<double>(position) / static_cast<double>(end - start))));
+      progress(std::min(0.99, std::max(0.0, static_cast<double>(position) / static_cast<double>(total_duration))));
     }
   }
   gst_element_set_state(GST_ELEMENT(pipeline.get()), GST_STATE_NULL);

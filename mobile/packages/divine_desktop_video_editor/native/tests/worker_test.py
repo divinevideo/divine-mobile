@@ -122,6 +122,92 @@ class WorkerTests(unittest.TestCase):
         self.assertEqual(code, 0, events)
         self.assertIs(events[-1]['value'], True)
 
+    def test_concatenated_trimmed_segments_preserve_order_and_audio(self):
+        directory = tempfile.TemporaryDirectory(prefix='ordered input clips ')
+        self.addCleanup(directory.cleanup)
+        source = Path(directory.name) / 'moving with audio.mp4'
+        subprocess.run(['ffmpeg', '-v', 'error', '-i', str(self.moving_fixture()),
+            '-i', str(FIXTURE), '-map', '0:v', '-map', '1:a', '-c', 'copy',
+            '-shortest', str(source)], check=True)
+        other = Path(directory.name) / 'other moving with audio.mp4'
+        subprocess.run(['ffmpeg', '-v', 'error', '-i', str(source),
+            '-vf', 'negate', '-c:v', 'libx264', '-c:a', 'copy', str(other)], check=True)
+        code, events = self.invoke(args={'videoClips': [
+            {'inputPath': str(source), 'startUs': 500000, 'endUs': 1000000},
+            {'inputPath': str(other), 'startUs': 0, 'endUs': 500000},
+        ]})
+        self.assertEqual(code, 0, events)
+        output = Path(events[-1]['value']['path'])
+        probe = json.loads(subprocess.check_output(['ffprobe', '-v', 'error',
+            '-count_frames', '-show_streams', '-show_format', '-of', 'json', str(output)]))
+        video = next(s for s in probe['streams'] if s['codec_type'] == 'video')
+        audio = next(s for s in probe['streams'] if s['codec_type'] == 'audio')
+        self.assertEqual((video['width'], video['height'], video['nb_read_frames']), (128, 240, '10'))
+        self.assertEqual(audio['codec_name'], 'aac')
+        self.assertAlmostEqual(float(probe['format']['duration']), 1.0, delta=0.06)
+        pictures = [subprocess.check_output(['ffmpeg', '-v', 'error', '-ss', time,
+            '-i', str(output), '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'])
+            for time in ['0.25', '0.75']]
+        self.assertGreater(pictures[0][2], 220)
+        self.assertLess(pictures[0][0], 30)
+        self.assertLess(pictures[1][0], 30)
+        self.assertGreater(pictures[1][1], 220)
+        self.assertGreater(pictures[1][2], 220)
+        samples = subprocess.check_output(['ffmpeg', '-v', 'error', '-i', str(output),
+            '-vn', '-f', 's16le', '-ac', '1', '-ar', '16000', '-'])
+        import array
+        pcm = array.array('h', samples)
+        for start in [1600, 7200, 12800]:
+            window = pcm[start:start + 1600]
+            self.assertEqual(len(window), 1600)
+            self.assertGreater((sum(float(x) ** 2 for x in window) / len(window)) ** 0.5, 100)
+
+    def test_invalid_later_clip_does_not_leave_partial_render_output(self):
+        code, events = self.invoke(args={'videoClips': [
+            {'inputPath': str(FIXTURE)}, {'inputPath': '/missing/second.mp4'},
+        ]})
+        self.assertNotEqual(code, 0)
+        self.assertEqual(events[-1]['value'], 'input')
+        self.assertEqual(list(Path(self.directory.name).iterdir()), [])
+
+    def test_silent_then_audible_join_preserves_timing_and_common_cadence(self):
+        code, events = self.invoke(args={'videoClips': [
+            {'inputPath': str(self.moving_fixture()), 'startUs': 500000, 'endUs': 1000000},
+            {'inputPath': str(FIXTURE), 'endUs': 500000},
+        ]})
+        self.assertEqual(code, 0, events)
+        output = Path(events[-1]['value']['path'])
+        probe = json.loads(subprocess.check_output(['ffprobe', '-v', 'error',
+            '-count_frames', '-show_streams', '-show_format', '-of', 'json', str(output)]))
+        video = next(s for s in probe['streams'] if s['codec_type'] == 'video')
+        self.assertEqual(video['nb_read_frames'], '20')
+        self.assertEqual(video['r_frame_rate'], '20/1')
+        self.assertAlmostEqual(float(probe['format']['duration']), 1.0, delta=0.06)
+        samples = subprocess.check_output(['ffmpeg', '-v', 'error', '-i', str(output),
+            '-vn', '-f', 's16le', '-ac', '1', '-ar', '16000', '-'])
+        import array
+        pcm = array.array('h', samples)
+        silence = pcm[1600:3200]
+        audible = pcm[11200:12800]
+        self.assertEqual(len(silence), 1600)
+        self.assertEqual(len(audible), 1600)
+        self.assertLessEqual(max(abs(x) for x in silence), 1)
+        self.assertGreater((sum(float(x) ** 2 for x in audible) / len(audible)) ** 0.5, 100)
+
+    def test_muted_join_has_only_video_with_all_segment_frames(self):
+        code, events = self.invoke(args={'videoClips': [
+            {'inputPath': str(FIXTURE), 'endUs': 500000},
+            {'inputPath': str(FIXTURE), 'startUs': 500000, 'endUs': 1000000},
+        ], 'enableAudio': False})
+        self.assertEqual(code, 0, events)
+        output = Path(events[-1]['value']['path'])
+        streams = json.loads(subprocess.check_output(['ffprobe', '-v', 'error',
+            '-count_frames', '-show_streams', '-of', 'json', str(output)]))['streams']
+        self.assertEqual([s['codec_type'] for s in streams], ['video'])
+        self.assertEqual(streams[0]['nb_read_frames'], '20')
+        self.assertEqual((streams[0]['width'], streams[0]['height']), (128, 240))
+        self.assertGreater(self.rgb(output)[(120 * 128 + 16) * 3], 220)
+
     def test_disabled_audio_omits_audio_track_and_preserves_video(self):
         code, events = self.invoke(args={
             'videoClips': [{'inputPath': str(FIXTURE)}], 'enableAudio': False,
