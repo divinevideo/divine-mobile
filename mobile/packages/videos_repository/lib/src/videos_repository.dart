@@ -116,6 +116,7 @@ const Duration _recentRelayRefreshTimeout = Duration(seconds: 3);
 const Duration _routeRelayTimeout = Duration(seconds: 3);
 const String _popularCacheKey = 'popular';
 const String _popularLegacyBeforeCursorPrefix = 'before:';
+const String _recommendedFallbackCursorPrefix = 'recommended-fallback:';
 const String _classicsCacheKey = 'classics';
 const String _classicsOffsetCursorPrefix = 'classic-offset:';
 const Duration _classicsFirstPageCacheTtl = Duration(minutes: 15);
@@ -183,6 +184,19 @@ int? _decodeClassicsOffsetCursor(String? cursor) {
   }
 
   return int.tryParse(cursor.substring(_classicsOffsetCursorPrefix.length));
+}
+
+String _encodeRecommendedFallbackCursor(int? until) =>
+    '$_recommendedFallbackCursorPrefix${until ?? 'retry'}';
+
+({bool isFallback, int? until}) _decodeRecommendedFallbackCursor(
+  String? cursor,
+) {
+  if (cursor == null || !cursor.startsWith(_recommendedFallbackCursorPrefix)) {
+    return (isFallback: false, until: null);
+  }
+  final suffix = cursor.substring(_recommendedFallbackCursorPrefix.length);
+  return (isFallback: true, until: int.tryParse(suffix));
 }
 
 /// Cache-key suffix for the popular feed's viewer preferences.
@@ -287,6 +301,7 @@ class VideosRepository {
   final Random _random;
 
   String _recommendationSessionSeed = generateRecommendationSessionSeed();
+  String? _lastRecommendedSeedVideoId;
   String _classicBrowsingSeed = generateRecommendationSessionSeed();
   String? _classicBrowsingViewer;
   Object? _classicBrowsingContext;
@@ -3972,8 +3987,10 @@ class VideosRepository {
 
   /// Fetches discovery following an opened video, using For You for now.
   ///
-  /// An opaque [cursor] continues recommendations. A popular fallback without
-  /// a cursor is a terminal page, matching the home For You feed.
+  /// An opaque [cursor] continues recommendations. When recommendations fall
+  /// back to popular videos, a synthetic fallback cursor keeps pagination
+  /// alive so later pages retry recommendations and otherwise page popular
+  /// videos instead of stranding the viewer at a dead end.
   ///
   /// Every opened video starts its own discovery, so the first page is always
   /// fetched rather than read from the For You tab's cached first page, which
@@ -3985,12 +4002,14 @@ class VideosRepository {
     required String? userPubkey,
     int limit = _defaultLimit,
     String? cursor,
+    String? seedVideoId,
     List<String> preferredLanguages = const [],
     String? viewerCountry,
   }) => _recommendedVideos(
     userPubkey: userPubkey,
     limit: limit,
     cursor: cursor,
+    seedVideoId: seedVideoId,
     skipCache: false,
     revalidate: false,
     preferredLanguages: preferredLanguages,
@@ -4012,6 +4031,7 @@ class VideosRepository {
     int limit = _defaultLimit,
     int? until,
     String? cursor,
+    String? seedVideoId,
     bool skipCache = false,
     bool revalidate = false,
     List<String> preferredLanguages = const [],
@@ -4021,6 +4041,7 @@ class VideosRepository {
     limit: limit,
     until: until,
     cursor: cursor,
+    seedVideoId: seedVideoId,
     skipCache: skipCache,
     revalidate: revalidate,
     preferredLanguages: preferredLanguages,
@@ -4040,6 +4061,7 @@ class VideosRepository {
     required bool useFirstPageCache,
     int? until,
     String? cursor,
+    String? seedVideoId,
   }) async {
     final effectiveUserPubkey =
         userPubkey ??
@@ -4064,6 +4086,11 @@ class VideosRepository {
       }
     }
 
+    final decodedFallback = _decodeRecommendedFallbackCursor(cursor);
+    final isFallbackContinuation = decodedFallback.isFallback;
+    final effectiveUntil = isFallbackContinuation
+        ? decodedFallback.until
+        : until;
     final isFirstPage = until == null && cursor == null;
     final requestSeed = skipCache && isFirstPage
         ? generateRecommendationSessionSeed()
@@ -4075,15 +4102,24 @@ class VideosRepository {
       return _popularVideosInsteadOfRecommendations(
         reason: 'recommendations unavailable',
         limit: limit,
-        until: until,
-        skipCache: skipCache,
+        until: effectiveUntil,
+        skipCache: skipCache || isFallbackContinuation,
         revalidate: revalidate,
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
       );
     }
 
-    final recommendationCursor = cursor ?? until?.toString();
+    // Fallback continuation retries recommendations with a fresh cursor first
+    // so the feed recovers personalized ranking once a transient failure
+    // clears; if recommendations still fail or return nothing unseen, it
+    // advances into the next popular page via `effectiveUntil`.
+    final recommendationCursor = isFallbackContinuation
+        ? null
+        : (cursor ?? until?.toString());
+    final effectiveSeedVideoId =
+        seedVideoId ??
+        (isFallbackContinuation ? _lastRecommendedSeedVideoId : null);
     late final RecommendationsResponse response;
     try {
       response = await _fetchRecommendationsPage(
@@ -4091,16 +4127,25 @@ class VideosRepository {
         limit: limit,
         cursor: recommendationCursor,
         seed: requestSeed,
+        seedVideoId: effectiveSeedVideoId,
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
       );
     } on FunnelcakeException catch (e) {
-      if (recommendationCursor != null) rethrow;
+      final isInvalidCursor =
+          recommendationCursor != null &&
+          e is FunnelcakeApiException &&
+          e.statusCode == 400;
+      if (recommendationCursor != null && !isInvalidCursor) rethrow;
       return _popularVideosInsteadOfRecommendations(
-        reason: 'first page failed: $e',
+        reason: isInvalidCursor
+            ? 'cursor rejected (400): $e'
+            : isFallbackContinuation
+            ? 'recommendations retry failed: $e'
+            : 'first page failed: $e',
         limit: limit,
-        until: until,
-        skipCache: skipCache,
+        until: effectiveUntil,
+        skipCache: skipCache || isFallbackContinuation || isInvalidCursor,
         revalidate: revalidate,
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
@@ -4113,6 +4158,7 @@ class VideosRepository {
       limit: limit,
       requestSeed: requestSeed,
       recommendationCursor: recommendationCursor,
+      seedVideoId: effectiveSeedVideoId,
       preferredLanguages: preferredLanguages,
       viewerCountry: viewerCountry,
     );
@@ -4121,28 +4167,49 @@ class VideosRepository {
       return _popularVideosInsteadOfRecommendations(
         reason: 'no recommendations survived filtering',
         limit: limit,
-        until: until,
-        skipCache: skipCache,
+        until: effectiveUntil,
+        skipCache: skipCache || isFallbackContinuation,
         revalidate: revalidate,
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
       );
     }
 
+    _lastRecommendedSeedVideoId = result.videos.last.id;
     if (isFirstPage) {
       _recommendationSessionSeed = requestSeed;
     }
+
+    // Even if an older server reports a terminal page with no next cursor,
+    // keep For You paginated via a fallback continuation cursor so the viewer
+    // never hits a dead end.
+    final continuousResult =
+        (result.hasMore == true && result.paginationCursor != null)
+        ? result
+        : HomeFeedResult(
+            videos: result.videos,
+            videoListSources: result.videoListSources,
+            listOnlyVideoIds: result.listOnlyVideoIds,
+            consumedItemCount: result.consumedItemCount,
+            nextCursor: result.nextCursor,
+            paginationCursor: _encodeRecommendedFallbackCursor(effectiveUntil),
+            hasMore: true,
+            recommendationPageCount: result.recommendationPageCount,
+            followingPageCount: result.followingPageCount,
+          );
+
     if (useFirstPageCache && until == null && cursor == null) {
-      _inMemoryFeedCache?.set(cacheKey, result);
+      _inMemoryFeedCache?.set(cacheKey, continuousResult);
     }
-    return result;
+    return continuousResult;
   }
 
   /// Serves popular videos when the For You feed cannot be personalized.
   ///
-  /// The returned [HomeFeedResult] is indistinguishable from a recommendation
-  /// result at the call site, so the substitution is logged here — otherwise
-  /// nothing records that a viewer saw popular videos under the For You tab.
+  /// Returns a synthetic fallback cursor so For You stays paginated: the next
+  /// `loadMore` retries personalized recommendations first and otherwise
+  /// continues paging popular videos by timestamp instead of hitting a dead
+  /// end.
   Future<HomeFeedResult> _popularVideosInsteadOfRecommendations({
     required String reason,
     required int limit,
@@ -4157,17 +4224,65 @@ class VideosRepository {
       name: 'VideosRepository',
       category: LogCategory.video,
     );
-    final popular = await getPopularVideos(
-      limit: limit,
-      until: until,
-      // This legacy, no-variant popular call has no heavier refresh
-      // semantics, so revalidation bypasses its cache like manual refresh.
-      skipCache: skipCache || revalidate,
-      preferredLanguages: preferredLanguages,
-      viewerCountry: viewerCountry,
-    );
     await _seenVideoLookup?.ensureInitialized();
-    return HomeFeedResult(videos: _withoutSeenVideos(popular));
+
+    final collected = <VideoEvent>[];
+    final seenVideoKeys = <String>{};
+    var pageUntil = until;
+    int? nextUntil;
+    var pageCount = 0;
+
+    while (true) {
+      pageCount++;
+      final popular = await getPopularVideos(
+        limit: limit,
+        until: pageUntil,
+        // This legacy, no-variant popular call has no heavier refresh
+        // semantics, so revalidation bypasses its cache like manual refresh.
+        skipCache: skipCache || revalidate || pageUntil != null,
+        preferredLanguages: preferredLanguages,
+        viewerCountry: viewerCountry,
+      );
+      if (popular.isEmpty) {
+        nextUntil = null;
+        break;
+      }
+
+      final oldestTimestamp = popular
+          .map((video) => video.createdAt)
+          .reduce(min);
+      final candidateNextUntil =
+          pageUntil != null && oldestTimestamp >= pageUntil
+          ? pageUntil - 1
+          : oldestTimestamp - 1;
+      nextUntil = candidateNextUntil > 0 ? candidateNextUntil : null;
+
+      _appendUniqueVideos(
+        collected,
+        _withoutSeenVideos(popular),
+        seenVideoKeys: seenVideoKeys,
+      );
+
+      if (collected.isNotEmpty ||
+          _seenVideoLookup == null ||
+          pageCount >= maxSeenOnlyFeedPages ||
+          nextUntil == null) {
+        break;
+      }
+      pageUntil = nextUntil;
+    }
+
+    if (collected.isNotEmpty) {
+      _lastRecommendedSeedVideoId = collected.last.id;
+    }
+
+    return HomeFeedResult(
+      videos: collected,
+      paginationCursor: nextUntil == null
+          ? null
+          : _encodeRecommendedFallbackCursor(nextUntil),
+      hasMore: nextUntil != null,
+    );
   }
 
   Future<RecommendationsResponse> _fetchRecommendationsPage({
@@ -4177,11 +4292,34 @@ class VideosRepository {
     required String seed,
     required List<String> preferredLanguages,
     required String? viewerCountry,
+    String? seedVideoId,
   }) {
+    if (cursor == null && seedVideoId == null) {
+      return _funnelcakeApiClient!.getRecommendations(
+        pubkey: pubkey,
+        limit: limit,
+        seed: seed,
+        preferredLanguages: preferredLanguages,
+        viewerCountry: viewerCountry,
+      );
+    }
+
     if (cursor == null) {
       return _funnelcakeApiClient!.getRecommendations(
         pubkey: pubkey,
         limit: limit,
+        seed: seed,
+        seedVideoId: seedVideoId,
+        preferredLanguages: preferredLanguages,
+        viewerCountry: viewerCountry,
+      );
+    }
+
+    if (seedVideoId == null) {
+      return _funnelcakeApiClient!.getRecommendations(
+        pubkey: pubkey,
+        limit: limit,
+        cursor: cursor,
         seed: seed,
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
@@ -4193,6 +4331,7 @@ class VideosRepository {
       limit: limit,
       cursor: cursor,
       seed: seed,
+      seedVideoId: seedVideoId,
       preferredLanguages: preferredLanguages,
       viewerCountry: viewerCountry,
     );
@@ -4206,6 +4345,7 @@ class VideosRepository {
     required String? recommendationCursor,
     required List<String> preferredLanguages,
     required String? viewerCountry,
+    String? seedVideoId,
   }) async {
     await _seenVideoLookup?.ensureInitialized();
 
@@ -4245,6 +4385,7 @@ class VideosRepository {
         limit: limit,
         cursor: fetchedCursor,
         seed: requestSeed,
+        seedVideoId: seedVideoId,
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
       );

@@ -1373,7 +1373,8 @@ void main() {
         );
         expect(page, equals(maxSeenOnlyFeedPages));
         expect(result.videos.map((v) => v.id), equals(['popular-unseen']));
-        expect(result.paginationCursor, isNull);
+        expect(result.paginationCursor, startsWith('recommended-fallback:'));
+        expect(result.hasMore, isTrue);
       },
     );
   });
@@ -1533,7 +1534,8 @@ void main() {
         );
 
         expect(result.videos.map((v) => v.id), equals(['popular-new']));
-        expect(result.paginationCursor, isNull);
+        expect(result.paginationCursor, startsWith('recommended-fallback:'));
+        expect(result.hasMore, isTrue);
       },
     );
 
@@ -1586,7 +1588,8 @@ void main() {
 
         expect(page, equals(maxSeenOnlyFeedPages));
         expect(result.videos.map((v) => v.id), equals(['popular-unwatched']));
-        expect(result.paginationCursor, isNull);
+        expect(result.paginationCursor, startsWith('recommended-fallback:'));
+        expect(result.hasMore, isTrue);
       },
     );
 

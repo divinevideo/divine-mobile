@@ -1455,6 +1455,64 @@ void main() {
         expect(nearEndCalled, isFalse); // Not yet (no page change fired).
       });
 
+      testWidgets(
+        'proactively triggers onNearEnd after list updates that remain near '
+        'end',
+        (tester) async {
+          var nearEndCalls = 0;
+          final key = GlobalKey<InfiniteVideoFeedState>();
+
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: List.generate(3, (i) => _makeVideo('v$i')),
+                cache: cache,
+                onNearEnd: () => nearEndCalls++,
+                preloadGracePeriod: Duration.zero,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          expect(nearEndCalls, equals(0));
+
+          // When a short page arrives (6 videos <= default threshold 15),
+          // InfiniteVideoFeed immediately schedules onNearEnd so the next page
+          // starts loading before the viewer reaches the end.
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: List.generate(6, (i) => _makeVideo('v$i')),
+                cache: cache,
+                onNearEnd: () => nearEndCalls++,
+                preloadGracePeriod: Duration.zero,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          await tester.pump();
+          expect(nearEndCalls, equals(1));
+
+          // Rebuilding with the same length (e.g. after a failed loadMore)
+          // must not spin-loop onNearEnd.
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: List.generate(6, (i) => _makeVideo('v$i')),
+                cache: cache,
+                onNearEnd: () => nearEndCalls++,
+                preloadGracePeriod: Duration.zero,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          await tester.pump();
+          expect(nearEndCalls, equals(1));
+        },
+      );
+
       testWidgets('calls onActiveVideoChanged on page change', (tester) async {
         final activeChanges = <int>[];
         final key = GlobalKey<InfiniteVideoFeedState>();

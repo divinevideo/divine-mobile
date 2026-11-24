@@ -3198,6 +3198,7 @@ class FunnelcakeApiClient {
     String? category,
     String? cursor,
     String? seed,
+    String? seedVideoId,
     List<String> preferredLanguages = const [],
     String? viewerCountry,
   }) async {
@@ -3221,6 +3222,9 @@ class FunnelcakeApiClient {
     }
     if (seed != null && seed.isNotEmpty) {
       queryParams['seed'] = seed;
+    }
+    if (seedVideoId != null && seedVideoId.isNotEmpty) {
+      queryParams['seed_video_id'] = seedVideoId;
     }
     _addViewerPreferenceQueryParameters(
       queryParams,

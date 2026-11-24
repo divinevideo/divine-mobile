@@ -71,7 +71,7 @@ class InfiniteVideoFeed extends StatefulWidget {
     this.maxPlaybackDuration,
     this.onActiveVideoChanged,
     this.onNearEnd,
-    this.nearEndThreshold = 10,
+    this.nearEndThreshold = 15,
     this.onVideoLoopCompleted,
     this.onVideoStalled,
     this.slowLoadThreshold = const Duration(seconds: 8),
@@ -678,6 +678,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           .toList()
           .forEach(_disposeAt);
       unawaited(_onIndexChanged(_currentIndex));
+      if (widget.videos.length != oldWidget.videos.length) {
+        _scheduleNearEndCheckIfNeeded();
+      }
       return;
     }
 
@@ -723,6 +726,26 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     });
 
     unawaited(_onIndexChanged(_currentIndex));
+    if (widget.videos.length != oldWidget.videos.length) {
+      _scheduleNearEndCheckIfNeeded();
+    }
+  }
+
+  /// Requests the next page after frame commit when a list update still leaves
+  /// fewer than [InfiniteVideoFeed.nearEndThreshold] videos ahead of the
+  /// current position (e.g. a short cached window or heavily seen-filtered
+  /// page), so pagination buffers ahead before the viewer reaches the end.
+  void _scheduleNearEndCheckIfNeeded() {
+    if (widget.onNearEnd == null || widget.videos.isEmpty) return;
+    final distanceFromEnd = widget.videos.length - _currentIndex - 1;
+    if (distanceFromEnd > widget.nearEndThreshold) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.videos.isEmpty) return;
+      final remaining = widget.videos.length - _currentIndex - 1;
+      if (remaining <= widget.nearEndThreshold) {
+        widget.onNearEnd?.call();
+      }
+    });
   }
 
   String? _resolvedSourceFor(

@@ -15395,48 +15395,79 @@ void main() {
         },
       );
 
-      test('exposes popular fallback without a continuation cursor', () async {
-        final popular = _createVideoStats(
-          id: 'popular-continuation',
-          pubkey: 'popular-pubkey',
-          dTag: 'popular-dtag',
-          videoUrl: 'https://example.com/popular.mp4',
-        );
-        when(
-          () => mockFunnelcakeClient.getWatchingVideos(
-            limit: any(named: 'limit'),
-            before: any(named: 'before'),
-          ),
-        ).thenAnswer((_) async => [popular]);
-        final repo = VideosRepository(
-          nostrClient: mockNostrClient,
-          funnelcakeApiClient: mockFunnelcakeClient,
-        );
-        final result = await repo.getVideoDiscoveryPage(
-          userPubkey: null,
-          limit: 10,
-        );
-        expect(result.videos.single.id, 'popular-continuation');
-        expect(result.paginationCursor, isNull);
-        expect(result.hasMore, isNull);
-        verify(
-          () => mockFunnelcakeClient.getWatchingVideos(
+      test(
+        'exposes popular fallback with a continuation cursor and advances '
+        'pages',
+        () async {
+          final firstPopular = _createVideoStats(
+            id: 'popular-continuation-1',
+            pubkey: 'popular-pubkey',
+            dTag: 'popular-dtag-1',
+            videoUrl: 'https://example.com/popular-1.mp4',
+            createdAt: 1700000100,
+          );
+          final secondPopular = _createVideoStats(
+            id: 'popular-continuation-2',
+            pubkey: 'popular-pubkey-2',
+            dTag: 'popular-dtag-2',
+            videoUrl: 'https://example.com/popular-2.mp4',
+            createdAt: 1700000050,
+          );
+          when(
+            () => mockFunnelcakeClient.getWatchingVideos(
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer((invocation) async {
+            final before = invocation.namedArguments[#before] as int?;
+            return before == null ? [firstPopular] : [secondPopular];
+          });
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+          final firstPage = await repo.getVideoDiscoveryPage(
+            userPubkey: null,
             limit: 10,
-          ),
-        ).called(1);
-        verifyNever(
-          () => mockFunnelcakeClient.getRecommendations(
-            pubkey: any(named: 'pubkey'),
-            limit: any(named: 'limit'),
-            fallback: any(named: 'fallback'),
-            category: any(named: 'category'),
-            cursor: any(named: 'cursor'),
-            seed: any(named: 'seed'),
-            preferredLanguages: any(named: 'preferredLanguages'),
-            viewerCountry: any(named: 'viewerCountry'),
-          ),
-        );
-      });
+          );
+          expect(firstPage.videos.single.id, 'popular-continuation-1');
+          expect(firstPage.paginationCursor, isNotNull);
+          expect(firstPage.hasMore, isTrue);
+
+          final secondPage = await repo.getVideoDiscoveryPage(
+            userPubkey: null,
+            limit: 10,
+            cursor: firstPage.paginationCursor,
+          );
+          expect(secondPage.videos.single.id, 'popular-continuation-2');
+          expect(secondPage.paginationCursor, isNotNull);
+          expect(secondPage.hasMore, isTrue);
+          verify(
+            () => mockFunnelcakeClient.getWatchingVideos(
+              limit: 10,
+            ),
+          ).called(1);
+          verify(
+            () => mockFunnelcakeClient.getWatchingVideos(
+              limit: 10,
+              before: 1700000099,
+            ),
+          ).called(1);
+          verifyNever(
+            () => mockFunnelcakeClient.getRecommendations(
+              pubkey: any(named: 'pubkey'),
+              limit: any(named: 'limit'),
+              fallback: any(named: 'fallback'),
+              category: any(named: 'category'),
+              cursor: any(named: 'cursor'),
+              seed: any(named: 'seed'),
+              seedVideoId: any(named: 'seedVideoId'),
+              preferredLanguages: any(named: 'preferredLanguages'),
+              viewerCountry: any(named: 'viewerCountry'),
+            ),
+          );
+        },
+      );
     });
 
     group('getRecommendedVideos', () {
@@ -15494,6 +15525,258 @@ void main() {
           ),
         ).called(1);
       });
+
+      test(
+        'keeps For You paginated after first-page timeout and recovers '
+        'recommendations on next page',
+        () async {
+          final popular = _createVideoStats(
+            id: 'popular-after-timeout',
+            pubkey: 'popular-pubkey',
+            dTag: 'popular-dtag',
+            videoUrl: 'https://example.com/popular.mp4',
+            createdAt: 1700000200,
+          );
+          final recovered = _createVideoStats(
+            id: 'recovered-recommended',
+            pubkey: 'recommended-pubkey',
+            dTag: 'recommended-dtag',
+            videoUrl: 'https://example.com/recovered.mp4',
+          );
+
+          var recommendationCalls = 0;
+          when(
+            () => mockFunnelcakeClient.getRecommendations(
+              seed: any(named: 'seed'),
+              seedVideoId: any(named: 'seedVideoId'),
+              pubkey: any(named: 'pubkey'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+              fallback: any(named: 'fallback'),
+              category: any(named: 'category'),
+              preferredLanguages: any(named: 'preferredLanguages'),
+              viewerCountry: any(named: 'viewerCountry'),
+            ),
+          ).thenAnswer((invocation) async {
+            recommendationCalls++;
+            if (recommendationCalls == 1) {
+              throw const FunnelcakeTimeoutException(
+                'https://api.divine.video/api/users/user-pubkey/recommendations',
+              );
+            }
+            expect(invocation.namedArguments[#cursor], isNull);
+            expect(
+              invocation.namedArguments[#seedVideoId],
+              'popular-after-timeout',
+            );
+            return RecommendationsResponse(
+              videos: [recovered],
+              source: 'personalized',
+              nextCursor: 'server-cursor-2',
+              hasMore: true,
+            );
+          });
+          when(
+            () => mockFunnelcakeClient.getWatchingVideos(
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer((_) async => [popular]);
+
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          final fallbackPage = await repo.getRecommendedVideos(
+            userPubkey: 'user-pubkey',
+            limit: 10,
+          );
+          expect(fallbackPage.videos.single.id, 'popular-after-timeout');
+          expect(fallbackPage.hasMore, isTrue);
+          expect(fallbackPage.paginationCursor, isNotNull);
+
+          final recoveredPage = await repo.getRecommendedVideos(
+            userPubkey: 'user-pubkey',
+            limit: 10,
+            cursor: fallbackPage.paginationCursor,
+          );
+          expect(recoveredPage.videos.single.id, 'recovered-recommended');
+          expect(recoveredPage.paginationCursor, 'server-cursor-2');
+          expect(recoveredPage.hasMore, isTrue);
+        },
+      );
+
+      test(
+        'continues paging popular fallback when recommendations retry still '
+        'times out',
+        () async {
+          final firstPopular = _createVideoStats(
+            id: 'popular-page-1',
+            pubkey: 'popular-pubkey-1',
+            dTag: 'popular-dtag-1',
+            videoUrl: 'https://example.com/popular-1.mp4',
+            createdAt: 1700000500,
+          );
+          final secondPopular = _createVideoStats(
+            id: 'popular-page-2',
+            pubkey: 'popular-pubkey-2',
+            dTag: 'popular-dtag-2',
+            videoUrl: 'https://example.com/popular-2.mp4',
+            createdAt: 1700000300,
+          );
+
+          when(
+            () => mockFunnelcakeClient.getRecommendations(
+              seed: any(named: 'seed'),
+              seedVideoId: any(named: 'seedVideoId'),
+              pubkey: any(named: 'pubkey'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+              fallback: any(named: 'fallback'),
+              category: any(named: 'category'),
+              preferredLanguages: any(named: 'preferredLanguages'),
+              viewerCountry: any(named: 'viewerCountry'),
+            ),
+          ).thenThrow(
+            const FunnelcakeTimeoutException(
+              'https://api.divine.video/api/users/user-pubkey/recommendations',
+            ),
+          );
+          when(
+            () => mockFunnelcakeClient.getWatchingVideos(
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer((invocation) async {
+            final before = invocation.namedArguments[#before] as int?;
+            return before == null ? [firstPopular] : [secondPopular];
+          });
+
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          final page1 = await repo.getRecommendedVideos(
+            userPubkey: 'user-pubkey',
+            limit: 10,
+          );
+          expect(page1.videos.single.id, 'popular-page-1');
+          expect(page1.hasMore, isTrue);
+          expect(page1.paginationCursor, isNotNull);
+
+          final page2 = await repo.getRecommendedVideos(
+            userPubkey: 'user-pubkey',
+            limit: 10,
+            cursor: page1.paginationCursor,
+          );
+          expect(page2.videos.single.id, 'popular-page-2');
+          expect(page2.hasMore, isTrue);
+          expect(page2.paginationCursor, isNotNull);
+          expect(page2.paginationCursor, isNot(page1.paginationCursor));
+          verify(
+            () => mockFunnelcakeClient.getWatchingVideos(
+              limit: 10,
+              before: 1700000499,
+            ),
+          ).called(1);
+        },
+      );
+
+      test(
+        'attaches fallback continuation cursor when server marks '
+        'recommendations page terminal',
+        () async {
+          final terminal = _createVideoStats(
+            id: 'last-rec-video',
+            pubkey: 'rec-pubkey',
+            dTag: 'rec-dtag',
+            videoUrl: 'https://example.com/last-rec.mp4',
+          );
+          when(
+            () => mockFunnelcakeClient.getRecommendations(
+              seed: any(named: 'seed'),
+              pubkey: any(named: 'pubkey'),
+              limit: any(named: 'limit'),
+              fallback: any(named: 'fallback'),
+              category: any(named: 'category'),
+              preferredLanguages: any(named: 'preferredLanguages'),
+              viewerCountry: any(named: 'viewerCountry'),
+            ),
+          ).thenAnswer(
+            (_) async => RecommendationsResponse(
+              videos: [terminal],
+              source: 'personalized',
+            ),
+          );
+
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          final result = await repo.getRecommendedVideos(
+            userPubkey: 'user-pubkey',
+            limit: 10,
+          );
+          expect(result.videos.single.id, 'last-rec-video');
+          expect(result.hasMore, isTrue);
+          expect(result.paginationCursor, isNotNull);
+        },
+      );
+
+      test(
+        'recovers via popular fallback when server rejects cursor with 400',
+        () async {
+          final popular = _createVideoStats(
+            id: 'popular-after-400',
+            pubkey: 'popular-pubkey',
+            dTag: 'popular-dtag',
+            videoUrl: 'https://example.com/popular-400.mp4',
+            createdAt: 1700000600,
+          );
+          when(
+            () => mockFunnelcakeClient.getRecommendations(
+              seed: any(named: 'seed'),
+              pubkey: any(named: 'pubkey'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+              fallback: any(named: 'fallback'),
+              category: any(named: 'category'),
+              preferredLanguages: any(named: 'preferredLanguages'),
+              viewerCountry: any(named: 'viewerCountry'),
+            ),
+          ).thenThrow(
+            const FunnelcakeApiException(
+              message: 'Invalid cursor',
+              statusCode: 400,
+              url:
+                  'https://api.divine.video/api/users/user-pubkey/recommendations',
+            ),
+          );
+          when(
+            () => mockFunnelcakeClient.getWatchingVideos(
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer((_) async => [popular]);
+
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          final result = await repo.getRecommendedVideos(
+            userPubkey: 'user-pubkey',
+            limit: 10,
+            cursor: 'stale-cursor',
+          );
+          expect(result.videos.single.id, 'popular-after-400');
+          expect(result.hasMore, isTrue);
+          expect(result.paginationCursor, isNotNull);
+        },
+      );
 
       test(
         'drops recommendations the viewer has seen',
