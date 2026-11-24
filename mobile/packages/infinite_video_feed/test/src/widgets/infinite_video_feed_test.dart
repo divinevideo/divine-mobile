@@ -2958,7 +2958,8 @@ void main() {
         });
 
         testWidgets(
-          'does not report an abandoned session when returning to a failed video',
+          'does not report an abandoned session when returning to a failed '
+          'video',
           (tester) async {
             await start(tester);
             harness.setClipsFailures[0] = <Exception>[

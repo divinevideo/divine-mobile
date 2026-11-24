@@ -467,8 +467,9 @@ void main() {
           push(async, controller, _buffering);
           async.elapse(const Duration(milliseconds: 200));
           unawaited(controller.dispose());
-          async.flushMicrotasks();
-          async.elapse(const Duration(milliseconds: 1000));
+          async
+            ..flushMicrotasks()
+            ..elapse(const Duration(milliseconds: 1000));
 
           final metric = timer.end(
             FeedPlaybackSessionEnd.swipe,
