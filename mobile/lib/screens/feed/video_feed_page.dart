@@ -194,8 +194,8 @@ class VideoFeedPage extends ConsumerWidget {
         child: VideoFeedView(initialIndex: initialIndex),
       ),
     );
-    // Above the keyed providers, so a filter or account change does not
-    // split the visit.
+    // Above the keyed providers, so a filter change, which replaces the
+    // feed's blocs, does not split the visit.
     return ScreenFrameTraceScope(screen: .homeFeed, child: feed);
   }
 }
