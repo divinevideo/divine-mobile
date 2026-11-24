@@ -104,6 +104,65 @@ void main() {
       expect(feedPage('comedy'), findsOneWidget);
     });
 
+    testWidgets('drops a feed asked for from a page no longer on top', (
+      tester,
+    ) async {
+      await pumpRouter(tester);
+      openHashtagFeed(homeContext, 'funny', logName: 'test');
+      await tester.pumpAndSettle();
+      expect(feedPage('funny'), findsOneWidget);
+
+      openHashtagFeed(homeContext, 'comedy', logName: 'test');
+      await tester.pumpAndSettle();
+
+      expect(feedPage('comedy'), findsNothing);
+    });
+
+    testWidgets('drops a feed asked for from a shell branch the feed covers', (
+      tester,
+    ) async {
+      final rootKey = GlobalKey<NavigatorState>();
+      final router = GoRouter(
+        navigatorKey: rootKey,
+        routes: [
+          ShellRoute(
+            builder: (context, state, child) => Scaffold(body: child),
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (context, state) {
+                  homeContext = context;
+                  return const Text('home');
+                },
+              ),
+            ],
+          ),
+          GoRoute(
+            path: HashtagScreenRouter.path,
+            parentNavigatorKey: rootKey,
+            builder: (context, state) =>
+                Scaffold(body: Text('feed ${state.pathParameters['tag']}')),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MaterialApp.router(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
+      );
+      openHashtagFeed(homeContext, 'funny', logName: 'test');
+      await tester.pumpAndSettle();
+      expect(feedPage('funny'), findsOneWidget);
+
+      openHashtagFeed(homeContext, 'comedy', logName: 'test');
+      await tester.pumpAndSettle();
+
+      expect(feedPage('comedy'), findsNothing);
+    });
+
     // On a still screen nothing else draws a frame, so the gate has to ask
     // for the one that reopens it.
     testWidgets('reopens after one frame even when the push draws nothing', (

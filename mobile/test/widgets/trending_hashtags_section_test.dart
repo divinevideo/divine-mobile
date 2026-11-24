@@ -271,6 +271,31 @@ void main() {
         }),
       );
 
+      // A tap belongs to the widget its finger went down on, so a finger that
+      // landed before the feed was drawn still lifts onto the chip.
+      testWidgets(
+        'a second finger lifted after the feed is drawn opens no second feed',
+        (tester) async {
+          await pumpRow(tester, const ['funny']);
+          final chip = tester.getCenter(find.text('#funny'));
+
+          await tester.tap(find.text('#funny'));
+          final second = await tester.startGesture(chip);
+          await tester.pump();
+          await second.up();
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text('opened funny', skipOffstage: false),
+            findsOneWidget,
+          );
+        },
+        variant: const TargetPlatformVariant({
+          TargetPlatform.android,
+          TargetPlatform.iOS,
+        }),
+      );
+
       testWidgets(
         'a tap on another chip in the same frame is dropped',
         (tester) async {

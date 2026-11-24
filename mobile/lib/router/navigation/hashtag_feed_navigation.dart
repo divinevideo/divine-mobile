@@ -12,10 +12,10 @@ import 'package:unified_logger/unified_logger.dart';
 final Expando<bool> _openedThisFrame = Expando<bool>('openHashtagFeed');
 
 /// Pushes the feed for [tag], unless [context]'s router already opened a
-/// hashtag feed since the last frame.
+/// hashtag feed since the last frame or [context]'s page is no longer on top.
 ///
 /// A go_router push lands at once, but its page takes taps only from the next
-/// frame, so a second tap before then would stack another feed (#9980).
+/// frame, and a finger already down on the link still lifts onto it (#9980).
 ///
 /// A failed push is logged under [logName] as "Failed to [description]".
 void openHashtagFeed(
@@ -26,6 +26,7 @@ void openHashtagFeed(
 }) {
   final router = GoRouter.of(context);
   if (_openedThisFrame[router] ?? false) return;
+  if (!_isOnTop(context)) return;
   _openedThisFrame[router] = true;
   SchedulerBinding.instance
     ..addPostFrameCallback((_) => _openedThisFrame[router] = null)
@@ -36,4 +37,16 @@ void openHashtagFeed(
     logName: logName,
     category: LogCategory.ui,
   );
+}
+
+/// Whether [context]'s page, and each page holding its navigator, is on top.
+bool _isOnTop(BuildContext context) {
+  for (
+    BuildContext? current = context;
+    current != null;
+    current = current.findAncestorStateOfType<NavigatorState>()?.context
+  ) {
+    if (ModalRoute.isCurrentOf(current) == false) return false;
+  }
+  return true;
 }
