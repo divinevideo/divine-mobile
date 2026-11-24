@@ -17,8 +17,8 @@ const soundEventKind = 1063;
 /// `AudioEvent.fromNostrEvent` so the two cannot drift apart.
 ///
 /// [pubkey] may be empty: the signer fills it in. The event never carries an
-/// `a` tag, which would make it a video's sound, nor `divine_sound`, which
-/// only the app's shipped sounds have.
+/// `a` tag, which would make it a video's sound. It carries `divine_sound`
+/// only for a sound the app ships ([SoundCandidate.divineSoundId]).
 Map<String, Object?> buildUnsignedSoundEvent({
   required SoundCandidate candidate,
   required ImportRecord record,
@@ -66,6 +66,8 @@ Map<String, Object?> buildUnsignedSoundEvent({
         ['k', 'isrc'],
       ],
       if (summary != null) ['summary', summary],
+      if (candidate.divineSoundId case final shippedId?)
+        ['divine_sound', shippedId],
       ['alt', 'Sound: ${candidate.title}'],
     ],
     'content': soundCreditContent(candidate, changes: record.changes),

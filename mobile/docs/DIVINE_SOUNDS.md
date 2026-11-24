@@ -1,6 +1,6 @@
 # Divine's own sounds
 
-Divine ships a library of sounds with the app (`assets/sounds/sounds_manifest.json`). This document describes how those sounds, and any Divine adds later, are published to the network, and what the app does with them. The app side is in place; nothing has been published yet.
+Divine ships a library of sounds with the app (`assets/sounds/sounds_manifest.json`). This document describes how those sounds, and any Divine adds later, are published to the network, and what the app does with them. The app side is in place; nothing has been published yet. The 22 shipped sounds whose licence allows it go into the imported library instead (see [Sources](#sources)).
 
 ## Why publish them
 
@@ -77,7 +77,10 @@ Only sources whose terms allow publishing the sounds as a library:
 
 - CC0 effects from `lavenderdotpet/CC0-Public-Domain-Sounds`, only from packs whose own licence file names the original author: Kenney (`kenney_*`, `sci-fi-sounds`), Ben Burnes (`BB_*`, `bb - *`, `Micro Pack - *`), The Motion Monkey (`MMRetroArcadeSoundsPack1_0_5`) and Team Forbidden (`warfork-cc0`, without its trailer voice-overs). Folders without a licence file are left out. `tools/sound_import/cc0_packs.dart` lists the packs, their credits and kinds.
 - Music by Kevin MacLeod from incompetech (`pieces.json`), CC BY 4.0. Its credit is the one incompetech asks for: the title, "Kevin MacLeod (incompetech.com)", "Licensed under Creative Commons: By Attribution 4.0 License" and the licence link.
-- Not Freesound, Pixabay or the Sonniss bundles: their terms forbid this use.
+- The app's own sounds (`assets/sounds/sounds_manifest.json`, read at the revision `appSoundsCommit` in `tools/sound_import/app_sounds.dart` pins) that carry CC0, CC BY 4.0 or CC BY 3.0 and name their Freesound page: 22 of the 91. Each is credited to its Freesound user and carries the `divine_sound` tag with its manifest id. The others have no licence or an unknown one and stay in the app only.
+- Not Freesound as a source, nor Pixabay or the Sonniss bundles. Freesound's API terms forbid copying its database, and the others' terms forbid this use. The app's own Freesound sounds above are single files, shared under their own licences.
+
+The app ties a published sound to the file it ships only when a Divine sound account signed it (`linkDivineSounds`). Until it also ties the library's, each of those 22 shows twice in the picker: as the shipped sound and as the library's. Once they are published, their event ids can go into the manifest so the shipped sounds reference them.
 
 The CC0 catalog tree and all audio/source URLs are pinned to the verified
 revision `f2b6264f9ab89fabc266914c3654685d68c5a39b`, not upstream `main`.
@@ -113,7 +116,7 @@ dart run tools/import_free_sounds.dart upload --work-dir <dir> --blossom <server
 dart run tools/import_free_sounds.dart publish --work-dir <dir> --relay <url> --expect-pubkey <hex> --dry-run
 ```
 
-1. `catalog` reads the two listings; nothing is downloaded.
+1. `catalog` reads the three listings (`--source cc0`, `incompetech` or `app` reads one); nothing is downloaded.
 2. `prepare` downloads, one file every two seconds, and uses ffmpeg to trim edge silence (below -60 dBFS, keeping 50 ms before and 200 ms after the sound), bring the sound to -16 LUFS without lifting its true peak above -1.5 dBTP, and encode AAC (192 kbps for music, 128 kbps otherwise; mono stays mono). A silent file is rejected. It prepares 20 per run unless `--limit` or `--all` says otherwise: the full sources are about 12.5 GB from incompetech plus the CC0 packs, so a full run needs the maintainers' go and runs once.
 3. `events` writes the unsigned events to `events.jsonl`. A Blossom URL is the server and the file's SHA-256, so the events can be built before the upload. `--created-at` is the newest timestamp: each subsequent unique output in catalog order is one second older. Duplicate outputs consume no timestamp. This allows `until`/`limit` relay pagination to reach the entire import. A base too small to keep every timestamp at or after the Unix epoch is rejected without replacing the events file. The base decides where the import lands in New, which lists sounds newest first: a base of now puts the whole import ahead of every community sound until newer ones push it down, and a base in the past files it among the sounds of that time. Repeating with the same catalog, state and base produces the same events.
 4. `upload` asks the server for each file and uploads the missing ones with a BUD-02 authorization signed by the key in `SOUND_IMPORT_UPLOAD_NSEC`. Divine's own media servers need `--confirm-production`. Staging builds use the production media server too, so trying the library on staging needs that go as well.

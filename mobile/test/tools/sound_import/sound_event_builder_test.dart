@@ -97,6 +97,24 @@ void main() {
       expect(event['pubkey'], isEmpty);
     });
 
+    test("names the app's shipped sound it stands for", () {
+      final candidate = SoundCandidate.fromJson({
+        ..._musicCandidate().toJson(),
+        'divineSoundId': 'freesound_yay',
+      });
+
+      final sound = _parse(
+        buildUnsignedSoundEvent(
+          candidate: candidate,
+          record: _prepared(),
+          blossomBase: 'https://media.example',
+          createdAt: 1700000000,
+        ),
+      );
+
+      expect(sound.divineSoundId, equals('freesound_yay'));
+    });
+
     test('carries the ISRC as a NIP-73 external content id', () {
       final tags =
           buildUnsignedSoundEvent(
