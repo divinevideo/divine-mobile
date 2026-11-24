@@ -16,8 +16,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -219,6 +217,14 @@ void main() {
 
     when(() => profileRepository.isVanished(any())).thenReturn(false);
     when(
+      () => profileRepository.fetchRawProfileForDisplay(
+        pubkey: any(named: 'pubkey'),
+      ),
+    ).thenAnswer(
+      (invocation) async =>
+          profileFor(invocation.namedArguments[#pubkey] as String),
+    );
+    when(
       () => profileRepository.getCachedProfile(pubkey: any(named: 'pubkey')),
     ).thenAnswer((_) async => null);
     when(
@@ -277,12 +283,6 @@ void main() {
     repostsRepositoryProvider.overrideWithValue(repostsRepository),
     commentsRepositoryProvider.overrideWithValue(commentsRepository),
     isDmRestrictedProvider.overrideWith((ref) => false),
-    isFeatureEnabledProvider(
-      FeatureFlag.videoReplies,
-    ).overrideWith((ref) => false),
-    isFeatureEnabledProvider(
-      FeatureFlag.profileMonetizationLinks,
-    ).overrideWith((ref) => false),
   ];
 
   /// The routes every scenario below needs: the two shapes of the in-shell

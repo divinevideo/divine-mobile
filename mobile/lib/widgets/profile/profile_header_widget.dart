@@ -25,8 +25,6 @@ import 'package:openvine/blocs/supporter/supporter_cubit.dart';
 import 'package:openvine/blocs/supporter/supporter_state.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/monetization/monetization_analytics.dart';
 import 'package:openvine/features/monetization/monetization_storefront_policy.dart';
 import 'package:openvine/features/people_lists/view/people_list_membership_indicator.dart';
@@ -702,8 +700,7 @@ class _SessionExpiredPromptTriggerState
 
 /// Centered tip/support pill below the bio.
 ///
-/// Renders nothing when the profile has no storefront-eligible links or the
-/// monetization flag is off.
+/// Renders nothing when the profile has no storefront-eligible links.
 class _ProfileSupportButton extends ConsumerWidget {
   const _ProfileSupportButton({required this.links});
 
@@ -711,12 +708,8 @@ class _ProfileSupportButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final enabled = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.profileMonetizationLinks),
-    );
-
     return _ProfileHeaderReveal(
-      child: links.isEmpty || !enabled
+      child: links.isEmpty
           ? null
           : Padding(
               padding: const EdgeInsets.only(top: 8),

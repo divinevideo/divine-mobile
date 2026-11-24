@@ -16,7 +16,6 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/locale/locale_cubit.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/screens/feature_flag_screen.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -727,32 +726,18 @@ void main() {
         });
       }
 
-      testWidgets('monetization links stay open while the flag is on', (
+      testWidgets('monetization links stay open without feature flags', (
         tester,
       ) async {
         final context = await _scopedContext(tester, [
-          featureFlagStateProvider.overrideWithValue(const {
-            FeatureFlag.profileMonetizationLinks: true,
-          }),
+          featureFlagServiceProvider.overrideWith(
+            (ref) => throw StateError('feature flags must not be read'),
+          ),
         ]);
 
         expect(
           _redirect(MonetizationLinksSettingsScreen.path, context),
           isNull,
-        );
-      });
-
-      testWidgets('monetization links send the viewer to Settings while the '
-          'flag is off', (tester) async {
-        final context = await _scopedContext(tester, [
-          featureFlagStateProvider.overrideWithValue(const {
-            FeatureFlag.profileMonetizationLinks: false,
-          }),
-        ]);
-
-        expect(
-          _redirect(MonetizationLinksSettingsScreen.path, context),
-          SettingsScreen.path,
         );
       });
 

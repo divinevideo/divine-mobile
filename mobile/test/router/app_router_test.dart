@@ -13,8 +13,6 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -512,35 +510,6 @@ void main() {
 
       expect(container.read(supporterApiConfiguredProvider), isTrue);
       expect(supporterRedirectIfUnavailable(container), isNull);
-    });
-
-    test('monetization settings route redirects when flag is off', () {
-      final container = ProviderContainer(
-        overrides: [
-          featureFlagStateProvider.overrideWithValue(const {
-            FeatureFlag.profileMonetizationLinks: false,
-          }),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      expect(
-        monetizationLinksRedirectIfDisabled(container),
-        SettingsScreen.path,
-      );
-    });
-
-    test('monetization settings route stays available when flag is on', () {
-      final container = ProviderContainer(
-        overrides: [
-          featureFlagStateProvider.overrideWithValue(const {
-            FeatureFlag.profileMonetizationLinks: true,
-          }),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      expect(monetizationLinksRedirectIfDisabled(container), isNull);
     });
   });
 

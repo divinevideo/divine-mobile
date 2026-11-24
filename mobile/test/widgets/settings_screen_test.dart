@@ -36,6 +36,7 @@ import 'package:openvine/screens/apps/apps_permissions_screen.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/developer_options_screen.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
+import 'package:openvine/screens/settings/monetization_links_settings_screen.dart';
 import 'package:openvine/screens/settings/settings_categories_screen.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
@@ -753,6 +754,66 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(() => mockGoRouter.push(BadgesScreen.path)).called(1);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
+
+    testWidgets('tapping Creator Support opens the support links settings', (
+      tester,
+    ) async {
+      when(() => mockAuthService.isRegistered).thenReturn(false);
+      when(() => mockAuthService.userRelays).thenReturn([]);
+      final mockGoRouter = MockGoRouter();
+      when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
+
+      await tester.pumpWidget(
+        buildSubject(
+          goRouter: mockGoRouter,
+          child: const CreatingSettingsScreen(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final scrollable = find.byType(Scrollable);
+      await scrollUntilTappable(
+        tester,
+        find.text(l10n.monetizationSettingsTitle),
+        200,
+        scrollable: scrollable,
+      );
+      await tester.tap(find.text(l10n.monetizationSettingsTitle));
+      await tester.pumpAndSettle();
+
+      verify(
+        () => mockGoRouter.push(MonetizationLinksSettingsScreen.path),
+      ).called(1);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
+
+    testWidgets('hides Creator Support when signed out', (tester) async {
+      when(() => mockAuthService.isRegistered).thenReturn(false);
+      when(() => mockAuthService.userRelays).thenReturn([]);
+
+      await tester.pumpWidget(
+        buildSubject(
+          authState: AuthState.unauthenticated,
+          child: const CreatingSettingsScreen(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final scrollable = find.byType(Scrollable);
+      await scrollUntilTappable(
+        tester,
+        find.text(l10n.settingsBadgesTitle),
+        200,
+        scrollable: scrollable,
+      );
+      expect(find.text(l10n.settingsBadgesTitle), findsOneWidget);
+      expect(find.text(l10n.monetizationSettingsTitle), findsNothing);
 
       await tester.pumpWidget(const SizedBox());
       await tester.pump();

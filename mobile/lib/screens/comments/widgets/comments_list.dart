@@ -15,13 +15,11 @@ class CommentsList extends StatefulWidget {
   const CommentsList({
     required this.showClassicVineNotice,
     required this.scrollController,
-    this.showVideoReplies = true,
     super.key,
   });
 
   final bool showClassicVineNotice;
   final ScrollController scrollController;
-  final bool showVideoReplies;
 
   @override
   State<CommentsList> createState() => _CommentsListState();
@@ -206,13 +204,10 @@ class _CommentsListState extends State<CommentsList> {
                     )) {
                   return const _LoadingState();
                 }
-                final all = state.displayCommentsWith(
+                final displayed = state.displayCommentsWith(
                   upvoteCounts: votes.upvotes,
                   downvoteCounts: votes.downvotes,
                 );
-                final displayed = widget.showVideoReplies
-                    ? all
-                    : all.where((node) => !node.comment.hasVideo).toList();
 
                 _shownIds = [for (final node in displayed) node.comment.id];
                 if (displayed.isEmpty) {

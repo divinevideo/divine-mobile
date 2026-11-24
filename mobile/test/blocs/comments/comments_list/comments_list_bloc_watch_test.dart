@@ -85,7 +85,6 @@ void main() {
       rootEventId: _rootId,
       rootEventKind: 34236,
       rootAuthorPubkey: _rootAuthor,
-      includeVideoReplies: true,
     );
 
     test('keeps every comment of a burst past ten a second', () {

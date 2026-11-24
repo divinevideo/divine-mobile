@@ -6,8 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/screens/feature_flag_screen.dart';
 import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -499,12 +497,6 @@ class MonetizationLinksSettingsRouteData extends GoRouteData
   const MonetizationLinksSettingsRouteData();
 
   @override
-  String? redirect(BuildContext context, GoRouterState state) =>
-      monetizationLinksRedirectIfDisabled(
-        ProviderScope.containerOf(context, listen: false),
-      );
-
-  @override
   Widget build(BuildContext context, GoRouterState state) =>
       const MonetizationLinksSettingsScreen();
 }
@@ -753,14 +745,6 @@ class DeveloperOptionsRouteData extends GoRouteData
               ),
             ),
       );
-}
-
-String? monetizationLinksRedirectIfDisabled(ProviderContainer container) {
-  final enabled = container.read(
-    isFeatureEnabledProvider(FeatureFlag.profileMonetizationLinks),
-  );
-  if (enabled) return null;
-  return SettingsScreen.path;
 }
 
 String? supporterRedirectIfUnavailable(ProviderContainer container) {

@@ -32,13 +32,11 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
     required ContentBlocklistRepository contentBlocklistRepository,
     required String currentUserPubkey,
     required FollowRepository followRepository,
-    bool loadSupportLinks = false,
     IdentityClaimsRepository? identityClaimsRepository,
   }) : _profileRepository = profileRepository,
        _blocklistRepository = contentBlocklistRepository,
        _currentUserPubkey = currentUserPubkey,
        _followRepository = followRepository,
-       _loadSupportLinks = loadSupportLinks,
        _identityClaimsRepository = identityClaimsRepository,
        super(const OtherProfileInitial()) {
     on<OtherProfileLoadRequested>(_onLoadRequested);
@@ -56,7 +54,6 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
   final ContentBlocklistRepository _blocklistRepository;
   final String _currentUserPubkey;
   final FollowRepository _followRepository;
-  final bool _loadSupportLinks;
   final IdentityClaimsRepository? _identityClaimsRepository;
 
   int _profileRequest = 0;
@@ -271,7 +268,7 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
   }
 
   void _requestSupportLinks(int request) {
-    if (_loadSupportLinks) add(_SupportLinksRequested(request));
+    add(_SupportLinksRequested(request));
   }
 
   /// Optional raw metadata must never hold the ordinary profile read open.

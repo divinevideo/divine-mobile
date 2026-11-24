@@ -22,16 +22,11 @@ class ProfileCommentsBloc
   /// - [commentsRepository]: Repository for querying comments
   /// - [targetUserPubkey]: Hex public key of the user whose comments
   ///   to load
-  /// - [includeVideoReplies]: Whether to include video replies alongside text
-  ///   comments. Defaults to false to match [CommentsRepository]'s text-only
-  ///   author comments query.
   ProfileCommentsBloc({
     required CommentsRepository commentsRepository,
     required String targetUserPubkey,
-    bool includeVideoReplies = false,
   }) : _commentsRepository = commentsRepository,
        _targetUserPubkey = targetUserPubkey,
-       _includeVideoReplies = includeVideoReplies,
        super(const ProfileCommentsState()) {
     on<ProfileCommentsSyncRequested>(
       _onSyncRequested,
@@ -44,7 +39,6 @@ class ProfileCommentsBloc
 
   final CommentsRepository _commentsRepository;
   final String _targetUserPubkey;
-  final bool _includeVideoReplies;
 
   /// Loads the target user's comments, completing
   /// [ProfileCommentsSyncRequested.completer] once the load has settled so the
@@ -66,7 +60,7 @@ class ProfileCommentsBloc
     try {
       final page = await _commentsRepository.loadCommentsByAuthor(
         authorPubkey: _targetUserPubkey,
-        includeVideoReplies: _includeVideoReplies,
+        includeVideoReplies: true,
       );
       final comments = page.comments;
 
@@ -110,7 +104,7 @@ class ProfileCommentsBloc
       final page = await _commentsRepository.loadCommentsByAuthor(
         authorPubkey: _targetUserPubkey,
         before: before,
-        includeVideoReplies: _includeVideoReplies,
+        includeVideoReplies: true,
       );
       final comments = page.comments;
 
