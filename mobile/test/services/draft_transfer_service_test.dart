@@ -9,7 +9,14 @@ import 'package:flutter/widgets.dart' show SizedBox;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart'
-    show AspectRatio, AudioEvent, DmFileMetadata, DmMessage;
+    show
+        AspectRatio,
+        AudioEvent,
+        ClipSourceCredit,
+        DmFileMetadata,
+        DmMessage,
+        InspiredByInfo;
+import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
@@ -211,6 +218,81 @@ void main() {
 
   group(DraftTransferService, () {
     group('importDraft', () {
+      test(
+        'restores repeated undo steps with their own editable metadata',
+        () async {
+          final original = makeDraft();
+          final editorHistory = history(
+            'Draft caption',
+            original.selectedSound!,
+          );
+          final step = (editorHistory['history'] as List).single;
+          editorHistory['history'] = [step, step, step];
+          editorHistory['position'] = 2;
+          final project = await transfer.exportDraft(
+            original.copyWith(editorStateHistory: editorHistory),
+            temporaryDirectory: outbox,
+          );
+          final imported = await transfer.importDraft(
+            messageId: 'undo-history',
+            senderPubkey: _sender,
+            storage: recipientStorage,
+            download: project.readAsBytes,
+            stillWanted: () => true,
+          );
+          final steps = imported.editorStateHistory['history'] as List;
+          expect(steps, hasLength(3));
+          final firstMeta = (steps.first as Map)['meta'] as Map;
+          final secondMeta = (steps[1] as Map)['meta'] as Map;
+          expect(secondMeta, equals(firstMeta));
+          expect(secondMeta, isNot(same(firstMeta)));
+          expect(displayedText(imported), 'Draft caption');
+        },
+      );
+
+      test('preserves caption mentions and the original clip credit', () async {
+        const artist =
+            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+        const credit = ClipSourceCredit(
+          authorPubkey: artist,
+          addressableId: '34236:$artist:original',
+        );
+        const inspiration = InspiredByInfo(
+          addressableId: '34236:$artist:inspiration',
+        );
+        const mention = CaptionMention(display: 'Artist', pubkey: artist);
+        final draft = makeDraft();
+        final credited = draft.copyWith(
+          description: 'Edited with @Artist',
+          allowVideoReuse: false,
+          captionMentions: [mention],
+          inspiredByVideo: inspiration,
+          clips: [
+            draft.clips.first.copyWith(sourceCredits: [credit]),
+          ],
+        );
+        final package = await transfer.exportDraft(
+          credited,
+          temporaryDirectory: outbox,
+        );
+        final imported = await transfer.importDraft(
+          messageId: 'credit-message',
+          senderPubkey: _sender,
+          storage: recipientStorage,
+          download: package.readAsBytes,
+          stillWanted: () => true,
+        );
+        expect(imported.clips.single.sourceAuthorPubkey, artist);
+        expect(imported.clips.single.sourceAddressableId, credit.addressableId);
+        expect(
+          imported.clipSourceCredits.map((item) => item.authorPubkey),
+          contains(_sender),
+        );
+        expect(imported.allowVideoReuse, isFalse);
+        expect(imported.captionMentions, [mention]);
+        expect(imported.inspiredByVideo, inspiration);
+      });
+
       test(
         'encrypted project round trips, opens in the editor, edits and returns',
         () async {

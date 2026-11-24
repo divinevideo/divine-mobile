@@ -7,6 +7,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/draft_storage_service.dart';
@@ -118,6 +119,8 @@ class DraftTransferService {
       throw DmVideoTooLargeException(total);
     }
 
+    _validateHistory(project, manifest.length);
+
     final output = File(
       p.join(temporaryDirectory.path, '${const Uuid().v4()}.divinedraft'),
     );
@@ -207,6 +210,7 @@ class DraftTransferService {
     ) as Map<String, dynamic>;
     final project = manifest['project'] as Map<String, dynamic>;
     _validateDepth(project);
+    _validateHistory(project, manifestSize);
     final files = manifest['files'] as List<dynamic>;
     if (files.length > _maxFiles) {
       throw const FormatException('Too many media files');
@@ -292,6 +296,10 @@ class DraftTransferService {
     'clips',
     'title',
     'description',
+    'allowVideoReuse',
+    'captionMentions',
+    'inspiredByVideo',
+    'inspiredByNpubs',
     'hashtags',
     'selectedApproach',
     'editorStateHistory',
@@ -342,6 +350,11 @@ class DraftTransferService {
     String? senderPubkey,
   }) =>
       rewriteJsonMaps(project, (map) {
+            // Divine exports widget layers by ID or captures their pixels.
+            // A direct file URL has no draft-owned lifetime on another device.
+            if (map['fileUrl'] != null) {
+              throw const FormatException('Unsupported file-backed layer');
+            }
             final result = Map<String, dynamic>.from(map)
               ..remove('proofManifestJson')
               ..remove(proofManifestRefKey)
@@ -385,14 +398,7 @@ class DraftTransferService {
               }
               final localMedia =
                   _clipMedia.contains(key) ||
-                  (key == 'path' &&
-                      (map.containsKey('durationUs') ||
-                          map.containsKey('durationMs') ||
-                          const {
-                            'video',
-                            'image',
-                            'audio',
-                          }.contains(map['kind']))) ||
+                  key == 'path' ||
                   (key == 'image' && map['type'] == 'image') ||
                   ((key == 'video' || key == 'source') &&
                       map['video'] is String &&
@@ -414,11 +420,54 @@ class DraftTransferService {
     String senderPubkey,
   ) {
     final sender = ClipSourceCredit(authorPubkey: senderPubkey);
+    final credits = ClipSourceCredit.listFromJson(raw);
+    // The first entry backs the original author's pubkey and source event.
     return [
-      sender.toJson(),
-      for (final credit in ClipSourceCredit.listFromJson(raw))
-        if (credit.identityKey != sender.identityKey) credit.toJson(),
+      for (final credit in credits) credit.toJson(),
+      if (!credits.any(
+        (credit) => pubkeysEqual(credit.authorPubkey, senderPubkey),
+      ))
+        sender.toJson(),
     ];
+  }
+
+  /// A saved history shares identical metadata across undo steps. Restoring
+  /// it makes a distinct copy per step, so the transfer limit must also cover
+  /// those copies. The writer only references earlier entries with full meta.
+  static void _validateHistory(
+    Map<String, dynamic> project,
+    int manifestBytes,
+  ) {
+    final history = project['editorStateHistory'];
+    if (history == null) return;
+    if (history is! Map || history['m'] == true) {
+      throw const FormatException('Unsupported editor history');
+    }
+    final entries = history['history'];
+    if (entries is! List) return;
+    var expandedBytes = manifestBytes;
+    final metaSizes = <int, int>{};
+    for (var i = 0; i < entries.length; i++) {
+      final entry = entries[i];
+      if (entry is! Map || !entry.containsKey(historyMetaRefKey)) continue;
+      final index = entry[historyMetaRefKey];
+      if (index is! int || index < 0 || index >= i) {
+        throw const FormatException('Invalid editor history reference');
+      }
+      final source = entries[index];
+      if (source is! Map ||
+          source['meta'] is! Map ||
+          source.containsKey(historyMetaRefKey)) {
+        throw const FormatException('Invalid editor history reference');
+      }
+      expandedBytes += metaSizes.putIfAbsent(
+        index,
+        () => utf8.encode(jsonEncode(source['meta'])).length,
+      );
+      if (expandedBytes > _maxManifestBytes) {
+        throw DmVideoTooLargeException(expandedBytes);
+      }
+    }
   }
 
   static void _validateDepth(Object? root) {
