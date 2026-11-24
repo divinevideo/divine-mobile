@@ -310,8 +310,8 @@ void main() {
       });
 
       testWidgets(
-        'reads access on a verifier that names no requirement only with the '
-        'simulated requirement on',
+        'reads access and shows the Confirmation card on a verifier that '
+        'names no requirement only with the simulated requirement on',
         (tester) async {
           const twitterOpen = VerifierPlatform(
             key: 'twitter',
@@ -343,6 +343,16 @@ void main() {
             expect(
               reads,
               simulated ? equals([false]) : isEmpty,
+              reason: 'simulated: $simulated',
+            );
+            expect(
+              find.text(l10n.verifyConfirmationCardTitle),
+              simulated ? findsOneWidget : findsNothing,
+              reason: 'simulated: $simulated',
+            );
+            expect(
+              signInButton('twitter'),
+              simulated ? findsNothing : findsOneWidget,
               reason: 'simulated: $simulated',
             );
             // A fresh page for the next pass.
