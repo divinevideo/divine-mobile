@@ -325,6 +325,44 @@ void main() {
         );
       });
 
+      testWidgets('/explore/tab/:name binds the campaign feed in its query', (
+        tester,
+      ) async {
+        await captureContext(tester);
+
+        expect(
+          screenAt(
+            '/explore/tab/:name',
+            RoutePaths.exploreFeaturedCampaign('ft_a1b2c3d4'),
+            pathParameters: {'name': 'featured'},
+          ),
+          isA<ExploreScreen>().having(
+            (s) => s.requiredFeaturedFeedId,
+            'requiredFeaturedFeedId',
+            'ft_a1b2c3d4',
+          ),
+        );
+      });
+
+      testWidgets('/explore/tab/:name ignores an empty campaign feed', (
+        tester,
+      ) async {
+        await captureContext(tester);
+
+        expect(
+          screenAt(
+            '/explore/tab/:name',
+            '/explore/tab/featured?campaignFeedId=',
+            pathParameters: {'name': 'featured'},
+          ),
+          isA<ExploreScreen>().having(
+            (s) => s.requiredFeaturedFeedId,
+            'requiredFeaturedFeedId',
+            isNull,
+          ),
+        );
+      });
+
       testWidgets('/explore/:index opens the default tab', (tester) async {
         await captureContext(tester);
 
@@ -443,6 +481,16 @@ void main() {
         expect(
           const ExploreTabRouteData(name: 'for-you').location,
           equals(ExploreScreen.pathForTab('for_you')),
+        );
+      });
+
+      test('a campaign feed location matches exploreFeaturedCampaign', () {
+        expect(
+          const ExploreTabRouteData(
+            name: 'featured',
+            campaignFeedId: 'ft_a1b2c3d4',
+          ).location,
+          equals(RoutePaths.exploreFeaturedCampaign('ft_a1b2c3d4')),
         );
       });
 

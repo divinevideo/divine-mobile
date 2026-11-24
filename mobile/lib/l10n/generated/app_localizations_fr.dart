@@ -326,7 +326,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Ça nous aide à voir ce qui sert vraiment. Si tu désactives, les données en attente sur cet appareil sont supprimées.';
+      'Ça nous aide à voir ce qui sert vraiment. Si tu désactives, les données en attente sur cet appareil sont supprimées. Les rapports de plantage sont toujours envoyés pour qu\'on puisse corriger les bugs.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -15831,6 +15831,13 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get updateAction => 'Mettre à jour';
+
+  @override
+  String get announcementViewContest => 'Voir le concours';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Ce fil à la une n’est plus disponible.';
 
   @override
   String updateNewIn(String version) {

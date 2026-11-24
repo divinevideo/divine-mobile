@@ -285,7 +285,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Giúp bọn mình thấy mọi người thực sự dùng gì. Nếu bạn tắt, dữ liệu đang chờ trên thiết bị này sẽ bị xóa.';
+      'Giúp bọn mình thấy mọi người thực sự dùng gì. Nếu bạn tắt, dữ liệu đang chờ trên thiết bị này sẽ bị xóa. Báo cáo sự cố vẫn được gửi để bọn mình sửa lỗi.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -15520,6 +15520,13 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get updateAction => 'Cập nhật';
+
+  @override
+  String get announcementViewContest => 'Xem cuộc thi';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Bảng tin nổi bật này không còn khả dụng.';
 
   @override
   String updateNewIn(String version) {

@@ -254,7 +254,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'İnsanların gerçekte neyi kullandığını görmemize yardımcı olur. Kapatırsan bu cihazda sırada bekleyen veriler silinir.';
+      'İnsanların gerçekte neyi kullandığını görmemize yardımcı olur. Kapatırsan bu cihazda sırada bekleyen veriler silinir. Hataları düzeltebilmemiz için çökme raporları gönderilmeye devam eder.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -15508,6 +15508,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get updateAction => 'Güncelle';
+
+  @override
+  String get announcementViewContest => 'Yarışmayı görüntüle';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Bu öne çıkan akış artık kullanılamıyor.';
 
   @override
   String updateNewIn(String version) {

@@ -245,7 +245,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      '何が実際に使われているかを把握するのに役立ちます。オフにすると、この端末で送信待ちのデータは削除されます。';
+      '何が実際に使われているかを把握するのに役立ちます。オフにすると、この端末で送信待ちのデータは削除されます。不具合を修正するため、クラッシュレポートは引き続き送信されます。';
 
   @override
   String get privacySettingsSaveFailed => '保存できませんでした。利用データは今のところオフのままです。';
@@ -14856,6 +14856,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get updateAction => 'アップデート';
+
+  @override
+  String get announcementViewContest => 'コンテストを見る';
+
+  @override
+  String get featuredFeedUnavailable => 'このおすすめフィードは利用できなくなりました。';
 
   @override
   String updateNewIn(String version) {

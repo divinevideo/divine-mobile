@@ -335,7 +335,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Ne ajută să vedem ce folosesc oamenii cu adevărat. Dacă îl oprești, datele aflate în așteptare pe acest dispozitiv sunt șterse.';
+      'Ne ajută să vedem ce folosesc oamenii cu adevărat. Dacă îl oprești, datele aflate în așteptare pe acest dispozitiv sunt șterse. Rapoartele de blocare sunt trimise în continuare, ca să putem repara erorile.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -15893,6 +15893,13 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get updateAction => 'Actualizează';
+
+  @override
+  String get announcementViewContest => 'Vezi concursul';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Acest flux recomandat nu mai este disponibil.';
 
   @override
   String updateNewIn(String version) {

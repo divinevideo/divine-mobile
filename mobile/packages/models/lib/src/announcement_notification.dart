@@ -13,6 +13,7 @@ final class AnnouncementNotification extends NotificationItem {
     required super.timestamp,
     required this.expiresAt,
     this.learnMoreUrl,
+    this.action,
     super.isRead,
     List<String> platforms = const [],
     this.minimumAppVersion,
@@ -39,6 +40,9 @@ final class AnnouncementNotification extends NotificationItem {
   /// An optional validated first-party HTTPS destination.
   final Uri? learnMoreUrl;
 
+  /// Optional typed action, validated at the public catalog boundary.
+  final AnnouncementAction? action;
+
   /// Eligible platforms; an empty list means all platforms.
   final List<String> platforms;
 
@@ -53,6 +57,7 @@ final class AnnouncementNotification extends NotificationItem {
     timestamp: timestamp,
     expiresAt: expiresAt,
     learnMoreUrl: learnMoreUrl,
+    action: action,
     isRead: isRead ?? this.isRead,
     platforms: platforms,
     minimumAppVersion: minimumAppVersion,
@@ -68,8 +73,46 @@ final class AnnouncementNotification extends NotificationItem {
     timestamp,
     expiresAt,
     learnMoreUrl,
+    action,
     isRead,
     platforms,
     minimumAppVersion,
   ];
+}
+
+/// An optional first-party announcement action.
+sealed class AnnouncementAction extends Equatable {
+  const AnnouncementAction();
+}
+
+/// Asks installs on [platform] from [channel] older than [version] to update.
+final class UpdateAppAnnouncementAction extends AnnouncementAction {
+  const UpdateAppAnnouncementAction({
+    required this.platform,
+    required this.channel,
+    required this.version,
+  });
+
+  /// `ios` or `android`.
+  final String platform;
+
+  /// `app_store` for iOS; `google_play` or `zapstore` for Android.
+  final String channel;
+
+  /// Canonical `major.minor.patch` the install must be older than.
+  final String version;
+
+  @override
+  List<Object?> get props => [platform, channel, version];
+}
+
+/// Links to an official contest page at [url].
+final class ContestAnnouncementAction extends AnnouncementAction {
+  const ContestAnnouncementAction({required this.url});
+
+  /// A contest URL the catalog parser has validated against its allowlist.
+  final Uri url;
+
+  @override
+  List<Object?> get props => [url];
 }

@@ -102,11 +102,12 @@ swiped past before its first frame, or one that fails, records nothing there,
 so that local rate leaves out the slowest starts.
 
 In distributed release builds (store, TestFlight and Zapstore installs, not a
-local `flutter run --release`), every activation goes to Firebase Performance as
-the `video_first_frame` trace when it ends, played or not, with a `cache`
-attribute (`hit` or `miss`), a `position` attribute (`initial` or `subsequent`),
-an `outcome` (`played`, `abandoned` or `failed`) and, when it rendered, the
-time to first frame in `ttff_ms` (`lib/observability/feed_playback_performance.dart`).
+local `flutter run --release`), and only while **Share usage data** is on
+(#11398), every activation goes to Firebase Performance as the
+`video_first_frame` trace when it ends, played or not, with a `cache` attribute
+(`hit` or `miss`), a `position` attribute (`initial` or `subsequent`), an
+`outcome` (`played`, `abandoned` or `failed`) and, when it rendered, the time to
+first frame in `ttff_ms` (`lib/observability/feed_playback_performance.dart`).
 That is the place to read the field hit rate, over all outcomes or for `played`
 alone. An activation that ended before its player opened a source counts as
 `miss`.

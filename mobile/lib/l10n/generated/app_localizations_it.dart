@@ -319,7 +319,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Ci aiuta a capire cosa si usa davvero. Se lo disattivi, i dati in coda su questo dispositivo vengono eliminati.';
+      'Ci aiuta a capire cosa si usa davvero. Se lo disattivi, i dati in coda su questo dispositivo vengono eliminati. I report degli arresti anomali vengono comunque inviati, così possiamo correggere i bug.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -15783,6 +15783,13 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get updateAction => 'Aggiorna';
+
+  @override
+  String get announcementViewContest => 'Vedi il concorso';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Questo feed in evidenza non è più disponibile.';
 
   @override
   String updateNewIn(String version) {

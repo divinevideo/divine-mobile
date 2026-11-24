@@ -322,7 +322,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'ప్రజలు నిజంగా ఏమి వాడుతున్నారో చూడటానికి ఇది మాకు సహాయపడుతుంది. దీన్ని ఆఫ్ చేస్తే, ఈ పరికరంలో వేచి ఉన్న డేటా తొలగించబడుతుంది.';
+      'ప్రజలు నిజంగా ఏమి వాడుతున్నారో చూడటానికి ఇది మాకు సహాయపడుతుంది. దీన్ని ఆఫ్ చేస్తే, ఈ పరికరంలో వేచి ఉన్న డేటా తొలగించబడుతుంది. బగ్‌లను సరిచేయడానికి క్రాష్ నివేదికలు ఇప్పటికీ పంపబడతాయి.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -15951,6 +15951,13 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get updateAction => 'అప్‌డేట్ చేయండి';
+
+  @override
+  String get announcementViewContest => 'పోటీని చూడండి';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'ఈ ఫీచర్ చేసిన ఫీడ్ ఇక అందుబాటులో లేదు.';
 
   @override
   String updateNewIn(String version) {

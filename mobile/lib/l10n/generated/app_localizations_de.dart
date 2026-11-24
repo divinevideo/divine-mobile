@@ -318,7 +318,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Hilft uns zu sehen, was wirklich genutzt wird. Schaltest du es aus, werden wartende Daten auf diesem Gerät gelöscht.';
+      'Hilft uns zu sehen, was wirklich genutzt wird. Schaltest du es aus, werden wartende Daten auf diesem Gerät gelöscht. Absturzberichte werden weiter gesendet, damit wir Fehler beheben können.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -15765,6 +15765,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get updateAction => 'Aktualisieren';
+
+  @override
+  String get announcementViewContest => 'Wettbewerb ansehen';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Dieser empfohlene Feed ist nicht mehr verfügbar.';
 
   @override
   String updateNewIn(String version) {

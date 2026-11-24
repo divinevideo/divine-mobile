@@ -275,7 +275,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      '帮我们了解大家实际在用什么。关闭后，这台设备上排队等待的数据会被删除。';
+      '帮我们了解大家实际在用什么。关闭后，这台设备上排队等待的数据会被删除。崩溃报告仍会发送，方便我们修复问题。';
 
   @override
   String get privacySettingsSaveFailed => '没能保存。使用数据暂时保持关闭。';
@@ -14679,6 +14679,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get updateAction => '更新';
+
+  @override
+  String get announcementViewContest => '查看比赛';
+
+  @override
+  String get featuredFeedUnavailable => '此精选动态已不可用。';
 
   @override
   String updateNewIn(String version) {

@@ -285,7 +285,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Membantu kami melihat apa yang benar-benar digunakan orang. Jika anda matikan, data yang menunggu pada peranti ini dipadam.';
+      'Membantu kami melihat apa yang benar-benar digunakan orang. Jika anda matikan, data yang menunggu pada peranti ini dipadam. Laporan ranap tetap dihantar supaya kami boleh membaiki pepijat.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -15579,6 +15579,13 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get updateAction => 'Kemas kini';
+
+  @override
+  String get announcementViewContest => 'Lihat pertandingan';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Suapan pilihan ini tidak lagi tersedia.';
 
   @override
   String updateNewIn(String version) {

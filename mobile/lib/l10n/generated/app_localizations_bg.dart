@@ -320,7 +320,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Помага ни да видим какво хората наистина ползват. Изключиш ли го, чакащите данни на това устройство се изтриват.';
+      'Помага ни да видим какво хората наистина ползват. Изключиш ли го, чакащите данни на това устройство се изтриват. Докладите за сривове пак се изпращат, за да можем да поправяме грешки.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -15728,6 +15728,13 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get updateAction => 'Актуализиране';
+
+  @override
+  String get announcementViewContest => 'Виж конкурса';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Тази избрана емисия вече не е достъпна.';
 
   @override
   String updateNewIn(String version) {

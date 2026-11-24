@@ -17,6 +17,7 @@ import 'package:openvine/router/router.dart';
 import 'package:openvine/router/shell/shell_chrome.dart';
 import 'package:openvine/router/shell/shell_title_resolver.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Duration of the cross-fade applied when switching between bottom-nav tabs.
@@ -270,8 +271,9 @@ class _AppShellState extends ConsumerState<AppShell> with RouteAware {
 /// [ExcludeSemantics]/[ExcludeFocus] the three hidden tabs would still be
 /// announced and focusable. On a tab switch the outgoing branch fades out
 /// while the incoming one fades in — a true cross-fade between two live tabs.
-/// Within-tab navigation never reaches here (those are [NoTransitionPage]s
-/// inside a single branch).
+/// [ScreenFrameTraceTab] lets the hidden tabs' frame traces end their visit
+/// as a tab switch. Within-tab navigation never reaches here (those are
+/// [NoTransitionPage]s inside a single branch).
 class AppShellBranchContainer extends StatelessWidget {
   const AppShellBranchContainer({
     required this.currentIndex,
@@ -304,7 +306,11 @@ class AppShellBranchContainer extends StatelessWidget {
               excluding: !isActive,
               child: IgnorePointer(
                 ignoring: !isActive,
-                child: TickerMode(enabled: isActive, child: children[index]),
+                // Above the TickerMode, which its frame traces read it for.
+                child: ScreenFrameTraceTab(
+                  selected: isActive,
+                  child: TickerMode(enabled: isActive, child: children[index]),
+                ),
               ),
             ),
           ),

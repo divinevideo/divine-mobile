@@ -172,13 +172,20 @@ mixin $ExploreRouteData on GoRouteData {
 
 mixin $ExploreTabRouteData on GoRouteData {
   static ExploreTabRouteData _fromState(GoRouterState state) =>
-      ExploreTabRouteData(name: state.pathParameters['name']!);
+      ExploreTabRouteData(
+        name: state.pathParameters['name']!,
+        campaignFeedId: state.uri.queryParameters['campaignFeedId'],
+      );
 
   ExploreTabRouteData get _self => this as ExploreTabRouteData;
 
   @override
-  String get location =>
-      GoRouteData.$location('/explore/tab/${Uri.encodeComponent(_self.name)}');
+  String get location => GoRouteData.$location(
+    '/explore/tab/${Uri.encodeComponent(_self.name)}',
+    queryParams: {
+      if (_self.campaignFeedId != null) 'campaignFeedId': _self.campaignFeedId,
+    },
+  );
 
   @override
   void go(BuildContext context) => context.go(location);

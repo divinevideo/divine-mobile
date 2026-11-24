@@ -161,6 +161,48 @@ void main() {
       });
     });
 
+    test(
+      'a change that resolves before the first load records no consent change',
+      () async {
+        final sink = _ConsentSink();
+        final changes = StreamController<void>();
+        addTearDown(changes.close);
+        final loadGate = Completer<NotificationPreferences>();
+        final reloadGate = Completer<NotificationPreferences>();
+        final gates = [loadGate, reloadGate];
+        when(() => service.changes).thenAnswer((_) => changes.stream);
+        when(
+          service.loadPreferences,
+        ).thenAnswer((_) => gates.removeAt(0).future);
+        final cubit = NotificationSettingsCubit(
+          preferencesService: service,
+          notificationAnalytics: NotificationAnalyticsTracker(
+            sink: sink,
+            collectionAllowed: () async => true,
+            privacyBoundary: () => 'test',
+          ),
+        );
+        addTearDown(cubit.close);
+
+        final loading = cubit.load();
+        changes.add(null);
+        await pumpEventQueue();
+        expect(gates, isEmpty);
+        reloadGate.complete(
+          const NotificationPreferences(campaignsEnabled: true),
+        );
+        await pumpEventQueue();
+        loadGate.complete(
+          const NotificationPreferences(campaignsEnabled: true),
+        );
+        await loading;
+        await pumpEventQueue();
+
+        expect(cubit.state.preferences.campaignsEnabled, isTrue);
+        expect(sink.changes, isEmpty);
+      },
+    );
+
     blocTest<NotificationSettingsCubit, NotificationSettingsState>(
       'load emits loading then ready with the loaded preferences',
       setUp: () {

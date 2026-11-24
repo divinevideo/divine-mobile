@@ -83,11 +83,14 @@ class AnnouncementsRepository {
   String? _etag;
   Set<String> _seen = {};
   Future<void>? _initialization;
-  Future<void>? _refresh;
+  Future<bool>? _refresh;
   Future<void> _writes = Future.value();
   Future<void>? _closeFuture;
   Timer? _eligibilityTimer;
   bool _closed = false;
+
+  /// Whether a validated catalog has loaded from cache or the endpoint.
+  bool get hasCatalog => !_closed && _catalog != null;
 
   /// Current eligible announcements, newest first, with local seen state.
   ///
@@ -167,17 +170,23 @@ class AnnouncementsRepository {
 
   /// Fetches a complete snapshot; failures retain the last valid catalog.
   /// Concurrent refreshes share the same request.
-  Future<void> refresh() {
-    if (_closed) return Future.value();
+  ///
+  /// Completes with whether the endpoint supplied a validated new snapshot or
+  /// confirmed "not modified". A failed refresh completes with false: the
+  /// retained catalog may predate an announcement, so its absence there proves
+  /// nothing.
+  Future<bool> refresh() {
+    if (_closed) return Future.value(false);
     return _refresh ??= _refreshCatalog().whenComplete(() => _refresh = null);
   }
 
-  Future<void> _refreshCatalog() async {
+  Future<bool> _refreshCatalog() async {
     await initialize();
-    if (_closed) return;
+    if (_closed) return false;
+    var answered = false;
     try {
       final fetched = await _fetch();
-      if (_closed) return;
+      if (_closed) return false;
       if (fetched != null) {
         _catalog = _decodeCatalog(fetched.catalog);
         _catalogJson = fetched.catalog;
@@ -195,6 +204,7 @@ class AnnouncementsRepository {
           await _store.writeSeen(seen);
         });
       }
+      answered = true;
     } on Exception catch (error) {
       // Network, schema, and storage failures never erase valid cached rows.
       // A fetch that close() cut off is not a catalog failure.
@@ -206,6 +216,7 @@ class AnnouncementsRepository {
       }
     }
     _emit();
+    return answered && !_closed;
   }
 
   Future<_FetchedCatalog?> _fetch() async {
@@ -426,10 +437,50 @@ class AnnouncementsRepository {
           platforms: platforms.cast<String>(),
           minimumAppVersion: minimumVersion as String?,
           learnMoreUrl: learnMore,
+          action: _action(value['action']),
         ),
       );
     }
     return List.unmodifiable(result);
+  }
+
+  static AnnouncementAction? _action(Object? value) {
+    if (value == null) return null;
+    final action = _object(value);
+    if (action['type'] == 'update_app') {
+      final platform = action['platform'];
+      final channel = action['channel'];
+      final version = action['version'];
+      if (platform is! String ||
+          channel is! String ||
+          !((platform == 'ios' && channel == 'app_store') ||
+              (platform == 'android' &&
+                  (channel == 'google_play' || channel == 'zapstore'))) ||
+          version is! String ||
+          version.length > 20 ||
+          !RegExp(
+            r'^(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})$',
+          ).hasMatch(version)) {
+        throw const FormatException('Invalid announcement update action');
+      }
+      return UpdateAppAnnouncementAction(
+        platform: platform,
+        channel: channel,
+        version: version,
+      );
+    }
+    if (action['type'] == 'contest') {
+      final url = action['url'];
+      if (url is! String ||
+          url.length > 2048 ||
+          !RegExp(
+            r'^https://divine-challenges\.pages\.dev/contests/[A-Za-z0-9-]+$',
+          ).hasMatch(url)) {
+        throw const FormatException('Invalid announcement contest action');
+      }
+      return ContestAnnouncementAction(url: Uri.parse(url));
+    }
+    throw const FormatException('Unsupported announcement action');
   }
 
   static Map<String, Object?> _object(Object? value) {

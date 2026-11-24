@@ -40,8 +40,10 @@ it ends when the response body completes, fails, or its subscription is
 cancelled — not at time-to-first-byte.
 
 Nothing is recorded until `PerformanceMonitoringService.initialize()` has
-succeeded (`isEnabled`), which is sampled per request rather than captured,
-because clients are built with the provider graph before startup finishes.
+succeeded, nor while the person has **Share usage data** switched off
+(`isEnabled`, #11398). It is sampled per request rather than captured,
+because clients are built with the provider graph before startup finishes and
+the switch can change mid-session.
 
 ### Instrumenting a new client
 
@@ -239,7 +241,9 @@ slow; check the cheap things first.
    `FIREBASE_PERFORMANCE_COLLECTION_DEACTIVATED=NO` in `ios/Flutter/Debug.xcconfig`)
    **and** flip `PerformanceMonitoringService.collectionEnabled` to `true`
    **and** `PerformanceMonitoringService.distributedBuildsOnly` to `false` —
-   any one alone leaves collection off. A `flutter run --release` needs only
+   any one alone leaves collection off. The device's **Share usage data**
+   switch (Privacy settings) must also be on; an unset preference counts as
+   on (#11398). A `flutter run --release` needs only
    the last flip: release mode passes the first two gates, and the third is
    what keeps a local release build out (#7302) — the Shorebird engine that
    only `shorebird release` links, or a Zapstore installer, is what marks a

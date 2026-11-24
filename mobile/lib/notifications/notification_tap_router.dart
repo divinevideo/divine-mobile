@@ -157,11 +157,9 @@ Future<void> _renderBackgroundLocalPush({
 /// preloader shares: a usable signed coordinate is routed to directly, and
 /// otherwise the executor walks `targetEventId` to a root video. Encoding the
 /// coordinate-over-walk precedence in the returned value keeps it out of the
-/// executor's branch order.
-///
-/// Campaign payloads skip this: an `app_route`, `video_address` or
-/// `creator_profile` target is validated by the campaign helpers beside
-/// [campaignAppRoute], is not preloaded, and anything else opens the inbox.
+/// executor's branch order. Campaign and activity-digest payloads return
+/// before preload. The helpers beside [campaignAppRoute] validate campaign
+/// targets and unsupported values open the inbox.
 ///
 /// Extracted and `@visibleForTesting` so the push-side per-kind routing can be
 /// asserted without a navigator — mirrors [resolveVideoDeepLinkNavAction].

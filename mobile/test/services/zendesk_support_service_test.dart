@@ -896,60 +896,6 @@ void main() {
     );
   });
 
-  group('ZendeskSupportService.createTicket JWT expiry retry', () {
-    test(
-      'retries with anonymous identity when JWT returns unauthorized',
-      () async {
-        var createTicketCallCount = 0;
-        var setUserIdentityCalled = false;
-
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(channel, (MethodCall call) async {
-              if (call.method == 'initialize') return true;
-              if (call.method == 'setUserIdentity') {
-                setUserIdentityCalled = true;
-                return true;
-              }
-              if (call.method == 'createTicket') {
-                createTicketCallCount++;
-                if (createTicketCallCount == 1) {
-                  // First call fails with expired JWT
-                  throw PlatformException(
-                    code: 'CREATE_FAILED',
-                    message: 'unauthorized',
-                  );
-                }
-                // Second call (after anonymous identity set) succeeds
-                return true;
-              }
-              return null;
-            });
-
-        await ZendeskSupportService.initialize(
-          appId: 'test',
-          clientId: 'test',
-          zendeskUrl: 'https://test.zendesk.com',
-        );
-
-        // Set user identity so anonymous fallback has name/email
-        ZendeskSupportService.setUserIdentity(
-          npub: 'npub1test1234567890abcdef1234567890abcdef1234567890abcdef1234',
-          displayName: 'Test User',
-        );
-
-        final result = await ZendeskSupportService.createTicket(
-          subject: 'Content Report',
-          description: 'Test report',
-          tags: ['content-report'],
-        );
-
-        expect(result, isTrue);
-        expect(createTicketCallCount, 2);
-        expect(setUserIdentityCalled, isTrue);
-      },
-    );
-  });
-
   group('ZendeskSupportService.createTicket native failure', () {
     late CrashReporter originalCrashReporter;
     late _RecordingCrashReporter crashReporter;
@@ -1116,6 +1062,11 @@ void main() {
       expect(crashReporter.logs.single, contains('is invalid'));
       expect(
         crashReporter.logs.single,
+        isNot(contains('reporter@example.com')),
+      );
+      expect(crashReporter.errors.single.toString(), contains('is invalid'));
+      expect(
+        crashReporter.errors.single.toString(),
         isNot(contains('reporter@example.com')),
       );
     });
@@ -1345,6 +1296,213 @@ void main() {
       expect(created, isFalse);
       expect(calls, ['refreshJwt', 'createTicket', 'refreshJwt']);
     });
+  });
+
+  // Zendesk iOS SDK (ZendeskCoreSDK 5.0, SupportProvidersSDK 9.0) on an SDK
+  // app set up for JWT, in the shapes the iOS bridge reports them: an
+  // anonymous identity fails the identity check (303) and the SDK keeps it, a
+  // token the JWT endpoint rejects fails the token exchange, and a ticket
+  // Zendesk refuses answers with its HTTP status.
+  group('ZendeskSupportService.createTicket on an iOS JWT SDK app', () {
+    late List<String> calls;
+    late String sdkIdentity;
+    late bool sdkAcceptsJwt;
+    late int? refusedWithStatus;
+    late bool Function(int refresh) refreshSucceeds;
+    late bool Function(int refresh) zendeskAcceptsToken;
+    late CrashReporter originalCrashReporter;
+    late _RecordingCrashReporter crashReporter;
+    var refreshes = 0;
+
+    PlatformException createFailed(
+      String message,
+      Map<String, Object> details,
+    ) => PlatformException(
+      code: 'CREATE_FAILED',
+      message: message,
+      details: {'networkError': false, ...details},
+    );
+
+    setUp(() async {
+      calls = [];
+      sdkIdentity = 'anonymous';
+      sdkAcceptsJwt = false;
+      refusedWithStatus = null;
+      refreshSucceeds = (_) => true;
+      zendeskAcceptsToken = (_) => true;
+      refreshes = 0;
+      crashReporter = _RecordingCrashReporter();
+      originalCrashReporter = ZendeskSupportService.crashlytics;
+      ZendeskSupportService.crashlytics = crashReporter;
+      expect(
+        ZendeskConfig.isRestApiConfigured,
+        isFalse,
+        reason:
+            'ZENDESK_API_TOKEN is defined, so the REST fallback would run '
+            'instead of the report these tests pin; run without it.',
+      );
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall call) async {
+            calls.add(call.method);
+            switch (call.method) {
+              case 'setUserIdentity':
+                sdkIdentity = 'anonymous';
+                return true;
+              case 'createTicket':
+                if (sdkIdentity == 'anonymous') {
+                  throw createFailed(
+                    'The configured authentication type and the Identity '
+                    "type do not match. Can't authenticate.",
+                    {
+                      'status': -1,
+                      'authFailed': true,
+                      'errorDomain': 'com.zendesk.core.identity',
+                      'errorCode': 303,
+                      'identity': 'anonymous',
+                      'expectedAuth': 'jwt',
+                    },
+                  );
+                }
+                if (!sdkAcceptsJwt) {
+                  throw createFailed('Default error description', {
+                    'status': 401,
+                    'authFailed': true,
+                    'errorDomain': 'com.zendesk.sdk.core',
+                    'errorCode': 1000,
+                    'identity': 'jwt',
+                    'expectedAuth': 'jwt',
+                  });
+                }
+                final status = refusedWithStatus;
+                if (status != null) {
+                  throw createFailed('unprocessable entity', {
+                    'status': status,
+                    'authFailed': false,
+                    'errorDomain': 'com.zendesk.sdk',
+                    'errorCode': status,
+                    'identity': 'jwt',
+                  });
+                }
+                return true;
+            }
+            return true;
+          });
+
+      ZendeskSupportService.setTestHooks(
+        jwtIdentityRefresh:
+            ({required nip98Service, required relayManagerUrl}) async {
+              refreshes++;
+              calls.add('refreshJwt');
+              if (!refreshSucceeds(refreshes)) return false;
+              sdkIdentity = 'jwt';
+              sdkAcceptsJwt = zendeskAcceptsToken(refreshes);
+              return true;
+            },
+      );
+      await ZendeskSupportService.initialize(
+        appId: 'test',
+        clientId: 'test',
+        zendeskUrl: 'https://test.zendesk.com',
+      );
+      ZendeskSupportService.setUserIdentity(
+        npub: 'npub1test1234567890abcdef1234567890abcdef1234567890abcdef1234',
+        displayName: 'Test User',
+      );
+      ZendeskSupportService.storeAuthContext(
+        nip98Service: _FakeNip98AuthService(),
+        relayManagerUrl: 'https://test-relay.divine.video',
+      );
+      calls.clear();
+    });
+
+    tearDown(() => ZendeskSupportService.crashlytics = originalCrashReporter);
+
+    Future<ZendeskTicketOutcome> createReportTicket() =>
+        ZendeskSupportService.createTicketWithOutcome(
+          subject: 'Content Report',
+          description: 'Test report',
+        );
+
+    test('retries the anonymous sign-in identity with a fresh JWT', () async {
+      // The refresh before the ticket fails, so the SDK still holds the
+      // anonymous identity set at sign-in.
+      refreshSucceeds = (refresh) => refresh > 1;
+
+      final outcome = await createReportTicket();
+
+      expect(outcome, ZendeskTicketOutcome.created);
+      expect(calls, [
+        'refreshJwt',
+        'createTicket',
+        'refreshJwt',
+        'createTicket',
+      ]);
+      expect(crashReporter.errors, isEmpty);
+    });
+
+    test('retries a JWT the token exchange rejects with a fresh one', () async {
+      zendeskAcceptsToken = (refresh) => refresh > 1;
+
+      final outcome = await createReportTicket();
+
+      expect(outcome, ZendeskTicketOutcome.created);
+      expect(calls, [
+        'refreshJwt',
+        'createTicket',
+        'refreshJwt',
+        'createTicket',
+      ]);
+    });
+
+    test('reports which identity the app refused when no JWT can be set, '
+        'without retrying the anonymous identity it refuses', () async {
+      refreshSucceeds = (_) => false;
+
+      final outcome = await createReportTicket();
+
+      expect(outcome, ZendeskTicketOutcome.failed);
+      expect(calls, ['refreshJwt', 'createTicket', 'refreshJwt']);
+      expect(
+        crashReporter.errors.single.toString(),
+        contains(
+          'CREATE_FAILED (com.zendesk.core.identity 303, identity anonymous, '
+          'expects jwt): The configured authentication type and the '
+          'Identity type do not match.',
+        ),
+      );
+    });
+
+    test(
+      'gives up on a ticket Zendesk refuses and reports its status',
+      () async {
+        refusedWithStatus = 422;
+
+        final outcome = await createReportTicket();
+
+        expect(outcome, ZendeskTicketOutcome.rejected);
+        expect(calls, ['refreshJwt', 'createTicket']);
+        expect(
+          crashReporter.errors.single.toString(),
+          contains(
+            'CREATE_FAILED (HTTP 422, com.zendesk.sdk 422, identity jwt)',
+          ),
+        );
+      },
+    );
+
+    test(
+      'reports a failure the outbox keeps retrying once per session',
+      () async {
+        refreshSucceeds = (_) => false;
+
+        expect(await createReportTicket(), ZendeskTicketOutcome.failed);
+        expect(await createReportTicket(), ZendeskTicketOutcome.failed);
+
+        expect(crashReporter.errors, hasLength(1));
+        expect(crashReporter.logs, hasLength(2));
+      },
+    );
   });
 
   group('ZendeskSupportService identity consistency', () {

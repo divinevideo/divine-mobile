@@ -303,7 +303,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Hjälper oss att se vad folk faktiskt använder. Stänger du av raderas data som väntar på den här enheten.';
+      'Hjälper oss att se vad folk faktiskt använder. Stänger du av raderas data som väntar på den här enheten. Kraschrapporter skickas fortfarande så att vi kan rätta buggar.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -15598,6 +15598,13 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get updateAction => 'Uppdatera';
+
+  @override
+  String get announcementViewContest => 'Visa tävlingen';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Det här utvalda flödet är inte längre tillgängligt.';
 
   @override
   String updateNewIn(String version) {

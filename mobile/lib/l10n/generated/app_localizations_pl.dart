@@ -325,7 +325,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Pomaga nam zobaczyć, z czego ludzie naprawdę korzystają. Po wyłączeniu dane czekające na tym urządzeniu zostaną usunięte.';
+      'Pomaga nam zobaczyć, z czego ludzie naprawdę korzystają. Po wyłączeniu dane czekające na tym urządzeniu zostaną usunięte. Raporty o awariach są nadal wysyłane, żebyśmy mogli naprawiać błędy.';
 
   @override
   String get privacySettingsSaveFailed =>
@@ -15903,6 +15903,13 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get updateAction => 'Aktualizuj';
+
+  @override
+  String get announcementViewContest => 'Zobacz konkurs';
+
+  @override
+  String get featuredFeedUnavailable =>
+      'Ten polecany kanał nie jest już dostępny.';
 
   @override
   String updateNewIn(String version) {

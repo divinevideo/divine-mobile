@@ -652,6 +652,7 @@ AnalyticsService analyticsService(Ref ref) {
     viewEventRetryService: retryService,
     productEventQueue: productQueue,
     analyticsCollectionControl: ref.watch(analyticsCollectionControlProvider),
+    performanceConsentControl: ref.watch(performanceMonitoringServiceProvider),
     currentUserPubkey: () => authService.currentPublicKeyHex,
     appVersion: () => appVersion,
   );
