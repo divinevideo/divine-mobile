@@ -827,11 +827,20 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       final currentController = _controllers[_currentIndex];
       // A player that kept its painted frame while the feed was hidden has no
       // first frame left to wait for, so timing it would publish a ~0 ms
-      // sample for a video the viewer never waited on.
+      // sample for a video the viewer never waited on. Likewise, an already
+      // failed slot that will not re-initialize on reactivation is not
+      // starting a new playback attempt, so timing it would emit a bogus
+      // abandoned sample when the viewer leaves the error tile.
       final alreadyPainted =
           currentController != null &&
           currentController.state.isFirstFrameRendered;
-      if (alreadyPainted) {
+      final alreadyFailed =
+          _errors.contains(_currentIndex) &&
+          !_needsReinitOnActivate &&
+          !(widget.releaseNeighboursWhenInactive &&
+              currentController == null &&
+              !_hasTerminalError(_currentIndex));
+      if (alreadyPainted || alreadyFailed) {
         _activeFirstFrameTimer = null;
       } else {
         _beginFirstFrameMeasurement(_currentIndex);

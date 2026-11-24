@@ -2956,6 +2956,91 @@ void main() {
             await stop(tester);
           }
         });
+
+        testWidgets(
+          'does not report an abandoned session when returning to a failed video',
+          (tester) async {
+            await start(tester);
+            harness.setClipsFailures[0] = <Exception>[
+              PlatformException(code: 'service_unavailable'),
+            ];
+            Widget feed({required bool isActive}) => _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo('failing')],
+                cache: cache,
+                isActive: isActive,
+                prefetchCount: 0,
+                autoRetryMaxAttempts: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            );
+            try {
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+              await tester.pump();
+
+              await tester.pumpWidget(feed(isActive: false));
+              expect(sessions, hasLength(1));
+              expect(
+                sessions.single.outcome,
+                FeedPlaybackSessionOutcome.failed,
+              );
+
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+              await tester.pumpWidget(const SizedBox.shrink());
+
+              expect(sessions, hasLength(1));
+            } finally {
+              await stop(tester);
+            }
+          },
+        );
+
+        testWidgets(
+          'does not start a new session when returning to a terminal error '
+          'with neighbour release',
+          (tester) async {
+            await start(tester);
+            harness.setClipsFailures[0] = <Exception>[
+              PlatformException(
+                code: 'COMPOSITION_ERROR',
+                message: 'No playable video tracks found.',
+              ),
+            ];
+            Widget feed({required bool isActive}) => _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo('terminal')],
+                cache: cache,
+                isActive: isActive,
+                releaseNeighboursWhenInactive: true,
+                prefetchCount: 0,
+                autoRetryMaxAttempts: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            );
+            try {
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+              await tester.pump();
+
+              await tester.pumpWidget(feed(isActive: false));
+              expect(sessions, hasLength(1));
+              expect(
+                sessions.single.outcome,
+                FeedPlaybackSessionOutcome.failed,
+              );
+
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+              await tester.pumpWidget(const SizedBox.shrink());
+
+              expect(sessions, hasLength(1));
+            } finally {
+              await stop(tester);
+            }
+          },
+        );
       });
 
       testWidgets('does not autoplay when canAutoPlay returns false', (
