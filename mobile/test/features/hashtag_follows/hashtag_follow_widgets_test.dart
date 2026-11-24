@@ -198,5 +198,52 @@ void main() {
         expect(repositoryA.subscriptions.single.canonicalTag, 'lnic');
       },
     );
+
+    testWidgets(
+      'management opens one feed when a row is tapped twice before the next '
+      'frame',
+      (tester) async {
+        final repository = HashtagSubscriptionRepository(store: TestStore());
+        addTearDown(repository.dispose);
+        await repository.follow('funny');
+        final router = GoRouter(
+          routes: [
+            GoRoute(path: '/', builder: (_, _) => const FollowedHashtagsPage()),
+            GoRoute(
+              path: HashtagScreenRouter.path,
+              builder: (_, state) => Scaffold(
+                body: Text('opened:${state.pathParameters['tag']}'),
+              ),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              hashtagSubscriptionRepositoryProvider.overrideWithValue(
+                repository,
+              ),
+            ],
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('#funny'));
+        await tester.tap(find.text('#funny'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('opened:funny', skipOffstage: false), findsOneWidget);
+      },
+      variant: const TargetPlatformVariant({
+        TargetPlatform.android,
+        TargetPlatform.iOS,
+      }),
+    );
   });
 }

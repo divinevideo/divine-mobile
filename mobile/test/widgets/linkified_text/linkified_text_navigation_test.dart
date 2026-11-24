@@ -14,6 +14,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
@@ -277,6 +278,61 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('open sheet'), findsOneWidget);
+    });
+
+    group('navigateToHashtagFeed', () {
+      testWidgets(
+        'opens one feed when a hashtag is tapped twice before the next frame',
+        (tester) async {
+          final router = GoRouter(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (_, _) => Scaffold(
+                  body: Builder(
+                    builder: (context) => TextButton(
+                      onPressed: () =>
+                          LinkifiedTextNavigation.navigateToHashtagFeed(
+                            context,
+                            'funny',
+                          ),
+                      child: const Text('#funny'),
+                    ),
+                  ),
+                ),
+              ),
+              GoRoute(
+                path: HashtagScreenRouter.path,
+                builder: (_, state) => Scaffold(
+                  body: Text('opened:${state.pathParameters['tag']}'),
+                ),
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+          await tester.pumpWidget(
+            MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('#funny'));
+          await tester.tap(find.text('#funny'));
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text('opened:funny', skipOffstage: false),
+            findsOneWidget,
+          );
+        },
+        variant: const TargetPlatformVariant({
+          TargetPlatform.android,
+          TargetPlatform.iOS,
+        }),
+      );
     });
   });
 }

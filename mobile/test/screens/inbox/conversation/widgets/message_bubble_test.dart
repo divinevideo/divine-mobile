@@ -19,6 +19,7 @@ import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/message_bubble.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
@@ -1604,6 +1605,48 @@ void main() {
         expect(find.text('search:hm21'), findsOneWidget);
         expect(router.canPop(), isTrue);
       });
+
+      testWidgets(
+        'opens one hashtag feed when a hashtag is tapped twice before the '
+        'next frame',
+        (tester) async {
+          final router = GoRouter(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (context, state) => const Scaffold(
+                  body: MessageBubble(
+                    message: 'Look #funny',
+                    timestamp: '2:30 PM',
+                    isSent: true,
+                  ),
+                ),
+              ),
+              GoRoute(
+                path: HashtagScreenRouter.path,
+                builder: (context, state) => Scaffold(
+                  body: Text('feed:${state.pathParameters['tag']}'),
+                ),
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+
+          await tester.pumpWidget(_routerTestApp(router));
+          await tester.pump();
+
+          final recognizer = _linkRecognizer(tester, '#funny');
+          recognizer.onTap!();
+          recognizer.onTap!();
+          await tester.pumpAndSettle();
+
+          expect(find.text('feed:funny', skipOffstage: false), findsOneWidget);
+        },
+        variant: const TargetPlatformVariant({
+          TargetPlatform.android,
+          TargetPlatform.iOS,
+        }),
+      );
 
       testWidgets('URL span has $TapGestureRecognizer', (tester) async {
         await tester.pumpWidget(
