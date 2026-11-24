@@ -73,9 +73,9 @@ class VerifyPage extends ConsumerWidget {
 
     return BlocProvider(
       // Re-create on a repository swap: the captured signer and client belong
-      // to the identity that was current when the flow opened. The reader is
-      // in the key too, so changing the developer override starts over with
-      // the new answer.
+      // to the identity that was current when the flow opened. The reader and
+      // the simulated requirement are in the key too, so changing either
+      // developer setting starts over.
       key: ValueKey((
         repository,
         pubkey,

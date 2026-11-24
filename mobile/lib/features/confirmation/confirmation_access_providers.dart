@@ -1,5 +1,5 @@
 // ABOUTME: Where the app reads Divine Confirmation access from, and the
-// ABOUTME: developer override that forces an answer for testing.
+// ABOUTME: developer settings that force an answer or simulate the requirement.
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,8 +17,9 @@ import 'package:profile_repository/profile_repository.dart';
 /// must not carry onto the next account.
 const confirmationAccessOverrideKey = 'confirmation_access_override';
 
-/// Whether this is a debug build, where the override applies without
-/// developer mode. A provider only so tests can run as a release build.
+/// Whether this is a debug build, where the access override and the simulated
+/// requirement apply without developer mode. A provider only so tests can run
+/// as a release build.
 @visibleForTesting
 final confirmationAccessDebugBuildProvider = Provider<bool>(
   (ref) => kDebugMode,
@@ -91,11 +92,12 @@ final confirmationAccessReaderProvider = Provider<ConfirmationAccessReader>((
 const confirmationRequirementSimulatedKey =
     'confirmation_requirement_simulated';
 
-/// Whether a developer turned on "act as if the verifier requires Divine
-/// Confirmation" in developer options.
+/// Whether a developer turned on "Act as if Confirmation is required" in
+/// developer options.
 ///
-/// Stored even while it doesn't apply: [simulateConfirmationRequirementProvider]
-/// honours it only in a debug build or with developer mode on.
+/// Stored even while it doesn't apply:
+/// [simulateConfirmationRequirementProvider] honours it only in a debug build
+/// or with developer mode on.
 final confirmationRequirementSimulatedProvider =
     NotifierProvider<ConfirmationRequirementSimulatedNotifier, bool>(
       ConfirmationRequirementSimulatedNotifier.new,
@@ -122,21 +124,16 @@ class ConfirmationRequirementSimulatedNotifier extends Notifier<bool> {
   }
 }
 
-/// Whether the Verify screens treat every platform whose sign-in is on as
-/// requiring Divine Confirmation, as the verifier reports while its
-/// requirement is on (see `withSimulatedConfirmationRequirement`).
+/// Whether the Verify screens mark every platform whose sign-in is on as
+/// needing Divine Confirmation ([withSimulatedConfirmationRequirement]), so a
+/// tester can see the Confirmation screens against a verifier with its
+/// requirement off. The offer then follows [confirmationSignInRequired] and
+/// [showsConfirmationUpsell].
 ///
-/// It applies, like the access override, in a debug build or in any build with
-/// developer mode on, so a tester can see the Confirmation screens on a build
-/// that talks to a verifier with the requirement off. The offer itself also
-/// needs the `confirmationSignIn` flag and a "doesn't have" access answer:
-/// the override above, or the verifier's own, since "couldn't check" shows no
-/// offer.
-///
-/// Nothing the app submits changes, and the verifier still approves sign-ins
-/// as before. With the requirement shown and no access override applying,
-/// the app asks the verifier whether the account has Confirmation, as it
-/// would with the gate on.
+/// Applies where the access override does: a debug build, or developer mode
+/// on. The verifier still approves sign-ins as before. With the
+/// `confirmationSignIn` flag on and no access override applying, the app also
+/// signs, without prompting, and sends the access check it otherwise skips.
 final simulateConfirmationRequirementProvider = Provider<bool>((ref) {
   final applies =
       ref.watch(confirmationAccessDebugBuildProvider) ||

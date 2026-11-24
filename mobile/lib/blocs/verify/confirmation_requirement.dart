@@ -1,5 +1,5 @@
-// ABOUTME: The pure rule for when Divine Confirmation gates a sign-in link,
-// ABOUTME: and when the app offers the upsell for it.
+// ABOUTME: The pure rules for when Divine Confirmation gates a sign-in link,
+// ABOUTME: when the app offers its upsell, and the developer simulation of it.
 
 import 'package:profile_repository/profile_repository.dart';
 import 'package:verifier_client/verifier_client.dart';
