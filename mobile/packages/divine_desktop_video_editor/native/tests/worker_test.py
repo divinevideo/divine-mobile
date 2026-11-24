@@ -122,6 +122,27 @@ class WorkerTests(unittest.TestCase):
         self.assertEqual(code, 0, events)
         self.assertIs(events[-1]['value'], True)
 
+    def test_disabled_audio_omits_audio_track_and_preserves_video(self):
+        code, events = self.invoke(args={
+            'videoClips': [{'inputPath': str(FIXTURE)}], 'enableAudio': False,
+        })
+        self.assertEqual(code, 0, events)
+        output = Path(events[-1]['value']['path'])
+        streams = json.loads(subprocess.check_output(['ffprobe', '-v', 'error',
+            '-count_frames', '-show_streams', '-of', 'json', str(output)]))['streams']
+        self.assertEqual([stream['codec_type'] for stream in streams], ['video'])
+        self.assertEqual((streams[0]['width'], streams[0]['height']), (128, 240))
+        self.assertEqual(streams[0]['nb_read_frames'], '20')
+        pixels = self.rgb(output)
+        left = (120 * 128 + 16) * 3
+        right = (120 * 128 + 112) * 3
+        self.assertGreater(pixels[left], 220)
+        self.assertLess(pixels[left + 2], 30)
+        self.assertGreater(pixels[right + 2], 220)
+        self.assertLess(pixels[right], 30)
+        subprocess.run(['ffmpeg', '-v', 'error', '-i', str(output),
+                        '-f', 'null', '-'], check=True, stderr=subprocess.PIPE)
+
     def test_default_export_preserves_source_rate_and_explicit_cap_remains_a_cap(self):
         directory = tempfile.TemporaryDirectory(prefix='high rate input ')
         self.addCleanup(directory.cleanup)

@@ -16,10 +16,10 @@ void effect(GESClip* clip, const char* description) {
   if (!added) throw Failure{"encoder"};
 }
 
-void select_encoders() {
+void select_encoders(bool enable_audio) {
   Object<GstElementFactory> video(gst_element_factory_find("openh264enc"));
-  Object<GstElementFactory> audio(gst_element_factory_find("voaacenc"));
-  if (!video || !audio) throw Failure{"encoder"};
+  Object<GstElementFactory> audio(enable_audio ? gst_element_factory_find("voaacenc") : nullptr);
+  if (!video || (enable_audio && !audio)) throw Failure{"encoder"};
   // This helper's registry is isolated from the Flutter process. Make encoder
   // selection deterministic instead of accepting whichever installed encoder
   // happens to have the highest rank.
@@ -30,7 +30,7 @@ void select_encoders() {
   }
   gst_plugin_feature_list_free(factories);
   gst_plugin_feature_set_rank(GST_PLUGIN_FEATURE(video.get()), GST_RANK_PRIMARY + 100);
-  gst_plugin_feature_set_rank(GST_PLUGIN_FEATURE(audio.get()), GST_RANK_PRIMARY + 100);
+  if (audio) gst_plugin_feature_set_rank(GST_PLUGIN_FEATURE(audio.get()), GST_RANK_PRIMARY + 100);
 }
 
 struct MuxOptions {
@@ -104,13 +104,12 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
   const bool flip_x = boolean(member(args, "flipX"), false);
   const bool flip_y = boolean(member(args, "flipY"), false);
   const double turns = number(member(args, "rotateTurns"), 0);
-  if (turns != 0 || !boolean(member(args, "enableAudio"), true)) {
-    throw Failure{"unsupported"};
-  }
+  if (turns != 0) throw Failure{"unsupported"};
+  const bool enable_audio = boolean(member(args, "enableAudio"), true);
   JsonNode* format = member(args, "outputFormat");
   if (!absent(format) && text(format) != "mp4") throw Failure{"unsupported"};
 
-  select_encoders();
+  select_encoders(enable_audio);
   MuxOptions mux{boolean(member(args, "shouldOptimizeForNetworkUse"), false),
       false, (directory / "mux-media.tmp").u8string()};
   Object<GESTimeline> timeline(static_cast<GESTimeline*>(
@@ -127,6 +126,7 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
   auto* created = ges_uri_clip_new(uri.c_str());
   if (!created) throw Failure{"decoder"};
   Object<GESUriClip> clip(static_cast<GESUriClip*>(g_object_ref_sink(created)));
+  if (!enable_audio) ges_clip_set_supported_formats(GES_CLIP(clip.get()), GES_TRACK_TYPE_VIDEO);
   const GstClockTime duration = ges_timeline_element_get_duration(GES_TIMELINE_ELEMENT(clip.get()));
   const auto start = static_cast<GstClockTime>(start_us * GST_USECOND);
   const auto end = end_us == -1 ? duration : static_cast<GstClockTime>(end_us * GST_USECOND);
@@ -165,12 +165,17 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
       "/" + std::to_string(output_denominator);
   Caps restrictions(gst_caps_from_string(restriction.c_str()));
   GList* tracks = ges_timeline_get_tracks(timeline.get());
+  bool tracks_configured = true;
   for (GList* item = tracks; item; item = item->next) {
+    if (!enable_audio && GES_IS_AUDIO_TRACK(item->data)) {
+      if (!ges_timeline_remove_track(timeline.get(), GES_TRACK(item->data))) tracks_configured = false;
+    }
     if (GES_IS_VIDEO_TRACK(item->data)) {
       ges_track_set_restriction_caps(GES_TRACK(item->data), restrictions.get());
     }
   }
   g_list_free_full(tracks, g_object_unref);
+  if (!tracks_configured) throw Failure{"encoder"};
   GError* error = nullptr;
   const bool added = ges_layer_add_clip_full(layer, GES_CLIP(clip.get()), &error);
   g_clear_error(&error);
@@ -191,8 +196,10 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
       video_caps.get(), nullptr, restrictions.get(), 0);
   gst_encoding_video_profile_set_variableframerate(output_video, TRUE);
   gst_encoding_container_profile_add_profile(container, GST_ENCODING_PROFILE(output_video));
-  gst_encoding_container_profile_add_profile(container, GST_ENCODING_PROFILE(
-      gst_encoding_audio_profile_new(audio_caps.get(), nullptr, nullptr, 0)));
+  if (enable_audio) {
+    gst_encoding_container_profile_add_profile(container, GST_ENCODING_PROFILE(
+        gst_encoding_audio_profile_new(audio_caps.get(), nullptr, nullptr, 0)));
+  }
   const fs::path output = directory / "render.mp4";
   const std::string output_uri = file_uri(output);
   if (!ges_pipeline_set_timeline(pipeline.get(), timeline.get()) ||
