@@ -1,5 +1,6 @@
 import copy
 import io
+import os
 import plistlib
 import subprocess
 import tempfile
@@ -18,14 +19,18 @@ class StoreReviewTest(unittest.TestCase):
         scratch = tempfile.TemporaryDirectory()
         self.addCleanup(scratch.cleanup)
         self.repo = Path(scratch.name)
-        self.git('init', '-q')
+        self.git('-c', 'init.defaultBranch=main', 'init', '-q')
         self.enterContext(patch.object(store_review, 'ROOT', self.repo))
         self.plist({'UIBackgroundModes': ['fetch']})
         self.write('mobile/android/app/src/main/AndroidManifest.xml', '<manifest/>')
         self.base = self.commit()
 
     def git(self, *args):
-        return subprocess.check_output(['git', '-C', str(self.repo), *args], text=True).strip()
+        # A developer's global signing or hook settings must not change the fixture.
+        env = dict(os.environ, GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM='1')
+        return subprocess.check_output(
+            ['git', '-C', str(self.repo), *args], text=True, env=env
+        ).strip()
 
     def write(self, name, contents):
         path = self.repo / name
@@ -263,6 +268,84 @@ class StoreReviewTest(unittest.TestCase):
                 self.assertFalse(plan['actions'])
                 self.assertEqual(len(plan['errors']), 2)
                 self.assertTrue(all(finding in error for error in plan['errors']))
+
+    def test_documented_file_triggers_and_exclusions(self):
+        cases = [
+            ('ios', 'mobile/ios/Runner/en.lproj/InfoPlist.strings', 'changed', 'localized iOS permission prompts'),
+            ('ios', 'mobile/ios/Runner/PrivacyInfo.xcprivacy', 'changed', 'privacy manifests'),
+            ('ios', 'mobile/ios/Runner/Runner.entitlements', 'changed', 'privacy manifests'),
+            ('ios', 'mobile/ios/fastlane/metadata/en-US/description.txt', 'changed', 'iPad screenshots'),
+            ('ios', 'mobile/ios/Flutter/Release.xcconfig', 'TARGETED_DEVICE_FAMILY = 1,2', 'iPad screenshots'),
+            ('android', 'mobile/android/app/build.gradle.kts', 'changed', 'merged permissions'),
+            ('android', 'mobile/android/gradle.properties', 'changed', 'merged permissions'),
+            ('android', 'mobile/android/fastlane/metadata/android/en-US/title.txt', 'changed', 'merged permissions'),
+            ('android', 'mobile/android/app/src/debug/AndroidManifest.xml', 'changed', None),
+            ('android', 'mobile/packages/cam/example/android/app/src/main/AndroidManifest.xml', 'changed', None),
+            ('android', 'mobile/packages/cam/android/src/test/AndroidManifest.xml', 'changed', None),
+        ]
+        baseline = self.base
+        for platform, path, contents, finding in cases:
+            with self.subTest(path=path):
+                self.write(path, contents)
+                action = self.action(platform, self.commit())
+                plan = self.screen([action], baseline=baseline)
+                baseline = action['build']['sha']
+                if finding:
+                    self.assertFalse(plan['actions'])
+                    self.assertIn(finding, plan['errors'][0])
+                else:
+                    self.assertEqual((plan['actions'], plan['errors']), ([action], []))
+
+    def test_info_plist_policy_keys_and_purpose_strings_are_flagged(self):
+        for extra, finding in [({'NSCameraUsageDescription': 'Record loops'}, 'permission prompts'),
+                               ({'ITSAppUsesNonExemptEncryption': False}, 'export declarations'),
+                               ({'NSAppTransportSecurity': {'NSAllowsLocalNetworking': True}},
+                                'App Transport Security'),
+                               ({'CFBundleDisplayName': 'Divine'}, None)]:
+            with self.subTest(extra=extra):
+                self.plist({'UIBackgroundModes': ['fetch'], **extra})
+                action = self.action('ios', self.commit())
+                plan = self.screen([action])
+                self.assertEqual(plan['actions'], [] if finding else [action])
+                if finding:
+                    self.assertIn(finding, plan['errors'][0])
+
+    def test_each_unsupported_background_mode_is_blocked(self):
+        for mode in ('audio', 'bluetooth-central', 'bluetooth-peripheral'):
+            with self.subTest(mode=mode):
+                self.plist({'UIBackgroundModes': ['fetch', mode]})
+                plan = self.screen([self.action('ios', self.commit())], approval='any')
+                self.assertFalse(plan['actions'])
+                self.assertIn(f'regression ({mode})', plan['errors'][0])
+
+    def test_background_modes_written_as_a_string_are_rejected(self):
+        self.plist({'UIBackgroundModes': 'audio'})
+        plan = self.screen([self.action('ios', self.commit())], approval='any')
+        self.assertFalse(plan['actions'])
+        self.assertIn('invalid UIBackgroundModes', plan['errors'][0])
+
+    def test_confirmation_is_bound_to_the_reported_findings(self):
+        self.write('mobile/lib/widgets/report_content_dialog.dart', 'changed report UI')
+        action = self.action('android', self.commit())
+        approval = self.token_for(action)
+        original = store_review.findings_for
+        with patch.object(store_review, 'findings_for', side_effect=lambda *a: original(*a) + ['New rule.']):
+            plan = self.screen([action], approval=approval)
+        self.assertFalse(plan['actions'])
+        self.assertIn('New rule.', plan['errors'][0])
+
+    def test_proposed_submission_in_a_live_tick_is_reported_not_failed(self):
+        self.write('mobile/lib/widgets/report_content_dialog.dart', 'changed report UI')
+        plan = self.screen(proposed=[self.action('android', self.commit())], dry=False)
+        self.assertEqual((plan['proposed'], plan['errors']), ([], []))
+        self.assertIn('review required', plan['reasons'][0])
+
+    def test_candidate_without_verified_source_never_reaches_git(self):
+        for sha in (None, 'HEAD'):
+            with self.subTest(sha=sha):
+                plan = self.screen([self.action('android', sha)], approval='any')
+                self.assertFalse(plan['actions'])
+                self.assertIn('candidate source provenance is missing', plan['errors'][0])
 
     def test_production_outside_the_candidate_history_is_named_and_blocks_both_stores(self):
         self.git('checkout', '-q', '-b', 'hotfix')
