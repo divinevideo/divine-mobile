@@ -700,6 +700,19 @@ HRESULT Camera::ConfigureOutputMirroring() {
   if (FAILED(hr)) return hr;
   preview_output_mirrored_.store(record_stream == preview_stream);
   output_mirror_pending_ = true;
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+  char direct_effect[2];
+  if (GetEnvironmentVariableA("DIVINE_CAPTURE_TEST_DIRECT_EFFECT", direct_effect, sizeof(direct_effect))) {
+    // IMFCaptureSource accepts either IMFActivate or IMFTransform. Compare
+    // the same configured instance, changing only that interface boundary.
+    ComPtr<IMFTransform> transform;
+    hr = TraceMirrorStatus("direct_query", output_mirror_effect_.As(&transform));
+    if (SUCCEEDED(hr)) {
+      hr = TraceMirrorStatus("add", source->AddEffect(record_stream, transform.Get()));
+      if (SUCCEEDED(hr)) DebugLog("capture-stage effect_direct_applied");
+    }
+  } else
+#endif
   hr = TraceMirrorStatus("add", source->AddEffect(record_stream, output_mirror_activation_.Get()));
   if (FAILED(hr)) output_mirror_pending_ = false;
   return hr;

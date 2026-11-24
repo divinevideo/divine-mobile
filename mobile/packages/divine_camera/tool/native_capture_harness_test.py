@@ -40,7 +40,7 @@ class TraceFailureSignaturesTest(unittest.TestCase):
 
 class NativeFailureStatusTest(unittest.TestCase):
     def test_keeps_only_known_mirror_operation_and_hresult(self):
-        for stage in ['source', 'record_index', 'preview_index', 'factory', 'class', 'category', 'flags', 'control', 'mode', 'add']:
+        for stage in ['source', 'record_index', 'preview_index', 'factory', 'class', 'category', 'flags', 'control', 'mode', 'direct_query', 'add']:
             with self.subTest(stage=stage):
                 self.assertEqual(native_failure_status('capture-status mirror_' + stage + ':0xc00d36e6 metadata=unused'),
                                  ('mirror_' + stage, '0xc00d36e6'))
@@ -138,6 +138,26 @@ class EffectFlagsControlTest(unittest.TestCase):
                                              'capture-stage effect_flags_applied')
         require_capture_success(result, 'windows', 'mirrored-video', [], Path('.'),
                                 {'DIVINE_CAPTURE_TEST_EFFECT_FLAGS': '1'})
+
+
+class DirectEffectControlTest(unittest.TestCase):
+    def test_requested_variant_requires_actual_native_application(self):
+        result = subprocess.CompletedProcess([], 0, 'DIVINE_CAPTURE_PASS', '')
+        with self.assertRaisesRegex(RuntimeError, 'Direct effect variant was not applied'):
+            require_capture_success(result, 'windows', 'mirrored-video', [], Path('.'),
+                                    {'DIVINE_CAPTURE_TEST_DIRECT_EFFECT': '1'})
+
+    def test_applied_variant_does_not_hide_failed_capture(self):
+        result = subprocess.CompletedProcess([], 1, '', 'capture-stage effect_direct_applied')
+        with self.assertRaisesRegex(RuntimeError, 'Native capture failed'):
+            require_capture_success(result, 'windows', 'mirrored-video', [], Path('.'),
+                                    {'DIVINE_CAPTURE_TEST_DIRECT_EFFECT': '1'})
+
+    def test_applied_variant_and_success_are_both_required(self):
+        result = subprocess.CompletedProcess([], 0, 'DIVINE_CAPTURE_PASS',
+                                             'capture-stage effect_direct_applied')
+        require_capture_success(result, 'windows', 'mirrored-video', [], Path('.'),
+                                {'DIVINE_CAPTURE_TEST_DIRECT_EFFECT': '1'})
 
 
 class TraceRoutingTest(unittest.TestCase):

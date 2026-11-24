@@ -157,6 +157,8 @@ jobs:
           }
           python tool/native_capture_harness.py --platform windows --case mirrored-video --test-effect-flags --workspace $workspace
           if ($LASTEXITCODE -ne 0) { $failedCases += 'mirrored-video-flags' }
+          python tool/native_capture_harness.py --platform windows --case mirrored-video --test-direct-effect --workspace $workspace
+          if ($LASTEXITCODE -ne 0) { $failedCases += 'mirrored-video-direct' }
           if ($failedCases.Count -gt 0) { throw "Capture cases failed: $($failedCases -join ', ')" }
       - name: Characterize video processor activation independently
         if: ${{ !cancelled() && steps.native_contracts.outcome == 'success' }}
