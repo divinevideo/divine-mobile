@@ -195,7 +195,7 @@ production.
 
   To put the app behind it, the environment decides how. In every non-production environment the app accepts only relays on the environment's own host (`lib/services/nostr_service_factory.dart`), so under STAGING it takes `relay.staging.divine.video` and nothing else: a loopback proxy cannot be added there. Under `DEFAULT_ENV=LOCAL` the host is `localhost`, the default relay is `ws://localhost:47777` and the REST API shares that port (`mobile/lib/models/environment_config.dart`):
 
-  - **No local stack.** Run the proxy with `--listen 47777` and any `--upstream`, for example `wss://relay.staging.divine.video`. The app's own default relay now goes through it, and nothing needs adding in the settings. Plain HTTP to that port is forwarded too, so REST reads work.
+  - **No local stack.** Run the proxy with `--listen 47777` and any `--upstream`, for example `nak serve --port 47778`, or `wss://relay.staging.divine.video` while it still answers (it timed out on 2026-11-24, `flutter-lens.md` §1). The app's own default relay now goes through it, and nothing needs adding in the settings. Plain HTTP to that port is forwarded too, so REST reads work.
   - **With the local stack** (`mise run local_up` from `mobile/`; for the iOS simulator export `BLOSSOM_PUBLIC_URL=http://localhost:43003` first, per `AGENTS.md`): `--upstream ws://localhost:47777` (`localRelayPort`), the proxy on 47801, and add `ws://localhost:47801` in the app's relay settings. This route has not been run.
 
   **Run with the app** on 2026-11-02: iOS 27.0 simulator, debug, the first route above, staging relay upstream.

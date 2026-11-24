@@ -45,7 +45,8 @@ The device steps below are written for iOS; §5b has Android, macOS and web.
 - A TestFlight or App Store report is a release report. A debug repro proves the logic; say so, and name what differs: asserts that throw in debug and are skipped in release, `kDebugMode` branches, JIT timing, default log level.
 - Performance claims are measured in profile, median of several runs. Debug numbers are not evidence.
 - Profile and release install over the user's production app. Ask first.
-- Debug needs `--dart-define=DEFAULT_ENV=STAGING` (or `LOCAL`), otherwise the staging bundle talks to production.
+- Debug needs `--dart-define=DEFAULT_ENV=LOCAL` (or `STAGING`), otherwise the staging bundle talks to production.
+- Staging may no longer run: on 2026-11-24 `wss://relay.staging.divine.video` timed out on TCP 443 while the same `nak req` reached `relay.divine.video`, and `mobile/lib/models/environment_config.dart` says staging and POC no longer run. Probe it before you plan on it (`nak req -k 0 -l 1 wss://relay.staging.divine.video </dev/null`). Without staging or Docker, `nak serve --port 47777 </dev/null` is LOCAL's relay: a `DEFAULT_ENV=LOCAL` build signs in, follows, publishes and receives DMs against it, while the Funnelcake REST calls seen answered 404, so feeds, counts and notifications fail (#7684, iOS 27.2 simulator, debug).
 
 ## 2. See every log, not two categories of seven
 
@@ -90,7 +91,7 @@ directory. In a fresh worktree run `mise trust` in `mobile/` once first, or
 
 ```bash
 FM="bash <skill dir>/scripts/flutter-machine.sh"; RUN=<scratch>/run1
-$FM start $RUN <repo>/mobile <device-id> --dart-define=DEFAULT_ENV=STAGING \
+$FM start $RUN <repo>/mobile <device-id> --dart-define=DEFAULT_ENV=LOCAL \
     --dart-define=LOG_CATEGORIES=RELAY,VIDEO,UI,AUTH,STORAGE,API,SYSTEM \
     --dart-define=LOG_LEVEL=verbose
 $FM wait $RUN                          # prints appId, wsUri (VM service), dtdUri
