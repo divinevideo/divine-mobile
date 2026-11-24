@@ -914,7 +914,8 @@ class ZendeskSupportService {
   /// with the user's name and email is used when the bridge says the app
   /// expects one, or when no JWT can be set and the bridge has not said the
   /// app expects JWT. Both bridges name the expected type of a refused
-  /// identity; iOS names it for every authentication failure.
+  /// identity; iOS also names it for any other authentication failure of an
+  /// identity the SDK holds.
   static Future<bool> _setIdentityForRetry(
     ZendeskNativeTicketFailure failure,
   ) async {
