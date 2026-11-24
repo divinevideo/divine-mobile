@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/widgets/video_feed_item/blurred_video_backdrop.dart';
+import 'package:openvine/widgets/video_tile_transition/laid_out_transform_path.dart';
 import 'package:openvine/widgets/video_tile_transition/rounded_by_clips.dart';
 
 /// Where a player letterboxing a video at [aspectRatio] draws it in
@@ -141,8 +142,10 @@ class _VideoTileTransitionTargetState extends State<VideoTileTransitionTarget> {
   VideoTileLanding? landingIn(RenderBox ancestor) {
     if (widget.blocksFlight) return null;
     final page = context.findRenderObject();
-    if (page is! RenderBox || !page.attached || !page.hasSize) return null;
-    if (!ancestor.attached) return null;
+    if (page is! RenderBox ||
+        !hasLaidOutTransformPath(page, ancestor: ancestor)) {
+      return null;
+    }
     final viewport = MatrixUtils.transformRect(
       page.getTransformTo(ancestor),
       Offset.zero & page.size,

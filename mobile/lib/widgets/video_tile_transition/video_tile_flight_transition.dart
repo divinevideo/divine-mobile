@@ -8,6 +8,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
+import 'package:openvine/widgets/video_tile_transition/laid_out_transform_path.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_transition_target.dart';
 
@@ -366,7 +367,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
   /// show the video, rather than aiming elsewhere for those frames.
   VideoTileLanding _landing(Rect screen) {
     final page = _pageKey.currentContext?.findRenderObject();
-    if (page is RenderBox && page.attached) {
+    if (page is RenderBox && hasLaidOutTransformPath(page)) {
       final landing = _targets.landingOf(_videoId, page);
       if (landing != null) {
         _lastLanding = landing.shift(page.localToGlobal(Offset.zero));
