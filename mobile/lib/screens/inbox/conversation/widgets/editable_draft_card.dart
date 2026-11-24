@@ -71,6 +71,12 @@ class EditableDraftCard extends ConsumerWidget {
   }
 
   Future<void> _open(BuildContext context, WidgetRef ref) async {
+    final route = ModalRoute.of(context);
+    final router = GoRouter.of(context);
+    final conversation = router.routerDelegate.currentConfiguration;
+    bool inConversation() =>
+        route?.isCurrent == true &&
+        router.routerDelegate.currentConfiguration == conversation;
     final storage = ref.read(draftStorageServiceProvider);
     final auth = ref.read(authServiceProvider);
     final owner = storage.ownerPubkey;
@@ -90,13 +96,13 @@ class EditableDraftCard extends ConsumerWidget {
         !ref
             .read(contentBlocklistRepositoryProvider)
             .isBlocked(
-              message.senderPubkey,
+              message.senderPubkey.toLowerCase(),
             );
 
     try {
       final importer = ref.read(draftTransferServiceProvider);
       final decryptor = ref.read(dmVideoDecryptorProvider);
-      final id = await context.read<_DraftImportCubit>().open(() async {
+      await context.read<_DraftImportCubit>().open(() async {
         final draft = await importer.importDraft(
           messageId: message.id,
           senderPubkey: message.senderPubkey,
@@ -109,27 +115,23 @@ class EditableDraftCard extends ConsumerWidget {
             stillWanted: stillWanted,
           ),
         );
-        return draft.id;
+        if (!context.mounted || !stillWanted() || !inConversation()) return;
+        if (hasCreationSessionInRouteStack(conversation)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            DivineSnackbarContainer.snackBar(
+              context.l10n.uploadFailureSheetSavedToDraftsSnackbar,
+            ),
+          );
+          return;
+        }
+        final publisher = ref.read(videoPublishProvider.notifier);
+        await publisher.clearAll(keepAutosavedDraft: true);
+        if (!context.mounted || !stillWanted() || !inConversation()) return;
+        await VideoEditorDraftRouteData(
+          draftId: draft.id,
+          from: VideoEditorScreen.libraryOrigin,
+        ).push<void>(context);
       });
-      if (!context.mounted || id == null || !stillWanted()) return;
-      final router = GoRouter.of(context);
-      if (hasCreationSessionInRouteStack(
-        router.routerDelegate.currentConfiguration,
-      )) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          DivineSnackbarContainer.snackBar(
-            context.l10n.uploadFailureSheetSavedToDraftsSnackbar,
-          ),
-        );
-        return;
-      }
-      final publisher = ref.read(videoPublishProvider.notifier);
-      await publisher.clearAll(keepAutosavedDraft: true);
-      if (!context.mounted || !stillWanted()) return;
-      await VideoEditorDraftRouteData(
-        draftId: id,
-        from: VideoEditorScreen.libraryOrigin,
-      ).push<void>(context);
     } finally {
       session.close();
     }
@@ -141,17 +143,14 @@ enum _DraftImportState { idle, importing, failed }
 class _DraftImportCubit extends Cubit<_DraftImportState> {
   _DraftImportCubit() : super(_DraftImportState.idle);
 
-  Future<String?> open(Future<String> Function() importDraft) async {
-    if (isClosed || state == _DraftImportState.importing) return null;
+  Future<void> open(Future<void> Function() openDraft) async {
+    if (isClosed || state == _DraftImportState.importing) return;
     emit(_DraftImportState.importing);
     try {
-      final id = await importDraft();
-      if (isClosed) return null;
-      emit(_DraftImportState.idle);
-      return id;
+      await openDraft();
+      if (!isClosed) emit(_DraftImportState.idle);
     } on Object {
       if (!isClosed) emit(_DraftImportState.failed);
-      return null;
     }
   }
 }

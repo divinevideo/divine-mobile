@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
@@ -70,82 +71,106 @@ void main() {
 
   group(EditableDraftCard, () {
     group('navigation', () {
-      testWidgets('opens the imported draft in the normal draft editor route', (
-        tester,
-      ) async {
-        final storage = _MockStorage();
-        final importer = _MockTransfer();
-        final blocklist = _MockBlocklist();
-        when(() => storage.ownerPubkey).thenReturn(_recipient);
-        when(() => blocklist.isBlocked(_sender)).thenReturn(false);
+      for (final leaveChat in [false, true]) {
+        testWidgets(
+          leaveChat
+              ? 'keeps the next page open when an import finishes in the background'
+              : 'opens the imported draft in the normal draft editor route',
+          (tester) async {
+            final storage = _MockStorage();
+            final importer = _MockTransfer();
+            final blocklist = _MockBlocklist();
+            when(() => storage.ownerPubkey).thenReturn(_recipient);
+            when(() => blocklist.isBlocked(_sender)).thenReturn(false);
 
-        final draft = DivineVideoDraft.create(
-          id: 'imported-draft',
-          clips: [],
-          title: 'Received project',
-          description: '',
-          hashtags: {},
-          selectedApproach: 'camera',
-        );
-        when(
-          () => importer.importDraft(
-            messageId: message.id,
-            senderPubkey: _sender,
-            storage: storage,
-            download: any(named: 'download'),
-            stillWanted: any(named: 'stillWanted'),
-          ),
-        ).thenAnswer((_) async => draft);
-
-        String? editorOrigin;
-        final router = GoRouter(
-          routes: [
-            GoRoute(
-              path: '/',
-              builder: (_, _) => Scaffold(
-                body: EditableDraftCard(message: message, canOpen: true),
+            final draft = DivineVideoDraft.create(
+              id: 'imported-draft',
+              clips: [],
+              title: 'Received project',
+              description: '',
+              hashtags: {},
+              selectedApproach: 'camera',
+            );
+            final imported = Completer<DivineVideoDraft>();
+            when(
+              () => importer.importDraft(
+                messageId: message.id,
+                senderPubkey: _sender,
+                storage: storage,
+                download: any(named: 'download'),
+                stillWanted: any(named: 'stillWanted'),
               ),
-            ),
-            GoRoute(
-              path: VideoEditorScreen.draftPathWithId,
-              builder: (_, state) {
-                editorOrigin = state.uri.queryParameters['from'];
-                return Scaffold(body: Text(state.pathParameters['draftId']!));
-              },
-            ),
-          ],
+            ).thenAnswer((_) => imported.future);
+
+            String? editorOrigin;
+            final router = GoRouter(
+              routes: [
+                GoRoute(
+                  path: '/',
+                  builder: (_, _) => Scaffold(
+                    body: EditableDraftCard(message: message, canOpen: true),
+                  ),
+                ),
+                GoRoute(
+                  path: '/profile',
+                  builder: (_, _) => const Scaffold(body: Text('Profile')),
+                ),
+                GoRoute(
+                  path: VideoEditorScreen.draftPathWithId,
+                  builder: (_, state) {
+                    editorOrigin = state.uri.queryParameters['from'];
+                    return Scaffold(
+                      body: Text(state.pathParameters['draftId']!),
+                    );
+                  },
+                ),
+              ],
+            );
+            addTearDown(router.dispose);
+
+            await tester.pumpWidget(
+              testProviderScope(
+                mockAuthService: createMockAuthService(
+                  currentPublicKeyHex: _recipient,
+                ),
+                additionalOverrides: [
+                  nostrSessionProvider.overrideWith(_Session.new),
+                  draftStorageServiceProvider.overrideWithValue(storage),
+                  dmVideoDecryptorProvider.overrideWithValue(_MockDecryptor()),
+                  draftTransferServiceProvider.overrideWithValue(importer),
+                  contentBlocklistRepositoryProvider.overrideWithValue(
+                    blocklist,
+                  ),
+                  videoPublishProvider.overrideWith(_Publisher.new),
+                ],
+                child: MaterialApp.router(
+                  routerConfig: router,
+                  theme: VineTheme.theme,
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                ),
+              ),
+            );
+
+            verifyZeroInteractions(importer);
+            await tester.tap(find.text(l10n.dmOpenDraft));
+            await tester.pump();
+            if (leaveChat) {
+              unawaited(router.push<void>('/profile'));
+              await tester.pumpAndSettle();
+            }
+            imported.complete(draft);
+            await tester.pumpAndSettle();
+            if (leaveChat) {
+              expect(find.text('Profile'), findsOneWidget);
+              expect(editorOrigin, isNull);
+            } else {
+              expect(find.text(draft.id), findsOneWidget);
+              expect(editorOrigin, VideoEditorScreen.libraryOrigin);
+            }
+          },
         );
-        addTearDown(router.dispose);
-
-        await tester.pumpWidget(
-          testProviderScope(
-            mockAuthService: createMockAuthService(
-              currentPublicKeyHex: _recipient,
-            ),
-            additionalOverrides: [
-              nostrSessionProvider.overrideWith(_Session.new),
-              draftStorageServiceProvider.overrideWithValue(storage),
-              dmVideoDecryptorProvider.overrideWithValue(_MockDecryptor()),
-              draftTransferServiceProvider.overrideWithValue(importer),
-              contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
-              videoPublishProvider.overrideWith(_Publisher.new),
-            ],
-            child: MaterialApp.router(
-              routerConfig: router,
-              theme: VineTheme.theme,
-              localizationsDelegates: appLocalizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-            ),
-          ),
-        );
-
-        verifyZeroInteractions(importer);
-        await tester.tap(find.text(l10n.dmOpenDraft));
-        await tester.pumpAndSettle();
-
-        expect(find.text(draft.id), findsOneWidget);
-        expect(editorOrigin, VideoEditorScreen.libraryOrigin);
-      });
+      }
     });
   });
 }

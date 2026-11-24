@@ -2154,7 +2154,7 @@ class _MessageList extends StatelessWidget {
         final index = itemIndex - pendingCount;
         final message = messages[index];
         final messageKey = ValueKey(message.id);
-        final isSent = message.senderPubkey == currentPubkey;
+        final isSent = pubkeysEqual(message.senderPubkey, currentPubkey);
         final soundRequest = parseSoundRequestMessage(
           message,
           ownerPubkey: currentPubkey,
@@ -2353,6 +2353,7 @@ class _MessageList extends StatelessWidget {
                         !kIsWeb &&
                         !isSent &&
                         !isGroup &&
+                        isOneToOneWith(message.senderPubkey) &&
                         !blockedSenders.contains(
                           message.senderPubkey.toLowerCase(),
                         ) &&
