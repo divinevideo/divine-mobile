@@ -233,8 +233,9 @@ contains monitor failures and is never awaited.
 
 Ship enabled, under the same gates as every other performance trace: release
 mode only and distributed builds only (Shorebird engine or a Zapstore
-installer), with debug and profile excluded both natively and in Dart. No
-separate sampler is added. The `http_operation` trace is 1:1 with a network
+installer), with debug and profile excluded both natively and in Dart, and
+no trace started while **Share usage data** is off (#11398). No separate
+sampler is added. The `http_operation` trace is 1:1 with a network
 metric that already ships unsampled; Firebase's on-device rate limit and
 dynamic sampling already bound the volume; and a second sample rate would
 decouple the custom trace from the network metric the reports compare it
