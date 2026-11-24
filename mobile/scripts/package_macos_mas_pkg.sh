@@ -70,10 +70,28 @@ echo "Verifying Firebase Analytics product (no Google ads-measurement SDK)..."
 bash scripts/check_ios_analytics_product.sh --app "$ARCHIVED_APP"
 
 echo "Exporting signed Mac App Store .pkg..."
+EXPORT_LOG="$(mktemp)"
+trap 'rm -f "$EXPORT_LOG"' EXIT
+set +e
 xcodebuild -exportArchive \
   -archivePath "$ARCHIVE_PATH" \
   -exportOptionsPlist "$EXPORT_OPTIONS_PLIST" \
-  -exportPath "$EXPORT_DIR"
+  -exportPath "$EXPORT_DIR" 2>&1 | tee "$EXPORT_LOG"
+EXPORT_STATUS="${PIPESTATUS[0]}"
+set -e
+
+if [ "$EXPORT_STATUS" -ne 0 ]; then
+  DIST_LOG_DIR="$(sed -En 's/.*Created bundle at path "([^"]+\.xcdistributionlogs)".*/\1/p' "$EXPORT_LOG" | tail -1)"
+  if [ -n "$DIST_LOG_DIR" ] && [ -d "$DIST_LOG_DIR" ]; then
+    for log_name in IDEDistribution.critical.log IDEDistribution.standard.log; do
+      if [ -f "$DIST_LOG_DIR/$log_name" ]; then
+        echo "=== $log_name ===" >&2
+        tail -n 120 "$DIST_LOG_DIR/$log_name" >&2
+      fi
+    done
+  fi
+  exit "$EXPORT_STATUS"
+fi
 
 PKG_PATH=$(find "$EXPORT_DIR" -maxdepth 1 -name '*.pkg' -print -quit)
 if [ -z "$PKG_PATH" ] || [ ! -f "$PKG_PATH" ]; then

@@ -73,7 +73,10 @@ app-store-connect certificates list \
   --certificate-key="@env:CERTIFICATE_PRIVATE_KEY" \
   --save
 
-keychain add-certificates
+# `keychain add-certificates` defaults to allowing only `codesign` and
+# `productsign`. Mac App Store `.pkg` export invokes `/usr/bin/productbuild`,
+# which fails headlessly unless it is on the key ACL and partition list.
+keychain add-certificates --allow-app codesign productsign productbuild
 
 # `certificates list --save` exits 0 with an empty list when no matching
 # installer certificate exists yet for this private key. Inspect the keychain
@@ -85,7 +88,7 @@ if [ -z "$INSTALLER_SIGNING_IDENTITY" ]; then
     --type MAC_INSTALLER_DISTRIBUTION \
     --certificate-key="@env:CERTIFICATE_PRIVATE_KEY" \
     --save
-  keychain add-certificates
+  keychain add-certificates --allow-app codesign productsign productbuild
   INSTALLER_SIGNING_IDENTITY="$(find_installer_signing_identity)"
 fi
 
@@ -101,6 +104,13 @@ if [ -z "$APP_SIGNING_IDENTITY" ]; then
   security find-identity -v -p codesigning >&2 || true
   exit 1
 fi
+
+# Authorize Apple signing tools (`codesign`, `productbuild`, `productsign`) to
+# access the imported private key non-interactively (`keychain initialize` uses
+# an empty password by default). `keychain get-default` prints the raw path on
+# stdout without mangling paths that contain spaces.
+BUILD_KEYCHAIN="$(keychain get-default)"
+security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$BUILD_KEYCHAIN" >/dev/null
 
 xcode-project use-profiles --project macos/Runner.xcodeproj
 

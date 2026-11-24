@@ -1541,6 +1541,87 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
                 )
                 self.assertEqual(expected, result.stdout.strip())
 
+    def test_macos_signing_and_pkg_scripts_authorize_productbuild_and_log_failures(self) -> None:
+        signing_text = (CODEMAGIC_PATH.parent / "mobile/scripts/setup_macos_mas_signing.sh").read_text()
+        add_cert_lines = [
+            line.strip()
+            for line in signing_text.splitlines()
+            if line.strip().startswith("keychain add-certificates")
+        ]
+        self.assertGreaterEqual(len(add_cert_lines), 2)
+        for line in add_cert_lines:
+            self.assertIn("--allow-app codesign productsign productbuild", line)
+        self.assertIn('BUILD_KEYCHAIN="$(keychain get-default)"', signing_text)
+        self.assertIn(
+            'security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$BUILD_KEYCHAIN"',
+            signing_text,
+        )
+
+        pkg_script = CODEMAGIC_PATH.parent / "mobile/scripts/package_macos_mas_pkg.sh"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            work_dir = root / "mobile"
+            (work_dir / "macos").mkdir(parents=True)
+            (work_dir / "scripts").mkdir(parents=True)
+            (work_dir / "build/macos").mkdir(parents=True)
+            (work_dir / "build/macos/ExportOptions.plist").write_text("<plist/>")
+            (work_dir / "scripts/check_ios_analytics_product.sh").write_text("#!/usr/bin/env bash\nexit 0\n")
+
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
+            dist_logs = root / "Runner_test.xcdistributionlogs"
+            dist_logs.mkdir()
+            (dist_logs / "IDEDistribution.critical.log").write_text("CRITICAL_PRODUCTBUILD_ERR\n")
+            (dist_logs / "IDEDistribution.standard.log").write_text("STANDARD_KEYCHAIN_ACL_ERR\n")
+
+            codesign_stub = bin_dir / "codesign"
+            codesign_stub.write_text(
+                "#!/usr/bin/env bash\n"
+                'if [ "${1:-}" = "-d" ]; then\n'
+                '  printf "<key>com.apple.security.app-sandbox</key>\\n<key>keychain-access-groups</key>\\n"\n'
+                "fi\n"
+                "exit 0\n"
+            )
+            codesign_stub.chmod(0o755)
+
+            xcodebuild_stub = bin_dir / "xcodebuild"
+            xcodebuild_stub.write_text(
+                "#!/usr/bin/env bash\n"
+                "set -euo pipefail\n"
+                'if [ "${1:-}" = "-exportArchive" ]; then\n'
+                f'  echo \'[MT] IDEDistribution: Created bundle at path "{dist_logs}".\'\n'
+                "  echo 'error: exportArchive productbuild failed' >&2\n"
+                "  exit 70\n"
+                "fi\n"
+                'archive_path=""\n'
+                'while [ "$#" -gt 0 ]; do\n'
+                '  if [ "$1" = "-archivePath" ]; then\n'
+                '    archive_path="$2"\n'
+                "    shift 2\n"
+                "  else\n"
+                "    shift\n"
+                "  fi\n"
+                "done\n"
+                'app="$archive_path/Products/Applications/Divine.app"\n'
+                'mkdir -p "$app/Contents/Resources"\n'
+                'touch "$app/Contents/embedded.provisionprofile" "$app/Contents/Resources/PrivacyInfo.xcprivacy"\n'
+                "exit 0\n"
+            )
+            xcodebuild_stub.chmod(0o755)
+
+            env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}")
+            result = subprocess.run(
+                ["bash", str(pkg_script)],
+                cwd=work_dir,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 70, result.stderr)
+            self.assertIn("CRITICAL_PRODUCTBUILD_ERR", result.stderr)
+            self.assertIn("STANDARD_KEYCHAIN_ACL_ERR", result.stderr)
+
     def _definition_block(self, anchor_name: str) -> str:
         start = self.contents.index(f"    - &{anchor_name}\n")
         next_definition = re.search(
