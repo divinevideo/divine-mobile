@@ -3085,6 +3085,68 @@ void main() {
             }
           },
         );
+
+        testWidgets(
+          'measures a manual retry after returning to a failed video',
+          (tester) async {
+            await start(tester);
+            final key = GlobalKey<InfiniteVideoFeedState>();
+            final videos = [_makeVideo('retry_after_return')];
+            final firstFrames = <FeedFirstFrameMetric>[];
+            final firstFrameSub = FeedFirstFrameMetrics.events.listen(
+              firstFrames.add,
+            );
+            addTearDown(firstFrameSub.cancel);
+            harness.setClipsFailures[0] = <Exception>[
+              PlatformException(code: 'service_unavailable'),
+            ];
+            Widget feed({required bool isActive}) => _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: videos,
+                cache: cache,
+                isActive: isActive,
+                prefetchCount: 0,
+                autoRetryMaxAttempts: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            );
+            try {
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+              await tester.pump();
+
+              await tester.pumpWidget(feed(isActive: false));
+              expect(sessions, hasLength(1));
+              expect(
+                sessions.single.outcome,
+                FeedPlaybackSessionOutcome.failed,
+              );
+
+              await tester.pumpWidget(feed(isActive: true));
+              await tester.pump();
+
+              await key.currentState!.retryAt(0);
+              await tester.pump();
+              await harness.sendEvent(1, const <Object?, Object?>{
+                'status': 'playing',
+                'isFirstFrameRendered': true,
+              });
+              await tester.pump(const Duration(milliseconds: 250));
+
+              await tester.pumpWidget(const SizedBox.shrink());
+
+              expect(firstFrames, hasLength(1));
+              expect(sessions, hasLength(2));
+              expect(sessions.last.outcome, FeedPlaybackSessionOutcome.played);
+              expect(sessions.last.end, FeedPlaybackSessionEnd.closed);
+              expect(sessions.last.timeToFirstFrame, isNotNull);
+              expect(sessions.last.watched, const Duration(milliseconds: 250));
+            } finally {
+              await stop(tester);
+            }
+          },
+        );
       });
 
       testWidgets('does not autoplay when canAutoPlay returns false', (

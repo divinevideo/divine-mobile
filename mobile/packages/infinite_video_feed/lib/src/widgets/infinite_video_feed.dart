@@ -1783,6 +1783,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _subscriptions.unsubscribe(index);
     unawaited(_controllers.remove(index)?.dispose());
     _rebuildPage(index);
+    if (index == _currentIndex && _isActive && _activeFirstFrameTimer == null) {
+      _beginFirstFrameMeasurement(index);
+    }
     // Skip cache on manual retry so a corrupt cached file does not loop
     // the same failure indefinitely.
     final initialized = await _initController(index, skipCache: true);
