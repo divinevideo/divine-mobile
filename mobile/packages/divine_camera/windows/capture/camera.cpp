@@ -14,6 +14,7 @@
 #include "logging.h"
 #include "photo_handler.h"
 #include "pixel_utils.h"
+#include "pixel_transform.h"
 
 // ============================================================================
 // COM callbacks
@@ -630,6 +631,53 @@ HRESULT Camera::StartPreviewInternal() {
   return hr;
 }
 
+// Saved output is transformed on the recording source. Shared preview streams
+// are compensated in OnPreviewSample so Flutter still receives natural pixels.
+HRESULT Camera::ConfigureOutputMirroring() {
+  ComPtr<IMFCaptureSource> source;
+  HRESULT hr = capture_engine_->GetSource(&source);
+  if (FAILED(hr)) return hr;
+  DWORD record_stream = 0, preview_stream = 0;
+  hr = source->GetStreamIndexFromFriendlyName(
+      MF_CAPTURE_ENGINE_PREFERRED_SOURCE_STREAM_FOR_VIDEO_RECORD, &record_stream);
+  if (FAILED(hr)) return hr;
+  hr = source->GetStreamIndexFromFriendlyName(
+      MF_CAPTURE_ENGINE_PREFERRED_SOURCE_STREAM_FOR_VIDEO_PREVIEW, &preview_stream);
+  if (FAILED(hr)) return hr;
+  hr = CoCreateInstance(CLSID_VideoProcessorMFT, nullptr, CLSCTX_INPROC_SERVER,
+                        IID_PPV_ARGS(&output_mirror_effect_));
+  if (FAILED(hr)) return hr;
+  hr = output_mirror_effect_->SetMirror(MIRROR_HORIZONTAL);
+  if (FAILED(hr)) return hr;
+  preview_output_mirrored_.store(record_stream == preview_stream);
+  output_mirror_pending_ = true;
+  hr = source->AddEffect(record_stream, output_mirror_effect_.Get());
+  if (FAILED(hr)) output_mirror_pending_ = false;
+  return hr;
+}
+
+void Camera::FinishInitialization() {
+  HRESULT hr = StartPreviewInternal();
+  if (FAILED(hr)) {
+    DebugLog("capture-status preview:" + HrToString(hr));
+    CompleteInit(false, "Failed to start camera preview");
+    return;
+  }
+
+  // Complete initialization now instead of waiting for the first preview
+  // sample. Preview dimensions are already known from negotiation, and
+  // blocking on frame #1 added ~1.9s of camera sensor warm-up to initialize().
+  // Frames populate the texture as they arrive; the init timeout becomes a
+  // watchdog that signals a cameraError if no frames ever show up.
+  {
+    std::lock_guard<std::mutex> lk(state_mutex_);
+    if (state_ == CameraState::kInitializing) state_ = CameraState::kRunning;
+  }
+  DebugLog("init-timing: +" + std::to_string(InitElapsedMs()) +
+           "ms StartPreview issued, init completed (not waiting for frame #1)");
+  CompleteInit(true, "", preview_width_, preview_height_);
+}
+
 // ============================================================================
 // Initialize
 // ============================================================================
@@ -795,25 +843,26 @@ void Camera::OnEngineEvent(IMFMediaEvent* event) {
     DebugLog("init-timing: +" + std::to_string(InitElapsedMs()) +
              "ms media types negotiated");
 
-    hr = StartPreviewInternal();
-    if (FAILED(hr)) {
-      DebugLog("capture-status preview:" + HrToString(hr));
-      CompleteInit(false, "Failed to start camera preview");
-      return;
+    if (config_.mirror_output) {
+      hr = ConfigureOutputMirroring();
+      if (FAILED(hr)) {
+        DebugLog("capture-status mirror_effect:" + HrToString(hr));
+        CompleteInit(false, "Failed to configure saved-output mirroring");
+      }
+      return;  // EFFECT_ADDED acknowledges the configured recording stream.
     }
+    FinishInitialization();
+    return;
+  }
 
-    // Complete initialization now instead of waiting for the first preview
-    // sample. Preview dimensions are already known from negotiation, and
-    // blocking on frame #1 added ~1.9s of camera sensor warm-up to initialize().
-    // Frames populate the texture as they arrive; the init timeout becomes a
-    // watchdog that signals a cameraError if no frames ever show up.
-    {
-      std::lock_guard<std::mutex> lk(state_mutex_);
-      if (state_ == CameraState::kInitializing) state_ = CameraState::kRunning;
+  if (event_type == MF_CAPTURE_ENGINE_EFFECT_ADDED && output_mirror_pending_) {
+    output_mirror_pending_ = false;
+    if (FAILED(event_hr)) {
+      DebugLog("capture-status mirror_effect:" + HrToString(event_hr));
+      CompleteInit(false, "Failed to apply saved-output mirroring");
+    } else {
+      FinishInitialization();
     }
-    DebugLog("init-timing: +" + std::to_string(InitElapsedMs()) +
-             "ms StartPreview issued, init completed (not waiting for frame #1)");
-    CompleteInit(true, "", preview_width_, preview_height_);
     return;
   }
 
@@ -953,8 +1002,12 @@ void Camera::OnPreviewSample(IMFSample* sample) {
   if (!copied) return;
 
   BYTE* data = packed_frame_.data();
+  if (preview_output_mirrored_.load()) {
+    divine_capture::MirrorFourByteRows(data, static_cast<ptrdiff_t>(cur_w) * 4,
+                                       cur_w, cur_h);
+  }
 
-  // Snapshot for photo capture (natural BGRA, mirroring handled in Flutter).
+  // Snapshot natural BGRA; photo output applies its own saved orientation.
   {
     std::lock_guard<std::mutex> lk(latest_frame_mutex_);
     latest_frame_.resize(packed_len);
@@ -1087,6 +1140,11 @@ void Camera::TakePicture(
   {
     width  = preview_width_;
     height = preview_height_;
+  }
+
+  if (config_.mirror_output) {
+    divine_capture::MirrorFourByteRows(frame_copy.data(),
+        static_cast<ptrdiff_t>(width) * 4, width, height);
   }
 
   DebugLog("TakePicture: capturing frame " + std::to_string(width) +
@@ -1508,6 +1566,7 @@ void Camera::DisposeInternal() {
   record_handler_.reset();
 
   preview_sink_.Reset();
+  output_mirror_effect_.Reset();
   base_preview_media_type_.Reset();
   base_capture_media_type_.Reset();
   dxgi_device_manager_.Reset();

@@ -334,6 +334,15 @@ void CameraDesktopPlugin::HandleCreate(
   config.symbolic_link = symbolic_link;
   config.resolution_preset = resolution_preset;
   config.enable_audio = enable_audio;
+  auto mirror_it = args.find(flutter::EncodableValue("mirrorOutput"));
+  if (mirror_it != args.end()) {
+    const auto* mirror = std::get_if<bool>(&mirror_it->second);
+    if (!mirror) {
+      result->Error("invalid_args", "mirrorOutput must be a boolean");
+      return;
+    }
+    config.mirror_output = *mirror;
+  }
   config.target_fps = target_fps;
   config.target_bitrate = target_bitrate;
   config.audio_bitrate = audio_bitrate;

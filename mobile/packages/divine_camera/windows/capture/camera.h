@@ -40,6 +40,7 @@ struct CameraConfig {
   std::wstring symbolic_link;
   int  resolution_preset = 4;  // 0=low … 4=max
   bool enable_audio      = false;
+  bool mirror_output     = false;
   int  target_fps        = 30;
   int  target_bitrate    = 0;  // <=0 means use dynamic default ladder.
   int  audio_bitrate     = 0;
@@ -98,6 +99,8 @@ class Camera : public std::enable_shared_from_this<Camera> {
   HRESULT CreateCaptureEngine();
   HRESULT FindBaseMediaTypes();
   HRESULT StartPreviewInternal();
+  HRESULT ConfigureOutputMirroring();
+  void FinishInitialization();
 
   void CompleteInit(bool success, const std::string& error,
                     int width = 0, int height = 0);
@@ -134,6 +137,9 @@ class Camera : public std::enable_shared_from_this<Camera> {
   ComPtr<IMFMediaSource>        capture_video_source_;
   ComPtr<IMFMediaSource>        capture_audio_source_;
   ComPtr<IMFCapturePreviewSink> preview_sink_;
+  ComPtr<IMFVideoProcessorControl> output_mirror_effect_;
+  bool output_mirror_pending_ = false;  // Platform queue only.
+  std::atomic<bool> preview_output_mirrored_{false};
   ComPtr<ID3D11Device>          dx11_device_;
   ComPtr<IMFDXGIDeviceManager>  dxgi_device_manager_;
   UINT                          dx_device_reset_token_ = 0;
