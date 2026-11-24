@@ -247,9 +247,9 @@
   "@privacySettingsShareUsage": {
     "description": "Label of the switch that turns analytics collection on or off. Consent copy: keep it plain and literal, never playful."
   },
-  "privacySettingsShareUsageSubtitle": "Helps us see what people actually use. Switch it off and queued data is deleted.",
+  "privacySettingsShareUsageSubtitle": "Helps us see what people actually use. Switch it off and queued data is deleted. Crash reports are still sent so we can fix bugs.",
   "@privacySettingsShareUsageSubtitle": {
-    "description": "Supporting copy under the analytics consent switch. Second sentence is load-bearing: turning the switch off also discards analytics still queued on the device."
+    "description": "Supporting copy under the analytics consent switch. Second sentence is load-bearing: turning the switch off also discards analytics still queued on the device. Third sentence is load-bearing too: crash reporting stays on whichever way the switch is set, so the copy must not suggest it stops."
   },
   "privacySettingsSaveFailed": "We couldn't save that. Usage data stays off for now.",
   "@privacySettingsSaveFailed": {

@@ -320,7 +320,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Helps us see what people actually use. Switch it off and queued data is deleted.';
+      'Helps us see what people actually use. Switch it off and queued data is deleted. Crash reports are still sent so we can fix bugs.';
 
   @override
   String get privacySettingsSaveFailed =>

@@ -13,6 +13,7 @@ import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
+import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/product_event_queue.dart';
 import 'package:openvine/services/view_event_publisher.dart';
 import 'package:openvine/services/view_event_retry_service.dart';
@@ -56,6 +57,16 @@ class _RecordingCollectionControl implements AnalyticsCollectionControl {
   @override
   Future<void> resetAnalyticsData() async {
     resetCount++;
+  }
+}
+
+/// Records what the consent switch asked of Firebase Performance.
+class _RecordingPerformanceConsent implements PerformanceConsentControl {
+  final List<bool> consent = [];
+
+  @override
+  Future<void> setAnalyticsConsent({required bool enabled}) async {
+    consent.add(enabled);
   }
 }
 
@@ -1511,6 +1522,7 @@ void main() {
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
       late _RecordingCollectionControl collectionControl;
+      late _RecordingPerformanceConsent performanceConsent;
 
       PendingViewEventsDao openDao() {
         final tempDir = Directory.systemTemp.createTempSync(
@@ -1527,6 +1539,7 @@ void main() {
           backgroundActivityManager: BackgroundActivityManager(),
           pendingViewEventsDao: dao,
           analyticsCollectionControl: collectionControl,
+          performanceConsentControl: performanceConsent,
           currentUserPubkey: () => viewerPubkey,
         );
       }
@@ -1557,6 +1570,7 @@ void main() {
 
       setUp(() {
         collectionControl = _RecordingCollectionControl();
+        performanceConsent = _RecordingPerformanceConsent();
       });
 
       test(
@@ -1645,6 +1659,32 @@ void main() {
 
         expect(collectionControl.collectionEnabled, equals([false]));
         expect(collectionControl.resetCount, 1);
+      });
+
+      test(
+        'a stored opt-out reaches Firebase Performance at startup',
+        () async {
+          // #11398: Performance has its own SDK flag, so switching Analytics
+          // collection off left every performance trace reporting.
+          SharedPreferences.setMockInitialValues({'analytics_enabled': false});
+          final service = buildService();
+
+          await service.initialize();
+
+          expect(performanceConsent.consent, equals([false]));
+        },
+      );
+
+      test('withdrawal turns Firebase Performance off', () async {
+        SharedPreferences.setMockInitialValues({'analytics_enabled': true});
+        final service = buildService();
+        await service.initialize();
+        expect(performanceConsent.consent, equals([true]));
+        performanceConsent.consent.clear();
+
+        await service.setAnalyticsEnabled(false);
+
+        expect(performanceConsent.consent, equals([false]));
       });
 
       test('opting back in turns Firebase collection on again', () async {

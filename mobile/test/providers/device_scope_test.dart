@@ -22,6 +22,7 @@ import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
 import 'package:openvine/providers/player_cache_budget_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/shorebird_availability_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
@@ -244,6 +245,25 @@ void main() {
 
       expect(a.read(logMessageBatcherProvider), same(logMessageBatcher));
       expect(b.read(logMessageBatcherProvider), same(logMessageBatcher));
+    });
+
+    test('every container reads the same performance monitor', () {
+      // Startup initializes the monitor once. A per-container instance would
+      // never be, so an account switch would drop every later trace and an
+      // analytics opt-out made after it would not reach the SDK (#11398).
+      final a = buildAccountContainer(deviceScope);
+      addTearDown(a.dispose);
+      final b = buildAccountContainer(deviceScope);
+      addTearDown(b.dispose);
+
+      expect(
+        a.read(performanceMonitoringServiceProvider),
+        same(deviceScope.performanceMonitoring),
+      );
+      expect(
+        b.read(performanceMonitoringServiceProvider),
+        same(deviceScope.performanceMonitoring),
+      );
     });
 
     test('every container reads the same app version override', () {

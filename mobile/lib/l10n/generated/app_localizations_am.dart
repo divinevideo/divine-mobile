@@ -315,7 +315,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'ሰዎች በእውነት ምን እንደሚጠቀሙ እንድናይ ይረዳናል። ካጠፉት በዚህ መሣሪያ ላይ የተሰለፈው ውሂብ ይሰረዛል።';
+      'ሰዎች በእውነት ምን እንደሚጠቀሙ እንድናይ ይረዳናል። ካጠፉት በዚህ መሣሪያ ላይ የተሰለፈው ውሂብ ይሰረዛል። ስህተቶችን ለማስተካከል የብልሽት ሪፖርቶች አሁንም ይላካሉ።';
 
   @override
   String get privacySettingsSaveFailed =>

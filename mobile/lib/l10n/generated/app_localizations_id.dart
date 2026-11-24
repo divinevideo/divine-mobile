@@ -255,7 +255,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Membantu kami melihat apa yang benar-benar dipakai orang. Kalau kamu matikan, data yang masih antre di perangkat ini dihapus.';
+      'Membantu kami melihat apa yang benar-benar dipakai orang. Kalau kamu matikan, data yang masih antre di perangkat ini dihapus. Laporan crash tetap dikirim supaya kami bisa memperbaiki bug.';
 
   @override
   String get privacySettingsSaveFailed =>

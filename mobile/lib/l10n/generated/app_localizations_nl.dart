@@ -314,7 +314,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Helpt ons te zien wat mensen echt gebruiken. Zet je het uit, dan worden wachtende gegevens op dit apparaat verwijderd.';
+      'Helpt ons te zien wat mensen echt gebruiken. Zet je het uit, dan worden wachtende gegevens op dit apparaat verwijderd. Crashrapporten worden nog wel verstuurd, zodat we bugs kunnen oplossen.';
 
   @override
   String get privacySettingsSaveFailed =>

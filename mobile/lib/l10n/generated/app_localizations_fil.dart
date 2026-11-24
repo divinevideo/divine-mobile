@@ -285,7 +285,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Nakakatulong para makita namin kung ano talaga ang ginagamit ng mga tao. Kapag na-off mo, mabubura ang naka-queue na data sa device na ito.';
+      'Nakakatulong para makita namin kung ano talaga ang ginagamit ng mga tao. Kapag na-off mo, mabubura ang naka-queue na data sa device na ito. Ipinapadala pa rin ang mga crash report para maayos namin ang mga bug.';
 
   @override
   String get privacySettingsSaveFailed =>

@@ -3656,7 +3656,7 @@
   "settingsPrivacySubtitle": "Pilih data penggunaan yang kamu bagikan",
   "privacySettingsAnalyticsSection": "ANALITIK",
   "privacySettingsShareUsage": "Bagikan data penggunaan",
-  "privacySettingsShareUsageSubtitle": "Membantu kami melihat apa yang benar-benar dipakai orang. Kalau kamu matikan, data yang masih antre di perangkat ini dihapus.",
+  "privacySettingsShareUsageSubtitle": "Membantu kami melihat apa yang benar-benar dipakai orang. Kalau kamu matikan, data yang masih antre di perangkat ini dihapus. Laporan crash tetap dikirim supaya kami bisa memperbaiki bug.",
   "privacySettingsSaveFailed": "Kami tidak bisa menyimpannya. Data penggunaan tetap nonaktif untuk saat ini.",
   "generalSettingsSectionIntegrations": "INTEGRASI",
   "generalSettingsSectionViewing": "MENONTON",
