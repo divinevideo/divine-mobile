@@ -48,6 +48,18 @@ class _AuthRequiredPublishRetry {
   bool resent = false;
 }
 
+/// The one-shot queries and COUNT requests a relay object still owed an
+/// answer to when it left the pool.
+class _OrphanedRequests {
+  _OrphanedRequests(this.queries, this.counts);
+
+  final List<Subscription> queries;
+  final List<
+    ({String id, Completer<CountResponse> completer, List<dynamic>? request})
+  >
+  counts;
+}
+
 class RelayPool {
   // avoid to send these events to cache relay
   static List<int> cacheAvoidEvents = [
@@ -114,6 +126,21 @@ class RelayPool {
   /// Live subscriptions whose serving relays all refused while a relay in
   /// [_relaysStillReplaying] could still take them, with the last reason.
   final Map<String, String> _refusedAwaitingReplay = {};
+
+  /// What a relay object removed from the pool still owed an answer to, by
+  /// url, until the object that replaces it takes it over in [add] or the
+  /// removal's follow-up ends it (#11343).
+  ///
+  /// `RelayManager` reconnects a relay by removing its object and adding a
+  /// new one for the same url. A subscription id names a request on one
+  /// socket only (NIP-01), so whatever the old socket was still answering
+  /// has to be asked again on the new one.
+  final Map<String, _OrphanedRequests> _orphanedRequests = {};
+
+  /// Replacement relays still dialling after taking over another object's
+  /// requests. Each sends them as it connects, so it still counts as able to
+  /// answer them; see [_canStillSettleQuery].
+  final Set<Relay> _relaysTakingOver = {};
 
   // init query
   final Map<String, Subscription> _initQuery = {};
@@ -332,6 +359,17 @@ class RelayPool {
   /// here — which would both grow unbounded and, if the id were ever reused,
   /// let a later full-settlement query skip its hold.
   final Set<String> _queryReachedNoRelay = {};
+
+  /// One-shot queries a relay took and can no longer answer: it left the pool
+  /// with nothing replacing it, or its replacement could not reconnect to ask
+  /// again (#11343).
+  ///
+  /// Unlike [_queryAnswered] this proves nothing about the fan-out being
+  /// served, so it never arms [querySettleWindow] against the relays still
+  /// answering. It only lets a [requireAllRelaysSettled] read end once no
+  /// relay holds the query, instead of waiting for an answer that cannot
+  /// come; the outcome reports the lost relay as dropped.
+  final Set<String> _queryLostRelay = {};
 
   /// Track publishes awaiting OK confirmations (per event id).
   final Map<String, PublishTracker> _pendingPublishes = {};
@@ -781,8 +819,17 @@ class RelayPool {
 
     relay.onMessage = _onEvent;
     _observeRelayStatus(relay);
+    final takenOver = _takeOverOrphanedRequests(relay);
 
-    if (!autoSubscribe) return _connectAdded(relay, init: init);
+    if (!autoSubscribe) {
+      var connected = false;
+      try {
+        connected = await _connectAdded(relay, init: init);
+        return connected;
+      } finally {
+        _finishTakeover(relay, takenOver, connected: connected);
+      }
+    }
     _relaysStillReplaying.add(relay);
     var replaySucceeded = false;
     try {
@@ -800,7 +847,62 @@ class RelayPool {
           unsentIds: null,
         );
       }
+      _finishTakeover(relay, takenOver, connected: replaySucceeded);
       _settleRefusedAwaitingReplay();
+    }
+  }
+
+  /// Hands [relay] what the previous object for its url still owed an answer
+  /// to, before [relay] connects, so its socket asks for it again (#11343).
+  ///
+  /// A one-shot query is saved on [relay], which re-issues saved requests on
+  /// a fresh socket, and the query's outcome judges [relay] on its own answer
+  /// in place of the object it replaces. A COUNT is queued to go out the same
+  /// way. Until the dial ends, [relay] counts as able to answer them and is
+  /// not judged silent.
+  _OrphanedRequests? _takeOverOrphanedRequests(Relay relay) {
+    final orphans = _orphanedRequests.remove(relay.url);
+    if (orphans == null) return null;
+    for (final query in orphans.queries) {
+      relay.saveQuery(query);
+      _queryOutcomes[query.id]?.recordTakeover(relay);
+    }
+    for (final count in orphans.counts) {
+      final request = count.request;
+      if (request == null) {
+        _failOrphanedCount(count.completer, relay.url, count.id);
+      } else {
+        relay.adoptCountQuery(count.id, count.completer, request);
+      }
+    }
+    _relaysTakingOver.add(relay);
+    return orphans;
+  }
+
+  /// Ends [relay]'s takeover of [takenOver] once its dial is over.
+  ///
+  /// Once connected, its socket asks for them again as it replays its saved
+  /// requests. Otherwise nothing will, so they end now as unanswered by it, as
+  /// on a removal with no replacement. A relay replaced again meanwhile handed
+  /// them on already.
+  void _finishTakeover(
+    Relay relay,
+    _OrphanedRequests? takenOver, {
+    required bool connected,
+  }) {
+    if (takenOver == null) return;
+    _relaysTakingOver.remove(relay);
+    if (connected || !_holdsRelay(relay)) return;
+    for (final count in takenOver.counts) {
+      relay.failCountQuery(
+        count.id,
+        '${relay.url} could not reconnect to answer it',
+      );
+    }
+    for (final query in takenOver.queries) {
+      if (relay.discardQuery(query.id)) {
+        _fireQueryCompleteIfSettled(query.id, afterRelayLost: true);
+      }
     }
   }
 
@@ -996,6 +1098,12 @@ class RelayPool {
 
   void remove(String url, {int relayType = RelayType.normal}) {
     log('Removing $url');
+    final removed = switch (relayType) {
+      RelayType.normal => _relays[url],
+      RelayType.cache => _cacheRelays[url],
+      _ => null,
+    };
+    if (removed != null) _orphanRequestsOf(removed);
     if (relayType == RelayType.normal) {
       _relays[url]?.disconnect();
       _relays[url]?.dispose();
@@ -1009,9 +1117,56 @@ class RelayPool {
     // After the caller's synchronous follow-up, so a reconnect that re-adds
     // the same URL is judged on the replacement rather than on its absence.
     scheduleMicrotask(() {
+      _endOrphanedRequests(url);
       _recheckStoredEventsPhasesFor(url);
       _settleRefusedAwaitingReplay();
     });
+  }
+
+  /// Keeps what [relay] still owed an answer to as it leaves the pool, for
+  /// the object that replaces it under the same url; see [_orphanedRequests].
+  ///
+  /// The queries leave [relay] too, so a frame its socket delivers late, such
+  /// as an event still being verified off the main isolate, cannot hand the
+  /// query back to it once the replacement has asked again.
+  void _orphanRequestsOf(Relay relay) {
+    final queries = relay.getQueries();
+    for (final query in queries) {
+      relay.discardQuery(query.id);
+    }
+    final counts = relay.takePendingCountQueries();
+    if (queries.isEmpty && counts.isEmpty) return;
+    final earlier = _orphanedRequests[relay.url];
+    _orphanedRequests[relay.url] = _OrphanedRequests(
+      [...?earlier?.queries, ...queries],
+      [...?earlier?.counts, ...counts],
+    );
+  }
+
+  /// Ends what a removed relay still owed when no replacement for its url
+  /// took it over: no socket is left to answer it.
+  void _endOrphanedRequests(String url) {
+    final orphans = _orphanedRequests.remove(url);
+    if (orphans == null) return;
+    for (final count in orphans.counts) {
+      _failOrphanedCount(count.completer, url, count.id);
+    }
+    for (final query in orphans.queries) {
+      _fireQueryCompleteIfSettled(query.id, afterRelayLost: true);
+    }
+  }
+
+  void _failOrphanedCount(
+    Completer<CountResponse> completer,
+    String url,
+    String id,
+  ) {
+    if (completer.isCompleted) return;
+    completer.completeError(
+      CountNotSupportedException(
+        '$url left the relay pool before answering COUNT $id',
+      ),
+    );
   }
 
   /// Whether a pooled relay is still connecting or replaying [_subscriptions],
@@ -1371,6 +1526,8 @@ class RelayPool {
   /// absence for callers that require full settlement.
   /// Set [afterFanoutReachedNoRelay] when the REQ fan-out ended with no relay
   /// having taken the query.
+  /// Set [afterRelayLost] when a relay that took the query can no longer
+  /// answer it; see [_queryLostRelay].
   ///
   /// A fourth fact takes no flag because it is read from the relays
   /// themselves: whether any relay still holds this query while being unable
@@ -1386,12 +1543,14 @@ class RelayPool {
     bool afterTerminalFrame = false,
     bool afterClosedWithoutAnswer = false,
     bool afterFanoutReachedNoRelay = false,
+    bool afterRelayLost = false,
   }) {
     final callback = _queryCompleteCallbacks[subId];
     if (callback == null) return;
     if (afterTerminalFrame) _queryAnswered.add(subId);
     if (afterClosedWithoutAnswer) _queryClosedWithoutAnswer.add(subId);
     if (afterFanoutReachedNoRelay) _queryReachedNoRelay.add(subId);
+    if (afterRelayLost) _queryLostRelay.add(subId);
     if (_queryFanoutInProgress.contains(subId)) return;
 
     final list = [
@@ -1447,9 +1606,13 @@ class RelayPool {
     // [strandedOnBlockedRelay] joins the two existing reasons to keep waiting.
     // It cannot coincide with [_queryReachedNoRelay]: a fan-out no relay took
     // leaves no relay holding the query, so nothing can be stranded on one.
+    // A lost relay ([_queryLostRelay]) cannot answer either, so once nothing
+    // else holds the query, waiting on it is as pointless as on no relay.
     if (_queriesRequiringFullSettlement.contains(subId) &&
         !_queryReachedNoRelay.contains(subId) &&
-        (!_queryAnswered.contains(subId) || strandedOnBlockedRelay)) {
+        (strandedOnBlockedRelay ||
+            !(_queryAnswered.contains(subId) ||
+                _queryLostRelay.contains(subId)))) {
       return;
     }
 
@@ -1530,9 +1693,12 @@ class RelayPool {
   /// replay after NIP-42. One part-way through its answer, or still answering
   /// the requests queued ahead of this one on the same socket, keeps sending
   /// frames; only one that has gone quiet stops, and only time tells the two
-  /// apart. A relay mid-handshake is not silent. A relay the pool no longer
-  /// holds, removed or replaced by a fresh object for its url, can never
-  /// answer, so it counts as silent at once.
+  /// apart. A relay mid-handshake is not silent, and neither is one still
+  /// dialling to take over a request from the object it replaced, which has
+  /// had no socket to send on yet. A relay the pool no longer holds can never
+  /// answer, so it counts as silent at once. One replaced by a fresh object
+  /// for its url is not that: the replacement takes the REQ over and is
+  /// judged in its place (#11343).
   ({String relayUrl, bool leftPool})? relaySilentOnQuery(
     String subId, {
     required Duration quietFor,
@@ -1547,7 +1713,9 @@ class RelayPool {
     final now = _monotonic.elapsed;
     for (final relay in owing) {
       if (!_holdsRelay(relay)) return (relayUrl: relay.url, leftPool: true);
-      if (_hasLiveAuthHandshake(relay)) continue;
+      if (_hasLiveAuthHandshake(relay) || _relaysTakingOver.contains(relay)) {
+        continue;
+      }
       final heard = _lastHeardAt[relay];
       if (heard == null || now - heard >= quietFor) {
         return (relayUrl: relay.url, leftPool: false);
@@ -1584,6 +1752,7 @@ class RelayPool {
     _queryAnswered.remove(subId);
     _queryClosedWithoutAnswer.remove(subId);
     _queryReachedNoRelay.remove(subId);
+    _queryLostRelay.remove(subId);
     _queriesRequiringFullSettlement.remove(subId);
     _querySettleTimers.remove(subId)?.cancel();
     _releaseQuery(subId);
@@ -1673,7 +1842,11 @@ class RelayPool {
   bool _canStillSettleQuery(Relay relay) {
     // A dropped socket cannot deliver the terminal frame for a REQ that was
     // written to it; the reconnect path re-issues the REQ on a fresh socket.
-    if (relay.relayStatus.connected != ClientConnected.connected) return false;
+    // A replacement still dialling is the exception: it sends the requests it
+    // took over as it connects, and reports `connecting` meanwhile (#11343).
+    if (relay.relayStatus.connected != ClientConnected.connected) {
+      return _relaysTakingOver.contains(relay);
+    }
 
     // A connection being force-cycled as a zombie reports `connected`
     // throughout, so it would otherwise keep charging concurrent queries the
@@ -3361,6 +3534,7 @@ class RelayPool {
       _queryAnswered.remove(id);
       _queryClosedWithoutAnswer.remove(id);
       _queryReachedNoRelay.remove(id);
+      _queryLostRelay.remove(id);
       _queriesRequiringFullSettlement.remove(id);
       _querySettleTimers.remove(id)?.cancel();
       _releaseQuery(id);
@@ -3398,12 +3572,14 @@ class RelayPool {
     final answered = _queryAnswered.contains(subId);
     final closedWithoutAnswer = _queryClosedWithoutAnswer.contains(subId);
     final noRelayTookRequest = _queryReachedNoRelay.contains(subId);
+    final lostRelay = _queryLostRelay.contains(subId);
     final strandedOnBlockedRelay = unsettled.any(
       (relay) => !_canStillSettleQuery(relay),
     );
     if (answered &&
         !closedWithoutAnswer &&
         !noRelayTookRequest &&
+        !lostRelay &&
         !strandedOnBlockedRelay &&
         unsettled.isEmpty) {
       return;
@@ -3416,6 +3592,7 @@ class RelayPool {
       '(answered=$answered, closedWithoutAnswer=$closedWithoutAnswer, '
       'noRelayTookRequest=$noRelayTookRequest, '
       'strandedOnBlockedRelay=$strandedOnBlockedRelay, '
+      'lostRelay=$lostRelay, '
       'unsettledRelays=${unsettled.length})',
     );
   }
@@ -4634,13 +4811,18 @@ class RelayPool {
           acceptedByAny = true;
 
           // Only register after successful send to avoid orphaned completers
-          final responseFuture = relay.registerCountQuery(relaySubId);
+          final responseFuture = relay.registerCountQuery(
+            relaySubId,
+            request: relayMessage,
+          );
           log('📊 COUNT request sent to ${relay.url}');
           answerBudget = remaining();
           return await responseFuture.timeout(answerBudget);
         } on TimeoutException {
           log('📊 COUNT timed out on ${relay.url}');
           relay.failCountQuery(relaySubId, 'Timeout');
+          // A replacement for the url may have taken the COUNT over.
+          _relays[relay.url]?.failCountQuery(relaySubId, 'Timeout');
           _diagnose(
             RelayDiagnosticSite.requestSettlement,
             RelayDiagnosticLevel.warning,
