@@ -68,7 +68,7 @@ Besides the curated sounds above, Divine publishes a library of freely licensed 
 - `AudioEvent.isLibrary` (`lib/extensions/divine_sound_extensions.dart`) marks it, by signer and without an `a` tag, as `isDivine` does.
 - It shows in every list the community's sounds do: New, Popular, search, and For you for a viewer who follows the library account. It shows without the community mark.
 - A library sound picked for the boost is published again by a Divine sound account.
-- The set is empty until the account exists. An app version without its pubkey shows the library with the community mark.
+- The library account is `npub1n0dqg6d7t8ejzcc0awlhz4sgxxsrg28q37dp5ktxze0t9hs8s9jqncrx0a` (hex `9bda0469be59f321630febbf71560831a03428e08f9a1a5966165eb2de078164`, `kSoundLibraryPubkeyHex`). An app version from before it was added shows the library with the community mark.
 - Funnelcake's search boost (`SEARCH_DIVINE_SOUND_PUBKEYS`) should not list the library account either.
 
 ### Sources
@@ -131,6 +131,6 @@ Keys come from the environment of the maintainer who runs the step and never go 
 
 ## Open decisions
 
-- **Signing account.** HQ is configured. A dedicated sound account keeps HQ's own posts apart; changing it is one line in `official_accounts.dart` and needs a release, like the other official sets. The imported library has its own account, decided 2026-11-04; its pubkey goes into `kSoundLibraryPublisherPubkeys` once it exists.
+- **Signing account.** HQ is configured. A dedicated sound account keeps HQ's own posts apart; changing it is one line in `official_accounts.dart` and needs a release, like the other official sets. The imported library has its own account, decided 2026-11-04 and created 2026-11-24; its pubkey is in `kSoundLibraryPublisherPubkeys`, and it is the `--expect-pubkey` for `publish`.
 - **Tag schema.** `divine_sound` and the use of `music`/`sfx` should be confirmed before the first publish. The app also reads the effect synonyms above.
 - **The shipped set.** Once the library is published, the app can ship a small starter set and load the rest from the network.

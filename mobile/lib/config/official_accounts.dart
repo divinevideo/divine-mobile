@@ -93,15 +93,20 @@ const List<OfficialAccount> kPinnedOfficialAccounts = [
 /// describes what such an account publishes.
 const Set<String> kDivineSoundPublisherPubkeys = {kHqPubkeyHex};
 
+/// The account that signs Divine's imported sound library, created
+/// 2026-11-24: npub1n0dqg6d7t8ejzcc0awlhz4sgxxsrg28q37dp5ktxze0t9hs8s9jqncrx0a.
+const String kSoundLibraryPubkeyHex =
+    '9bda0469be59f321630febbf71560831a03428e08f9a1a5966165eb2de078164';
+
 /// Accounts that publish Divine's imported sound library: thousands of
 /// freely licensed effects and songs (`tools/import_free_sounds.dart`).
 ///
 /// Kept apart from [kDivineSoundPublisherPubkeys] so the bulk import does
 /// not take the Divine boost: its sounds show without the community mark, in
 /// every list like the community's. A sound picked for the boost is published
-/// by a Divine sound account instead. Empty until the library account exists;
-/// `mobile/docs/DIVINE_SOUNDS.md` describes it.
-const Set<String> kSoundLibraryPublisherPubkeys = {};
+/// by a Divine sound account instead. `mobile/docs/DIVINE_SOUNDS.md`
+/// describes it.
+const Set<String> kSoundLibraryPublisherPubkeys = {kSoundLibraryPubkeyHex};
 
 /// The Divine team and Divine's own accounts, by pubkey. Drives the profile
 /// checkmark.
