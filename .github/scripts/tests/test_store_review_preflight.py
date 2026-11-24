@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import release_train_fakes  # adds repository scripts to sys.path
-from release_train import runner, store_review
+from release_train import release_notes, runner, store_review
 from release_train.providers import BeforeStoreMutationError, DeferredReview
 
 
@@ -226,6 +226,44 @@ class StoreReviewTest(unittest.TestCase):
                 self.assertEqual(len(plan['errors']), 2)
                 self.assertTrue(all(finding in error for error in plan['errors']))
 
+    def test_code_that_carries_out_review_critical_flows_is_flagged_on_both_stores(self):
+        cases = {
+            'mobile/lib/blocs/comments/comment_reactions/comment_reactions_bloc.dart': 'moderation flows',
+            'mobile/lib/screens/comments/widgets/comment_options_modal.dart': 'moderation flows',
+            'mobile/packages/comments_repository/lib/src/comment_moderation_repository.dart': 'moderation flows',
+            'mobile/lib/screens/other_profile_screen.dart': 'moderation flows',
+            'mobile/lib/providers/social_providers.dart': 'moderation flows',
+            'mobile/lib/services/nsfw_content_filter.dart': 'filtering objectionable content',
+            'mobile/lib/widgets/content_warning.dart': 'moderation flows',
+            'mobile/lib/widgets/video_feed_item/moderated_content_overlay.dart': 'moderation flows',
+            'mobile/lib/services/moderation_label_service.dart': 'moderation flows',
+            'mobile/packages/content_policy/lib/src/policy_rule.dart': 'moderation flows',
+            'mobile/lib/blocs/dm/message_requests/message_request_actions_cubit.dart': 'moderation flows',
+            'mobile/lib/blocs/dm/minor_dm_approval.dart': 'moderation flows',
+            'mobile/lib/blocs/dm/conversation_list/protected_minor_inbox_gate_impl.dart': 'moderation flows',
+            'mobile/packages/keycast_flutter/lib/src/oauth/oauth_client.dart': 'reviewer access',
+            'mobile/lib/providers/auth_providers.dart': 'reviewer access',
+            'mobile/lib/router/app_router_redirect.dart': 'reviewer access',
+            'mobile/lib/screens/account_deletion_recovery_screen.dart': 'reviewer access',
+            'mobile/lib/repositories/account_deletion_recovery_repository.dart': 'reviewer access',
+            'mobile/lib/screens/settings/privacy_settings_screen.dart': 'reviewer access',
+            'mobile/lib/services/analytics_service.dart': 'reviewer access',
+            'mobile/lib/blocs/support_contact/support_contact_cubit.dart': 'reviewer access',
+            'mobile/lib/services/age_verification_service.dart': 'reviewer access',
+            'mobile/lib/blocs/email_verification/email_verification_cubit.dart': 'reviewer access',
+        }
+        baseline = self.base
+        for path, finding in cases.items():
+            with self.subTest(path=path):
+                self.write(path, 'changed policy-sensitive behavior')
+                source = self.commit()
+                actions = [self.action('ios', source), self.action('android', source)]
+                plan = self.screen(actions, baseline=baseline)
+                baseline = source
+                self.assertFalse(plan['actions'])
+                self.assertEqual(len(plan['errors']), 2)
+                self.assertTrue(all(finding in error for error in plan['errors']))
+
     def test_main_releases_only_when_live_dispatch_confirms_the_exact_build(self):
         self.write('mobile/lib/widgets/report_content_dialog.dart', 'changed report UI')
         candidate = self.commit()
@@ -301,3 +339,13 @@ class StoreReviewTest(unittest.TestCase):
         ])
         self.assertEqual(other_build[0], 1)
         self.assertFalse(other_build[1])
+
+
+class StoreReviewPathListTest(unittest.TestCase):
+    def test_every_watched_prefix_matches_a_tracked_file(self):
+        tracked = subprocess.check_output(
+            ['git', '-C', str(release_notes.ROOT), 'ls-files', 'mobile'], text=True
+        ).splitlines()
+        for prefix in store_review.MODERATION_PATHS + store_review.ACCESS_PATHS:
+            with self.subTest(prefix=prefix):
+                self.assertTrue(any(path.startswith(prefix) for path in tracked))

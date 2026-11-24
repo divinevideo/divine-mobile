@@ -17,6 +17,58 @@ PLAY_UGC = 'https://support.google.com/googleplay/android-developer/answer/98769
 IOS_PLIST = 'mobile/ios/Runner/Info.plist'
 IOS_PROJECT = 'mobile/ios/Runner.xcodeproj/project.pbxproj'
 STORE_ACTIONS = {'app-store', 'play-production'}
+# Screens and the blocs, services, providers and packages that carry out the flow.
+MODERATION_PATHS = (
+    'mobile/lib/features/chat/', 'mobile/lib/screens/inbox/',
+    'mobile/lib/blocs/safety_settings/', 'mobile/lib/screens/safety_settings',
+    'mobile/lib/services/content_reporting', 'mobile/lib/services/blocklist',
+    'mobile/lib/widgets/report_',
+    'mobile/lib/services/content_moderation', 'mobile/packages/content_blocklist_repository/lib/',
+    'mobile/lib/blocs/report/', 'mobile/lib/widgets/video_feed_item/actions/report_',
+    'mobile/lib/blocs/other_profile/', 'mobile/lib/widgets/profile/unavailable_profile_actions',
+    'mobile/lib/widgets/profile/blocked_user_screen', 'mobile/lib/widgets/profile/more_sheet/',
+    'mobile/lib/services/report_retry_service',
+    'mobile/lib/providers/moderation_providers', 'mobile/lib/blocs/dm/conversation_actions/',
+    'mobile/lib/screens/other_profile_screen', 'mobile/lib/widgets/video_feed_item/video_feed_item.dart',
+    'mobile/lib/blocs/comments/comment_reactions/comment_reactions_bloc',
+    'mobile/lib/screens/comments/widgets/comment_options_modal',
+    'mobile/packages/comments_repository/lib/src/comment_moderation_repository',
+    'mobile/lib/providers/social_providers', 'mobile/lib/providers/repository_providers',
+    'mobile/lib/config/official_accounts',
+    'mobile/packages/db_client/lib/src/database/daos/pending_reports_dao',
+    'mobile/lib/services/nsfw_content_filter', 'mobile/lib/services/moderation_label_service',
+    'mobile/lib/services/video_block_policy', 'mobile/packages/content_policy/lib/',
+    'mobile/lib/widgets/content_warning', 'mobile/lib/widgets/video_feed_item/content_warning_',
+    'mobile/lib/widgets/video_feed_item/moderated_content_overlay',
+    'mobile/lib/blocs/dm/message_requests/', 'mobile/lib/blocs/dm/minor_dm_approval',
+    'mobile/lib/blocs/dm/conversation_list/protected_minor_inbox_gate',
+)
+ACCESS_PATHS = (
+    'mobile/lib/screens/auth/', 'mobile/lib/features/oauth/',
+    'mobile/lib/widgets/delete_account_', 'mobile/lib/screens/settings/legal_',
+    'mobile/lib/screens/settings/support_center', 'mobile/lib/screens/minor_account',
+    'mobile/lib/blocs/minor_consent_', 'mobile/lib/blocs/analytics_consent/',
+    'mobile/lib/services/account_deletion_', 'mobile/lib/blocs/account_deletion_',
+    'mobile/lib/constants/terms_acceptance_', 'mobile/lib/services/auth_service',
+    'mobile/lib/services/auth/',
+    'mobile/lib/router/routes/auth_routes', 'mobile/lib/blocs/divine_auth/',
+    'mobile/packages/keycast_flutter/lib/', 'mobile/lib/providers/auth_providers',
+    'mobile/lib/router/app_router_redirect', 'mobile/lib/blocs/welcome/',
+    'mobile/lib/widgets/geo_blocking_gate',
+    'mobile/lib/blocs/email_verification/', 'mobile/lib/services/email_verification_listener',
+    'mobile/lib/services/age_verification_service', 'mobile/lib/widgets/age_verification_dialog',
+    'mobile/lib/screens/account_deletion_recovery_screen',
+    'mobile/lib/router/routes/account_deletion_recovery_routes',
+    'mobile/lib/repositories/account_deletion_recovery_repository',
+    'mobile/lib/screens/settings/nostr_settings_screen',
+    'mobile/lib/services/user_data_cleanup_service',
+    'mobile/lib/screens/settings/privacy_settings_screen', 'mobile/lib/services/analytics_service',
+    'mobile/lib/providers/analytics_providers',
+    'mobile/packages/analytics/lib/src/firebase_analytics_event_sink',
+    'mobile/lib/repositories/minor_account_review_repository',
+    'mobile/lib/blocs/support_contact/', 'mobile/lib/services/zendesk_support_service',
+    'mobile/lib/services/support_email_composer',
+)
 
 
 def git(*args):
@@ -119,32 +171,13 @@ def findings_for(platform, base, source):
             f'listing and App content declarations. {PLAY}'
         )
     policy = APPLE if platform == 'ios' else PLAY_UGC
-    if any(path.startswith((
-        'mobile/lib/features/chat/', 'mobile/lib/screens/inbox/',
-        'mobile/lib/blocs/safety_settings/', 'mobile/lib/screens/safety_settings',
-        'mobile/lib/services/content_reporting', 'mobile/lib/services/blocklist',
-        'mobile/lib/widgets/report_', 'mobile/lib/screens/settings/moderation',
-        'mobile/lib/services/content_moderation', 'mobile/packages/content_blocklist_repository/lib/',
-        'mobile/lib/blocs/report/', 'mobile/lib/widgets/video_feed_item/actions/report_',
-        'mobile/lib/blocs/other_profile/', 'mobile/lib/widgets/profile/unavailable_profile_actions',
-        'mobile/lib/widgets/profile/blocked_user_screen', 'mobile/lib/widgets/profile/more_sheet/',
-        'mobile/lib/services/report_retry_service',
-        'mobile/lib/providers/moderation_providers', 'mobile/lib/blocs/dm/conversation_actions/',
-    )) for path in paths):
+    if any(path.startswith(MODERATION_PATHS) for path in paths):
         findings.append(
-            'Test the changed moderation flows on the candidate, including '
-            f'reporting content and accounts and blocking abusive users. {policy}'
+            'Test the changed moderation flows on the candidate, including filtering '
+            'objectionable content, reporting content and accounts and blocking '
+            f'abusive users. {policy}'
         )
-    if any(path.startswith((
-        'mobile/lib/screens/auth/', 'mobile/lib/features/oauth/',
-        'mobile/lib/widgets/delete_account_', 'mobile/lib/screens/settings/legal_',
-        'mobile/lib/screens/settings/support_center', 'mobile/lib/screens/minor_account',
-        'mobile/lib/blocs/minor_consent_', 'mobile/lib/blocs/analytics_consent/',
-        'mobile/lib/services/account_deletion_', 'mobile/lib/blocs/account_deletion_',
-        'mobile/lib/constants/terms_acceptance_', 'mobile/lib/services/auth_service',
-        'mobile/lib/services/auth/',
-        'mobile/lib/router/routes/auth_routes', 'mobile/lib/blocs/divine_auth/',
-    )) for path in paths):
+    if any(path.startswith(ACCESS_PATHS) for path in paths):
         policy = APPLE if platform == 'ios' else PLAY
         findings.append(
             'Verify reviewer access, sign-in, account deletion, consent and '
