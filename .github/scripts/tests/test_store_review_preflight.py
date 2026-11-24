@@ -242,6 +242,7 @@ class StoreReviewTest(unittest.TestCase):
             'mobile/lib/widgets/content_warning.dart': 'moderation flows',
             'mobile/lib/widgets/video_feed_item/moderated_content_overlay.dart': 'moderation flows',
             'mobile/lib/services/moderation_label_service.dart': 'moderation flows',
+            'mobile/lib/services/video_block_policy.dart': 'filtering objectionable content',
             'mobile/packages/content_policy/lib/src/policy_rule.dart': 'moderation flows',
             'mobile/lib/blocs/dm/message_requests/message_request_actions_cubit.dart': 'moderation flows',
             'mobile/lib/blocs/dm/minor_dm_approval.dart': 'moderation flows',
@@ -255,7 +256,9 @@ class StoreReviewTest(unittest.TestCase):
             'mobile/lib/services/analytics_service.dart': 'reviewer access',
             'mobile/lib/blocs/support_contact/support_contact_cubit.dart': 'reviewer access',
             'mobile/lib/services/age_verification_service.dart': 'reviewer access',
+            'mobile/lib/widgets/age_verification_dialog.dart': 'reviewer access',
             'mobile/lib/blocs/email_verification/email_verification_cubit.dart': 'reviewer access',
+            'mobile/lib/services/email_verification_listener.dart': 'reviewer access',
         }
         baseline = self.base
         for path, finding in cases.items():
