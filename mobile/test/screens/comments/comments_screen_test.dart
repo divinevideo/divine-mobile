@@ -792,6 +792,81 @@ void main() {
         expect(captured.text, 'Test comment');
       });
 
+      testWidgets('a delayed draft update preserves the active edit', (
+        tester,
+      ) async {
+        final states = StreamController<CommentComposerState>();
+        addTearDown(states.close);
+        whenListen(
+          mockComposerBloc,
+          states.stream,
+          initialState: const CommentComposerState(),
+        );
+        await tester.pumpWidget(buildTestWidget());
+        final field = find.byType(TextField);
+        await tester.enterText(field, 'Nice cl');
+
+        const latestEdit = TextEditingValue(
+          text: 'Nice clip',
+          selection: TextSelection.collapsed(offset: 8),
+          composing: TextRange(start: 5, end: 9),
+        );
+        tester.testTextInput.updateEditingValue(latestEdit);
+        final controller = tester.widget<TextField>(field).controller!;
+        expect(controller.value, latestEdit);
+
+        states.add(const CommentComposerState(mainInputText: 'Nice cl'));
+        await tester.pump();
+
+        expect(controller.value, latestEdit);
+        states.add(const CommentComposerState(mainInputText: 'Nice clip'));
+        await tester.pump();
+        expect(controller.value, latestEdit);
+      });
+
+      testWidgets('loads, clears and restores programmatic drafts', (
+        tester,
+      ) async {
+        final states = StreamController<CommentComposerState>();
+        addTearDown(states.close);
+        const draft = CommentComposerState(mainInputText: 'A draft');
+        whenListen(mockComposerBloc, states.stream, initialState: draft);
+        await tester.pumpWidget(buildTestWidget());
+        final controller = tester
+            .widget<TextField>(find.byType(TextField))
+            .controller!;
+        expect(controller.text, 'A draft');
+
+        final editing = draft.copyWith(
+          activeEditCommentId: TestCommentIds.comment1Id,
+          editInputText: 'An existing comment',
+          replaceDraft: true,
+        );
+        states.add(editing);
+        await tester.pump();
+        expect(controller.text, 'An existing comment');
+
+        final composing = editing.clearEditMode();
+        states.add(composing);
+        await tester.pump();
+        expect(controller.text, 'A draft');
+
+        final cleared = composing.copyWith(
+          mainInputText: '',
+          replaceDraft: true,
+        );
+        states.add(cleared);
+        await tester.pump();
+        expect(controller.text, isEmpty);
+
+        states.add(
+          cleared.copyWith(mainInputText: 'A draft', replaceDraft: true),
+        );
+        await tester.pump();
+        expect(controller.text, 'A draft');
+        expect(controller.selection, const TextSelection.collapsed(offset: 7));
+      });
+
       testWidgets('expands sheet to max when the composer gains focus', (
         tester,
       ) async {

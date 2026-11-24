@@ -157,15 +157,14 @@ void main() {
 
     group('CommentTextChanged', () {
       blocTest<CommentComposerBloc, CommentComposerState>(
-        'updates mainInputText when no commentId',
+        'updates mainInputText when no commentId and keeps draft revision',
         build: createBloc,
+        seed: () => const CommentComposerState(draftRevision: 1),
         act: (b) => b.add(const CommentTextChanged('hi')),
         expect: () => [
-          isA<CommentComposerState>().having(
-            (s) => s.mainInputText,
-            'main',
-            'hi',
-          ),
+          isA<CommentComposerState>()
+              .having((s) => s.mainInputText, 'main', 'hi')
+              .having((s) => s.draftRevision, 'draft revision', 1),
         ],
       );
 
@@ -175,11 +174,9 @@ void main() {
         seed: () => const CommentComposerState(activeReplyCommentId: 'p1'),
         act: (b) => b.add(const CommentTextChanged('reply', commentId: 'p1')),
         expect: () => [
-          isA<CommentComposerState>().having(
-            (s) => s.replyInputText,
-            'reply',
-            'reply',
-          ),
+          isA<CommentComposerState>()
+              .having((s) => s.replyInputText, 'reply', 'reply')
+              .having((s) => s.draftRevision, 'draft revision', 0),
         ],
       );
 
@@ -189,11 +186,9 @@ void main() {
         seed: () => const CommentComposerState(activeEditCommentId: 'e1'),
         act: (b) => b.add(const CommentTextChanged('edited')),
         expect: () => [
-          isA<CommentComposerState>().having(
-            (s) => s.editInputText,
-            'edit',
-            'edited',
-          ),
+          isA<CommentComposerState>()
+              .having((s) => s.editInputText, 'edit', 'edited')
+              .having((s) => s.draftRevision, 'draft revision', 0),
         ],
       );
     });
@@ -372,16 +367,20 @@ void main() {
         act: (b) => b.add(const CommentSubmitted()),
         errors: () => [isA<PostCommentFailedException>()],
         expect: () => [
-          isA<CommentComposerState>().having(
-            (s) => s.outbox,
-            'outbox after first emit',
-            isA<ComposerOutboxInsertPlaceholder>(),
-          ),
-          isA<CommentComposerState>().having(
-            (s) => s.outbox,
-            'outbox after second emit',
-            isA<ComposerOutboxRollbackPlaceholder>(),
-          ),
+          isA<CommentComposerState>()
+              .having(
+                (s) => s.outbox,
+                'outbox after first emit',
+                isA<ComposerOutboxInsertPlaceholder>(),
+              )
+              .having((s) => s.draftRevision, 'draft revision', 1),
+          isA<CommentComposerState>()
+              .having(
+                (s) => s.outbox,
+                'outbox after second emit',
+                isA<ComposerOutboxRollbackPlaceholder>(),
+              )
+              .having((s) => s.draftRevision, 'draft revision', 2),
         ],
       );
 
