@@ -48,6 +48,7 @@ class DivineCameraDesktop extends DivineCameraPlatform
   Completer<void>? _initializationCancellation;
   Future<void> _pending = Future<void>.value();
   Future<void>? _deviceRelease;
+  Completer<void>? _nativeStartCancellation;
   Completer<capture.XFile?>? _nativeStopCancellation;
   final _retiredStopCleanups = <Future<void>>{};
   CameraState _state = const CameraState();
@@ -139,6 +140,7 @@ class DivineCameraDesktop extends DivineCameraPlatform
         DivineVideoStabilizationMode.off,
   }) {
     _cancelPendingInitialization();
+    _cancelNativeStart();
     _cancelNativeStop();
     _resumeOnForeground = false;
     _resumeLens = lens;
@@ -376,8 +378,13 @@ class DivineCameraDesktop extends DivineCameraPlatform
           outputDirectory ??
           (useCache ? null : (await getApplicationDocumentsDirectory()).path);
       _checkGeneration(generation);
-      await _cameraPlatform.startVideoRecording(cameraId);
       _recordingCameraId = cameraId;
+      try {
+        await _startWithCancellation(cameraId);
+      } catch (_) {
+        _recordingCameraId = null;
+        rethrow;
+      }
       _checkGeneration(generation);
       _state = _state.copyWith(isRecording: true);
       if (maxDuration != null) {
@@ -415,6 +422,40 @@ class DivineCameraDesktop extends DivineCameraPlatform
       return _stopNativeTake();
     });
     return take == null ? null : _finishTake(take);
+  }
+
+  Future<void> _startWithCancellation(int cameraId) async {
+    final completion = Completer<void>();
+    _nativeStartCancellation = completion;
+    try {
+      unawaited(
+        Future<void>.sync(
+          () => _cameraPlatform.startVideoRecording(cameraId),
+        ).then<void>(
+          (_) {
+            if (!completion.isCompleted) completion.complete();
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            if (!completion.isCompleted) {
+              completion.completeError(error, stackTrace);
+            }
+            // A late failure belongs to the cancelled native operation.
+          },
+        ),
+      );
+      await completion.future;
+    } finally {
+      if (identical(_nativeStartCancellation, completion)) {
+        _nativeStartCancellation = null;
+      }
+    }
+  }
+
+  void _cancelNativeStart() {
+    final cancellation = _nativeStartCancellation;
+    if (cancellation != null && !cancellation.isCompleted) {
+      cancellation.complete();
+    }
   }
 
   Future<_StoppedTake?> _stopNativeTake() async {
@@ -548,9 +589,12 @@ class DivineCameraDesktop extends DivineCameraPlatform
 
   @override
   Future<void> pausePreview({bool releaseAudio = true}) {
-    if (releaseAudio && _initializationCancellation != null) {
+    if (releaseAudio &&
+        (_initializationCancellation != null ||
+            _nativeStartCancellation != null)) {
       _generation++;
       _cancelPendingInitialization();
+      _cancelNativeStart();
       _resumeOnForeground = true;
     }
     return _pausePreview(releaseAudio: releaseAudio);
@@ -702,6 +746,7 @@ class DivineCameraDesktop extends DivineCameraPlatform
   Future<void> disposeCamera() {
     _generation++;
     _cancelPendingInitialization();
+    _cancelNativeStart();
     _cancelNativeStop();
     _resumeOnForeground = false;
     _recordingLimit?.cancel();
@@ -743,6 +788,7 @@ class DivineCameraDesktop extends DivineCameraPlatform
   void _failCamera(int cameraId, int generation, Object error) {
     if (_cameraId != cameraId || generation != _generation) return;
     final retiringGeneration = ++_generation;
+    _cancelNativeStart();
     _cancelNativeStop();
     final reportError = onCameraError;
     final reportAutoStop = onRecordingAutoStopped;

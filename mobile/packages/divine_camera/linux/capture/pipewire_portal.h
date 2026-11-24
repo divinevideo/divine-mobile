@@ -31,7 +31,7 @@ class PipeWirePortal {
 
   // Asynchronously requests camera access via the portal and enumerates
   // PipeWire camera nodes. Calls |callback| on the main thread with results.
-  // On failure (portal unavailable, user denied), returns empty vector.
+  // On failure or denial, returns an empty vector without direct-device fallback.
   using EnumerateCallback =
       std::function<void(std::vector<DeviceInfo> devices)>;
   void EnumerateDevicesAsync(EnumerateCallback callback);
@@ -59,7 +59,7 @@ class PipeWirePortal {
   void HandleAccessResponse(guint32 response);
   void OpenPipeWireRemote();
   void EnumeratePipeWireNodes();
-  void FinishWithFallback();
+  void FinishWithoutDevices();
 
   // Builds a unique request token for the portal handle.
   std::string MakeHandleToken();

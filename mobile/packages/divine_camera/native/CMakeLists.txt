@@ -39,6 +39,11 @@ if(BUILD_TESTING)
   file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/audio-start-failure-output")
   add_test(NAME microphone_start_failure_releases_writer
     COMMAND recording_probe "${CMAKE_CURRENT_BINARY_DIR}/audio-start-failure-output" audio-start-failure)
+  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/production-audio-failure-output")
+  add_test(NAME production_microphone_unavailable
+    COMMAND recording_probe "${CMAKE_CURRENT_BINARY_DIR}/production-audio-failure-output" no-device-audio)
+  set_tests_properties(production_microphone_unavailable PROPERTIES TIMEOUT 30
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0;GST_PLUGIN_FEATURE_RANK=openalsrc:0,pulsesrc:0,alsasrc:0,oss4src:0,osssrc:0,pipewiresrc:0,jackaudiosrc:0")
   set_tests_properties(repeated_av_capture microphone_setup_failure_and_retry microphone_start_failure_releases_writer
     PROPERTIES TIMEOUT 45 ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0;G_DEBUG=fatal-criticals")
 endif()

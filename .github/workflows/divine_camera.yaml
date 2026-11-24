@@ -60,7 +60,8 @@ jobs:
   native-linux:
     name: Linux Capture Ownership
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    # Fresh runner dependency downloads exceeded 25 minutes before compilation.
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: mobile/packages/divine_camera
@@ -123,7 +124,7 @@ jobs:
       - name: Verify actual Flutter capture and source release
         run: |
           $workspace = Join-Path $env:RUNNER_TEMP 'divine-capture-consumer'
-          foreach ($captureCase in @('video', 'audio', 'audio-unavailable')) {
+          foreach ($captureCase in @('video', 'audio', 'audio-unavailable', 'texture-unavailable')) {
             python tool/native_capture_harness.py --platform windows --case $captureCase --workspace $workspace
             if ($LASTEXITCODE -ne 0) { throw "Capture case failed: $captureCase" }
           }

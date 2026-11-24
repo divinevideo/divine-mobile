@@ -1,4 +1,5 @@
 #include "photo_handler.h"
+#include "private_capture_file.h"
 
 #include <gio/gio.h>
 #include <gst/app/gstappsink.h>
@@ -48,21 +49,19 @@ bool PhotoHandler::TakePicture(GstElement* appsink,
     return false;
   }
 
-  FILE* file = fopen(output_path.c_str(), "wb");
+  FILE* file = OpenPrivateCaptureFile(output_path.c_str(), error);
   if (!file) {
     gst_buffer_unmap(buffer, &map);
     gst_sample_unref(converted);
-    g_set_error(error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                "Failed to open output file: %s", output_path.c_str());
     return false;
   }
 
   size_t written = fwrite(map.data, 1, map.size, file);
-  fclose(file);
+  const bool closed = fclose(file) == 0;
   gst_buffer_unmap(buffer, &map);
   gst_sample_unref(converted);
 
-  if (written != map.size) {
+  if (written != map.size || !closed) {
     g_set_error(error, G_IO_ERROR, G_IO_ERROR_FAILED,
                 "Incomplete write to output file");
     return false;

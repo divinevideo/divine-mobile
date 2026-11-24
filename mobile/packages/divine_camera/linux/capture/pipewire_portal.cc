@@ -81,7 +81,7 @@ void PipeWirePortal::EnumerateDevicesAsync(EnumerateCallback callback) {
   pending_callback_ = std::move(callback);
 
   if (!connection_) {
-    FinishWithFallback();
+    FinishWithoutDevices();
     return;
   }
 
@@ -102,7 +102,7 @@ void PipeWirePortal::EnumerateDevicesAsync(EnumerateCallback callback) {
   if (!unique_name) {
     g_info("[camera_desktop] PipeWirePortal: D-Bus unique name is null,"
            " cannot build request path");
-    FinishWithFallback();
+    FinishWithoutDevices();
     return;
   }
 
@@ -162,7 +162,7 @@ void PipeWirePortal::OnAccessCameraReply(GObject* source, GAsyncResult* res,
   if (error) {
     g_warning("PipeWirePortal: AccessCamera call failed: %s", error->message);
     g_error_free(error);
-    self->FinishWithFallback();
+    self->FinishWithoutDevices();
     return;
   }
 
@@ -204,7 +204,7 @@ void PipeWirePortal::HandleAccessResponse(guint32 response) {
   if (response != 0) {
     // User denied or dialog was dismissed.
     g_info("PipeWirePortal: camera access denied (response=%u)", response);
-    FinishWithFallback();
+    FinishWithoutDevices();
     return;
   }
 
@@ -214,7 +214,7 @@ void PipeWirePortal::HandleAccessResponse(guint32 response) {
 
 void PipeWirePortal::OpenPipeWireRemote() {
   if (!connection_) {
-    FinishWithFallback();
+    FinishWithoutDevices();
     return;
   }
 
@@ -242,7 +242,7 @@ void PipeWirePortal::OpenPipeWireRemote() {
   if (error) {
     g_warning("PipeWirePortal: OpenPipeWireRemote failed: %s", error->message);
     g_error_free(error);
-    FinishWithFallback();
+    FinishWithoutDevices();
     return;
   }
 
@@ -254,7 +254,7 @@ void PipeWirePortal::OpenPipeWireRemote() {
   if (!fd_list || g_unix_fd_list_get_length(fd_list) <= fd_index) {
     g_warning("PipeWirePortal: no fd received from OpenPipeWireRemote");
     if (fd_list) g_object_unref(fd_list);
-    FinishWithFallback();
+    FinishWithoutDevices();
     return;
   }
 
@@ -266,7 +266,7 @@ void PipeWirePortal::OpenPipeWireRemote() {
               error ? error->message : "unknown");
     if (error) g_error_free(error);
     pw_fd_ = -1;
-    FinishWithFallback();
+    FinishWithoutDevices();
     return;
   }
 
@@ -288,7 +288,7 @@ void PipeWirePortal::EnumeratePipeWireNodes() {
   if (!gst_device_monitor_start(monitor)) {
     g_warning("PipeWirePortal: failed to start GstDeviceMonitor");
     gst_object_unref(monitor);
-    FinishWithFallback();
+    FinishWithoutDevices();
     return;
   }
 
@@ -352,8 +352,8 @@ void PipeWirePortal::EnumeratePipeWireNodes() {
   }
 }
 
-void PipeWirePortal::FinishWithFallback() {
-  g_info("[camera_desktop] PipeWire path unavailable, falling back to V4L2");
+void PipeWirePortal::FinishWithoutDevices() {
+  g_info("[camera_desktop] Camera portal returned no authorized devices");
   if (pending_callback_) {
     auto cb = std::move(pending_callback_);
     pending_callback_ = nullptr;

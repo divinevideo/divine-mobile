@@ -13,7 +13,8 @@ int main(int argc, char** argv) {
   if (argc != 2 && argc != 3) return 2;
   const bool unavailable_audio = argc == 3 && std::string(argv[2]) == "audio-unavailable";
   const bool audio_start_failure = argc == 3 && std::string(argv[2]) == "audio-start-failure";
-  if (argc == 3 && !unavailable_audio && !audio_start_failure) return 2;
+  const bool no_device_audio = argc == 3 && std::string(argv[2]) == "no-device-audio";
+  if (argc == 3 && !unavailable_audio && !audio_start_failure && !no_device_audio) return 2;
   if (audio_start_failure) g_setenv("DIVINE_CAPTURE_TEST_AUDIO_START_FAILURE", "1", TRUE);
   if (unavailable_audio) g_setenv("DIVINE_CAPTURE_TEST_AUDIO_UNAVAILABLE", "1", TRUE);
   GError* error = nullptr;
@@ -43,8 +44,16 @@ int main(int argc, char** argv) {
   int result = 0;
   {
     RecordHandler recording;
-    recording.UseSyntheticAudio();
+    if (!no_device_audio) recording.UseSyntheticAudio();
     bool setup = recording.Setup(pipeline, tee, 640, 480, 30, 0, 0, true, &error);
+    if (no_device_audio) {
+      const bool accepted = setup && recording.StartRecording(
+          std::string(argv[1]) + "/unavailable-microphone.mp4", &error);
+      if (accepted || !error) {
+        std::cerr << "Unavailable production microphone returned capture success" << std::endl;
+        result = 15;
+      }
+    }
     if (unavailable_audio) {
       if (setup || !error) {
         std::cerr << "Requested microphone failure was ignored" << std::endl;
@@ -76,8 +85,8 @@ int main(int argc, char** argv) {
         setup = recording.Setup(pipeline, tee, 640, 480, 30, 0, 0, true, &error);
       }
     }
-    if (result == 0 && !setup) result = 4;
-    if (result == 0) {
+    if (result == 0 && !setup && !no_device_audio) result = 4;
+    if (result == 0 && !no_device_audio) {
       for (int index = 0; index < 2; ++index) {
         auto path = std::string(argv[1]) + "/take" + std::to_string(index) + ".mp4";
         std::cout << "DIVINE_RECORDER_START " << index << std::endl;

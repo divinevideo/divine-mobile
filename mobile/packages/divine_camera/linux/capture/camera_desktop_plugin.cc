@@ -60,10 +60,17 @@ static void respond_with_devices(FlMethodCall* method_call,
   fl_method_call_respond_success(method_call, result, nullptr);
 }
 
+static void respond_with_portal_devices(FlMethodCall* method_call,
+                                       std::vector<DeviceInfo> devices) {
+  // An empty portal result includes explicit denial. Stay within that access
+  // boundary instead of opening a direct-device path after the prompt.
+  respond_with_devices(method_call, devices);
+}
+
 static void handle_available_cameras(CameraDesktopPlugin* self,
                                      FlMethodCall* method_call) {
 #ifdef DIVINE_CAMERA_TEST_CAPTURE
-  respond_with_devices(method_call, {{"divine-test://camera", "Synthetic Camera", "", 2, 0}});
+  respond_with_devices(method_call, DeviceEnumerator::EnumerateDevices());
   return;
 #endif
   if (self->data->use_pipewire && self->data->portal) {
@@ -71,14 +78,7 @@ static void handle_available_cameras(CameraDesktopPlugin* self,
     g_object_ref(method_call);
     self->data->portal->EnumerateDevicesAsync(
         [method_call](std::vector<DeviceInfo> devices) {
-          // If portal returned no devices, fall back to V4L2.
-          if (devices.empty()) {
-            g_info("[camera_desktop] PipeWire returned no cameras, falling back to V4L2");
-            devices = DeviceEnumerator::EnumerateDevices();
-          }
-          g_info("[camera_desktop] availableCameras returning %zu device(s)",
-                 devices.size());
-          respond_with_devices(method_call, devices);
+          respond_with_portal_devices(method_call, std::move(devices));
           g_object_unref(method_call);
         });
     return;
@@ -191,6 +191,13 @@ static void handle_create(CameraDesktopPlugin* self,
   }
 
   // Enumerate resolutions based on backend.
+  if (self->data->use_pipewire &&
+      (backend != CameraBackend::kPipeWire || !self->data->portal ||
+       self->data->portal->pw_fd() < 0)) {
+    fl_method_call_respond_error(method_call, "camera_access_denied",
+        "Camera access has not been granted", nullptr, nullptr);
+    return;
+  }
   std::vector<ResolutionInfo> resolutions;
 #ifdef DIVINE_CAMERA_TEST_CAPTURE
   if (backend == CameraBackend::kSynthetic) {
@@ -392,6 +399,10 @@ static void camera_desktop_plugin_handle_method_call(
     FlMethodCall* method_call) {
   const gchar* method = fl_method_call_get_name(method_call);
 #ifdef DIVINE_CAMERA_TEST_CAPTURE
+  if (strcmp(method, "testPortalDenied") == 0) {
+    respond_with_portal_devices(method_call, {});
+    return;
+  }
   if (strcmp(method, "testMainLoopBarrier") == 0) {
     // Drain earlier normal/idle callbacks before the synthetic test proceeds.
     g_idle_add_full(G_PRIORITY_LOW, [](gpointer data) -> gboolean {

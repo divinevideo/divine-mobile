@@ -13,6 +13,11 @@ CameraTexture::~CameraTexture() {
 }
 
 int64_t CameraTexture::Register() {
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+  char failure[2];
+  if (GetEnvironmentVariableA("DIVINE_CAPTURE_TEST_TEXTURE_FAILURE", failure,
+                             sizeof(failure)) != 0) return -1;
+#endif
   texture_variant_ = std::make_unique<flutter::TextureVariant>(
       flutter::PixelBufferTexture(
           [this](size_t w, size_t h) -> const FlutterDesktopPixelBuffer* {

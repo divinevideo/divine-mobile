@@ -1,4 +1,5 @@
 #include "record_handler.h"
+#include "private_capture_file.h"
 
 #include <gio/gio.h>
 #include <cstdio>
@@ -26,6 +27,44 @@ static const char* kAudioEncoderCandidates[] = {
     "voaacenc",
 };
 static const int kNumAudioEncoderCandidates = 2;
+
+// autoaudiosrc can report only a warning and substitute audiotestsrc when
+// no input can be opened. A synthetic fallback is not microphone capture.
+static bool has_real_audio_source(GstElement* source) {
+  if (!GST_IS_BIN(source)) {
+    auto* factory = gst_element_get_factory(source);
+    return factory && g_strcmp0(gst_plugin_feature_get_name(GST_PLUGIN_FEATURE(factory)),
+                               "audiotestsrc") != 0;
+  }
+  auto* children = gst_bin_iterate_recurse(GST_BIN(source));
+  GValue child = G_VALUE_INIT;
+  bool valid = true;
+  bool found = false;
+  bool done = false;
+  while (valid && !done) {
+    switch (gst_iterator_next(children, &child)) {
+      case GST_ITERATOR_OK: {
+        found = true;
+        auto* factory = gst_element_get_factory(GST_ELEMENT(g_value_get_object(&child)));
+        if (factory && g_strcmp0(gst_plugin_feature_get_name(GST_PLUGIN_FEATURE(factory)),
+                                "audiotestsrc") == 0) valid = false;
+        g_value_reset(&child);
+        break;
+      }
+      case GST_ITERATOR_RESYNC:
+        gst_iterator_resync(children);
+        break;
+      case GST_ITERATOR_DONE:
+        done = true;
+        break;
+      default:
+        valid = false;
+    }
+  }
+  if (G_IS_VALUE(&child)) g_value_unset(&child);
+  gst_iterator_free(children);
+  return valid && found;
+}
 
 RecordHandler::RecordHandler()
     : pipeline_(nullptr),
@@ -357,6 +396,13 @@ bool RecordHandler::StartRecording(const std::string& output_path,
   }
 
   output_path_ = output_path;
+  FILE* reserved = OpenPrivateCaptureFile(output_path.c_str(), error);
+  if (!reserved) return false;
+  if (fclose(reserved) != 0) {
+    g_set_error(error, G_IO_ERROR, G_IO_ERROR_FAILED,
+        "Capture output could not be prepared");
+    return false;
+  }
 
   // EOS belongs to every element in the completed branch, including the
   // encoder and queue. Reset the complete chain before a subsequent take.
@@ -376,6 +422,16 @@ bool RecordHandler::StartRecording(const std::string& output_path,
       ClearSetup();
       return false;
     }
+  }
+  bool require_real_audio = has_audio_;
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+  if (synthetic_audio_) require_real_audio = false;
+#endif
+  if (require_real_audio && !has_real_audio_source(audio_source_)) {
+    g_set_error(error, G_IO_ERROR, G_IO_ERROR_FAILED,
+        "Requested microphone is unavailable");
+    ClearSetup();
+    return false;
   }
 
   // Open the video valve to let data flow.

@@ -12,6 +12,7 @@
 #include <future>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 #include <thread>
 
 static void Require(bool condition, const char* message) {

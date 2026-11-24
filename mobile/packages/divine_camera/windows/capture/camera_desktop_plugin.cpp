@@ -350,6 +350,9 @@ void CameraDesktopPlugin::HandleCreate(
 
   int64_t texture_id = camera->RegisterTexture();
   if (texture_id < 0) {
+    // Cleanup must begin while this shared owner is still alive: Camera's
+    // asynchronous release keeps itself alive until native teardown finishes.
+    camera->Dispose();
     DebugLog("HandleCreate: texture registration failed for camera_id=" +
              std::to_string(camera_id));
     result->Error("texture_registration_failed",

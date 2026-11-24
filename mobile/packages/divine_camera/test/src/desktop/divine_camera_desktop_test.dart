@@ -1537,6 +1537,49 @@ void main() {
         await camera.disposeCamera();
         expect(backend.activeCameraIds, isEmpty);
       });
+
+      for (final interrupt in [
+        'dispose',
+        'reopen',
+        'background',
+        'deviceError',
+      ]) {
+        test('releases a stalled recording start on $interrupt', () async {
+          final gate = Completer<void>();
+          backend.startGate = gate;
+          await camera.initializeCamera();
+          final starting = camera.startRecording();
+          final rejected = expectLater(starting, throwsStateError);
+          await backend.startEntered.future;
+          Future<Object?>? interrupted;
+          try {
+            switch (interrupt) {
+              case 'dispose':
+                interrupted = camera.disposeCamera();
+              case 'reopen':
+                interrupted = camera.initializeCamera();
+              case 'background':
+                interrupted = camera.pausePreview();
+              case 'deviceError':
+                backend.errors.add(
+                  const CameraErrorEvent(7, 'Synthetic device error'),
+                );
+            }
+            await pumpEventQueue();
+            expect(backend.disposalEntered.isCompleted, isTrue);
+            await rejected;
+            await interrupted;
+            gate.complete();
+            await pumpEventQueue();
+            expect((await camera.getCameraState()).isRecording, isFalse);
+          } finally {
+            if (!gate.isCompleted) gate.complete();
+            await rejected;
+            await interrupted;
+            await camera.disposeCamera();
+          }
+        });
+      }
     });
 
     group('capturePhoto', () {

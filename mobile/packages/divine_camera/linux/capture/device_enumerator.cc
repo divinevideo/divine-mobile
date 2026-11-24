@@ -70,6 +70,9 @@ static int QueryMaxFps(int fd, __u32 pixel_format, int width, int height) {
 }
 
 std::vector<DeviceInfo> DeviceEnumerator::EnumerateDevices() {
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+  return {{"divine-test://camera", "Synthetic Camera", "", 2, 0}};
+#endif
   std::vector<DeviceInfo> devices;
   std::set<std::string> seen_bus_info;
   int open_failures = 0;

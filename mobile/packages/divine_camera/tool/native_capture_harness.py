@@ -16,6 +16,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:camera_platform_interface/camera_platform_interface.dart';
+import 'package:divine_camera/src/desktop/desktop_camera_backend.dart';
 
 const channel = MethodChannel('video.divine/desktop_capture');
 final previewFrames = <int, Completer<void>>{};
@@ -50,13 +52,27 @@ Future<void> main() async {
         !text.contains('Permission is hereby granted, free of charge')) {
       throw StateError('Native source attribution is missing from bundled notices');
     }
+    if (Platform.isLinux) {
+      setStage('portal-denial');
+      final denied = await channel.invokeListMethod<Object?>('testPortalDenied');
+      if (denied == null || denied.isNotEmpty) throw StateError('Camera denial offered a fallback device');
+    }
     final devices = await channel.invokeListMethod<Map<Object?, Object?>>('availableCameras');
     final device = devices!.firstWhere((item) => (item['name']! as String).contains('Synthetic') ||
       (item['name']! as String).contains('Fake Red Camera'));
-    final created = await channel.invokeMapMethod<String, Object?>('create', {
-      'cameraName': device['name'], 'resolutionPreset': 1,
-      'enableAudio': audio, 'fps': 30,
-    });
+    Map<String, Object?>? created;
+    try {
+      created = await channel.invokeMapMethod<String, Object?>('create', {
+        'cameraName': device['name'], 'resolutionPreset': 1,
+        'enableAudio': audio, 'fps': 30,
+      });
+    } on PlatformException catch (error) {
+      if (testCase != 'texture-unavailable' || error.code != 'texture_registration_failed') rethrow;
+      await verifySourcesReleased();
+      stdout.writeln('DIVINE_CAPTURE_PASS');
+      exit(0);
+    }
+    if (testCase == 'texture-unavailable') throw StateError('Texture allocation failure was ignored');
     id = created!['cameraId']! as int;
     setStage('initialization');
     final initialized = await channel.invokeMapMethod<String, Object?>('initialize', {'cameraId': id});
@@ -133,6 +149,10 @@ Future<void> main() async {
     await verifySourcesReleased();
     setStage('concurrent-stop-dispose');
     await verifyConcurrentStop(device, audio);
+    if (Platform.isLinux) {
+      setStage('completed-private-transfer');
+      await verifyPrivateTransfer(root);
+    }
     if (Platform.isWindows) {
       setStage('initialization-disposal');
       await verifyInitializationDisposal(device);
@@ -209,8 +229,34 @@ Future<void> verifySourcesReleased() async {
   }
 }
 
+Future<void> verifyPrivateTransfer(Directory root) async {
+  final backend = DesktopCameraBackend(temporaryDirectory: () async => root);
+  try {
+    final device = (await backend.availableCameras()).first;
+    final id = await backend.createCameraWithSettings(device,
+      const MediaSettings(enableAudio: false, resolutionPreset: ResolutionPreset.low));
+    await backend.initializeCamera(id);
+    final captured = await backend.takePicture(id);
+    final file = File(captured.path);
+    if (file.parent.path != root.path) throw StateError('Transfer fixture did not leave its operation directory');
+    await verifyWriterReleased(file);
+    final retained = File.fromUri(root.uri.resolve('retained-private.jpg'));
+    await captured.saveTo(retained.path);
+    await verifyWriterReleased(retained);
+    await backend.dispose(id);
+    if (!file.existsSync() || !retained.existsSync()) throw StateError('Release removed transferred media');
+    await file.delete();
+    await retained.delete();
+  } finally {
+    await backend.close();
+  }
+}
+
 Future<void> verifyWriterReleased(File file) async {
   if (Platform.isLinux) {
+    if ((file.statSync().mode & 0x3f) != 0) {
+      throw StateError('Capture output did not preserve private permissions');
+    }
     for (final descriptor in Directory('/proc/self/fd').listSync(followLinks: false)) {
       String target;
       try {
@@ -299,7 +345,7 @@ os.close(fd)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--platform', choices=['linux', 'windows'], required=True)
-    parser.add_argument('--case', choices=['video', 'audio', 'audio-unavailable'], default='video')
+    parser.add_argument('--case', choices=['video', 'audio', 'audio-unavailable', 'texture-unavailable'], default='video')
     parser.add_argument('--workspace', type=Path, help='Optional private incremental build directory.')
     args = parser.parse_args()
     flutter = ['flutter']
@@ -319,6 +365,9 @@ def main():
         shutil.copytree(PACKAGE / 'native/include', plugin / 'native/include',
                         dirs_exist_ok=True)
         (plugin / 'lib').mkdir(exist_ok=True)
+        dart_backend = plugin / 'lib/src/desktop/desktop_camera_backend.dart'
+        dart_backend.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(PACKAGE / 'lib/src/desktop/desktop_camera_backend.dart', dart_backend)
         license_changed = False
         if (PACKAGE / 'LICENSE').exists():
             license_changed = not (plugin / 'LICENSE').exists() or (
@@ -333,6 +382,7 @@ version: 0.0.1
 environment:
   sdk: ^3.13.0
 dependencies:
+  camera_platform_interface: ^2.7.0
   flutter:
     sdk: flutter
 flutter:
@@ -382,6 +432,8 @@ dependencies:
                    TMPDIR=str(native_temp), TEMP=str(native_temp), TMP=str(native_temp))
         if args.case == 'audio-unavailable':
             env['DIVINE_CAPTURE_TEST_AUDIO_UNAVAILABLE'] = '1'
+        if args.case == 'texture-unavailable':
+            env['DIVINE_CAPTURE_TEST_TEXTURE_FAILURE'] = '1'
         if args.platform == 'linux':
             binary = app / 'build/linux/x64/debug/bundle/capture_probe'
             command = ['xvfb-run', '-a', str(binary)]
@@ -403,8 +455,8 @@ dependencies:
                 print(line, flush=True)
         if result.returncode != 0 or 'DIVINE_CAPTURE_PASS' not in result.stdout:
             raise RuntimeError('Native capture failed; exit=' + str(result.returncode))
-        if args.case == 'audio-unavailable':
-            print('DIVINE_CAPTURE_AUDIO_FAILURE_PASS', flush=True)
+        if args.case in ['audio-unavailable', 'texture-unavailable']:
+            print('DIVINE_CAPTURE_EXPECTED_FAILURE_PASS', flush=True)
             return
         # FFmpeg is an independent test oracle, never a production dependency.
         for name in ['photo.jpg', 'take0.mp4', 'take1.mp4']:
