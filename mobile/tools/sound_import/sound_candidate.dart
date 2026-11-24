@@ -144,7 +144,8 @@ class SoundCandidate {
 
   /// The id of the sound the app ships that this one is, from the app's
   /// `sounds_manifest.json`; null for every other source. Published as the
-  /// `divine_sound` tag, which ties the event to the shipped file.
+  /// `divine_sound` tag, which names the shipped file. The app ties only the
+  /// Divine sound accounts' events to it, so not the library's yet.
   final String? divineSoundId;
 
   Map<String, dynamic> toJson() => {

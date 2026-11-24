@@ -55,8 +55,8 @@ void main() {
     test('reads both Creative Commons Attribution versions', () {
       final candidates = appSoundCandidates({
         'sounds': [
-          _entry(id: 'four', license: 'CC BY 4.0'),
-          _entry(id: 'three', license: 'CC BY 3.0'),
+          _entry(license: 'CC BY 4.0'),
+          _entry(id: 'freesound_radio_announcement', license: 'CC BY 3.0'),
         ],
       });
 
@@ -77,6 +77,7 @@ void main() {
             sourceUrl: 'https://www.youtube.com/shorts/example',
           ),
           _entry(id: 'no-page', sourceUrl: null),
+          _entry(id: 'unchecked-cc-by', license: 'CC BY 4.0'),
           _entry(id: 'kept'),
         ],
       });
@@ -86,26 +87,65 @@ void main() {
       ]);
     });
 
-    test('takes the kind from the manifest tags', () {
+    test('files a sound as the app does: music when tagged so, else an '
+        'effect', () {
       SoundKind kindOf(List<String> tags) => appSoundCandidates({
         'sounds': [_entry(tags: tags)],
       }).single.kind;
 
       expect(kindOf(['music', 'bossa nova']), equals(SoundKind.music));
-      expect(kindOf(['acapella', 'singing']), equals(SoundKind.music));
-      expect(kindOf(['announcement', 'voice']), equals(SoundKind.speech));
+      expect(kindOf(['acapella', 'singing']), equals(SoundKind.sfx));
+      expect(kindOf(['announcement', 'voice']), equals(SoundKind.sfx));
       expect(kindOf(['radio', 'sfx']), equals(SoundKind.sfx));
     });
 
-    test('keeps the shipped-sound id through the catalog file', () {
+    test("credits a CC BY sound with the recording's own title", () {
       final candidate = appSoundCandidates({
-        'sounds': [_entry(license: 'CC BY 3.0')],
+        'sounds': [
+          _entry(id: 'freesound_radio_announcement', license: 'CC BY 3.0'),
+        ],
+      }).single;
+
+      expect(candidate.creditLines, [
+        'Your no.1 talk, music and news radio.m4a',
+        'Created by Some_User',
+        'License: CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)',
+      ]);
+    });
+
+    test('says when the app ships only an excerpt of the recording', () {
+      final candidate = appSoundCandidates({
+        'sounds': [
+          _entry(id: 'freesound_elevator_music', license: 'CC BY 4.0'),
+        ],
+      }).single;
+
+      expect(
+        candidate.creditLines,
+        contains('Excerpt of the original recording'),
+      );
+    });
+
+    test('gives a CC0 sound the generic credit', () {
+      final candidate = appSoundCandidates({
+        'sounds': [_entry()],
+      }).single;
+
+      expect(candidate.creditLines, isEmpty);
+    });
+
+    test('keeps the shipped-sound id and credit through the catalog file', () {
+      final candidate = appSoundCandidates({
+        'sounds': [
+          _entry(id: 'freesound_radio_announcement', license: 'CC BY 3.0'),
+        ],
       }).single;
 
       final restored = SoundCandidate.fromJson(candidate.toJson());
 
-      expect(restored.divineSoundId, equals('freesound_yay'));
+      expect(restored.divineSoundId, equals('freesound_radio_announcement'));
       expect(restored.license, same(SoundLicense.ccBy3));
+      expect(restored.creditLines, equals(candidate.creditLines));
     });
   });
 }

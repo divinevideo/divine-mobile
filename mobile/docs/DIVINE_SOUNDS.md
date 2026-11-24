@@ -47,14 +47,9 @@ No `a` tag: that is what marks a video's sound.
 
 ## Publishing
 
-A one-off script, run by a maintainer who holds the account key. The key never goes into the app.
+No Divine sound account publishes the shipped sounds. The 22 whose licence allows it go out with the imported library: the importer's `app` source (`tools/sound_import/app_sounds.dart`) reads them from the manifest and the library account signs them, each with its manifest id as the `divine_sound` tag (see [The imported library](#the-imported-library)). The other 69 have no licence or an unknown one and are not published at all.
 
-1. For each manifest entry, upload the asset to Blossom and note its URL, hash and size.
-2. Build the event from the table above, with the entry's id as the `divine_sound` tag.
-3. Sign it with the account in `kDivineSoundPublisherPubkeys` and publish it to `relay.divine.video` and the app's other default relays.
-4. Check in the app that the sound plays and that a test video referencing it is counted. Use a staging environment, not production posts.
-
-Publishing a sound again with the same `divine_sound` id replaces the link; the app takes the newest event.
+To publish a sound that should rank with the shipped ones, sign it with an account in `kDivineSoundPublisherPubkeys` and give it the event shape above. The key never goes into the app. Check in the app that the sound plays and that a test video referencing it is counted, on a staging environment, not with production posts. Publishing a sound again with the same `divine_sound` id replaces the link; the app takes the newest event.
 
 ## Rollout notes
 
@@ -63,11 +58,11 @@ Publishing a sound again with the same `divine_sound` id replaces the link; the 
 
 ## The imported library
 
-Besides the curated sounds above, Divine publishes a library of freely licensed effects and music, thousands of sounds at once. It is signed by its own account, in `kSoundLibraryPublisherPubkeys` (`lib/config/official_accounts.dart`), not by a Divine sound account, so the app does not list its thousands of sounds beside Divine's own in For you:
+Besides the curated sounds above, Divine publishes a library of freely licensed effects and music, thousands of sounds at once. It is signed by its own account, in `kSoundLibraryPublisherPubkeys` (`lib/config/official_accounts.dart`), not by a Divine sound account, so its thousands of sounds are not among the Divine sounds For you lists for every viewer:
 
 - `AudioEvent.isLibrary` (`lib/extensions/divine_sound_extensions.dart`) marks it, by signer and without an `a` tag, as `isDivine` does.
 - It shows in every list the community's sounds do: New, Popular, search, and For you for a viewer who follows the library account. It shows without the community mark.
-- A library sound picked to sit beside Divine's own in For you is published again by a Divine sound account.
+- A library sound picked for every viewer's For you is published again by a Divine sound account.
 - The library account is `npub1n0dqg6d7t8ejzcc0awlhz4sgxxsrg28q37dp5ktxze0t9hs8s9jqncrx0a` (hex `9bda0469be59f321630febbf71560831a03428e08f9a1a5966165eb2de078164`, `kSoundLibraryPubkeyHex`). An app version from before it was added shows the library with the community mark.
 - Funnelcake's search boost (`SEARCH_DIVINE_SOUND_PUBKEYS`) lists the library account beside Divine HQ (divinevideo/divine-iac-coreconfig#2880), so its sounds rank first among equally good search matches. Funnelcake writes the boost into each sound's search document, and its nightly backfill re-indexes every sound, so a change to the list applies from the next run.
 
@@ -77,7 +72,7 @@ Only sources whose terms allow publishing the sounds as a library:
 
 - CC0 effects from `lavenderdotpet/CC0-Public-Domain-Sounds`, only from packs whose own licence file names the original author: Kenney (`kenney_*`, `sci-fi-sounds`), Ben Burnes (`BB_*`, `bb - *`, `Micro Pack - *`), The Motion Monkey (`MMRetroArcadeSoundsPack1_0_5`) and Team Forbidden (`warfork-cc0`, without its trailer voice-overs). Folders without a licence file are left out. `tools/sound_import/cc0_packs.dart` lists the packs, their credits and kinds.
 - Music by Kevin MacLeod from incompetech (`pieces.json`), CC BY 4.0. Its credit is the one incompetech asks for: the title, "Kevin MacLeod (incompetech.com)", "Licensed under Creative Commons: By Attribution 4.0 License" and the licence link.
-- The app's own sounds (`assets/sounds/sounds_manifest.json`, read at the revision `appSoundsCommit` in `tools/sound_import/app_sounds.dart` pins) that carry CC0, CC BY 4.0 or CC BY 3.0 and name their Freesound page: 22 of the 91. Each is credited to its Freesound user and carries the `divine_sound` tag with its manifest id. The others have no licence or an unknown one and stay in the app only.
+- The app's own sounds (`assets/sounds/sounds_manifest.json`, read at the revision `appSoundsCommit` in `tools/sound_import/app_sounds.dart` pins) that carry CC0, CC BY 4.0 or CC BY 3.0 and name their Freesound page: 22 of the 91. Each is credited to its Freesound user and carries the `divine_sound` tag with its manifest id. The six under CC BY are credited with the recording's Freesound title, and the two the app ships as excerpts say so. Like the app, the importer files a sound tagged `music` as music and every other one as an effect. The others have no licence or an unknown one and stay in the app only.
 - Not Freesound as a source, nor Pixabay or the Sonniss bundles. Freesound's API terms forbid copying its database, and the others' terms forbid this use. The app's own Freesound sounds above are single files, shared under their own licences.
 
 The app ties a published sound to the file it ships only when a Divine sound account signed it (`linkDivineSounds`). Until it also ties the library's, each of those 22 shows twice in the picker: as the shipped sound and as the library's. Once they are published, their event ids can go into the manifest so the shipped sounds reference them.

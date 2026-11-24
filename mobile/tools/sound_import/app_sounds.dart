@@ -22,6 +22,29 @@ const Map<String, SoundLicense> _licenses = {
   'CC BY 3.0': SoundLicense.ccBy3,
 };
 
+/// What the Freesound pages of the app's CC BY sounds say, checked on
+/// 2026-11-24: the recording's own title, which the credit names (CC BY 3.0
+/// requires it), and whether the app ships only an excerpt of it, which the
+/// credit has to say as a change. The app's titles are shortened, and two
+/// of its files are 6-second cuts of 39 s and 1:23 recordings.
+const Map<String, ({String title, bool excerpt})> _ccByOriginals = {
+  'freesound_yay': (title: 'YAY.mp3', excerpt: false),
+  'freesound_hello_acapella': (title: 'Hello Acapella', excerpt: false),
+  'freesound_radio_announcement': (
+    title: 'Your no.1 talk, music and news radio.m4a',
+    excerpt: false,
+  ),
+  'freesound_elevator_music': (title: 'Elevator Music', excerpt: true),
+  'freesound_bossa_nova_guitar': (
+    title: 'II-V-I Bossa Nova Guitar',
+    excerpt: false,
+  ),
+  'freesound_vibrant_energy': (
+    title: 'Vibrant and Uplifting Energy',
+    excerpt: true,
+  ),
+};
+
 final _freesoundPage = RegExp(
   r'^https://freesound\.org/people/([^/]+)/sounds/\d+/?$',
 );
@@ -31,9 +54,11 @@ final _freesoundPage = RegExp(
 ///
 /// Leaves out every other entry: most of the app's sounds have no licence
 /// or an unknown one, and a licence without its source page cannot be
-/// credited. Freesound's API terms forbid copying its database, which is
-/// why the importer has no Freesound source; these are single sounds the
-/// app already ships, shared under their own licences.
+/// credited. A CC BY sound is also left out until its Freesound title is in
+/// [_ccByOriginals], so its credit names the recording as the licence asks.
+/// Freesound's API terms forbid copying its database, which is why the
+/// importer has no Freesound source; these are single sounds the app already
+/// ships, shared under their own licences.
 List<SoundCandidate> appSoundCandidates(Map<String, dynamic> manifest) {
   final sounds = manifest['sounds'] as List<dynamic>? ?? const [];
   return [
@@ -48,6 +73,9 @@ SoundCandidate? _candidate(Map<String, dynamic> sound) {
   if (license == null || creator == null) return null;
 
   final id = sound['id'] as String;
+  final original = license.requiresAttribution ? _ccByOriginals[id] : null;
+  if (license.requiresAttribution && original == null) return null;
+
   final user = creator.group(1)!;
   final tags = [
     for (final tag in (sound['tags'] as List<dynamic>? ?? const []))
@@ -58,7 +86,10 @@ SoundCandidate? _candidate(Map<String, dynamic> sound) {
     downloadUrl: '$_appRoot/${Uri.encodeFull(sound['assetPath'] as String)}',
     sourcePage: page!,
     title: sound['title'] as String,
-    kind: _kindOf(tags),
+    // As the app files its shipped sounds (`VineSoundKind`): music when
+    // tagged so, an effect otherwise. A sound with no kind tag that its
+    // audio analysis finds to be speech would drop out of Funnelcake's lists.
+    kind: tags.contains('music') ? SoundKind.music : SoundKind.sfx,
     creatorName: user,
     creatorUrl: 'https://freesound.org/people/$user/',
     license: license,
@@ -66,16 +97,14 @@ SoundCandidate? _candidate(Map<String, dynamic> sound) {
       for (final tag in tags)
         if (tag != 'music' && tag != 'sfx') tag,
     ],
+    creditLines: [
+      if (original != null) ...[
+        original.title,
+        'Created by $user',
+        'License: ${license.name} (${license.url})',
+        if (original.excerpt) 'Excerpt of the original recording',
+      ],
+    ],
     divineSoundId: id,
   );
-}
-
-/// Music when the manifest tags it as music or singing, speech when it is a
-/// voice, and an effect otherwise.
-SoundKind _kindOf(List<String> tags) {
-  if (tags.contains('music') || tags.contains('singing')) {
-    return SoundKind.music;
-  }
-  if (tags.contains('voice')) return SoundKind.speech;
-  return SoundKind.sfx;
 }

@@ -102,10 +102,11 @@ const String kSoundLibraryPubkeyHex =
 /// freely licensed effects and songs (`tools/import_free_sounds.dart`).
 ///
 /// Kept apart from [kDivineSoundPublisherPubkeys] so its thousands of sounds
-/// are not listed beside Divine's own in For you: they show without the
-/// community mark, in every list like the community's. Funnelcake's search
+/// are not among the Divine sounds For you lists for every viewer: they show
+/// without the community mark, in every list like the community's, and in
+/// For you for a viewer who follows the library account. Funnelcake's search
 /// still ranks them with Divine's own (`SEARCH_DIVINE_SOUND_PUBKEYS`). A
-/// library sound picked to sit beside Divine's own is published again by a
+/// library sound picked for every viewer's For you is published again by a
 /// Divine sound account. `mobile/docs/DIVINE_SOUNDS.md` describes it.
 const Set<String> kSoundLibraryPublisherPubkeys = {kSoundLibraryPubkeyHex};
 
