@@ -117,6 +117,7 @@ jobs:
       - name: Verify trace output minimization
         run: python -m unittest discover -s tool -p '*_test.py'
       - name: Verify output ownership and writer release barriers
+        id: native_contracts
         run: |
           foreach ($serviceName in @('Audiosrv', 'AudioEndpointBuilder')) {
             $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
@@ -134,7 +135,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Capture ownership configuration failed.' }
           cmake --build $build --config Release
           if ($LASTEXITCODE -ne 0) { throw 'Capture ownership build failed.' }
-          ctest --test-dir $build -C Release --output-on-failure
+          ctest --test-dir $build -C Release --output-on-failure -E '^video_processor_activation_contract$'
           if ($LASTEXITCODE -ne 0) { throw 'Capture ownership tests failed.' }
       - name: Start existing audio runtime for capture engine
         run: |
@@ -155,3 +156,9 @@ jobs:
             if ($LASTEXITCODE -ne 0) { $failedCases += $captureCase }
           }
           if ($failedCases.Count -gt 0) { throw "Capture cases failed: $($failedCases -join ', ')" }
+      - name: Characterize video processor activation independently
+        if: ${{ !cancelled() && steps.native_contracts.outcome == 'success' }}
+        run: |
+          $build = Join-Path $env:RUNNER_TEMP 'divine-capture-ownership'
+          ctest --test-dir $build -C Release --output-on-failure --verbose -R '^video_processor_activation_contract$'
+          if ($LASTEXITCODE -ne 0) { throw 'Video processor activation contract failed.' }
