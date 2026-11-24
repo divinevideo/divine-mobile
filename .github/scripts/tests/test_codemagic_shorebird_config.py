@@ -1541,6 +1541,23 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
                 )
                 self.assertEqual(expected, result.stdout.strip())
 
+    def test_macos_signing_and_pkg_scripts_authorize_productbuild_and_log_failures(self) -> None:
+        signing_text = (CODEMAGIC_PATH.parent / "mobile/scripts/setup_macos_mas_signing.sh").read_text()
+        add_cert_lines = [
+            line.strip()
+            for line in signing_text.splitlines()
+            if line.strip().startswith("keychain add-certificates")
+        ]
+        self.assertGreaterEqual(len(add_cert_lines), 2)
+        for line in add_cert_lines:
+            self.assertIn("--allow-app codesign productsign productbuild", line)
+        self.assertIn("security set-key-partition-list -S apple-tool:,apple:,codesign:", signing_text)
+
+        pkg_text = (CODEMAGIC_PATH.parent / "mobile/scripts/package_macos_mas_pkg.sh").read_text()
+        self.assertIn(".xcdistributionlogs", pkg_text)
+        self.assertIn("IDEDistribution.critical.log", pkg_text)
+        self.assertIn("IDEDistribution.standard.log", pkg_text)
+
     def _definition_block(self, anchor_name: str) -> str:
         start = self.contents.index(f"    - &{anchor_name}\n")
         next_definition = re.search(
