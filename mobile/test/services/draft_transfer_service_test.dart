@@ -295,7 +295,7 @@ void main() {
         expect(imported.inspiredByVideo, inspiration);
       });
 
-      test('keeps only credits that name a published video', () async {
+      test('keeps only credits whose coordinate names the author', () async {
         const artist =
             'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
         const other =
@@ -310,8 +310,9 @@ void main() {
           authorPubkey: other,
           eventId: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
         );
-        // Names an account but no video, and a real video under someone
-        // else's pubkey: neither is a fact the recipient can stand behind.
+        // An account with no video, an event id nothing ties to that
+        // account, and a real video under someone else's pubkey: none is a
+        // fact the recipient can stand behind without a lookup.
         const accountOnly = ClipSourceCredit(authorPubkey: stranger);
         const wrongAuthor = ClipSourceCredit(
           authorPubkey: stranger,
@@ -319,7 +320,12 @@ void main() {
         );
         final draft = makeDraft();
         final credited = draft.copyWith(
-          clipSourceCredits: const [video, accountOnly, wrongAuthor],
+          clipSourceCredits: const [
+            video,
+            legacyVideo,
+            accountOnly,
+            wrongAuthor,
+          ],
           clips: [
             draft.clips.first.copyWith(
               sourceCredits: const [
@@ -347,7 +353,6 @@ void main() {
         final clip = imported.clips.single;
         expect(clip.sourceCredits, const [
           video,
-          legacyVideo,
           ClipSourceCredit(authorPubkey: _sender),
         ]);
         expect(clip.sourceAuthorPubkey, artist);

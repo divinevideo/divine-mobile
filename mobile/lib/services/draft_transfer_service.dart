@@ -489,12 +489,14 @@ class DraftTransferService {
     ];
   }
 
-  /// Keeps the credits that name a published video and adds the sender.
+  /// Keeps the credits whose video coordinate names the credited account, and
+  /// adds the sender.
   ///
   /// Credits become locked rows in the recipient's post form and `p`/`a` tags
   /// that notify the credited account, published under the recipient's name.
-  /// A credit naming only an account is the sender's word alone, so it is
-  /// dropped; the sender is credited for what they shared.
+  /// Only a coordinate ties the account to the video without a lookup; a
+  /// credit naming just an account or an event id is the sender's word alone,
+  /// so it is dropped. The sender is credited for what they shared.
   static List<Map<String, dynamic>> _creditSender(
     Iterable<ClipSourceCredit> credits,
     String senderPubkey,
@@ -510,15 +512,13 @@ class DraftTransferService {
     ];
   }
 
-  /// Whether [credit] names the published video a clip was reused from. A
-  /// video's coordinate names its author, so an `a` credit must credit them.
+  /// Whether [credit] names the published video a clip was reused from by a
+  /// coordinate, which names that video's author, and credits that author.
   static bool _namesPublishedVideo(ClipSourceCredit credit) {
-    if (credit.inspiredByInfo case final video?) {
-      final author = video.creatorPubkey;
-      return author.isNotEmpty && pubkeysEqual(author, credit.authorPubkey);
-    }
-    final eventId = credit.eventId;
-    return eventId != null && eventId.isNotEmpty;
+    final author = credit.inspiredByInfo?.creatorPubkey;
+    return author != null &&
+        author.isNotEmpty &&
+        pubkeysEqual(author, credit.authorPubkey);
   }
 
   /// A saved history shares identical metadata across undo steps. Restoring
