@@ -254,7 +254,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'İnsanların gerçekte neyi kullandığını görmemize yardımcı olur. Kapatırsan bu cihazda sırada bekleyen veriler silinir.';
+      'İnsanların gerçekte neyi kullandığını görmemize yardımcı olur. Kapatırsan bu cihazda sırada bekleyen veriler silinir. Hataları düzeltebilmemiz için çökme raporları gönderilmeye devam eder.';
 
   @override
   String get privacySettingsSaveFailed =>

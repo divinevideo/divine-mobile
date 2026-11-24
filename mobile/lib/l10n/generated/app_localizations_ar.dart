@@ -302,7 +302,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'تساعدنا على معرفة ما يستخدمه الناس فعلاً. عند الإيقاف، تُحذف البيانات المنتظرة على هذا الجهاز.';
+      'تساعدنا على معرفة ما يستخدمه الناس فعلاً. عند الإيقاف، تُحذف البيانات المنتظرة على هذا الجهاز. لا تزال تقارير الأعطال تُرسَل حتى نتمكن من إصلاح الأخطاء.';
 
   @override
   String get privacySettingsSaveFailed =>

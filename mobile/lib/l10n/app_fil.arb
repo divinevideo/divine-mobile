@@ -2972,7 +2972,7 @@
   "settingsPrivacySubtitle": "Piliin kung anong usage data ang ibinabahagi mo",
   "privacySettingsAnalyticsSection": "ANALYTICS",
   "privacySettingsShareUsage": "I-share ang usage data",
-  "privacySettingsShareUsageSubtitle": "Nakakatulong para makita namin kung ano talaga ang ginagamit ng mga tao. Kapag na-off mo, mabubura ang naka-queue na data sa device na ito.",
+  "privacySettingsShareUsageSubtitle": "Nakakatulong para makita namin kung ano talaga ang ginagamit ng mga tao. Kapag na-off mo, mabubura ang naka-queue na data sa device na ito. Ipinapadala pa rin ang mga crash report para maayos namin ang mga bug.",
   "privacySettingsSaveFailed": "Hindi namin ito na-save. Naka-off muna ang usage data.",
   "contentFiltersAdultContent": "NILALAMAN PARA SA MATATANDA",
   "contentFiltersViolenceGore": "KARAHASAN AT GORE",

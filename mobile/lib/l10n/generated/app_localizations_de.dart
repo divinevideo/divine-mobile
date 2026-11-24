@@ -318,7 +318,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Hilft uns zu sehen, was wirklich genutzt wird. Schaltest du es aus, werden wartende Daten auf diesem Gerät gelöscht.';
+      'Hilft uns zu sehen, was wirklich genutzt wird. Schaltest du es aus, werden wartende Daten auf diesem Gerät gelöscht. Absturzberichte werden weiter gesendet, damit wir Fehler beheben können.';
 
   @override
   String get privacySettingsSaveFailed =>

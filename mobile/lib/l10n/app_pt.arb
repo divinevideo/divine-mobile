@@ -3656,7 +3656,7 @@
   "settingsPrivacySubtitle": "Escolha quais dados de uso você compartilha",
   "privacySettingsAnalyticsSection": "ESTATÍSTICAS",
   "privacySettingsShareUsage": "Compartilhar dados de uso",
-  "privacySettingsShareUsageSubtitle": "Ajuda a gente a ver o que as pessoas realmente usam. Se você desligar, os dados na fila neste dispositivo são apagados.",
+  "privacySettingsShareUsageSubtitle": "Ajuda a gente a ver o que as pessoas realmente usam. Se você desligar, os dados na fila neste dispositivo são apagados. Os relatórios de falhas continuam sendo enviados para a gente corrigir bugs.",
   "privacySettingsSaveFailed": "Não deu para salvar. Os dados de uso ficam desativados por enquanto.",
   "generalSettingsSectionIntegrations": "INTEGRAÇÕES",
   "generalSettingsSectionViewing": "VISUALIZAÇÃO",

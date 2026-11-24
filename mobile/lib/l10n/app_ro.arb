@@ -3656,7 +3656,7 @@
   "settingsPrivacySubtitle": "Alege ce date de utilizare partajezi",
   "privacySettingsAnalyticsSection": "STATISTICI",
   "privacySettingsShareUsage": "Partajează datele de utilizare",
-  "privacySettingsShareUsageSubtitle": "Ne ajută să vedem ce folosesc oamenii cu adevărat. Dacă îl oprești, datele aflate în așteptare pe acest dispozitiv sunt șterse.",
+  "privacySettingsShareUsageSubtitle": "Ne ajută să vedem ce folosesc oamenii cu adevărat. Dacă îl oprești, datele aflate în așteptare pe acest dispozitiv sunt șterse. Rapoartele de blocare sunt trimise în continuare, ca să putem repara erorile.",
   "privacySettingsSaveFailed": "Nu am putut salva. Datele de utilizare rămân dezactivate deocamdată.",
   "generalSettingsSectionIntegrations": "INTEGRĂRI",
   "generalSettingsSectionViewing": "VIZIONARE",

@@ -320,7 +320,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get privacySettingsShareUsageSubtitle =>
-      'Помага ни да видим какво хората наистина ползват. Изключиш ли го, чакащите данни на това устройство се изтриват.';
+      'Помага ни да видим какво хората наистина ползват. Изключиш ли го, чакащите данни на това устройство се изтриват. Докладите за сривове пак се изпращат, за да можем да поправяме грешки.';
 
   @override
   String get privacySettingsSaveFailed =>

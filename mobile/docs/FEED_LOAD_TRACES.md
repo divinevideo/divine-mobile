@@ -24,7 +24,8 @@ gates on `kReleaseMode` in Dart, debug/profile builds are additionally
 deactivated natively, and since #7302 a release build must also carry the
 Shorebird engine (`shorebird release`) or a Zapstore installer — so a local
 run, `flutter run --release` included, produces no samples at all and that is
-not a bug. Opting one run back in takes every half of the recipe in
+not a bug. Within those builds, nobody who has switched off **Share usage
+data** sends any (#11398). Opting one run back in takes every half of the recipe in
 [Network performance monitoring](NETWORK_PERFORMANCE_MONITORING.md#verifying-a-change) —
 any one alone leaves collection off.
 
