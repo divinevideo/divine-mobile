@@ -48,6 +48,38 @@ void main() {
       expect(cubit.state.nextCursor, isNull);
     });
 
+    test(
+      'appends the next page after a relay video already in the reel',
+      () async {
+        final first = _video('ranked-first');
+        final relay = _video('relay-only');
+        final next = _video('ranked-next');
+        final cubit = HashtagFeedCubit(
+          fetchPage: (cursor) async => cursor == null
+              ? HashtagFeedVideosResult.success([first], nextCursor: 'o:50')
+              : HashtagFeedVideosResult.success([next]),
+          filterVideos: (videos) => videos,
+        );
+        addTearDown(cubit.close);
+        await cubit.refresh();
+
+        final snapshots = StreamIterator(
+          cubit.watchPlaybackVideos(
+            initialVideos: [first, relay],
+            visibleVideos: (ranked) => [...ranked, relay],
+          ),
+        );
+        addTearDown(snapshots.cancel);
+        expect(await snapshots.moveNext(), isTrue);
+        expect(snapshots.current, [first, relay]);
+
+        final updated = snapshots.moveNext();
+        await cubit.loadMore();
+        expect(await updated, isTrue);
+        expect(snapshots.current, [first, relay, next]);
+      },
+    );
+
     test('ignores an older page that arrives after a refresh', () async {
       final first = _video('first');
       final refreshed = _video('refreshed');

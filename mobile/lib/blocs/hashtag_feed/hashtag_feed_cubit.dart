@@ -3,6 +3,7 @@
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
@@ -33,6 +34,36 @@ class HashtagFeedCubit extends Cubit<HashtagFeedState> {
   final Future<HashtagFeedVideosResult> Function(String?) _fetchPage;
   final List<VideoEvent> Function(List<VideoEvent>) _filterVideos;
   int _request = 0;
+
+  /// Keeps the reel in the order it opened. Ranked pages can otherwise land
+  /// ahead of the current video when the viewer is on a relay-only result.
+  Stream<List<VideoEvent>> watchPlaybackVideos({
+    required List<VideoEvent> initialVideos,
+    required List<VideoEvent> Function(List<VideoEvent>) visibleVideos,
+  }) => Rx.defer(() {
+    var playback = initialVideos;
+
+    List<VideoEvent> appendNewVideos(HashtagFeedState state) {
+      final latest = {
+        for (final video in visibleVideos(state.videos))
+          _playbackKey(video): video,
+      };
+      return playback = [
+        for (final video in playback)
+          if (latest.remove(_playbackKey(video)) case final VideoEvent kept)
+            kept,
+        ...latest.values,
+      ];
+    }
+
+    return stream
+        .where((state) => !state.isLoading)
+        .map(appendNewVideos)
+        .startWith(appendNewVideos(state));
+  });
+
+  String _playbackKey(VideoEvent video) =>
+      video.vineId?.toLowerCase() ?? video.feedDedupKey;
 
   Future<void> refresh() => _load(replace: true);
 

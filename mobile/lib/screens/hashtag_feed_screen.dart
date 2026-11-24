@@ -204,15 +204,11 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
       category: LogCategory.video,
     );
     final feed = _feed;
-    List<VideoEvent> visibleVideos(HashtagFeedState state) =>
-        mounted && _feed == feed ? _visibleVideos(state.videos) : videoList;
-
     final repository = StreamFeedRepository(
-      videos: Rx.defer(
-        () => feed.stream
-            .where((state) => !state.isLoading)
-            .map(visibleVideos)
-            .startWith(visibleVideos(feed.state)),
+      videos: feed.watchPlaybackVideos(
+        initialVideos: videoList,
+        visibleVideos: (ranked) =>
+            mounted && _feed == feed ? _visibleVideos(ranked) : videoList,
       ),
       hasMore: Rx.defer(
         () => feed.stream
