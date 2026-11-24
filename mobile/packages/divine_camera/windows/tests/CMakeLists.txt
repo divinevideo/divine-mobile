@@ -17,6 +17,12 @@ add_test(NAME windows_pixel_conversion COMMAND windows_pixel_utils_test)
 set_tests_properties(capture_output_and_writer_release PROPERTIES TIMEOUT 30)
 
 if(WIN32)
+  add_executable(capture_trace_launcher capture_trace_launcher.cc)
+  target_compile_features(capture_trace_launcher PRIVATE cxx_std_17)
+  target_compile_definitions(capture_trace_launcher PRIVATE _WIN32_WINNT=0x0A00 WINVER=0x0A00)
+  set_target_properties(capture_trace_launcher PROPERTIES OUTPUT_NAME "capture trace launcher")
+  add_test(NAME capture_trace_process_tree_release COMMAND capture_trace_launcher --self-test)
+  set_tests_properties(capture_trace_process_tree_release PROPERTIES TIMEOUT 20)
   add_executable(synthetic_audio_source_test
     synthetic_audio_source_test.cc ../capture/fake_camera_source.cpp)
   target_compile_features(synthetic_audio_source_test PRIVATE cxx_std_17)

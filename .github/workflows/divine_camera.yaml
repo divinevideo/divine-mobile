@@ -148,6 +148,7 @@ jobs:
       - name: Verify actual Flutter capture and source release
         run: |
           $workspace = Join-Path $env:RUNNER_TEMP 'divine-capture-consumer'
+          $env:DIVINE_CAPTURE_TRACE_LAUNCHER = Join-Path $env:RUNNER_TEMP 'divine-capture-ownership/Release/capture trace launcher.exe'
           $failedCases = @()
           foreach ($captureCase in @('video', 'audio', 'audio-unavailable', 'texture-unavailable')) {
             python tool/native_capture_harness.py --platform windows --case $captureCase --workspace $workspace

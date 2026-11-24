@@ -401,10 +401,15 @@ def trace_capture_failure(command, app, env):
     print('DIVINE_CAPTURE_TRACE_TOOL', 'present' if tracer else 'unavailable', flush=True)
     if not tracer:
         return
+    launcher = env.get('DIVINE_CAPTURE_TRACE_LAUNCHER')
+    if not launcher or not Path(launcher).is_file():
+        print('DIVINE_CAPTURE_TRACE_STAGE launcher_unavailable', flush=True)
+        return
     try:
         # MFTrace defaults to stdout. Keep it in memory, never in a raw log.
-        traced = subprocess.run([str(tracer), '-dc', '-l', '5'] + command,
-                                cwd=app, env=env, capture_output=True, timeout=30)
+        traced = subprocess.run([launcher, str(tracer), '-dc', '-l', '5'] + command,
+                                cwd=app, env=env, capture_output=True, timeout=40)
+        print('DIVINE_CAPTURE_TRACE_LAUNCHER_EXIT', traced.returncode, flush=True)
         streams = [traced.stdout, traced.stderr]
     except subprocess.TimeoutExpired as failure:
         print('DIVINE_CAPTURE_TRACE_STAGE timeout', flush=True)
@@ -418,6 +423,13 @@ def trace_capture_failure(command, app, env):
     print('DIVINE_CAPTURE_TRACE_FAILURE_COUNT', len(signatures), flush=True)
     for symbol, code in signatures[:80]:
         print('DIVINE_CAPTURE_TRACE_STATUS', symbol, code, flush=True)
+
+
+def require_capture_success(result, platform, capture_case, command, app, env):
+    if result.returncode != 0 or 'DIVINE_CAPTURE_PASS' not in result.stdout:
+        if platform == 'windows' and capture_case == 'audio' and 'DIVINE_CAPTURE_FAIL initialization' in (result.stdout + result.stderr):
+            trace_capture_failure(command, app, env)
+        raise RuntimeError('Native capture failed; exit=' + str(result.returncode))
 
 
 def main():
@@ -540,10 +552,7 @@ dependencies:
                 print('DIVINE_CAPTURE_NATIVE_STAGE timeout', flush=True)
             if line.startswith('DIVINE_CAPTURE_') or 'GStreamer error:' in line or 'RecordHandler::Setup failed:' in line or 'Audio setup failed:' in line:
                 print(line, flush=True)
-        if result.returncode != 0 or 'DIVINE_CAPTURE_PASS' not in result.stdout:
-            if args.platform == 'windows' and args.case == 'audio' and 'DIVINE_CAPTURE_FAIL initialization' in result.stdout:
-                trace_capture_failure(command, app, env)
-            raise RuntimeError('Native capture failed; exit=' + str(result.returncode))
+        require_capture_success(result, args.platform, args.case, command, app, env)
         if args.case in ['audio-unavailable', 'texture-unavailable', 'startup-failure']:
             print('DIVINE_CAPTURE_EXPECTED_FAILURE_PASS', flush=True)
             return

@@ -1,7 +1,13 @@
 """Only API symbols and failure codes may leave the native diagnostic process."""
+import contextlib
+import io
+from pathlib import Path
+import subprocess
+import sys
 import unittest
+from unittest.mock import patch
 
-from native_capture_harness import trace_failure_signatures
+from native_capture_harness import require_capture_success, trace_failure_signatures
 
 
 class TraceFailureSignaturesTest(unittest.TestCase):
@@ -30,6 +36,62 @@ class TraceFailureSignaturesTest(unittest.TestCase):
         text = 'CMFMediaEventDetours::GetStatus status=0x80070005\n' * 3
         self.assertEqual(trace_failure_signatures(text),
                          [('CMFMediaEventDetours::GetStatus', '0x80070005')])
+
+
+class TraceRoutingTest(unittest.TestCase):
+    def failure(self, stream='stderr', stage='initialization'):
+        return subprocess.run([
+            sys.executable, '-c',
+            "import sys; sys." + stream + ".write('DIVINE_CAPTURE_FAIL " + stage +
+            " initialization_failed\\n'); sys.exit(1)",
+        ], capture_output=True, text=True, check=False)
+
+    def test_real_stderr_failure_reaches_diagnostic_and_remains_failed(self):
+        result = self.failure()
+        output = io.StringIO()
+        with patch('native_capture_harness.capture_trace_tool', return_value=None):
+            with contextlib.redirect_stdout(output):
+                with self.assertRaisesRegex(RuntimeError, 'Native capture failed; exit=1'):
+                    require_capture_success(result, 'windows', 'audio', [], Path('.'), {})
+        self.assertEqual(output.getvalue(), 'DIVINE_CAPTURE_TRACE_TOOL unavailable\n')
+        self.assertEqual(result.returncode, 1)
+
+    def test_trace_without_owned_launcher_stays_failed_without_execution(self):
+        result = self.failure()
+        output = io.StringIO()
+        with patch('native_capture_harness.capture_trace_tool', return_value=Path('mftrace.exe')):
+            with contextlib.redirect_stdout(output):
+                with self.assertRaisesRegex(RuntimeError, 'Native capture failed; exit=1'):
+                    require_capture_success(result, 'windows', 'audio', [], Path('.'), {})
+        self.assertEqual(output.getvalue(), 'DIVINE_CAPTURE_TRACE_TOOL present\n'
+                         'DIVINE_CAPTURE_TRACE_STAGE launcher_unavailable\n')
+
+    def test_stdout_control_also_reaches_diagnostic(self):
+        result = self.failure('stdout')
+        output = io.StringIO()
+        with patch('native_capture_harness.capture_trace_tool', return_value=None):
+            with contextlib.redirect_stdout(output):
+                with self.assertRaises(RuntimeError):
+                    require_capture_success(result, 'windows', 'audio', [], Path('.'), {})
+        self.assertEqual(output.getvalue(), 'DIVINE_CAPTURE_TRACE_TOOL unavailable\n')
+
+    def test_other_failures_stay_failed_without_launching_trace(self):
+        for platform, case, stage in [('linux', 'audio', 'initialization'),
+                                      ('windows', 'video', 'initialization'),
+                                      ('windows', 'audio', 'recording')]:
+            result = self.failure(stage=stage)
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                with self.assertRaises(RuntimeError):
+                    require_capture_success(result, platform, case, [], Path('.'), {})
+            self.assertEqual(output.getvalue(), '')
+
+    def test_success_needs_no_diagnostic(self):
+        result = subprocess.CompletedProcess([], 0, 'DIVINE_CAPTURE_PASS', '')
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            require_capture_success(result, 'windows', 'audio', [], Path('.'), {})
+        self.assertEqual(output.getvalue(), '')
 
 
 if __name__ == '__main__':
