@@ -40,7 +40,7 @@ class TraceFailureSignaturesTest(unittest.TestCase):
 
 class NativeFailureStatusTest(unittest.TestCase):
     def test_keeps_only_known_mirror_operation_and_hresult(self):
-        for stage in ['source', 'record_index', 'preview_index', 'factory', 'class', 'control', 'mode', 'add']:
+        for stage in ['source', 'record_index', 'preview_index', 'factory', 'class', 'category', 'control', 'mode', 'add']:
             with self.subTest(stage=stage):
                 self.assertEqual(native_failure_status('capture-status mirror_' + stage + ':0xc00d36e6 metadata=unused'),
                                  ('mirror_' + stage, '0xc00d36e6'))

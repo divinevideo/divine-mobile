@@ -498,7 +498,7 @@ def trace_capture_failure(command, app, env):
 
 
 def native_failure_status(line):
-    status = re.search(r'capture-status (create|initialize|error|record_start|record_stop|other|event_type|event_status|negotiate|preview|mirror_effect|mirror_(?:source|record_index|preview_index|factory|class|control|mode|add)):(0x[89a-fA-F][0-9a-fA-F]{7})(?![0-9a-fA-F])', line)
+    status = re.search(r'capture-status (create|initialize|error|record_start|record_stop|other|event_type|event_status|negotiate|preview|mirror_effect|mirror_(?:source|record_index|preview_index|factory|class|category|control|mode|add)):(0x[89a-fA-F][0-9a-fA-F]{7})(?![0-9a-fA-F])', line)
     return status.groups() if status else None
 
 

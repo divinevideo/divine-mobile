@@ -682,6 +682,9 @@ HRESULT Camera::ConfigureOutputMirroring() {
   hr = TraceMirrorStatus("class", output_mirror_activation_->SetGUID(MFT_TRANSFORM_CLSID_Attribute,
                                           CLSID_VideoProcessorMFT));
   if (FAILED(hr)) return hr;
+  hr = TraceMirrorStatus("category", output_mirror_activation_->SetGUID(
+      MF_TRANSFORM_CATEGORY_Attribute, MFT_CATEGORY_VIDEO_PROCESSOR));
+  if (FAILED(hr)) return hr;
   hr = TraceMirrorStatus("control", output_mirror_activation_->ActivateObject(IID_PPV_ARGS(&output_mirror_effect_)));
   if (FAILED(hr)) return hr;
   hr = TraceMirrorStatus("mode", output_mirror_effect_->SetMirror(MIRROR_HORIZONTAL));
