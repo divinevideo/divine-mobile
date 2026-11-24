@@ -309,10 +309,8 @@ void main() {
         expect(reads, equals([false]));
       });
 
-      testWidgets(
-        'reads access and shows the Confirmation card on a verifier that '
-        'names no requirement only with the simulated requirement on',
-        (tester) async {
+      group('on a verifier that names no requirement', () {
+        setUp(() {
           const twitterOpen = VerifierPlatform(
             key: 'twitter',
             label: 'Twitter / X',
@@ -325,14 +323,17 @@ void main() {
           when(
             () => repository.platform('twitter'),
           ).thenAnswer((_) async => twitterOpen);
+        });
 
-          for (final simulated in [false, true]) {
+        testWidgets(
+          'reads no access and keeps the sign-in with the simulated '
+          'requirement off',
+          (tester) async {
             final reads = <bool>[];
             await pump(
               tester,
               platformKey: 'twitter',
               confirmationSignIn: true,
-              simulateConfirmationRequirement: simulated,
               readConfirmationAccess: ({bool refresh = false}) async {
                 reads.add(refresh);
                 return ConfirmationAccess.hasNot;
@@ -340,26 +341,38 @@ void main() {
             );
             await tester.pump();
 
-            expect(
-              reads,
-              simulated ? equals([false]) : isEmpty,
-              reason: 'simulated: $simulated',
+            expect(reads, isEmpty);
+            expect(find.text(l10n.verifyConfirmationCardTitle), findsNothing);
+            expect(signInButton('twitter'), findsOneWidget);
+          },
+        );
+
+        testWidgets(
+          'reads access and shows the Confirmation card with the simulated '
+          'requirement on',
+          (tester) async {
+            final reads = <bool>[];
+            await pump(
+              tester,
+              platformKey: 'twitter',
+              confirmationSignIn: true,
+              simulateConfirmationRequirement: true,
+              readConfirmationAccess: ({bool refresh = false}) async {
+                reads.add(refresh);
+                return ConfirmationAccess.hasNot;
+              },
             );
+            await tester.pump();
+
+            expect(reads, equals([false]));
             expect(
               find.text(l10n.verifyConfirmationCardTitle),
-              simulated ? findsOneWidget : findsNothing,
-              reason: 'simulated: $simulated',
+              findsOneWidget,
             );
-            expect(
-              signInButton('twitter'),
-              simulated ? findsNothing : findsOneWidget,
-              reason: 'simulated: $simulated',
-            );
-            // A fresh page for the next pass.
-            await tester.pumpWidget(const SizedBox());
-          }
-        },
-      );
+            expect(signInButton('twitter'), findsNothing);
+          },
+        );
+      });
 
       testWidgets(
         'turning the simulated requirement over keeps the open flow and its '
