@@ -8,17 +8,17 @@ import kotlin.test.assertTrue
 class ShutterRequestTest {
     @Test
     fun forTap_sendsTheActionTheShutterShows() {
-        assertEquals("watchStart", ShutterRequest.forTap(RecorderSnapshot()).command)
+        assertEquals("watchStart", ShutterRequest.forTap(RecorderSnapshot(), revision = 1).command)
         assertEquals(
             "watchStop",
-            ShutterRequest.forTap(RecorderSnapshot(isShutterActive = true)).command,
+            ShutterRequest.forTap(RecorderSnapshot(isShutterActive = true), revision = 1).command,
         )
     }
 
     @Test
     fun aVideoPress_isAnsweredWhenTheShutterFlips() {
         val idle = RecorderSnapshot()
-        val request = ShutterRequest.forTap(idle)
+        val request = ShutterRequest.forTap(idle, revision = 1)
 
         assertFalse(request.isAnsweredBy(idle))
         assertTrue(request.isAnsweredBy(idle.copy(isShutterActive = true)))
@@ -29,7 +29,7 @@ class ShutterRequestTest {
     @Test
     fun aStill_isAnsweredOnceThePhoneHasTakenIt() {
         val stopMotion = RecorderSnapshot(modeName = "Stop Motion", stillShutterCount = 3)
-        val request = ShutterRequest.forTap(stopMotion)
+        val request = ShutterRequest.forTap(stopMotion, revision = 1)
 
         assertFalse(request.isAnsweredBy(stopMotion.copy(recordedMs = 100)))
         assertTrue(request.isAnsweredBy(stopMotion.copy(stillShutterCount = 4)))
@@ -37,6 +37,6 @@ class ShutterRequestTest {
 
     @Test
     fun aRecorderThatClosed_answersThePress() {
-        assertTrue(ShutterRequest.forTap(RecorderSnapshot()).isAnsweredBy(null))
+        assertTrue(ShutterRequest.forTap(RecorderSnapshot(), revision = 1).isAnsweredBy(null))
     }
 }

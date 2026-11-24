@@ -16,19 +16,29 @@ devices. The phone side lives in the camera plugin
 
 | Direction | Path | What |
 |---|---|---|
-| Phone → watch | data item `/divine/remote/recorder` | The recorder state Dart publishes as `RemoteRecorderState`, or `available = false` while no recorder is on screen. |
-| Watch → phone | message `/divine/remote/hello` | Sent when the remote comes on screen and on each connection change. |
-| Phone → watch | message `/divine/remote/state` | The answer to hello: the same state. It tells the watch that the phone app is running and can act on a press. |
-| Watch → phone | message `/divine/remote/shutter` | `watchStart` or `watchStop`, the action the shutter showed. The phone hands it to Dart as an `onRemoteRecordTrigger`, the path volume keys and Bluetooth remotes take. |
+| Phone → watch | data item `/divine/remote/recorder` | The recorder state Dart publishes as `RemoteRecorderState`, or `available = false` while no recorder is on screen, with its `revision`. |
+| Watch → phone | message `/divine/remote/hello` | A `helloId`. Sent when the remote comes on screen, on each connection change, and when a state arrives while the phone counts as unreachable. |
+| Phone → watch | message `/divine/remote/state` | The answer to hello: the same state, and the `helloId` it answers. It tells the watch that the phone app is running and can act on a press. |
+| Watch → phone | message `/divine/remote/shutter` | The `action` the shutter showed, `watchStart` or `watchStop`, and the `revision` of the state it showed it on. The phone hands the action to Dart as an `onRemoteRecordTrigger`, the path volume keys and Bluetooth remotes take. |
 
-The data item outlives the phone app, so the watch only enables the shutter
-once the phone app has answered. Each app declares a Data Layer capability
-(`divine_remote_shutter` on the watch, `divine_recorder` on the phone) so
-each finds the other.
+The data item outlives the phone app, so a state alone never enables the
+shutter: only the answer to the hello in flight, from a phone it went to,
+does. The stored item, its changes and the answers reach the watch in any
+order, so the watch shows a state only when its revision is newer than the
+one it shows. Revisions start from the phone's clock, so a restarted phone
+app publishes above its earlier run.
+
+The phone drops a press whose revision is not the state it last published,
+so a Stop meant for one take cannot stop the next, and a Start made before
+the recorder closed or changed modes does nothing.
+
+Each app declares a Data Layer capability (`divine_remote_shutter` on the
+watch, `divine_recorder` on the phone) so each finds the other.
 
 A press waits for the phone's answer, which is the state it publishes next:
 a video press flips the shutter, and a Stop Motion still counts up the
-finished stills. After 4 s without one the shutter is released.
+finished stills. After 4 s without one, as for a press the phone dropped,
+the shutter is released.
 
 While the phone's camera is open, the watch shows an ongoing activity on the
 watch face and in the launcher's recents; a tap opens the remote. A phone app

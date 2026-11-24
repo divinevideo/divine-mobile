@@ -17,7 +17,10 @@ internal object WearRemoteProtocol {
     /** Data item holding the recorder's latest state. */
     const val RECORDER_PATH = "/divine/remote/recorder"
 
-    /** Watch to phone: a shutter press, with the action the watch showed. */
+    /**
+     * Watch to phone: a shutter press, with the action the watch showed and
+     * the [REVISION] of the state it showed it on.
+     */
     const val SHUTTER_PATH = "/divine/remote/shutter"
 
     /** Watch to phone: the watch app came on screen and wants to know who answers. */
@@ -44,18 +47,35 @@ internal object WearRemoteProtocol {
     const val SHUTTER_ENABLED = "shutterEnabled"
     const val STILL_SHUTTER_COUNT = "stillShutterCount"
 
+    /**
+     * Numbers each state the phone publishes, higher for a newer one, also
+     * across restarts of the app. The watch shows only a state newer than the
+     * one it has, and a press names the state it was made on.
+     */
+    const val REVISION = "revision"
+
+    /** A hello's number, which the answer repeats so the watch can match it. */
+    const val HELLO_ID = "helloId"
+
+    /** The shutter action in a press. */
+    const val ACTION = "action"
+
     /** The shutter actions a watch can send, as `RemoteRecordTrigger` names them. */
     private val shutterActions = setOf("watchStart", "watchStop")
 
+    /** A press from the watch: [action] on the state with [revision]. */
+    data class ShutterPress(val action: String, val revision: Long)
+
     /**
-     * The recorder [state] Dart sent as a data map, or a closed recorder when
-     * it is `null`.
+     * The recorder [state] Dart sent as a data map with its [revision], or a
+     * closed recorder when it is `null`.
      *
      * A take that is not running leaves out its start time: a data map cannot
      * hold `null`.
      */
-    fun recorderDataMap(state: Map<*, *>?): DataMap {
+    fun recorderDataMap(state: Map<*, *>?, revision: Long): DataMap {
         val map = DataMap()
+        map.putLong(REVISION, revision)
         if (state == null) {
             map.putBoolean(AVAILABLE, false)
             return map
@@ -75,7 +95,36 @@ internal object WearRemoteProtocol {
         return map
     }
 
-    /** The shutter action a [SHUTTER_PATH] message carries, or `null` for anything else. */
-    fun shutterAction(payload: ByteArray): String? =
-        payload.toString(Charsets.UTF_8).takeIf { it in shutterActions }
+    /**
+     * The revision after [previous]. Starting from the clock keeps it above
+     * what an earlier run of the app published.
+     */
+    fun nextRevision(previous: Long, nowMs: Long): Long = maxOf(previous + 1, nowMs)
+
+    /** The press a [SHUTTER_PATH] message carries, or `null` for anything else. */
+    fun shutterPress(payload: ByteArray): ShutterPress? {
+        val map = dataMapOf(payload) ?: return null
+        val action = map.getString(ACTION)?.takeIf { it in shutterActions } ?: return null
+        if (!map.containsKey(REVISION)) return null
+        return ShutterPress(action, map.getLong(REVISION))
+    }
+
+    /** The answer to a [HELLO_PATH] message: [state], and the hello's number. */
+    fun helloAnswer(state: DataMap, hello: ByteArray): DataMap {
+        val answer = DataMap()
+        answer.putAll(state)
+        val helloMap = dataMapOf(hello)
+        if (helloMap != null && helloMap.containsKey(HELLO_ID)) {
+            answer.putLong(HELLO_ID, helloMap.getLong(HELLO_ID))
+        }
+        return answer
+    }
+
+    private fun dataMapOf(payload: ByteArray): DataMap? =
+        // Anything a watch sends is untrusted; malformed bytes throw.
+        try {
+            DataMap.fromByteArray(payload)
+        } catch (e: RuntimeException) {
+            null
+        }
 }

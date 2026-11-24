@@ -25,6 +25,10 @@ private const val LOG_NAME = "DivineCamera.WearRemote"
  * remote while the camera is open. A watch app that comes on screen also says
  * hello, and the answer tells it the phone app is there to act on a press.
  *
+ * Each state carries a revision, and a press names the revision the watch
+ * showed. A press made on a state the recorder has since left is dropped: a
+ * Stop for the take before this one must not stop this one.
+ *
  * The Data Layer is part of Google Play services, so [create] returns `null`
  * on a device without them and the recorder works as before.
  */
@@ -45,8 +49,11 @@ internal class WearRemoteLink private constructor(
     var hasWatchRemote = false
         private set
 
+    /** Revision of [state]. Only touched on the main thread. */
+    private var revision = WearRemoteProtocol.nextRevision(0, System.currentTimeMillis())
+
     /** What the watch should show. Only touched on the main thread. */
-    private var state: DataMap = WearRemoteProtocol.recorderDataMap(null)
+    private var state: DataMap = WearRemoteProtocol.recorderDataMap(null, revision)
 
     private var isStarted = false
 
@@ -127,7 +134,8 @@ internal class WearRemoteLink private constructor(
      * [recorder] is `null`. Call on the main thread.
      */
     fun update(recorder: Map<*, *>?) {
-        state = WearRemoteProtocol.recorderDataMap(recorder)
+        revision = WearRemoteProtocol.nextRevision(revision, System.currentTimeMillis())
+        state = WearRemoteProtocol.recorderDataMap(recorder, revision)
         publish()
     }
 
@@ -143,15 +151,23 @@ internal class WearRemoteLink private constructor(
     private fun handle(event: MessageEvent) {
         when (event.path) {
             WearRemoteProtocol.SHUTTER_PATH -> {
-                val action = WearRemoteProtocol.shutterAction(event.data) ?: return
-                DivineCameraLog.debug("Watch shutter: $action", name = LOG_NAME)
-                onShutterAction(action)
+                val press = WearRemoteProtocol.shutterPress(event.data) ?: return
+                if (press.revision != revision) {
+                    DivineCameraLog.debug(
+                        "Watch shutter ignored: ${press.action} was pressed on " +
+                            "revision ${press.revision}, the recorder is at $revision",
+                        name = LOG_NAME
+                    )
+                    return
+                }
+                DivineCameraLog.debug("Watch shutter: ${press.action}", name = LOG_NAME)
+                onShutterAction(press.action)
             }
             WearRemoteProtocol.HELLO_PATH -> {
                 messageClient.sendMessage(
                     event.sourceNodeId,
                     WearRemoteProtocol.STATE_PATH,
-                    state.toByteArray()
+                    WearRemoteProtocol.helloAnswer(state, event.data).toByteArray()
                 ).addOnFailureListener {
                     DivineCameraLog.debug(
                         "Watch hello not answered: ${it.message}",

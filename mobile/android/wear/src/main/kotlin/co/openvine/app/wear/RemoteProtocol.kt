@@ -14,7 +14,10 @@ internal object RemoteProtocol {
     /** Data item the phone keeps its recorder's latest state in. */
     const val RECORDER_PATH = "/divine/remote/recorder"
 
-    /** Watch to phone: a shutter press, with the action the watch showed. */
+    /**
+     * Watch to phone: a shutter press, with the action the watch showed and
+     * the [REVISION] of the state it showed it on.
+     */
     const val SHUTTER_PATH = "/divine/remote/shutter"
 
     /** Watch to phone: the remote came on screen and wants to know who answers. */
@@ -40,6 +43,28 @@ internal object RemoteProtocol {
     const val SHUTTER_ACTIVE = "shutterActive"
     const val SHUTTER_ENABLED = "shutterEnabled"
     const val STILL_SHUTTER_COUNT = "stillShutterCount"
+
+    /**
+     * Numbers each state the phone publishes, higher for a newer one. A press
+     * names the state it was made on, and the phone drops it once the
+     * recorder has left that state.
+     */
+    const val REVISION = "revision"
+
+    /** A hello's number, which the phone's answer repeats. */
+    const val HELLO_ID = "helloId"
+
+    /** The shutter action in a press. */
+    const val ACTION = "action"
+
+    /** Reads a state the phone sent, with the revision that orders it. */
+    fun update(payload: Map<String, Any?>): RecorderUpdate = RecorderUpdate(
+        recorder = snapshot(payload),
+        revision = (payload[REVISION] as? Number)?.toLong() ?: 0L,
+    )
+
+    /** The hello an answer repeats, or `null` when it names none. */
+    fun helloId(payload: Map<String, Any?>): Long? = (payload[HELLO_ID] as? Number)?.toLong()
 
     /**
      * Reads what the phone sent; `null` for a closed recorder.

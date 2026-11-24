@@ -15,6 +15,8 @@ internal data class ShutterRequest(
     val stops: Boolean,
     /** Finished stills when the press was sent. */
     val stillShutterCount: Int,
+    /** Revision of the state the press was made on. */
+    val revision: Long,
 ) {
     /** What the press tells the phone. */
     val command: String
@@ -27,10 +29,11 @@ internal data class ShutterRequest(
             recorder.stillShutterCount != stillShutterCount
 
     companion object {
-        /** The press a tap sends for what [recorder] shows. */
-        fun forTap(recorder: RecorderSnapshot) = ShutterRequest(
+        /** The press a tap sends for what [recorder], at [revision], shows. */
+        fun forTap(recorder: RecorderSnapshot, revision: Long) = ShutterRequest(
             stops = recorder.isShutterActive,
             stillShutterCount = recorder.stillShutterCount,
+            revision = revision,
         )
     }
 }

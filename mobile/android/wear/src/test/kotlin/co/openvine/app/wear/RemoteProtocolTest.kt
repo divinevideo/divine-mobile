@@ -37,6 +37,15 @@ class RemoteProtocolTest {
     }
 
     @Test
+    fun update_carriesTheRevisionAndAnAnswerItsHello() {
+        val payload = mapOf("available" to false, "revision" to 42L, "helloId" to 7L)
+
+        assertEquals(RecorderUpdate(null, revision = 42), RemoteProtocol.update(payload))
+        assertEquals(7L, RemoteProtocol.helloId(payload))
+        assertNull(RemoteProtocol.helloId(mapOf("revision" to 42L)))
+    }
+
+    @Test
     fun snapshot_ofAClosedRecorder_isNull() {
         assertNull(RemoteProtocol.snapshot(mapOf("available" to false, "recordedMs" to 900L)))
         // A deleted data item arrives as no values at all.
