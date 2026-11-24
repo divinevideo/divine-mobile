@@ -31,10 +31,10 @@ class ZendeskNativeTicketFailure {
   /// Whether another identity can make the ticket succeed: the bridge found
   /// none on the SDK, or the SDK could not authenticate the one it had.
   ///
-  /// Neither SDK says the latter in a way Dart could read from the message:
-  /// Android reports a failed token exchange as a 400, and iOS reports it, and
-  /// an identity of the wrong type, without an HTTP status at all. So both
-  /// bridges flag it in `authFailed`.
+  /// The HTTP status cannot say the latter: Android answers a failed token
+  /// exchange with a synthetic 400, iOS passes the token exchange's own
+  /// status, and iOS refuses an identity of the wrong type with no HTTP status
+  /// at all. So both bridges flag it in `authFailed`.
   bool get needsAnotherIdentity =>
       error.code == 'NO_IDENTITY' ||
       (error.code == 'CREATE_FAILED' && _details['authFailed'] == true);
