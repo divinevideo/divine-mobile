@@ -15,6 +15,7 @@ import 'package:infinite_video_feed/src/models/feed_playback_telemetry.dart';
 import 'package:infinite_video_feed/src/models/video_error_type.dart';
 import 'package:infinite_video_feed/src/models/video_retry_result.dart';
 import 'package:infinite_video_feed/src/services/bunny_playback_selector.dart';
+import 'package:infinite_video_feed/src/services/stale_playback_detector.dart';
 import 'package:infinite_video_feed/src/widgets/infinite_video_feed.dart';
 import 'package:infinite_video_feed/src/widgets/video_item.dart';
 import 'package:media_cache/media_cache.dart';
@@ -5985,6 +5986,54 @@ void main() {
             },
           );
         }
+      }
+    });
+
+    group('wait for data after playback started', () {
+      for (final (platform, seeks) in [
+        // AVPlayer reported these waits as playing, so the stale detector's
+        // seek recovery covered them; it still does.
+        (TargetPlatform.iOS, 1),
+        (TargetPlatform.android, 0),
+      ]) {
+        testWidgets('seeks to recover it $seeks time(s) on ${platform.name}', (
+          tester,
+        ) async {
+          debugDefaultTargetPlatformOverride = platform;
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install();
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('stalls')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+            expect(harness.countCallsForPlayer(0, 'play'), 1);
+            const position = {'positionMs': 1000, 'durationMs': 6000};
+            await harness.sendEvent(0, {'status': 'playing', ...position});
+            await tester.pump(const Duration(milliseconds: 1100));
+            await harness.sendEvent(0, {'status': 'buffering', ...position});
+            // Past the grace and a full stall, short of a second recovery.
+            await tester.pump(
+              StalePlaybackDetector.interval *
+                  (StalePlaybackDetector.heartbeatThreshold + 2),
+            );
+            expect(harness.countCallsForPlayer(0, 'seekTo'), seeks);
+          } finally {
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            await harness.dispose();
+            debugDefaultTargetPlatformOverride = null;
+          }
+        });
       }
     });
 

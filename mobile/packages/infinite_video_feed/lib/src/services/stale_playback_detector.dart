@@ -12,13 +12,22 @@ class StalePlaybackDetector {
   /// Creates a detector. [onSeekRecovery] is invoked first when a stall is
   /// detected; only after [maxRecoveryAttempts] failed seeks does
   /// [onSourceFailover] fire.
+  ///
+  /// With [watchesBuffering], buffering after playback started keeps the
+  /// heartbeat running, so a wait for data whose position stops goes through
+  /// the same recovery as playback whose position stops. AVPlayer used to
+  /// report those waits as playing, which is how this recovery came to cover
+  /// them on iOS and macOS. Buffering before playback starts is left to the
+  /// slow-load watchdog.
   StalePlaybackDetector({
     required void Function(int index, int positionMs) onSeekRecovery,
     required void Function(int index) onSourceFailover,
     required void Function(String message) log,
+    bool watchesBuffering = false,
   }) : _onSeekRecovery = onSeekRecovery,
        _onSourceFailover = onSourceFailover,
-       _log = log;
+       _log = log,
+       _watchesBuffering = watchesBuffering;
 
   /// Polling interval for the position heartbeat.
   static const interval = Duration(milliseconds: 250);
@@ -37,19 +46,25 @@ class StalePlaybackDetector {
   final void Function(int index, int positionMs) _onSeekRecovery;
   final void Function(int index) _onSourceFailover;
   final void Function(String) _log;
+  final bool _watchesBuffering;
 
   Timer? _timer;
   StreamSubscription<DivineVideoPlayerState>? _stateSubscription;
   int? _lastPositionMs;
   int _heartbeats = 0;
   int _graceHeartbeats = 0;
+
+  /// Whether the current source reported playing since [start] or
+  /// [resetGrace].
+  bool _played = false;
   final _recoveryAttempts = <int, int>{};
 
   /// Starts monitoring [controller] for [index]. Cancels any previous monitor.
   ///
   /// The [interval] heartbeat runs only while [controller] is actively
-  /// playing — when playback is paused or idle, the timer is cancelled and
-  /// re-armed reactively via `controller.stateStream` once playback resumes.
+  /// playing, or buffering after it played when this detector watches
+  /// buffering — otherwise the timer is cancelled and re-armed reactively
+  /// via `controller.stateStream` once playback resumes.
   void start(int index, DivineVideoPlayerController? controller) {
     stop();
     if (controller == null) return;
@@ -57,14 +72,15 @@ class StalePlaybackDetector {
     _lastPositionMs = null;
     _heartbeats = 0;
     _graceHeartbeats = graceAfterPlay;
+    _played = false;
     _recoveryAttempts[index] = 0;
 
-    if (controller.state.isPlaying) {
+    if (_watches(controller.state)) {
       _startHeartbeatTimer(index, controller);
     }
 
     _stateSubscription = controller.stateStream.listen((state) {
-      if (state.isPlaying) {
+      if (_watches(state)) {
         if (_timer == null) {
           _startHeartbeatTimer(index, controller);
         }
@@ -72,6 +88,12 @@ class StalePlaybackDetector {
         _pauseHeartbeatTimer();
       }
     });
+  }
+
+  bool _watches(DivineVideoPlayerState state) {
+    if (state.isPlaying) _played = true;
+    return state.isPlaying ||
+        (_watchesBuffering && _played && state.isBuffering);
   }
 
   void _startHeartbeatTimer(int index, DivineVideoPlayerController controller) {
@@ -122,6 +144,7 @@ class StalePlaybackDetector {
   /// stale detection doesn't fire during the new source's initial buffer.
   void resetGrace() {
     _graceHeartbeats = graceAfterPlay;
+    _played = false;
   }
 
   /// Forgets recovery counters for [index].
