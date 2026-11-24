@@ -601,7 +601,73 @@ void main() {
           };
           await expectRejected(pack(manifest, media));
         });
+
+        test('one media index used as both video and audio', () async {
+          final (:manifest, :media) = await exported();
+          ((manifest['project'] as Map)['selectedSound'] as Map)['url'] = '@0';
+          await expectRejected(pack(manifest, media));
+        });
+
+        test('two clips that share an id', () async {
+          final (:manifest, :media) = await exported();
+          final clips = (manifest['project'] as Map)['clips'] as List;
+          (clips[1] as Map)['id'] = (clips[0] as Map)['id'];
+          // This check runs after the media is written, so it also proves the
+          // written files are removed. It can leave an empty audio folder.
+          List<String> files() => directory
+              .listSync(recursive: true)
+              .whereType<File>()
+              .map((f) => f.path)
+              .toList();
+          final before = files();
+          await expectLater(
+            transfer.importDraft(
+              messageId: '4' * 64,
+              senderPubkey: _sender,
+              storage: recipientStorage,
+              download: () async => pack(manifest, media),
+              stillWanted: () => true,
+            ),
+            throwsFormatException,
+          );
+          expect(await recipientStorage.getDraftCount(), 0);
+          expect(files(), unorderedEquals(before));
+        });
       });
+
+      test(
+        "drops the sender's proof manifest from the imported copy",
+        () async {
+          final package = await transfer.exportDraft(
+            makeDraft(),
+            temporaryDirectory: outbox,
+          );
+          final bytes = package.readAsBytesSync();
+          final end = 8 + ByteData.sublistView(bytes, 0, 8).getUint32(4);
+          final manifest = jsonDecode(
+            utf8.decode(bytes.sublist(8, end)),
+          ) as Map<String, dynamic>;
+          final clips = (manifest['project'] as Map)['clips'] as List;
+          (clips.first as Map)['proofManifestJson'] = '{"sender":true}';
+          final json = utf8.encode(jsonEncode(manifest));
+          final header = ByteData(8)
+            ..setUint32(0, 0x44564431)
+            ..setUint32(4, json.length);
+          final bundle = Uint8List.fromList([
+            ...header.buffer.asUint8List(),
+            ...json,
+            ...bytes.sublist(end),
+          ]);
+          final imported = await transfer.importDraft(
+            messageId: '5' * 64,
+            senderPubkey: _sender,
+            storage: recipientStorage,
+            download: () async => bundle,
+            stillWanted: () => true,
+          );
+          expect(imported.clips.first.proofManifestJson, isNull);
+        },
+      );
 
       test('drops a forged single credit on a clip', () async {
         const stranger =
