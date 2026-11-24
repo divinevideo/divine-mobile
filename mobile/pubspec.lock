@@ -274,14 +274,6 @@ packages:
       url: "https://github.com/guardianproject/c2pa-flutter.git"
     source: git
     version: "0.0.3"
-  camera_desktop:
-    dependency: transitive
-    description:
-      name: camera_desktop
-      sha256: "280ce2b335f3a6d2bd4345c9906697d86de40065d52cd6090df28a8b52b32304"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.0.0"
   camera_platform_interface:
     dependency: transitive
     description:

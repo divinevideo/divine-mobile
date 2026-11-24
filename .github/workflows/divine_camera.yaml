@@ -56,3 +56,74 @@ jobs:
       - name: Run divine_camera Android unit tests
         working-directory: mobile/android
         run: gradle :divine_camera:testDebugUnitTest
+
+  native-linux:
+    name: Linux Capture Ownership
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: mobile/packages/divine_camera
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.9"
+          channel: stable
+          cache: true
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install native capture and independent decoder tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang libclang-rt-18-dev cmake ninja-build pkg-config libgtk-3-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav ffmpeg xvfb xauth
+      - name: Verify native live recording and microphone failure recovery under ASAN
+        run: |
+          cmake -G Ninja -S native -B "$RUNNER_TEMP/divine-capture-core" -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug -DDIVINE_CAPTURE_TEST_ASAN=ON
+          cmake --build "$RUNNER_TEMP/divine-capture-core"
+          ctest --test-dir "$RUNNER_TEMP/divine-capture-core" --output-on-failure
+      - name: Verify actual Flutter capture and writer release
+        run: |
+          for capture_case in video audio audio-unavailable; do
+            python tool/native_capture_harness.py --platform linux --case "$capture_case" --workspace "$RUNNER_TEMP/divine-capture-consumer"
+          done
+
+  native-windows:
+    name: Windows Capture Ownership
+    runs-on: windows-2022
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: mobile/packages/divine_camera
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.9"
+          channel: stable
+          cache: true
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install independent test decoder
+        run: |
+          choco install ffmpeg --yes --no-progress
+          if ($LASTEXITCODE -ne 0) { throw 'Independent decoder installation failed.' }
+      - name: Verify output ownership and writer release barriers
+        run: |
+          $build = Join-Path $env:RUNNER_TEMP 'divine-capture-ownership'
+          cmake -S windows/tests -B $build -A x64
+          if ($LASTEXITCODE -ne 0) { throw 'Capture ownership configuration failed.' }
+          cmake --build $build --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'Capture ownership build failed.' }
+          ctest --test-dir $build -C Release --output-on-failure
+          if ($LASTEXITCODE -ne 0) { throw 'Capture ownership tests failed.' }
+      - name: Verify actual Flutter capture and source release
+        run: |
+          $workspace = Join-Path $env:RUNNER_TEMP 'divine-capture-consumer'
+          foreach ($captureCase in @('video', 'audio', 'audio-unavailable')) {
+            python tool/native_capture_harness.py --platform windows --case $captureCase --workspace $workspace
+            if ($LASTEXITCODE -ne 0) { throw "Capture case failed: $captureCase" }
+          }
