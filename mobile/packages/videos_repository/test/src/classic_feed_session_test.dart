@@ -101,6 +101,60 @@ void main() {
     );
 
     test(
+      'filters unavailable incoming videos while keeping the playing prefix',
+      () async {
+        final unavailable = <String>{};
+        final session = ClassicFeedSession(
+          isUnavailable: unavailable.contains,
+          loadPage: (request) async => request.cursor == null
+              ? HomeFeedResult(
+                  videos: [1, 2, 3, 4].map(_video).toList(),
+                  paginationCursor: 'next',
+                  hasMore: true,
+                )
+              : _page([5, 6], cursor: null),
+        );
+        addTearDown(session.dispose);
+
+        await session.loadInitial();
+        session.activate(1);
+        unavailable.addAll([1, 2, 4, 6].map(_id));
+        await session.loadMore();
+
+        expect(session.state.videos.map((v) => v.id), [1, 2, 3, 5].map(_id));
+        expect(session.state.currentIndex, 1);
+
+        await session.loadInitial(refresh: true);
+
+        expect(session.state.videos.map((v) => v.id), [_id(3)]);
+        expect(session.state.currentIndex, 0);
+      },
+    );
+
+    test(
+      'a republished revision keeps unavailable videos through the playing '
+      'slot',
+      () {
+        final unavailable = <String>{};
+        final republishable = _video(3).copyWith(addressableDTag: 'classic');
+        final edited = republishable.copyWith(id: _id(7), eventCreatedAt: 2);
+        final session = ClassicFeedSession(
+          initialVideos: [_video(1), _video(2), republishable],
+          isUnavailable: unavailable.contains,
+          loadPage: (_) async => _page([]),
+        );
+        addTearDown(session.dispose);
+
+        session.activate(1);
+        unavailable.add(_id(1));
+        session.replaceVideoRevision(edited);
+
+        expect(session.state.videos, [_video(1), _video(2), edited]);
+        expect(session.state.currentIndex, 1);
+      },
+    );
+
+    test(
       'pagination appends and publishes loading without replacing the queue',
       () async {
         final requests = <ClassicRecommendationsRequest>[];

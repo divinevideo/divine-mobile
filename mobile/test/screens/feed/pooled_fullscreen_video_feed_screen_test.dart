@@ -2769,6 +2769,10 @@ void main() {
             ).thenAnswer((_) => confirmation.future);
             final tracker = _MockBrokenVideoTracker();
             when(() => tracker.isVideoBroken(any())).thenReturn(false);
+            when(
+              () => tracker.markedVideoIds,
+            ).thenAnswer((_) => const Stream<String>.empty());
+            when(() => tracker.brokenVideoIds).thenReturn(const []);
             when(() => tracker.markVideoBroken(any(), any()))
                 .thenAnswer((_) async {});
             final oldService = createMockVideoEventService();
@@ -2859,6 +2863,10 @@ void main() {
           ).thenAnswer((_) => confirmation.future);
           final tracker = _MockBrokenVideoTracker();
           when(() => tracker.isVideoBroken(any())).thenReturn(false);
+          when(
+            () => tracker.markedVideoIds,
+          ).thenAnswer((_) => const Stream<String>.empty());
+          when(() => tracker.brokenVideoIds).thenReturn(const []);
           final videoEventService = createMockVideoEventService();
           when(
             () => videoEventService.shouldHideVideo(any()),

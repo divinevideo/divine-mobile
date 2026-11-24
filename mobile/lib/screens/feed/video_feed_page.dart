@@ -110,6 +110,9 @@ class VideoFeedPage extends ConsumerWidget {
     final feedTuningRepository = ref.watch(feedTuningRepositoryProvider);
     final badgeRepository = ref.watch(badgeRepositoryProvider);
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
+    // Stable for the app's lifetime and follows identity changes itself, so
+    // a read here cannot go stale (#9341).
+    final unavailabilityGate = ref.read(feedUnavailabilityGateProvider);
 
     final persistence = ref
         .watch(feedModePersistenceRegistryProvider)
@@ -143,8 +146,14 @@ class VideoFeedPage extends ConsumerWidget {
                   removalRepositoryStream: ref.read(
                     videosRepositoryIdentityStreamProvider,
                   ),
+                  unavailableFilter: unavailabilityGate.isVideoBroken,
+                  unavailableVideoIds: unavailabilityGate.markedVideoIds,
                   classicSession: useAdaptiveClassics
-                      ? _homeClassicSession(ref, viewerPubkey)
+                      ? _homeClassicSession(
+                          ref,
+                          viewerPubkey,
+                          isUnavailable: unavailabilityGate.isVideoBroken,
+                        )
                       : null,
                   followRepository: followRepository,
                   curatedListRepository: curatedListRepository,
@@ -805,7 +814,11 @@ class _KeyboardStableBottomInsetState
 /// the provider: the old service emits a privacy change synchronously while it
 /// is disposed, and Riverpod rejects re-reading the provider inside that
 /// disposal. Such a read sees the disposed service and sends no identity.
-ClassicFeedSession _homeClassicSession(WidgetRef ref, String? viewerPubkey) {
+ClassicFeedSession _homeClassicSession(
+  WidgetRef ref,
+  String? viewerPubkey, {
+  required bool Function(String videoId) isUnavailable,
+}) {
   var analytics = ref.read(analyticsServiceProvider);
   return ClassicFeedSession(
     loadPage: (request) {
@@ -833,6 +846,7 @@ ClassicFeedSession _homeClassicSession(WidgetRef ref, String? viewerPubkey) {
         .read(analyticsServiceIdentityStreamProvider)
         .doOnData((current) => analytics = current)
         .switchMap((current) => current.privacyChanges),
+    isUnavailable: isUnavailable,
     filter: (videos) {
       final repository = ref.read(videosRepositoryProvider);
       return repository

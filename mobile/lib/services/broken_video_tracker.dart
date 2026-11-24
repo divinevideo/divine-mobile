@@ -1,6 +1,7 @@
 // ABOUTME: Service for tracking and persisting broken video URLs
 // ABOUTME: Prevents repeated display of videos with non-functional URLs
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,6 +21,8 @@ class BrokenVideoTracker {
   late SharedPreferences _prefs;
   Set<String> _brokenVideoIds = {};
   Map<String, DateTime> _brokenTimestamps = {};
+  final StreamController<String> _markedVideoIdsController =
+      StreamController<String>.broadcast();
 
   static String _scopedKey(String baseKey, String? ownerPubkey) {
     final scope = ownerPubkey == null || ownerPubkey.isEmpty
@@ -134,6 +137,9 @@ class BrokenVideoTracker {
     if (!_brokenVideoIds.contains(videoId)) {
       _brokenVideoIds.add(videoId);
       _brokenTimestamps[videoId] = DateTime.now();
+      if (!_markedVideoIdsController.isClosed) {
+        _markedVideoIdsController.add(videoId);
+      }
 
       await _saveBrokenVideos();
 
@@ -144,6 +150,16 @@ class BrokenVideoTracker {
       );
     }
   }
+
+  /// Each id as it is newly marked, so a feed already showing it can drop it.
+  Stream<String> get markedVideoIds => _markedVideoIdsController.stream;
+
+  /// Ends [markedVideoIds] when the provider rebuilds this tracker, which it
+  /// does on every auth transition.
+  ///
+  /// A confirmation that began before the rebuild can still mark a video
+  /// afterwards; the mark is saved but no longer announced.
+  void dispose() => unawaited(_markedVideoIdsController.close());
 
   /// Check if a video is known to be broken
   bool isVideoBroken(String videoId) {
@@ -167,7 +183,10 @@ class BrokenVideoTracker {
   /// Get count of broken videos
   int get brokenVideoCount => _brokenVideoIds.length;
 
-  /// Get all broken video IDs (for debugging)
+  /// Every id currently marked broken, as a copy.
+  ///
+  /// The feed gate replays these when it attaches this tracker, so a feed
+  /// served before the tracker loaded drops them too.
   List<String> get brokenVideoIds => _brokenVideoIds.toList();
 
   /// Clear all broken video records

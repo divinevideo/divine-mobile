@@ -1,6 +1,8 @@
 // ABOUTME: Tests FeedUnavailabilityGate — fails closed until its per-identity
 // ABOUTME: tracker and guard attach, then answers from whichever is current.
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/broken_video_tracker.dart';
@@ -23,6 +25,10 @@ void main() {
     setUp(() {
       gate = FeedUnavailabilityGate();
       tracker = _MockTracker();
+      when(
+        () => tracker.markedVideoIds,
+      ).thenAnswer((_) => const Stream<String>.empty());
+      when(() => tracker.brokenVideoIds).thenReturn(const []);
       guard = _MockGuard();
     });
 
@@ -40,6 +46,72 @@ void main() {
         // An identity change detaches the old tracker until the new resolves.
         gate.attachTracker(null);
         expect(gate.isVideoBroken(_videoId), isFalse);
+      });
+    });
+
+    group('markedVideoIds', () {
+      test('forwards marks only from the currently attached tracker', () async {
+        final first = StreamController<String>.broadcast();
+        final second = StreamController<String>.broadcast();
+        addTearDown(first.close);
+        addTearDown(second.close);
+        final next = _MockTracker();
+        when(() => tracker.markedVideoIds).thenAnswer((_) => first.stream);
+        when(() => next.markedVideoIds).thenAnswer((_) => second.stream);
+        when(() => next.brokenVideoIds).thenReturn(const []);
+        final forwarded = <String>[];
+        final subscription = gate.markedVideoIds.listen(forwarded.add);
+        addTearDown(subscription.cancel);
+
+        gate.attachTracker(tracker);
+        first.add('first-account');
+        await pumpEventQueue();
+        // An identity change replaces the tracker.
+        gate.attachTracker(next);
+        first.add('previous-account');
+        second.add('second-account');
+        await pumpEventQueue();
+        gate.attachTracker(null);
+        second.add('detached');
+        await pumpEventQueue();
+
+        expect(forwarded, ['first-account', 'second-account']);
+      });
+
+      test(
+        'replays the ids a tracker already holds when it attaches',
+        () async {
+          // Home can serve its cached window before the tracker resolves, so
+          // nothing filtered these; the feed has to hear about them now.
+          when(() => tracker.brokenVideoIds).thenReturn(['held-1', 'held-2']);
+          final forwarded = <String>[];
+          final subscription = gate.markedVideoIds.listen(forwarded.add);
+          addTearDown(subscription.cancel);
+
+          gate.attachTracker(tracker);
+          // Reattaching the same tracker must not replay it a second time.
+          gate.attachTracker(tracker);
+          await pumpEventQueue();
+
+          expect(forwarded, ['held-1', 'held-2']);
+        },
+      );
+    });
+
+    group('dispose', () {
+      test('stops forwarding the tracker and ends markedVideoIds', () async {
+        final marks = StreamController<String>.broadcast();
+        addTearDown(marks.close);
+        when(() => tracker.markedVideoIds).thenAnswer((_) => marks.stream);
+        gate.attachTracker(tracker);
+        expect(marks.hasListener, isTrue);
+        final forwarded = gate.markedVideoIds.toList();
+
+        gate.dispose();
+        await pumpEventQueue();
+
+        expect(marks.hasListener, isFalse);
+        expect(await forwarded.timeout(const Duration(seconds: 5)), isEmpty);
       });
     });
 

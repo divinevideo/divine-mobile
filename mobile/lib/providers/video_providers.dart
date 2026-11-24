@@ -885,6 +885,7 @@ Future<BrokenVideoTracker> brokenVideoTracker(Ref ref) async {
   ref.watch(currentAuthStateProvider);
   final ownerPubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
   final tracker = BrokenVideoTracker(ownerPubkey: ownerPubkey);
+  ref.onDispose(tracker.dispose);
   await tracker.initialize();
   return tracker;
 }
@@ -932,6 +933,7 @@ Future<DeadMediaFeedGuard> deadMediaFeedGuard(Ref ref) async {
 @Riverpod(keepAlive: true)
 FeedUnavailabilityGate feedUnavailabilityGate(Ref ref) {
   final gate = FeedUnavailabilityGate();
+  ref.onDispose(gate.dispose);
   ref.listen(videoEventServiceProvider, (_, next) {
     gate.attachVideoEventService(next);
   }, fireImmediately: true);
