@@ -16,6 +16,7 @@ void main() {
       final configuration = desktopVideoConfiguration(TargetPlatform.linux);
 
       expect(configuration.enableHardwareAcceleration, isFalse);
+      expect(configuration.hwdec, 'auto-safe');
     });
   });
 }
