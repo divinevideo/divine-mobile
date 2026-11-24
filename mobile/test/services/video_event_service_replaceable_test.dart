@@ -10,6 +10,8 @@ import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/video_event_service.dart';
 
+import '../helpers/test_pubkeys.dart';
+
 class _MockNostrClient extends Mock implements NostrClient {}
 
 void main() {
@@ -438,6 +440,100 @@ void main() {
         expect(service.discoveryVideos[0].title, 'New Video');
       },
     );
+
+    test('keeps the short video when a normal video shares its d tag', () {
+      const pubkey =
+          'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210';
+      when(() => mockNostrService.publicKey).thenReturn(pubkey);
+      final tags = [
+        ['d', 'shared-video'],
+        ['url', 'https://example.com/video.mp4'],
+      ];
+      final short = sdk.Event(
+        pubkey,
+        NIP71VideoKinds.addressableShortVideo,
+        tags,
+        'Short video',
+        createdAt: 1000,
+      );
+      service.handleEventForTesting(short, SubscriptionType.discovery);
+      final normal = sdk.Event(
+        pubkey,
+        NIP71VideoKinds.addressableNormalVideo,
+        tags,
+        'Edited normal video',
+        createdAt: 2000,
+      );
+
+      service.updateVideoEvent(
+        VideoEvent.fromNostrEvent(normal, permissive: true),
+      );
+
+      expect(
+        service.discoveryVideos.map((video) => video.id),
+        contains(short.id),
+      );
+      expect(
+        service.authorVideos(pubkey).map((video) => video.id),
+        unorderedEquals([short.id, normal.id]),
+      );
+    });
+
+    test('notifies update listeners about a video it does not hold', () {
+      // A feed fed over REST, such as Home, holds videos this service never
+      // saw; it still has to learn that its copy was republished (#11250).
+      final updates = <VideoEvent>[];
+      service.addVideoUpdateListener(updates.add);
+      final republished = VideoEvent.fromNostrEvent(
+        sdk.Event(
+          syntheticOtherTestPubkey,
+          NIP71VideoKinds.addressableShortVideo,
+          [
+            ['d', 'rest-only-video'],
+            ['url', 'https://example.com/video.mp4'],
+            ['title', 'Edited elsewhere'],
+          ],
+          '',
+          createdAt: 3000,
+        ),
+      );
+
+      service.updateVideoEvent(republished);
+
+      expect(updates.map((v) => v.id), [republished.id]);
+    });
+
+    test('keeps the winning revision when an older publish completes', () {
+      final owner = 'a' * 64;
+      when(() => mockNostrService.publicKey).thenReturn(owner);
+      final winner = sdk.Event(
+        owner,
+        NIP71VideoKinds.addressableShortVideo,
+        [
+          ['d', 'clip'],
+          ['url', 'https://example.com/video.mp4'],
+        ],
+        'Newer caption',
+        createdAt: 2000,
+      );
+      final older = VideoEvent.fromNostrEvent(
+        sdk.Event(
+          winner.pubkey,
+          winner.kind,
+          winner.tags,
+          'Earlier caption',
+          createdAt: 1000,
+        ),
+      );
+      service.handleEventForTesting(winner, SubscriptionType.discovery);
+      expect(service.discoveryVideos.single.id, winner.id);
+      expect(service.authorVideos(winner.pubkey).single.id, winner.id);
+
+      service.updateVideoEvent(older);
+
+      expect(service.discoveryVideos.single.id, winner.id);
+      expect(service.authorVideos(winner.pubkey).single.id, winner.id);
+    });
 
     test(
       'updateVideoEvent preserves nostrLikeCount from existing video',

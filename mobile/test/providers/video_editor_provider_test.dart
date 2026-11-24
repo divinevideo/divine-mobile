@@ -2159,6 +2159,135 @@ void main() {
         },
       );
 
+      test(
+        'tags a render the edit changed under stale, not success, and traces '
+        'the render that replaces it',
+        () async {
+          final notifier = container.read(videoEditorProvider.notifier);
+          addOneClip();
+
+          final staleRender = Completer<(DivineVideoClip, String?)>();
+          final replacingRender = Completer<(DivineVideoClip, String?)>();
+          var callCount = 0;
+          VideoEditorRenderService.renderVideoToClipOverride =
+              ({
+                required clips,
+                required editorStateHistory,
+                parameters,
+                taskId,
+              }) {
+                callCount++;
+                return callCount == 1
+                    ? staleRender.future
+                    : replacingRender.future;
+              };
+          DivineVideoClip rendered(String id) => DivineVideoClip(
+            id: id,
+            video: EditorVideo.file('/docs/$id.mp4'),
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime.now(),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          );
+
+          final render = notifier.startRenderVideo();
+          // The edit changes while the render runs, as a take's proof
+          // landing does.
+          notifier.invalidateFinalRenderedClip();
+          staleRender.complete((rendered('stale'), null));
+          await render;
+
+          expect(callCount, 2, reason: 'the stale video is rendered again');
+          expect(performanceMonitor.traces, hasLength(2));
+          final stale = performanceMonitor.traces.first;
+          expect(stale.attributes['outcome'], 'stale');
+          expect(stale.stopCount, 1);
+
+          replacingRender.complete((rendered('fresh'), null));
+          await pumpEventQueue();
+          expect(
+            container.read(videoEditorProvider).finalRenderedClip?.id,
+            'fresh',
+          );
+        },
+      );
+
+      test('reports the features of the render and no bake for a take '
+          'without a pending key', () async {
+        final notifier = container.read(videoEditorProvider.notifier);
+        addOneClip();
+        VideoEditorRenderService.renderVideoToClipOverride = ({
+          required clips,
+          required editorStateHistory,
+          parameters,
+          taskId,
+        }) async => (clips.single, null);
+
+        await notifier.startRenderVideo();
+
+        expect(performanceMonitor.traces.single.metrics, {
+          'layer_count': 0,
+          'has_text': 0,
+          'has_filter': 0,
+          'has_adjustment': 0,
+          'has_effect': 0,
+          'has_audio_track': 0,
+          'has_speed_change': 0,
+          'has_reverse': 0,
+          'has_chroma_key': 0,
+          'has_stop_motion': 0,
+        });
+      });
+
+      test(
+        'times the bake of a take still waiting on its recorded key',
+        () async {
+          final database = AppDatabase.test(NativeDatabase.memory());
+          addTearDown(database.close);
+          final monitor = _RecordingPerformanceMonitor();
+          final pendingContainer = ProviderContainer(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(
+                await SharedPreferences.getInstance(),
+              ),
+              performanceMonitoringServiceProvider.overrideWithValue(monitor),
+              databaseProvider.overrideWithValue(database),
+              clipManagerProvider.overrideWith(
+                () => _BakingClipManager(fails: false),
+              ),
+            ],
+          );
+          addTearDown(pendingContainer.dispose);
+          pendingContainer
+              .read(clipManagerProvider.notifier)
+              .addClip(
+                limitClipDuration: false,
+                video: EditorVideo.file('/docs/raw.mp4'),
+                targetAspectRatio: .vertical,
+                originalAspectRatio: 9 / 16,
+                duration: const Duration(seconds: 2),
+                captureChromaKey: const ClipChromaKey(
+                  key: ChromaKey.greenScreen(),
+                ),
+              );
+          VideoEditorRenderService.renderVideoToClipOverride = ({
+            required clips,
+            required editorStateHistory,
+            parameters,
+            taskId,
+          }) async => (clips.single, null);
+
+          await pendingContainer
+              .read(videoEditorProvider.notifier)
+              .startRenderVideo();
+
+          final trace = monitor.traces.single;
+          expect(trace.attributes['outcome'], 'success');
+          expect(trace.metrics, contains('chroma_bake_ms'));
+          expect(trace.metrics['has_chroma_key'], 1);
+        },
+      );
+
       void failRenderWith(VideoRenderFailedException failure) {
         VideoEditorRenderService.renderVideoToClipOverride = ({
           required clips,

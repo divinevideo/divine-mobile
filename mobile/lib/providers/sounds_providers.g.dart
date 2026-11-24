@@ -728,7 +728,7 @@ final class SoundsOfKindProvider
   }
 }
 
-String _$soundsOfKindHash() => r'13781cb087cf068b4750aec7dc6831e269040ec1';
+String _$soundsOfKindHash() => r'3316f005712c7d755716c6215e2600857007f830';
 
 /// The sounds of [kind] in one of the picker's lists ([list]), loading the
 /// next page as the list is scrolled to its end ([SoundsOfKind.loadMore]).
@@ -1267,7 +1267,7 @@ final class PopularSoundsProvider
   PopularSounds create() => PopularSounds();
 }
 
-String _$popularSoundsHash() => r'09b6fa7ab9ade92315821b460654f53e3a47bebf';
+String _$popularSoundsHash() => r'6034e5c5cdfba43806353dc198af68dae5a0c61e';
 
 /// The sounds people are picking up right now, the most trending first,
 /// with how many videos use each, loading further down the ranking page by
@@ -1986,7 +1986,7 @@ final class _SoundCoverCacheProvider
   }
 }
 
-String _$_soundCoverCacheHash() => r'1cd87cc3aa83da3ee258ccf49f7e54cbe6a654e6';
+String _$_soundCoverCacheHash() => r'bf097cd52c64878a4e27dec359811538b57d0dc2';
 
 /// Viewer-independent reuse terms for explicit and legacy audio events.
 

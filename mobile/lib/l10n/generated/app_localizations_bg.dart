@@ -2161,6 +2161,14 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Твой ред';
 
   @override
+  String get videoStickerAddYoursWatchSeries => 'Гледай поредицата';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Гледай поредицата: $prompt';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4524,6 +4532,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Релето не прие промяната. Опитай пак след малко.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Това видео е променено на друго устройство и вече има твърде много етикети или хора, които сътрудничат. Отвори го отново и махни някои.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Това видео не можа да бъде обновено. Опитай пак.';
 
@@ -4614,6 +4626,18 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get soundsNoSoundsFoundDescription => 'Пробвай с друго търсене';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Намерени са $count звука',
+      one: 'Намерен е $count звук',
+      zero: 'Няма намерени звуци',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'Запазен в Звуци';
@@ -9488,6 +9512,21 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectEcho => 'Ехо';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Разделено време';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Дълга експозиция';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Само движение';
+
+  @override
+  String get videoEditorEffectStutter => 'Накъсване';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Изкривено време';
+
+  @override
   String get videoEditorEffectFisheye => 'Рибешко око';
 
   @override
@@ -9689,6 +9728,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'Движение';
 
   @override
+  String get videoEditorEffectCategoryTime => 'Време';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'Частици';
 
   @override
@@ -9795,6 +9837,14 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'Само един мигащ ефект наведнъж. Прекаленото мигане може да навреди на чувствителни хора.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Само един ефект от „Време“ наведнъж. Два заедно биха изглеждали различно след експортиране, затова тук заменихме другия.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Само един ефект от „Време“ наведнъж. Два заедно биха изглеждали различно след експортиране.';
 
   @override
   String get videoEditorEffectsOnBeat => 'В ритъм';
@@ -11921,6 +11971,34 @@ class AppLocalizationsBg extends AppLocalizations {
       'Показва видео отговорите на това видео. Зрителите го докосват, за да ги гледат.';
 
   @override
+  String get videoEditorSocialStickerAudienceTitle => 'Кой може да отговаря';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Всички';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Близки';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Само аз';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Само хората, които следваш, могат да се включат. Всички останали виждат стикера, щом някой се включи.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Стикерът показва само видео отговори от хората, които следваш. Всички останали го виждат, щом някой от тях отговори.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Само ти можеш да се включиш. Никой друг не вижда стикера, докато не го направиш.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Стикерът показва само твоите видео отговори. Никой друг не го вижда, докато не отговориш.';
+
+  @override
   String get videoEditorInteractiveCardAreaHint =>
       'Стикерът стои в тази рамка, за да могат зрителите да го докосват';
 
@@ -13731,6 +13809,21 @@ class AppLocalizationsBg extends AppLocalizations {
       'Замяната „защитен непълнолетен“ е изчистена';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
   String get commentsRecordVideoButtonLabel => 'Запис на видео коментар';
 
   @override
@@ -14798,6 +14891,65 @@ class AppLocalizationsBg extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Премахни връзката с профила $identity в $platform';
   }
@@ -14829,7 +14981,26 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'Едно докосване';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -14941,6 +15112,18 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'Потвърдено, но нито едно реле не прие промяната. Опитай пак.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>

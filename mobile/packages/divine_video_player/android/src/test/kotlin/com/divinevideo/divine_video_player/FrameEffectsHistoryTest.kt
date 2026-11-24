@@ -96,4 +96,45 @@ class FrameEffectsHistoryTest {
 
         assertNull(nearestDecodedFrame(frames, 480_000L))
     }
+
+    @Test
+    fun `each effect keeps its earlier frames at the size it asks for`() {
+        // An effect that needs whole frames, one that asks for half-size ones
+        // further back, one that asks for none, and an unregistered one.
+        val plan = FrameEffectsHistoryPlan.of(
+            listOf(
+                longArrayOf(33_333L) to 1f,
+                longArrayOf(66_666L, 400_000L) to 0.5f,
+                LongArray(0) to 1f,
+                null,
+            ),
+        )
+
+        assertEquals(listOf(1f, 0.5f), plan.scales)
+        // The whole frames are only kept as far back as their effect reaches.
+        assertEquals(listOf(33_333L, 400_000L), plan.maxOffsetsUs)
+        assertEquals(listOf(0, 1, null, null), plan.storeOfEffect)
+        assertEquals(1f, plan.largestScale)
+    }
+
+    @Test
+    fun `effects asking for the same size share one store`() {
+        val plan = FrameEffectsHistoryPlan.of(
+            listOf(longArrayOf(100_000L) to 0.5f, longArrayOf(700_000L) to 0.5f, longArrayOf(1L) to 0f),
+        )
+
+        assertEquals(listOf(0.5f, 0.05f), plan.scales)
+        assertEquals(listOf(700_000L, 1L), plan.maxOffsetsUs)
+        assertEquals(listOf(0, 0, 1), plan.storeOfEffect)
+        assertEquals(0.5f, plan.largestScale)
+    }
+
+    @Test
+    fun `no effect asking for earlier frames keeps none`() {
+        val plan = FrameEffectsHistoryPlan.of(listOf(LongArray(0) to 0.5f))
+
+        assertTrue(plan.scales.isEmpty())
+        assertEquals(listOf<Int?>(null), plan.storeOfEffect)
+        assertEquals(1f, plan.largestScale)
+    }
 }

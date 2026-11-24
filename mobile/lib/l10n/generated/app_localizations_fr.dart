@@ -2173,6 +2173,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoStickerAddYoursButton => 'À ton tour';
 
   @override
+  String get videoStickerAddYoursWatchSeries => 'Voir la série';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Voir la série : $prompt';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4546,6 +4554,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Le relais n\'a pas accepté la modification. Réessaie dans un instant.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Cette vidéo a changé sur un autre appareil et compte maintenant trop de tags ou de personnes qui collaborent. Rouvre-la et fais du tri.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Impossible de mettre à jour cette vidéo. Réessaie.';
 
@@ -4638,6 +4650,19 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get soundsNoSoundsFoundDescription =>
       'Essaie un autre terme de recherche';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sons trouvés',
+      many: '$count de sons trouvés',
+      one: '$count son trouvé',
+      zero: 'Aucun son trouvé',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'Enregistré dans Sons';
@@ -9547,6 +9572,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorEffectEcho => 'Écho';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Décalage temporel';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Pose longue';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Mouvement seul';
+
+  @override
+  String get videoEditorEffectStutter => 'Saccades';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Distorsion temporelle';
+
+  @override
   String get videoEditorEffectFisheye => 'Fish-eye';
 
   @override
@@ -9748,6 +9788,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'Mouvement';
 
   @override
+  String get videoEditorEffectCategoryTime => 'Temps';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'Particules';
 
   @override
@@ -9854,6 +9897,14 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'Un seul effet clignotant à la fois. Trop de clignotements peuvent faire du mal aux personnes sensibles.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Un seul effet Temps à la fois. Deux ensemble auraient un autre rendu une fois exportés, alors on a remplacé l\'autre ici.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Un seul effet Temps à la fois. Deux ensemble auraient un autre rendu une fois exportés.';
 
   @override
   String get videoEditorEffectsOnBeat => 'Sur le rythme';
@@ -11995,6 +12046,34 @@ class AppLocalizationsFr extends AppLocalizations {
       'Montre qui a répondu à cette vidéo par une vidéo. En le touchant, on regarde les réponses.';
 
   @override
+  String get videoEditorSocialStickerAudienceTitle => 'Qui peut répondre';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Tout le monde';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Proches';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Moi uniquement';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Seules les personnes que tu suis peuvent participer. Les autres voient le sticker dès que quelqu\'un l\'a fait.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Le sticker n\'affiche que les réponses vidéo des personnes que tu suis. Les autres le voient dès que l\'une d\'elles a répondu.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Il n\'y a que toi qui peux participer. Personne d\'autre ne voit le sticker avant que tu l\'aies fait.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Le sticker n\'affiche que tes propres réponses vidéo. Personne d\'autre ne le voit avant que tu aies répondu.';
+
+  @override
   String get videoEditorInteractiveCardAreaHint =>
       'Ce sticker reste dans ce cadre pour qu\'on puisse le toucher';
 
@@ -13821,6 +13900,21 @@ class AppLocalizationsFr extends AppLocalizations {
       'Surcharge mineur protégé effacée';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
   String get commentsRecordVideoButtonLabel =>
       'Enregistrer un commentaire vidéo';
 
@@ -14895,6 +14989,65 @@ class AppLocalizationsFr extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Délier le compte $platform $identity';
   }
@@ -14926,7 +15079,26 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'Un tap';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -15038,6 +15210,18 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'Vérifié, mais aucun relais n\'a accepté la mise à jour. Réessaie.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>

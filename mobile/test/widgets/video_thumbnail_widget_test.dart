@@ -383,6 +383,35 @@ void main() {
     );
 
     testWidgets(
+      'skips ImageWithDimensionsListener when video metadata already has '
+      'usable dimensions',
+      (tester) async {
+        final divineHostedVideoWithDims = createTestVideoEvent(
+          id: 'test-divine-known-dims',
+          thumbnailUrl: 'https://media.divine.video/72d7eda61074b17e077fb9f4a8b48166cdeb65cb07e053aafa6e69d5fa165995.jpg',
+          dimensions: '720x1280',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: VideoThumbnailWidget(
+                video: divineHostedVideoWithDims,
+                width: 200,
+                height: 200,
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byType(Image), findsOneWidget);
+        expect(find.byType(ImageWithDimensionsListener), findsNothing);
+      },
+    );
+
+    testWidgets(
       'Divine Image.network path honors caller placeholder and error widget',
       (tester) async {
         final mediaAuthInterceptor = _MockMediaAuthInterceptor();

@@ -19,6 +19,7 @@ import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/message_bubble.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
@@ -33,6 +34,7 @@ import 'package:videos_repository/videos_repository.dart';
 import '../../../../helpers/contrast.dart';
 import '../../../../helpers/decoded_images.dart';
 import '../../../../helpers/test_provider_overrides.dart';
+import '../../../../helpers/test_pubkeys.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
@@ -49,8 +51,7 @@ String _longestRenderedText(WidgetTester tester) {
   return values.first;
 }
 
-const _testHexPubkey =
-    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const String _testHexPubkey = syntheticTestPubkey;
 
 /// The route an author-named share of `abc123` resolves by (#10384).
 const _testCoordinate = '34236:$_testHexPubkey:abc123';
@@ -1604,6 +1605,48 @@ void main() {
         expect(find.text('search:hm21'), findsOneWidget);
         expect(router.canPop(), isTrue);
       });
+
+      testWidgets(
+        'opens one hashtag feed when a hashtag is tapped twice before the '
+        'next frame',
+        (tester) async {
+          final router = GoRouter(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (context, state) => const Scaffold(
+                  body: MessageBubble(
+                    message: 'Look #funny',
+                    timestamp: '2:30 PM',
+                    isSent: true,
+                  ),
+                ),
+              ),
+              GoRoute(
+                path: HashtagScreenRouter.path,
+                builder: (context, state) => Scaffold(
+                  body: Text('feed:${state.pathParameters['tag']}'),
+                ),
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+
+          await tester.pumpWidget(_routerTestApp(router));
+          await tester.pump();
+
+          final recognizer = _linkRecognizer(tester, '#funny');
+          recognizer.onTap!();
+          recognizer.onTap!();
+          await tester.pumpAndSettle();
+
+          expect(find.text('feed:funny', skipOffstage: false), findsOneWidget);
+        },
+        variant: const TargetPlatformVariant({
+          TargetPlatform.android,
+          TargetPlatform.iOS,
+        }),
+      );
 
       testWidgets('URL span has $TapGestureRecognizer', (tester) async {
         await tester.pumpWidget(

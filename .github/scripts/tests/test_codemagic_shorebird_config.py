@@ -366,7 +366,7 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
 
     def test_release_channel_is_explicit_and_defaults_to_beta(self) -> None:
         config = self._resolved_config()
-        for name in ('ios-build', 'android-build', 'macos-build'):
+        for name in ('ios-build', 'android-build'):
             channel = config['workflows'][name]['inputs']['RELEASE_CHANNEL']
             self.assertEqual(channel['default'], 'BETA')
             self.assertEqual(channel['options'], ['BETA', 'PRODUCTION'])
@@ -430,7 +430,7 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             self.assertEqual(list(root.iterdir()), [root / 'zapstore.yaml'])
 
     def test_stable_publish_refuses_non_main_branches(self) -> None:
-        scripts = self._resolved_config()['workflows']['macos-build']['scripts']
+        scripts = self._resolved_config()['workflows']['ios-build']['scripts']
         original = next(step['script'] for step in scripts if step['name'] == 'Publish to GitHub Release')
         for channel, branch, allowed in [('PRODUCTION', 'main', True),
                                           ('PRODUCTION', 'feature/test', False),
@@ -1436,20 +1436,31 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn("Crashlytics", self.shorebird_doc_contents)
 
     def test_macos_build_signs_and_packages_for_mac_app_store(self) -> None:
-        workflow = self._resolved_config()["workflows"]["macos-build"]
+        resolved = self._resolved_config()["workflows"]
+        workflow = resolved["macos-build"]
         self.assertEqual(
             workflow["integrations"]["app_store_connect"],
             "API key for Codemagic",
         )
+        groups = workflow["environment"]["groups"]
+        self.assertIn("macos_signing_credentials", groups)
+        for other_name, other_workflow in resolved.items():
+            if other_name == "macos-build":
+                continue
+            other_groups = (other_workflow.get("environment") or {}).get("groups") or []
+            self.assertNotIn("macos_signing_credentials", other_groups)
+
         env_vars = workflow["environment"]["vars"]
         self.assertEqual(env_vars["BUNDLE_ID"], "co.openvine.app")
-        self.assertEqual(env_vars["FIREBASE_ANALYTICS_WITHOUT_ADID"], "true")
+        self.assertNotIn("FIREBASE_ANALYTICS_WITHOUT_ADID", env_vars)
 
         step_names = [step["name"] for step in workflow["scripts"]]
         self.assertIn("Check macOS App Store configuration", step_names)
         self.assertIn("Setup Mac App Store code signing", step_names)
         self.assertIn("Build macOS app", step_names)
         self.assertIn("Archive and export Mac App Store pkg", step_names)
+        self.assertNotIn("Package macOS DMG", step_names)
+        self.assertNotIn("Publish to GitHub Release", step_names)
         self.assertLess(
             step_names.index("Setup Mac App Store code signing"),
             step_names.index("Build macOS app"),
@@ -1459,15 +1470,71 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             step_names.index("Archive and export Mac App Store pkg"),
         )
 
+        allocate_script = next(
+            step["script"]
+            for step in workflow["scripts"]
+            if "release_identity.py direct" in step["script"]
+        )
+        self.assertIn(
+            "app-store-connect get-latest-testflight-build-number",
+            allocate_script,
+        )
+        self.assertNotIn("|| echo", allocate_script)
+        self.assertNotIn("2>/dev/null", allocate_script)
+
         build_macos = self._definition_block("build_macos")
         self.assertNotIn("CODE_SIGNING_ALLOWED=NO", build_macos)
         self.assertNotIn("CODE_SIGNING_REQUIRED=NO", build_macos)
 
         self.assertIn("build/macos/pkg/*.pkg", workflow["artifacts"])
+        self.assertNotIn("build/macos/Build/Products/Release/*.dmg", workflow["artifacts"])
         publishing = workflow["publishing"]["app_store_connect"]
         self.assertEqual(publishing["auth"], "integration")
         self.assertIs(publishing["submit_to_testflight"], True)
         self.assertIs(publishing["submit_to_app_store"], False)
+
+    def test_macos_signing_script_identity_lookup_works_with_posix_ere_sed(self) -> None:
+        script_path = CODEMAGIC_PATH.parent / "mobile/scripts/setup_macos_mas_signing.sh"
+        script_text = script_path.read_text()
+        self.assertNotIn(r"\|", script_text)
+        self.assertIn("Library/Developer/Xcode/UserData/Provisioning Profiles", script_text)
+        self.assertIn("--profiles-dir", script_text)
+
+        sample = (
+            '  1) AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA "Apple Development: Example (TEAM1)"\n'
+            '  2) BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB "Apple Distribution: Verse Communications, Inc. (GZCZBKH7MY)"\n'
+            '  3) CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC "3rd Party Mac Developer Installer: Verse Communications, Inc. (GZCZBKH7MY)"\n'
+        )
+        for fn_name, expected in (
+            (
+                "find_app_signing_identity",
+                "Apple Distribution: Verse Communications, Inc. (GZCZBKH7MY)",
+            ),
+            (
+                "find_installer_signing_identity",
+                "3rd Party Mac Developer Installer: Verse Communications, Inc. (GZCZBKH7MY)",
+            ),
+        ):
+            with self.subTest(fn=fn_name):
+                sed_match = re.search(
+                    rf"{fn_name}\(\)\s*\{{(.*?)\n\}}",
+                    script_text,
+                    re.DOTALL,
+                )
+                self.assertIsNotNone(sed_match)
+                body = sed_match.group(1)
+                cmd = (
+                    f'security() {{ printf "%s" {shlex.quote(sample)}; }}\n'
+                    f"{fn_name}() {{\n{body}\n}}\n"
+                    f"{fn_name}\n"
+                )
+                result = subprocess.run(
+                    ["bash", "-c", cmd],
+                    check=True,
+                    text=True,
+                    capture_output=True,
+                )
+                self.assertEqual(expected, result.stdout.strip())
 
     def _definition_block(self, anchor_name: str) -> str:
         start = self.contents.index(f"    - &{anchor_name}\n")

@@ -60,6 +60,11 @@
 #   - Secure DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS forwarded from the repository policy
 #   - Application-scoped; native store workflows import it last. Other workflows keep github_credentials.
 #   - Public GitHub publishing retains github_credentials; candidate-tag credentials never enter a native build.
+# 13 - Create app-level environment variable group "macos_signing_credentials" with:
+#   - CERTIFICATE_PRIVATE_KEY (mark as secure) — persistent 2048-bit RSA private key in PEM format
+#     matching the team's Mac App Distribution and Mac Installer Distribution certificates.
+#   - Imported only by `macos-build`. Create this group in Codemagic UI before merging a YAML
+#     change that references it, or Codemagic rejects every workflow in this file.
 #
 # Public people-list discovery exclusions come from the GitHub repository
 # variable DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS (JSON array). Native store
@@ -1493,20 +1498,6 @@ workflows:
           - PRODUCTION
           - STAGING
           - POC
-      RELEASE_CHANNEL:
-        description: GitHub release channel; publish ready direct downloads independently of store rollout. PRODUCTION sets Latest; existing clients may prompt before their store has the update.
-        type: choice
-        default: BETA
-        options:
-          - BETA
-          - PRODUCTION
-      PUBLISH_TO_GITHUB:
-        description: Upload DMG to GitHub Release (for direct distribution)
-        type: choice
-        default: "NO"
-        options:
-          - "NO"
-          - "YES"
     environment:
       flutter: 3.47.9
       xcode: latest
@@ -1515,11 +1506,9 @@ workflows:
         - zendesk_credentials
         - proofmode_credentials
         - github_credentials
+        - macos_signing_credentials
       vars:
         BUNDLE_ID: co.openvine.app
-        # Same analytics product as ios-build (#7303): links FirebaseAnalyticsCore
-        # without Google ads-measurement SDKs.
-        FIREBASE_ANALYTICS_WITHOUT_ADID: "true"
     cache:
       cache_paths:
         - $HOME/Library/Caches/CocoaPods
@@ -1540,13 +1529,17 @@ workflows:
           set -euo pipefail
           mkdir -p build/shorebird
           git ls-remote --tags origin | awk '{print $2}' > build/shorebird/stable_tags.txt
+          # Fail closed on App Store Connect auth/network errors; an empty
+          # stdout with exit 0 means no macOS build has been uploaded yet.
           LATEST_ASC_BUILD=$(
             app-store-connect get-latest-testflight-build-number \
               --platform MAC_OS \
-              "6747959501" 2>/dev/null || echo "0"
+              "6747959501"
           )
+          LATEST_ASC_BUILD="${LATEST_ASC_BUILD:-0}"
           if ! [[ "$LATEST_ASC_BUILD" =~ ^[0-9]+$ ]]; then
-            LATEST_ASC_BUILD=0
+            echo "ERROR: Unexpected macOS TestFlight build number from App Store Connect: '$LATEST_ASC_BUILD'" >&2
+            exit 1
           fi
           NEXT_ASC_BUILD=$((LATEST_ASC_BUILD + 1))
           BUILD_NUM="$PROJECT_BUILD_NUMBER"
@@ -1561,12 +1554,9 @@ workflows:
           echo SHOREBIRD_PLATFORM=macos >> "$CM_ENV"
       - *build_macos
       - *package_macos_mas_pkg
-      - *package_macos_dmg
-      - *publish_github_release
     artifacts:
       - build/macos/pkg/*.pkg
       - build/macos/archive/Runner.xcarchive/dSYMs/**
-      - build/macos/Build/Products/Release/*.dmg
       - build/shorebird/macos_release.env
     publishing:
       app_store_connect:

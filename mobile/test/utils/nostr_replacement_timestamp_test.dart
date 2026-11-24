@@ -40,4 +40,19 @@ void main() {
       expect(replacementCreatedAt, lessThanOrEqualTo(after));
     });
   });
+
+  group(nextReplacementCreatedAtAfter, () {
+    test('stamps one second after a revision stamped in the future', () {
+      expect(nextReplacementCreatedAtAfter(4102444800), 4102444801);
+    });
+
+    test('stamps current Nostr time after an old revision', () {
+      final before = NostrTimestamp.now();
+
+      final stamp = nextReplacementCreatedAtAfter(1700000100);
+
+      expect(stamp, greaterThanOrEqualTo(before));
+      expect(stamp, lessThanOrEqualTo(NostrTimestamp.now()));
+    });
+  });
 }

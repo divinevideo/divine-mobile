@@ -140,10 +140,10 @@ class AudioPipeline {
         return RejectedAudio('trim failed: ${trim.stderr}');
       }
 
+      // A silent file trims to a few samples, and the peak check below
+      // rejects it. No minimum length: a click can be 20 ms long.
       final trimmedDuration = await _duration(trimmed.path);
-      if (trimmedDuration == null || trimmedDuration < 0.05) {
-        return const RejectedAudio('silent');
-      }
+      if (trimmedDuration == null) return const RejectedAudio('silent');
 
       final measure = await _run(ffmpeg, [
         '-nostdin',

@@ -28,7 +28,7 @@ freeze — Divine does not run release freezes, including before launch. See
   - Dart package name: `mobile/pubspec.yaml`
   - Store bundle IDs: `co.openvine.app` and shipped child bundle IDs such as `co.openvine.app.NotificationServiceExtension`
 - Do not rename the Dart package or bundle IDs during release cleanup. They are compatibility identifiers, not brand copy drift.
-- macOS direct-download builds are not App Store submissions today, so their Xcode marketing/build settings remain intentionally separate from the iOS store version path.
+- macOS App Store builds (`codemagic.yaml` `macos-build`) upload a signed `.pkg` to App Store Connect / TestFlight under `co.openvine.app` (App ID `6747959501`) independently of the iOS Shorebird release train; App Store submission remains manual.
 
 ## 3. Run The Required Checks
 

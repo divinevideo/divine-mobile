@@ -387,6 +387,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   // UI-facing state — drives build(). Stays on the State.
   final _errors = <int>{};
+  final _loadingSourceFailures = <int>{};
   final _errorTypes = <int, VideoErrorType>{};
   final _terminalErrorTypesByVideoId = <String, VideoErrorType>{};
   // Viewer auth headers per index, applied to every resolved playback source
@@ -559,6 +560,13 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   void debugActivatePage(int index) {
     if (!mounted || widget.videos.isEmpty) return;
     _onPageChanged(index.clamp(0, widget.videos.length - 1));
+  }
+
+  /// Marks [index] as having hit a source failure during loading, for widget
+  /// tests that run without platform player channels.
+  @visibleForTesting
+  void debugMarkLoadingSourceFailed(int index) {
+    _markLoadingSourceFailed(index);
   }
 
   void _syncPagePosition() {
@@ -746,6 +754,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     }
     for (var i = startIndex; i < oldWidget.videos.length; i++) {
       _errors.remove(i);
+      _loadingSourceFailures.remove(i);
       _errorTypes.remove(i);
       _cancelAutoRetry(i);
     }
@@ -973,8 +982,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   Future<void> _activateCurrentController(
     DivineVideoPlayerController controller,
-    int index,
-  ) async {
+    int index, {
+    bool applyVolume = true,
+  }) async {
     // The captured [controller] can be disposed mid-await by a window update,
     // failover, or re-init — each removes it from [_controllers] before
     // disposing. Re-checking identity (not just _isActive/_currentIndex, which
@@ -992,8 +1002,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final allowed = _canAutoPlayAt(index);
     if (index == _currentIndex) _lastAppliedGate = allowed;
     if (!allowed) return;
-    await controller.setVolume(_volume);
-    if (!stillOwnsController()) return;
+    if (applyVolume) {
+      await controller.setVolume(_volume);
+      if (!stillOwnsController()) return;
+    }
     _firstFrameTimerFor(index)?.markPlaybackRequested();
     await controller.play();
     if (!stillOwnsController()) return;
@@ -1315,6 +1327,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _processingRetryAttempts.clear();
     _loadedFromCache.clear();
     _errors.clear();
+    _loadingSourceFailures.clear();
     _errorTypes.clear();
     if (!keepViewerHeaders) _httpHeadersByIndex.clear();
     _telemetryLoads.clear();
@@ -1343,6 +1356,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _staleDetector.forget(index);
     _cancelAutoRetry(index);
     _errors.remove(index);
+    _loadingSourceFailures.remove(index);
     _failoverInFlight.remove(index);
     _processingRetryInFlight.remove(index);
     _processingRetryAttempts.remove(index);
@@ -1425,6 +1439,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     String? lastFailedSource;
     void rememberFailedSource(String source) {
       lastFailedSource = source;
+      if (ownsInit()) {
+        _markLoadingSourceFailed(index);
+      }
     }
 
     try {
@@ -1589,7 +1606,11 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       if (index == _currentIndex && _isActive) {
         _log('Playing index $index (${video.id})');
         unawaited(_recordFirstFrame(index, controller));
-        await _activateCurrentController(controller, index);
+        await _activateCurrentController(
+          controller,
+          index,
+          applyVolume: false,
+        );
         if (!guardInitOwnership('play')) return false;
       }
 
@@ -1602,6 +1623,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         guardInitOwnership('error handling');
         return false;
       }
+      _loadingSourceFailures.remove(index);
       _firstFrameTimerFor(index)?.finish(
         outcome: FeedPlaybackOutcome.error,
         errorCategory: FeedPlaybackError.initialization,
@@ -1709,6 +1731,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     Map<String, String> httpHeaders = const {},
   }) async {
     _errors.remove(index);
+    _loadingSourceFailures.remove(index);
     _errorTypes.remove(index);
     _processingRetryInFlight.remove(index);
     _processingRetryAttempts.remove(index);
@@ -1783,6 +1806,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       _onVideoStalled(index);
       return;
     }
+    _markLoadingSourceFailed(index);
 
     final changesBunny = failedOnBunny || isBunnyPlaybackSource(nextSource);
     if (changesBunny) {
@@ -1941,6 +1965,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final delay = _runtimeProcessingRetryDelays[attempt];
     _processingRetryAttempts[index] = attempt + 1;
     _processingRetryInFlight.add(index);
+    _markLoadingSourceFailed(index);
     var retryProcessingAgain = false;
     _log(
       'Processing retry index $index: '
@@ -2051,6 +2076,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       errorCategory: FeedPlaybackError.playback,
     );
     unawaited(_controllers[index]?.stop());
+    _loadingSourceFailures.remove(index);
     _errors.add(index);
     _errorTypes[index] ??= type;
     _rebuildPage(index);
@@ -2070,6 +2096,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     }
     _cancelAutoRetry(index);
     unawaited(_controllers[index]?.stop());
+    _loadingSourceFailures.remove(index);
     _errors.add(index);
     _errorTypes[index] = type;
     _rebuildPage(index);
@@ -2363,6 +2390,12 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     );
   }
 
+  void _markLoadingSourceFailed(int index) {
+    if (_loadingSourceFailures.add(index)) {
+      _rebuildPage(index);
+    }
+  }
+
   /// One page of the feed: loading layer, video, overlay and error layer.
   ///
   /// Rebuilt through its own revision counter (see [_pageRevision]), so a
@@ -2396,6 +2429,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
             context,
             index,
             isSquare: _isSquareVideo(controller),
+            hasSourceFailure: _loadingSourceFailures.contains(index),
           ),
 
         if (!hasError && hasVideoSize)

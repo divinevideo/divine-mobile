@@ -63,6 +63,8 @@ class SubtitleEditorCubit extends Cubit<SubtitleEditorState> {
           cues: result.cues.map(EditableCue.fromCue).toList(),
           isDirty: false,
           clearSelectedCue: true,
+          loadedTrackRef: result.ref,
+          clearLoadedTrackRef: result.ref == null,
         ),
       );
     } catch (e, st) {
@@ -193,6 +195,7 @@ class SubtitleEditorCubit extends Cubit<SubtitleEditorState> {
       final updatedVideo = await _repository.publishEditedSubtitles(
         video: _video,
         cues: ordered.map((c) => c.toCue()).toList(),
+        loadedRef: state.loadedTrackRef,
       );
       if (isClosed) return;
       emit(

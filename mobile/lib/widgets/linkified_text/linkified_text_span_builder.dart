@@ -276,11 +276,7 @@ class LinkifiedTextSpanBuilder {
     final style = mentionStyle ?? linkStyle;
 
     if (lower.startsWith('npub1') || lower.startsWith('nprofile1')) {
-      final hexPubkey = npubToHexOrNull(normalized);
-      if (hexPubkey == null || hexPubkey.length != 64) {
-        return TextSpan(text: nostrId, style: style);
-      }
-      return _buildProfileReferenceSpan(hexPubkey, style);
+      return _buildProfileIdentifierSpan(normalized, nostrId, style);
     }
 
     if (lower.startsWith('note1') ||
@@ -372,7 +368,8 @@ class LinkifiedTextSpanBuilder {
 
   TextSpan _buildHexReferenceSpan(String hexReference, int start) {
     if (_hexReferenceLooksLikeProfile(start)) {
-      return _buildProfileReferenceSpan(
+      return _buildProfileIdentifierSpan(
+        hexReference,
         hexReference,
         mentionStyle ?? linkStyle,
       );
@@ -382,6 +379,18 @@ class LinkifiedTextSpanBuilder {
       routeReference: hexReference,
       originalReference: hexReference,
     );
+  }
+
+  TextSpan _buildProfileIdentifierSpan(
+    String identifier,
+    String originalReference,
+    TextStyle style,
+  ) {
+    final hexPubkey = npubToHexOrNull(identifier);
+    if (hexPubkey == null) {
+      return TextSpan(text: originalReference, style: style);
+    }
+    return _buildProfileReferenceSpan(hexPubkey, style);
   }
 
   TextSpan _buildProfileReferenceSpan(String hexPubkey, TextStyle style) {

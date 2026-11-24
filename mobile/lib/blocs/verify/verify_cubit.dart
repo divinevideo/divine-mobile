@@ -5,7 +5,10 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:openvine/blocs/verify/confirmation_requirement.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
+import 'package:verifier_client/verifier_client.dart' show SigninRequirement;
 
 part 'verify_state.dart';
 
@@ -15,18 +18,35 @@ class VerifyCubit extends Cubit<VerifyState> {
   VerifyCubit({
     required IdentityClaimsRepository repository,
     required String pubkey,
+    required bool confirmationSignIn,
+    required ConfirmationAccessReader readConfirmationAccess,
   }) : _repository = repository,
        _pubkey = pubkey,
+       _confirmationSignIn = confirmationSignIn,
+       _readConfirmationAccess = readConfirmationAccess,
        super(VerifyState());
 
   final IdentityClaimsRepository _repository;
   final String _pubkey;
+  final bool _confirmationSignIn;
+
+  /// The reader this cubit was made with; the Verify page re-keys the cubit
+  /// when it changes, so an account change never reuses this one.
+  final ConfirmationAccessReader _readConfirmationAccess;
 
   /// Reads the links and their verdicts, plus the platforms on offer.
   ///
   /// The platform list is loaded first and kept even if the claim read fails,
   /// so "add a link" still works when relays are unreachable.
-  Future<void> load() async {
+  ///
+  /// With the `confirmationSignIn` flag on and a platform whose sign-in needs
+  /// Divine Confirmation, also reads whether the user holds it, so the list
+  /// can say which platforms that gates. [refreshAccess] skips the remembered
+  /// answer.
+  ///
+  /// A call while a load is already in flight is dropped, [refreshAccess]
+  /// included.
+  Future<void> load({bool refreshAccess = false}) async {
     if (state.status == VerifyStatus.loading) return;
     emit(state.copyWith(status: VerifyStatus.loading, clearError: true));
 
@@ -53,6 +73,9 @@ class VerifyCubit extends Cubit<VerifyState> {
           platforms: platforms,
         ),
       );
+      // After the list is on screen: the answer can take a network trip, and
+      // until it lands the badge reads as it does for a user who has it.
+      await _loadConfirmationAccess(platforms, refresh: refreshAccess);
     } on Object catch (error, stackTrace) {
       if (isClosed) return;
       addError(error, stackTrace);
@@ -65,6 +88,102 @@ class VerifyCubit extends Cubit<VerifyState> {
         ),
       );
     }
+  }
+
+  bool _refreshingQuietly = false;
+
+  /// Bumped whenever the list is changed locally ([claimLinked], an unlink),
+  /// so a quiet refresh that began before the change can tell its read is
+  /// older than the list and must not replace it.
+  int _listGeneration = 0;
+
+  /// Re-reads the verdicts and Divine Confirmation access without leaving the
+  /// list, for the return from the Confirmation screen.
+  ///
+  /// Deliberately not a [load]: that swaps the list for the loading spinner,
+  /// resets the scroll, and can drop to the full failure screen over a
+  /// transient error. Here the list stays, access is asked afresh, and a
+  /// failed read leaves the list as it was and reports through
+  /// [VerifyState.errorAttempt] (a snackbar), as an unlink that fails does.
+  /// With no list showing yet it is a full [load].
+  Future<void> refreshQuietly() async {
+    if (state.status != VerifyStatus.ready) {
+      return load(refreshAccess: true);
+    }
+    if (_refreshingQuietly) return;
+    _refreshingQuietly = true;
+    final generation = _listGeneration;
+    try {
+      try {
+        final claims = await _repository.claimsWithVerdicts(_pubkey);
+        if (isClosed) return;
+        // A link or unlink landed while the read was out. The read may
+        // predate it, or come from a relay that hasn't caught up, and would
+        // put back a row the user just removed. The next load reconciles.
+        if (generation == _listGeneration) {
+          emit(
+            state.copyWith(
+              claims: claims.claims,
+              verifiedKeys: claims.verifiedKeys,
+              verifierReachable: claims.verifierReachable,
+              signInCodes: claims.signInCodes,
+            ),
+          );
+        }
+      } on Object catch (error, stackTrace) {
+        if (isClosed) return;
+        addError(error, stackTrace);
+        emit(
+          state.copyWith(
+            error: VerifyError.load,
+            errorAttempt: state.errorAttempt + 1,
+          ),
+        );
+      }
+      // Asked either way: coming back from the Confirmation screen is what
+      // this refresh is for, and the access read never throws.
+      if (isClosed) return;
+      await _loadConfirmationAccess(state.platforms, refresh: true);
+    } finally {
+      _refreshingQuietly = false;
+    }
+  }
+
+  /// Reads Divine Confirmation access without forcing a re-check (the
+  /// remembered answer, if any), for the return from the connect screen. A
+  /// re-check made there (on coming back from the Confirmation screen) is
+  /// shared through the repository, so the badges catch up with it.
+  Future<void> rereadConfirmationAccess() =>
+      _loadConfirmationAccess(state.platforms, refresh: false);
+
+  // A plain read can still be out when a refresh starts ([load] then
+  // [refreshQuietly]). No generation guard is needed: the reader resolves a
+  // read a newer one overtook to the newest answer, so whichever lands last
+  // writes the same value.
+  Future<void> _loadConfirmationAccess(
+    List<VerifierPlatform> platforms, {
+    required bool refresh,
+  }) async {
+    final gated = platforms.any(
+      (platform) =>
+          platform.supportsOAuth &&
+          platform.signinRequires == SigninRequirement.confirmation,
+    );
+    if (!_confirmationSignIn || !gated) return;
+    ConfirmationAccess access;
+    try {
+      access = await _readConfirmationAccess(refresh: refresh);
+    } on Object catch (error) {
+      // Only the type: a signer's message can name the account. A read that
+      // throws counts as unknown, which behaves like "has".
+      Log.warning(
+        'Confirmation access read failed: ${error.runtimeType}',
+        name: 'VerifyCubit',
+      );
+      access = ConfirmationAccess.unknown;
+    }
+    if (isClosed) return;
+    emit(state.copyWith(confirmationAccess: access));
   }
 
   /// Adds a claim the connect flow just published to the rendered list.
@@ -82,6 +201,7 @@ class VerifyCubit extends Cubit<VerifyState> {
   void claimLinked(IdentityClaim claim, {IdentityClaim? replacing}) {
     final key = VerifyState.keyOf(claim);
     final dropped = {key, if (replacing != null) VerifyState.keyOf(replacing)};
+    _listGeneration++;
     emit(
       state.copyWith(
         status: VerifyStatus.ready,
@@ -110,6 +230,7 @@ class VerifyCubit extends Cubit<VerifyState> {
     try {
       await _repository.removeClaim(claim);
       if (isClosed) return;
+      _listGeneration++;
       emit(
         state.copyWith(
           claims: [

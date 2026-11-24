@@ -1,13 +1,11 @@
 // ABOUTME: Scrollable explore tab bar with a right-edge fade gradient.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/foundation.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/explore_tabs/explore_tabs_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/explore/explore_tab_labels.dart';
-import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 /// The explore screen's scrollable tab bar.
 ///
@@ -37,68 +35,66 @@ class ExploreTabBar extends StatelessWidget {
     final tabSurface = colors.isLight
         ? colors.surface
         : colors.surfaceContainerHigh;
-    // Material is required for TabBar ink splashes; PointerInterceptor ensures
-    // tabs receive taps on web.
-    return PointerInterceptor(
-      intercepting: kIsWeb,
-      child: Material(
-        color: VineTheme.transparent,
-        child: Stack(
-          children: [
-            TabBar(
-              controller: controller,
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              padding: const EdgeInsetsDirectional.only(start: 16),
-              indicatorColor: context.vineColors.isLight
-                  ? context.vineColors.accentPositive
-                  : VineTheme.tabIndicatorGreen,
-              indicatorWeight: 4,
-              indicatorSize: TabBarIndicatorSize.tab,
-              dividerColor: VineTheme.transparent,
-              labelColor: context.vineColors.primaryText,
-              unselectedLabelColor: context.vineColors.onSurfaceMuted,
-              labelPadding: const EdgeInsets.symmetric(horizontal: 14),
-              labelStyle: VineTheme.titleMediumFont(
-                color: context.vineColors.primaryText,
-              ),
-              unselectedLabelStyle: VineTheme.titleMediumFont(
-                color: context.vineColors.onSurfaceMuted,
-              ),
-              onTap: onTap,
-              tabs: [
-                for (final name in tabsState.tabNames)
-                  Tab(
-                    child: _ExploreTabLabel(
-                      name: name,
-                      featuredTab: tabsState.featuredTab,
-                    ),
-                  ),
-              ],
+    // Material is required for TabBar ink splashes. web/index.html sets
+    // `pointer-events: none` on every platform view, so the tabs need no
+    // PointerInterceptor.
+    return Material(
+      color: VineTheme.transparent,
+      child: Stack(
+        children: [
+          TabBar(
+            controller: controller,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            padding: const EdgeInsetsDirectional.only(start: 16),
+            indicatorColor: context.vineColors.isLight
+                ? context.vineColors.accentPositive
+                : VineTheme.tabIndicatorGreen,
+            indicatorWeight: 4,
+            indicatorSize: TabBarIndicatorSize.tab,
+            dividerColor: VineTheme.transparent,
+            labelColor: context.vineColors.primaryText,
+            unselectedLabelColor: context.vineColors.onSurfaceMuted,
+            labelPadding: const EdgeInsets.symmetric(horizontal: 14),
+            labelStyle: VineTheme.titleMediumFont(
+              color: context.vineColors.primaryText,
             ),
-            // Right-edge fade gradient shim
-            Positioned(
-              top: 0,
-              bottom: 0,
-              right: 0,
-              width: 24,
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.centerRight,
-                      end: Alignment.centerLeft,
-                      // Both stops are the same surface at different alpha.
-                      // Fading to a hardcoded transparent *black* instead
-                      // muddies the midpoint once the surface is light.
-                      colors: [tabSurface, tabSurface.withValues(alpha: 0)],
-                    ),
+            unselectedLabelStyle: VineTheme.titleMediumFont(
+              color: context.vineColors.onSurfaceMuted,
+            ),
+            onTap: onTap,
+            tabs: [
+              for (final name in tabsState.tabNames)
+                Tab(
+                  child: _ExploreTabLabel(
+                    name: name,
+                    featuredTab: tabsState.featuredTab,
+                  ),
+                ),
+            ],
+          ),
+          // Right-edge fade gradient shim
+          Positioned(
+            top: 0,
+            bottom: 0,
+            right: 0,
+            width: 24,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerRight,
+                    end: Alignment.centerLeft,
+                    // Both stops are the same surface at different alpha.
+                    // Fading to a hardcoded transparent *black* instead
+                    // muddies the midpoint once the surface is light.
+                    colors: [tabSurface, tabSurface.withValues(alpha: 0)],
                   ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

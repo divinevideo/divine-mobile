@@ -13,6 +13,7 @@ import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/video_generation_trace.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
@@ -172,6 +173,28 @@ class _RecordingCrashReporter implements CrashReporter {
   }) async {
     reports.add((error: error, reason: reason));
   }
+}
+
+/// Records which steps a render timed, in order, and the output it reported.
+class _RecordingGenerationRecorder implements VideoGenerationRecorder {
+  final phases = <VideoGenerationPhase>[];
+  final outputs = <({Duration duration, int width, int height, int? bytes})>[];
+
+  @override
+  Future<T> time<T>(VideoGenerationPhase phase, Future<T> Function() body) {
+    phases.add(phase);
+    return body();
+  }
+
+  @override
+  void recordOutput({
+    required Duration duration,
+    required int width,
+    required int height,
+    int? bytes,
+  }) => outputs.add(
+    (duration: duration, width: width, height: height, bytes: bytes),
+  );
 }
 
 Future<void> _flushStreamEvents() => pumpEventQueue();
@@ -548,6 +571,146 @@ void main() {
 
       await secondCancellation;
       expect(VideoEditorRenderService.activeNativeTaskIdsForTesting, isEmpty);
+    });
+  });
+
+  group('VideoEditorRenderService video_generation recorder', () {
+    late ProVideoEditor originalProVideoEditor;
+    late _ProgressProVideoEditor proVideoEditor;
+    late _RecordingGenerationRecorder recorder;
+
+    setUp(() {
+      originalProVideoEditor = ProVideoEditor.instance;
+      proVideoEditor = _ProgressProVideoEditor();
+      ProVideoEditor.instance = proVideoEditor;
+      StopMotionRenderService.probeDurationOverride = (_) async => null;
+      StopMotionRenderService.assembleOverride = ({
+        required frames,
+        required aspectRatio,
+        frameRate = StopMotionRenderService.defaultFrameRate,
+        String? taskId,
+      }) async => '${Directory.systemTemp.path}/assembled-$taskId.mp4';
+      NativeProofModeService.proofFileOverride = (
+        File videoFile, {
+        required bool enableAdvancedCawgEmbedding,
+        creatorBindingAssertion,
+        cawgIdentityAssertion,
+        verifiedIdentityBundle,
+        clips,
+        editorStateHistory,
+        derivedFrom,
+      }) async => const model.NativeProofData(videoHash: 'proof');
+      VideoEditorRenderService.resetActiveNativeTaskIdsForTesting();
+      recorder = _RecordingGenerationRecorder();
+    });
+
+    tearDown(() async {
+      VideoEditorRenderService.renderVideoOverride = null;
+      NativeProofModeService.proofFileOverride = null;
+      StopMotionRenderService.assembleOverride = null;
+      StopMotionRenderService.probeDurationOverride = null;
+      VideoEditorRenderService.resetActiveNativeTaskIdsForTesting();
+      await proVideoEditor.dispose();
+      ProVideoEditor.instance = originalProVideoEditor;
+    });
+
+    void renderTo(String? outputPath) {
+      VideoEditorRenderService.renderVideoOverride = ({
+        required clips,
+        required usePersistentStorage,
+        aspectRatio,
+        parameters,
+        taskId,
+        maxOutputDuration,
+      }) async => outputPath;
+    }
+
+    DivineVideoClip stopMotionClip(String id) => DivineVideoClip(
+      id: id,
+      stopMotionFrames: const [
+        StopMotionClipFrame(
+          path: '/frames/f0.jpg',
+          duration: Duration(milliseconds: 83),
+        ),
+      ],
+      duration: const Duration(milliseconds: 83),
+      recordedAt: DateTime(2026),
+      targetAspectRatio: model.AspectRatio.vertical,
+      originalAspectRatio: 9 / 16,
+    );
+
+    test(
+      'times each step of a render in order and records its output',
+      () async {
+        renderTo('${Directory.systemTemp.path}/recorded-render.mp4');
+
+        await VideoEditorRenderService.renderVideoToClip(
+          clips: [_createClip(0), _createClip(1)],
+          editorStateHistory: const {},
+          taskId: 'recorded-render',
+          recorder: recorder,
+        );
+
+        expect(recorder.phases, [
+          VideoGenerationPhase.render,
+          VideoGenerationPhase.metadata,
+          VideoGenerationPhase.proof,
+          VideoGenerationPhase.cover,
+        ]);
+        // The metadata the fake editor reports for every output.
+        expect(recorder.outputs, [
+          (
+            duration: const Duration(seconds: 6),
+            width: 1080,
+            height: 1920,
+            // The render override never writes the file.
+            bytes: null,
+          ),
+        ]);
+      },
+    );
+
+    test('times the assembly of every stop-motion clip', () async {
+      renderTo('${Directory.systemTemp.path}/recorded-stop-motion.mp4');
+
+      await VideoEditorRenderService.renderVideoToClip(
+        clips: [stopMotionClip('sm-0'), _createClip(1), stopMotionClip('sm-2')],
+        editorStateHistory: const {},
+        taskId: 'recorded-stop-motion',
+        recorder: recorder,
+      );
+
+      expect(recorder.phases, [
+        VideoGenerationPhase.assembly,
+        VideoGenerationPhase.assembly,
+        VideoGenerationPhase.render,
+        VideoGenerationPhase.metadata,
+        VideoGenerationPhase.proof,
+        VideoGenerationPhase.cover,
+      ]);
+    });
+
+    test('stops after the step that failed and records no output', () async {
+      renderTo(null);
+
+      await expectLater(
+        VideoEditorRenderService.renderVideoToClip(
+          clips: [_createClip(0)],
+          editorStateHistory: const {},
+          taskId: 'recorded-failure',
+          recorder: recorder,
+        ),
+        throwsA(
+          isA<VideoRenderFailedException>().having(
+            (e) => e.reason,
+            'reason',
+            VideoRenderFailureReason.nativeRender,
+          ),
+        ),
+      );
+
+      expect(recorder.phases, [VideoGenerationPhase.render]);
+      expect(recorder.outputs, isEmpty);
     });
   });
 

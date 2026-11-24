@@ -58,6 +58,10 @@ class _ProfileLikedGridState extends State<ProfileLikedGrid>
   /// Resolved from [PrimaryScrollController] provided by [NestedScrollView].
   ScrollController? _primaryScrollController;
 
+  /// Shared by every state this tab shows; see
+  /// [ProfileTabLoadingState.scrollViewKey].
+  final GlobalKey _scrollViewKey = GlobalKey();
+
   @override
   ScrollController get paginationScrollController => _primaryScrollController!;
 
@@ -103,7 +107,7 @@ class _ProfileLikedGridState extends State<ProfileLikedGrid>
         if (likedVideos.isEmpty &&
             state.status != ProfileLikedVideosStatus.success &&
             state.status != ProfileLikedVideosStatus.failure) {
-          return const ProfileTabLoadingState();
+          return ProfileTabLoadingState(scrollViewKey: _scrollViewKey);
         }
 
         // Only surface the failure screen when there is nothing cached to
@@ -117,12 +121,14 @@ class _ProfileLikedGridState extends State<ProfileLikedGrid>
         if (state.status == ProfileLikedVideosStatus.failure &&
             likedVideos.isEmpty) {
           return ProfileTabErrorState(
+            scrollViewKey: _scrollViewKey,
             message: context.l10n.profileErrorLoadingLiked,
           );
         }
 
         if (likedVideos.isEmpty) {
           return ProfileTabEmptyState(
+            scrollViewKey: _scrollViewKey,
             title: context.l10n.profileNoLikedVideosTitle,
             subtitle: widget.isOwnProfile
                 ? context.l10n.profileLikedOwnEmpty
@@ -135,6 +141,7 @@ class _ProfileLikedGridState extends State<ProfileLikedGrid>
         // directly under the tabs while scrolling — a body overlay would be
         // painted behind the pinned header.
         return CustomScrollView(
+          key: _scrollViewKey,
           physics: const ClampingScrollPhysics(),
           slivers: [
             ProfileMasonryGrid(

@@ -1,6 +1,20 @@
 // ABOUTME: Shared synthetic pubkeys for test fixtures.
 // ABOUTME: Never use a real personal key as test data.
 
+import 'package:nostr_sdk/client_utils/keys.dart';
+
+/// A distinct public key that is a point on secp256k1, derived from [seed].
+///
+/// Use it when a test needs another identity and no `const` is required.
+/// Repeated-character fixtures are a trap: `'b' * 64`, `'c' * 64` and
+/// `'1' * 64` are well-formed hex but no point on the curve, so no account can
+/// own them and the identifier normalizer rejects them (#8706). The constants
+/// below are all on the curve.
+String testPubkeyFromSeed(int seed) {
+  assert(seed > 0, 'seed must be a valid non-zero private key');
+  return getPublicKey(seed.toRadixString(16).padLeft(64, '0'));
+}
+
 /// A clearly-synthetic 64-char hex pubkey for use as a generic fixture
 /// identity in tests (test video author, mock current-user pubkey, and
 /// similar).

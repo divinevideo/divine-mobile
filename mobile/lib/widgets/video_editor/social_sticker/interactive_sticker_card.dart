@@ -115,6 +115,7 @@ class InteractiveStickerCard extends StatelessWidget {
     this.onAnswer,
     this.onJoin,
     this.onOpenResponses,
+    this.watchOnly = false,
     super.key,
   });
 
@@ -122,6 +123,11 @@ class InteractiveStickerCard extends StatelessWidget {
 
   /// Whether the card is drawn again over itself in a video's frames.
   final bool overFrames;
+
+  /// Whether an Add yours is shown to a viewer who may not join it: in place
+  /// of who joined and its button, it shows the latest answers and invites
+  /// them to watch the series through [onOpenResponses].
+  final bool watchOnly;
 
   /// Who joined or replied, or `null` to show no one.
   final StickerResponses? responses;
@@ -162,6 +168,11 @@ class InteractiveStickerCard extends StatelessWidget {
                 data: data,
                 onAnswer: onAnswer,
               ),
+              SocialStickerKind.addYours when watchOnly => _AddYoursSeries(
+                data: data,
+                responses: responses,
+                onOpen: onOpenResponses,
+              ),
               SocialStickerKind.addYours => _AddYours(
                 data: data,
                 responses: responses,
@@ -195,6 +206,7 @@ class InteractiveStickerCopy extends StatelessWidget {
     this.onAnswer,
     this.onJoin,
     this.onOpenResponses,
+    this.watchOnly = false,
     super.key,
   });
 
@@ -203,6 +215,9 @@ class InteractiveStickerCopy extends StatelessWidget {
   final VoidCallback? onAnswer;
   final VoidCallback? onJoin;
   final VoidCallback? onOpenResponses;
+
+  /// See [InteractiveStickerCard.watchOnly].
+  final bool watchOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -216,6 +231,7 @@ class InteractiveStickerCopy extends StatelessWidget {
           onAnswer: onAnswer,
           onJoin: onJoin,
           onOpenResponses: onOpenResponses,
+          watchOnly: watchOnly,
         ),
       ),
     );
@@ -405,6 +421,106 @@ class _AddYours extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// How many answers' thumbnails an Add yours shows to a viewer who may not
+/// join it.
+const int _seriesThumbnails = 3;
+
+/// How tall each of those thumbnails is: what is left of the card the
+/// viewer who may join sees once the prompt and the invitation to watch take
+/// theirs, so both are the same size and fill the same box.
+const double _seriesThumbnailHeight = 123;
+
+/// How wide each of them is, upright like a video.
+const double _seriesThumbnailWidth = _seriesThumbnailHeight * 3 / 4;
+
+/// An Add yours shown to a viewer who may not join it: its prompt over the
+/// latest answers' thumbnails and an invitation to watch the series, which
+/// [onOpen] opens. Its hashtag is left out to give the thumbnails room.
+class _AddYoursSeries extends StatelessWidget {
+  const _AddYoursSeries({
+    required this.data,
+    required this.responses,
+    required this.onOpen,
+  });
+
+  final SocialStickerData data;
+  final StickerResponses? responses;
+  final VoidCallback? onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final responses = this.responses;
+    final shown = (responses?.latest ?? const <StickerResponsePreview>[])
+        .take(_seriesThumbnails)
+        .toList();
+    // The answers beyond the thumbnails, counted on the last one.
+    final more = (responses?.count ?? 0) - shown.length + 1;
+    final card = Column(
+      mainAxisSize: .min,
+      crossAxisAlignment: .stretch,
+      spacing: 16,
+      children: [
+        StickerTextLine(
+          text: data.prompt ?? '',
+          style: interactiveCardTextStyle(54),
+          maxLines: 2,
+          textAlign: .center,
+        ),
+        Row(
+          mainAxisAlignment: .center,
+          spacing: 12,
+          children: [
+            for (final (index, response) in shown.indexed)
+              _ResponseThumbnail(
+                response: response,
+                width: _seriesThumbnailWidth,
+                height: _seriesThumbnailHeight,
+                radius: 16,
+                moreCount: index == shown.length - 1 && more > 1 ? more : null,
+              ),
+          ],
+        ),
+        // A longer translation is made smaller rather than cut short.
+        FittedBox(
+          fit: .scaleDown,
+          child: Row(
+            mainAxisSize: .min,
+            spacing: 8,
+            children: [
+              const DivineIcon(
+                icon: .play,
+                size: 40,
+                color: VineTheme.vineGreenDark,
+              ),
+              StickerTextLine(
+                text: l10n.videoStickerAddYoursWatchSeries,
+                style: interactiveCardTextStyle(40),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    final onOpen = this.onOpen;
+    if (onOpen == null) return card;
+    return Semantics(
+      button: true,
+      label: l10n.videoStickerAddYoursWatchSeriesSemanticLabel(
+        data.prompt ?? '',
+      ),
+      excludeSemantics: true,
+      // excludeSemantics drops the detector's own tap action with it.
+      onTap: onOpen,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onOpen,
+        child: card,
+      ),
     );
   }
 }
@@ -618,13 +734,41 @@ class _CyclingThumbnailState extends State<_CyclingThumbnail> {
   @override
   Widget build(BuildContext context) {
     final shown = _withThumbnail;
-    final response = shown.isEmpty ? null : shown[_index % shown.length];
+    return _ResponseThumbnail(
+      response: shown.isEmpty ? null : shown[_index % shown.length],
+      width: _thumbnailWidth,
+      height: _thumbnailHeight,
+      radius: 28,
+    );
+  }
+}
+
+/// The thumbnail of [response], blurred when it carries a content warning,
+/// or a pale frame with a play mark while there is none; with [moreCount],
+/// darkened under `+moreCount`, the answers it stands for.
+class _ResponseThumbnail extends StatelessWidget {
+  const _ResponseThumbnail({
+    required this.response,
+    required this.width,
+    required this.height,
+    required this.radius,
+    this.moreCount,
+  });
+
+  final StickerResponsePreview? response;
+  final double width;
+  final double height;
+  final double radius;
+  final int? moreCount;
+
+  @override
+  Widget build(BuildContext context) {
     final placeholder = ColoredBox(
       color: interactiveCardInk.withValues(alpha: 0.08),
       child: Center(
         child: DivineIcon(
           icon: .play,
-          size: 72,
+          size: width * 0.4,
           color: interactiveCardInk.withValues(alpha: 0.4),
         ),
       ),
@@ -644,12 +788,29 @@ class _CyclingThumbnailState extends State<_CyclingThumbnail> {
         child: picture,
       );
     }
+    final moreCount = this.moreCount;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
+      borderRadius: BorderRadius.circular(radius),
       child: SizedBox(
-        width: _thumbnailWidth,
-        height: _thumbnailHeight,
-        child: picture,
+        width: width,
+        height: height,
+        child: moreCount == null
+            ? picture
+            : Stack(
+                fit: .expand,
+                children: [
+                  picture,
+                  const ColoredBox(color: VineTheme.scrim50),
+                  Center(
+                    child: StickerTextLine(
+                      text: '+$moreCount',
+                      style: interactiveCardTextStyle(
+                        34,
+                      ).copyWith(color: interactiveCardColor),
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }

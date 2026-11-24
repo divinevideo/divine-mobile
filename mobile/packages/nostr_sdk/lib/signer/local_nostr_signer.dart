@@ -3,6 +3,7 @@ import '../client_utils/keys.dart' as keys;
 import '../event.dart';
 import '../nip04/nip04.dart';
 import '../nip44/nip44_v2.dart';
+import '../relay/native_schnorr_sign.dart';
 import 'nostr_signer.dart';
 
 class LocalNostrSigner implements NostrSigner {
@@ -11,6 +12,7 @@ class LocalNostrSigner implements NostrSigner {
   late String _publicKey;
 
   ECDHBasicAgreement? _agreement;
+  bool _nativeSignerDisabled = false;
 
   LocalNostrSigner(this._privateKey) {
     _publicKey = keys.getPublicKey(_privateKey);
@@ -40,6 +42,21 @@ class LocalNostrSigner implements NostrSigner {
 
   @override
   Future<Event?> signEvent(Event event) async {
+    if (!_nativeSignerDisabled && keys.keyIsValid(_privateKey)) {
+      final nativeSign = resolveNativeSchnorrSigner();
+      if (nativeSign != null) {
+        try {
+          event.sig = await nativeSign(
+            privateKey: _privateKey,
+            message: event.id,
+            auxRand: keys.getRandomHexString(),
+          );
+          return event;
+        } on Object catch (_) {
+          _nativeSignerDisabled = true;
+        }
+      }
+    }
     event.sign(_privateKey);
     return event;
   }

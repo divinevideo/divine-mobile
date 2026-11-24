@@ -89,6 +89,7 @@ class _VineCachedImageState extends State<VineCachedImage> {
   ImageStreamListener? _listener;
   Object? _error;
   bool _hasImage = false;
+  bool _loadedSynchronously = false;
 
   ImageProvider<Object> get _imageProvider {
     final provider = MediaCacheImageProvider(
@@ -134,6 +135,7 @@ class _VineCachedImageState extends State<VineCachedImage> {
       _removeImageListener();
       _error = null;
       _hasImage = false;
+      _loadedSynchronously = false;
       return;
     }
 
@@ -148,6 +150,7 @@ class _VineCachedImageState extends State<VineCachedImage> {
     _imageStream = newStream;
     _error = null;
     _hasImage = false;
+    _loadedSynchronously = false;
 
     _listener = ImageStreamListener(
       (image, synchronousCall) {
@@ -167,6 +170,12 @@ class _VineCachedImageState extends State<VineCachedImage> {
           }
         }
         if (_hasImage) return;
+        if (synchronousCall) {
+          _hasImage = true;
+          _loadedSynchronously = true;
+          _error = null;
+          return;
+        }
         setState(() {
           _hasImage = true;
           _error = null;
@@ -177,6 +186,7 @@ class _VineCachedImageState extends State<VineCachedImage> {
         setState(() {
           _error = error;
           _hasImage = false;
+          _loadedSynchronously = false;
         });
       },
     );
@@ -228,6 +238,10 @@ class _VineCachedImageState extends State<VineCachedImage> {
         errorWidget: widget.errorWidget,
       ),
     );
+
+    if (_loadedSynchronously) {
+      return KeyedSubtree(key: const ValueKey('image'), child: image);
+    }
 
     if (widget.placeholder == null) {
       return AnimatedOpacity(

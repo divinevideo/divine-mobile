@@ -25,6 +25,8 @@ import 'package:openvine/utils/collaborator_tags.dart';
 import 'package:openvine/utils/inspired_by_tags.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 
+import '../helpers/test_pubkeys.dart';
+
 class _MockUploadManager extends Mock implements UploadManager {}
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -60,10 +62,8 @@ void main() {
 
   const testPubkey =
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-  const inspiredCreatorPubkey =
-      'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-  const inspiredPersonPubkey =
-      'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+  const inspiredCreatorPubkey = syntheticTestPubkey;
+  const inspiredPersonPubkey = syntheticOtherTestPubkey;
   const secondClipCreatorPubkey =
       'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
   const rootAuthorPubkey =

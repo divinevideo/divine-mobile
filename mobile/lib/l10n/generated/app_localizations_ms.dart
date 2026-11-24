@@ -2107,6 +2107,14 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Giliran anda';
 
   @override
+  String get videoStickerAddYoursWatchSeries => 'Tonton siri ini';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Tonton siri ini: $prompt';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4462,6 +4470,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Relay tidak menerima kemas kini. Cuba lagi sebentar lagi.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Video ini telah diubah pada peranti lain dan kini mempunyai terlalu banyak tag atau kolaborator. Buka semula dan buang beberapa.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Gagal mengemas kini video ini. Cuba lagi.';
 
@@ -4553,6 +4565,17 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get soundsNoSoundsFoundDescription => 'Cuba istilah carian lain';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count bunyi ditemui',
+      zero: 'Tiada bunyi ditemui',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'Disimpan ke Bunyi';
@@ -9405,6 +9428,21 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorEffectEcho => 'Gema';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Masa Terbelah';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Dedahan Panjang';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Gerakan Sahaja';
+
+  @override
+  String get videoEditorEffectStutter => 'Tersekat-sekat';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Herotan Masa';
+
+  @override
   String get videoEditorEffectFisheye => 'Mata Ikan';
 
   @override
@@ -9606,6 +9644,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'Gerakan';
 
   @override
+  String get videoEditorEffectCategoryTime => 'Masa';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'Zarah';
 
   @override
@@ -9711,6 +9752,14 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'Satu kesan berkelip pada satu masa. Kelipan berlebihan boleh memudaratkan orang yang sensitif.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Satu kesan Masa pada satu masa. Dua bersama akan kelihatan berbeza selepas dieksport, jadi kami menggantikan yang satu lagi di sini.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Satu kesan Masa pada satu masa. Dua bersama akan kelihatan berbeza selepas dieksport.';
 
   @override
   String get videoEditorEffectsOnBeat => 'Ikut rentak';
@@ -11823,6 +11872,34 @@ class AppLocalizationsMs extends AppLocalizations {
       'Menunjukkan siapa yang membalas video ini dengan video. Penonton ketik padanya untuk menonton balasan.';
 
   @override
+  String get videoEditorSocialStickerAudienceTitle => 'Siapa boleh menjawab';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Semua orang';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Rakan';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Saya sahaja';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Hanya orang yang anda ikuti boleh menyertai. Orang lain melihat pelekat selepas ada yang menyertai.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Pelekat hanya memaparkan balasan video daripada orang yang anda ikuti. Orang lain melihatnya selepas salah seorang daripada mereka membalas.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Hanya anda boleh menyertai. Orang lain tidak akan melihat pelekat sehingga anda menyertai.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Pelekat hanya memaparkan balasan video anda sendiri. Orang lain tidak akan melihatnya sehingga anda membalas.';
+
+  @override
   String get videoEditorInteractiveCardAreaHint =>
       'Pelekat ini kekal dalam kotak ini supaya penonton boleh mengetiknya';
 
@@ -13618,6 +13695,21 @@ class AppLocalizationsMs extends AppLocalizations {
       'Penggantian bawah umur dilindungi dikosongkan';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
   String get commentsRecordVideoButtonLabel => 'Rakam komen video';
 
   @override
@@ -14655,6 +14747,65 @@ class AppLocalizationsMs extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Nyahpaut akaun $platform $identity';
   }
@@ -14686,7 +14837,26 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'Satu ketik';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -14798,6 +14968,18 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'Disahkan, tetapi tiada geganti menerima kemas kini. Cuba lagi.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>

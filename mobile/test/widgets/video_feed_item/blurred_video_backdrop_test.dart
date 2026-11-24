@@ -15,6 +15,7 @@ void main() {
       String url = testUrl,
       String? blurhash,
       double? videoAspectRatio,
+      bool useRuntimeBlur = true,
     }) {
       return WidgetsApp(
         localizationsDelegates: appLocalizationsDelegates,
@@ -27,6 +28,7 @@ void main() {
             url: url,
             blurhash: blurhash,
             videoAspectRatio: videoAspectRatio,
+            useRuntimeBlur: useRuntimeBlur,
           ),
         ),
       );
@@ -38,6 +40,45 @@ void main() {
       expect(find.byType(ClipRect), findsOneWidget);
       expect(find.byType(ImageFiltered), findsOneWidget);
     });
+
+    testWidgets(
+      'omits $ImageFiltered and dims poster when useRuntimeBlur is false',
+      (tester) async {
+        await tester.pumpWidget(
+          WidgetsApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            color: const Color(0xFF000000),
+            builder: (_, _) => const SizedBox(
+              width: 400,
+              height: 800,
+              child: BlurredVideoBackdrop(
+                url: testUrl,
+                useRuntimeBlur: false,
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byType(ClipRect), findsOneWidget);
+        expect(find.byType(ImageFiltered), findsNothing);
+        final opacity = tester.widget<Opacity>(find.byType(Opacity));
+        expect(opacity.opacity, equals(0.25));
+      },
+    );
+
+    testWidgets(
+      'dims the poster in each letterbox bar when useRuntimeBlur is false',
+      (tester) async {
+        await tester.pumpWidget(
+          buildWidget(videoAspectRatio: 1, useRuntimeBlur: false),
+        );
+
+        expect(find.byType(ImageFiltered), findsNothing);
+        final opacities = tester.widgetList<Opacity>(find.byType(Opacity));
+        expect(opacities.map((o) => o.opacity), equals([0.25, 0.25]));
+      },
+    );
 
     testWidgets(
       'renders $BlurhashDisplay without any blur pass when a blurhash '

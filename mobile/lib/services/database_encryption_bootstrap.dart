@@ -70,6 +70,8 @@ class DatabaseEncryptionBootstrap {
     persistRecoveryOutcome,
     Future<bool> Function()? hasPendingCorruptionRecovery,
     Future<void> Function()? clearPendingCorruptionRecovery,
+    Future<bool> Function()? hasCompletedAccessibilityUpgrade,
+    Future<void> Function()? markAccessibilityUpgradeCompleted,
   }) : _secureStorage = secureStorage,
        _isProtectedDataAvailable =
            isProtectedDataAvailable ??
@@ -80,6 +82,10 @@ class DatabaseEncryptionBootstrap {
            hasPendingCorruptionRecovery ?? (() async => false),
        _clearPendingCorruptionRecovery =
            clearPendingCorruptionRecovery ?? (() async {}),
+       _hasCompletedAccessibilityUpgrade =
+           hasCompletedAccessibilityUpgrade ?? (() async => false),
+       _markAccessibilityUpgradeCompleted =
+           markAccessibilityUpgradeCompleted ?? (() async {}),
        _ensureRuntime = ensureRuntime ?? ensureSqlCipherRuntime,
        _isCipherAvailable = isCipherAvailable ?? isSqlCipherAvailable,
        _migrate =
@@ -154,6 +160,12 @@ class DatabaseEncryptionBootstrap {
   /// by recovering, or by proving there is nothing to recover. Called on every
   /// non-throwing path so a stuck flag cannot force a salvage every launch.
   final Future<void> Function() _clearPendingCorruptionRecovery;
+
+  /// Persisted marker indicating that [_upgradeKeyAccessibility] has already
+  /// succeeded on this install, avoiding five sequential Keychain IPC calls
+  /// on every subsequent cold launch.
+  final Future<bool> Function() _hasCompletedAccessibilityUpgrade;
+  final Future<void> Function() _markAccessibilityUpgradeCompleted;
 
   /// Records a startup DB recovery (salvage or wipe) as a non-fatal so the
   /// corruption rate — and a device recovering on every launch — is observable
@@ -426,10 +438,12 @@ class DatabaseEncryptionBootstrap {
   /// A key written before #9343 sits under `unlocked`, which the Keychain
   /// refuses whenever the device is locked (#9343). The plugin cannot report
   /// which class an existing item carries and its `read` does not filter on
-  /// one, so there is nothing to test — the rewrite is simply repeated. It is
-  /// idempotent: the plugin's iOS write puts the accessibility into its
-  /// `SecItemUpdate` query, so an item already under the current class updates
-  /// in place, and only a mismatched one takes the delete-and-re-add path.
+  /// one, so there is nothing to test. The rewrite is repeated on each launch
+  /// until it succeeds once; a persisted marker then skips it, and a database
+  /// reset clears that marker. It is idempotent: the plugin's iOS write puts
+  /// the accessibility into its `SecItemUpdate` query, so an item already
+  /// under the current class updates in place, and only a mismatched one takes
+  /// the delete-and-re-add path.
   ///
   /// Rewriting in place, rather than moving the key to a new slot, is what
   /// keeps a rollback non-destructive — see [dbCipherKeyStorageKey].
@@ -443,6 +457,7 @@ class DatabaseEncryptionBootstrap {
   /// so a rollback during an interrupted rewrite remains unsupported until a
   /// successful launch of this build restores it.
   Future<void> _upgradeKeyAccessibility(String key) async {
+    if (await _hasCompletedAccessibilityUpgrade()) return;
     if (await _isProtectedDataAvailable() != true) return;
     try {
       await _secureStorage.write(
@@ -467,20 +482,38 @@ class DatabaseEncryptionBootstrap {
       );
       return;
     }
-    await _restorePrimaryKey(key);
+    final rewritten = await _restorePrimaryKey(key);
+    // A failed write that left the old item readable proves availability,
+    // not the new accessibility class. Retry the rewrite next launch.
+    if (!rewritten) return;
+    try {
+      await _markAccessibilityUpgradeCompleted();
+    } on Object catch (error) {
+      Log.warning(
+        'Could not persist DB cipher key accessibility upgrade marker '
+        '(non-fatal): $error',
+        name: _logName,
+      );
+    }
   }
 
   /// Leaves the recovery copy intact until the primary has been verified.
-  Future<void> _restorePrimaryKey(String key) async {
+  ///
+  /// Returns whether a write of the primary succeeded. `false` means the first
+  /// write failed and the old item, still readable, was kept as it was.
+  Future<bool> _restorePrimaryKey(String key) async {
+    var wrote = false;
     try {
       try {
         await _secureStorage.write(key: dbCipherKeyStorageKey, value: key);
+        wrote = true;
       } on Object {
         // An error need not mean the old item survived. Retry if it did not,
         // retaining the durable recovery copy through both attempts.
         if (await _readCipherKey(_secureStorage, dbCipherKeyStorageKey) !=
             key) {
           await _secureStorage.write(key: dbCipherKeyStorageKey, value: key);
+          wrote = true;
         }
       }
       if (await _readCipherKey(_secureStorage, dbCipherKeyStorageKey) != key) {
@@ -507,6 +540,7 @@ class DatabaseEncryptionBootstrap {
         error: error,
       );
     }
+    return wrote;
   }
 
   /// Refuses to act on an empty primary slot while the platform cannot decrypt

@@ -2097,6 +2097,14 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoStickerAddYoursButton => 'Đến lượt bạn';
 
   @override
+  String get videoStickerAddYoursWatchSeries => 'Xem loạt video';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Xem loạt video: $prompt';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4434,6 +4442,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Relay không chấp nhận bản cập nhật. Thử lại sau giây lát.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Video này đã thay đổi trên thiết bị khác và giờ có quá nhiều thẻ hoặc cộng tác viên. Mở lại rồi xoá bớt nhé.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Không cập nhật được video này. Thử lại nhé.';
 
@@ -4524,6 +4536,17 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get soundsNoSoundsFoundDescription => 'Thử từ khóa khác nhé';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Tìm thấy $count âm thanh',
+      zero: 'Không tìm thấy âm thanh nào',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'Đã lưu vào Âm thanh';
@@ -9356,6 +9379,21 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectEcho => 'Tiếng vọng';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Tách thời gian';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Phơi sáng dài';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Chỉ chuyển động';
+
+  @override
+  String get videoEditorEffectStutter => 'Giật hình';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Bẻ cong thời gian';
+
+  @override
   String get videoEditorEffectFisheye => 'Mắt cá';
 
   @override
@@ -9557,6 +9595,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'Chuyển động';
 
   @override
+  String get videoEditorEffectCategoryTime => 'Thời gian';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'Hạt';
 
   @override
@@ -9662,6 +9703,14 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Mỗi lúc chỉ một hiệu ứng Thời gian. Dùng hai cùng lúc sẽ trông khác sau khi xuất, nên chúng mình đã thay hiệu ứng kia ở đây.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Mỗi lúc chỉ một hiệu ứng Thời gian. Dùng hai cùng lúc sẽ trông khác sau khi xuất.';
 
   @override
   String get videoEditorEffectsOnBeat => 'Theo nhịp';
@@ -11766,6 +11815,34 @@ class AppLocalizationsVi extends AppLocalizations {
       'Hiển thị những ai đã phản hồi video này bằng video. Người xem chạm vào để xem các phản hồi.';
 
   @override
+  String get videoEditorSocialStickerAudienceTitle => 'Ai có thể trả lời';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Mọi người';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Bạn bè';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Chỉ mình tôi';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Chỉ những người bạn theo dõi mới có thể tham gia. Người khác sẽ thấy nhãn dán khi đã có ai tham gia.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Nhãn dán chỉ hiển thị phản hồi bằng video từ những người bạn theo dõi. Người khác sẽ thấy nhãn dán khi một trong số họ đã phản hồi.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Chỉ bạn mới có thể tham gia. Người khác sẽ không thấy nhãn dán cho đến khi bạn tham gia.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Nhãn dán chỉ hiển thị phản hồi bằng video của chính bạn. Người khác sẽ không thấy nhãn dán cho đến khi bạn phản hồi.';
+
+  @override
   String get videoEditorInteractiveCardAreaHint =>
       'Nhãn dán này nằm trong khung này để người xem có thể chạm vào';
 
@@ -13561,6 +13638,21 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đã xóa ghi đè vị thành niên được bảo vệ';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
   String get commentsRecordVideoButtonLabel => 'Quay bình luận video';
 
   @override
@@ -14598,6 +14690,65 @@ class AppLocalizationsVi extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Hủy liên kết tài khoản $platform $identity';
   }
@@ -14629,7 +14780,26 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'Một chạm';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -14741,6 +14911,18 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'Đã xác minh, nhưng không relay nào nhận cập nhật. Thử lại.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>

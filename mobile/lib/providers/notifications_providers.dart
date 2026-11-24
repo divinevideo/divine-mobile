@@ -82,7 +82,7 @@ final notificationPreferencesStoreProvider =
 final pushNotificationServiceProvider = Provider<PushNotificationService?>((
   ref,
 ) {
-  // Firebase Messaging only supports Android, iOS, macOS, and web.
+  // Only Android, iOS and macOS have a real Firebase project.
   if (!isFirebaseSupported || kIsWeb) {
     return null;
   }
@@ -292,7 +292,7 @@ final notificationPreferencesServiceProvider =
 /// cleanup after the replacement account has committed.
 @Riverpod(keepAlive: true)
 PushNotificationSessionCoordinator? pushNotificationSync(Ref ref) {
-  // Firebase Messaging only supports Android, iOS, macOS, and web.
+  // Only Android, iOS and macOS have a real Firebase project.
   if (!isFirebaseSupported) {
     return null;
   }

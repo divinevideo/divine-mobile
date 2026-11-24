@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/verify/verify_cubit.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:verifier_client/verifier_client.dart';
 
 class _MockIdentityClaimsRepository extends Mock
     implements IdentityClaimsRepository {}
@@ -68,9 +69,324 @@ void main() {
       when(() => repository.removeClaim(any())).thenAnswer((_) async => []);
     });
 
-    VerifyCubit build() => VerifyCubit(repository: repository, pubkey: _pubkey);
+    var accessReads = <bool>[];
+    late ConfirmationAccess accessAnswer;
+    Object? accessError;
+
+    setUp(() {
+      accessReads = [];
+      accessAnswer = ConfirmationAccess.hasNot;
+      accessError = null;
+    });
+
+    Future<ConfirmationAccess> readAccess({bool refresh = false}) async {
+      accessReads.add(refresh);
+      if (accessError != null) throw accessError!;
+      return accessAnswer;
+    }
+
+    VerifyCubit build({bool confirmationSignIn = false}) => VerifyCubit(
+      repository: repository,
+      pubkey: _pubkey,
+      confirmationSignIn: confirmationSignIn,
+      readConfirmationAccess: readAccess,
+    );
+
+    // A verifier whose Twitter sign-in needs Divine Confirmation.
+    void gateTwitter() {
+      when(() => repository.supportedPlatforms()).thenAnswer(
+        (_) async => const [
+          VerifierPlatform(key: 'github', label: 'GitHub', supported: true),
+          VerifierPlatform(
+            key: 'twitter',
+            label: 'Twitter / X',
+            supported: true,
+            signinRequires: SigninRequirement.confirmation,
+          ),
+        ],
+      );
+    }
+
+    // The dashboard showing a Twitter sign-in that lapsed for want of
+    // Divine Confirmation.
+    VerifyState readyState() => VerifyState(
+      status: VerifyStatus.ready,
+      claims: const [_github, _twitter],
+      verifiedKeys: const {'github:octocat'},
+      platforms: const [
+        VerifierPlatform(
+          key: 'twitter',
+          label: 'Twitter / X',
+          supported: true,
+          signinRequires: SigninRequirement.confirmation,
+        ),
+      ],
+      signInCodes: const {'twitter:jack': SignInLapse.needsConfirmation},
+    );
+
+    group('refreshQuietly', () {
+      blocTest<VerifyCubit, VerifyState>(
+        'never emits loading, re-reads the verdicts and skips the '
+        'remembered access answer',
+        build: () => build(confirmationSignIn: true),
+        seed: readyState,
+        setUp: () {
+          when(() => repository.claimsWithVerdicts(any())).thenAnswer(
+            (_) async => const IdentityClaimStatus(
+              claims: [_github, _twitter],
+              verifiedKeys: {'github:octocat', 'twitter:jack'},
+              verifierReachable: true,
+            ),
+          );
+          accessAnswer = ConfirmationAccess.has;
+        },
+        act: (cubit) => cubit.refreshQuietly(),
+        expect: () => [
+          isA<VerifyState>()
+              .having((s) => s.status, 'status', VerifyStatus.ready)
+              .having(
+                (s) => s.verifiedKeys,
+                'verified',
+                contains('twitter:jack'),
+              )
+              .having((s) => s.signInCodes, 'codes', isEmpty),
+          isA<VerifyState>()
+              .having((s) => s.status, 'status', VerifyStatus.ready)
+              .having(
+                (s) => s.confirmationAccess,
+                'access',
+                ConfirmationAccess.has,
+              ),
+        ],
+        verify: (_) => expect(accessReads, equals([true])),
+      );
+
+      blocTest<VerifyCubit, VerifyState>(
+        'keeps the list, reports the failure and still asks for access '
+        'afresh when the read fails',
+        build: () => build(confirmationSignIn: true),
+        seed: readyState,
+        setUp: () {
+          when(
+            () => repository.claimsWithVerdicts(any()),
+          ).thenThrow(StateError('relay down'));
+          accessAnswer = ConfirmationAccess.has;
+        },
+        errors: () => [isA<StateError>()],
+        act: (cubit) => cubit.refreshQuietly(),
+        expect: () => [
+          isA<VerifyState>()
+              .having((s) => s.status, 'status', VerifyStatus.ready)
+              .having((s) => s.claims, 'claims', [_github, _twitter])
+              .having((s) => s.error, 'error', VerifyError.load)
+              .having((s) => s.errorAttempt, 'attempt', 1),
+          isA<VerifyState>()
+              .having((s) => s.claims, 'claims', [_github, _twitter])
+              .having(
+                (s) => s.confirmationAccess,
+                'access',
+                ConfirmationAccess.has,
+              ),
+        ],
+        verify: (_) => expect(accessReads, equals([true])),
+      );
+
+      test('an unlink made while it runs stays unlinked', () async {
+        final cubit = build(confirmationSignIn: true)..emit(readyState());
+        addTearDown(cubit.close);
+        final read = Completer<IdentityClaimStatus>();
+        when(
+          () => repository.claimsWithVerdicts(any()),
+        ).thenAnswer((_) => read.future);
+
+        final refresh = cubit.refreshQuietly();
+        await cubit.removeClaim(_twitter);
+        // The slow read started before the unlink and still has the row.
+        read.complete(
+          const IdentityClaimStatus(
+            claims: [_github, _twitter],
+            verifiedKeys: {'github:octocat', 'twitter:jack'},
+            verifierReachable: true,
+          ),
+        );
+        await refresh;
+
+        expect(cubit.state.claims, equals([_github]));
+        expect(cubit.state.verifiedKeys, isNot(contains('twitter:jack')));
+        // The access answer is still taken afresh.
+        expect(accessReads, equals([true]));
+      });
+
+      test('a link made while it runs stays linked', () async {
+        const mastodon = IdentityClaim(
+          pubkey: _pubkey,
+          platform: 'mastodon',
+          identity: 'alice',
+          proof: 'https://mastodon.social/@alice/1',
+        );
+        final cubit = build(confirmationSignIn: true)..emit(readyState());
+        addTearDown(cubit.close);
+        final read = Completer<IdentityClaimStatus>();
+        when(
+          () => repository.claimsWithVerdicts(any()),
+        ).thenAnswer((_) => read.future);
+
+        final refresh = cubit.refreshQuietly();
+        cubit.claimLinked(mastodon);
+        expect(cubit.state.claims, contains(mastodon));
+        // The slow read started before the link and has no row for it.
+        read.complete(
+          const IdentityClaimStatus(
+            claims: [_github, _twitter],
+            verifiedKeys: {'github:octocat', 'twitter:jack'},
+            verifierReachable: true,
+          ),
+        );
+        await refresh;
+
+        expect(cubit.state.claims, equals([_github, _twitter, mastodon]));
+        expect(cubit.state.isVerified(mastodon), isTrue);
+        // The access answer is still taken afresh.
+        expect(accessReads, equals([true]));
+      });
+
+      blocTest<VerifyCubit, VerifyState>(
+        'loads in full when the list is not showing yet',
+        build: () => build(confirmationSignIn: true),
+        act: (cubit) => cubit.refreshQuietly(),
+        expect: () => [
+          isA<VerifyState>().having(
+            (s) => s.status,
+            'status',
+            VerifyStatus.loading,
+          ),
+          isA<VerifyState>().having(
+            (s) => s.status,
+            'status',
+            VerifyStatus.ready,
+          ),
+        ],
+      );
+    });
+
+    group('rereadConfirmationAccess', () {
+      blocTest<VerifyCubit, VerifyState>(
+        'takes the remembered answer without asking afresh',
+        build: () => build(confirmationSignIn: true),
+        seed: readyState,
+        setUp: () => accessAnswer = ConfirmationAccess.has,
+        act: (cubit) => cubit.rereadConfirmationAccess(),
+        expect: () => [
+          isA<VerifyState>().having(
+            (s) => s.confirmationAccess,
+            'access',
+            ConfirmationAccess.has,
+          ),
+        ],
+        verify: (_) => expect(accessReads, equals([false])),
+      );
+    });
 
     group('load', () {
+      blocTest<VerifyCubit, VerifyState>(
+        'reads access when the flag is on and a platform requires it',
+        build: () => build(confirmationSignIn: true),
+        setUp: gateTwitter,
+        act: (cubit) => cubit.load(),
+        verify: (cubit) {
+          expect(accessReads, equals([false]));
+          expect(cubit.state.confirmationAccess, ConfirmationAccess.hasNot);
+        },
+      );
+
+      blocTest<VerifyCubit, VerifyState>(
+        'makes no access read with the flag off',
+        build: build,
+        setUp: gateTwitter,
+        act: (cubit) => cubit.load(),
+        verify: (cubit) {
+          expect(accessReads, isEmpty);
+          expect(cubit.state.confirmationAccess, ConfirmationAccess.unknown);
+        },
+      );
+
+      blocTest<VerifyCubit, VerifyState>(
+        'makes no access read when no platform requires it',
+        build: () => build(confirmationSignIn: true),
+        act: (cubit) => cubit.load(),
+        verify: (_) => expect(accessReads, isEmpty),
+      );
+
+      blocTest<VerifyCubit, VerifyState>(
+        'skips the remembered answer when asked to refresh it',
+        build: () => build(confirmationSignIn: true),
+        setUp: gateTwitter,
+        act: (cubit) => cubit.load(refreshAccess: true),
+        verify: (_) => expect(accessReads, equals([true])),
+      );
+
+      blocTest<VerifyCubit, VerifyState>(
+        'makes no access read for a proof-only platform that names a '
+        'requirement',
+        build: () => build(confirmationSignIn: true),
+        setUp: () {
+          when(() => repository.supportedPlatforms()).thenAnswer(
+            (_) async => const [
+              VerifierPlatform(
+                key: 'github',
+                label: 'GitHub',
+                supported: true,
+                oauth: false,
+                signinRequires: SigninRequirement.confirmation,
+              ),
+            ],
+          );
+        },
+        act: (cubit) => cubit.load(),
+        verify: (_) => expect(accessReads, isEmpty),
+      );
+
+      blocTest<VerifyCubit, VerifyState>(
+        'counts a reader that throws as unknown',
+        build: () => build(confirmationSignIn: true),
+        setUp: () {
+          gateTwitter();
+          accessError = StateError('signer unavailable');
+        },
+        act: (cubit) => cubit.load(),
+        verify: (cubit) {
+          expect(accessReads, hasLength(1));
+          expect(cubit.state.status, VerifyStatus.ready);
+          expect(cubit.state.confirmationAccess, ConfirmationAccess.unknown);
+        },
+      );
+
+      test('shows the list before the access read answers', () async {
+        gateTwitter();
+        final access = Completer<ConfirmationAccess>();
+        final cubit = VerifyCubit(
+          repository: repository,
+          pubkey: _pubkey,
+          confirmationSignIn: true,
+          readConfirmationAccess: ({bool refresh = false}) => access.future,
+        );
+        addTearDown(cubit.close);
+
+        final load = cubit.load();
+        await pumpEventQueue();
+
+        // The access read is still out, and the list is already showing.
+        expect(cubit.state.status, VerifyStatus.ready);
+        expect(cubit.state.claims, equals([_github, _twitter]));
+        expect(cubit.state.confirmationAccess, ConfirmationAccess.unknown);
+
+        access.complete(ConfirmationAccess.hasNot);
+        await load;
+
+        expect(cubit.state.status, VerifyStatus.ready);
+        expect(cubit.state.confirmationAccess, ConfirmationAccess.hasNot);
+      });
+
       blocTest<VerifyCubit, VerifyState>(
         'emits the claims with their verdicts',
         build: build,
@@ -603,6 +919,81 @@ void main() {
   });
 
   group(VerifyState, () {
+    group('canRenewConfirmation', () {
+      VerifyState state({
+        Set<String> verifiedKeys = const {},
+        Map<String, SignInLapse> signInCodes = const {
+          'twitter:jack': SignInLapse.needsConfirmation,
+        },
+        String? removingKey,
+      }) => VerifyState(
+        status: VerifyStatus.ready,
+        claims: const [_twitter],
+        verifiedKeys: verifiedKeys,
+        platforms: _platforms,
+        signInCodes: signInCodes,
+        removingKey: removingKey,
+      );
+
+      bool renews(VerifyState s, {bool flagOn = true, bool oauth = true}) =>
+          s.canRenewConfirmation(
+            _twitter,
+            flagOn: flagOn,
+            oauthUsable: oauth,
+          );
+
+      test('offers it on a link that needs Confirmation', () {
+        expect(renews(state()), isTrue);
+      });
+
+      test('does not offer it with the flag off', () {
+        expect(renews(state(), flagOn: false), isFalse);
+      });
+
+      test('does not offer it where sign-in is hidden', () {
+        expect(renews(state(), oauth: false), isFalse);
+      });
+
+      test('does not offer it for any other reason the sign-in lapsed', () {
+        for (final lapse in [
+          SignInLapse.expired,
+          SignInLapse.accountChanged,
+        ]) {
+          expect(
+            renews(state(signInCodes: {'twitter:jack': lapse})),
+            isFalse,
+            reason: lapse.name,
+          );
+        }
+        expect(renews(state(signInCodes: const {})), isFalse);
+      });
+
+      test('does not offer it on a link that verifies', () {
+        expect(renews(state(verifiedKeys: const {'twitter:jack'})), isFalse);
+      });
+
+      test('does not offer it while an unlink is in flight', () {
+        expect(renews(state(removingKey: 'github:octocat')), isFalse);
+      });
+
+      test('does not offer it on a proof-post link', () {
+        const proofPost = IdentityClaim(
+          pubkey: _pubkey,
+          platform: 'twitter',
+          identity: 'jack',
+          proof: 'abc',
+        );
+        expect(
+          state().canRenewConfirmation(
+            proofPost,
+            flagOn: true,
+            oauthUsable: true,
+          ),
+          isFalse,
+        );
+      });
+    });
+
     group('canSignInAgain', () {
       VerifyState state({
         Set<String> verifiedKeys = const {'github:octocat'},
@@ -630,6 +1021,16 @@ void main() {
             signInCodes: const {'twitter:jack': SignInLapse.accountChanged},
           ).canSignInAgain(_twitter),
           isTrue,
+        );
+      });
+
+      test('does not offer it on a link that needs Confirmation', () {
+        // Renewing restores that link; signing in again would not.
+        expect(
+          state(
+            signInCodes: const {'twitter:jack': SignInLapse.needsConfirmation},
+          ).canSignInAgain(_twitter),
+          isFalse,
         );
       });
 

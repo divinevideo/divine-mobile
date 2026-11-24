@@ -1,6 +1,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/hashtag_search/hashtag_search_bloc.dart';
@@ -9,6 +10,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
+import 'package:openvine/screens/search_results/widgets/search_tag_chip.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
 import 'package:openvine/screens/search_results/widgets/tags_section.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -264,6 +266,64 @@ void main() {
           equals('Failed to open hashtag feed: Exception: route failed'),
         );
       });
+    });
+
+    group('taps before the next frame', () {
+      testWidgets(
+        'a second tap on a tag opens no second feed',
+        (tester) async {
+          when(() => mockBloc.state).thenReturn(
+            const HashtagSearchState(
+              status: HashtagSearchStatus.success,
+              query: 'fun',
+              results: ['funny'],
+            ),
+          );
+          final router = GoRouter(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (context, state) => Scaffold(
+                  body: BlocProvider<HashtagSearchBloc>.value(
+                    value: mockBloc,
+                    child: const CustomScrollView(
+                      slivers: [TagsSection(showAll: true)],
+                    ),
+                  ),
+                ),
+              ),
+              GoRoute(
+                path: HashtagScreenRouter.path,
+                builder: (context, state) => Scaffold(
+                  body: Text('opened ${state.pathParameters['tag']}'),
+                ),
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+          await tester.pumpWidget(
+            MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.byType(SearchTagChip));
+          await tester.tap(find.byType(SearchTagChip));
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text('opened funny', skipOffstage: false),
+            findsOneWidget,
+          );
+        },
+        variant: const TargetPlatformVariant({
+          TargetPlatform.android,
+          TargetPlatform.iOS,
+        }),
+      );
     });
   });
 }

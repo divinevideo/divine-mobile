@@ -25,6 +25,7 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
+import 'package:openvine/observability/video_generation_trace.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/clip_mask_render.dart';
 import 'package:openvine/services/video_editor/clip_normalization_models.dart';
@@ -184,6 +185,9 @@ class VideoEditorRenderService {
   /// The cover is taken from the rendered video at [coverTimestamp], or at
   /// the default moment when none is given.
   ///
+  /// [recorder] receives how long each step took and what came out, for the
+  /// `video_generation` trace. The test override does not report to it.
+  ///
   /// Throws:
   ///
   /// * [VideoRenderFailedException] if the render produced no video — the
@@ -197,6 +201,7 @@ class VideoEditorRenderService {
     CompleteParameters? parameters,
     String? taskId,
     Duration? coverTimestamp,
+    VideoGenerationRecorder? recorder,
   }) {
     final render = _renderVideoToClip(
       clips: clips,
@@ -204,6 +209,7 @@ class VideoEditorRenderService {
       parameters: parameters,
       taskId: taskId,
       coverTimestamp: coverTimestamp,
+      recorder: recorder,
     );
     final effectiveTaskId = taskId ?? (clips.isEmpty ? null : clips.first.id);
 
@@ -224,6 +230,7 @@ class VideoEditorRenderService {
     CompleteParameters? parameters,
     String? taskId,
     Duration? coverTimestamp,
+    VideoGenerationRecorder? recorder,
   }) async {
     if (renderVideoToClipOverride != null) {
       return renderVideoToClipOverride!(
@@ -271,48 +278,13 @@ class VideoEditorRenderService {
     final intermediateStopMotionPaths = <String>[];
 
     try {
-      final renderClips = <DivineVideoClip>[];
-      var assemblyStep = 0;
-      for (final clip in clips) {
-        if (clip.video == null && clip.isStopMotion) {
-          final assemblyTaskId = '$effectiveTaskId-stop-motion-$assemblyStep';
-          await progressTracker.startAssemblyStep(
-            assemblyTaskId: assemblyTaskId,
-            step: assemblyStep,
-            stepCount: assemblyStepCount,
-          );
-          assemblyStep++;
-          final DivineVideoClip materialized;
-          try {
-            final assembled = await StopMotionRenderService.materialize(
-              clip,
-              taskId: assemblyTaskId,
-            );
-            if (assembled == null) {
-              throw const VideoRenderFailedException(
-                VideoRenderFailureReason.stopMotionAssembly,
-              );
-            }
-            materialized = assembled;
-          } on RenderCanceledException catch (e) {
-            // Detach / cancelActiveNativeTasks during assembly must not land
-            // in the stop_motion_assembly bucket — same incomplete semantics
-            // as a cancelled composite render.
-            throw VideoRenderFailedException(
-              VideoRenderFailureReason.canceled,
-              cause: e,
-            );
-          }
-          final intermediatePath = materialized.video?.file?.path;
-          if (intermediatePath != null) {
-            intermediateStopMotionPaths.add(intermediatePath);
-          }
-          renderClips.add(materialized);
-        } else {
-          renderClips.add(clip);
-        }
-      }
-      await progressTracker.markAssemblyComplete();
+      final renderClips = await StopMotionRenderService.materializeForRender(
+        clips,
+        taskId: effectiveTaskId,
+        progress: progressTracker,
+        assembledPaths: intermediateStopMotionPaths,
+        recorder: recorder,
+      );
 
       Log.debug(
         '🎬 renderVideoToClip: clips=${renderClips.length}, '
@@ -321,19 +293,23 @@ class VideoEditorRenderService {
         category: LogCategory.video,
       );
 
-      final outputPath = await _renderVideoOrThrow(
-        clips: renderClips,
-        aspectRatio: renderClips.first.targetAspectRatio,
-        usePersistentStorage: true,
-        parameters: parameters,
-        taskId: effectiveTaskId,
-        reportEveryFailure: true,
+      final outputPath = await recorder.timed(
+        .render,
+        () => _renderVideoOrThrow(
+          clips: renderClips,
+          aspectRatio: renderClips.first.targetAspectRatio,
+          usePersistentStorage: true,
+          parameters: parameters,
+          taskId: effectiveTaskId,
+          reportEveryFailure: true,
+        ),
       );
 
       await progressTracker.markRenderComplete();
 
-      final metaData = await ProVideoEditor.instance.getMetadata(
-        EditorVideo.file(outputPath),
+      final metaData = await recorder.timed(
+        .metadata,
+        () => ProVideoEditor.instance.getMetadata(EditorVideo.file(outputPath)),
       );
 
       // Generate ProofMode attestation
@@ -345,12 +321,15 @@ class VideoEditorRenderService {
 
       // Signed as an edit of the media its clips came from, never as a fresh
       // capture: footage without a camera proof leaves the video unsigned.
-      final proofData = await proofRenderedVideo(
-        File(outputPath),
-        clips: renderClips,
-        parameters: parameters,
-        editorStateHistory: editorStateHistory,
-        onRecordingsSigned: () => progressTracker.markProofStepComplete(1),
+      final proofData = await recorder.timed(
+        .proof,
+        () => proofRenderedVideo(
+          File(outputPath),
+          clips: renderClips,
+          parameters: parameters,
+          editorStateHistory: editorStateHistory,
+          onRecordingsSigned: () => progressTracker.markProofStepComplete(1),
+        ),
       );
       progressTracker.markProofStepComplete(2);
       final String? proofManifestJson = proofData != null
@@ -378,11 +357,17 @@ class VideoEditorRenderService {
       // thumbnailTimestamp and would land on a different frame than the cover
       // it just showed. Falling back to the source thumbnail keeps a render
       // whose extraction failed from losing its preview entirely.
-      final cover = await VideoThumbnailService.extractThumbnail(
-        videoPath: outputPath,
-        targetTimestamp:
-            coverTimestamp ?? VideoEditorConstants.defaultThumbnailExtractTime,
+      final cover = await recorder.timed(
+        .cover,
+        () => VideoThumbnailService.extractThumbnail(
+          videoPath: outputPath,
+          targetTimestamp:
+              coverTimestamp ??
+              VideoEditorConstants.defaultThumbnailExtractTime,
+        ),
       );
+
+      await recorder.recordOutputOf(outputPath, metaData);
 
       final clip = DivineVideoClip(
         id: 'clip-${DateTime.now().millisecondsSinceEpoch}',
@@ -1004,13 +989,14 @@ class VideoEditorRenderService {
         timelineMap: timelineMap,
       ),
       effects: effects,
-      // The looks after the effects editor's other effects, and Adjust after
-      // all of them, as in the preview; see looksLast and
+      // The effects that read earlier frames first, the looks after the
+      // effects editor's other effects, and Adjust after all of them, as in
+      // the preview; see customVideoEffectsInRenderOrder and
       // adjustVideoEffectsOf for why. Lightning keeps clear of the flashes of
       // the built-in effects.
       customEffects: customVideoEffectsOnOutput(
         [
-          ...looksLast(
+          ...customVideoEffectsInRenderOrder(
             parameters?.customVideoEffectsFromCompleteMeta ?? const [],
           ),
           ...adjustVideoEffectsOf(parameters?.tuneAdjustments ?? const []),
@@ -1183,7 +1169,7 @@ class VideoEditorRenderService {
   /// censor [ImageLayer] built from the layer itself, see [censorImageLayer];
   /// it hides whatever is composited before it, in its place in the list.
   /// An audio visualizer is drawn by the export from [audioEnergies], see
-  /// [audioVisualizerImageLayer].
+  /// [audioVisualizerImageLayer]. A layer [isLeftOutOfFrames] is left out.
   ///
   /// Public because the detached-clip pass builds the layers that go over its
   /// composition with the same geometry, and both have to agree exactly.
@@ -1204,8 +1190,9 @@ class VideoEditorRenderService {
     );
     return [
       for (final item in capturedLayers)
-        if (!excludeDetachedClips ||
-            !DetachedClipLayerData.isDetachedClipLayer(item.layer))
+        if ((!excludeDetachedClips ||
+                !DetachedClipLayerData.isDetachedClipLayer(item.layer)) &&
+            !isLeftOutOfFrames(item.layer))
           ..._imageLayersFor(
             item,
             bodySize: bodySize,

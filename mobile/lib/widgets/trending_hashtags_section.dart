@@ -5,9 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/router/routes/search_routes.dart';
-import 'package:openvine/utils/detached_future.dart';
-import 'package:unified_logger/unified_logger.dart';
+import 'package:openvine/router/navigation/hashtag_feed_navigation.dart';
 
 /// A section displaying trending hashtags in a horizontal scrollable list.
 ///
@@ -135,11 +133,10 @@ class _HashtagChipList extends StatelessWidget {
               if (onHashtagTap != null) {
                 onHashtagTap!(hashtag);
               } else {
-                runDetached(
-                  HashtagRouteData(tag: hashtag).push<void>(context),
-                  'open hashtag feed',
+                openHashtagFeed(
+                  context,
+                  hashtag,
                   logName: 'TrendingHashtagsSection',
-                  category: LogCategory.ui,
                 );
               }
             },

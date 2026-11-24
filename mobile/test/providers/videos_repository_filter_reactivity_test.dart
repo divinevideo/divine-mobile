@@ -4,17 +4,24 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/features/feature_flags/services/build_configuration.dart';
+import 'package:openvine/features/feature_flags/services/feature_flag_service.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_version_provider.dart';
+import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
+import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -22,6 +29,10 @@ import 'package:videos_repository/videos_repository.dart';
 class _MockVideoLocalStorage extends Mock implements VideoLocalStorage {}
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
+
+class _MockSeenVideosService extends Mock implements SeenVideosService {}
 
 class _MockSharedPreferences extends Mock implements SharedPreferences {}
 
@@ -69,6 +80,7 @@ class _StaticDivineHostFilterVersion extends DivineHostFilterVersion {
 void main() {
   setUpAll(() {
     registerFallbackValue(_FakeVideoEvent());
+    registerFallbackValue(Duration.zero);
   });
   group('videosRepositoryProvider filter reactivity (#4755)', () {
     late _MockSharedPreferences mockPrefs;
@@ -110,6 +122,99 @@ void main() {
       when(() => mockDivineHost.showDivineHostedOnly).thenReturn(false);
       when(() => mockAspectRatio.shouldHideVideo(any())).thenReturn(false);
     });
+
+    test(
+      'Home follows seen-filter changes without restarting the session',
+      () async {
+        final flags = FeatureFlagService(mockPrefs, const BuildConfiguration());
+        addTearDown(flags.dispose);
+        await flags.setFlag(FeatureFlag.clientSeenFiltering, true);
+        final seen = _MockSeenVideosService();
+        when(seen.initializeForFeed).thenAnswer((_) async {});
+        final watchedId = '1' * 64;
+        final freshId = '2' * 64;
+        when(
+          () => seen.wasSeenRecently(any(), within: any(named: 'within')),
+        ).thenAnswer(
+          (invocation) => invocation.positionalArguments.first == watchedId,
+        );
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+        when(
+          () => api.getHomeFeed(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer(
+          (_) async => HomeFeedResponse(
+            videos: [
+              for (final id in [watchedId, freshId])
+                VideoStats(
+                  id: id,
+                  pubkey: 'a' * 64,
+                  createdAt: DateTime.utc(2026),
+                  kind: 34236,
+                  dTag: 'video-$id',
+                  title: 'Test',
+                  thumbnail: 'https://example.com/thumb.jpg',
+                  videoUrl: 'https://example.com/$id.mp4',
+                  reactions: 0,
+                  comments: 0,
+                  reposts: 0,
+                  engagementScore: 0,
+                ),
+            ],
+            rawBody: '{}',
+          ),
+        );
+        when(() => api.getBulkVideoStats(any())).thenAnswer(
+          (_) async => const BulkVideoStatsResponse(stats: {}),
+        );
+        final provenance = _MockProvenanceFilter();
+        when(() => provenance.showVerifiedOnly).thenReturn(false);
+        final container = ProviderContainer(
+          overrides: [
+            appVersionProvider.overrideWithValue('test'),
+            sharedPreferencesProvider.overrideWithValue(mockPrefs),
+            nostrServiceProvider.overrideWithValue(mockNostrClient),
+            contentFilterServiceProvider.overrideWithValue(mockContentFilter),
+            feedAspectRatioPreferenceServiceProvider.overrideWithValue(
+              mockAspectRatio,
+            ),
+            contentFilterVersionProvider.overrideWith(
+              _StaticContentFilterVersion.new,
+            ),
+            divineHostFilterVersionProvider.overrideWith(
+              _StaticDivineHostFilterVersion.new,
+            ),
+            divineHostFilterServiceProvider.overrideWithValue(mockDivineHost),
+            videoProvenanceFilterServiceProvider.overrideWithValue(provenance),
+            featureFlagServiceProvider.overrideWithValue(flags),
+            seenVideosServiceProvider.overrideWithValue(seen),
+            funnelcakeApiClientProvider.overrideWithValue(api),
+          ],
+        );
+        addTearDown(container.dispose);
+        Future<List<String>> homeIds() async {
+          final page = await container
+              .read(videosRepositoryProvider)
+              .getHomeFeedVideos(
+                authors: ['a' * 64],
+                userPubkey: 'd' * 64,
+              );
+          return page.videos.map((video) => video.id).toList();
+        }
+
+        expect(await homeIds(), [freshId]);
+        await flags.setFlag(FeatureFlag.clientSeenFiltering, false);
+        await container.pump();
+        expect(await homeIds(), [watchedId, freshId]);
+        await flags.setFlag(FeatureFlag.clientSeenFiltering, true);
+        await container.pump();
+        expect(await homeIds(), [freshId]);
+      },
+    );
 
     test(
       'repository and service follow the current owner for off-host media',
@@ -179,6 +284,56 @@ void main() {
         expect(service.shouldHideVideo(video), isTrue);
       },
     );
+
+    // Home is fed over REST, so the repository's replacement stream is the
+    // only way a republish from this device reaches its tile.
+    test('forwards every video the service reports republished', () async {
+      final provenance = _MockProvenanceFilter();
+      when(() => provenance.showVerifiedOnly).thenReturn(false);
+      final container = ProviderContainer(
+        overrides: [
+          appVersionProvider.overrideWithValue('test'),
+          videoLocalStorageProvider.overrideWithValue(_MockVideoLocalStorage()),
+          sharedPreferencesProvider.overrideWithValue(mockPrefs),
+          nostrServiceProvider.overrideWithValue(mockNostrClient),
+          contentFilterServiceProvider.overrideWithValue(mockContentFilter),
+          feedAspectRatioPreferenceServiceProvider.overrideWithValue(
+            mockAspectRatio,
+          ),
+          contentFilterVersionProvider.overrideWith(
+            _StaticContentFilterVersion.new,
+          ),
+          divineHostFilterVersionProvider.overrideWith(
+            _StaticDivineHostFilterVersion.new,
+          ),
+          divineHostFilterServiceProvider.overrideWithValue(mockDivineHost),
+          videoProvenanceFilterServiceProvider.overrideWithValue(provenance),
+        ],
+      );
+      addTearDown(container.dispose);
+      final repository = container.read(videosRepositoryProvider);
+      final replaced = <String>[];
+      final subscription = repository.replacedVideos.listen(
+        (video) => replaced.add(video.id),
+      );
+      addTearDown(subscription.cancel);
+
+      container
+          .read(videoEventServiceProvider)
+          .updateVideoEvent(
+            VideoEvent(
+              id: 'e' * 64,
+              pubkey: 'a' * 64,
+              createdAt: 1770000000,
+              timestamp: DateTime.utc(2026),
+              content: '',
+              videoUrl: 'https://example.com/video.mp4',
+            ),
+          );
+      await pumpEventQueue();
+
+      expect(replaced, ['e' * 64]);
+    });
 
     for (final provenance in [false, true]) {
       test(

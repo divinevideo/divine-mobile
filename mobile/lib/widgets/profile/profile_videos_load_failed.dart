@@ -23,11 +23,19 @@ import 'package:unified_logger/unified_logger.dart';
 /// The top padding is smaller than the empty state's 64 because that would
 /// push the subtitle below the fold in the short tab too.
 class ProfileVideosLoadFailed extends StatefulWidget {
-  const ProfileVideosLoadFailed({required this.isOwnProfile, super.key});
+  const ProfileVideosLoadFailed({
+    required this.isOwnProfile,
+    this.scrollViewKey,
+    super.key,
+  });
 
   /// Whether the viewer owns the profile, which picks "your videos" or
   /// "videos" in the title.
   final bool isOwnProfile;
+
+  /// Passed to the [ProfileTabEmptyState] this builds; see
+  /// [ProfileTabEmptyState.scrollViewKey].
+  final GlobalKey? scrollViewKey;
 
   @override
   State<ProfileVideosLoadFailed> createState() =>
@@ -65,6 +73,7 @@ class _ProfileVideosLoadFailedState extends State<ProfileVideosLoadFailed> {
       (ProfileFeedCubit cubit) => cubit.state.isRefreshing,
     );
     return ProfileTabEmptyState(
+      scrollViewKey: widget.scrollViewKey,
       title: _title(context),
       subtitle: context.l10n.profileVideosLoadFailedSubtitle,
       padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),

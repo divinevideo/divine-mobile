@@ -20,6 +20,8 @@ extension VideoMetadataUpdateErrorL10n on AppLocalizations {
         return videoUpdateErrorCouldNotSign;
       case VideoMetadataUpdateError.publishRejected:
         return videoUpdateErrorPublishRejected;
+      case VideoMetadataUpdateError.concurrentEditsOverLimit:
+        return videoUpdateErrorConcurrentEditsOverLimit;
       case VideoMetadataUpdateError.generic:
         return videoUpdateErrorGeneric;
     }

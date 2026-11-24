@@ -86,15 +86,16 @@ Future<SubtitleFetchResult> subtitleTrack(
       ? service.effectiveTargetLanguage(effectiveAppLocale)
       : null;
 
-  if (!wantsTranslation &&
-      textTrackContent != null &&
-      textTrackContent.isNotEmpty) {
-    final embedded = SubtitleFetchResult.fromBody(textTrackContent);
-    if (embedded?.status == SubtitleFetchStatus.available) return embedded!;
-  }
   final refs = textTrackRefs.isNotEmpty
       ? textTrackRefs
       : [if (textTrackRef != null && textTrackRef.isNotEmpty) textTrackRef];
+  if (!wantsTranslation &&
+      textTrackContent != null &&
+      textTrackContent.isNotEmpty &&
+      embeddedCaptionsMatchRef(textTrackContent, refs.firstOrNull)) {
+    final embedded = SubtitleFetchResult.fromBody(textTrackContent);
+    if (embedded?.status == SubtitleFetchStatus.available) return embedded!;
+  }
   return fetchSubtitleCues(
     httpClient: ref.read(subtitleHttpClientProvider),
     nostrClient: ref.read(nostrServiceProvider),

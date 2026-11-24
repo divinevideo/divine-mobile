@@ -46,6 +46,7 @@ forbidden_entitlements = [
     "com.apple.security.cs.disable-executable-page-protection",
     "com.apple.security.cs.allow-unsigned-executable-memory",
     "com.apple.security.cs.disable-library-validation",
+    "com.apple.security.photos.library.add-only",
 ]
 for key in forbidden_entitlements:
     if key in ent:

@@ -255,6 +255,7 @@ void main() {
       String? audioEventId,
       bool canSetReminders = true,
       bool isActive = true,
+      bool isAddYoursSeries = false,
     }) async {
       tester.view.physicalSize = const Size(360, 640);
       tester.view.devicePixelRatio = 1;
@@ -288,6 +289,7 @@ void main() {
                     onOpen: (_, region, _) => opened.add(region),
                     canSetReminders: canSetReminders,
                     isActive: isActive,
+                    isAddYoursSeries: isAddYoursSeries,
                   ),
                 ),
               ],
@@ -502,6 +504,35 @@ void main() {
         await tester.tap(find.text('Ask me anything'), warnIfMissed: false);
         await tester.pump(kDoubleTapTimeout);
         expect(opened, isEmpty);
+      });
+
+      testWidgets('leaves an Add yours only some may answer out of its '
+          'series, and keeps one in the frames', (tester) async {
+        VideoStickerRegion addYours(VideoStickerAudience audience) =>
+            VideoStickerRegion(
+              kind: VideoStickerKind.prompt,
+              target: '',
+              centerX: 0.5,
+              centerY: audience.isRestricted ? 0.3 : 0.7,
+              width: 0.6,
+              height: 0.16,
+              style: audience.isRestricted ? null : 'light',
+              label: audience.isRestricted
+                  ? 'Show your desk\ndesksetup'
+                  : 'Show your car\ncarsetup',
+              audience: audience,
+            );
+        final regions = [
+          addYours(VideoStickerAudience.following),
+          addYours(VideoStickerAudience.everyone),
+        ];
+
+        await pump(tester, regions, isActive: false);
+        expect(find.byType(InteractiveStickerOverlay), findsNWidgets(2));
+
+        await pump(tester, regions, isActive: false, isAddYoursSeries: true);
+        expect(find.byType(InteractiveStickerOverlay), findsOneWidget);
+        expect(find.text('Show your car'), findsOneWidget);
       });
 
       testWidgets('draws the sticker sharp over its area', (tester) async {

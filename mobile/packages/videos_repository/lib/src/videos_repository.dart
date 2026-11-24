@@ -16,6 +16,7 @@ import 'package:videos_repository/src/author_feed_result.dart';
 import 'package:videos_repository/src/badge_video_pager.dart';
 import 'package:videos_repository/src/home_feed_result.dart';
 import 'package:videos_repository/src/in_memory_feed_cache.dart';
+import 'package:videos_repository/src/latest_video_revision.dart';
 import 'package:videos_repository/src/popular_videos_page.dart';
 import 'package:videos_repository/src/profile_video_merge.dart';
 import 'package:videos_repository/src/recommendation_session_seed.dart';
@@ -225,6 +226,7 @@ class VideosRepository {
     BlockedVideoFilter? blockFilter,
     DeletedVideoFilter? deletedFilter,
     this.removedVideoIds = const Stream<String>.empty(),
+    this.replacedVideos = const Stream<VideoEvent>.empty(),
     VideoContentFilter? contentFilter,
     VideoContentFilter? feedShapeFilter,
     VideoWarningLabelsResolver? warningLabelsResolver,
@@ -259,6 +261,10 @@ class VideosRepository {
 
   /// Emits IDs for videos removed by deletion handling.
   final Stream<String> removedVideoIds;
+
+  /// Emits each video its owner republished from this device, so a feed
+  /// holding an older revision can show the new one (#11250).
+  final Stream<VideoEvent> replacedVideos;
 
   final VideoContentFilter? _contentFilter;
   final VideoContentFilter? _feedShapeFilter;
@@ -549,18 +555,13 @@ class VideosRepository {
         response.videos,
         sortByCreatedAt: false,
       );
-      final hydratedVideos = await _hydrateVideosWithBulkStats(videos);
-      final unseenVideos = _withoutSeenVideos(hydratedVideos);
+      final unseenVideos = _withoutSeenVideos(videos);
       if (unseenVideos.isNotEmpty) {
         seenOnlyPages = 0;
-      } else if (hydratedVideos.isNotEmpty) {
+      } else if (videos.isNotEmpty) {
         seenOnlyPages++;
       }
-      _appendUniqueVideos(
-        visible,
-        unseenVideos,
-        seenVideoKeys: seenVideoKeys,
-      );
+      _appendUniqueVideos(visible, unseenVideos, seenVideoKeys: seenVideoKeys);
       // Trust the server's flag rather than the row count: the client drops
       // malformed rows, and a short page would otherwise end the feed early.
       if (!response.hasMore) break;
@@ -581,10 +582,14 @@ class VideosRepository {
       }
     }
 
+    // Hydrate bulk stats once for the surviving unseen videos instead of once
+    // per fetched page (which wasted round-trips on seen-only pages).
+    final hydratedVisible = await _hydrateVideosWithBulkStats(visible);
+
     // Return the over-fetched tail too: the next page resumes after the last
     // fetched page, so trimming it here would skip it for good.
     return _FollowingFetchResult(
-      videos: visible,
+      videos: hydratedVisible,
       pageCount: pageCount,
       nextBefore: nextBefore,
     );
@@ -671,7 +676,13 @@ class VideosRepository {
     final client = _funnelcakeApiClient;
     if (client == null || !client.isAvailable) return null;
     final response = await client.getBulkVideoStats([video.id]);
-    final stats = response.stats[video.id];
+    return _loopCountFromBulkStats(video, response.stats[video.id]);
+  }
+
+  static int? _loopCountFromBulkStats(
+    VideoEvent video,
+    BulkVideoStatsEntry? stats,
+  ) {
     if (stats == null || (stats.loops == null && stats.views == null)) {
       return null;
     }
@@ -684,13 +695,12 @@ class VideosRepository {
     List<VideoEvent> videos, {
     bool replaceInteractionCounts = false,
   }) async {
-    if (videos.isEmpty ||
-        _funnelcakeApiClient == null ||
-        !_funnelcakeApiClient.isAvailable) {
+    final client = _funnelcakeApiClient;
+    if (videos.isEmpty || client == null || !client.isAvailable) {
       return videos;
     }
 
-    final videosNeedingStats = videos
+    final ids = videos
         .where(
           (video) =>
               video.id.isNotEmpty &&
@@ -707,63 +717,76 @@ class VideosRepository {
                   video.nostrCommentCount == null ||
                   video.nostrRepostCount == null),
         )
+        .map((video) => video.id)
         .toList();
-    if (videosNeedingStats.isEmpty) return videos;
+    if (ids.isEmpty) return videos;
 
+    // A failed chunk must leave the other chunks' counts available.
+    const batchSize = 100;
+    final responses = await Future.wait([
+      for (var start = 0; start < ids.length; start += batchSize)
+        _fetchFeedBulkStatsChunk(
+          client,
+          ids.sublist(start, min(start + batchSize, ids.length)),
+        ),
+    ]);
+    final statsById = {for (final stats in responses) ...stats};
+
+    if (statsById.isEmpty) return videos;
+
+    final fetchedAt = DateTime.now().toUtc();
+    return videos.map((video) {
+      final stats = statsById[video.id];
+      if (stats == null) return video;
+
+      final loopCount = _loopCountFromBulkStats(video, stats);
+      return video.copyWith(
+        // Only the archival embedded_loops may seed originalLoops; the
+        // live computed stats.loops would clobber the Vine-era count and
+        // double-count against the views tag in totalLoops.
+        originalLoops: stats.embeddedLoops ?? video.originalLoops,
+        originalLikes: video.originalLikes,
+        originalComments: video.originalComments,
+        originalReposts: video.originalReposts,
+        // Bulk stats are live Nostr engagement counts. Keep archival import
+        // tags in original* and fill only the live fields so display seeds
+        // can add the two sources without double-counting.
+        nostrLikeCount: replaceInteractionCounts
+            ? stats.reactions
+            : video.nostrLikeCount ?? stats.reactions,
+        nostrCommentCount: replaceInteractionCounts
+            ? stats.comments
+            : video.nostrCommentCount ?? stats.comments,
+        nostrRepostCount: replaceInteractionCounts
+            ? stats.reposts
+            : video.nostrRepostCount ?? stats.reposts,
+        rawTags: video.rawTags['views'] == null && stats.views != null
+            ? {...video.rawTags, 'views': stats.views.toString()}
+            : video.rawTags,
+        loopCountSnapshot: loopCount == null
+            ? null
+            : (count: loopCount, fetchedAt: fetchedAt),
+      );
+    }).toList();
+  }
+
+  Future<Map<String, BulkVideoStatsEntry>> _fetchFeedBulkStatsChunk(
+    FunnelcakeApiClient client,
+    List<String> eventIds,
+  ) async {
     try {
-      final statsById = <String, BulkVideoStatsEntry>{};
-      for (var i = 0; i < videosNeedingStats.length; i += 100) {
-        final end = i + 100 > videosNeedingStats.length
-            ? videosNeedingStats.length
-            : i + 100;
-        final chunk = videosNeedingStats.sublist(i, end);
-        final response = await _funnelcakeApiClient.getBulkVideoStats(
-          chunk.map((video) => video.id).toList(),
-        );
-        statsById.addAll(response.stats);
-      }
-
-      if (statsById.isEmpty) return videos;
-
-      return videos.map((video) {
-        final stats = statsById[video.id];
-        if (stats == null) return video;
-
-        return video.copyWith(
-          // Only the archival embedded_loops may seed originalLoops; the
-          // live computed stats.loops would clobber the Vine-era count and
-          // double-count against the views tag in totalLoops.
-          originalLoops: stats.embeddedLoops ?? video.originalLoops,
-          originalLikes: video.originalLikes,
-          originalComments: video.originalComments,
-          originalReposts: video.originalReposts,
-          // Bulk stats are live Nostr engagement counts. Keep archival import
-          // tags in original* and fill only the live fields so display seeds
-          // can add the two sources without double-counting.
-          nostrLikeCount: replaceInteractionCounts
-              ? stats.reactions
-              : video.nostrLikeCount ?? stats.reactions,
-          nostrCommentCount: replaceInteractionCounts
-              ? stats.comments
-              : video.nostrCommentCount ?? stats.comments,
-          nostrRepostCount: replaceInteractionCounts
-              ? stats.reposts
-              : video.nostrRepostCount ?? stats.reposts,
-          rawTags: video.rawTags['views'] == null && stats.views != null
-              ? {...video.rawTags, 'views': stats.views.toString()}
-              : video.rawTags,
-        );
-      }).toList();
+      final response = await client.getBulkVideoStats(eventIds);
+      return response.stats;
     } on Object catch (e, stackTrace) {
       // An account switch disposes the client under a load still in flight
       // (#10291); that failure is expected, not a fault worth an error.
-      if (_funnelcakeApiClient.isDisposed) {
+      if (client.isDisposed) {
         Log.debug(
           'Failed to hydrate home feed videos with bulk stats: $e',
           name: 'VideosRepository',
           category: LogCategory.video,
         );
-        return videos;
+        return const {};
       }
       Log.error(
         'Failed to hydrate home feed videos with bulk stats',
@@ -772,7 +795,7 @@ class VideosRepository {
         error: e,
         stackTrace: stackTrace,
       );
-      return videos;
+      return const {};
     }
   }
 
@@ -1227,10 +1250,7 @@ class VideosRepository {
   }
 
   Future<({List<VideoEvent> videos, int? nextBefore})>
-  _fetchVisibleRecentVideosFromRelays({
-    required int limit,
-    int? until,
-  }) async {
+  _fetchVisibleRecentVideosFromRelays({required int limit, int? until}) async {
     var cursor = until;
     final visible = <VideoEvent>[];
     final seenVideoKeys = <String>{};
@@ -1498,10 +1518,7 @@ class VideosRepository {
         );
 
         final pageVideos = _filterPopularVideosForVariant(
-          await _hydrateVideosWithBulkStats(
-            _transformVideoStats(stats, sortByCreatedAt: false),
-            replaceInteractionCounts: true,
-          ),
+          _transformVideoStats(stats, sortByCreatedAt: false),
           PopularVideosVariant.classic,
         );
 
@@ -1548,11 +1565,17 @@ class VideosRepository {
       );
     }
 
-    collected.shuffle(_random);
+    // Hydrate bulk stats once on the surviving filtered videos rather than
+    // once per fetched page before seen/archive filtering.
+    final hydratedCollected = await _hydrateVideosWithBulkStats(
+      collected,
+      replaceInteractionCounts: true,
+    );
+    hydratedCollected.shuffle(_random);
 
     final hasMore = !exhausted && !failed;
     final result = HomeFeedResult(
-      videos: collected,
+      videos: hydratedCollected,
       paginationCursor: hasMore ? _encodeClassicsOffsetCursor(offset) : null,
       hasMore: hasMore,
     );
@@ -2068,6 +2091,20 @@ class VideosRepository {
     }
   }
 
+  /// [event] as the video this viewer may see, or `null` when it is no
+  /// video or this viewer's blocks, deletions or content filters leave it
+  /// out: the rules [getVideosFromRelaysByAddressableIds] applies to what
+  /// the relays return, for a video event another source handed over.
+  /// [includeFeedShape] works as for [getVideosByAddressableIds].
+  VideoEvent? visibleVideoFromEvent(
+    Event event, {
+    bool includeFeedShape = true,
+  }) => _tryParseAndFilter(
+    event,
+    permissive: true,
+    includeFeedShape: includeFeedShape,
+  );
+
   /// The videos at [addressableIds] as the relays alone hold them, in that
   /// order, and whether every relay answered in full.
   ///
@@ -2102,6 +2139,36 @@ class VideosRepository {
       ],
       complete: reads.every((read) => read.isComplete),
     );
+  }
+
+  /// The newest revision the relays hold at the video [addressableId]
+  /// (`kind:pubkey:d-tag`), for a caller about to replace it.
+  ///
+  /// Reads from every configured relay without the local cache, as required
+  /// before replacing an event (#11250). An incomplete read is retried on
+  /// fresh connections. A refusal or any other missing answer on that retry
+  /// leaves the revision [LatestVideoRevisionUnknown].
+  ///
+  /// Throws [ArgumentError] when [addressableId] is not a Kind 34235 or
+  /// 34236 address.
+  Future<LatestVideoRevision> fetchLatestVideoRevision(
+    String addressableId,
+  ) async {
+    final address = AId.fromString(addressableId);
+    if (address == null ||
+        !NIP71VideoKinds.isAddressableVideoKind(address.kind)) {
+      throw ArgumentError.value(
+        addressableId,
+        'addressableId',
+        'is not a video address',
+      );
+    }
+    final read = await _nostrClient.readCurrentVersion(
+      kind: address.kind,
+      pubkey: address.pubkey,
+      dTag: address.dTag,
+    );
+    return LatestVideoRevision.fromCurrentVersion(read);
   }
 
   /// The video addresses among [addressableIds], in their order: Kind 34236
@@ -2546,6 +2613,18 @@ class VideosRepository {
       if (processed != null) out.add(processed);
     }
     return out;
+  }
+
+  /// Reapplies content and seen-video filtering to a persisted Home window.
+  ///
+  /// Waits for history hydration before serving cached For You, Following,
+  /// or Classics videos. New and profile feeds retain watched videos and
+  /// should use [applyContentPreferences] instead.
+  Future<List<VideoEvent>> applyHomeFeedPreferences(
+    List<VideoEvent> videos,
+  ) async {
+    await _seenVideoLookup?.ensureInitialized();
+    return _withoutSeenVideos(applyContentPreferences(videos));
   }
 
   /// Transforms raw Nostr events to VideoEvents and filters invalid ones.
@@ -3184,20 +3263,17 @@ class VideosRepository {
         start < authors.length;
         start += _membersFeedRelayFilterAuthors
       )
-        _nostrClient.queryEventsDetailed(
-          [
-            Filter(
-              kinds: [_videoKind],
-              authors: authors
-                  .skip(start)
-                  .take(_membersFeedRelayFilterAuthors)
-                  .toList(),
-              limit: limit,
-              until: until,
-            ),
-          ],
-          requireAllRelaysSettled: true,
-        ),
+        _nostrClient.queryEventsDetailed([
+          Filter(
+            kinds: [_videoKind],
+            authors: authors
+                .skip(start)
+                .take(_membersFeedRelayFilterAuthors)
+                .toList(),
+            limit: limit,
+            until: until,
+          ),
+        ], requireAllRelaysSettled: true),
     ]);
     final events = <Event>[];
     for (final read in reads) {

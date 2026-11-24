@@ -436,7 +436,6 @@ dependencies:
   flutter_staggered_grid_view: ^0.7.0
   qr_flutter: ^4.1.0
   android_intent_plus: ^6.0.0
-  pointer_interceptor: ^0.10.1+2
   volume_controller: ^3.4.4
   meta: ^1.18.0
   battery_plus: ^7.1.2
@@ -595,7 +594,9 @@ flutter:
     - shaders/light_leak_transition.frag
     - shaders/light_rays.frag
     - shaders/lightning.frag
+    - shaders/long_exposure.frag
     - shaders/look.frag
+    - shaders/motion_only.frag
     - shaders/neon_edges.frag
     - shaders/night_vision.frag
     - shaders/paint.frag
@@ -612,6 +613,8 @@ flutter:
     - shaders/swirl.frag
     - shaders/thermal.frag
     - shaders/tilt_shift.frag
+    - shaders/time_split.frag
+    - shaders/time_warp.frag
     - shaders/tunnel.frag
     - shaders/window_light.frag
     - shaders/x_ray.frag
@@ -644,6 +647,10 @@ flutter:
           weight: 400
         - asset: assets/fonts/Inter-SemiBold.ttf
           weight: 600
+    - family: ChivoMono
+      fonts:
+        - asset: assets/fonts/ChivoMono-Light.ttf
+          weight: 300
   #   - family: Schyler
   #     fonts:
   #       - asset: fonts/Schyler-Regular.ttf

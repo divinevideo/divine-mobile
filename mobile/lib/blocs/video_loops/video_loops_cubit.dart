@@ -50,21 +50,44 @@ class VideoLoopsState extends Equatable {
 /// the server cannot identify which local reports its snapshot includes.
 /// Adding pending loops to every snapshot would count those reports twice.
 class VideoLoopsCubit extends Cubit<VideoLoopsState> {
+  /// How long a seeded or previously fetched loop count stays fresh before
+  /// reactivation triggers another server lookup.
+  static const defaultStaleAfter = Duration(minutes: 5);
+
   VideoLoopsCubit({
     required VideoEvent video,
     required VideosRepository videosRepository,
+    Duration staleAfter = defaultStaleAfter,
+    DateTime Function()? clock,
   }) : _video = video,
        _videosRepository = videosRepository,
-       super(
-         VideoLoopsState(
-           count: video.hasLoopMetadata ? video.totalLoops : null,
-         ),
-       );
+       _staleAfter = staleAfter,
+       _clock = clock ?? DateTime.now,
+       _lastSyncedAt = video.loopCountSnapshot?.fetchedAt,
+       super(VideoLoopsState(count: _seedCount(video)));
 
   final VideoEvent _video;
   final VideosRepository _videosRepository;
+  final Duration _staleAfter;
+  final DateTime Function() _clock;
+  DateTime? _lastSyncedAt;
 
-  /// Starts a fresh read on playback and invalidates it on pause or cover.
+  static int? _seedCount(VideoEvent video) {
+    final snapshot = video.loopCountSnapshot;
+    if (snapshot != null) return math.max(snapshot.count, video.totalLoops);
+    return video.hasLoopMetadata ? video.totalLoops : null;
+  }
+
+  bool get _needsRefresh {
+    final lastSyncedAt = _lastSyncedAt;
+    if (state.count == null || lastSyncedAt == null) return true;
+    final age = _clock().difference(lastSyncedAt);
+    return age.isNegative || age >= _staleAfter;
+  }
+
+  /// Marks playback active and refreshes unless a server count fetched within
+  /// the stale window is known; invalidates any in-flight refresh on pause or
+  /// cover.
   void setActive(bool active) {
     if (isClosed || active == state.isActive) return;
     emit(
@@ -74,7 +97,7 @@ class VideoLoopsCubit extends Cubit<VideoLoopsState> {
         generation: state.generation + 1,
       ),
     );
-    if (active) unawaited(refresh());
+    if (active && _needsRefresh) unawaited(refresh());
   }
 
   /// Immediately reflects a completed playthrough reported by the player.
@@ -91,6 +114,7 @@ class VideoLoopsCubit extends Cubit<VideoLoopsState> {
     try {
       final count = await _videosRepository.fetchLoopCount(_video);
       if (isClosed || generation != state.generation) return;
+      if (count != null) _lastSyncedAt = _clock();
       emit(
         state.copyWith(
           count: count == null ? null : math.max(state.count ?? 0, count),
@@ -99,8 +123,7 @@ class VideoLoopsCubit extends Cubit<VideoLoopsState> {
       );
     } on Object catch (error, stackTrace) {
       if (isClosed || generation != state.generation) return;
-      // Playback and optimistic counts remain usable offline. The next tick
-      // retries without an overlapping request or a reset to zero.
+      // Keep the optimistic count while offline and retry on reactivation.
       emit(state.copyWith(isRefreshing: false));
       addError(error, stackTrace);
     }

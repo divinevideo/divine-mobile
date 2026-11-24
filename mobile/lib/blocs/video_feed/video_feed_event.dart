@@ -205,6 +205,16 @@ final class VideoFeedEnrichmentReady extends VideoFeedEvent {
   List<Object?> get props => [source, enrichedVideos, sourceIds];
 }
 
+/// Fetches creator profiles independently of the feed load.
+final class _VideoFeedCreatorProfilesRequested extends VideoFeedEvent {
+  const _VideoFeedCreatorProfilesRequested(this.videos);
+
+  final List<VideoEvent> videos;
+
+  @override
+  List<Object?> get props => [videos];
+}
+
 /// A user was blocked or the blocklist changed.
 ///
 /// When [blockedPubkey] is provided, the handler removes that user's videos
@@ -271,6 +281,19 @@ final class VideoFeedVideoRemoved extends VideoFeedEvent {
 
   @override
   List<Object?> get props => [videoId, removalGeneration];
+}
+
+/// A video its owner republished from this device, announced on
+/// [VideosRepository.replacedVideos], to show in place of an older revision
+/// the feed holds (#11250).
+final class VideoFeedVideoReplaced extends VideoFeedEvent {
+  const VideoFeedVideoReplaced(this.video);
+
+  /// The republished revision.
+  final VideoEvent video;
+
+  @override
+  List<Object?> get props => [video];
 }
 
 /// Independent Classics queue changed after request-only feedback.

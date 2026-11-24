@@ -12,6 +12,7 @@ export 'src/bug_report_data.dart';
 export 'src/bulk_profiles_response.dart';
 export 'src/bulk_video_stats_entry.dart';
 export 'src/bulk_video_stats_response.dart';
+export 'src/caption_text_track.dart';
 export 'src/classic_recommendations_request.dart';
 export 'src/collaborator_status.dart';
 export 'src/curated_list.dart';

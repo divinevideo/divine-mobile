@@ -230,5 +230,57 @@ void main() {
 
       expect(copy.textTrackLang, equals('ja'));
     });
+
+    group('of a track that carries no captions', () {
+      List<String> track(String ref, String type, String language) => [
+        'text-track',
+        ref,
+        'wss://relay.divine.video',
+        type,
+        language,
+      ];
+
+      test('leaves it out of the refs playback falls back through', () {
+        final event = Event(
+          testPubkey,
+          34236,
+          [
+            ['d', 'my-vine-id'],
+            track('https://media.divine.video/en', 'captions', 'en'),
+            track('https://media.divine.video/chapters', 'chapters', 'en'),
+            track('https://media.divine.video/es', 'subtitles', 'es'),
+            ['text-track', 'https://media.divine.video/untyped'],
+          ],
+          'content',
+        );
+
+        final video = VideoEvent.fromNostrEvent(event);
+
+        expect(video.textTrackRefs, [
+          'https://media.divine.video/en',
+          'https://media.divine.video/es',
+          'https://media.divine.video/untyped',
+        ]);
+      });
+
+      test('takes neither the ref nor the language from it when it comes '
+          'first', () {
+        final event = Event(
+          testPubkey,
+          34236,
+          [
+            ['d', 'my-vine-id'],
+            track('https://media.divine.video/chapters', 'chapters', 'fr'),
+            track('https://media.divine.video/en', 'captions', 'en'),
+          ],
+          'content',
+        );
+
+        final video = VideoEvent.fromNostrEvent(event);
+
+        expect(video.textTrackRef, 'https://media.divine.video/en');
+        expect(video.textTrackLang, 'en');
+      });
+    });
   });
 }

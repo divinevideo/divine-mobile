@@ -455,6 +455,100 @@ void main() {
           isNull,
         );
       });
+
+      test('reads who may answer a prompt or replies sticker', () {
+        for (final kind in ['prompt', 'replies']) {
+          final label = kind == 'prompt'
+              ? 'Show your desk\ndesksetup'
+              : 'Reply with a video';
+          final tag = voteTag(kind, '', label)..[7] = '';
+
+          expect(
+            VideoStickerRegion.fromTag([...tag, 'following'])?.audience,
+            equals(VideoStickerAudience.following),
+            reason: kind,
+          );
+          expect(
+            VideoStickerRegion.fromTag([...tag, 'creator'])?.audience,
+            equals(VideoStickerAudience.creator),
+            reason: kind,
+          );
+          expect(
+            VideoStickerRegion.fromTag(voteTag(kind, '', label))?.audience,
+            equals(VideoStickerAudience.everyone),
+            reason: kind,
+          );
+        }
+      });
+
+      test('drops a sticker restricted in a way it does not know', () {
+        final tag = voteTag('replies', '', 'Reply with a video');
+
+        expect(VideoStickerRegion.fromTag([...tag, 'closeFriends']), isNull);
+      });
+
+      test('ignores an audience on a sticker answered otherwise', () {
+        final region = VideoStickerRegion.fromTag([
+          ...voteTag('question', '', 'Ask me anything'),
+          'creator',
+        ]);
+
+        expect(region?.audience, equals(VideoStickerAudience.everyone));
+      });
+    });
+
+    group('audience', () {
+      test('publishes who may answer after the text, without a style', () {
+        const region = VideoStickerRegion(
+          kind: VideoStickerKind.replies,
+          target: '',
+          centerX: 0.5,
+          centerY: 0.5,
+          width: 0.4,
+          height: 0.3,
+          label: 'Reply with a video',
+          audience: VideoStickerAudience.following,
+        );
+
+        expect(
+          region.toTag(),
+          equals([
+            'sticker',
+            'replies',
+            '',
+            '0.5 0.5 0.4 0.3',
+            '0',
+            '',
+            '',
+            '',
+            'Reply with a video',
+            'following',
+          ]),
+        );
+        expect(VideoStickerRegion.fromTag(region.toTag()), equals(region));
+        expect(
+          region.withTarget('').audience,
+          equals(VideoStickerAudience.following),
+        );
+      });
+
+      test('admits the owner, and for following who they follow', () {
+        const owner = _pubkey;
+        const friend =
+            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+        const stranger =
+            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+
+        bool admits(VideoStickerAudience audience, String pubkey) =>
+            audience.admits(pubkey, owner: owner, ownerFollows: {friend});
+
+        expect(admits(VideoStickerAudience.everyone, stranger), isTrue);
+        expect(admits(VideoStickerAudience.following, owner), isTrue);
+        expect(admits(VideoStickerAudience.following, friend), isTrue);
+        expect(admits(VideoStickerAudience.following, stranger), isFalse);
+        expect(admits(VideoStickerAudience.creator, owner), isTrue);
+        expect(admits(VideoStickerAudience.creator, friend), isFalse);
+      });
     });
 
     group('VideoStickerKind', () {

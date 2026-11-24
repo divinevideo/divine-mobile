@@ -10,6 +10,8 @@ import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
 import 'package:openvine/state/video_feed_state.dart';
+import 'package:videos_repository/videos_repository.dart'
+    show isNewerVideoRevision, mergeRepublishedVideo;
 
 /// Provider to hold the explore tab's current video list.
 /// Set by ExploreScreen when entering feed mode and consumed by
@@ -24,14 +26,21 @@ final exploreTabVideoUpdateListenerProvider = Provider<void>((ref) {
   final videoEventService = ref.watch(videoEventServiceProvider);
 
   final unregister = videoEventService.addVideoUpdateListener((updated) {
+    final address = updated.addressableId;
     final currentVideos = ref.read(exploreTabVideosProvider);
-    if (currentVideos != null) {
-      final updatedList = currentVideos.map((v) {
-        if (v.stableId == updated.stableId && v.pubkey == updated.pubkey) {
-          return updated;
-        }
-        return v;
-      }).toList();
+    if (address == null || currentVideos == null) return;
+
+    List<VideoEvent>? updatedList;
+    for (final (index, video) in currentVideos.indexed) {
+      if (video.addressableId == address &&
+          isNewerVideoRevision(updated, video)) {
+        (updatedList ??= [...currentVideos])[index] = mergeRepublishedVideo(
+          video,
+          updated,
+        );
+      }
+    }
+    if (updatedList != null) {
       ref.read(exploreTabVideosProvider.notifier).state = updatedList;
     }
   });

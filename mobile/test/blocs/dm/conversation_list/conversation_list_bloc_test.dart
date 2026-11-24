@@ -4155,6 +4155,29 @@ void main() {
       expect(bloc.state, equals(before));
     });
 
+    // The inbox forwards a new repository in the same frame its re-key closes
+    // the old bloc, so the event can run after close(). Mid-search is the
+    // worst case: the handler would also add an event to the closed bloc.
+    test('ignores a repository handed over just before close', () async {
+      _stubStreams(mockDmRepository, accepted: conversations());
+      final bloc = createBloc(withProfiles: false);
+      await load(bloc);
+      bloc.add(const ConversationListSearchQueryChanged('pizza'));
+      await bloc.stream
+          .firstWhere((s) => s.searchQuery == 'pizza')
+          .timeout(settleTimeout);
+      final incoming = _MockProfileRepository();
+      when(
+        incoming.watchVanishedPubkeys,
+      ).thenAnswer((_) => Stream.value(const <String>{}));
+
+      bloc.add(ConversationListProfileRepositoryChanged(incoming));
+      await bloc.close();
+      await pumpEventQueue();
+
+      verifyNever(incoming.watchVanishedPubkeys);
+    });
+
     test('matches counterparty display name via ProfileRepository', () async {
       _stubStreams(mockDmRepository, accepted: conversations());
       when(

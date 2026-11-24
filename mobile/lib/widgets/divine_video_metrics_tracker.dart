@@ -340,7 +340,6 @@ class _DivineVideoMetricsTrackerState
     if (startedAt != null) _watchTotal += now.difference(startedAt);
     _playIntervalStartedAt = now;
     _reportWatchSegment(widget.video, _lastKnownDuration);
-    unawaited(widget.loopCounts?.refresh());
   }
 
   /// Flush the watch/loop delta since the last flush as an end-phase event.

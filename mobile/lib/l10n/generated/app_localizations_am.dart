@@ -2082,6 +2082,14 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoStickerAddYoursButton => 'የእርስዎ ተራ';
 
   @override
+  String get videoStickerAddYoursWatchSeries => 'ተከታታዩን ይመልከቱ';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'ተከታታዩን ይመልከቱ፦ $prompt';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4366,6 +4374,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'ማስተላለፊያው ማዘመኛውን አልተቀበለም። ትንሽ ቆይተህ እንደገና ሞክር።';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'ይህ ቪዲዮ በሌላ መሣሪያ ላይ ተቀይሯል፤ አሁን በጣም ብዙ መለያዎች ወይም ተባባሪዎች አሉት። እንደገና ከፍተው ጥቂቶቹን ያስወግዱ።';
+
+  @override
   String get videoUpdateErrorGeneric => 'ይህን ቪዲዮ ማዘመን አልተቻለም። እንደገና ሞክር።';
 
   @override
@@ -4454,6 +4466,18 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get soundsNoSoundsFoundDescription => 'የተለየ የፍለጋ ቃል ይሞክሩ';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ድምፆች ተገኝተዋል',
+      one: '$count ድምፅ ተገኝቷል',
+      zero: 'ምንም ድምፆች አልተገኙም',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'ወደ ድምፆች ተቀመጠ';
@@ -9185,6 +9209,21 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectEcho => 'ማሚቶ';
 
   @override
+  String get videoEditorEffectTimeSplit => 'የጊዜ ክፍፍል';
+
+  @override
+  String get videoEditorEffectLongExposure => 'ረጅም ተጋላጭነት';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'እንቅስቃሴ ብቻ';
+
+  @override
+  String get videoEditorEffectStutter => 'መንተባተብ';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'የጊዜ መጣመም';
+
+  @override
   String get videoEditorEffectFisheye => 'ፊሽአይ';
 
   @override
@@ -9386,6 +9425,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'እንቅስቃሴ';
 
   @override
+  String get videoEditorEffectCategoryTime => 'ጊዜ';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'ቅንጣቶች';
 
   @override
@@ -9491,6 +9533,14 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል።';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'አንድ የጊዜ ኢፌክት በአንድ ጊዜ። ሁለቱ አብረው ሲሆኑ ከኤክስፖርት በኋላ የተለየ ይመስላሉ፣ ስለዚህ ሌላውን እዚህ ተክተነዋል።';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'አንድ የጊዜ ኢፌክት በአንድ ጊዜ። ሁለቱ አብረው ሲሆኑ ከኤክስፖርት በኋላ የተለየ ይመስላሉ።';
 
   @override
   String get videoEditorEffectsOnBeat => 'ከምቱ ጋር';
@@ -11543,6 +11593,34 @@ class AppLocalizationsAm extends AppLocalizations {
       'ለዚህ ቪዲዮ በቪዲዮ ምላሽ የሰጡትን ያሳያል። ተመልካቾች ምላሾቹን ለማየት ይነኩታል።';
 
   @override
+  String get videoEditorSocialStickerAudienceTitle => 'ማን መመለስ ይችላል';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'ሁሉም';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'ጓደኞች';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'እኔ ብቻ';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'የሚከተሏቸው ሰዎች ብቻ ሊሳተፉ ይችላሉ። ሌሎች ሁሉ አንድ ሰው ከተሳተፈ በኋላ ተለጣፊውን ያያሉ።';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'ተለጣፊው የሚያሳየው እርስዎ ከሚከተሏቸው ሰዎች የመጡ የቪዲዮ ምላሾችን ብቻ ነው። ሌሎች ሁሉ ከእነሱ አንዱ ምላሽ ከሰጠ በኋላ ያዩታል።';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'እርስዎ ብቻ መሳተፍ ይችላሉ። እርስዎ እስኪሳተፉ ድረስ ሌላ ማንም ተለጣፊውን አያይም።';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'ተለጣፊው የሚያሳየው የእርስዎን የቪዲዮ ምላሾች ብቻ ነው። እርስዎ ምላሽ እስኪሰጡ ድረስ ሌላ ማንም አያየውም።';
+
+  @override
   String get videoEditorInteractiveCardAreaHint =>
       'ተመልካቾች መንካት እንዲችሉ ይህ ተለጣፊ በዚህ ሳጥን ውስጥ ይቆያል';
 
@@ -13280,6 +13358,21 @@ class AppLocalizationsAm extends AppLocalizations {
   String get devOptionsProtectedMinorClearedToast => 'የተጠበቀ-ታዳጊ ሽፋን ጸድቷል';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
   String get commentsRecordVideoButtonLabel => 'የቪዲዮ አስተያየት ቅረጽ';
 
   @override
@@ -14298,6 +14391,65 @@ class AppLocalizationsAm extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'የ$platform መለያ $identity ግንኙነት አቋርጥ';
   }
@@ -14329,7 +14481,26 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'አንድ ንክኪ';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -14440,6 +14611,18 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'ተረጋግጧል፣ ግን ማንኛውም ሪሌይ ዝማኔውን አልተቀበለም። እንደገና ሞክር።';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>

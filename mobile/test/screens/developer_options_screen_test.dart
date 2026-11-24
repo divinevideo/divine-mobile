@@ -250,6 +250,81 @@ void main() {
     });
   });
 
+  group('Divine Confirmation access override', () {
+    late bool previousHitTestWarningShouldBeFatal;
+
+    setUp(() {
+      previousHitTestWarningShouldBeFatal =
+          WidgetController.hitTestWarningShouldBeFatal;
+      WidgetController.hitTestWarningShouldBeFatal = true;
+    });
+
+    tearDown(() {
+      WidgetController.hitTestWarningShouldBeFatal =
+          previousHitTestWarningShouldBeFatal;
+    });
+
+    // Neighbouring rows can sit just outside the viewport, built but
+    // offstage, so they are found without skipping offstage widgets.
+    bool tileSelected(WidgetTester tester, String title) => tester
+        .widget<ListTile>(
+          find.widgetWithText(ListTile, title, skipOffstage: false),
+        )
+        .selected;
+
+    testWidgets('choosing "Has not" stores the override', (tester) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final prefs = await mockPrefs();
+      await pumpScreen(tester, prefs);
+
+      await tapTile(tester, l10n.devOptionsConfirmationAccessHasNot);
+
+      expect(prefs.getString('confirmation_access_override'), 'hasNot');
+      expect(
+        tileSelected(tester, l10n.devOptionsConfirmationAccessHasNot),
+        isTrue,
+      );
+      expect(
+        tileSelected(tester, l10n.devOptionsConfirmationAccessReal),
+        isFalse,
+      );
+      final title = find.text(l10n.devOptionsConfirmationAccessTitle);
+      await scrollUntilTappable(tester, title, -300);
+      expect(title, findsOneWidget);
+    });
+
+    testWidgets('choosing "Real answer" clears the override', (tester) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final prefs = await mockPrefs();
+      await prefs.setString('confirmation_access_override', 'unknown');
+      await pumpScreen(tester, prefs);
+
+      await scrollUntilTappable(
+        tester,
+        find.widgetWithText(ListTile, l10n.devOptionsConfirmationAccessUnknown),
+        300,
+      );
+      expect(
+        tileSelected(tester, l10n.devOptionsConfirmationAccessUnknown),
+        isTrue,
+      );
+      // "Real answer" sits above the row just scrolled to.
+      final realTile = find.widgetWithText(
+        ListTile,
+        l10n.devOptionsConfirmationAccessReal,
+      );
+      await scrollUntilTappable(tester, realTile, -300);
+      await tester.tap(realTile);
+      await tester.pumpAndSettle();
+
+      expect(prefs.containsKey('confirmation_access_override'), isFalse);
+      expect(
+        tileSelected(tester, l10n.devOptionsConfirmationAccessReal),
+        isTrue,
+      );
+    });
+  });
+
   group('protected-minor simulation (#5721)', () {
     late bool previousHitTestWarningShouldBeFatal;
 

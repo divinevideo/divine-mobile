@@ -61,13 +61,13 @@ import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
-import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
 import 'package:openvine/repositories/sticker_repository.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/library_screen.dart';
+import 'package:openvine/screens/video_editor/editor_camera_return.dart';
 import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_screen.dart';
 import 'package:openvine/screens/video_editor/voice_over_recorder_screen.dart';
 import 'package:openvine/screens/video_editor/voice_over_take_commit.dart';
@@ -78,6 +78,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/utils/path_resolver.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_actions.dart';
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_sheet.dart';
@@ -132,6 +133,7 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
     this.draftId,
     this.fromLibrary = false,
     this.analyticsSession,
+    this.openRequest,
   });
 
   /// Optional draft ID to load an existing draft.
@@ -143,6 +145,9 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
 
   /// Continues the funnel of the reaction that opened this editor.
   final CreationAnalyticsSession? analyticsSession;
+
+  /// When the recorder asked for this editor, timed into `editor_ready`.
+  final EditorOpenRequest? openRequest;
 
   /// Route name for this screen.
   static const routeName = 'video-editor';
@@ -281,6 +286,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         hasDraft: widget.draftId != null,
         fromLibrary: widget.fromLibrary,
       ),
+      openRequest: widget.openRequest,
     );
     _creationAnalyticsTracker = ref.read(creationAnalyticsTrackerProvider);
     if (widget.analyticsSession case final session?) {
@@ -583,7 +589,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   ///
   /// Snapshots the current clip IDs before opening so that any newly recorded
   /// clips can be rolled back if the user cancels (`result != true`).
-  /// On success or cancel, calls [_syncClipsToEditor] to keep the
+  /// On success or cancel, [settleEditorCameraReturn] keeps the
   /// [ClipEditorBloc] in sync.
   Future<void> _openCamera({
     required ClipEditorBloc clipEditorBloc,
@@ -613,77 +619,16 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     if (!mounted) return;
     _comeBackToCall();
 
-    final notifier = ref.read(clipManagerProvider.notifier);
-    if (result != true) {
-      final newClips = notifier.clips
-          .where((c) => !initialIds.contains(c.id))
-          .toList();
-      for (final clip in newClips) {
-        await notifier.removeClipById(clip.id);
-      }
-    } else if (stopMotionTarget != null) {
-      await _insertCapturedStopMotionFrames(
-        target: stopMotionTarget,
-        initialIds: initialIds,
-        playhead: playhead,
-      );
-    }
-
-    _syncClipsToEditor(clipEditorBloc: clipEditorBloc);
-  }
-
-  /// Splices stills captured over a stop-motion composition into its frames
-  /// clip [target] at the [playhead] position, then drops the throwaway clip
-  /// (and its library row) the recorder created for the capture session.
-  Future<void> _insertCapturedStopMotionFrames({
-    required DivineVideoClip target,
-    required Set<String> initialIds,
-    required Duration playhead,
-  }) async {
-    final notifier = ref.read(clipManagerProvider.notifier);
-    final clips = notifier.clips;
-    final added = clips
-        .where((c) => !initialIds.contains(c.id) && c.isStopMotion)
-        .toList();
-    final capturedFrames = [
-      for (final clip in added) ...?clip.stopMotionFrames,
-    ];
-    if (capturedFrames.isEmpty) return;
-
-    final targetFrames = target.stopMotionFrames ?? const [];
-    // Fresh captures arrive stretched to fill a second on their own
-    // ([StopMotionFrameOps.initialHold]) — one still added from here would
-    // splice into a long clip at a 1s hold — so the session's global default
-    // is re-applied, both to undo that stretch and to keep the new stills from
-    // drifting from the ones already in the clip.
-    final newFrames = StopMotionFrameOps.setGlobalHold(
-      capturedFrames,
-      StopMotionFrameOps.globalDefaultFramesPerImage(targetFrames),
+    await settleEditorCameraReturn(
+      context,
+      ref,
+      recorded: result == true,
+      initialIds: initialIds,
+      stopMotionTarget: stopMotionTarget,
+      playhead: playhead,
+      clipEditorBloc: clipEditorBloc,
+      editor: () => _editor,
     );
-    final index = StopMotionFrameOps.insertIndexAtPosition(
-      targetFrames,
-      playhead,
-    );
-    final merged = StopMotionFrameOps.clipWithFrames(
-      target,
-      StopMotionFrameOps.insertFramesAt(targetFrames, index, newFrames),
-    );
-
-    final addedIds = added.map((c) => c.id).toSet();
-    notifier.replaceClips([
-      for (final clip in clips)
-        if (clip.id == target.id)
-          merged
-        else if (!addedIds.contains(clip.id))
-          clip,
-    ]);
-
-    // The recorder saved each capture session as its own library set; those
-    // stills now live in [target], so drop the throwaway rows (files kept).
-    final libraryService = ref.read(clipLibraryServiceProvider);
-    for (final id in addedIds) {
-      await libraryService.deleteClipRow(id);
-    }
   }
 
   Future<void> _openClipsEditor({
@@ -779,10 +724,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       category: LogCategory.video,
     );
     clipEditorBloc.add(
-      ClipEditorSplitScreenLayoutInserted(
-        clip: layoutClip,
-        playhead: playhead,
-      ),
+      ClipEditorSplitScreenLayoutInserted(clip: layoutClip, playhead: playhead),
     );
   }
 
@@ -862,33 +804,6 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     });
     if (!mounted) return null;
     return finished;
-  }
-
-  /// Syncs the current clip list from [clipManagerProvider] into the
-  /// [ClipEditorBloc] and appends a history entry to the pro_image_editor.
-  ///
-  /// The camera adds content — clips or stills shot from the editor — so the
-  /// composition can end up longer than the one a sound was clamped to when
-  /// it was added. [VideoEditorExtensions.setLengthenedClipState] carries a
-  /// window that ran to the old end onto the new one (#6401); a window the
-  /// user trimmed short is left alone. The clips picker takes the other
-  /// route: its import lands in the bloc first, and the scaffold's result
-  /// listener commits the same lengthened history entry from there.
-  void _syncClipsToEditor({required ClipEditorBloc clipEditorBloc}) {
-    // Read before the dispatch: this is the composition the audio windows were
-    // last clamped against.
-    final previousClips = clipEditorBloc.state.clips;
-
-    // Sync the updated clip list into the editor BLoC.
-    final updatedClips = ref.read(clipManagerProvider).clips;
-    clipEditorBloc.add(ClipEditorInitialized(updatedClips));
-
-    if (_editor != null) {
-      _editor!.setLengthenedClipState(
-        previousClips: previousClips,
-        clips: updatedClips,
-      );
-    }
   }
 
   /// Opens the sticker picker sheet and adds the selected sticker as a layer.
@@ -1114,6 +1029,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       prompt: addYours.prompt,
       hashtag: addYours.hashtag,
       chainRoot: addYours.chainRoot,
+      audience: addYours.audience,
     );
     if (!sticker.isComplete) return;
     Log.debug(
@@ -1330,10 +1246,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
           captionLayers: [
             for (final cue in cues)
               preserveCaptionLayerTransform(
-                style.buildLayer(
-                  cue,
-                  frameSize: frameSize,
-                ),
+                style.buildLayer(cue, frameSize: frameSize),
                 existingByCueId[cue.id],
               ),
           ],
@@ -1778,8 +1691,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
                 canPop: false,
                 child: ValueListenableBuilder<bool>(
                   valueListenable: _isLoadingDraft,
-                  builder: (_, isLoading, _) =>
-                      VideoEditorScaffold(isLoading: isLoading),
+                  builder: (_, isLoading, _) => ScreenFrameTraceScope(
+                    screen: .editor,
+                    child: VideoEditorScaffold(isLoading: isLoading),
+                  ),
                 ),
               ),
             );

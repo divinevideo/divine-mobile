@@ -16,6 +16,8 @@ import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/utils/collaborator_tags.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 
+import '../helpers/test_pubkeys.dart';
+
 class _MockUploadManager extends Mock implements UploadManager {}
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -44,10 +46,8 @@ void main() {
 
   const testPubkey =
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-  const collaboratorPubkey =
-      'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-  const mentionPubkey =
-      'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+  const collaboratorPubkey = syntheticTestPubkey;
+  const mentionPubkey = syntheticOtherTestPubkey;
   const secondMentionPubkey =
       'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
 

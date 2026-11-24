@@ -75,7 +75,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Future<Iterable<String>> Function()? badgeAuthors,
     Stream<void>? badgeSubscriptionChanges,
     Stream<String>? removedIdsStream,
-    // Rebind only deletion notifications/policy when a same-account service
+    Stream<VideoEvent>? replacedVideosStream,
+    // Rebind video update notifications and policy when a same-account service
     // rebuild replaces the repository. Do not reset feed or playback state.
     Stream<VideosRepository>? removalRepositoryStream,
   }) : _videosRepository = videosRepository,
@@ -143,14 +144,22 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     on<VideoFeedBlocklistChanged>(_onBlocklistChanged);
     on<VideoFeedActiveIndexChanged>(_onActiveIndexChanged);
     on<VideoFeedEnrichmentReady>(_onEnrichmentReady);
+    on<_VideoFeedCreatorProfilesRequested>(_onCreatorProfilesRequested);
     on<VideoFeedTuningSwipeCommitted>(_onTuningSwipeCommitted);
     on<VideoFeedTuningUndoRequested>(_onTuningUndoRequested);
     on<VideoFeedVideoRemoved>(_onVideoRemoved, transformer: sequential());
+    on<VideoFeedVideoReplaced>(_onVideoReplaced, transformer: sequential());
     _watchRemovedVideoIds(
       removedIdsStream ??
           (removalRepositoryStream == null
               ? null
               : videosRepository.removedVideoIds),
+    );
+    _watchReplacedVideos(
+      replacedVideosStream ??
+          (removalRepositoryStream == null
+              ? null
+              : videosRepository.replacedVideos),
     );
     _removalRepositorySubscription = removalRepositoryStream?.listen(
       (repository) {
@@ -164,6 +173,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           keep: (video) => !repository.isVideoKnownDeleted(video),
         );
         _watchRemovedVideoIds(repository.removedVideoIds);
+        _watchReplacedVideos(repository.replacedVideos);
         // Tombstones hydrate before the service is published, and broadcasts
         // do not replay. Reconcile its snapshot as well as future removals.
         for (final video in state.videos) {
@@ -234,6 +244,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   /// without people-list feeds.
   final PeopleListsRepository? _peopleListsRepository;
   final ProfileRepository? _profileRepository;
+  final _pendingCreatorProfilePubkeys = <String>{};
   final ContentBlocklistRepository? _blocklistRepository;
   final String? _userPubkey;
   final bool _serveCachedHomeFeed;
@@ -245,6 +256,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   final Stream<void>? _badgeSubscriptionChanges;
   StreamSubscription<void>? _badgeSubscriptionsSubscription;
   StreamSubscription<String>? _removedIdsSubscription;
+  StreamSubscription<VideoEvent>? _replacedVideosSubscription;
 
   late final _followingFeed = FollowingVideoFeedSession(
     videosRepository: _videosRepository,
@@ -848,6 +860,24 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     );
   }
 
+  /// Follows [replacements], so a video republished from this device shows
+  /// its new revision in place of the one the feed holds (#11250).
+  void _watchReplacedVideos(Stream<VideoEvent>? replacements) {
+    final previous = _replacedVideosSubscription;
+    _replacedVideosSubscription = replacements?.listen((video) {
+      if (_isClosing || isClosed) return;
+      add(VideoFeedVideoReplaced(video));
+    });
+    if (previous != null) {
+      runDetached(
+        previous.cancel(),
+        'cancel the retired Home replacement subscription',
+        logName: 'VideoFeedBloc',
+        category: LogCategory.video,
+      );
+    }
+  }
+
   @override
   Future<void> close() async {
     _isClosing = true;
@@ -859,6 +889,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     final cleanup = <Future<void>?>[
       _removalRepositorySubscription?.cancel(),
       _removedIdsSubscription?.cancel(),
+      _replacedVideosSubscription?.cancel(),
       ..._pendingRemovalCancellations,
       _classicSessionSubscription?.cancel(),
       _classicSession?.dispose(),
@@ -871,6 +902,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     ];
     _removalRepositorySubscription = null;
     _removedIdsSubscription = null;
+    _replacedVideosSubscription = null;
     _followingSubscription = null;
     _curatedListsSubscription = null;
     _followedPeopleListsSubscription = null;
@@ -1220,8 +1252,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
 
       _scheduleNostrEnrichment(source: source, videos: updatedVideos);
 
-      // Batch-fetch profiles for new creators only.
-      await _fetchCreatorProfiles(validNewVideos, source, emit);
+      // Batch-fetch profiles for new creators without blocking pagination.
+      addIfOpen(_VideoFeedCreatorProfilesRequested(validNewVideos));
 
       // The cross-restart cache is written only on a genuine swipe
       // (_onActiveIndexChanged); pagination alone does not move the resume
@@ -1770,6 +1802,54 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     }
   }
 
+  void _onVideoReplaced(
+    VideoFeedVideoReplaced event,
+    Emitter<VideoFeedBlocState> emit,
+  ) {
+    final republished = event.video;
+    final address = republished.addressableId;
+    if (address == null) return;
+    _classicSession?.replaceVideoRevision(republished);
+    final index = state.videos.indexWhere(
+      (video) =>
+          video.addressableId == address &&
+          isNewerVideoRevision(republished, video),
+    );
+    if (index == -1) return;
+
+    final previous = state.videos[index];
+    final merged = mergeRepublishedVideo(previous, republished);
+    final allowed = _removalRepository.applyContentPreferences([merged]);
+    if (allowed.isEmpty) {
+      _onVideoRemoved(VideoFeedVideoRemoved(previous.id), emit);
+      return;
+    }
+    final videos = [...state.videos];
+    videos[index] = allowed.single;
+    final listSources = Map.of(state.videoListSources);
+    final listOnlyIds = {...state.listOnlyVideoIds};
+    if (listSources.remove(previous.id) case final sources?) {
+      listSources[republished.id] = sources;
+    }
+    if (listOnlyIds.remove(previous.id)) listOnlyIds.add(republished.id);
+    emit(
+      state.copyWith(
+        videos: videos,
+        videoListSources: listSources,
+        listOnlyVideoIds: listOnlyIds,
+      ),
+    );
+
+    if (_usesHomeFeedCache(state.source)) {
+      _resumeManager.persistNow(
+        pubkey: _userPubkey,
+        mode: state.source.mode.name,
+        videos: videos,
+        activeIndex: state.currentIndex,
+      );
+    }
+  }
+
   /// Drops late results for removals that were deletions. Block and mute
   /// sweeps share the bus but are reversible, so an unblocked author's video
   /// may come back on a later read.
@@ -1845,11 +1925,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
 
   /// Load videos for the specified mode.
   ///
-  /// On a cache-eligible load ([skipCache] false), serves the persisted home
-  /// feed for the mode instantly — positioned at the user's last-viewed index
-  /// — while fresh data loads in the background. When the fresh result
-  /// arrives it is spliced in *after* the active video so the playing video
-  /// and its next never jump (via [HomeFeedResumeManager]).
+  /// On a cache-eligible load ([skipCache] false), serves the filtered resume
+  /// window before fetching fresh data. [HomeFeedResumeManager] keeps the active
+  /// video and its lookahead when splicing in the fresh result.
   ///
   /// For the home feed, does NOT wait for the follow list to initialize.
   /// Instead, the follow-list stream subscription (set up in [_onStarted])
@@ -1993,15 +2071,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         );
       }
 
-      // Batch-fetch creator profiles to warm the Drift cache.
-      await _fetchCreatorProfiles(validVideos, source, emit);
-      if (!canEmit()) return;
+      // Batch-fetch creator profiles in the background to warm the Drift cache
+      // without delaying resume persistence or blocking subsequent loads.
+      addIfOpen(_VideoFeedCreatorProfilesRequested(validVideos));
 
       // Advance the resume window past the active position so the next cold
       // start opens on the next unseen video — even when the user just
-      // reopens without scrolling. Reads the current list rather than the
-      // spliced local, so a removal that landed during the profile fetch is
-      // not written back.
+      // reopens without scrolling.
       if (_usesHomeFeedCache(source)) {
         _resumeManager.persistNow(
           pubkey: _userPubkey,
@@ -2394,46 +2470,43 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     }
   }
 
-  /// Batch-fetch creator profiles for the given videos.
+  /// Batch-fetch creator profiles for the given videos in the background.
   ///
-  /// Only fetches profiles for pubkeys not already in
-  /// [state.creatorProfiles]. Does not block video display — called
-  /// after videos are already emitted.
-  Future<void> _fetchCreatorProfiles(
-    List<VideoEvent> videos,
-    VideoFeedSource source,
+  /// Runs outside the pagination handler so a slow lookup can't hold its lock.
+  Future<void> _onCreatorProfilesRequested(
+    _VideoFeedCreatorProfilesRequested event,
     Emitter<VideoFeedBlocState> emit,
   ) async {
-    if (_profileRepository == null || videos.isEmpty) return;
+    final repository = _profileRepository;
+    if (repository == null || _isClosing || isClosed) return;
 
-    final newPubkeys = videos
-        .map((v) => v.pubkey)
-        .toSet()
-        .difference(state.creatorProfiles.keys.toSet())
-        .toList();
-
-    if (newPubkeys.isEmpty) return;
+    final pubkeys = <String>[
+      for (final pubkey in event.videos.map((video) => video.pubkey))
+        if (!state.creatorProfiles.containsKey(pubkey) &&
+            _pendingCreatorProfilePubkeys.add(pubkey))
+          pubkey,
+    ];
+    if (pubkeys.isEmpty) return;
 
     try {
-      final profiles = await _profileRepository.fetchBatchProfiles(
-        pubkeys: newPubkeys,
+      final profiles = await repository.fetchBatchProfiles(pubkeys: pubkeys);
+      if (_isClosing || isClosed || emit.isDone || profiles.isEmpty) return;
+      // Creator profiles belong to this account and are shared across sources.
+      emit(
+        state.copyWith(
+          creatorProfiles: {...state.creatorProfiles, ...profiles},
+        ),
       );
-
-      if (!_canEmitForSource(source, emit)) return;
-
-      if (profiles.isNotEmpty) {
-        emit(
-          state.copyWith(
-            creatorProfiles: {...state.creatorProfiles, ...profiles},
-          ),
-        );
-      }
-    } catch (e) {
+    } on Object catch (error, stackTrace) {
       Log.error(
-        'VideoFeedBloc: Failed to batch-fetch creator profiles - $e',
+        'VideoFeedBloc: Failed to batch-fetch creator profiles',
         name: 'VideoFeedBloc',
         category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
       );
+    } finally {
+      _pendingCreatorProfilePubkeys.removeAll(pubkeys);
     }
   }
 }

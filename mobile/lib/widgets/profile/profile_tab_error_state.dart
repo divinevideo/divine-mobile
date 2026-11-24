@@ -14,6 +14,7 @@ class ProfileTabErrorState extends StatelessWidget {
   const ProfileTabErrorState({
     required this.message,
     this.physics = const ClampingScrollPhysics(),
+    this.scrollViewKey,
     super.key,
   });
 
@@ -27,8 +28,14 @@ class ProfileTabErrorState extends StatelessWidget {
   /// a failed tab can still be overscrolled far enough to retry.
   final ScrollPhysics physics;
 
+  /// Key for the wrapping [CustomScrollView].
+  ///
+  /// See `ProfileTabLoadingState.scrollViewKey`.
+  final GlobalKey? scrollViewKey;
+
   @override
   Widget build(BuildContext context) => CustomScrollView(
+    key: scrollViewKey,
     physics: physics,
     slivers: [
       SliverFillRemaining(

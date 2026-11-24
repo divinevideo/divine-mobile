@@ -1688,6 +1688,191 @@ void main() {
       );
     });
 
+    test('openEncryptedConnection configures WAL journal mode, FULL '
+        'synchronous, and MEMORY temp_store and supports restart, '
+        'classification, and salvage', () async {
+      final tempRoot = Directory.systemTemp.createTempSync(
+        'db_client_wal_pragma_test_',
+      );
+      addTearDown(() {
+        if (tempRoot.existsSync()) tempRoot.deleteSync(recursive: true);
+      });
+      final dbPath = p.join(tempRoot.path, 'encrypted_wal.db');
+
+      final db = AppDatabase(
+        openEncryptedConnection(rawKeyHex: validKey, databasePath: dbPath),
+      );
+
+      final journalMode = await db
+          .customSelect('PRAGMA journal_mode;')
+          .getSingle();
+      final synchronous = await db
+          .customSelect('PRAGMA synchronous;')
+          .getSingle();
+      final tempStore = await db.customSelect('PRAGMA temp_store;').getSingle();
+
+      expect(
+        journalMode.read<String>('journal_mode').toLowerCase(),
+        equals('wal'),
+      );
+      expect(synchronous.read<int>('synchronous'), equals(2));
+      expect(tempStore.read<int>('temp_store'), equals(2));
+
+      final salvagePath = p.join(tempRoot.path, 'needs_salvage.db');
+      try {
+        // Copy the checkpointed database before the insert so the new row
+        // can only be recovered from the WAL. A clean close would checkpoint
+        // the insert and hide a recovery path that ignored the WAL.
+        final checkpoint = await db
+            .customSelect('PRAGMA wal_checkpoint(TRUNCATE);')
+            .getSingle();
+        expect(checkpoint.read<int>('busy'), isZero);
+        File(dbPath).copySync(salvagePath);
+        await db.customStatement(
+          'INSERT INTO removed_message_ids '
+          '(owner_pubkey, rumor_id, removed_at) '
+          "VALUES ('owner-1', 'wal-msg-1', 1700000000);",
+        );
+        File('$dbPath-wal').copySync('$salvagePath-wal');
+      } finally {
+        await db.close();
+      }
+
+      // Classification and key verification handle a WAL-mode encrypted DB.
+      expect(
+        await migratePlaintextToEncrypted(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        ),
+        equals(CipherMigrationOutcome.alreadyEncrypted),
+      );
+      expect(
+        await encryptedDatabaseKeyDecrypts(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        ),
+        isTrue,
+      );
+      expect(
+        await encryptedDatabaseOpensWithKey(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        ),
+        isTrue,
+      );
+
+      // Reopen verifies WAL commits survive restart.
+      final reopened = AppDatabase(
+        openEncryptedConnection(rawKeyHex: validKey, databasePath: dbPath),
+      );
+      final restartedRows = await reopened
+          .customSelect(
+            'SELECT rumor_id FROM removed_message_ids '
+            "WHERE rumor_id = 'wal-msg-1';",
+          )
+          .get();
+      expect(restartedRows.map((r) => r.read<String>('rumor_id')), [
+        'wal-msg-1',
+      ]);
+      await reopened.close();
+
+      // Classify and salvage the crash snapshot without an earlier keyed
+      // open that could checkpoint the row into the database file.
+      expect(
+        await migratePlaintextToEncrypted(
+          rawKeyHex: validKey,
+          databasePath: salvagePath,
+        ),
+        equals(CipherMigrationOutcome.alreadyEncrypted),
+      );
+      expect(
+        await salvageCorruptEncryptedDatabase(
+          rawKeyHex: validKey,
+          databasePath: salvagePath,
+        ),
+        isTrue,
+      );
+      final postSalvage = AppDatabase(
+        openEncryptedConnection(rawKeyHex: validKey, databasePath: salvagePath),
+      );
+      addTearDown(postSalvage.close);
+      final salvagedRows = await postSalvage
+          .customSelect(
+            'SELECT rumor_id FROM removed_message_ids '
+            "WHERE rumor_id = 'wal-msg-1';",
+          )
+          .get();
+      expect(salvagedRows.map((r) => r.read<String>('rumor_id')), [
+        'wal-msg-1',
+      ]);
+    });
+
+    test(
+      'configureDatabasePerformancePragmas enables WAL, FULL synchronous, '
+      'and MEMORY temp_store on plaintext databases and migrates cleanly',
+      () async {
+        final tempRoot = Directory.systemTemp.createTempSync(
+          'db_client_plaintext_wal_test_',
+        );
+        addTearDown(() {
+          if (tempRoot.existsSync()) tempRoot.deleteSync(recursive: true);
+        });
+        final dbPath = p.join(tempRoot.path, 'plaintext_wal.db');
+
+        final db = AppDatabase(
+          NativeDatabase.createInBackground(
+            File(dbPath),
+            setup: configureDatabasePerformancePragmas,
+          ),
+        );
+
+        final journalMode = await db
+            .customSelect('PRAGMA journal_mode;')
+            .getSingle();
+        final synchronous = await db
+            .customSelect('PRAGMA synchronous;')
+            .getSingle();
+        final tempStore = await db
+            .customSelect('PRAGMA temp_store;')
+            .getSingle();
+        expect(
+          journalMode.read<String>('journal_mode').toLowerCase(),
+          equals('wal'),
+        );
+        expect(synchronous.read<int>('synchronous'), equals(2));
+        expect(tempStore.read<int>('temp_store'), equals(2));
+
+        await db.customStatement(
+          'INSERT INTO removed_message_ids '
+          '(owner_pubkey, rumor_id, removed_at) '
+          "VALUES ('owner-1', 'plain-wal-1', 1700000000);",
+        );
+        await db.close();
+
+        // Plaintext WAL database migrates cleanly to encrypted storage.
+        expect(
+          await migratePlaintextToEncrypted(
+            rawKeyHex: validKey,
+            databasePath: dbPath,
+          ),
+          equals(CipherMigrationOutcome.migrated),
+        );
+        final encrypted = AppDatabase(
+          openEncryptedConnection(rawKeyHex: validKey, databasePath: dbPath),
+        );
+        addTearDown(encrypted.close);
+        final migratedRows = await encrypted
+            .customSelect(
+              'SELECT rumor_id FROM removed_message_ids '
+              "WHERE rumor_id = 'plain-wal-1';",
+            )
+            .get();
+        expect(migratedRows.map((r) => r.read<String>('rumor_id')), [
+          'plain-wal-1',
+        ]);
+      },
+    );
+
     test(
       'expires a preserved copy the retention window has outlived',
       () async {

@@ -5,6 +5,7 @@
 import 'dart:ui' as ui;
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -63,84 +64,98 @@ Future<void> hideContentWarningsLikeThese({
   );
 }
 
-/// Full-screen content warning overlay with blur for videos with warn labels.
+/// Full-screen content warning overlay for videos with warn labels.
 ///
-/// Shows a blurred backdrop with warning text, matched content labels,
-/// and a "View Anyway" button to reveal the video.
+/// Covers the video with a blurred scrim, or an opaque one where
+/// [useBackdropBlur] is off, with warning text, matched content labels and a
+/// "View Anyway" button to reveal the video.
 class ContentWarningBlurOverlay extends StatelessWidget {
   const ContentWarningBlurOverlay({
     required this.labels,
     required this.onReveal,
     super.key,
     this.onHideSimilar,
+    this.useBackdropBlur = !kIsWeb,
   });
 
   final List<String> labels;
   final VoidCallback onReveal;
   final VoidCallback? onHideSimilar;
 
+  /// Whether to blur the underlying video with a [BackdropFilter].
+  ///
+  /// Defaults to `false` on web, where the filter cannot blur the `<video>`
+  /// platform view and its 30 px blur shader is costly to compile. The scrim
+  /// is then opaque, so nothing shows through.
+  final bool useBackdropBlur;
+
   @override
-  Widget build(BuildContext context) => SizedBox.expand(
-    child: ClipRect(
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: VineTheme.backgroundColor.withValues(alpha: 0.6),
-          ),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const DivineIcon(
-                    icon: DivineIconName.warning,
-                    color: VineTheme.contentWarningAmber,
-                    size: 48,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    context.l10n.contentWarningSensitiveContent,
-                    style: const TextStyle(
-                      color: VineTheme.whiteText,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    labels
-                        .map((l) => humanizeContentLabel(context, l))
-                        .join(', '),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: VineTheme.secondaryText,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  DivineButton(
-                    label: context.l10n.contentWarningViewAnyway,
-                    type: DivineButtonType.tertiary,
-                    onPressed: onReveal,
-                  ),
-                  if (onHideSimilar != null) ...[
-                    const SizedBox(height: 12),
-                    DivineButton(
-                      label: context.l10n.contentWarningHideAllLikeThis,
-                      type: DivineButtonType.ghost,
-                      onPressed: onHideSimilar,
-                    ),
-                  ],
-                ],
+  Widget build(BuildContext context) {
+    final scrim = DecoratedBox(
+      decoration: BoxDecoration(
+        color: useBackdropBlur
+            ? VineTheme.backgroundColor.withValues(alpha: 0.6)
+            : VineTheme.backgroundColor,
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const DivineIcon(
+                icon: DivineIconName.warning,
+                color: VineTheme.contentWarningAmber,
+                size: 48,
               ),
-            ),
+              const SizedBox(height: 16),
+              Text(
+                context.l10n.contentWarningSensitiveContent,
+                style: const TextStyle(
+                  color: VineTheme.whiteText,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                labels.map((l) => humanizeContentLabel(context, l)).join(', '),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: VineTheme.secondaryText,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 24),
+              DivineButton(
+                label: context.l10n.contentWarningViewAnyway,
+                type: DivineButtonType.tertiary,
+                onPressed: onReveal,
+              ),
+              if (onHideSimilar != null) ...[
+                const SizedBox(height: 12),
+                DivineButton(
+                  label: context.l10n.contentWarningHideAllLikeThis,
+                  type: DivineButtonType.ghost,
+                  onPressed: onHideSimilar,
+                ),
+              ],
+            ],
           ),
         ),
       ),
-    ),
-  );
+    );
+    return SizedBox.expand(
+      child: ClipRect(
+        child: useBackdropBlur
+            ? BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                child: scrim,
+              )
+            : scrim,
+      ),
+    );
+  }
 }
 
 /// Convert a NIP-32 content-warning label value to a localized

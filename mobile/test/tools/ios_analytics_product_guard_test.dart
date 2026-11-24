@@ -170,7 +170,11 @@ void main() {
       expect(run([]).exitCode, 2);
     });
 
-    test('scans macOS Contents/ bundle layout and versioned frameworks', () {
+    Directory macosBundle({
+      String executable = 'Divine',
+      List<String> executableStrings = const [],
+      Map<String, List<String>> frameworks = const {},
+    }) {
       final app = Directory(
         '${tmp.path}/${DateTime.now().microsecondsSinceEpoch}/Divine.app',
       )..createSync(recursive: true);
@@ -182,18 +186,38 @@ void main() {
 <plist version="1.0">
 <dict>
   <key>CFBundleExecutable</key>
-  <string>Divine</string>
+  <string>$executable</string>
 </dict>
 </plist>
 ''');
-      File('${app.path}/Contents/MacOS/Divine')
+      File('${app.path}/Contents/MacOS/$executable')
         ..createSync(recursive: true)
-        ..writeAsStringSync(analyticsHost);
-      final fw = Directory(
-        '${app.path}/Contents/Frameworks/GoogleAdsOnDeviceConversion.framework/'
-        'Versions/Current',
-      )..createSync(recursive: true);
-      File('${fw.path}/GoogleAdsOnDeviceConversion').writeAsStringSync(adsHost);
+        ..writeAsStringSync(executableStrings.join('\x00'));
+      frameworks.forEach((name, strings) {
+        final fw = Directory(
+          '${app.path}/Contents/Frameworks/$name.framework/Versions/Current',
+        )..createSync(recursive: true);
+        File('${fw.path}/$name').writeAsStringSync(strings.join('\x00'));
+      });
+      return app;
+    }
+
+    test('passes on macOS Contents/ bundle without ads measurement', () {
+      final app = macosBundle(executableStrings: [analyticsHost]);
+
+      final result = run(['--app', app.path]);
+
+      expect(result.exitCode, 0, reason: '${result.stdout}${result.stderr}');
+      expect(result.stdout, contains('OK [macos_analytics_product]'));
+    });
+
+    test('scans macOS Contents/ bundle layout and versioned frameworks', () {
+      final app = macosBundle(
+        executableStrings: [analyticsHost],
+        frameworks: {
+          'GoogleAdsOnDeviceConversion': [adsHost],
+        },
+      );
 
       final result = run(['--app', app.path]);
 

@@ -6,13 +6,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/verify/confirmation_requirement.dart';
 import 'package:openvine/blocs/verify/verify_connect_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
+import 'package:openvine/features/confirmation/confirmation_access_providers.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/oauth/app_oauth_callback.dart';
 import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/verify/verify_platform_labels.dart';
 import 'package:openvine/utils/clipboard_utils.dart';
@@ -52,6 +57,16 @@ class VerifyConnectPage extends ConsumerWidget {
     // iOS below 17.4 can report a completed OAuth session as a cancel, so the
     // one-tap route is hidden there and the proof post carries the flow.
     final oauthUsable = ref.watch(appOAuthSupportProvider).value ?? false;
+    // Watched for drawing only. The cubit reads the flag once per flow (see
+    // below), so turning it over here changes what is shown, never a sign-in
+    // under way.
+    final confirmationSignIn = ref.watch(
+      isFeatureEnabledProvider(FeatureFlag.confirmationSignIn),
+    );
+    // Gates only the buy buttons: a build no store can bill still says that
+    // linking by signing in needs Divine Confirmation, with a note where the
+    // button would be.
+    final canBuy = ref.watch(supporterStoreBillingAvailableProvider);
 
     if (pubkey == null || pubkey.isEmpty) {
       return _ConnectScaffold(
@@ -87,6 +102,16 @@ class VerifyConnectPage extends ConsumerWidget {
           // A plain Provider whose identity never changes, so it is read
           // rather than watched and stays out of the ValueKey above.
           analytics: ref.read(analyticsEventSinkProvider),
+          // Read once per flow and kept out of the ValueKey: turning the flag
+          // over must not close a cubit holding a sign-in to approve.
+          confirmationSignIn: ref.read(
+            isFeatureEnabledProvider(FeatureFlag.confirmationSignIn),
+          ),
+          // The verifier's reader is the repository's own, and the repository
+          // is in the ValueKey, so an account change (a new repository) makes
+          // a new cubit reading the new account's answer rather than the old
+          // one's remembered answer.
+          readConfirmationAccess: ref.read(confirmationAccessReaderProvider),
         );
         runDetached(
           cubit.loadPlatform(),
@@ -99,18 +124,43 @@ class VerifyConnectPage extends ConsumerWidget {
       child: VerifyConnectView(
         npub: NostrKeyUtils.encodePubKey(pubkey),
         oauthAvailable: oauthUsable,
+        confirmationSignIn: confirmationSignIn,
+        canBuy: canBuy,
       ),
     );
   }
 }
 
+/// What the person picked in the sheet shown when a sign-in is refused for
+/// Divine Confirmation.
+enum _ConfirmationRefusalChoice { getConfirmation, useProof }
+
+/// Opens the Divine Confirmation screen, then asks again whether the user
+/// holds it, skipping the remembered answer, so a purchase made there shows
+/// at once. Reads nothing with the `confirmationSignIn` flag off.
+Future<void> _openConfirmation(
+  BuildContext context,
+  VerifyConnectCubit cubit,
+) async {
+  await const VerifyConfirmationRouteData().push<void>(context);
+  if (cubit.isClosed) return;
+  runDetached(
+    cubit.refreshConfirmationAccess(),
+    'refresh Divine Confirmation access',
+    logName: 'VerifyConnectView',
+    category: LogCategory.auth,
+  );
+}
+
 /// The link form for one platform.
-class VerifyConnectView extends StatelessWidget {
+class VerifyConnectView extends StatefulWidget {
   /// Creates a [VerifyConnectView].
   @visibleForTesting
   const VerifyConnectView({
     required this.npub,
     this.oauthAvailable = true,
+    this.confirmationSignIn = false,
+    this.canBuy = true,
     super.key,
   });
 
@@ -119,6 +169,23 @@ class VerifyConnectView extends StatelessWidget {
 
   /// Whether this platform's OAuth route can complete here.
   final bool oauthAvailable;
+
+  /// The internal `confirmationSignIn` flag. With it off there is no
+  /// Confirmation card, sheet or heading, but a refusal for Confirmation
+  /// still gets its own snackbar, and a refused renewal offers the proof post.
+  final bool confirmationSignIn;
+
+  /// Whether a store can bill this build, so a buy button can be offered.
+  final bool canBuy;
+
+  @override
+  State<VerifyConnectView> createState() => _VerifyConnectViewState();
+}
+
+class _VerifyConnectViewState extends State<VerifyConnectView> {
+  // On the proof section's label, so "Use a proof post" can bring it into
+  // view.
+  final GlobalKey _proofSectionKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -141,7 +208,13 @@ class VerifyConnectView extends StatelessWidget {
         child: _ConnectScaffold(
           title: verifyPlatformLabel(platform.key),
           canLeave: !busy,
-          body: _ConnectForm(npub: npub, oauthAvailable: oauthAvailable),
+          body: _ConnectForm(
+            npub: widget.npub,
+            oauthAvailable: widget.oauthAvailable,
+            confirmationSignIn: widget.confirmationSignIn,
+            canBuy: widget.canBuy,
+            proofSectionKey: _proofSectionKey,
+          ),
         ),
       ),
     );
@@ -181,6 +254,19 @@ class VerifyConnectView extends StatelessWidget {
       return;
     }
     if (error == null) return;
+    // With the flag on there is somewhere to go next, so the refusal asks
+    // rather than tells. With it off there is nowhere to buy, and the
+    // snackbar below says the proof post still works.
+    if (error == VerifyConnectError.confirmationRequired &&
+        widget.confirmationSignIn) {
+      runDetached(
+        _offerConfirmation(context),
+        'offer Divine Confirmation after a refused sign-in',
+        logName: 'VerifyConnectView',
+        category: LogCategory.ui,
+      );
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       DivineSnackbarContainer.snackBar(switch (error) {
         VerifyConnectError.proofRejected => l10n.verifyErrorProofRejected,
@@ -208,8 +294,68 @@ class VerifyConnectView extends StatelessWidget {
         VerifyConnectError.handleRequired => l10n.verifyErrorHandleRequired,
         VerifyConnectError.publishFailed => l10n.verifyErrorPublishFailed,
         VerifyConnectError.linksUnreadable => l10n.verifyErrorLinksUnreadable,
+        VerifyConnectError.confirmationRequired =>
+          l10n.verifyErrorConfirmationRequired,
+        VerifyConnectError.confirmationUnavailable =>
+          l10n.verifyErrorConfirmationUnavailable,
+        VerifyConnectError.confirmationPending =>
+          l10n.verifyErrorConfirmationPending,
       }, error: true),
     );
+  }
+
+  // The sign-in stays while this is up, so it can be approved once
+  // Confirmation is bought without signing in at the platform again.
+  Future<void> _offerConfirmation(BuildContext context) async {
+    final cubit = context.read<VerifyConnectCubit>();
+    final l10n = context.l10n;
+    final canBuy = widget.canBuy;
+    // VineBottomSheet shows on the root navigator, so it is closed there.
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final choice = await VineBottomSheetPrompt.show<_ConfirmationRefusalChoice>(
+      context: context,
+      sticker: DivineStickerName.verified,
+      title: l10n.verifyConfirmationSheetTitle,
+      subtitle: l10n.verifyConfirmationSheetSubtitle,
+      additionalText: canBuy ? null : l10n.verifyConfirmationStoreOnly,
+      primaryButtonText: canBuy ? l10n.verifyGetConfirmation : null,
+      onPrimaryPressed: canBuy
+          ? () => navigator.pop(_ConfirmationRefusalChoice.getConfirmation)
+          : null,
+      secondaryButtonText: l10n.verifyConfirmationSheetUseProof,
+      onSecondaryPressed: () =>
+          navigator.pop(_ConfirmationRefusalChoice.useProof),
+    );
+    if (!mounted || cubit.isClosed) return;
+    switch (choice) {
+      case _ConfirmationRefusalChoice.getConfirmation:
+        await _openConfirmation(this.context, cubit);
+      case _ConfirmationRefusalChoice.useProof:
+        // The kept sign-in holds the proof form closed, and in a renewal it
+        // may be for another handle than the locked one the form shows.
+        cubit.cancelSignIn();
+        // After the frame that opens the form, so the label is laid out
+        // where it ends up.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final label = _proofSectionKey.currentContext;
+          if (label == null || !label.mounted) return;
+          final reduceMotion = MediaQuery.disableAnimationsOf(label);
+          runDetached(
+            Scrollable.ensureVisible(
+              label,
+              duration: reduceMotion
+                  ? Duration.zero
+                  : const Duration(milliseconds: 300),
+            ),
+            'scroll to the proof post',
+            logName: 'VerifyConnectView',
+            category: LogCategory.ui,
+          );
+        });
+      case null:
+        // Dismissed: the sign-in stays to approve or cancel.
+        break;
+    }
   }
 }
 
@@ -246,17 +392,44 @@ class _ConnectScaffold extends StatelessWidget {
 }
 
 class _ConnectForm extends StatelessWidget {
-  const _ConnectForm({required this.npub, required this.oauthAvailable});
+  const _ConnectForm({
+    required this.npub,
+    required this.oauthAvailable,
+    required this.confirmationSignIn,
+    required this.canBuy,
+    required this.proofSectionKey,
+  });
 
   final String npub;
   final bool oauthAvailable;
+  final bool confirmationSignIn;
+  final bool canBuy;
+  final GlobalKey proofSectionKey;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final state = context.watch<VerifyConnectCubit>().state;
-    final showOAuth = state.supportsOAuth && oauthAvailable;
     final signedInAccount = state.signedInAccount;
+    // The card takes the place of the start button only. Access is read
+    // after the screen opens, so it can answer once a sign-in has begun:
+    // the browser's start button and a returned sign-in waiting for approval
+    // stay, since the person is already past the point the card speaks to.
+    final upsell =
+        signedInAccount == null &&
+        state.status != VerifyConnectStatus.authorizing &&
+        showsConfirmationUpsell(
+          required: confirmationSignInRequired(
+            flagOn: confirmationSignIn,
+            platform: state.platform,
+            oauthUsable: oauthAvailable,
+          ),
+          access: state.confirmationAccess,
+        );
+    // The upsell implies sign-in would show here (the rule needs it usable
+    // and offered). Hiding the sign-in block for it lets the Bluesky field
+    // and the proof post below fall back exactly as where sign-in can't run.
+    final showOAuth = state.supportsOAuth && oauthAvailable && !upsell;
     // One link at a time: while a sign-in waits, the person links that
     // account or cancels it first. One already signed carries the links as
     // they were, so a proof linked meanwhile would be dropped once that
@@ -275,6 +448,39 @@ class _ConnectForm extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
+        if (upsell) ...[
+          DivineInfoCard(
+            title: l10n.verifyConfirmationCardTitle,
+            message: l10n.verifyConfirmationCardBody,
+            icon: DivineIconName.sealCheck,
+            footer: canBuy
+                ? DivineButton(
+                    label: l10n.verifyGetConfirmation,
+                    expanded: true,
+                    // Held like the start button it replaces: the screen it
+                    // opens would sit where the listener pops with a claim
+                    // linked meanwhile, so the dashboard would never get it.
+                    onPressed: state.isBusy
+                        ? null
+                        : () => runDetached(
+                            _openConfirmation(
+                              context,
+                              context.read<VerifyConnectCubit>(),
+                            ),
+                            'open Divine Confirmation',
+                            logName: 'VerifyConnectView',
+                            category: LogCategory.ui,
+                          ),
+                  )
+                : Text(
+                    l10n.verifyConfirmationStoreOnly,
+                    style: VineTheme.bodyMediumFont(
+                      color: context.vineColors.onSurfaceVariant,
+                    ),
+                  ),
+          ),
+          const SizedBox(height: 24),
+        ],
         if (showOAuth) ...[
           Text(
             l10n.verifyConnectOauthExplainer(
@@ -359,13 +565,25 @@ class _ConnectForm extends StatelessWidget {
           ],
         ],
         if (showProof) ...[
-          _SectionLabel(l10n.verifyConnectProofTitle),
-          // Bluesky's note says a sign-in above is all it takes, which reads
-          // wrong while the card above still asks to link the account.
+          // With the offer card in place of the sign-in button, the proof post
+          // is the only way in, so its heading says it is always available.
+          _SectionLabel(
+            upsell
+                ? l10n.verifyProofAlwaysAvailable
+                : l10n.verifyConnectProofTitle,
+            key: proofSectionKey,
+          ),
+          // Bluesky's note says a sign-in above is all it takes. That reads
+          // wrong while a sign-in is held (the card still asks to link the
+          // account), so the note is hidden then. It also reads wrong under
+          // the offer card, where there is no sign-in above, so that state
+          // gets the generic note.
           if (!(signedInAccount != null &&
               state.platform.key == 'bluesky')) ...[
             Text(
-              verifyProofExplainer(l10n, state.platform.key),
+              upsell && state.platform.key == 'bluesky'
+                  ? l10n.verifyConnectProofExplainer
+                  : verifyProofExplainer(l10n, state.platform.key),
               style: VineTheme.bodyMediumFont(
                 color: context.vineColors.mutedText,
               ),
@@ -542,7 +760,7 @@ class _NpubCard extends StatelessWidget {
 }
 
 class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
+  const _SectionLabel(this.text, {super.key});
 
   final String text;
 

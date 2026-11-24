@@ -244,22 +244,24 @@ extension VideoEditorExtensions on ProImageEditorState {
     setState(() {});
   }
 
-  /// Cuts other flashing effects out of the window of the effect with [id],
-  /// in place in the current history entry, so the timeline gesture that put
-  /// them on top of each other stays one undo step. Returns whether anything
-  /// was cut; see [withoutFlashingOverlaps].
-  bool separateFlashingVideoEffects(String id) {
-    final separated = withoutFlashingOverlaps(
-      stateManager.videoEffectEntries,
+  /// Cuts the other effects of its [EditorEffectExclusiveGroup] out of the
+  /// window of the effect with [id], in place in the current history entry,
+  /// so the timeline gesture that put them on top of each other stays one
+  /// undo step. Returns the group whose effects were cut, or `null` when
+  /// nothing was; see [withoutExclusiveOverlaps].
+  EditorEffectExclusiveGroup? separateExclusiveVideoEffects(String id) {
+    final effects = stateManager.videoEffectEntries;
+    final separated = withoutExclusiveOverlaps(
+      effects,
       keepId: id,
       createId: () => '${id}_${const Uuid().v4()}',
     );
-    if (separated == null) return false;
+    if (separated == null) return null;
     stateManager.activeMeta[VideoEditorConstants.effectsStateHistoryKey] = [
       for (final effect in separated) effect.toMap(),
     ];
     setState(() {});
-    return true;
+    return effects.firstWhere((effect) => effect.id == id).type.exclusiveGroup;
   }
 
   Map<String, dynamic> _metaWithVideoEffects(List<EditorVideoEffect> effects) {

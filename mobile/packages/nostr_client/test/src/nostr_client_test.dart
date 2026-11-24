@@ -5569,8 +5569,12 @@ void main() {
           final result = await clientWithCache.fetchEventById(eventId);
 
           expect(result, equals(wsEvent));
-          // Should cache the websocket result
-          verify(() => mockNostrEventsDao.upsertEvent(wsEvent)).called(1);
+          // queryEvents persists fetched events via upsertEventsBatch without a
+          // duplicate single-event upsert.
+          verify(
+            () => mockNostrEventsDao.upsertEventsBatch([wsEvent]),
+          ).called(1);
+          verifyNever(() => mockNostrEventsDao.upsertEvent(any()));
         });
       });
 
@@ -5624,8 +5628,12 @@ void main() {
           final result = await clientWithCache.fetchProfile(pubkey);
 
           expect(result, equals(wsProfile));
-          // Should cache the websocket result
-          verify(() => mockNostrEventsDao.upsertEvent(wsProfile)).called(1);
+          // queryEvents persists fetched profiles via upsertEventsBatch without
+          // a duplicate single-event upsert.
+          verify(
+            () => mockNostrEventsDao.upsertEventsBatch([wsProfile]),
+          ).called(1);
+          verifyNever(() => mockNostrEventsDao.upsertEvent(any()));
         });
       });
     });
