@@ -2250,7 +2250,7 @@
   "librarySortVerticalFirst": "Önce dikey",
   "libraryDraftActionShare": "Taslağı paylaş",
   "libraryDraftShareConfirm": "{name} adlı hesaba düzenlenebilir taslak gönderilsin mi?",
-  "libraryDraftShareNotice": "Alıcı kurguyu, metni ve sesi düzenleyip kendi kopyasını yayınlayabilir veya geri gönderebilir.",
+  "libraryDraftShareNotice": "Orijinal klipleri ve düzenleme geçmişini paylaşıyorsun. Alıcı kestiğin kısımları görebilir, kendi kopyasını düzenleyebilir, paylaşabilir veya sana geri gönderebilir.",
   "libraryDraftShareFailed": "Taslak gönderilemedi.",
   "libraryDraftShareTooLarge": "Taslak gönderilemeyecek kadar büyük.",
   "dmSharedDraft": "Paylaşılan taslak",

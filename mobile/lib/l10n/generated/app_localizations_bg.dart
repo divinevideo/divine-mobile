@@ -7248,7 +7248,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'Получателят може да редактира клиповете, текста и звука и да публикува или върне своето копие.';
+      'Изпращаш оригиналните клипове и историята на редакциите. Получателят може да види изрязаните части, да редактира копието си, да го публикува или да ти го върне.';
 
   @override
   String get libraryDraftShareFailed => 'Черновата не можа да се изпрати.';

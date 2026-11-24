@@ -7011,7 +7011,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'ተቀባዩ ቅንጥቦቹን፣ ጽሑፉን እና ድምፁን መቀየር፣ ቅጂውንም ማተም ወይም መልሶ መላክ ይችላል።';
+      'ዋናዎቹ ክሊፖችና የአርትዖት ታሪኩ ይላካሉ። ተቀባዩ የተቆረጡትን ክፍሎች ማየት፣ ቅጂውን ማርትዕ፣ መለጠፍ ወይም መልሶ መላክ ይችላል።';
 
   @override
   String get libraryDraftShareFailed => 'ረቂቁን መላክ አልተቻለም።';

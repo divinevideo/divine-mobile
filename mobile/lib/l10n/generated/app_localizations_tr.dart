@@ -7104,7 +7104,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'Alıcı kurguyu, metni ve sesi düzenleyip kendi kopyasını yayınlayabilir veya geri gönderebilir.';
+      'Orijinal klipleri ve düzenleme geçmişini paylaşıyorsun. Alıcı kestiğin kısımları görebilir, kendi kopyasını düzenleyebilir, paylaşabilir veya sana geri gönderebilir.';
 
   @override
   String get libraryDraftShareFailed => 'Taslak gönderilemedi.';

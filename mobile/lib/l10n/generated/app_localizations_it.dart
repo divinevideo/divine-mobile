@@ -7261,7 +7261,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'Chi la riceve può modificare i tagli, il testo e l’audio, poi pubblicare la propria copia o rimandartela.';
+      'Condividi le clip originali e la cronologia delle modifiche. Chi le riceve può vedere le parti tagliate, modificare la propria copia, pubblicarla o rimandartela.';
 
   @override
   String get libraryDraftShareFailed =>

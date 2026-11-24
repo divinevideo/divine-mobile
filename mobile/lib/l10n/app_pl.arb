@@ -2253,7 +2253,7 @@
   "librarySortVerticalFirst": "Najpierw pionowe",
   "libraryDraftActionShare": "Udostępnij szkic",
   "libraryDraftShareConfirm": "Wysłać edytowalny szkic do {name}?",
-  "libraryDraftShareNotice": "Ta osoba może zmienić cięcia, tekst i dźwięk, a potem opublikować swoją kopię lub Ci ją odesłać.",
+  "libraryDraftShareNotice": "Udostępniasz oryginalne klipy i historię edycji. Osoba, która je otrzyma, zobaczy też wycięte fragmenty. Może edytować swoją kopię, opublikować ją lub odesłać.",
   "libraryDraftShareFailed": "Nie udało się wysłać szkicu.",
   "libraryDraftShareTooLarge": "Szkic jest za duży, żeby go wysłać.",
   "dmSharedDraft": "Udostępniony szkic",

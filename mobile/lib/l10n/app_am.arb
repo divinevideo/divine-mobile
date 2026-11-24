@@ -2776,7 +2776,7 @@
   "libraryDraftActionEdit": "አርትዕ",
   "libraryDraftActionShare": "ረቂቅ አጋራ",
   "libraryDraftShareConfirm": "ሊታረም የሚችል ረቂቅ ለ{name} ይላክ?",
-  "libraryDraftShareNotice": "ተቀባዩ ቅንጥቦቹን፣ ጽሑፉን እና ድምፁን መቀየር፣ ቅጂውንም ማተም ወይም መልሶ መላክ ይችላል።",
+  "libraryDraftShareNotice": "ዋናዎቹ ክሊፖችና የአርትዖት ታሪኩ ይላካሉ። ተቀባዩ የተቆረጡትን ክፍሎች ማየት፣ ቅጂውን ማርትዕ፣ መለጠፍ ወይም መልሶ መላክ ይችላል።",
   "libraryDraftShareFailed": "ረቂቁን መላክ አልተቻለም።",
   "libraryDraftShareTooLarge": "ረቂቁ ለመላክ በጣም ትልቅ ነው።",
   "dmSharedDraft": "የተጋራ ረቂቅ",

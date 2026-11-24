@@ -7177,7 +7177,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'Penerima boleh mengedit potongan, teks dan audio, kemudian menyiarkan salinannya atau menghantarnya semula.';
+      'Anda berkongsi klip asal dan sejarah suntingan. Penerima boleh melihat bahagian yang dipotong, menyunting salinannya, menyiarkannya atau menghantarnya semula.';
 
   @override
   String get libraryDraftShareFailed => 'Draf tidak dapat dihantar.';

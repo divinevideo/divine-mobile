@@ -3512,7 +3512,7 @@
   "libraryDraftActionDuplicate": "Nhân bản",
   "libraryDraftActionShare": "Chia sẻ bản nháp",
   "libraryDraftShareConfirm": "Gửi bản nháp có thể chỉnh sửa cho {name}?",
-  "libraryDraftShareNotice": "Người nhận có thể sửa các đoạn cắt, văn bản và âm thanh, rồi đăng bản sao của họ hoặc gửi lại.",
+  "libraryDraftShareNotice": "Bạn đang chia sẻ các clip gốc và lịch sử chỉnh sửa. Người nhận có thể xem những đoạn bạn đã cắt, chỉnh sửa bản sao của họ, đăng hoặc gửi lại cho bạn.",
   "libraryDraftShareFailed": "Không thể gửi bản nháp.",
   "libraryDraftShareTooLarge": "Bản nháp quá lớn để gửi.",
   "dmSharedDraft": "Bản nháp đã chia sẻ",

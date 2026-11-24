@@ -7093,7 +7093,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'Penerima bisa mengubah potongan, teks, dan audio, lalu memposting salinannya atau mengirimkannya kembali.';
+      'Kamu membagikan klip asli dan riwayat edit. Penerima bisa melihat bagian yang kamu potong, mengedit salinannya, mempostingnya, atau mengirimkannya kembali.';
 
   @override
   String get libraryDraftShareFailed => 'Draf tidak dapat dikirim.';

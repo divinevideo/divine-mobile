@@ -7388,7 +7388,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'వారు కట్స్, టెక్స్ట్, ఆడియో మార్చి తమ కాపీని పోస్ట్ చేయవచ్చు లేదా తిరిగి పంపవచ్చు.';
+      'అసలు క్లిప్‌లు, ఎడిటింగ్ చరిత్ర రెండూ షేర్ అవుతాయి. అందుకున్నవారు మీరు కత్తిరించిన భాగాలను చూడవచ్చు. తమ కాపీని ఎడిట్ చేయవచ్చు, పోస్ట్ చేయవచ్చు లేదా తిరిగి పంపవచ్చు.';
 
   @override
   String get libraryDraftShareFailed => 'డ్రాఫ్ట్ పంపలేకపోయాం.';

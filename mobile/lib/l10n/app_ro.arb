@@ -2253,7 +2253,7 @@
   "librarySortVerticalFirst": "Verticalele mai întâi",
   "libraryDraftActionShare": "Distribuie ciorna",
   "libraryDraftShareConfirm": "Trimiți o ciornă editabilă către {name}?",
-  "libraryDraftShareNotice": "Destinatarul poate modifica montajul, textul și sunetul, apoi își poate publica exemplarul sau ți-l poate trimite înapoi.",
+  "libraryDraftShareNotice": "Trimiți clipurile originale și istoricul editărilor. Cine le primește poate vedea ce ai tăiat, își poate edita copia, o poate publica sau ți-o poate trimite înapoi.",
   "libraryDraftShareFailed": "Ciorna nu a putut fi trimisă.",
   "libraryDraftShareTooLarge": "Ciorna este prea mare pentru a fi trimisă.",
   "dmSharedDraft": "Ciornă distribuită",

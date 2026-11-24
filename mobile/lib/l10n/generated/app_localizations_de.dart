@@ -7273,7 +7273,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'Die andere Person kann Schnitte, Texte und Ton ändern und ihre Kopie posten oder zurücksenden.';
+      'Du teilst die Originalclips und den Bearbeitungsverlauf. Die andere Person kann herausgeschnittene Stellen sehen, ihre Kopie bearbeiten, posten oder zurückschicken.';
 
   @override
   String get libraryDraftShareFailed =>

@@ -6802,7 +6802,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      '相手はカット、テキスト、音声を編集し、自分のコピーを投稿したり、送り返したりできます。';
+      '元のクリップと編集履歴を共有します。受け取った相手はカットした部分も見ることができ、自分のコピーを編集、投稿したり、送り返したりできます。';
 
   @override
   String get libraryDraftShareFailed => '下書きを送信できませんでした。';

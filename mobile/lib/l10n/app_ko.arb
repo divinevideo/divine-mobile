@@ -1789,7 +1789,7 @@
   "librarySortVerticalFirst": "세로형 먼저",
   "libraryDraftActionShare": "초안 공유",
   "libraryDraftShareConfirm": "{name}님에게 편집 가능한 초안을 보낼까요?",
-  "libraryDraftShareNotice": "받는 사람은 컷, 텍스트, 오디오를 수정한 뒤 자신의 사본을 게시하거나 다시 보낼 수 있어요.",
+  "libraryDraftShareNotice": "원본 클립과 편집 기록을 공유해요. 상대방은 잘라낸 부분을 볼 수 있고, 자기 사본을 편집하거나 게시하거나 다시 보낼 수 있어요.",
   "libraryDraftShareFailed": "초안을 보내지 못했어요.",
   "libraryDraftShareTooLarge": "초안이 너무 커서 보낼 수 없어요.",
   "dmSharedDraft": "공유된 초안",

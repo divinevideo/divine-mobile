@@ -7358,7 +7358,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'Destinatarul poate modifica montajul, textul și sunetul, apoi își poate publica exemplarul sau ți-l poate trimite înapoi.';
+      'Trimiți clipurile originale și istoricul editărilor. Cine le primește poate vedea ce ai tăiat, își poate edita copia, o poate publica sau ți-o poate trimite înapoi.';
 
   @override
   String get libraryDraftShareFailed => 'Ciorna nu a putut fi trimisă.';

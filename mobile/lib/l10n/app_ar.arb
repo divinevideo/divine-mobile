@@ -2243,7 +2243,7 @@
   "librarySortVerticalFirst": "العمودي أولاً",
   "libraryDraftActionShare": "مشاركة المسودة",
   "libraryDraftShareConfirm": "هل تريد إرسال مسودة قابلة للتعديل إلى {name}؟",
-  "libraryDraftShareNotice": "يمكن للطرف الآخر تعديل المقاطع والنص والصوت، ثم نشر نسخته أو إرسالها إليك.",
+  "libraryDraftShareNotice": "يشمل الإرسال المقاطع الأصلية وسجل التعديلات. يمكن لمن يتلقى المسودة مشاهدة الأجزاء المحذوفة وتعديل النسخة أو نشرها أو إرسالها مجددًا.",
   "libraryDraftShareFailed": "تعذّر إرسال المسودة.",
   "libraryDraftShareTooLarge": "حجم المسودة أكبر من الحد المسموح للإرسال.",
   "dmSharedDraft": "مسودة مشتركة",

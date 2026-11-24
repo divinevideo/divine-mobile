@@ -2253,7 +2253,7 @@
   "librarySortVerticalFirst": "Verticaux d'abord",
   "libraryDraftActionShare": "Partager le brouillon",
   "libraryDraftShareConfirm": "Envoyer un brouillon modifiable à {name} ?",
-  "libraryDraftShareNotice": "Cette personne peut modifier le montage, le texte et le son, puis publier sa copie ou te la renvoyer.",
+  "libraryDraftShareNotice": "Tu partages les clips d’origine et l’historique des modifications. La personne pourra voir les passages coupés, modifier sa copie, la publier ou te la renvoyer.",
   "libraryDraftShareFailed": "Impossible d’envoyer le brouillon.",
   "libraryDraftShareTooLarge": "Le brouillon est trop volumineux pour être envoyé.",
   "dmSharedDraft": "Brouillon partagé",

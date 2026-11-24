@@ -7212,7 +7212,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'De ontvanger kan de montage, tekst en audio aanpassen en de eigen kopie plaatsen of terugsturen.';
+      'Je deelt de originele clips en de bewerkingsgeschiedenis. De ontvanger kan zien wat je hebt weggeknipt en kan de eigen kopie bewerken, plaatsen of terugsturen.';
 
   @override
   String get libraryDraftShareFailed =>

@@ -7370,7 +7370,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'Ta osoba może zmienić cięcia, tekst i dźwięk, a potem opublikować swoją kopię lub Ci ją odesłać.';
+      'Udostępniasz oryginalne klipy i historię edycji. Osoba, która je otrzyma, zobaczy też wycięte fragmenty. Może edytować swoją kopię, opublikować ją lub odesłać.';
 
   @override
   String get libraryDraftShareFailed => 'Nie udało się wysłać szkicu.';

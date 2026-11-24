@@ -2253,7 +2253,7 @@
   "librarySortVerticalFirst": "Prima i verticali",
   "libraryDraftActionShare": "Condividi bozza",
   "libraryDraftShareConfirm": "Inviare una bozza modificabile a {name}?",
-  "libraryDraftShareNotice": "Chi la riceve può modificare i tagli, il testo e l’audio, poi pubblicare la propria copia o rimandartela.",
+  "libraryDraftShareNotice": "Condividi le clip originali e la cronologia delle modifiche. Chi le riceve può vedere le parti tagliate, modificare la propria copia, pubblicarla o rimandartela.",
   "libraryDraftShareFailed": "Non è stato possibile inviare la bozza.",
   "libraryDraftShareTooLarge": "La bozza è troppo grande per essere inviata.",
   "dmSharedDraft": "Bozza condivisa",

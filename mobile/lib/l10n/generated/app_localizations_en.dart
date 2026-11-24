@@ -7263,7 +7263,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'They can edit the cuts, text, and audio, then post their copy or send it back.';
+      'You’re sharing the original clips and edit history. They can see what you cut, edit their copy, post it, or send it back.';
 
   @override
   String get libraryDraftShareFailed => 'Couldn’t send the draft.';

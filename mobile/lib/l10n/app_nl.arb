@@ -2253,7 +2253,7 @@
   "librarySortVerticalFirst": "Verticaal eerst",
   "libraryDraftActionShare": "Concept delen",
   "libraryDraftShareConfirm": "Een bewerkbaar concept naar {name} sturen?",
-  "libraryDraftShareNotice": "De ontvanger kan de montage, tekst en audio aanpassen en de eigen kopie plaatsen of terugsturen.",
+  "libraryDraftShareNotice": "Je deelt de originele clips en de bewerkingsgeschiedenis. De ontvanger kan zien wat je hebt weggeknipt en kan de eigen kopie bewerken, plaatsen of terugsturen.",
   "libraryDraftShareFailed": "Het concept kon niet worden verstuurd.",
   "libraryDraftShareTooLarge": "Het concept is te groot om te versturen.",
   "dmSharedDraft": "Gedeeld concept",

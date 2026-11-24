@@ -7189,7 +7189,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'يمكن للطرف الآخر تعديل المقاطع والنص والصوت، ثم نشر نسخته أو إرسالها إليك.';
+      'يشمل الإرسال المقاطع الأصلية وسجل التعديلات. يمكن لمن يتلقى المسودة مشاهدة الأجزاء المحذوفة وتعديل النسخة أو نشرها أو إرسالها مجددًا.';
 
   @override
   String get libraryDraftShareFailed => 'تعذّر إرسال المسودة.';

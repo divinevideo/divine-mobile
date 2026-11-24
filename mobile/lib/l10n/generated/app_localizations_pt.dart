@@ -7240,7 +7240,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'Quem receber pode editar os cortes, o texto e o áudio, depois postar a própria cópia ou enviar de volta.';
+      'Você compartilha os clipes originais e o histórico de edição. Quem receber pode ver os trechos cortados, editar a própria cópia, publicá-la ou enviá-la de volta.';
 
   @override
   String get libraryDraftShareFailed => 'Não foi possível enviar o rascunho.';

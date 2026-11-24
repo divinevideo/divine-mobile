@@ -5195,7 +5195,7 @@
   "libraryDraftActionDuplicate": "Duplicate",
   "libraryDraftActionShare": "Share draft",
   "libraryDraftShareConfirm": "Send an editable draft to {name}?",
-  "libraryDraftShareNotice": "They can edit the cuts, text, and audio, then post their copy or send it back.",
+  "libraryDraftShareNotice": "You’re sharing the original clips and edit history. They can see what you cut, edit their copy, post it, or send it back.",
   "libraryDraftShareFailed": "Couldn’t send the draft.",
   "libraryDraftShareTooLarge": "The draft is too large to send.",
   "dmSharedDraft": "Shared draft",

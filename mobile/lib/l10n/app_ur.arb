@@ -3512,7 +3512,7 @@
   "libraryDraftActionDuplicate": "نقل کریں",
   "libraryDraftActionShare": "مسودہ شیئر کریں",
   "libraryDraftShareConfirm": "کیا {name} کو قابلِ تدوین مسودہ بھیجنا ہے؟",
-  "libraryDraftShareNotice": "وہ کٹس، متن اور آڈیو میں تبدیلی کر کے اپنی نقل پوسٹ کر سکتے ہیں یا واپس بھیج سکتے ہیں۔",
+  "libraryDraftShareNotice": "اصل کلپس اور ترمیم کی سرگزشت بھی شیئر ہوتی ہے۔ وصول کنندہ کٹے ہوئے حصے دیکھ سکتا ہے اور اپنی کاپی میں ترمیم کر کے اسے پوسٹ کر سکتا ہے یا واپس بھیج سکتا ہے۔",
   "libraryDraftShareFailed": "مسودہ بھیجا نہیں جا سکا۔",
   "libraryDraftShareTooLarge": "مسودہ بھیجنے کے لیے بہت بڑا ہے۔",
   "dmSharedDraft": "شیئر کیا گیا مسودہ",

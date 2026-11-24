@@ -7171,7 +7171,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'Mottagaren kan ändra klippningen, texten och ljudet och sedan publicera sin kopia eller skicka tillbaka den.';
+      'Du delar originalklippen och redigeringshistoriken. Mottagaren kan se vad du har klippt bort, redigera sin kopia, publicera den eller skicka tillbaka den.';
 
   @override
   String get libraryDraftShareFailed => 'Det gick inte att skicka utkastet.';

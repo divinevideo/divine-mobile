@@ -6759,7 +6759,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get libraryDraftShareNotice => '对方可以修改剪辑、文字和音频，然后发布自己的副本或发送回来。';
+  String get libraryDraftShareNotice =>
+      '你将分享原始片段和编辑记录。对方可以看到你剪掉的部分，也可以编辑、发布或发回自己的副本。';
 
   @override
   String get libraryDraftShareFailed => '无法发送草稿。';

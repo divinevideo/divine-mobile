@@ -4091,7 +4091,7 @@
   "libraryDraftActionDuplicate": "నకిలీ",
   "libraryDraftActionShare": "డ్రాఫ్ట్ షేర్ చేయి",
   "libraryDraftShareConfirm": "{name}కు ఎడిట్ చేయగల డ్రాఫ్ట్ పంపాలా?",
-  "libraryDraftShareNotice": "వారు కట్స్, టెక్స్ట్, ఆడియో మార్చి తమ కాపీని పోస్ట్ చేయవచ్చు లేదా తిరిగి పంపవచ్చు.",
+  "libraryDraftShareNotice": "అసలు క్లిప్‌లు, ఎడిటింగ్ చరిత్ర రెండూ షేర్ అవుతాయి. అందుకున్నవారు మీరు కత్తిరించిన భాగాలను చూడవచ్చు. తమ కాపీని ఎడిట్ చేయవచ్చు, పోస్ట్ చేయవచ్చు లేదా తిరిగి పంపవచ్చు.",
   "libraryDraftShareFailed": "డ్రాఫ్ట్ పంపలేకపోయాం.",
   "libraryDraftShareTooLarge": "డ్రాఫ్ట్ పంపడానికి చాలా పెద్దగా ఉంది.",
   "dmSharedDraft": "షేర్ చేసిన డ్రాఫ్ట్",

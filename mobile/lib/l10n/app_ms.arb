@@ -3512,7 +3512,7 @@
   "libraryDraftActionDuplicate": "Duplikasi",
   "libraryDraftActionShare": "Kongsi draf",
   "libraryDraftShareConfirm": "Hantar draf yang boleh diedit kepada {name}?",
-  "libraryDraftShareNotice": "Penerima boleh mengedit potongan, teks dan audio, kemudian menyiarkan salinannya atau menghantarnya semula.",
+  "libraryDraftShareNotice": "Anda berkongsi klip asal dan sejarah suntingan. Penerima boleh melihat bahagian yang dipotong, menyunting salinannya, menyiarkannya atau menghantarnya semula.",
   "libraryDraftShareFailed": "Draf tidak dapat dihantar.",
   "libraryDraftShareTooLarge": "Draf terlalu besar untuk dihantar.",
   "dmSharedDraft": "Draf yang dikongsi",

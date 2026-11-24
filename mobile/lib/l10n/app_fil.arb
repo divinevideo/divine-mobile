@@ -1782,7 +1782,7 @@
   "libraryDraftActionEdit": "I-edit",
   "libraryDraftActionShare": "I-share ang draft",
   "libraryDraftShareConfirm": "Magpapadala ng draft na puwedeng i-edit kay {name}?",
-  "libraryDraftShareNotice": "Puwede nilang i-edit ang mga cut, text, at audio, tapos i-post ang kopya nila o ipadala ito pabalik.",
+  "libraryDraftShareNotice": "Kasama ang mga orihinal na clip at edit history. Makikita ng pinadalhan ang mga tinanggal mo. Puwede niyang i-edit, i-post o ibalik ang kopya niya.",
   "libraryDraftShareFailed": "Hindi naipadala ang draft.",
   "libraryDraftShareTooLarge": "Masyadong malaki ang draft para maipadala.",
   "dmSharedDraft": "Na-share na draft",

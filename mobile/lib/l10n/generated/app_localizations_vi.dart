@@ -7134,7 +7134,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'Người nhận có thể sửa các đoạn cắt, văn bản và âm thanh, rồi đăng bản sao của họ hoặc gửi lại.';
+      'Bạn đang chia sẻ các clip gốc và lịch sử chỉnh sửa. Người nhận có thể xem những đoạn bạn đã cắt, chỉnh sửa bản sao của họ, đăng hoặc gửi lại cho bạn.';
 
   @override
   String get libraryDraftShareFailed => 'Không thể gửi bản nháp.';

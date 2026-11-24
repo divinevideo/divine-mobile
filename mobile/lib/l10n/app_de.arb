@@ -2253,7 +2253,7 @@
   "libraryGridSizeColumns": "{count, plural, one{1 Spalte} other{{count} Spalten}}",
   "libraryDraftActionShare": "Entwurf teilen",
   "libraryDraftShareConfirm": "Bearbeitbaren Entwurf an {name} senden?",
-  "libraryDraftShareNotice": "Die andere Person kann Schnitte, Texte und Ton ändern und ihre Kopie posten oder zurücksenden.",
+  "libraryDraftShareNotice": "Du teilst die Originalclips und den Bearbeitungsverlauf. Die andere Person kann herausgeschnittene Stellen sehen, ihre Kopie bearbeiten, posten oder zurückschicken.",
   "libraryDraftShareFailed": "Der Entwurf konnte nicht gesendet werden.",
   "libraryDraftShareTooLarge": "Der Entwurf ist zu groß zum Senden.",
   "dmSharedDraft": "Geteilter Entwurf",

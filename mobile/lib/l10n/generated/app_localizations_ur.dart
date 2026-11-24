@@ -7181,7 +7181,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'وہ کٹس، متن اور آڈیو میں تبدیلی کر کے اپنی نقل پوسٹ کر سکتے ہیں یا واپس بھیج سکتے ہیں۔';
+      'اصل کلپس اور ترمیم کی سرگزشت بھی شیئر ہوتی ہے۔ وصول کنندہ کٹے ہوئے حصے دیکھ سکتا ہے اور اپنی کاپی میں ترمیم کر کے اسے پوسٹ کر سکتا ہے یا واپس بھیج سکتا ہے۔';
 
   @override
   String get libraryDraftShareFailed => 'مسودہ بھیجا نہیں جا سکا۔';

@@ -7222,7 +7222,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'Puwede nilang i-edit ang mga cut, text, at audio, tapos i-post ang kopya nila o ipadala ito pabalik.';
+      'Kasama ang mga orihinal na clip at edit history. Makikita ng pinadalhan ang mga tinanggal mo. Puwede niyang i-edit, i-post o ibalik ang kopya niya.';
 
   @override
   String get libraryDraftShareFailed => 'Hindi naipadala ang draft.';

@@ -7249,7 +7249,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'Esta persona puede editar los cortes, el texto y el audio, y publicar su copia o mandártela de vuelta.';
+      'Compartís los clips originales y el historial de edición. La otra persona puede ver lo que cortaste, editar su copia, publicarla o devolvértela.';
 
   @override
   String get libraryDraftShareFailed => 'No se pudo enviar el borrador.';

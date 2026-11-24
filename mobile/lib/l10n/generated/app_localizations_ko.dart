@@ -6828,7 +6828,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      '받는 사람은 컷, 텍스트, 오디오를 수정한 뒤 자신의 사본을 게시하거나 다시 보낼 수 있어요.';
+      '원본 클립과 편집 기록을 공유해요. 상대방은 잘라낸 부분을 볼 수 있고, 자기 사본을 편집하거나 게시하거나 다시 보낼 수 있어요.';
 
   @override
   String get libraryDraftShareFailed => '초안을 보내지 못했어요.';

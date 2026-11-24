@@ -2243,7 +2243,7 @@
   "librarySortVerticalFirst": "縦長を先に",
   "libraryDraftActionShare": "下書きを共有",
   "libraryDraftShareConfirm": "編集できる下書きを{name}さんに送信しますか？",
-  "libraryDraftShareNotice": "相手はカット、テキスト、音声を編集し、自分のコピーを投稿したり、送り返したりできます。",
+  "libraryDraftShareNotice": "元のクリップと編集履歴を共有します。受け取った相手はカットした部分も見ることができ、自分のコピーを編集、投稿したり、送り返したりできます。",
   "libraryDraftShareFailed": "下書きを送信できませんでした。",
   "libraryDraftShareTooLarge": "下書きが大きすぎて送信できません。",
   "dmSharedDraft": "共有された下書き",

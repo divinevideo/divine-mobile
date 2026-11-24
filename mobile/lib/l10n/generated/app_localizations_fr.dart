@@ -7283,7 +7283,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get libraryDraftShareNotice =>
-      'Cette personne peut modifier le montage, le texte et le son, puis publier sa copie ou te la renvoyer.';
+      'Tu partages les clips d’origine et l’historique des modifications. La personne pourra voir les passages coupés, modifier sa copie, la publier ou te la renvoyer.';
 
   @override
   String get libraryDraftShareFailed => 'Impossible d’envoyer le brouillon.';
