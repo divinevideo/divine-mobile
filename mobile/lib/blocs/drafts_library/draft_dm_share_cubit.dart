@@ -30,12 +30,14 @@ class DraftDmShareCubit extends Cubit<DraftDmShareState>
     required this.recipientPubkey,
     required Future<DivineVideoDraft?> Function(String) loadDraft,
     required Future<File> Function(DivineVideoDraft) exportDraft,
+    required Future<String?> Function(DivineVideoDraft) readCoverBlurhash,
     required bool Function() ownsSession,
     required DmSendPolicy sendPolicy,
     required bool Function(String) isBlocked,
     required VideoDmOutbox outbox,
   }) : _loadDraft = loadDraft,
        _exportDraft = exportDraft,
+       _readCoverBlurhash = readCoverBlurhash,
        _ownsSession = ownsSession,
        _sendPolicy = sendPolicy,
        _isBlocked = isBlocked,
@@ -46,6 +48,7 @@ class DraftDmShareCubit extends Cubit<DraftDmShareState>
   final String recipientPubkey;
   final Future<DivineVideoDraft?> Function(String) _loadDraft;
   final Future<File> Function(DivineVideoDraft) _exportDraft;
+  final Future<String?> Function(DivineVideoDraft) _readCoverBlurhash;
   final bool Function() _ownsSession;
   final DmSendPolicy _sendPolicy;
   final bool Function(String) _isBlocked;
@@ -72,7 +75,10 @@ class DraftDmShareCubit extends Cubit<DraftDmShareState>
         return;
       }
 
+      // Never throws, so it cannot surface unhandled if the export fails.
+      final coverBlurhash = _readCoverBlurhash(draft);
       bundle = await _exportDraft(draft);
+      final blurhash = await coverBlurhash;
 
       if (!_checkSession() || !await _checkRecipient() || !_checkSession()) {
         return;
@@ -81,6 +87,8 @@ class DraftDmShareCubit extends Cubit<DraftDmShareState>
         conversationId: conversationId,
         recipientPubkey: recipientPubkey,
         file: bundle,
+        title: draft.title,
+        blurhash: blurhash,
       );
       bundle = null;
       emitIfOpen(DraftDmShareState.queued);

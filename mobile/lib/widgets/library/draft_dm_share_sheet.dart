@@ -90,6 +90,8 @@ Future<void> showDraftDmShare(
                     transfer.exportDraft(draft, temporaryDirectory: directory),
               );
             },
+            readCoverBlurhash: (draft) =>
+                ref.read(draftTransferServiceProvider).readCoverBlurhash(draft),
             ownsSession: () => route?.isCurrent == true && ownsSession(),
             sendPolicy: sendPolicy,
             isBlocked: (pubkey) =>

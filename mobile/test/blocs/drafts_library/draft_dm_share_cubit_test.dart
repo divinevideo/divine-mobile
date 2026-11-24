@@ -31,6 +31,7 @@ void main() {
   late Future<File> Function() export;
   late DmSendPolicyDecision policy;
   late bool blocked;
+  late String? coverBlurhash;
   final conversationId = DmRepository.computeConversationId([
     _sender,
     _recipient,
@@ -49,6 +50,8 @@ void main() {
     conversationId: conversationId,
     recipientPubkey: _recipient,
     file: file,
+    title: 'Feedback draft',
+    blurhash: coverBlurhash,
   );
 
   setUpAll(() => registerFallbackValue(File('project.divinedraft')));
@@ -73,6 +76,7 @@ void main() {
     exported = false;
     policy = DmSendPolicyDecision.allowed;
     blocked = false;
+    coverBlurhash = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
     export = () => output.writeAsString('export');
     outbox = _MockOutbox();
     cubit = DraftDmShareCubit(
@@ -83,6 +87,10 @@ void main() {
         expect(draftToExport, same(draft));
         exported = true;
         return export();
+      },
+      readCoverBlurhash: (draftToRead) async {
+        expect(draftToRead, same(draft));
+        return coverBlurhash;
       },
       ownsSession: () => ownsSession,
       sendPolicy: (_) async => policy,
@@ -104,6 +112,36 @@ void main() {
         verify(() => send(file: output)).called(1);
         expect(await source.readAsString(), 'source');
         expect(output.existsSync(), isTrue);
+      });
+
+      test("sends the draft's title and cover blurhash", () async {
+        await cubit.send(_draftId);
+
+        verify(
+          () => outbox.sendDraft(
+            conversationId: conversationId,
+            recipientPubkey: _recipient,
+            file: output,
+            title: 'Feedback draft',
+            blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+          ),
+        ).called(1);
+      });
+
+      test('still sends when the cover cannot be read', () async {
+        coverBlurhash = null;
+
+        await cubit.send(_draftId);
+
+        expect(cubit.state, DraftDmShareState.queued);
+        verify(
+          () => outbox.sendDraft(
+            conversationId: conversationId,
+            recipientPubkey: _recipient,
+            file: output,
+            title: 'Feedback draft',
+          ),
+        ).called(1);
       });
 
       test('reports an export failure without sending the source', () async {

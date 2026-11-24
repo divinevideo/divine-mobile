@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/dm_draft_tag.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/draft_transfer_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
@@ -18,20 +19,33 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/router/creation_session_guard.dart';
 import 'package:openvine/router/routes/video_routes.dart';
+import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card.dart'
+    show
+        encryptedVideoCardHeight,
+        encryptedVideoCardRadius,
+        encryptedVideoCardWidth;
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
+import 'package:openvine/widgets/blurhash_display.dart';
 
 class EditableDraftCard extends ConsumerWidget {
   const EditableDraftCard({
     required this.message,
     required this.canOpen,
+    this.showPreview = true,
     super.key,
   });
 
   final DmMessage message;
   final bool canOpen;
 
+  /// Whether the card shows the sender's cover blurhash and title. Off for a
+  /// blocked or muted sender, whose video cards hold their preview back too.
+  final bool showPreview;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final blurhash = showPreview ? message.fileMetadata?.blurhash : null;
+    final title = showPreview ? message.draftTitle : null;
     return BlocProvider(
       key: ValueKey(message.id),
       create: (_) => _DraftImportCubit(),
@@ -41,12 +55,30 @@ class EditableDraftCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: 8,
           children: [
-            Text(
-              context.l10n.dmSharedDraft,
-              style: VineTheme.titleSmallFont(
-                color: context.vineColors.primaryText,
+            if (blurhash != null && blurhash.isNotEmpty)
+              _DraftCover(blurhash: blurhash),
+            if (title != null) ...[
+              Text(
+                context.l10n.dmSharedDraft,
+                style: VineTheme.labelSmallFont(
+                  color: context.vineColors.secondaryText,
+                ),
               ),
-            ),
+              Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: VineTheme.titleSmallFont(
+                  color: context.vineColors.primaryText,
+                ),
+              ),
+            ] else
+              Text(
+                context.l10n.dmSharedDraft,
+                style: VineTheme.titleSmallFont(
+                  color: context.vineColors.primaryText,
+                ),
+              ),
             if (canOpen)
               DivineButton(
                 label: context.l10n.dmOpenDraft,
@@ -135,6 +167,33 @@ class EditableDraftCard extends ConsumerWidget {
     } finally {
       session.close();
     }
+  }
+}
+
+/// The sender's cover blurhash, decoded on the device at the size of the
+/// encrypted video card so media cards line up. A sharper image would need an
+/// encrypted thumbnail, which would reuse the project's GCM nonce.
+class _DraftCover extends StatelessWidget {
+  const _DraftCover({required this.blurhash});
+
+  final String blurhash;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(encryptedVideoCardRadius),
+        child: SizedBox(
+          width: encryptedVideoCardWidth,
+          height: encryptedVideoCardHeight,
+          child: BlurhashDisplay(
+            blurhash: blurhash,
+            width: encryptedVideoCardWidth,
+            height: encryptedVideoCardHeight,
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -2349,6 +2349,13 @@ class _MessageList extends StatelessWidget {
             draftAttachment: isDraft
                 ? EditableDraftCard(
                     message: message,
+                    showPreview:
+                        !blockedSenders.contains(
+                          message.senderPubkey.toLowerCase(),
+                        ) &&
+                        !mutedSenders.contains(
+                          message.senderPubkey.toLowerCase(),
+                        ),
                     canOpen:
                         !kIsWeb &&
                         !isSent &&

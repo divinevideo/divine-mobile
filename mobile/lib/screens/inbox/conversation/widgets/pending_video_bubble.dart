@@ -95,9 +95,12 @@ class PendingVideoBubble extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   spacing: 8,
                   children: [
-                    if (entry.isDraft)
-                      _StatusText(l10n.dmSharedDraft)
-                    else
+                    if (entry.isDraft) ...[
+                      _StatusText(l10n.dmSharedDraft),
+                      if (entry.draftTitle case final title?
+                          when title.trim().isNotEmpty)
+                        _DraftTitle(title.trim()),
+                    ] else
                       ExcludeSemantics(child: _PendingCard(entry: entry)),
                     // A failure's line says why it failed, which the label
                     // does not; in flight the label already reads it.
@@ -213,6 +216,24 @@ class _StatusText extends StatelessWidget {
       style: VineTheme.labelMediumFont(
         color: context.vineColors.onSurfaceMuted,
       ),
+    );
+  }
+}
+
+/// The title of a draft being sent, as its chat card will show it.
+class _DraftTitle extends StatelessWidget {
+  const _DraftTitle(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      textAlign: TextAlign.end,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: VineTheme.titleSmallFont(color: context.vineColors.primaryText),
     );
   }
 }

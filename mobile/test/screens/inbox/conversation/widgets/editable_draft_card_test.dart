@@ -22,6 +22,7 @@ import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/draft_transfer_service.dart';
+import 'package:openvine/widgets/blurhash_display.dart';
 
 import '../../../../helpers/test_provider_overrides.dart';
 
@@ -70,6 +71,83 @@ void main() {
   });
 
   group(EditableDraftCard, () {
+    group('renders', () {
+      const blurhash = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
+      DmMessage sharedDraft({String? title, String? cover}) => DmMessage(
+        id: '3' * 64,
+        conversationId: 'conversation',
+        senderPubkey: _sender,
+        content: 'https://media.example.test/encrypted',
+        createdAt: 1,
+        giftWrapId: '4' * 64,
+        messageKind: 15,
+        tags: [
+          if (title != null) ['title', title],
+        ],
+        fileMetadata: DmFileMetadata(
+          fileType: DmFileMetadata.editableDraftMimeType,
+          encryptionAlgorithm: 'aes-gcm',
+          decryptionKey: 'a' * 64,
+          decryptionNonce: 'b' * 24,
+          fileHash: 'c' * 64,
+          blurhash: cover,
+        ),
+      );
+
+      Future<void> pumpCard(
+        WidgetTester tester,
+        DmMessage message, {
+        bool showPreview = true,
+      }) => tester.pumpWidget(
+        testMaterialApp(
+          home: Scaffold(
+            body: EditableDraftCard(
+              message: message,
+              canOpen: false,
+              showPreview: showPreview,
+            ),
+          ),
+        ),
+      );
+
+      testWidgets("the draft's title and cover", (tester) async {
+        await pumpCard(
+          tester,
+          sharedDraft(title: 'Beach cut', cover: blurhash),
+        );
+
+        expect(find.text(l10n.dmSharedDraft), findsOneWidget);
+        expect(find.text('Beach cut'), findsOneWidget);
+        expect(
+          tester.widget<BlurhashDisplay>(find.byType(BlurhashDisplay)).blurhash,
+          blurhash,
+        );
+      });
+
+      testWidgets('only the label for an untitled draft without a cover', (
+        tester,
+      ) async {
+        await pumpCard(tester, sharedDraft());
+
+        expect(find.text(l10n.dmSharedDraft), findsOneWidget);
+        expect(find.byType(BlurhashDisplay), findsNothing);
+      });
+
+      testWidgets('neither title nor cover when the preview is held back', (
+        tester,
+      ) async {
+        await pumpCard(
+          tester,
+          sharedDraft(title: 'Beach cut', cover: blurhash),
+          showPreview: false,
+        );
+
+        expect(find.text(l10n.dmSharedDraft), findsOneWidget);
+        expect(find.text('Beach cut'), findsNothing);
+        expect(find.byType(BlurhashDisplay), findsNothing);
+      });
+    });
+
     group('navigation', () {
       for (final leaveChat in [false, true]) {
         testWidgets(

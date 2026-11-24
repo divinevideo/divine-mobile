@@ -53,6 +53,7 @@ class _PendingSend {
     required this.videoFile,
     required this.mimeType,
     required this.extraTags,
+    required this.blurhash,
     required this.onPhase,
     required this.onUploadProgress,
     required this.cancellation,
@@ -62,6 +63,7 @@ class _PendingSend {
   final File videoFile;
   final String mimeType;
   final List<List<String>> extraTags;
+  final String? blurhash;
   final void Function(DmVideoSendPhase phase)? onPhase;
   final void Function(double fraction)? onUploadProgress;
   final Completer<NIP17SendResult> completer = Completer<NIP17SendResult>();
@@ -137,6 +139,7 @@ void main() {
         recipientPubkey: any(named: 'recipientPubkey'),
         videoFile: any(named: 'videoFile'),
         mimeType: any(named: 'mimeType'),
+        blurhash: any(named: 'blurhash'),
         extraTags: any(named: 'extraTags'),
         onPhase: any(named: 'onPhase'),
         onUploadProgress: any(named: 'onUploadProgress'),
@@ -168,6 +171,7 @@ void main() {
         videoFile: invocation.namedArguments[#videoFile] as File,
         mimeType: invocation.namedArguments[#mimeType] as String,
         extraTags: invocation.namedArguments[#extraTags] as List<List<String>>,
+        blurhash: invocation.namedArguments[#blurhash] as String?,
         onPhase:
             invocation.namedArguments[#onPhase]
                 as void Function(DmVideoSendPhase)?,
@@ -265,6 +269,50 @@ void main() {
         verify(file.delete).called(1);
       },
     );
+
+    test("sends a draft's title tag and cover blurhash", () async {
+      final file = _MockFile();
+      when(() => file.path).thenReturn('/v/project.divinedraft');
+      when(file.delete).thenAnswer((_) async => file);
+      stubControlledSend();
+      outbox = createOutbox();
+      final entries = recordConversation('c1');
+
+      outbox.sendDraft(
+        conversationId: 'c1',
+        recipientPubkey: _recipientPubkey,
+        file: file,
+        title: '  Beach cut  ',
+        blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+      );
+      await pumpEventQueue();
+
+      expect(entries.last.single.draftTitle, '  Beach cut  ');
+      expect(sends.single.mimeType, DmFileMetadata.editableDraftMimeType);
+      expect(sends.single.blurhash, 'LEHV6nWB2yk8pyo0adR*.7kCMdnj');
+      expect(sends.single.extraTags, [
+        ['title', 'Beach cut'],
+      ]);
+    });
+
+    test('sends an untitled draft without a title tag', () async {
+      final file = _MockFile();
+      when(() => file.path).thenReturn('/v/project.divinedraft');
+      when(file.delete).thenAnswer((_) async => file);
+      stubControlledSend();
+      outbox = createOutbox();
+
+      outbox.sendDraft(
+        conversationId: 'c1',
+        recipientPubkey: _recipientPubkey,
+        file: file,
+        title: ' ',
+      );
+      await pumpEventQueue();
+
+      expect(sends.single.blurhash, isNull);
+      expect(sends.single.extraTags, isEmpty);
+    });
 
     test('stalled upload fails and releases the account queue', () {
       fakeAsync((clock) {

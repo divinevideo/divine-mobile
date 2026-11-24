@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/widgets.dart' show SizedBox;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart'
     show
@@ -424,6 +425,47 @@ void main() {
         },
       );
     });
+    group('readCoverBlurhash', () {
+      test("encodes the draft's cover", () async {
+        final cover = document(
+          'cover.png',
+          img.encodePng(
+            img.fill(
+              img.Image(width: 16, height: 16),
+              color: img.ColorRgb8(200, 40, 40),
+            ),
+          ),
+        );
+
+        final blurhash = await transfer.readCoverBlurhash(
+          makeDraft().copyWith(customThumbnailPath: cover.path),
+        );
+
+        expect(blurhash, isNotNull);
+        expect(blurhash, isNotEmpty);
+      });
+
+      test('returns null when the cover is missing', () async {
+        final blurhash = await transfer.readCoverBlurhash(
+          makeDraft().copyWith(
+            customThumbnailPath: p.join(directory.path, 'gone.png'),
+          ),
+        );
+
+        expect(blurhash, isNull);
+      });
+
+      test('returns null when the cover is not an image', () async {
+        final cover = document('cover.png', [1, 2, 3]);
+
+        final blurhash = await transfer.readCoverBlurhash(
+          makeDraft().copyWith(customThumbnailPath: cover.path),
+        );
+
+        expect(blurhash, isNull);
+      });
+    });
+
     group('exportDraft', () {
       test('does not export a project with missing source media', () async {
         final draft = makeDraft();

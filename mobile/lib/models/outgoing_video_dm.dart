@@ -80,6 +80,8 @@ class OutgoingVideoDm extends Equatable {
     this.failure,
     this.rumorEventId,
     this.isDraft = false,
+    this.draftTitle,
+    this.draftBlurhash,
   });
 
   /// Local id, stable for the entry's life.
@@ -121,6 +123,14 @@ class OutgoingVideoDm extends Equatable {
   /// Whether the file is an editable video project.
   final bool isDraft;
 
+  /// The draft's title, sent so the chat card can name it; null for a video
+  /// or an untitled draft.
+  final String? draftTitle;
+
+  /// A blurhash of the draft's cover, sent as the message's preview; null for
+  /// a video, whose preview is read from the file while it uploads.
+  final String? draftBlurhash;
+
   /// Whether retrying could succeed: a too-large file or a rejected clip
   /// would fail again the same way.
   bool get canRetry =>
@@ -151,6 +161,8 @@ class OutgoingVideoDm extends Equatable {
     failure: failure != null ? failure() : this.failure,
     rumorEventId: rumorEventId != null ? rumorEventId() : this.rumorEventId,
     isDraft: isDraft,
+    draftTitle: draftTitle,
+    draftBlurhash: draftBlurhash,
   );
 
   @override
@@ -168,6 +180,8 @@ class OutgoingVideoDm extends Equatable {
     failure,
     rumorEventId,
     isDraft,
+    draftTitle,
+    draftBlurhash,
   ];
 }
 

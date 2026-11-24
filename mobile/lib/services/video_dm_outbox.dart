@@ -10,6 +10,7 @@ import 'package:collection/collection.dart';
 import 'package:models/models.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/dm_clip_tag.dart';
+import 'package:openvine/models/dm_draft_tag.dart';
 import 'package:openvine/models/outgoing_video_dm.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/reportable_error.dart';
@@ -238,15 +239,22 @@ class VideoDmOutbox {
   );
 
   /// Queues an editable project and owns its temporary file from here on.
+  ///
+  /// [title] and [blurhash] travel in the rumor so the chat card can name the
+  /// draft and show its cover before anyone downloads it.
   void sendDraft({
     required String conversationId,
     required String recipientPubkey,
     required File file,
+    String? title,
+    String? blurhash,
   }) => _sendFile(
     conversationId: conversationId,
     recipientPubkey: recipientPubkey,
     file: file,
     isDraft: true,
+    draftTitle: title,
+    draftBlurhash: blurhash,
   );
 
   void _sendFile({
@@ -254,6 +262,8 @@ class VideoDmOutbox {
     required String recipientPubkey,
     required File file,
     required bool isDraft,
+    String? draftTitle,
+    String? draftBlurhash,
   }) {
     if (_disposed) {
       if (isDraft) _deleteOwnedVideo(file);
@@ -266,6 +276,8 @@ class VideoDmOutbox {
       localPath: file.path,
       requestedAt: _now(),
       isDraft: isDraft,
+      draftTitle: draftTitle,
+      draftBlurhash: draftBlurhash,
     );
     if (isDraft) _ownedVideos[entry.id] = file;
     _entries.add([..._entries.value, entry]);
@@ -698,7 +710,11 @@ class VideoDmOutbox {
           mimeType: entry.isDraft
               ? DmFileMetadata.editableDraftMimeType
               : videoDmMimeTypeFor(entry.localPath),
-          extraTags: extraTags,
+          blurhash: entry.draftBlurhash,
+          extraTags: [
+            ...extraTags,
+            if (entry.isDraft) ?DmDraftTag.build(entry.draftTitle),
+          ],
           cancellation: currentAttempt,
           onPhase: (phase) {
             if (!currentAttempt.isActive) return;

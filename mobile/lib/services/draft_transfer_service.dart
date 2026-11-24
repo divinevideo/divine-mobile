@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:blurhash_service/blurhash_service.dart';
 import 'package:crypto/crypto.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
@@ -15,6 +16,7 @@ import 'package:openvine/utils/draft_audio_path_resolver.dart';
 import 'package:openvine/utils/editor_state_history_compaction.dart';
 import 'package:openvine/utils/json_tree_rewrite.dart';
 import 'package:path/path.dart' as p;
+import 'package:unified_logger/unified_logger.dart';
 import 'package:uuid/uuid.dart';
 
 /// The project format is a bounded JSON manifest followed by the listed
@@ -146,6 +148,40 @@ class DraftTransferService {
     } on Object {
       await _deleteFiles([output]);
       rethrow;
+    }
+  }
+
+  /// A blurhash of [draft]'s cover, sent with a share so the chat card shows
+  /// a preview before anyone downloads the project. Only the blurhash leaves
+  /// the device: an encrypted thumbnail would reuse the project's GCM nonce.
+  ///
+  /// Null when the draft has no readable cover or encoding takes longer than
+  /// [timeout]. Never throws.
+  Future<String?> readCoverBlurhash(
+    DivineVideoDraft draft, {
+    Duration timeout = const Duration(seconds: 10),
+  }) async {
+    final path = draft.coverThumbnailPath;
+    if (path == null || path.isEmpty) return null;
+    try {
+      var file = File(path);
+      if (!file.existsSync()) {
+        file = File(p.join(documentsPath, p.basename(path)));
+      }
+      if (!file.existsSync()) return null;
+      final bytes = await file.readAsBytes();
+      return await BlurhashService.generateBlurhash(
+        bytes,
+      ).timeout(timeout, onTimeout: () => null);
+    } on Object catch (error) {
+      // The preview is optional; a draft whose cover cannot be read still
+      // sends. The path is left out of the log.
+      Log.warning(
+        'Left the cover out of a shared draft: ${error.runtimeType}',
+        name: 'DraftTransferService',
+        category: LogCategory.video,
+      );
+      return null;
     }
   }
 

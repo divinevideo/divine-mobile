@@ -16,6 +16,7 @@ OutgoingVideoDm _entry({
   double? uploadProgress,
   OutgoingVideoDmFailure? failure,
   bool isDraft = false,
+  String? draftTitle,
   Uint8List? frame,
 }) => OutgoingVideoDm(
   id: 'entry',
@@ -28,6 +29,7 @@ OutgoingVideoDm _entry({
   failure: failure,
   frame: frame,
   isDraft: isDraft,
+  draftTitle: draftTitle,
 );
 
 Widget _host(
@@ -440,6 +442,22 @@ void main() {
           findsNothing,
         );
         handle.dispose();
+      });
+
+      testWidgets("a draft upload shows the draft's title", (tester) async {
+        await tester.pumpWidget(
+          _host(
+            _entry(
+              phase: OutgoingVideoDmPhase.uploading,
+              uploadProgress: 0.42,
+              isDraft: true,
+              draftTitle: ' Beach cut ',
+            ),
+          ),
+        );
+
+        expect(find.text(l10n.dmSharedDraft), findsOneWidget);
+        expect(find.text('Beach cut'), findsOneWidget);
       });
 
       for (final (failure, reason) in [
