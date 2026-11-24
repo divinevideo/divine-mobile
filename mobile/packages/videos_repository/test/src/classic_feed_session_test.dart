@@ -132,6 +132,29 @@ void main() {
     );
 
     test(
+      'a republished revision keeps unavailable videos through the playing '
+      'slot',
+      () {
+        final unavailable = <String>{};
+        final republishable = _video(3).copyWith(addressableDTag: 'classic');
+        final edited = republishable.copyWith(id: _id(7), eventCreatedAt: 2);
+        final session = ClassicFeedSession(
+          initialVideos: [_video(1), _video(2), republishable],
+          isUnavailable: unavailable.contains,
+          loadPage: (_) async => _page([]),
+        );
+        addTearDown(session.dispose);
+
+        session.activate(1);
+        unavailable.add(_id(1));
+        session.replaceVideoRevision(edited);
+
+        expect(session.state.videos, [_video(1), _video(2), edited]);
+        expect(session.state.currentIndex, 1);
+      },
+    );
+
+    test(
       'pagination appends and publishes loading without replacing the queue',
       () async {
         final requests = <ClassicRecommendationsRequest>[];
