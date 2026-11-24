@@ -264,6 +264,28 @@ class StoreReviewTest(unittest.TestCase):
                 self.assertEqual(len(plan['errors']), 2)
                 self.assertTrue(all(finding in error for error in plan['errors']))
 
+    def test_production_outside_the_candidate_history_is_named_and_blocks_both_stores(self):
+        self.git('checkout', '-q', '-b', 'hotfix')
+        self.write('mobile/lib/main.dart', 'hotfix only on a side branch')
+        production = self.commit()
+        self.git('checkout', '-q', '-')
+        self.write('mobile/lib/widgets/report_content_dialog.dart', 'changed report UI')
+        candidate = self.commit()
+        actions = [self.action('ios', candidate), self.action('android', candidate)]
+        plan = self.screen(actions, approval='any', baseline=production)
+        self.assertFalse(plan['actions'])
+        for error in plan['errors']:
+            self.assertIn(f'against production 1.0.1+1 ({production})', error)
+            self.assertIn('not an ancestor of the candidate', error)
+            self.assertNotIn('approve_store_review', error)
+
+    def test_unreadable_candidate_info_plist_names_the_file_and_commit(self):
+        (self.repo / 'mobile/ios/Runner/Info.plist').unlink()
+        candidate = self.commit()
+        plan = self.screen([self.action('ios', candidate)])
+        self.assertFalse(plan['actions'])
+        self.assertIn(f'cannot read mobile/ios/Runner/Info.plist at {candidate}', plan['errors'][0])
+
     def test_dependency_and_flutter_upgrades_prompt_permission_and_privacy_checks(self):
         pin = 'environment:\n  flutter: {0}\n  vars:\n    FLUTTER_VERSION: {0}\n    OTHER: {1}\n'
         self.write('codemagic.yaml', pin.format('3.47.9', 'x'))

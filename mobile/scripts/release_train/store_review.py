@@ -73,25 +73,44 @@ ACCESS_PATHS = (
 )
 
 
+COMPARE_FAILED = (
+    'could not compare the candidate with its live production source. '
+    'Verify release provenance and Git history before submitting.'
+)
+
+
 def git(*args):
     try:
         return subprocess.run(
             ['git', *args], cwd=ROOT, capture_output=True, check=True
         ).stdout
     except (OSError, subprocess.CalledProcessError):
-        raise ProviderError(
-            'could not compare the candidate with its live production source. '
-            'Verify release provenance and Git history before submitting.'
-        ) from None
+        raise ProviderError(COMPARE_FAILED) from None
 
 
-def ios_plist(source):
+def require_ancestor(base, source):
     try:
-        data = plistlib.loads(git('show', f'{source}:{IOS_PLIST}'))
-    except (plistlib.InvalidFileException, ExpatError, ValueError, OverflowError):
+        status = subprocess.run(
+            ['git', 'merge-base', '--is-ancestor', base, source], cwd=ROOT, capture_output=True
+        ).returncode
+    except OSError:
+        status = None
+    if status == 1:
+        raise ProviderError(
+            'the live production source is not an ancestor of the candidate, so the candidate '
+            'could drop changes already in production. Submit a build that contains it.'
+        )
+    if status != 0:
+        raise ProviderError(COMPARE_FAILED)
+
+
+def ios_plist(commit):
+    try:
+        data = plistlib.loads(git('show', f'{commit}:{IOS_PLIST}'))
+    except (ProviderError, plistlib.InvalidFileException, ExpatError, ValueError, OverflowError):
         data = None
     if not isinstance(data, dict):
-        raise ProviderError('cannot read the iOS Runner Info.plist at the selected commit.')
+        raise ProviderError(f'cannot read {IOS_PLIST} at {commit}.')
     return data
 
 
@@ -121,8 +140,8 @@ def ios_findings(base, source, paths, *, dependencies_changed):
         }
         if any(plist.get(key) != previous.get(key) for key in relevant | purpose_strings):
             findings.append(
-                'Verify iOS permission prompts, background use, sign-in and '
-                f'export declarations as applicable. {APPLE}'
+                'Verify iOS permission prompts, background use, sign-in, App Transport '
+                f'Security and export declarations as applicable. {APPLE}'
             )
     if any(path.endswith('/InfoPlist.strings') for path in paths):
         findings.append(f'Verify the localized iOS permission prompts explain the app’s actual use. {APPLE}')
@@ -146,7 +165,7 @@ def ios_findings(base, source, paths, *, dependencies_changed):
 
 
 def findings_for(platform, base, source):
-    git('merge-base', '--is-ancestor', base, source)
+    require_ancestor(base, source)
     changed = git('diff', '--no-renames', '--name-only', '-z', base, source, '--', 'mobile')
     excluded = (
         'mobile/macos/', 'mobile/windows/', 'mobile/linux/', 'mobile/web/',
@@ -210,12 +229,12 @@ def check_candidate(action, snapshot, approvals):
         number = baseline.get('number')
         if type(number) is not int or number < 1:
             raise ProviderError('published build number is missing. Reconcile release provenance.')
+        label += f" against production {baseline['version']}+{number} ({baseline['sha']})"
         findings = findings_for(platform, baseline['sha'], source)
     except ProviderError as error:
         raise ProviderError(f'{label}: {error}') from None
-    label += f" against production {baseline['version']}+{number} ({baseline['sha']})"
     if not findings:
-        return None, f'{label}: no issues detected by the source preflight.'
+        return None, f'{label}: none of the watched store review paths changed.'
     digest = hashlib.sha256(json.dumps([
         platform,
         [build['version'], build['number'], source, build.get('id')],
