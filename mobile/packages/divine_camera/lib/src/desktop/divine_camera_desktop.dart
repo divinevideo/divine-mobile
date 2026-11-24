@@ -47,6 +47,9 @@ class DivineCameraDesktop extends DivineCameraPlatform
   int _generation = 0;
   Completer<void>? _initializationCancellation;
   Future<void> _pending = Future<void>.value();
+  Future<void>? _deviceRelease;
+  Completer<capture.XFile?>? _nativeStopCancellation;
+  final _retiredStopCleanups = <Future<void>>{};
   CameraState _state = const CameraState();
   Timer? _recordingLimit;
   String? _recordingOutputDirectory;
@@ -136,6 +139,7 @@ class DivineCameraDesktop extends DivineCameraPlatform
         DivineVideoStabilizationMode.off,
   }) {
     _cancelPendingInitialization();
+    _cancelNativeStop();
     _resumeOnForeground = false;
     _resumeLens = lens;
     _videoQuality = videoQuality;
@@ -421,8 +425,11 @@ class DivineCameraDesktop extends DivineCameraPlatform
     final generation = _generation;
     capture.XFile? stopped;
     try {
-      final file = stopped = await _cameraPlatform.stopVideoRecording(cameraId);
+      // The native stop owns this take now. Error/disposal must abort the
+      // device rather than enqueue another stop behind the same stuck drain.
       _recordingCameraId = null;
+      final file = stopped = await _stopWithCancellation(cameraId);
+      if (file == null) throw StateError('Camera operation was cancelled.');
       _checkGeneration(generation);
       _state = _state.copyWith(isRecording: false);
       _isFinalizing = true;
@@ -440,6 +447,61 @@ class DivineCameraDesktop extends DivineCameraPlatform
         await _retireDevice(error, generation);
       }
       rethrow;
+    }
+  }
+
+  Future<capture.XFile?> _stopWithCancellation(int cameraId) async {
+    final cancellation = Completer<capture.XFile?>();
+    _nativeStopCancellation = cancellation;
+    try {
+      // The completion itself arbitrates native success against cancellation,
+      // including a backend that completes synchronously. A late native reply
+      // still owns its file cleanup, but cannot reactivate the retired take.
+      unawaited(
+        _cameraPlatform
+            .stopVideoRecording(cameraId)
+            .then<void>(
+              (file) async {
+                if (!cancellation.isCompleted) {
+                  cancellation.complete(file);
+                  return;
+                }
+                final cleanup = _discardFile(file.path);
+                _retiredStopCleanups.add(cleanup);
+                try {
+                  await cleanup;
+                } on Object catch (error, stackTrace) {
+                  Log.error(
+                    'Cancelled desktop recording output could not be removed.',
+                    name: 'divine_camera',
+                    error: error,
+                    stackTrace: stackTrace,
+                  );
+                } finally {
+                  _retiredStopCleanups.remove(cleanup);
+                }
+              },
+              onError: (Object error, StackTrace stackTrace) {
+                if (!cancellation.isCompleted) {
+                  cancellation.completeError(error, stackTrace);
+                }
+                // A failure after cancellation belongs to the retired native
+                // operation; its caller has already received cancellation.
+              },
+            ),
+      );
+      return await cancellation.future;
+    } finally {
+      if (identical(_nativeStopCancellation, cancellation)) {
+        _nativeStopCancellation = null;
+      }
+    }
+  }
+
+  void _cancelNativeStop() {
+    final cancellation = _nativeStopCancellation;
+    if (cancellation != null && !cancellation.isCompleted) {
+      cancellation.complete();
     }
   }
 
@@ -640,6 +702,7 @@ class DivineCameraDesktop extends DivineCameraPlatform
   Future<void> disposeCamera() {
     _generation++;
     _cancelPendingInitialization();
+    _cancelNativeStop();
     _resumeOnForeground = false;
     _recordingLimit?.cancel();
     _recordingLimit = null;
@@ -680,6 +743,7 @@ class DivineCameraDesktop extends DivineCameraPlatform
   void _failCamera(int cameraId, int generation, Object error) {
     if (_cameraId != cameraId || generation != _generation) return;
     final retiringGeneration = ++_generation;
+    _cancelNativeStop();
     final reportError = onCameraError;
     final reportAutoStop = onRecordingAutoStopped;
     _recordingLimit?.cancel();
@@ -727,7 +791,21 @@ class DivineCameraDesktop extends DivineCameraPlatform
     );
   }
 
-  Future<void> _releaseDevice({bool preserveState = false}) async {
+  Future<void> _releaseDevice({bool preserveState = false}) {
+    final existing = _deviceRelease;
+    if (existing != null) return existing;
+    late final Future<void> releasing;
+    releasing = _performDeviceRelease(preserveState: preserveState)
+        .whenComplete(
+          () {
+            if (identical(_deviceRelease, releasing)) _deviceRelease = null;
+          },
+        );
+    _deviceRelease = releasing;
+    return releasing;
+  }
+
+  Future<void> _performDeviceRelease({required bool preserveState}) async {
     final cameraId = _cameraId;
     final recordingCameraId = _recordingCameraId;
     _recordingCameraId = null;
@@ -742,11 +820,14 @@ class DivineCameraDesktop extends DivineCameraPlatform
     if (cameraId != null) {
       try {
         if (recordingCameraId == cameraId) {
-          final file = await _cameraPlatform.stopVideoRecording(cameraId);
-          await _discardFile(file.path);
+          final stopping = _stopWithCancellation(cameraId);
+          _cancelNativeStop();
+          final file = await stopping;
+          if (file != null) await _discardFile(file.path);
         }
       } finally {
         await _disposeNativeCamera(cameraId);
+        await Future.wait(_retiredStopCleanups.toList());
       }
     }
   }

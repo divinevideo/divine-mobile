@@ -7,9 +7,11 @@ import 'package:divine_camera/divine_camera_platform_interface.dart';
 import 'package:divine_camera/src/desktop/desktop_video_file_inspector.dart';
 import 'package:divine_camera/src/desktop/divine_camera_desktop.dart';
 import 'package:fake_async/fake_async.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../../helpers/fixtures.dart';
 
@@ -1058,6 +1060,205 @@ void main() {
         },
       );
 
+      for (final disposingActiveTake in [false, true]) {
+        final boundary = disposingActiveTake
+            ? 'active take'
+            : 'native stop reply';
+        test('disposal owns synchronous output from $boundary', () async {
+          final directory = await Directory.systemTemp.createTemp('sync-stop-');
+          final source = await File(
+            '${directory.path}/take.mp4',
+          ).writeAsBytes([1, 2, 3]);
+          backend
+            ..recordedFile = XFile(source.path)
+            ..synchronousStop = true;
+          try {
+            await camera.initializeCamera();
+            await camera.startRecording();
+            Future<void>? rejected;
+            if (!disposingActiveTake) {
+              rejected = expectLater(camera.stopRecording(), throwsStateError);
+              await backend.stopEntered.future;
+            }
+            await camera.disposeCamera();
+            await rejected;
+            expect(source.existsSync(), isFalse);
+            expect(backend.activeCameraIds, isEmpty);
+          } finally {
+            await camera.disposeCamera();
+            await directory.delete(recursive: true);
+          }
+        });
+      }
+
+      test(
+        'reports cleanup failure for a late cancelled recording',
+        () async {
+          final directory = await Directory.systemTemp.createTemp(
+            'late-read-only-',
+          );
+          final source = await File(
+            '${directory.path}/take.mp4',
+          ).writeAsBytes([1, 2, 3]);
+          final gate = Completer<void>();
+          backend
+            ..recordedFile = XFile(source.path)
+            ..stopGate = gate;
+          const message =
+              'Cancelled desktop recording output could not be removed.';
+          int failures() => LogCaptureService()
+              .getRecentLogs()
+              .where((entry) => entry.message == message)
+              .length;
+          final before = failures();
+          try {
+            await camera.initializeCamera();
+            await camera.startRecording();
+            final rejected = expectLater(
+              camera.stopRecording(),
+              throwsStateError,
+            );
+            await backend.stopEntered.future;
+            await camera.disposeCamera();
+            await rejected;
+            expect(
+              (await Process.run('chmod', ['500', directory.path])).exitCode,
+              0,
+            );
+            await expectLater(
+              File('${directory.path}/denied-probe').writeAsString('denied'),
+              throwsA(isA<FileSystemException>()),
+            );
+            gate.complete();
+            await pumpEventQueue();
+            expect(failures(), before + 1);
+            expect(source.existsSync(), isTrue);
+            expect(backend.activeCameraIds, isEmpty);
+          } finally {
+            await Process.run('chmod', ['700', directory.path]);
+            if (!gate.isCompleted) gate.complete();
+            await camera.disposeCamera();
+            await directory.delete(recursive: true);
+          }
+        },
+        skip: Platform.isWindows,
+      );
+
+      test('disposal aborts an active take without waiting for stop', () async {
+        final gate = Completer<void>();
+        backend.stopGate = gate;
+        await camera.initializeCamera();
+        await camera.startRecording();
+        var disposed = false;
+        final closing = camera.disposeCamera().then((_) => disposed = true);
+        await backend.stopEntered.future;
+        try {
+          await pumpEventQueue();
+          expect(disposed, isTrue);
+          expect(backend.activeCameraIds, isEmpty);
+          expect(backend.stopCalls, 1);
+        } finally {
+          gate.complete();
+          await closing;
+        }
+      });
+
+      for (final deviceError in [false, true]) {
+        final action = deviceError ? 'device error' : 'disposal';
+        test(
+          '$action aborts an unresolved native stop',
+          () async {
+            final directory = await Directory.systemTemp.createTemp(
+              'late-stop-',
+            );
+            final source = await File(
+              '${directory.path}/take.mp4',
+            ).writeAsBytes([1, 2, 3]);
+            final gate = Completer<void>();
+            backend
+              ..recordedFile = XFile(source.path)
+              ..stopGate = gate;
+            await camera.initializeCamera();
+            await camera.startRecording();
+            expect(backend.activeCameraIds, {7});
+            final stopping = camera.stopRecording();
+            final rejected = expectLater(stopping, throwsStateError);
+            await backend.stopEntered.future;
+            final failures = <Object>[];
+            camera.onCameraError = failures.add;
+            if (deviceError) {
+              backend.errors.add(
+                const CameraErrorEvent(7, 'Synthetic device loss during stop'),
+              );
+              await pumpEventQueue();
+            }
+            var disposed = false;
+            final closing = camera.disposeCamera().then((_) => disposed = true);
+            try {
+              await pumpEventQueue();
+              expect(disposed, isTrue);
+              expect(backend.activeCameraIds, isEmpty);
+              expect(backend.stopCalls, 1);
+              if (deviceError) expect(failures, hasLength(1));
+              await rejected;
+              gate.complete();
+              await pumpEventQueue();
+              expect(source.existsSync(), isFalse);
+            } finally {
+              if (!gate.isCompleted) gate.complete();
+              await rejected;
+              await closing;
+              await camera.disposeCamera();
+              await directory.delete(recursive: true);
+            }
+          },
+        );
+      }
+
+      test(
+        'joins failed-take retirement before opening a replacement',
+        () async {
+          backend.earlyDisposalAcknowledgement = true;
+          camera = DivineCameraDesktop(
+            cameraPlatform: backend,
+            fileInspector: fileInspector,
+            waitForNativeClosing: true,
+          );
+          backend.recordedFile = XFile('/synthetic/rejected.mp4');
+          fileInspector.pending = Completer<DesktopVideoMetadata>();
+          await camera.initializeCamera();
+          await camera.startRecording();
+          final stopping = camera.stopRecording();
+          final rejected = expectLater(stopping, throwsFormatException);
+          await fileInspector.entered.future;
+          final release = Completer<void>();
+          backend.disposalGate = release;
+          fileInspector.pending!.completeError(
+            const FormatException('Synthetic rejected take'),
+          );
+          await backend.disposalEntered.future;
+          var reopened = false;
+          final opening = camera.initializeCamera().then((state) {
+            reopened = true;
+            return state;
+          });
+          try {
+            await pumpEventQueue();
+            expect(reopened, isFalse);
+            expect(backend.activeCameraIds, {7});
+            release.complete();
+            expect((await opening).isInitialized, isTrue);
+            await rejected;
+            expect(backend.activeCameraIds, {8});
+          } finally {
+            if (!release.isCompleted) release.complete();
+            await opening;
+            await rejected;
+            await camera.disposeCamera();
+          }
+        },
+      );
+
       test('a failed old take cannot close resumed capture', () async {
         backend.recordedFile = XFile('/synthetic/old-take.mp4');
         fileInspector.pending = Completer<DesktopVideoMetadata>();
@@ -1708,6 +1909,7 @@ class _CameraBackend extends CameraPlatform {
   CameraException? stopError;
   Completer<void>? stopGate;
   final stopEntered = Completer<void>();
+  bool synchronousStop = false;
   int stopCalls = 0;
   int startCalls = 0;
   Completer<void>? startGate;
@@ -1766,13 +1968,15 @@ class _CameraBackend extends CameraPlatform {
 
   @override
   Stream<CameraInitializedEvent> onCameraInitialized(int cameraId) =>
-      initialized.stream;
+      initialized.stream.where((event) => event.cameraId == cameraId);
 
   @override
-  Stream<CameraErrorEvent> onCameraError(int cameraId) => errors.stream;
+  Stream<CameraErrorEvent> onCameraError(int cameraId) =>
+      errors.stream.where((event) => event.cameraId == cameraId);
 
   @override
-  Stream<CameraClosingEvent> onCameraClosing(int cameraId) => closing.stream;
+  Stream<CameraClosingEvent> onCameraClosing(int cameraId) =>
+      closing.stream.where((event) => event.cameraId == cameraId);
 
   @override
   Future<void> startVideoRecording(
@@ -1787,10 +1991,17 @@ class _CameraBackend extends CameraPlatform {
   }
 
   @override
-  Future<XFile> stopVideoRecording(int cameraId) async {
+  Future<XFile> stopVideoRecording(int cameraId) {
     stopCalls++;
-    if (stopError case final error?) throw error;
+    if (stopError case final error?) return Future.error(error);
     if (!stopEntered.isCompleted) stopEntered.complete();
+    if (synchronousStop) {
+      return SynchronousFuture(recordedFile!);
+    }
+    return _finishStop();
+  }
+
+  Future<XFile> _finishStop() async {
     await stopGate?.future;
     return recordedFile ?? XFile('/synthetic/unretained-take.mp4');
   }
