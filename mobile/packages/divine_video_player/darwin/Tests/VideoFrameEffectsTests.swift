@@ -23,6 +23,23 @@ private final class DimEffect: VideoFrameEffect {
   { image.applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: -1]) }
 }
 
+/// Asks for the frame 100 ms back at `scale` and records what it got, so a
+/// test can check how sharp each effect's earlier frames are.
+private final class RecordingEffect: VideoFrameEffect {
+  let historyOffsetsUs: [Int64] = [100_000]
+  let historyScale: Double
+  var received: [CIImage?] = []
+
+  init(scale: Double) { historyScale = scale }
+
+  func render(_ image: CIImage, history: [CIImage?], timeUs: Int64, effectTimeUs: Int64)
+    -> CIImage
+  {
+    received = history
+    return image
+  }
+}
+
 @main
 enum VideoFrameEffectsTests {
   static func main() {
@@ -37,6 +54,7 @@ enum VideoFrameEffectsTests {
     heldFramesAreDrawnAtTheClocksTime()
     heldFramesAreRedrawnOnlyOnceHeldAndDue()
     redrawsOverAHeldFrameKeepASteadyThirtyFramesASecond()
+    eachEffectGetsEarlierFramesAtTheSizeItAsksFor()
     print("VideoFrameEffectsTests passed")
   }
 
@@ -218,6 +236,71 @@ enum VideoFrameEffectsTests {
     }
     precondition(made == 1, "drawing six frames created \(made) render contexts")
     processor.dispose()
+  }
+
+  /// An effect that compares the frame with an earlier one needs that frame
+  /// whole: a smaller copy has lost the fine detail, which then counts as
+  /// change. The export keeps each effect's earlier frames at its own size,
+  /// so the preview does too, even while an effect that asks for smaller
+  /// ones is set for a later part of the video.
+  private static func eachEffectGetsEarlierFramesAtTheSizeItAsksFor() {
+    let whole = RecordingEffect(scale: 1)
+    let half = RecordingEffect(scale: 0.5)
+    VideoFrameEffects.register("test.whole") { _ in whole }
+    VideoFrameEffects.register("test.half") { _ in half }
+    let processor = VideoFrameEffectProcessor()
+    processor.setEffects([
+      ["id": "test.whole", "params": [String: Any](), "startUs": 0, "endUs": 1_000_000],
+      ["id": "test.half", "params": [String: Any](), "startUs": 0],
+    ])
+
+    // A still picture with detail one pixel fine: black and white columns.
+    let still = makeFrame { x, _ in x % 2 == 0 ? 0 : 255 }
+    for timeUs in stride(from: Int64(0), through: 100_000, by: 33_333) {
+      _ = processor.process(still, timeUs: timeUs)
+    }
+
+    let context = CIContext(options: [.workingColorSpace: NSNull()])
+    func columns(_ image: CIImage?) -> [UInt8] {
+      guard let image else { preconditionFailure("no earlier frame") }
+      var pixels = [UInt8](repeating: 0, count: 64 * 64 * 4)
+      context.render(
+        image, toBitmap: &pixels, rowBytes: 64 * 4,
+        bounds: CGRect(x: 0, y: 0, width: 64, height: 64), format: .BGRA8, colorSpace: nil)
+      return (0..<64).map { pixels[(32 * 64 + $0) * 4] }
+    }
+    let sharp = columns(whole.received.first ?? nil)
+    for x in 0..<64 {
+      precondition(
+        abs(Int(sharp[x]) - (x % 2 == 0 ? 0 : 255)) <= 2,
+        "the whole-size effect got a blurred earlier frame: column \(x) is \(sharp[x])")
+    }
+    let soft = columns(half.received.first ?? nil)
+    precondition(
+      soft[10...50].allSatisfy { abs(Int($0) - 128) <= 40 },
+      "the half-size effect did not get its smaller copy: \(soft[10...50])")
+    processor.dispose()
+  }
+
+  /// A 64×64 frame whose blue, green and red are `shade(x, y)`, first row at
+  /// the top.
+  private static func makeFrame(_ shade: (Int, Int) -> UInt8) -> CVPixelBuffer {
+    let buffer = makeFrame()
+    CVPixelBufferLockBaseAddress(buffer, [])
+    let base = CVPixelBufferGetBaseAddress(buffer)!.assumingMemoryBound(to: UInt8.self)
+    let rowBytes = CVPixelBufferGetBytesPerRow(buffer)
+    for y in 0..<64 {
+      for x in 0..<64 {
+        let value = shade(x, y)
+        let pixel = base + y * rowBytes + x * 4
+        pixel[0] = value
+        pixel[1] = value
+        pixel[2] = value
+        pixel[3] = 255
+      }
+    }
+    CVPixelBufferUnlockBaseAddress(buffer, [])
+    return buffer
   }
 
   private static func makeFrame() -> CVPixelBuffer {

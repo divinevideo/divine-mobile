@@ -151,4 +151,39 @@ void main() {
       },
     );
   });
+
+  group('enableReuse', () {
+    test('refuses when the video file changed after the approval', () async {
+      var replaced = false;
+      final approved = SoundRequestSource(
+        video: video(),
+        allowReuse: false,
+        requestable: true,
+      );
+      final client = PublishedVideoSoundClient(
+        ownerPubkey: owner,
+        currentOwner: () => owner,
+        readSource: (_) async => SoundRequestSource(
+          video: video().copyWith(
+            videoUrl: 'https://example.com/replaced.mp4',
+          ),
+          allowReuse: false,
+          requestable: true,
+        ),
+        acquireMedia: (_) async => '/cached/video.mp4',
+        publishOriginal: (_, _) async => soundId,
+        replaceMetadata: (_, _) async {
+          replaced = true;
+          return true;
+        },
+        fetchSound: (_) async => null,
+      );
+
+      await expectLater(
+        client.enableReuse(approved, soundId),
+        throwsA(isA<SoundRequestException>()),
+      );
+      expect(replaced, isFalse);
+    });
+  });
 }

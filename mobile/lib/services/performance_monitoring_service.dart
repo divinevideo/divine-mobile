@@ -4,6 +4,7 @@
 import 'package:app_update_repository/app_update_repository.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter/foundation.dart';
+import 'package:openvine/utils/platform_support.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// A handle to a single started performance trace.
@@ -183,7 +184,7 @@ class PerformanceMonitoringService implements PerformanceTraceMonitor {
   /// [distributedBuild] is [isDistributedBuild] evaluated by the caller, which
   /// has the container; it only matters when [distributedBuildsOnly] holds.
   Future<void> initialize({required bool distributedBuild}) async {
-    if (_initialized) return;
+    if (_initialized || !isFirebaseSupported) return;
 
     final collect =
         collectionEnabled && (!distributedBuildsOnly || distributedBuild);

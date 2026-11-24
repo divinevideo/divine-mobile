@@ -279,6 +279,22 @@ class DivineVideoPlayerInstanceTest {
     }
 
     @Test
+    fun `backgrounding also pauses and restores a buffering playback request`() {
+        materializePlayer()
+        every { mockPlayer.playWhenReady } returns true
+        every { mockPlayer.playbackState } returns Player.STATE_BUFFERING
+        every { mockPlayer.isPlaying } returns false
+        clearMocks(mockPlayer, answers = false, recordedCalls = true)
+
+        instance.onAppBackgrounded()
+        verify(exactly = 1) { mockPlayer.pause() }
+        verify(exactly = 0) { mockPlayer.play() }
+
+        instance.onAppForegrounded()
+        verify(exactly = 1) { mockPlayer.play() }
+    }
+
+    @Test
     fun `stopForActivityDetach pauses audio overlays for symmetry with onAppBackgrounded`() {
         materializePlayer()
 
@@ -457,6 +473,29 @@ class DivineVideoPlayerInstanceTest {
             assertEquals(480, sized["videoHeight"])
             assertEquals(1.0, sized["pixelWidthHeightRatio"])
         }
+    }
+
+    @Test
+    fun `position polling stays idle when paused and reports while playing`() {
+        val heartbeat = slot<Runnable>()
+        every { mockHandler.postDelayed(capture(heartbeat), 200L) } returns true
+        val (listener, _, states) = startPictureTest()
+        pausePictureTestAt(1_000L)
+        verify(exactly = 0) { mockHandler.postDelayed(any(), 200L) }
+
+        every { mockPlayer.isPlaying } returns true
+        listener.onIsPlayingChanged(true)
+        every { mockPlayer.currentPosition } returns 1_200L
+        heartbeat.captured.run()
+        assertEquals(1_200L, states.last()["positionMs"])
+
+        val scheduledTick = heartbeat.captured
+        clearMocks(mockHandler, answers = false, recordedCalls = true)
+        every { mockPlayer.isPlaying } returns false
+        listener.onIsPlayingChanged(false)
+        verify { mockHandler.removeCallbacks(scheduledTick) }
+        scheduledTick.run()
+        verify(exactly = 0) { mockHandler.postDelayed(any(), 200L) }
     }
 
     // -- decoder crop --
@@ -707,6 +746,49 @@ class DivineVideoPlayerInstanceTest {
         listener.onIsPlayingChanged(false)
 
         assertEquals(false, states.last().containsKey("shownPositionMs"))
+    }
+
+    @Test
+    fun `a paused seek reports the displayed frame when the decoder catches up`() {
+        val (_, frames, result) = seekWithSurface(playWhenReady = false)
+        pausePictureTestAt(500L)
+        val states = mutableListOf<Any>()
+        val sink = mockk<EventChannel.EventSink>(relaxed = true)
+        every { sink.success(capture(states)) } just runs
+        instance.onListen(null, sink)
+        assertEquals(null, (states.last() as Map<*, *>)["shownPositionMs"])
+
+        armSeekFrame()
+        frames.renderAt(733_333L)
+
+        assertEquals(533L, (states.last() as Map<*, *>)["shownPositionMs"])
+        verify(exactly = 1) { result.success(null) }
+    }
+
+    @Test
+    fun `a paused seek reports position at timeout and updates when the late frame arrives`() {
+        val timeout = slot<Runnable>()
+        every { mockHandler.postDelayed(capture(timeout), 500L) } returns true
+        val (_, frames, result) = seekWithSurface(playWhenReady = false)
+        pausePictureTestAt(200L)
+        val states = mutableListOf<Any>()
+        val sink = mockk<EventChannel.EventSink>(relaxed = true)
+        every { sink.success(capture(states)) } just runs
+        instance.onListen(null, sink)
+        assertEquals(200L, (states.last() as Map<*, *>)["positionMs"])
+
+        every { mockPlayer.currentPosition } returns 500L
+        timeout.captured.run()
+
+        assertEquals(500L, (states.last() as Map<*, *>)["positionMs"])
+        assertEquals(null, (states.last() as Map<*, *>)["shownPositionMs"])
+        verify(exactly = 1) { result.success(null) }
+
+        armSeekFrame()
+        frames.renderAt(733_333L)
+
+        assertEquals(533L, (states.last() as Map<*, *>)["shownPositionMs"])
+        verify(exactly = 1) { result.success(null) }
     }
 
     // -- rotation --

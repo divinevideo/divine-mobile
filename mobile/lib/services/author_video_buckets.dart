@@ -97,7 +97,7 @@ class AuthorVideoBuckets {
   }
 
   /// Caches [video], deduplicating addressable (NIP-71) events by
-  /// `(pubkey, vineId)` because each edit mints a new event id.
+  /// `(kind, pubkey, vineId)` because each edit mints a new event id.
   ///
   /// An existing entry is overwritten only by a newer
   /// [VideoEvent.nostrCreatedAt]; `createdAt` prefers `published_at`, which
@@ -112,7 +112,9 @@ class AuthorVideoBuckets {
     final bucket = _buckets.putIfAbsent(authorPubkey, () => []);
     final existingIndex = bucket.indexWhere(
       (existing) =>
-          existing.vineId == video.vineId && existing.pubkey == video.pubkey,
+          existing.vineId == video.vineId &&
+          existing.pubkey == video.pubkey &&
+          existing.referenceKind == video.referenceKind,
     );
 
     if (existingIndex != -1) {
@@ -133,7 +135,7 @@ class AuthorVideoBuckets {
   }
 
   /// Merges [updated] into the cached video with the same `stableId` and
-  /// `pubkey`, using [merge] to combine the two versions.
+  /// author and kind, using [merge] to combine the two versions.
   ///
   /// Returns whether a match was found.
   bool replaceByStableId(
@@ -147,7 +149,8 @@ class AuthorVideoBuckets {
     final index = bucket.indexWhere(
       (existing) =>
           existing.stableId == updated.stableId &&
-          existing.pubkey == updated.pubkey,
+          existing.pubkey == updated.pubkey &&
+          existing.referenceKind == updated.referenceKind,
     );
     if (index == -1) return false;
 

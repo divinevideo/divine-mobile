@@ -85,6 +85,7 @@ class SubtitleEditorState extends Equatable {
     this.updatedVideo,
     this.videoDurationMs,
     this.selectedCueIndex,
+    this.loadedTrackRef,
   });
 
   /// Timeline room left past the last cue when the video length is unknown.
@@ -115,6 +116,11 @@ class SubtitleEditorState extends Equatable {
   ///
   /// Drives which cue the preview seeks to and which row the list highlights.
   final int? selectedCueIndex;
+
+  /// The `text-track` reference [cues] were loaded from, or `null` when they
+  /// came from somewhere else or were written from scratch. A save replaces
+  /// that track, which can be a fallback in another language.
+  final String? loadedTrackRef;
 
   /// Whether [cues] can be published as they stand.
   bool get isValid => cues.isNotEmpty && cues.every((cue) => cue.isValid);
@@ -154,7 +160,8 @@ class SubtitleEditorState extends Equatable {
 
   /// Returns a copy with selected fields replaced.
   ///
-  /// Pass [clearSelectedCue] to drop the selection, which `null` cannot
+  /// Pass [clearSelectedCue] to drop the selection, or
+  /// [clearLoadedTrackRef] to drop the loaded track, which `null` cannot
   /// express.
   SubtitleEditorState copyWith({
     SubtitleEditorStatus? status,
@@ -164,6 +171,8 @@ class SubtitleEditorState extends Equatable {
     int? videoDurationMs,
     int? selectedCueIndex,
     bool clearSelectedCue = false,
+    String? loadedTrackRef,
+    bool clearLoadedTrackRef = false,
   }) {
     return SubtitleEditorState(
       status: status ?? this.status,
@@ -174,6 +183,9 @@ class SubtitleEditorState extends Equatable {
       selectedCueIndex: clearSelectedCue
           ? null
           : (selectedCueIndex ?? this.selectedCueIndex),
+      loadedTrackRef: clearLoadedTrackRef
+          ? null
+          : (loadedTrackRef ?? this.loadedTrackRef),
     );
   }
 
@@ -185,5 +197,6 @@ class SubtitleEditorState extends Equatable {
     updatedVideo,
     videoDurationMs,
     selectedCueIndex,
+    loadedTrackRef,
   ];
 }

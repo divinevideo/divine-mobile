@@ -1,6 +1,6 @@
 // ABOUTME: Tests for FeedLoadingModerationCubit.
-// ABOUTME: Covers deferred moderation check, the post-await close guard,
-// ABOUTME: and error handling.
+// ABOUTME: Covers immediate moderation check, idempotent start,
+// ABOUTME: the post-await close guard, and error handling.
 
 import 'dart:async';
 
@@ -114,6 +114,23 @@ void main() {
         },
       );
 
+      test('is idempotent when called more than once', () {
+        when(
+          () => mockService.fetchStatus(sha256),
+        ).thenAnswer((_) async => blockedStatus);
+
+        fakeAsync((fake) {
+          final cubit = buildCubit(videoUrl: divineUrl);
+          addTearDown(cubit.close);
+          cubit
+            ..start()
+            ..start();
+          fake.flushMicrotasks();
+          expect(cubit.state.isRestricted, isTrue);
+          verify(() => mockService.fetchStatus(sha256)).called(1);
+        });
+      });
+
       test(
         'emits ageRestricted when service returns age-restricted status',
         () {
@@ -133,7 +150,6 @@ void main() {
             final cubit = buildCubit(videoUrl: divineUrl);
             addTearDown(cubit.close);
             cubit.start();
-            fake.elapse(const Duration(seconds: 2));
             fake.flushMicrotasks();
             expect(cubit.state.isRestricted, isFalse);
             expect(cubit.state.isAgeRestricted, isTrue);
@@ -178,7 +194,6 @@ void main() {
           final cubit = buildCubit(videoUrl: divineUrl);
           addTearDown(cubit.close);
           cubit.start();
-          fake.elapse(const Duration(seconds: 3));
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
         });
@@ -193,7 +208,6 @@ void main() {
           final cubit = buildCubit(videoUrl: divineUrl);
           addTearDown(cubit.close);
           cubit.start();
-          fake.elapse(const Duration(seconds: 3));
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
         });
@@ -215,7 +229,6 @@ void main() {
             );
             addTearDown(cubit.close);
             cubit.start();
-            fake.elapse(const Duration(seconds: 3));
             fake.flushMicrotasks();
             verify(() => mockService.fetchStatus(explicitSha256)).called(1);
             verifyNever(() => mockService.fetchStatus(sha256));

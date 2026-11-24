@@ -31,6 +31,14 @@
   "videoEditorSocialStickerQuestionNote": "回答はプライベートメッセージで届きます。",
   "videoEditorSocialStickerAddYoursNote": "視聴者は自分の動画で回答します。すべての回答にこのハッシュタグが付き、あなたの動画にリンクされます。",
   "videoEditorSocialStickerRepliesNote": "この動画に動画で返信した人を表示します。視聴者がタップすると返信を見られます。",
+  "videoEditorSocialStickerAudienceTitle": "回答できる人",
+  "videoEditorSocialStickerAudienceEveryone": "全員",
+  "videoEditorSocialStickerAudienceFollowing": "友だち",
+  "videoEditorSocialStickerAudienceCreator": "自分のみ",
+  "videoEditorSocialStickerAudienceFollowingAddYoursNote": "フォローしている人だけが参加できます。ほかの人には、誰かが参加するとステッカーが表示されます。",
+  "videoEditorSocialStickerAudienceFollowingRepliesNote": "ステッカーには、フォローしている人の動画返信だけが表示されます。ほかの人には、そのうちの誰かが返信するとステッカーが表示されます。",
+  "videoEditorSocialStickerAudienceCreatorAddYoursNote": "参加できるのはあなただけです。あなたが参加するまで、ほかの人にはステッカーは表示されません。",
+  "videoEditorSocialStickerAudienceCreatorRepliesNote": "ステッカーには、あなた自身の動画返信だけが表示されます。あなたが返信するまで、ほかの人にはステッカーは表示されません。",
   "videoEditorInteractiveCardAreaHint": "視聴者がタップできるよう、このステッカーは枠の中に配置されます",
   "videoStickerPollSignInToVote": "投票するにはログインしてください。",
   "videoStickerPollNotReady": "接続中です。少し待ってからもう一度お試しください。",
@@ -40,6 +48,8 @@
   "videoStickerQuestionAnswerHint": "タップして回答",
   "videoStickerQuestionAnswerSemanticLabel": "回答: {question}",
   "videoStickerAddYoursButton": "あなたの番",
+  "videoStickerAddYoursWatchSeries": "シリーズを見る",
+  "videoStickerAddYoursWatchSeriesSemanticLabel": "シリーズを見る：{prompt}",
   "videoStickerAddYoursJoined": "{count, plural, =0{最初に参加しましょう} =1{{count}人が参加} other{{count}人が参加}}",
   "videoStickerAddYoursJoinedAtLeast": "{count}人が参加",
   "videoStickerAddYoursOpenSemanticLabel": "参加した人を見る",
@@ -269,11 +279,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "音声入力デバイス",
-  "contentPreferencesAutoRecommended": "自動 (おすすめ)",
-  "contentPreferencesAutoSelectsBest": "最適なマイクを自動で選ぶよ",
-  "contentPreferencesSelectAudioInput": "音声入力を選ぶ",
-  "contentPreferencesUnknownMicrophone": "不明なマイク",
   "profileBlockedAccountNotAvailable": "このアカウントは見れないよ",
   "profileInvalidId": "無効なプロフィール ID",
   "profileShareText": "Divine の {displayName} をチェックしてみて!\n\n{url}",
@@ -1540,6 +1545,7 @@
   "videoUpdateErrorNoPlayableVideo": "この動画には再生できるソースがないから、編集できない。",
   "videoUpdateErrorCouldNotSign": "更新に署名できなかった。もう一回試してみて。",
   "videoUpdateErrorPublishRejected": "リレーが更新を受け付けなかった。少ししてからもう一回試してみて。",
+  "videoUpdateErrorConcurrentEditsOverLimit": "この動画は別のデバイスで変更され、タグまたはコラボレーターが多すぎます。もう一度開いて、いくつか削除してください。",
   "videoUpdateErrorGeneric": "この動画を更新できなかった。もう一回試してみて。",
   "shareMenuDeleteVideoQuestion": "動画を削除する?",
   "shareMenuDeleteCleanupInProgress": "動画を削除しています…",
@@ -1569,6 +1575,7 @@
   "soundsSearchResults": "検索結果",
   "soundsNoSoundsFound": "サウンドが見つからない",
   "soundsNoSoundsFoundDescription": "別のキーワードで検索してみて",
+  "soundsSearchResultCount": "{count, plural, =0{サウンドが見つからない} other{サウンドが{count}件見つかった}}",
   "profileTitle": "プロフィール",
   "profileMoreOptions": "その他のオプション",
   "profileBlockedUser": "{name}をブロックしたよ",
@@ -2693,6 +2700,11 @@
   "videoEditorEffectWave": "ウェーブ",
   "videoEditorEffectGlow": "グロー",
   "videoEditorEffectEcho": "エコー",
+  "videoEditorEffectTimeSplit": "タイムスプリット",
+  "videoEditorEffectLongExposure": "長時間露光",
+  "videoEditorEffectMotionOnly": "動きだけ",
+  "videoEditorEffectStutter": "コマ落とし",
+  "videoEditorEffectTimeWarp": "タイムワープ",
   "videoEditorEffectFisheye": "魚眼",
   "videoEditorEffectDrops": "しずく",
   "videoEditorEffectLightLeak": "光漏れ",
@@ -2760,6 +2772,7 @@
   "videoEditorEffectCategoryDistort": "ゆがみ",
   "videoEditorEffectCategoryLight": "光",
   "videoEditorEffectCategoryMotion": "モーション",
+  "videoEditorEffectCategoryTime": "時間",
   "videoEditorEffectCategoryParticles": "パーティクル",
   "videoEditorEffectCategoryLooks": "ルック",
   "videoEditorEffectCategoryIntro": "イントロ",
@@ -2795,6 +2808,8 @@
   "videoEditorDropsShuffle": "シャッフル",
   "videoEditorEffectsFlashingReplaced": "点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあるので、ここではもう一方を置き換えました。",
   "videoEditorEffectsFlashingNotDuplicated": "点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあります。",
+  "videoEditorEffectsTimeReplaced": "時間エフェクトは一度にひとつだけ。ふたつ重ねると書き出し後の見え方が変わるので、ここではもう一方を置き換えました。",
+  "videoEditorEffectsTimeNotDuplicated": "時間エフェクトは一度にひとつだけ。ふたつ重ねると書き出し後の見え方が変わります。",
   "videoEditorEffectsOnBeat": "ビートに合わせる",
   "videoEditorEffectsOnBeatFinding": "ビートを検出中…",
   "videoEditorEffectsOnBeatNoBeat": "このサウンドには一定のビートがありません",
@@ -6453,9 +6468,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "購読中",
-  "badgeSubscribeAction": "バッジを購読",
-  "badgeAcceptedHoldersTitle": "バッジを承認した人",
+  "badgeSubscribedAction": "コミュニティをフォロー中",
+  "badgeSubscribeAction": "コミュニティをフォロー",
+  "badgeAcceptedHoldersTitle": "このコミュニティの人たち",
   "badgeSubscriptionLoadError": "バッジの購読を読み込めませんでした。もう一度お試しください。",
   "minorAccountReviewVideoSubmittedBody": "動画を確認のために送信しました。",
   "minorAccountReviewVideoSubmittedTitle": "動画を送信しました",
@@ -6558,5 +6573,23 @@
   "collabRoomPartLengthLabel": "各パートの長さ",
   "collabRoomSwapOrderHint": "2つのパートをタップすると順番が入れ替わります。",
   "collabRoomFilmSeriesHint": "それぞれが自分のパートを最大{seconds}秒で撮ります。パートは順番に再生されます。",
-  "collabRoomSeriesReadyHint": "全員のパートがそろいました。つなげましょう！"
+  "collabRoomSeriesReadyHint": "全員のパートがそろいました。つなげましょう！",
+  "badgeDiscoveryTitle": "バッジで人とつながる",
+  "badgeDiscoveryBody": "誰でもバッジを作成し、贈ることができます。プロフィールに表示するバッジは自分で選べます。バッジを開いてコミュニティを知り、気になる人をフォローしましょう。",
+  "badgeDiscoveryMyBadges": "自分のバッジ",
+  "badgeDiscoveryEmpty": "コミュニティがまだ見つかりません。下に引っ張って再試行してください。",
+  "badgeCommunityFollowHint": "コミュニティの動画をフォロー中のフィードに追加します。人のフォローは個別に行います。",
+  "badgeOfficialLabel": "公式",
+  "badgeDiscoveryCardLabel": "{badgeName}、{issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}、{issuerName}、{officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "詳しくは{website}へ",
+  "badgeDiscoveryVideosLabel": "{badgeName}の動画",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

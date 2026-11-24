@@ -1,12 +1,13 @@
-// Fast Nostr signature checks for the web build.
+// Fast Nostr BIP-340 crypto for the web build.
 //
-// Dart's BigInt is emulated in software once compiled to JavaScript, so a
-// BIP-340 check costs ~89 ms on the main thread. noble-secp256k1 uses the
-// browser's native BigInt and WebCrypto SHA-256 instead.
+// Dart's BigInt is emulated in software once compiled to JavaScript, so each
+// BIP-340 verify, sign, or pubkey derivation costs ~89-100 ms on the main
+// thread. noble-secp256k1 uses the browser's native BigInt and WebCrypto
+// SHA-256 instead, bringing operations down to <1 ms.
 //
-// Read by packages/nostr_sdk/lib/relay/native_schnorr_verifier_web.dart.
-// Takes named fields so the argument order cannot be swapped by mistake:
-// noble's order is (signature, message, publicKey).
+// Read by packages/nostr_sdk/lib/relay/native_schnorr_verifier_web.dart and
+// packages/nostr_sdk/lib/relay/native_schnorr_signer_web.dart.
+// Takes named fields so argument order cannot be swapped by mistake.
 import { etc, schnorr } from './vendor/noble-secp256k1/index.js';
 
 globalThis.divineNostrCrypto = Object.freeze({
@@ -22,4 +23,25 @@ globalThis.divineNostrCrypto = Object.freeze({
       etc.hexToBytes(message),
       etc.hexToBytes(pubkey),
     ),
+
+  /**
+   * Resolves to the 64-byte lowercase hex BIP-340 signature of 32-byte hex
+   * `message` using 32-byte hex `privateKey` and optional 32-byte hex
+   * `auxRand`.
+   */
+  signSchnorr: async ({ privateKey, message, auxRand }) =>
+    etc.bytesToHex(
+      await schnorr.signAsync(
+        etc.hexToBytes(message),
+        etc.hexToBytes(privateKey),
+        auxRand ? etc.hexToBytes(auxRand) : undefined,
+      ),
+    ),
+
+  /**
+   * Returns the 32-byte lowercase hex BIP-340 public key derived from 32-byte
+   * hex `privateKey`.
+   */
+  getPublicKey: ({ privateKey }) =>
+    etc.bytesToHex(schnorr.getPublicKey(etc.hexToBytes(privateKey))),
 });

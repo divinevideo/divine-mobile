@@ -4,7 +4,8 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
-import 'package:models/models.dart' show VideoStickerKind, VideoStickerRegion;
+import 'package:models/models.dart'
+    show VideoStickerAudience, VideoStickerKind, VideoStickerRegion;
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
@@ -34,7 +35,10 @@ List<VideoStickerRegion> stickerRegionsFor({
     for (final (index, item) in capturedLayers.indexed)
       ?_regionOf(
         item,
-        above: capturedLayers.skip(index + 1),
+        // One left out of the frames covers nothing in them.
+        above: capturedLayers
+            .skip(index + 1)
+            .where((upper) => !isLeftOutOfFrames(upper.layer)),
         bodySize: bodySize,
         frame: frame,
         timelineMap: timelineMap,
@@ -42,6 +46,12 @@ List<VideoStickerRegion> stickerRegionsFor({
       ),
   ];
 }
+
+/// Whether [layer] stays out of a rendered video's frames: an Add yours or
+/// replies sticker only some may answer, which the player draws alone, to
+/// whoever may see it.
+bool isLeftOutOfFrames(Layer layer) =>
+    SocialStickerData.of(layer)?.isLeftOutOfFrames ?? false;
 
 VideoStickerRegion? _regionOf(
   ExportedLayer item, {
@@ -80,9 +90,13 @@ VideoStickerRegion? _regionOf(
     // time with the video beneath, a faded, blended or masked one would come
     // back solid, a copy would hide what lies on it, and a see-through one in
     // glyphs either phone draws its own way would show both. A location
-    // sticker is not drawn again: its flag and globe are not in the tag.
+    // sticker is not drawn again: its flag and globe are not in the tag. One
+    // only some may answer is in no frame and is published with no look, so
+    // an app that cannot tell who may answer draws nothing; see
+    // VideoStickerRegion.
     style:
         sticker == null ||
+            sticker.isLeftOutOfFrames ||
             sticker.isAnimated ||
             !sticker.canBeRedrawn(emojiFontLoaded: emojiFontLoaded) ||
             !_isDrawnPlainly(layer) ||
@@ -90,6 +104,7 @@ VideoStickerRegion? _regionOf(
         ? null
         : sticker.style.name,
     label: sticker?.tapLabel ?? place?.placeName,
+    audience: sticker?.audience ?? VideoStickerAudience.everyone,
   );
   final start = region.start;
   final end = region.end;

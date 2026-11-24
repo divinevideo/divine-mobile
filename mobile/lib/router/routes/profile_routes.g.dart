@@ -27,6 +27,12 @@ RouteBase get $verifyRouteData => GoRouteData.$route(
       hasOverriddenOnExit: false,
       factory: $VerifyConnectRouteData._fromState,
     ),
+    GoRouteData.$route(
+      path: 'confirmation',
+      name: 'verify-confirmation',
+      hasOverriddenOnExit: false,
+      factory: $VerifyConfirmationRouteData._fromState,
+    ),
   ],
 );
 
@@ -65,6 +71,27 @@ mixin $VerifyConnectRouteData on GoRouteData {
     '/verify/connect/${Uri.encodeComponent(_self.platform)}',
     queryParams: {if (_self.replacing != null) 'replacing': _self.replacing},
   );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+mixin $VerifyConfirmationRouteData on GoRouteData {
+  static VerifyConfirmationRouteData _fromState(GoRouterState state) =>
+      const VerifyConfirmationRouteData();
+
+  @override
+  String get location => GoRouteData.$location('/verify/confirmation');
 
   @override
   void go(BuildContext context) => context.go(location);

@@ -289,6 +289,71 @@ void main() {
             repostCount: 0,
           ),
         ],
+        verify: (_) {
+          verifyNever(
+            () => mockCommentsRepository.getCommentsCount(
+              any(),
+              rootAddressableId: any(named: 'rootAddressableId'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
+            ),
+          );
+          verifyNever(() => mockRepostsRepository.getRepostCount(any()));
+          verifyNever(
+            () => mockRepostsRepository.getRepostCountByEventId(any()),
+          );
+        },
+      );
+
+      blocTest<VideoInteractionsBloc, VideoInteractionsState>(
+        'skips only the seeded comment count and still fetches reposts',
+        setUp: () {
+          when(
+            () => mockLikesRepository.isLikedResolvingCoordinate(
+              eventId: testEventId,
+              addressableId: testAddressableId,
+            ),
+          ).thenAnswer((_) async => false);
+          when(
+            () => mockRepostsRepository.isReposted(testAddressableId),
+          ).thenAnswer((_) async => false);
+          when(
+            () => mockLikesRepository.getLikeCount(
+              testEventId,
+              addressableId: testAddressableId,
+            ),
+          ).thenAnswer((_) async => 1);
+          when(
+            () => mockRepostsRepository.getRepostCount(testAddressableId),
+          ).thenAnswer((_) async => 32);
+        },
+        build: () => createBloc(addressableId: testAddressableId),
+        seed: () => const VideoInteractionsState(likeCount: 1, commentCount: 4),
+        act: (bloc) => bloc.add(const VideoInteractionsFetchRequested()),
+        expect: () => [
+          const VideoInteractionsState(
+            status: VideoInteractionsStatus.loading,
+            likeCount: 1,
+            commentCount: 4,
+          ),
+          const VideoInteractionsState(
+            status: VideoInteractionsStatus.success,
+            likeCount: 1,
+            commentCount: 4,
+            repostCount: 32,
+          ),
+        ],
+        verify: (_) {
+          verifyNever(
+            () => mockCommentsRepository.getCommentsCount(
+              any(),
+              rootAddressableId: any(named: 'rootAddressableId'),
+              includeVideoReplies: any(named: 'includeVideoReplies'),
+            ),
+          );
+          verify(
+            () => mockRepostsRepository.getRepostCount(testAddressableId),
+          ).called(1);
+        },
       );
 
       blocTest<VideoInteractionsBloc, VideoInteractionsState>(

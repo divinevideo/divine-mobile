@@ -1,14 +1,12 @@
 // ABOUTME: Content preferences screen: language, subtitles, filters and audio.
 // ABOUTME: Composes one small Cubit per independent sub-setting.
 
-import 'package:divine_camera/divine_camera.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/blocs/audio_device/audio_device_cubit.dart';
 import 'package:openvine/blocs/audio_sharing/audio_sharing_cubit.dart';
 import 'package:openvine/blocs/language_setting/language_setting_cubit.dart';
 import 'package:openvine/blocs/music_mode/music_mode_cubit.dart';
@@ -54,8 +52,6 @@ class ContentPreferencesScreen extends ConsumerWidget {
                   (defaultTargetPlatform == TargetPlatform.iOS ||
                       defaultTargetPlatform == TargetPlatform.android))
                 const MusicModeSetting(),
-              if (!kIsWeb && defaultTargetPlatform != TargetPlatform.linux)
-                const AudioDeviceSetting(),
             ],
           ),
         ),
@@ -327,165 +323,6 @@ class _MusicModeSettingTile extends StatelessWidget {
       onChanged: (value) => context.read<MusicModeCubit>().setEnabled(value),
     );
   }
-}
-
-class AudioDeviceSetting extends ConsumerWidget {
-  const AudioDeviceSetting({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final service = ref.watch(audioDevicePreferenceServiceProvider);
-    return BlocProvider(
-      key: ValueKey(service),
-      create: (_) {
-        final cubit = AudioDeviceCubit(service: service);
-        runDetached(
-          cubit.load(),
-          'load audio devices',
-          logName: 'ContentPreferencesScreen',
-          category: LogCategory.ui,
-        );
-        return cubit;
-      },
-      child: const _AudioDeviceSettingTile(),
-    );
-  }
-}
-
-class _AudioDeviceSettingTile extends StatelessWidget {
-  const _AudioDeviceSettingTile();
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<AudioDevice>>(
-      future: DivineCamera.instance.listAudioDevices(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data!.length <= 1) {
-          return const SizedBox.shrink();
-        }
-        final devices = snapshot.data!;
-        final currentDeviceId = context.select(
-          (AudioDeviceCubit cubit) => cubit.state.currentDeviceId,
-        );
-        final currentDisplayName = _resolveCurrentDisplayName(
-          context,
-          devices: devices,
-          currentDeviceId: currentDeviceId,
-        );
-
-        return ListTile(
-          leading: DivineIcon(
-            icon: DivineIconName.microphone,
-            color: context.vineColors.accentPositive,
-          ),
-          title: Text(
-            context.l10n.contentPreferencesAudioInputDevice,
-            style: VineTheme.titleMediumFont(
-              color: context.vineColors.primaryText,
-            ),
-          ),
-          subtitle: Text(
-            currentDisplayName,
-            style: VineTheme.bodyMediumFont(
-              color: context.vineColors.mutedText,
-            ),
-          ),
-          trailing: DivineIcon(
-            icon: DivineIconName.caretRight,
-            color: context.vineColors.mutedText,
-          ),
-          onTap: () => _showAudioDevicePicker(
-            context,
-            devices: devices,
-            currentDeviceId: currentDeviceId,
-          ),
-        );
-      },
-    );
-  }
-
-  String _resolveCurrentDisplayName(
-    BuildContext context, {
-    required List<AudioDevice> devices,
-    required String? currentDeviceId,
-  }) {
-    if (currentDeviceId == null) {
-      return context.l10n.contentPreferencesAutoRecommended;
-    }
-    final match = devices.where((d) => d.id == currentDeviceId);
-    if (match.isEmpty) {
-      return context.l10n.contentPreferencesAutoRecommended;
-    }
-    return _formatAudioDeviceName(context, match.first.name);
-  }
-
-  Future<void> _showAudioDevicePicker(
-    BuildContext context, {
-    required List<AudioDevice> devices,
-    required String? currentDeviceId,
-  }) async {
-    final cubit = context.read<AudioDeviceCubit>();
-    await VineBottomSheet.show<void>(
-      context: context,
-      scrollable: false,
-      contentTitle: context.l10n.contentPreferencesSelectAudioInput,
-      children: [
-        _AudioDevicePickerContent(
-          devices: devices,
-          currentDeviceId: currentDeviceId,
-          onSelectDevice: cubit.setDeviceId,
-        ),
-        const SizedBox(height: 16),
-      ],
-    );
-  }
-}
-
-/// The audio-input rows, as a widget so each tap closes the sheet through the
-/// sheet's own element rather than the settings screen's.
-class _AudioDevicePickerContent extends StatelessWidget {
-  const _AudioDevicePickerContent({
-    required this.devices,
-    required this.currentDeviceId,
-    required this.onSelectDevice,
-  });
-
-  final List<AudioDevice> devices;
-  final String? currentDeviceId;
-  final Future<void> Function(String? deviceId) onSelectDevice;
-
-  Future<void> _applyAndClose(BuildContext context, String? deviceId) async {
-    await onSelectDevice(deviceId);
-    if (context.mounted) Navigator.pop(context);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        DivineSelectableRow(
-          title: context.l10n.contentPreferencesAutoRecommended,
-          subtitle: context.l10n.contentPreferencesAutoSelectsBest,
-          isSelected: currentDeviceId == null,
-          onTap: () => _applyAndClose(context, null),
-        ),
-        ...devices.map(
-          (device) => DivineSelectableRow(
-            title: _formatAudioDeviceName(context, device.name),
-            subtitle: device.id,
-            isSelected: currentDeviceId == device.id,
-            onTap: () => _applyAndClose(context, device.id),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-String _formatAudioDeviceName(BuildContext context, String name) {
-  if (name.isEmpty) return context.l10n.contentPreferencesUnknownMicrophone;
-  return name;
 }
 
 /// Viewer preference for translating incoming subtitles into their language.

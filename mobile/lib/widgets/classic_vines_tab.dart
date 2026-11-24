@@ -23,9 +23,11 @@ import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/classic_viners_slider.dart';
+import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/feed_refresh_control.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Tab widget displaying Classics archive videos (pre-2017).
@@ -254,7 +256,7 @@ class _ClassicVinesContentState extends ConsumerState<_ClassicVinesContent>
           // Video grid below
           _ClassicVideosSliverGrid(
             videos: widget.videos,
-            onVideoTap: (videos, index) {
+            onVideoTap: (videos, index, captureOrigin) {
               Log.info(
                 '🎯 ClassicVinesTab TAP: gridIndex=$index, '
                 'videoId=${videos[index].id}',
@@ -268,6 +270,7 @@ class _ClassicVinesContentState extends ConsumerState<_ClassicVinesContent>
                     feedRepository: ref.read(feedRepositoryProvider),
                     initialIndex: 0,
                     initialVideoId: videos[index].id,
+                    tileOrigin: captureOrigin(),
                     contextTitle: context.l10n.exploreTabClassics,
                     trafficSource: ViewTrafficSource.discoveryClassic,
                   ),
@@ -310,7 +313,7 @@ class _ClassicVideosSliverGrid extends ConsumerWidget {
   });
 
   final List<VideoEvent> videos;
-  final void Function(List<VideoEvent> videos, int index) onVideoTap;
+  final VideoGridTapCallback onVideoTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -384,7 +387,7 @@ class _ClassicVideoItem extends StatelessWidget {
   final VideoEvent video;
   final int index;
   final List<VideoEvent> videos;
-  final void Function(List<VideoEvent> videos, int index) onVideoTap;
+  final VideoGridTapCallback onVideoTap;
 
   @override
   Widget build(BuildContext context) {
@@ -393,45 +396,55 @@ class _ClassicVideoItem extends StatelessWidget {
       button: true,
       label: video.displayTitle,
       child: GestureDetector(
-        onTap: () => onVideoTap(videos, index),
+        onTap: () => onVideoTap(
+          videos,
+          index,
+          () => VideoTileOrigin.captureVideo(context, video),
+        ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: Stack(
             children: [
-              VideoThumbnailWidget(video: video),
+              VideoTileThumbnailBoundary(
+                key: ValueKey(video.id),
+                child: VideoThumbnailWidget(video: video),
+              ),
               Positioned(
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: Container(
-                  padding: const EdgeInsets.only(
-                    left: 8,
-                    right: 8,
-                    bottom: 6,
-                    top: 24,
-                  ),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [VineTheme.transparent, VineTheme.scrim80],
+                child: VideoTileScrimBoundary(
+                  opacity: VineTheme.scrim80.a,
+                  child: Container(
+                    padding: const EdgeInsets.only(
+                      left: 8,
+                      right: 8,
+                      bottom: 6,
+                      top: 24,
                     ),
-                  ),
-                  child: UserName.fromPubKey(
-                    video.pubkey,
-                    embeddedName: video.displayAuthorName,
-                    maxLines: 1,
-                    style: const TextStyle(
-                      color: VineTheme.primaryText,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      shadows: [
-                        Shadow(
-                          offset: Offset(0, 1),
-                          blurRadius: 3,
-                          color: VineTheme.scrim50,
-                        ),
-                      ],
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [VineTheme.transparent, VineTheme.scrim80],
+                      ),
+                    ),
+                    child: UserName.fromPubKey(
+                      video.pubkey,
+                      embeddedName: video.displayAuthorName,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        color: VineTheme.primaryText,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        shadows: [
+                          Shadow(
+                            offset: Offset(0, 1),
+                            blurRadius: 3,
+                            color: VineTheme.scrim50,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

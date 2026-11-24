@@ -179,15 +179,14 @@ class FunnelcakeApiClient {
   /// budget in one attempt is not retried; the fast failures a flaky link
   /// actually produces — reset sockets, refused connections, 5xx — leave
   /// almost the whole budget intact and still get every attempt.
-  Future<http.Response> _get(Uri uri) => _retryRead(
+  Future<http.Response> _get(Uri uri) => _retryRead(uri, () => _sendGet(uri));
+
+  Future<http.Response> _sendGet(Uri uri) => _httpClient.get(
     uri,
-    () => _httpClient.get(
-      uri,
-      headers: {
-        'Accept': 'application/json',
-        ...buildDivineClientHeaders(appVersion: _appVersion),
-      },
-    ),
+    headers: {
+      'Accept': 'application/json',
+      ...buildDivineClientHeaders(appVersion: _appVersion),
+    },
   );
 
   /// Retries an idempotent read within one shared timeout budget.
@@ -1280,7 +1279,9 @@ class FunnelcakeApiClient {
       }
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final holders = data['holders'] as List<dynamic>;
-      return holders.cast<String>();
+      // Copy eagerly: a lazy cast would throw a malformed holder at the
+      // caller's iteration, outside this method's error translation.
+      return List<String>.from(holders);
     } on TimeoutException {
       throw FunnelcakeTimeoutException(uri.toString());
     } on FunnelcakeException {
@@ -2346,6 +2347,47 @@ class FunnelcakeApiClient {
     }
   }
 
+  /// Fetches the ranked public badge gallery and video previews in one read.
+  Future<List<IndexedBadgeCard>> getBadgeDiscovery() async {
+    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
+    final uri = Uri.parse(
+      '$_baseUrl/api/badges/discovery?limit=$badgeDiscoveryPageLimit',
+    );
+    late http.Response response;
+    try {
+      response = await _sendGet(uri).timeout(_timeout);
+    } on TimeoutException catch (_, stackTrace) {
+      Error.throwWithStackTrace(
+        FunnelcakeTimeoutException(uri.toString()),
+        stackTrace,
+      );
+    } on FunnelcakeException {
+      rethrow;
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(
+        FunnelcakeException('Failed to fetch badge discovery', cause: error),
+        stackTrace,
+      );
+    }
+    if (response.statusCode != 200) {
+      throw FunnelcakeApiException(
+        message: 'Badge discovery unavailable',
+        statusCode: response.statusCode,
+        url: uri.toString(),
+      );
+    }
+    try {
+      return parseBadgeDiscoveryResponse(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(
+        FunnelcakeException('Invalid badge discovery response', cause: error),
+        stackTrace,
+      );
+    }
+  }
+
   /// Fetches a page of raw badge definition events published by [issuer].
   ///
   /// [limit] is the page size (the API accepts 1 through 100). [cursor] is
@@ -2888,64 +2930,6 @@ class FunnelcakeApiClient {
     SoundKind.music => 'music',
     SoundKind.effect => 'sfx',
   };
-
-  /// Fetches the sounds being adopted right now, the most trending first,
-  /// each with its [SoundStats.usageCount].
-  ///
-  /// Trending weighs recent reuse, so a sound climbs as people start using
-  /// it rather than by its lifetime total.
-  ///
-  /// [limit] is the maximum number of results; the server caps it at 100.
-  /// [offset] skips that many of the ranking, for the pages after the first.
-  ///
-  /// Throws:
-  /// - [FunnelcakeNotConfiguredException] if the API is not configured.
-  /// - [FunnelcakeApiException] if the request fails.
-  /// - [FunnelcakeTimeoutException] if the request times out.
-  /// - [FunnelcakeException] for other errors.
-  Future<List<SoundStats>> getTrendingSounds({
-    int limit = 50,
-    int offset = 0,
-  }) async {
-    if (!isAvailable) {
-      throw const FunnelcakeNotConfiguredException();
-    }
-
-    final uri = Uri.parse('$_baseUrl/api/sounds').replace(
-      queryParameters: {
-        'sort': 'trending',
-        'limit': limit.toString(),
-        if (offset > 0) 'offset': offset.toString(),
-      },
-    );
-
-    try {
-      final response = await _get(uri);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as List<dynamic>;
-        return data
-            .whereType<Map<String, dynamic>>()
-            .map(SoundStats.fromJson)
-            .toList();
-      } else {
-        throw FunnelcakeApiException(
-          message: 'Failed to fetch trending sounds',
-          statusCode: response.statusCode,
-          url: uri.toString(),
-        );
-      }
-    } on TimeoutException {
-      throw FunnelcakeTimeoutException(uri.toString());
-    } on FunnelcakeException {
-      rethrow;
-    } catch (e) {
-      throw FunnelcakeException(
-        'Failed to fetch trending sounds: $e',
-        cause: e,
-      );
-    }
-  }
 
   /// Fetches a paginated list of followers for a user.
   ///

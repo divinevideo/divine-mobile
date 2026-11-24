@@ -233,18 +233,20 @@ StartupCoordinator createStartupCoordinator(
     optional: true,
   );
 
-  coordinator.registerService(
-    name: 'SeedDataPreload',
-    phase: StartupPhase.deferred,
-    initialize: () => initializeSeedDataPreload(
-      container,
-      startupPerformance: startupPerformance,
-      crashReporting: crashReporting,
-    ),
-    optional: true,
-  );
-
   if (!kIsWeb) {
+    // On web, loading the bundled seed JSON is an HTTP download and `compute`
+    // decodes it on the main thread, both on the first-boot path.
+    coordinator.registerService(
+      name: 'SeedDataPreload',
+      phase: StartupPhase.deferred,
+      initialize: () => initializeSeedDataPreload(
+        container,
+        startupPerformance: startupPerformance,
+        crashReporting: crashReporting,
+      ),
+      optional: true,
+    );
+
     coordinator.registerService(
       name: 'C2paDebrisSweep',
       phase: StartupPhase.deferred,

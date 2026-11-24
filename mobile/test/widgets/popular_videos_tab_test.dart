@@ -5,6 +5,7 @@ import 'package:clock/clock.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -13,10 +14,12 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
+import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/popular_videos_tab.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:videos_repository/videos_repository.dart';
 
@@ -408,6 +411,66 @@ void main() {
 
         classicCompleter.complete(_popularPage([_video('popular-classic')]));
         await tester.pumpAndSettle();
+      });
+    });
+
+    group('opening a video', () {
+      testWidgets('grows the player out of the tapped tile', (tester) async {
+        when(
+          () => videosRepository.getPopularVideosPage(
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+            cursor: any(named: 'cursor'),
+            variant: any(named: 'variant'),
+            skipCache: any(named: 'skipCache'),
+            preferredLanguages: any(named: 'preferredLanguages'),
+            viewerCountry: any(named: 'viewerCountry'),
+          ),
+        ).thenAnswer((_) async => _popularPage([_video('popular-video')]));
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) =>
+                  const Scaffold(body: PopularVideosTab()),
+            ),
+            GoRoute(
+              path: PooledFullscreenVideoFeedScreen.path,
+              builder: (context, state) => Scaffold(
+                body: Text(
+                  'opened from tile '
+                  '${(state.extra! as PooledFullscreenVideoFeedArgs).tileOrigin?.videoId}',
+                ),
+              ),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              trendingHashtagsProvider.overrideWith(_EmptyTrends.new),
+              appReadyProvider.overrideWithValue(true),
+              videosRepositoryProvider.overrideWithValue(videosRepository),
+              videoEventServiceProvider.overrideWithValue(videoEventService),
+              contentBlocklistRepositoryProvider.overrideWithValue(
+                blocklistRepository,
+              ),
+            ],
+            child: MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byType(VideoTileThumbnailBoundary));
+        await tester.pumpAndSettle();
+
+        expect(find.text('opened from tile popular-video'), findsOneWidget);
       });
     });
   });

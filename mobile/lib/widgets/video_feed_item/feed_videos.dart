@@ -65,6 +65,7 @@ import 'package:openvine/widgets/video_feed_item/video_interactions_bloc_key.dar
 import 'package:openvine/widgets/video_feed_item/video_interactions_restriction_listener.dart';
 import 'package:openvine/widgets/video_feed_item/video_loading_placeholder.dart';
 import 'package:openvine/widgets/video_feed_item/video_sticker_tap_areas.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_transition_target.dart';
 
 import 'package:unified_logger/unified_logger.dart';
 import 'package:uuid/uuid.dart';
@@ -83,6 +84,7 @@ class FeedVideos extends ConsumerStatefulWidget {
     this.currentIndex = 0,
     this.scrollPhysics,
     this.shouldPortraitExpand = true,
+    this.showTopScrim = false,
     this.isActive = true,
     this.releaseNeighboursWhenInactive = false,
     this.hasMore = false,
@@ -91,6 +93,7 @@ class FeedVideos extends ConsumerStatefulWidget {
     this.trafficSource = ViewTrafficSource.unknown,
     this.trafficSourceForVideo,
     this.sourceDetail,
+    this.isAddYoursSeries = false,
     this.feedSessionRevision = 0,
     super.key,
   });
@@ -103,6 +106,10 @@ class FeedVideos extends ConsumerStatefulWidget {
   final ScrollPhysics? scrollPhysics;
   final String? contextTitle;
   final bool shouldPortraitExpand;
+
+  /// Whether each video gets a scrim along its top edge, for controls that
+  /// sit over it there, such as a fullscreen player's app bar.
+  final bool showTopScrim;
 
   /// Whether this feed should be playing. Set to `false` when the owning
   /// screen is obscured (tab switch, overlay open) to pause the active video
@@ -137,6 +144,10 @@ class FeedVideos extends ConsumerStatefulWidget {
   /// Optional attribution for mixed feeds, such as a share followed by For You.
   final ViewTrafficSource Function(VideoEvent video)? trafficSourceForVideo;
   final String? sourceDetail;
+
+  /// Whether the feed is the series an Add yours collects; see
+  /// [VideoStickerTapAreas.isAddYoursSeries].
+  final bool isAddYoursSeries;
 
   /// Identifies one feed-depth session.
   ///
@@ -405,8 +416,13 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             defaultTargetPlatform == TargetPlatform.iOS);
     final playbackEligible = ref.watch(playbackEligibleProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
+    // A grid tile's picture flying over the page uncovers the video when it
+    // lands, so playback waits until it is about to.
     final isFeedActive =
-        widget.isActive && _routeAllowsPlayback && playbackEligible;
+        widget.isActive &&
+        _routeAllowsPlayback &&
+        playbackEligible &&
+        VideoTileTransitionScope.mayPlayOf(context);
     // A focus-only pause leaves the visible feed warm for the next swipe.
     // Route/tab changes and actual backgrounding still apply its release policy,
     // including when they happen after focus has already been lost.
@@ -480,6 +496,12 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         key: _feedKey,
         videos: widget.videos,
         isActive: isFeedActive,
+        // On web, each live HtmlElementView <video> splits the CanvasKit
+        // layer tree into an extra WebGL overlay surface and triggers shader
+        // recompilation during swipes. Initialize only the active video's
+        // player, not its neighbours'.
+        keepPreviousAlive: !kIsWeb,
+        keepNextAlive: !kIsWeb,
         releaseNeighboursWhenInactive:
             widget.releaseNeighboursWhenInactive && !focusOnlyPause,
         releaseCurrentWhenInactive: codecHeavySurfaceActive,
@@ -544,64 +566,69 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             return const SizedBox.shrink();
           }
           final video = widget.videos[index];
-
-          final thumbnailUrl = video.thumbnailUrl;
-          final blurhash = video.blurhash;
-          // Metadata (dim-tag) ratio, expected to match the player's decoded
-          // ratio. A wrong dim mis-sizes the bars, or — when it flips the
-          // square/non-square split the cover gate below keys off — drops the
-          // backdrop entirely; no publisher emits such a dim (PR #5965 review).
-          // A missing dim falls back to a fullscreen fill.
           final aspectRatio = backdropAspectRatio(video.width, video.height);
-          // The player covers (fills) the screen for every non-square video
-          // when shouldPortraitExpand is set (see VideoItemWidget._resolveBoxFit),
-          // fully occluding the backdrop — so only mount it for the
-          // contain-fit (letterboxed) case where it is actually visible.
-          final coversScreen = videoCoversFeedViewport(
+          return VideoTileTransitionTarget(
+            // The loading layer above is the same widget type, and goes at
+            // the first frame: unkeyed, the page would hand its element to
+            // this layer and rebuild the player from scratch.
+            key: const ValueKey('video-layer'),
+            videoId: video.id,
             aspectRatio: aspectRatio,
-            shouldPortraitExpand: fillsViewport,
-          );
-          // Either source can carry the backdrop: the blurhash path needs
-          // no poster URL (PR #5957 review). The backdrop paints only in the
-          // letterbox bars (each bar in its own RepaintBoundary), so no outer
-          // boundary here — a fullscreen boundary would be composited whole
-          // every frame and undo the per-bar isolation (PR #5957).
-          // A portrait video only leaves bars beside it where the feed
-          // shows whole videos instead of filling the viewport.
-          final showBlurBackdrop =
-              (!video.isPortrait || !fillsViewport) &&
-              !coversScreen &&
-              ((thumbnailUrl != null && thumbnailUrl.isNotEmpty) ||
-                  (blurhash != null && blurhash.isNotEmpty));
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              if (showBlurBackdrop)
-                Positioned.fill(
-                  child: BlurredVideoBackdrop(
-                    url: thumbnailUrl,
-                    blurhash: blurhash,
-                    videoAspectRatio: aspectRatio,
-                  ),
+            coversViewport: videoCoversFeedViewport(
+              aspectRatio: aspectRatio,
+              shouldPortraitExpand: fillsViewport,
+            ),
+            showsVideo: true,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _LetterboxBackdrop(
+                  video: video,
+                  shouldPortraitExpand: fillsViewport,
                 ),
-              child,
-            ],
+                child,
+              ],
+            ),
           );
         },
-        loadingBuilder: (context, index, {required bool isSquare}) {
-          if (index < 0 || index >= widget.videos.length) {
-            return const SizedBox.shrink();
-          }
-          final video = widget.videos[index];
-          return _FeedLoadingOrRestrictedOverlay(
-            video: video,
-            index: index,
-            feedMode: widget.contextTitle,
-            isSquare: isSquare,
-            shouldPortraitExpand: fillsViewport,
-            onSkip: () => _skipPooledVideoAt(index),
-          );
-        },
+        loadingBuilder:
+            (
+              context,
+              index, {
+              required bool isSquare,
+              required bool hasSourceFailure,
+            }) {
+              if (index < 0 || index >= widget.videos.length) {
+                return const SizedBox.shrink();
+              }
+              final video = widget.videos[index];
+              final aspectRatio = backdropAspectRatio(
+                video.width,
+                video.height,
+              );
+              return VideoTileTransitionTarget(
+                key: const ValueKey('loading-layer'),
+                videoId: video.id,
+                aspectRatio: aspectRatio,
+                coversViewport: videoCoversFeedViewport(
+                  aspectRatio: aspectRatio,
+                  shouldPortraitExpand: fillsViewport,
+                ),
+                child: _FeedLoadingOrRestrictedOverlay(
+                  video: video,
+                  index: index,
+                  feedMode: widget.contextTitle,
+                  // The feed only knows a video is square once its player has
+                  // read the stream. Until then the dimension tags already say
+                  // so, and the poster must sit where the video will, rather
+                  // than fill the screen and jump into its band on first frame.
+                  isSquare: isSquare || aspectRatio == 1,
+                  shouldPortraitExpand: fillsViewport,
+                  hasSourceFailure: hasSourceFailure,
+                  onSkip: () => _skipPooledVideoAt(index),
+                ),
+              );
+            },
         errorBuilder: (context, index, onRetry, errorType) {
           if (index < 0 || index >= widget.videos.length) {
             return const SizedBox.shrink();
@@ -673,6 +700,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
                 trafficSource: _trafficSourceFor(video),
                 sourceDetail: widget.sourceDetail,
                 child: _Overlay(
+                  isAddYoursSeries: widget.isAddYoursSeries,
                   controller: controller,
                   video: video,
                   index: index,
@@ -694,6 +722,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
                   onAutomaticSkipToNextVideo: () =>
                       unawaited(_animateToPage(index + 1)),
                   shouldPortraitExpand: fillsViewport,
+                  showTopScrim: widget.showTopScrim,
                 ),
               ),
             ),
@@ -717,17 +746,25 @@ class _Overlay extends ConsumerStatefulWidget {
     required this.onSkipToNextVideo,
     required this.onAutomaticSkipToNextVideo,
     required this.shouldPortraitExpand,
+    required this.showTopScrim,
     required this.loopCompletions,
     this.onSuppressAutoAdvance,
     this.onResumeAutoAdvance,
+    this.isAddYoursSeries = false,
   });
 
   final String? contextTitle;
+
+  /// See [VideoStickerTapAreas.isAddYoursSeries].
+  final bool isAddYoursSeries;
   final DivineVideoPlayerController? controller;
 
   /// Whether the feed fills the item with a video that is not square, which
   /// decides where on the item the video's stickers stand.
   final bool shouldPortraitExpand;
+
+  /// See [FeedVideos.showTopScrim].
+  final bool showTopScrim;
   final VideoEvent video;
   final int index;
 
@@ -1310,46 +1347,48 @@ class __OverlayState extends ConsumerState<_Overlay> {
     }
 
     switch (mode) {
-      case _OverlayForbiddenMode():
-        return ModeratedContentOverlay(
-          status: playbackStatus,
-          onSkip: _skipToNextVideo,
-        );
-      case _OverlayAgeRestrictedMode():
-        return ModeratedContentOverlay(
-          status: playbackStatus,
-          onSkip: _skipToNextVideo,
-          onVerifyAge: _verifyAgeForVideo,
-          isVerifying: isVerifyingAge,
-        );
-      case _OverlayUnavailableMode():
-        return ModeratedContentOverlay(
-          status: playbackStatus,
-          onSkip: _skipToNextVideo,
+      case _OverlayForbiddenMode() ||
+          _OverlayAgeRestrictedMode() ||
+          _OverlayUnavailableMode():
+        return VideoTileTransitionTarget.safetyOverlay(
+          videoId: video.id,
+          isActive: widget.isActive,
+          child: ModeratedContentOverlay(
+            status: playbackStatus,
+            onSkip: _skipToNextVideo,
+            onVerifyAge: mode is _OverlayAgeRestrictedMode
+                ? _verifyAgeForVideo
+                : null,
+            isVerifying: isVerifyingAge,
+          ),
         );
       case _OverlayContentWarningMode(:final labels):
-        return ContentWarningBlurOverlay(
-          // Display uses the merged (creator + community) labels so the blur
-          // names every warning. Hide-similar must persist ONLY the
-          // creator/trusted labels: an unverified community-only warning
-          // must never become a persisted global hide (#4771 warn-only v1).
-          labels: labels,
-          onReveal: widget.onContentWarningRevealed,
-          onHideSimilar: () {
-            runDetached(
-              hideContentWarningsLikeThese(
-                context: context,
-                ref: ref,
-                labels: contentWarningOverlayLabels(
-                  contentWarningLabels: video.contentWarningLabels,
-                  warnLabels: video.warnLabels,
+        return VideoTileTransitionTarget.safetyOverlay(
+          videoId: video.id,
+          isActive: widget.isActive,
+          child: ContentWarningBlurOverlay(
+            // Display uses the merged (creator + community) labels so the
+            // overlay names every warning. Hide-similar must persist ONLY the
+            // creator/trusted labels: an unverified community-only warning
+            // must never become a persisted global hide (#4771 warn-only v1).
+            labels: labels,
+            onReveal: widget.onContentWarningRevealed,
+            onHideSimilar: () {
+              runDetached(
+                hideContentWarningsLikeThese(
+                  context: context,
+                  ref: ref,
+                  labels: contentWarningOverlayLabels(
+                    contentWarningLabels: video.contentWarningLabels,
+                    warnLabels: video.warnLabels,
+                  ),
                 ),
-              ),
-              'hide similar content warnings',
-              logName: 'FeedVideos',
-              category: LogCategory.ui,
-            );
-          },
+                'hide similar content warnings',
+                logName: 'FeedVideos',
+                category: LogCategory.ui,
+              );
+            },
+          ),
         );
       case _OverlayInteractiveMode(isReady: final interactiveReady):
         return FeedAutoAdvancePastErrorListener(
@@ -1468,6 +1507,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
                               controller: widget.controller!,
                               shouldPortraitExpand: widget.shouldPortraitExpand,
                               isActive: widget.isActive && widget.isFeedActive,
+                              isAddYoursSeries: widget.isAddYoursSeries,
                               onVoteStarted: widget.onSuppressAutoAdvance,
                             ),
                           ),
@@ -1513,6 +1553,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
                               index: widget.index,
                               contextTitle: widget.contextTitle,
                               isOwnVideo: isOwnVideo,
+                              showTopScrim: widget.showTopScrim,
                               onSuppressAutoAdvance:
                                   widget.onSuppressAutoAdvance,
                               // Captions fade with the rest of the chrome, by
@@ -1625,6 +1666,7 @@ class _FeedItemActions extends StatelessWidget {
     required this.index,
     required this.contextTitle,
     required this.isOwnVideo,
+    required this.showTopScrim,
     required this.onSuppressAutoAdvance,
     this.subtitleLayer,
     this.pagePositionListenable,
@@ -1634,6 +1676,7 @@ class _FeedItemActions extends StatelessWidget {
   final int index;
   final String? contextTitle;
   final bool isOwnVideo;
+  final bool showTopScrim;
   final VoidCallback? onSuppressAutoAdvance;
   final Widget? subtitleLayer;
   final ValueListenable<double>? pagePositionListenable;
@@ -1646,6 +1689,7 @@ class _FeedItemActions extends StatelessWidget {
         video: video,
         contextTitle: contextTitle,
         isOwnVideo: isOwnVideo,
+        showTopScrim: showTopScrim,
         onSuppressAutoAdvance: onSuppressAutoAdvance,
         subtitleLayer: subtitleLayer,
       );
@@ -1664,6 +1708,7 @@ class _FeedItemActions extends StatelessWidget {
         video: video,
         contextTitle: contextTitle,
         isOwnVideo: isOwnVideo,
+        showTopScrim: showTopScrim,
         onSuppressAutoAdvance: onSuppressAutoAdvance,
         subtitleLayer: subtitleLayer,
       ),
@@ -1718,6 +1763,7 @@ class _FeedItemOverlayActions extends StatelessWidget {
     required this.video,
     required this.contextTitle,
     required this.isOwnVideo,
+    required this.showTopScrim,
     required this.onSuppressAutoAdvance,
     this.subtitleLayer,
   });
@@ -1725,6 +1771,7 @@ class _FeedItemOverlayActions extends StatelessWidget {
   final VideoEvent video;
   final String? contextTitle;
   final bool isOwnVideo;
+  final bool showTopScrim;
   final VoidCallback? onSuppressAutoAdvance;
   final Widget? subtitleLayer;
 
@@ -1740,6 +1787,7 @@ class _FeedItemOverlayActions extends StatelessWidget {
       hasBottomNavigation: false,
       contextTitle: contextTitle,
       isFullscreen: true,
+      showTopGradient: showTopScrim,
       topOffset: isOwnVideo ? 64 : 8,
       onInteracted: onSuppressAutoAdvance,
       subtitleLayer: subtitleLayer,
@@ -1794,14 +1842,69 @@ class _SubtitleLayerState extends State<_SubtitleLayer> {
   }
 }
 
-/// Shows [VideoLoadingPlaceholder] initially.
+/// The blurred fill in the letterbox bars around a video that does not cover
+/// the screen, or nothing when it does.
 ///
-/// If the video is still loading after the moderation-check delay, the
-/// moderation API is queried via [FeedLoadingModerationCubit]. Cached
-/// videos load immediately and never reach the delay, so no unnecessary
-/// API calls are made. Once the moderation check returns a restricted
-/// status the view switches to [VerifyingAwareVideoErrorOverlay] without
-/// waiting for the native player to time out with a 404.
+/// Built under the playing video and over its loading poster, so the bars
+/// are filled from the moment the page appears rather than only once the
+/// player knows the video's size.
+class _LetterboxBackdrop extends StatelessWidget {
+  const _LetterboxBackdrop({
+    required this.video,
+    required this.shouldPortraitExpand,
+  });
+
+  final VideoEvent video;
+  final bool shouldPortraitExpand;
+
+  @override
+  Widget build(BuildContext context) {
+    final thumbnailUrl = video.thumbnailUrl;
+    final blurhash = video.blurhash;
+    // Metadata (dim-tag) ratio, expected to match the player's decoded
+    // ratio. A wrong dim mis-sizes the bars, or — when it flips the
+    // square/non-square split the cover gate below keys off — drops the
+    // backdrop entirely; no publisher emits such a dim (PR #5965 review).
+    // A missing dim falls back to a fullscreen fill.
+    final aspectRatio = backdropAspectRatio(video.width, video.height);
+    // The player covers (fills) the screen for every non-square video
+    // when shouldPortraitExpand is set (see VideoItemWidget._resolveBoxFit),
+    // fully occluding the backdrop — so only mount it for the
+    // contain-fit (letterboxed) case where it is actually visible.
+    final coversScreen = videoCoversFeedViewport(
+      aspectRatio: aspectRatio,
+      shouldPortraitExpand: shouldPortraitExpand,
+    );
+    // Either source can carry the backdrop: the blurhash path needs
+    // no poster URL (PR #5957 review). The backdrop paints only in the
+    // letterbox bars (each bar in its own RepaintBoundary), so no outer
+    // boundary here — a fullscreen boundary would be composited whole
+    // every frame and undo the per-bar isolation (PR #5957).
+    // A portrait video only leaves bars beside it where the feed
+    // shows whole videos instead of filling the viewport.
+    final showBlurBackdrop =
+        (!video.isPortrait || !shouldPortraitExpand) &&
+        !coversScreen &&
+        ((thumbnailUrl != null && thumbnailUrl.isNotEmpty) ||
+            (blurhash != null && blurhash.isNotEmpty));
+    if (!showBlurBackdrop) return const SizedBox.shrink();
+    return Positioned.fill(
+      child: BlurredVideoBackdrop(
+        url: thumbnailUrl,
+        blurhash: blurhash,
+        videoAspectRatio: aspectRatio,
+      ),
+    );
+  }
+}
+
+/// Shows [VideoLoadingPlaceholder] while a video loads.
+///
+/// Healthy initial loads skip `/check-result` completely. Once a playback
+/// source fails or stalls while loading continues ([hasSourceFailure]),
+/// [FeedLoadingModerationCubit] queries the moderation API immediately (`0ms`)
+/// so restricted or age-gated media surfaces [VerifyingAwareVideoErrorOverlay]
+/// without waiting for every fallback URL to fail or time out.
 class _FeedLoadingOrRestrictedOverlay extends ConsumerWidget {
   const _FeedLoadingOrRestrictedOverlay({
     required this.video,
@@ -1809,6 +1912,7 @@ class _FeedLoadingOrRestrictedOverlay extends ConsumerWidget {
     required this.feedMode,
     required this.isSquare,
     required this.shouldPortraitExpand,
+    required this.hasSourceFailure,
     required this.onSkip,
   });
 
@@ -1817,42 +1921,50 @@ class _FeedLoadingOrRestrictedOverlay extends ConsumerWidget {
   final String? feedMode;
   final bool isSquare;
   final bool shouldPortraitExpand;
+  final bool hasSourceFailure;
   final VoidCallback onSkip;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Watch the moderation service so the BlocProvider rebuilds (and the
-    // captured cubit is closed and re-created) if the provider's identity
-    // ever flips. The ValueKey gates the BlocProvider lifecycle on the
-    // service identity. See .claude/rules/state_management.md → "Bridging
-    // Riverpod-provided dependencies into BlocProvider".
+    // captured cubit is closed and re-created) if the provider's identity or
+    // the video at this slot changes. See .claude/rules/state_management.md →
+    // "Bridging Riverpod-provided dependencies into BlocProvider".
     final service = ref.watch(videoModerationStatusServiceProvider);
     return BlocProvider<FeedLoadingModerationCubit>(
-      key: ValueKey(service),
-      create: (_) => FeedLoadingModerationCubit(
-        service: service,
-        explicitSha256: video.sha256,
-        videoUrl: video.videoUrl,
-      )..start(),
+      key: ValueKey((service, video.id)),
+      create: (_) {
+        final cubit = FeedLoadingModerationCubit(
+          service: service,
+          explicitSha256: video.sha256,
+          videoUrl: video.videoUrl,
+        );
+        if (hasSourceFailure) {
+          cubit.start();
+        }
+        return cubit;
+      },
       child: _FeedLoadingOrRestrictedOverlayView(
         video: video,
         index: index,
         feedMode: feedMode,
         isSquare: isSquare,
         shouldPortraitExpand: shouldPortraitExpand,
+        hasSourceFailure: hasSourceFailure,
         onSkip: onSkip,
       ),
     );
   }
 }
 
-class _FeedLoadingOrRestrictedOverlayView extends ConsumerWidget {
+class _FeedLoadingOrRestrictedOverlayView extends ConsumerStatefulWidget {
   const _FeedLoadingOrRestrictedOverlayView({
     required this.video,
     required this.index,
     required this.feedMode,
     required this.isSquare,
     required this.shouldPortraitExpand,
+    required this.hasSourceFailure,
     required this.onSkip,
   });
 
@@ -1861,10 +1973,34 @@ class _FeedLoadingOrRestrictedOverlayView extends ConsumerWidget {
   final String? feedMode;
   final bool isSquare;
   final bool shouldPortraitExpand;
+  final bool hasSourceFailure;
   final VoidCallback onSkip;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_FeedLoadingOrRestrictedOverlayView> createState() =>
+      _FeedLoadingOrRestrictedOverlayViewState();
+}
+
+class _FeedLoadingOrRestrictedOverlayViewState
+    extends ConsumerState<_FeedLoadingOrRestrictedOverlayView> {
+  @override
+  void didUpdateWidget(
+    covariant _FeedLoadingOrRestrictedOverlayView oldWidget,
+  ) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.hasSourceFailure && widget.hasSourceFailure) {
+      context.read<FeedLoadingModerationCubit>().start();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final video = widget.video;
+    final index = widget.index;
+    final feedMode = widget.feedMode;
+    final isSquare = widget.isSquare;
+    final shouldPortraitExpand = widget.shouldPortraitExpand;
+    final onSkip = widget.onSkip;
     return BlocListener<FeedLoadingModerationCubit, FeedLoadingModerationState>(
       listenWhen: (previous, current) =>
           previous.status != current.status && current.isAgeRestricted,
@@ -1925,13 +2061,24 @@ class _FeedLoadingOrRestrictedOverlayView extends ConsumerWidget {
                 );
               }
 
-              return VideoLoadingPlaceholder(
-                videoId: video.id,
-                index: index,
-                feedMode: feedMode,
-                thumbnailUrl: video.thumbnailUrl,
-                isSquare: isSquare,
-                shouldPortraitExpand: shouldPortraitExpand,
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  VideoLoadingPlaceholder(
+                    videoId: video.id,
+                    index: index,
+                    feedMode: feedMode,
+                    thumbnailUrl: video.thumbnailUrl,
+                    isSquare: isSquare,
+                    shouldPortraitExpand: shouldPortraitExpand,
+                  ),
+                  // The placeholder paints the page background, so the bars
+                  // go over it; they never reach the poster in the middle.
+                  _LetterboxBackdrop(
+                    video: video,
+                    shouldPortraitExpand: shouldPortraitExpand,
+                  ),
+                ],
               );
             },
           ),

@@ -63,6 +63,7 @@ import 'package:openvine/services/video_moderation_status_service.dart';
 import 'package:openvine/widgets/divine_video_metrics_tracker.dart';
 import 'package:openvine/widgets/video_feed_item/actions/help_classify_action_button.dart';
 import 'package:openvine/widgets/video_feed_item/actions/report_action_button.dart';
+import 'package:openvine/widgets/video_feed_item/blurred_video_backdrop.dart';
 import 'package:openvine/widgets/video_feed_item/content_warning_helpers.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
 import 'package:openvine/widgets/video_feed_item/feed_reactions_overlay.dart';
@@ -73,6 +74,7 @@ import 'package:openvine/widgets/video_feed_item/player_gesture_surface.dart';
 import 'package:openvine/widgets/video_feed_item/pooled_video_error_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
 import 'package:openvine/widgets/video_feed_item/video_loading_placeholder.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_transition_target.dart';
 import 'package:reposts_repository/reposts_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -195,6 +197,8 @@ VideoEvent _makeVideo({
   String? sha256,
   List<String> warnLabels = const [],
   List<String> contentWarningLabels = const [],
+  String? dimensions,
+  String? blurhash,
 }) {
   return VideoEvent(
     id: id ?? _testVideoId,
@@ -206,6 +210,8 @@ VideoEvent _makeVideo({
     sha256: sha256,
     warnLabels: warnLabels,
     contentWarningLabels: contentWarningLabels,
+    dimensions: dimensions,
+    blurhash: blurhash,
   );
 }
 
@@ -373,6 +379,10 @@ Future<ProviderContainer> _pumpFeedVideos(
   List<NavigatorObserver> navigatorObservers = const <NavigatorObserver>[],
   List<dynamic> additionalOverrides = const [],
   ValueListenable<List<VideoEvent>>? videosListenable,
+  ValueListenable<VideoTileFlightPhase>? tileTransitionPhase,
+
+  /// Left out of the feed when `null`, so its own default applies.
+  bool? showTopScrim,
   ProviderContainer? providerContainer,
 }) async {
   final mockPlaybackCubit =
@@ -389,19 +399,55 @@ Future<ProviderContainer> _pumpFeedVideos(
   // tests assert the chrome that reacts to it.
   final immersiveCubit = feedImmersiveCubit ?? FeedImmersiveCubit();
   addTearDown(immersiveCubit.close);
-  Widget buildFeed(List<VideoEvent> list) => FeedVideos(
-    key: feedKey,
-    trafficSource: trafficSource,
-    sourceDetail: sourceDetail,
-    feedSessionRevision: feedSessionRevision,
-    videos: list,
-    onNearEnd: () {},
-    isActive: isActive,
-    releaseNeighboursWhenInactive: releaseNeighboursWhenInactive,
-    hasMore: hasMore,
-    isLoadingMore: isLoadingMore,
-    onActiveVideoChanged: onActiveVideoChanged,
-  );
+  Widget buildFeed(List<VideoEvent> list) {
+    if (showTopScrim == null) {
+      return FeedVideos(
+        key: feedKey,
+        trafficSource: trafficSource,
+        sourceDetail: sourceDetail,
+        feedSessionRevision: feedSessionRevision,
+        videos: list,
+        onNearEnd: () {},
+        isActive: isActive,
+        releaseNeighboursWhenInactive: releaseNeighboursWhenInactive,
+        hasMore: hasMore,
+        isLoadingMore: isLoadingMore,
+        onActiveVideoChanged: onActiveVideoChanged,
+      );
+    }
+    return FeedVideos(
+      key: feedKey,
+      trafficSource: trafficSource,
+      sourceDetail: sourceDetail,
+      feedSessionRevision: feedSessionRevision,
+      videos: list,
+      onNearEnd: () {},
+      isActive: isActive,
+      releaseNeighboursWhenInactive: releaseNeighboursWhenInactive,
+      hasMore: hasMore,
+      isLoadingMore: isLoadingMore,
+      showTopScrim: showTopScrim,
+      onActiveVideoChanged: onActiveVideoChanged,
+    );
+  }
+
+  final noFlight = ValueNotifier<VideoTileFlightFrame?>(null);
+  addTearDown(noFlight.dispose);
+  Widget body = buildFeed(videos);
+  if (videosListenable != null) {
+    body = ValueListenableBuilder<List<VideoEvent>>(
+      valueListenable: videosListenable,
+      builder: (context, list, _) => buildFeed(list),
+    );
+  }
+  if (tileTransitionPhase != null) {
+    body = VideoTileTransitionScope(
+      targets: VideoTileTransitionTargets(),
+      phase: tileTransitionPhase,
+      flight: noFlight,
+      child: body,
+    );
+  }
   final container =
       providerContainer ??
       ProviderContainer(
@@ -442,14 +488,7 @@ Future<ProviderContainer> _pumpFeedVideos(
             BlocProvider<VideoVolumeCubit>.value(value: mockVolumeCubit),
             BlocProvider<FeedImmersiveCubit>.value(value: immersiveCubit),
           ],
-          child: Scaffold(
-            body: videosListenable == null
-                ? buildFeed(videos)
-                : ValueListenableBuilder<List<VideoEvent>>(
-                    valueListenable: videosListenable,
-                    builder: (context, list, _) => buildFeed(list),
-                  ),
-          ),
+          child: Scaffold(body: body),
         ),
       ),
     ),
@@ -519,6 +558,72 @@ void main() {
     );
 
     testWidgets(
+      'letterboxes the poster of a video tagged square before it loads',
+      (tester) async {
+        final video = _makeVideo(dimensions: '480x480');
+        await _pumpFeedVideos(tester, videos: [video]);
+        await tester.pump();
+
+        expect(
+          tester
+              .widget<VideoLoadingPlaceholder>(
+                find.byType(VideoLoadingPlaceholder),
+              )
+              .isSquare,
+          isTrue,
+        );
+      },
+    );
+
+    testWidgets(
+      'fills the screen with the poster of a video not tagged square',
+      (tester) async {
+        final video = _makeVideo(dimensions: '720x1280');
+        await _pumpFeedVideos(tester, videos: [video]);
+        await tester.pump();
+
+        expect(
+          tester
+              .widget<VideoLoadingPlaceholder>(
+                find.byType(VideoLoadingPlaceholder),
+              )
+              .isSquare,
+          isFalse,
+        );
+      },
+    );
+
+    testWidgets(
+      'fills the letterbox bars of a square video while it loads',
+      (tester) async {
+        final video = _makeVideo(
+          dimensions: '480x480',
+          blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+        );
+        await _pumpFeedVideos(tester, videos: [video]);
+        await tester.pump();
+
+        expect(find.byType(VideoLoadingPlaceholder), findsOneWidget);
+        expect(find.byType(BlurredVideoBackdrop), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'leaves no letterbox bars around a portrait video while it loads',
+      (tester) async {
+        final video = _makeVideo(
+          dimensions: '720x1280',
+          blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+        );
+        await _pumpFeedVideos(tester, videos: [video]);
+        await tester.pump();
+
+        expect(find.byType(VideoLoadingPlaceholder), findsOneWidget);
+        expect(find.byType(BlurredVideoBackdrop), findsNothing);
+      },
+    );
+
+    testWidgets(
       'shows $PooledVideoErrorOverlay when moderation cubit emits restricted',
       (tester) async {
         // Test _FeedLoadingOrRestrictedOverlayView directly by providing a
@@ -577,6 +682,29 @@ void main() {
     );
 
     testWidgets(
+      'skips moderation lookup during healthy loading before any source failure',
+      (tester) async {
+        const sha256 =
+            '8ad13ea11bed00b086a4c93d1bbc43f85953cf05f7715bfb16200663b6e3c0ac';
+        final video = _makeVideo(
+          videoUrl: 'https://media.divine.video/$sha256',
+          sha256: sha256,
+        );
+        final moderationService = _MockVideoModerationStatusService();
+
+        await _pumpFeedVideos(
+          tester,
+          videos: [video],
+          moderationService: moderationService,
+        );
+        await tester.pump(const Duration(seconds: 2));
+
+        verifyNever(() => moderationService.fetchStatus(any()));
+        expect(find.byType(VideoLoadingPlaceholder), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'auto-authorizes age-restricted loading media when preferences allow show',
       (tester) async {
         const sha256 =
@@ -619,7 +747,14 @@ void main() {
           mediaAuthInterceptor: mediaAuthInterceptor,
         );
         await tester.pump();
+        verifyNever(() => moderationService.fetchStatus(any()));
 
+        tester
+            .state<InfiniteVideoFeedState>(find.byType(InfiniteVideoFeed))
+            .debugMarkLoadingSourceFailed(0);
+        await tester.pump();
+
+        verify(() => moderationService.fetchStatus(sha256)).called(1);
         verify(
           () => mediaAuthInterceptor.createAutoAuthHeadersForAdultMedia(
             sha256Hash: sha256,
@@ -667,6 +802,12 @@ void main() {
         );
         await tester.pump();
 
+        tester
+            .state<InfiniteVideoFeedState>(find.byType(InfiniteVideoFeed))
+            .debugMarkLoadingSourceFailed(0);
+        await tester.pump();
+
+        verify(() => moderationService.fetchStatus(sha256)).called(1);
         verifyNever(() => playbackStatusCubit.markVerifying(video.id));
         verifyNever(
           () => mediaAuthInterceptor.createAutoAuthHeadersForAdultMedia(
@@ -689,15 +830,25 @@ void main() {
         final video = _makeVideo();
         final cubit = _MockVideoPlaybackStatusCubit()
           ..stub(PlaybackStatus.forbidden, video.id);
+        final phase = ValueNotifier(VideoTileFlightPhase.landed);
+        addTearDown(phase.dispose);
 
         await _pumpFeedVideos(
           tester,
           videos: [video],
           videoPlaybackStatusCubit: cubit,
+          tileTransitionPhase: phase,
         );
         await tester.pump();
 
         expect(find.byType(ModeratedContentOverlay), findsOneWidget);
+        final targets = tester
+            .widget<VideoTileTransitionScope>(
+              find.byType(VideoTileTransitionScope),
+            )
+            .targets;
+        expect(targets.blocksFlightFor(video.id), isTrue);
+        expect(targets.hasActiveSafetyOverlay, isTrue);
       },
     );
 
@@ -850,16 +1001,26 @@ void main() {
       final cubit = _MockVideoPlaybackStatusCubit()
         ..stub(PlaybackStatus.ready, video.id);
 
+      final phase = ValueNotifier(VideoTileFlightPhase.landed);
+      addTearDown(phase.dispose);
       await _pumpFeedVideos(
         tester,
         videos: [video],
         videoPlaybackStatusCubit: cubit,
+        tileTransitionPhase: phase,
       );
       await tester.pump();
 
       final feed = tester.widget<InfiniteVideoFeed>(
         find.byType(InfiniteVideoFeed),
       );
+      final targets = tester
+          .widget<VideoTileTransitionScope>(
+            find.byType(VideoTileTransitionScope),
+          )
+          .targets;
+      expect(targets.blocksFlightFor(video.id), isTrue);
+      expect(targets.hasActiveSafetyOverlay, isTrue);
       expect(feed.canAutoPlay, isNotNull);
       expect(
         feed.canAutoPlay!(video),
@@ -872,6 +1033,8 @@ void main() {
       await tester.pump();
 
       expect(find.byType(ContentWarningBlurOverlay), findsNothing);
+      expect(targets.blocksFlightFor(video.id), isFalse);
+      expect(targets.hasActiveSafetyOverlay, isFalse);
       final revealedFeed = tester.widget<InfiniteVideoFeed>(
         find.byType(InfiniteVideoFeed),
       );
@@ -881,6 +1044,62 @@ void main() {
         reason: 'View Anyway opens the autoplay gate for this video',
       );
     });
+
+    testWidgets(
+      'does not mark a warned neighbour as the current page safety overlay',
+      (tester) async {
+        final current = _makeVideo(id: 'current-video');
+        final neighbour = _makeVideo(
+          id: 'neighbour-video',
+          warnLabels: ['nsfw'],
+        );
+        final phase = ValueNotifier(VideoTileFlightPhase.landed);
+        addTearDown(phase.dispose);
+
+        await _pumpFeedVideos(
+          tester,
+          videos: [current, neighbour],
+          tileTransitionPhase: phase,
+        );
+        await tester.pump();
+
+        final targets = tester
+            .widget<VideoTileTransitionScope>(
+              find.byType(VideoTileTransitionScope),
+            )
+            .targets;
+        expect(targets.blocksFlightFor(neighbour.id), isTrue);
+        expect(targets.hasActiveSafetyOverlay, isFalse);
+      },
+    );
+
+    testWidgets(
+      'does not mark a moderated neighbour as the current page safety overlay',
+      (tester) async {
+        final current = _makeVideo(id: 'current-video');
+        final neighbour = _makeVideo(id: 'neighbour-video');
+        final cubit = _MockVideoPlaybackStatusCubit()
+          ..stub(PlaybackStatus.forbidden, neighbour.id);
+        final phase = ValueNotifier(VideoTileFlightPhase.landed);
+        addTearDown(phase.dispose);
+
+        await _pumpFeedVideos(
+          tester,
+          videos: [current, neighbour],
+          videoPlaybackStatusCubit: cubit,
+          tileTransitionPhase: phase,
+        );
+        await tester.pump();
+
+        final targets = tester
+            .widget<VideoTileTransitionScope>(
+              find.byType(VideoTileTransitionScope),
+            )
+            .targets;
+        expect(targets.blocksFlightFor(neighbour.id), isTrue);
+        expect(targets.hasActiveSafetyOverlay, isFalse);
+      },
+    );
 
     testWidgets('allows autoplay for video without content warning', (
       tester,
@@ -3497,6 +3716,50 @@ void main() {
       expect(tester.widget<InfiniteVideoFeed>(feedFinder).isActive, isTrue);
     });
 
+    testWidgets('leaves the top scrim off by default', (tester) async {
+      await _pumpFeedVideos(tester, videos: [_makeVideo()]);
+      await tester.pump();
+
+      expect(
+        tester
+            .widget<VideoOverlayActions>(find.byType(VideoOverlayActions))
+            .showTopGradient,
+        isFalse,
+      );
+    });
+
+    testWidgets('scrims the top of each video when asked', (tester) async {
+      await _pumpFeedVideos(tester, videos: [_makeVideo()], showTopScrim: true);
+      await tester.pump();
+
+      expect(
+        tester
+            .widget<VideoOverlayActions>(find.byType(VideoOverlayActions))
+            .showTopGradient,
+        isTrue,
+      );
+    });
+
+    testWidgets('waits for a grid tile picture to be about to land to play', (
+      tester,
+    ) async {
+      final phase = ValueNotifier(VideoTileFlightPhase.flying);
+      addTearDown(phase.dispose);
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [_makeVideo()],
+        tileTransitionPhase: phase,
+      );
+      final feedFinder = find.byType(InfiniteVideoFeed);
+      expect(tester.widget<InfiniteVideoFeed>(feedFinder).isActive, isFalse);
+
+      phase.value = VideoTileFlightPhase.arriving;
+      await tester.pump();
+
+      expect(tester.widget<InfiniteVideoFeed>(feedFinder).isActive, isTrue);
+    });
+
     testWidgets(
       'hides the paused affordance while the feed itself is inactive',
       (tester) async {
@@ -3717,9 +3980,6 @@ void main() {
         expect(find.text(topComment.content), findsOneWidget);
         // Hold the sheet's own load, so its pending focus stays observable.
         stubLoadComments((_) => Completer<CommentThread>().future);
-        when(
-          () => commentsRepository.stopWatchingComments(),
-        ).thenAnswer((_) async {});
 
         await tester.tap(find.text(topComment.content));
         await tester.pump();

@@ -1908,7 +1908,11 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             realignClipAudioLoop()
         }
         clipAudioSyncTicks = 0
-        clipAudioSyncTimer?.invalidate()
+        startClipAudioSyncIfNeeded()
+    }
+
+    private func startClipAudioSyncIfNeeded() {
+        guard !isBackgrounded, clipAudioLoop != nil, clipAudioSyncTimer == nil else { return }
         clipAudioSyncTimer = Timer.scheduledTimer(
             withTimeInterval: Self.clipAudioSyncInterval,
             repeats: true
@@ -2047,7 +2051,13 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         timeControlObservation?.invalidate()
         timeControlObservation = player?.observe(\.timeControlStatus, options: [.new]) {
             [weak self] _, _ in
-            DispatchQueue.main.async { self?.realignClipAudioLoop() }
+            DispatchQueue.main.async {
+                guard let self else { return }
+                if let player = self.player, player.timeControlStatus != .paused {
+                    self.textureOutput?.playbackDidStart()
+                }
+                self.realignClipAudioLoop()
+            }
         }
     }
 
@@ -2762,6 +2772,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         // disposes the engine's players before the shell is destroyed
         // (#9342).
         textureOutput?.suspendFrameDelivery()
+        clipAudioSyncTimer?.invalidate()
+        clipAudioSyncTimer = nil
         wasPlayingBeforePause = player?.rate ?? 0 > 0
         if wasPlayingBeforePause {
             player?.pause()
@@ -2777,6 +2789,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     func onAppForegrounded() {
         isBackgrounded = false
         textureOutput?.resumeFrameDelivery()
+        startClipAudioSyncIfNeeded()
         if wasPlayingBeforePause || resumesSeekOnForeground {
             player?.play()
             player?.rate = Float(speed)

@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/profile_reposted_videos/profile_reposted_videos_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/scroll_pagination_mixin.dart';
@@ -23,6 +24,7 @@ import 'package:openvine/widgets/profile/profile_tab_error_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_loading_more_sliver.dart';
 import 'package:openvine/widgets/profile/profile_tab_loading_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_thumbnail.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -54,6 +56,10 @@ class _ProfileRepostsGridState extends State<ProfileRepostsGrid>
     with ScrollPaginationMixin {
   /// Resolved from [PrimaryScrollController] provided by [NestedScrollView].
   ScrollController? _primaryScrollController;
+
+  /// Shared by every state this tab shows; see
+  /// [ProfileTabLoadingState.scrollViewKey].
+  final GlobalKey _scrollViewKey = GlobalKey();
 
   @override
   ScrollController get paginationScrollController => _primaryScrollController!;
@@ -95,7 +101,7 @@ class _ProfileRepostsGridState extends State<ProfileRepostsGrid>
         if (state.status == ProfileRepostedVideosStatus.initial ||
             state.status == ProfileRepostedVideosStatus.syncing ||
             state.status == ProfileRepostedVideosStatus.loading) {
-          return const ProfileTabLoadingState();
+          return ProfileTabLoadingState(scrollViewKey: _scrollViewKey);
         }
 
         // Reposts that failed to resolve land here too: a settled-empty tab
@@ -104,6 +110,7 @@ class _ProfileRepostsGridState extends State<ProfileRepostsGrid>
         if (state.status == ProfileRepostedVideosStatus.failure ||
             state.hasUnresolvedReposts) {
           return ProfileTabErrorState(
+            scrollViewKey: _scrollViewKey,
             message: context.l10n.profileErrorLoadingReposts,
           );
         }
@@ -112,6 +119,7 @@ class _ProfileRepostsGridState extends State<ProfileRepostsGrid>
 
         if (repostedVideos.isEmpty) {
           return ProfileTabEmptyState(
+            scrollViewKey: _scrollViewKey,
             title: context.l10n.profileNoRepostsTitle,
             subtitle: widget.isOwnProfile
                 ? context.l10n.profileRepostsOwnEmpty
@@ -120,6 +128,7 @@ class _ProfileRepostsGridState extends State<ProfileRepostsGrid>
         }
 
         return CustomScrollView(
+          key: _scrollViewKey,
           physics: const ClampingScrollPhysics(),
           slivers: [
             ProfileMasonryGrid(
@@ -191,12 +200,13 @@ class _RepostGridTile extends ConsumerWidget {
                 hasMore: bloc.stream
                     .map((state) => state.hasMoreContent)
                     .startWith(bloc.state.hasMoreContent),
-                onLoadMore: () async => bloc.add(
+                onLoadMore: () async => bloc.addIfOpen(
                   const ProfileRepostedVideosLoadMoreRequested(),
                 ),
               ),
               initialIndex: index,
               initialVideoId: videoEvent.id,
+              tileOrigin: VideoTileOrigin.captureVideo(context, videoEvent),
               trafficSource: ViewTrafficSource.profile,
             ),
           ).push<void>(context).whenComplete(() => releaseFeedLease?.call()),
@@ -215,9 +225,12 @@ class _RepostGridTile extends ConsumerWidget {
         borderRadius: BorderRadius.circular(4),
         child: DecoratedBox(
           decoration: BoxDecoration(color: context.vineColors.card),
-          child: ProfileTabThumbnail(
-            thumbnailUrl: videoEvent.thumbnailUrl,
-            blurhash: videoEvent.blurhash,
+          child: VideoTileThumbnailBoundary(
+            key: ValueKey(videoEvent.id),
+            child: ProfileTabThumbnail(
+              thumbnailUrl: videoEvent.thumbnailUrl,
+              blurhash: videoEvent.blurhash,
+            ),
           ),
         ),
       ),

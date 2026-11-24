@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/profile_collab_videos/profile_collab_videos_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/grid_prefetch_mixin.dart';
@@ -24,6 +25,7 @@ import 'package:openvine/widgets/profile/profile_tab_error_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_loading_more_sliver.dart';
 import 'package:openvine/widgets/profile/profile_tab_loading_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_thumbnail.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -55,6 +57,11 @@ class _ProfileCollabsGridState extends ConsumerState<ProfileCollabsGrid>
     with GridPrefetchMixin, ScrollPaginationMixin {
   /// Resolved from [PrimaryScrollController] provided by [NestedScrollView].
   ScrollController? _primaryScrollController;
+
+  /// Shared by every state this tab shows; see
+  /// [ProfileTabLoadingState.scrollViewKey].
+  final GlobalKey _scrollViewKey = GlobalKey();
+
   List<VideoEvent>? _lastPrefetchedVideos;
 
   @override
@@ -96,7 +103,11 @@ class _ProfileCollabsGridState extends ConsumerState<ProfileCollabsGrid>
     prefetchGridVideos(videos);
   }
 
-  void _onVideoTapped(int index, List<VideoEvent> allVideos) {
+  void _onVideoTapped(
+    int index,
+    List<VideoEvent> allVideos,
+    VideoTileOrigin? tileOrigin,
+  ) {
     Log.info(
       'ProfileCollabsGrid TAP: gridIndex=$index, '
       'videoId=${allVideos[index].id}',
@@ -123,10 +134,11 @@ class _ProfileCollabsGridState extends ConsumerState<ProfileCollabsGrid>
                 .map((state) => state.hasMoreContent)
                 .startWith(bloc.state.hasMoreContent),
             onLoadMore: () async =>
-                bloc.add(const ProfileCollabVideosLoadMoreRequested()),
+                bloc.addIfOpen(const ProfileCollabVideosLoadMoreRequested()),
           ),
           initialIndex: index,
           initialVideoId: allVideos[index].id,
+          tileOrigin: tileOrigin,
           trafficSource: ViewTrafficSource.profile,
         ),
       ).push<void>(context).whenComplete(() => releaseFeedLease?.call()),
@@ -142,11 +154,12 @@ class _ProfileCollabsGridState extends ConsumerState<ProfileCollabsGrid>
       builder: (context, state) {
         if (state.status == ProfileCollabVideosStatus.initial ||
             state.status == ProfileCollabVideosStatus.loading) {
-          return const ProfileTabLoadingState();
+          return ProfileTabLoadingState(scrollViewKey: _scrollViewKey);
         }
 
         if (state.status == ProfileCollabVideosStatus.failure) {
           return ProfileTabErrorState(
+            scrollViewKey: _scrollViewKey,
             message: context.l10n.profileErrorLoadingCollabs,
           );
         }
@@ -155,6 +168,7 @@ class _ProfileCollabsGridState extends ConsumerState<ProfileCollabsGrid>
 
         if (collabVideos.isEmpty) {
           return ProfileTabEmptyState(
+            scrollViewKey: _scrollViewKey,
             title: context.l10n.profileNoCollabsTitle,
             subtitle: widget.isOwnProfile
                 ? context.l10n.profileCollabsOwnEmpty
@@ -166,6 +180,7 @@ class _ProfileCollabsGridState extends ConsumerState<ProfileCollabsGrid>
         _prefetchIfNeeded(collabVideos);
 
         return CustomScrollView(
+          key: _scrollViewKey,
           physics: const ClampingScrollPhysics(),
           slivers: [
             SliverPadding(
@@ -177,7 +192,8 @@ class _ProfileCollabsGridState extends ConsumerState<ProfileCollabsGrid>
                 itemBuilder: (context, index) => _CollabGridTile(
                   videoEvent: collabVideos[index],
                   index: index,
-                  onTap: () => _onVideoTapped(index, collabVideos),
+                  onTap: (origin) =>
+                      _onVideoTapped(index, collabVideos, origin),
                 ),
               ),
             ),
@@ -202,7 +218,7 @@ class _CollabGridTile extends StatelessWidget {
 
   final VideoEvent videoEvent;
   final int index;
-  final VoidCallback onTap;
+  final ValueChanged<VideoTileOrigin?> onTap;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -211,14 +227,17 @@ class _CollabGridTile extends StatelessWidget {
     label: context.l10n.profileVideoThumbnailLabel(index + 1),
     button: true,
     child: GestureDetector(
-      onTap: onTap,
+      onTap: () => onTap(VideoTileOrigin.captureVideo(context, videoEvent)),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(4),
         child: DecoratedBox(
           decoration: BoxDecoration(color: context.vineColors.card),
-          child: ProfileTabThumbnail(
-            thumbnailUrl: videoEvent.thumbnailUrl,
-            blurhash: videoEvent.blurhash,
+          child: VideoTileThumbnailBoundary(
+            key: ValueKey(videoEvent.id),
+            child: ProfileTabThumbnail(
+              thumbnailUrl: videoEvent.thumbnailUrl,
+              blurhash: videoEvent.blurhash,
+            ),
           ),
         ),
       ),

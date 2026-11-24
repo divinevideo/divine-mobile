@@ -2,9 +2,11 @@
 // ABOUTME: Pins the single-source contract between the moderation constants
 // ABOUTME: here and ModerationLabelService's NIP-05 fallback.
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/app_constants.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 
 void main() {
@@ -265,6 +267,106 @@ void main() {
         expect(RetiredKeyCustody.destroyed.canStillSign, isFalse);
         expect(RetiredKeyCustody.archived.canStillSign, isTrue);
         expect(RetiredKeyCustody.compromised.canStillSign, isTrue);
+      });
+    });
+
+    // A retired key someone can still sign as is named "Former moderation
+    // account" on every DM surface (#9963), and no fluent speaker has read
+    // that label's translations yet (#9986). Until one has, a locale must
+    // fall back to English before such a key lands in the register.
+    group('former moderation label review hold (#9986)', () {
+      // The `dmFormerModerationAccountName` string a fluent speaker read, by
+      // locale. Keyed on the text, so rewriting a reviewed translation makes
+      // it unreviewed again. None yet.
+      const reviewedLabels = <String, String>{};
+
+      List<String> unreviewedLocales({
+        required List<RetiredModerationKey> register,
+        required Map<String, String> labelByLocale,
+        required String english,
+        required Map<String, String> reviewed,
+      }) => [
+        if (register.any((key) => key.custody.canStillSign))
+          for (final MapEntry(key: locale, value: label)
+              in labelByLocale.entries)
+            if (label != english && reviewed[locale] != label) locale,
+      ];
+
+      const english = 'Former moderation account';
+      const german = 'Ehemaliges Moderationskonto';
+      const labels = {
+        'en': english,
+        'de': german,
+        // Falls back to English, so nothing unreviewed is shown.
+        'fr': english,
+      };
+
+      List<String> flagged(
+        RetiredKeyCustody custody, {
+        Map<String, String> reviewed = const {},
+      }) => unreviewedLocales(
+        register: [
+          RetiredModerationKey(pubkeyHex: 'e' * 64, custody: custody),
+        ],
+        labelByLocale: labels,
+        english: english,
+        reviewed: reviewed,
+      );
+
+      test('flags a translated label only while a retired key can still '
+          'sign', () {
+        expect(flagged(RetiredKeyCustody.unrecovered), isEmpty);
+        expect(flagged(RetiredKeyCustody.archived), equals(['de']));
+        expect(flagged(RetiredKeyCustody.compromised), equals(['de']));
+      });
+
+      test('exempts a locale only while it shows the string that was '
+          'reviewed', () {
+        expect(
+          flagged(RetiredKeyCustody.archived, reviewed: const {'de': german}),
+          isEmpty,
+        );
+        expect(
+          flagged(
+            RetiredKeyCustody.archived,
+            reviewed: const {'de': 'Früheres Moderationskonto'},
+          ),
+          equals(['de']),
+        );
+      });
+
+      test('the shipped register shows no unreviewed translation', () {
+        final shippedEnglish = lookupAppLocalizations(
+          const Locale('en'),
+        ).dmFormerModerationAccountName;
+        final labelByLocale = <String, String>{};
+        for (final locale in AppLocalizations.supportedLocales) {
+          final strings = lookupAppLocalizations(locale);
+          // A lookup that fell back to English would make every label match
+          // English, and the hold would pass whatever the register says.
+          expect(strings.localeName, equals(locale.toString()));
+          labelByLocale[locale.toLanguageTag()] =
+              strings.dmFormerModerationAccountName;
+        }
+
+        expect(
+          unreviewedLocales(
+            register: kRetiredModerationKeys,
+            labelByLocale: labelByLocale,
+            english: shippedEnglish,
+            reviewed: reviewedLabels,
+          ),
+          isEmpty,
+          reason:
+              'A retired key someone can still sign as would show these '
+              'unreviewed translations of "$shippedEnglish". For each '
+              'locale, remove dmFormerModerationAccountName from its ARB '
+              'file, list it in _knownUntranslatedDebt in '
+              'mobile/test/l10n/arb_consistency_test.dart and run flutter '
+              'gen-l10n, or record the string a fluent speaker read in '
+              'reviewedLabels. See mobile/docs/RETIRED_MODERATION_KEYS.md '
+              'and #9986.',
+        );
       });
     });
 

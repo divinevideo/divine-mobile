@@ -92,6 +92,10 @@ run = "flutter gen-l10n"
 description = "Install Divine lnav log formats (requires: brew install lnav)"
 run = "lnav -i ../scripts/lnav/*.json"
 
+[tasks.test_web_db_upgrade]
+description = "Verify browser-local SQLite data survives the Drift worker upgrade"
+run = "dart test --platform chrome tools/web_db_upgrade_test.dart"
+
 [tasks.setup_hooks]
 description = "Install git hooks (pre-commit + pre-push) for local CI checks"
 run = "bash ../scripts/install-hooks.sh"

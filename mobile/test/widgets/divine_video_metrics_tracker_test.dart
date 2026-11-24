@@ -294,7 +294,7 @@ void main() {
     });
 
     testWidgets(
-      'increments completed loops and refreshes only while visible and playing',
+      'counts completed loops and refreshes on stale reactivation without watch-tick polling',
       (tester) async {
         final controller = _stubController(
           isPlaying: true,
@@ -306,6 +306,7 @@ void main() {
         final counts = VideoLoopsCubit(
           video: _video,
           videosRepository: repository,
+          clock: () => now,
         );
         addTearDown(counts.close);
         final active = ValueNotifier(true);
@@ -356,7 +357,8 @@ void main() {
         expect(counts.state.count, 11);
         now = now.add(const Duration(seconds: 15));
         await tester.pump(const Duration(seconds: 15));
-        verify(() => repository.fetchLoopCount(_video)).called(2);
+        // Only the initial unseeded activation fetches; the 15s watch tick does not.
+        verify(() => repository.fetchLoopCount(_video)).called(1);
         visible.value = false;
         await tester.pump();
         now = now.add(const Duration(seconds: 30));
@@ -387,8 +389,8 @@ void main() {
           ),
         );
         await tester.pump();
-        verify(() => repository.fetchLoopCount(_video)).called(1);
-        now = now.add(const Duration(seconds: 30));
+        verifyNever(() => repository.fetchLoopCount(_video));
+        now = now.add(const Duration(minutes: 6));
         await tester.pump(const Duration(seconds: 30));
         verifyNever(() => repository.fetchLoopCount(_video));
         expect(counts.state.count, 11);
@@ -401,6 +403,8 @@ void main() {
           ),
         );
         await tester.pump();
+        // Re-activating after the 5-minute staleness threshold refreshes once.
+        verify(() => repository.fetchLoopCount(_video)).called(1);
         expect(counts.state.count, 11);
         await tester.pumpWidget(const SizedBox.shrink());
         await controller.close();

@@ -1,11 +1,48 @@
-// ABOUTME: Tests the importer's loudness parsing and gain rule; the ffmpeg runs
-// ABOUTME: themselves are checked by hand with the tool, not in CI.
+// ABOUTME: Tests the importer's loudness parsing, gain rule and silence check;
+// ABOUTME: real ffmpeg runs are checked by hand with the tool, not in CI.
+
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../tools/sound_import/audio_pipeline.dart';
+import '../../../tools/sound_import/sound_candidate.dart';
 
 const _targets = AudioTargets();
+
+/// Answers the pipeline's ffprobe and ffmpeg calls with the numbers ffmpeg
+/// gives for one recording, without running either tool.
+ProcessRunner _fakeTools({
+  required String inputDuration,
+  required String trimmedDuration,
+  required String truePeak,
+}) {
+  return (executable, arguments) async {
+    if (executable == 'ffprobe') {
+      if (arguments.contains('stream=channels')) {
+        return ProcessResult(0, 0, '1', '');
+      }
+      final isInput = arguments.last == 'input.wav';
+      return ProcessResult(0, 0, isInput ? inputDuration : trimmedDuration, '');
+    }
+    if (arguments.contains('null')) {
+      final loudness = '{"input_i" : "-inf", "input_tp" : "$truePeak"}';
+      return ProcessResult(0, 0, '', loudness);
+    }
+    return ProcessResult(0, 0, '', '');
+  };
+}
+
+Future<PrepareOutcome> _prepare(ProcessRunner run) {
+  return AudioPipeline(run: run).prepare(
+    input: File('input.wav'),
+    output: File('output.m4a'),
+    kind: SoundKind.sfx,
+    title: 'Click',
+    artist: 'Artist',
+    comment: 'Credit',
+  );
+}
 
 void main() {
   group('normalizationGain', () {
@@ -83,6 +120,48 @@ void main() {
 
     test('returns null without a measurement', () {
       expect(parseLoudnorm('Error opening input file'), isNull);
+    });
+  });
+
+  group('AudioPipeline.prepare', () {
+    test('keeps a loud click shorter than the kept edge silence', () async {
+      // A 21 ms click from a CC0 arcade pack, as ffmpeg measures it.
+      final outcome = await _prepare(
+        _fakeTools(
+          inputDuration: '0.021293',
+          trimmedDuration: '0.021338',
+          truePeak: '-1.11',
+        ),
+      );
+
+      expect(
+        outcome,
+        isA<PreparedAudio>().having(
+          (prepared) => prepared.durationSeconds,
+          'durationSeconds',
+          closeTo(0.0213, 0.0001),
+        ),
+      );
+    });
+
+    test('rejects a file with nothing above the silence threshold', () async {
+      // Trimming a silent second leaves a single sample.
+      final outcome = await _prepare(
+        _fakeTools(
+          inputDuration: '1.000000',
+          trimmedDuration: '0.000023',
+          truePeak: '-inf',
+        ),
+      );
+
+      expect(
+        outcome,
+        isA<RejectedAudio>().having(
+          (rejected) => rejected.reason,
+          'reason',
+          'silent',
+        ),
+      );
     });
   });
 }

@@ -67,63 +67,6 @@ final class AudioSharingPreferenceServiceProvider
 String _$audioSharingPreferenceServiceHash() =>
     r'f5155e90e3af3cccf59ab6c73faf9891f46fb344';
 
-/// Audio device preference service for managing the preferred input device
-/// for recording on macOS. keepAlive ensures preference persists.
-
-@ProviderFor(audioDevicePreferenceService)
-final audioDevicePreferenceServiceProvider =
-    AudioDevicePreferenceServiceProvider._();
-
-/// Audio device preference service for managing the preferred input device
-/// for recording on macOS. keepAlive ensures preference persists.
-
-final class AudioDevicePreferenceServiceProvider
-    extends
-        $FunctionalProvider<
-          AudioDevicePreferenceService,
-          AudioDevicePreferenceService,
-          AudioDevicePreferenceService
-        >
-    with $Provider<AudioDevicePreferenceService> {
-  /// Audio device preference service for managing the preferred input device
-  /// for recording on macOS. keepAlive ensures preference persists.
-  AudioDevicePreferenceServiceProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'audioDevicePreferenceServiceProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$audioDevicePreferenceServiceHash();
-
-  @$internal
-  @override
-  $ProviderElement<AudioDevicePreferenceService> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  AudioDevicePreferenceService create(Ref ref) {
-    return audioDevicePreferenceService(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(AudioDevicePreferenceService value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<AudioDevicePreferenceService>(value),
-    );
-  }
-}
-
-String _$audioDevicePreferenceServiceHash() =>
-    r'cd3fc12de7e106a47976b9726f8626aa9dd523a9';
-
 /// Language preference service for managing the user's preferred content
 /// language. Used for NIP-32 self-labeling on published video events.
 /// keepAlive ensures setting persists across widget rebuilds.

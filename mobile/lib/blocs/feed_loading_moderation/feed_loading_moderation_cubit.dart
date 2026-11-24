@@ -15,7 +15,7 @@ import 'package:openvine/services/video_moderation_status_service.dart';
 /// Otherwise the state remains [FeedLoadingModerationStatus.loading] for the
 /// lifetime of the cubit.
 ///
-/// Call [start] immediately after the cubit is constructed.
+/// Call [start] once a playback source fails or stalls during loading.
 class FeedLoadingModerationCubit extends Cubit<FeedLoadingModerationState> {
   /// Creates the cubit and resolves the video's sha256 from [explicitSha256]
   /// or [videoUrl]. No request is started until [start] is called.
@@ -43,12 +43,16 @@ class FeedLoadingModerationCubit extends Cubit<FeedLoadingModerationState> {
   /// moderation check is not applicable.
   final String? _sha256;
 
-  /// Starts the moderation check.
+  bool _started = false;
+
+  /// Starts the moderation check immediately.
   ///
-  /// No-ops when there is no resolvable sha256 for this video.
+  /// No-ops when there is no resolvable sha256 for this video, or when already
+  /// started or closed.
   void start() {
     final sha256 = _sha256;
-    if (sha256 == null) return;
+    if (sha256 == null || _started || isClosed) return;
+    _started = true;
     unawaited(_checkModeration(sha256));
   }
 

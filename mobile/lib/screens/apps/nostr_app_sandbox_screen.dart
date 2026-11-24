@@ -241,6 +241,7 @@ class _NostrAppSandboxScreenState extends ConsumerState<NostrAppSandboxScreen> {
           });
         },
         onPageFinished: (url) async {
+          if (!mounted) return;
           _currentPageUri = Uri.tryParse(url) ?? _currentPageUri;
           await _injectBridge();
           if (!mounted) return;

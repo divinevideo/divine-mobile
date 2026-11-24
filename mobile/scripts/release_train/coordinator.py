@@ -447,6 +447,12 @@ def plan_tick(snapshot, state, levels):
                     platform,
                     build=max(eligible, key=lambda b: b["number"]),
                 )
+    from release_train.android_distribution import plan_distribution
+    distribution = plan_distribution(snapshot, state, levels)
+    actions.extend(distribution["actions"])
+    proposed.extend(distribution["proposed"])
+    reasons.extend(distribution["reasons"])
+    errors.extend(distribution["errors"])
     return {
         "actions": actions,
         "proposed": proposed,

@@ -134,6 +134,20 @@ void main() {
       semantics.dispose();
     });
 
+    testWidgets('only rebuilds the shadow when the sprite frame changes', (
+      tester,
+    ) async {
+      await pumpIndicator(tester, theme: VineTheme.lightTheme);
+      final shadow = find.byType(ImageFiltered);
+      final firstFrame = tester.widget<ImageFiltered>(shadow);
+
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(tester.widget<ImageFiltered>(shadow), same(firstFrame));
+
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(tester.widget<ImageFiltered>(shadow), isNot(same(firstFrame)));
+    });
+
     testWidgets('advances through the sheet while loading', (tester) async {
       await pumpIndicator(tester);
 

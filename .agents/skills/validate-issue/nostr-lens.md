@@ -107,7 +107,7 @@ Three rules before any command:
 | Build a wrap the way Divine does | `nak event -k 14 -c hi -p <B> \| nak gift wrap -p <B> --use-our-identity-key --use-their-identity-key` with the sender's `NOSTR_SECRET_KEY` exported (the flags stop a draft-NIP decoupled key from being used; `-p` is the recipient's public key, not a secret) |
 | Decode / build identifiers | `nak decode <npub\|nevent\|naddr>` / `nak encode …` |
 | NIP-98 request, Blossom, remote signer | `nak curl`, `nak blossom`, `nak bunker` |
-| A relay you control | `nak serve --port <p> [--auth] [--eager-auth] [--events seed.jsonl] </dev/null` (in memory; prints `relay running at ws://localhost:<p>`) |
+| A relay you control | `nak serve --port <p> [--auth] [--eager-auth] [--events seed.jsonl] </dev/null` (in memory; prints `relay running at ws://localhost:<p>`). It answers NIP-45 COUNT, but on 0.22.3 (2026-11-22) a filter with `#e` or `#E` counted 0 where the same events counted correctly by `#A`: seed and count by a tag it handles, and check the count against a REQ |
 
 Against a slow relay use one long-lived connection, not a process per query.
 Parallel one-shot processes return silent partial sets, and sequential ones
@@ -235,6 +235,7 @@ production.
   | `--duplicate-event N` | the relay delivering an EVENT twice: client-side dedup |
   | `--close-req auth-required` | a refused REQ (`CLOSED`), for the first `--close-req-count` requests |
   | `--delay-eose-ms MS`, `--never-eose` | a slow relay, and a REQ that never terminates |
+  | `--notice-count` | a relay without NIP-45: every COUNT is answered with `["NOTICE","ERROR: bad msg: unknown cmd"]`, as strfry before 1.1 does, and not forwarded. The NOTICE names no subscription (#9009) |
   | `--hold-retraction-eose` | a vote read that finishes while the read of those votes' retractions (kind 5) does not: only the comments that have votes come back unknown |
   | `--refuse-connects N` | the first N WebSocket handshakes fail (HTTP 503), then recover. The NIP-11 fetch is forwarded and not counted, so a client that reads NIP-11 first still meets the refusal |
   | `--close-after N` | the connection closed with a close frame (code 4000) after N relay frames, for the first connection (`--close-after-count`): the reconnect path |

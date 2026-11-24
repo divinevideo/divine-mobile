@@ -209,9 +209,32 @@ class VideoSearchBloc extends Bloc<VideoSearchEvent, VideoSearchState> {
       );
       if (!_isActiveSession(sessionId)) return;
 
+      // Match the first page's API precedence while keeping cached positions.
+      // Hydrate a matching event id without losing local audio attribution.
+      // For another revision at the same address, replace the whole event:
+      // its server verdict must never move onto the cached revision's id.
+      final apiVideosById = {
+        for (final video in result.videos) video.id: video,
+      };
+      final apiVideosByKey = {
+        for (final video in result.videos) video.feedDedupKey: video,
+      };
+      final hydratedVideos = currentVideos.map((video) {
+        final apiVideo =
+            apiVideosById[video.id] ?? apiVideosByKey[video.feedDedupKey];
+        if (apiVideo == null) return video;
+        apiVideosById.remove(apiVideo.id);
+        if (apiVideo.id != video.id) return apiVideo;
+
+        return video.copyWith(
+          isVerifiedArchive: apiVideo.isVerifiedArchive,
+          isArchiveVerificationUnknown: apiVideo.isArchiveVerificationUnknown,
+          archiveAudioReuseEnabled: apiVideo.archiveAudioReuseEnabled,
+        );
+      }).toList();
       final merged = _videosRepository.deduplicateVideosPreservingOrder([
-        ...currentVideos,
-        ...result.videos,
+        ...hydratedVideos,
+        ...apiVideosById.values,
       ]);
       final newOffset = apiOffset + _pageSize;
 

@@ -26,13 +26,15 @@
 /manifest.json
   Cache-Control: no-cache, no-store, must-revalidate
 
-# Content-addressed paths are safe to cache immutably: canvaskit is pinned to
-# engineRevision in its URL, assets/ filenames are fingerprinted by Flutter's
-# asset pipeline, and .wasm files ship alongside hashed JS.
-/canvaskit/*
-  Cache-Control: public, max-age=31536000, immutable
-
+# Flutter web does not content-hash assets/ paths (including FontManifest.json
+# and AssetManifest.bin.json), so browsers must revalidate them on deploys.
 /assets/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Versioned paths are safe to cache immutably: CI moves canvaskit/ under
+# canvaskit/<engineRevision>/ (scripts/version_web_canvaskit.sh), and
+# sqlite3.wasm is requested with a ?v=<version> query string.
+/canvaskit/*
   Cache-Control: public, max-age=31536000, immutable
 
 /*.wasm

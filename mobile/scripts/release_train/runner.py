@@ -28,7 +28,7 @@ from release_train.coordinator import (
     plan_tick,
     version_ack_key,
 )
-from release_train.ledger import GhLedgerStore, claim_path
+from release_train.ledger import GhLedgerStore, LedgerError, claim_path
 from release_train.providers import (
     APP_ID,
     Apple,
@@ -85,6 +85,10 @@ def reconcile_operations(state, snapshot):
         action = operation["action"]
         platform = action["platform"]
         kind = action["kind"]
+        if kind == "android-distribution":
+            from release_train.android_distribution import reconcile_distribution
+            reconcile_distribution(key, operation, state, snapshot)
+            continue
         if kind == "build":
             matches = [
                 b
@@ -219,7 +223,9 @@ def execute_plan(plan, state, snapshot, store, provider):
         old = state.get("operations", {}).get(key)
         if old and old["status"] not in {"deferred", "acknowledged"}:
             continue
-        if state.get("holds", {}).get(action["platform"]) is not None:
+        scope = "android-distribution" if action["kind"] == "android-distribution" else action["platform"]
+        if (state.get("holds", {}).get(scope) is not None
+                or (scope == "android-distribution" and state.get("holds", {}).get("android") is not None)):
             continue
         try:
             if hasattr(provider, "prepare_action"):
@@ -229,6 +235,10 @@ def execute_plan(plan, state, snapshot, store, provider):
         except ProviderError as error:
             plan.setdefault("errors", []).append(action["platform"] + ": " + str(error))
             plan["actions"].remove(raw)
+            continue
+        if scope == "android-distribution" and any(
+            state.get("holds", {}).get(channel) is not None for channel in ("android", scope)
+        ):
             continue
         state.setdefault("operations", {})[key] = {
             # Notes already live in the immutable source/artifact ledger. Keep
@@ -247,7 +257,8 @@ def execute_plan(plan, state, snapshot, store, provider):
         store.save(state)
         try:
             result = provider.execute(action, state, snapshot)
-            state["operations"][key]["status"] = "done"
+            state["operations"][key]["status"] = (
+                "deferred" if action["kind"] == "android-distribution" else "done")
             state["operations"][key]["result"] = result
         except BeforeStoreMutationError as error:
             # No store request has occurred, so preserve the prior retryable
@@ -266,7 +277,7 @@ def execute_plan(plan, state, snapshot, store, provider):
         except ProviderError as error:
             state["operations"][key]["error"] = str(error)
             state["operations"][key]["status"] = "ambiguous"
-            state.setdefault("holds", {})[action["platform"]] = key
+            state.setdefault("holds", {})[scope] = key
         store.save(state)
 
 
@@ -424,7 +435,7 @@ class Runtime:
 
     def list_builds(self):
         entries = []
-        for workflow in ["ios-build", "ios-scheduled-build", "android-build"]:
+        for workflow in ["ios-build", "ios-scheduled-build", "android-build", "zapstore-publish"]:
             cursor = None
             seen = set()
             while True:
@@ -466,6 +477,18 @@ class Runtime:
                         None,
                     )
                     sha = (item.get("commit") or {}).get("hash")
+                    if workflow == "zapstore-publish":
+                        matches = [re.fullmatch(
+                            r"release-distribution:android:([1-9][0-9]*):([0-9a-f]{40}):([1-9][0-9]*)", label)
+                            for label in labels if label.startswith("release-distribution:")]
+                        if len(matches) > 1 or (matches and matches[0] is None):
+                            raise ProviderError("Ambiguous Android distribution job label")
+                        distribution = matches[0] if matches else None
+                        entries.append({"id": item["id"], "platform": "android-distribution",
+                            "status": status, "sha": distribution.group(2) if distribution else sha,
+                            "number": int(distribution.group(1)) if distribution else None,
+                            "attempt": int(distribution.group(3)) if distribution else None})
+                        continue
                     if match and sha and sha != match.group(2):
                         raise ProviderError(
                             "Scheduled Codemagic build fetched a different candidate"
@@ -649,6 +672,7 @@ class Runtime:
             + urllib.parse.urlencode(
                 {
                     "filter[app]": APP_ID,
+                    "filter[preReleaseVersion.platform]": "IOS",
                     "include": "preReleaseVersion,buildBetaDetail,betaAppReviewSubmission",
                     "limit": 200,
                 }
@@ -709,7 +733,9 @@ class Runtime:
                     ),
                 }
             )
-        reviews = apple.pages("/apps/" + APP_ID + "/reviewSubmissions")
+        reviews = apple.pages(
+            "/apps/" + APP_ID + "/reviewSubmissions?filter[platform]=IOS"
+        )
         versions = []
         for v in apple.pages(
             "/apps/" + APP_ID + "/appStoreVersions?filter[platform]=IOS"
@@ -864,11 +890,46 @@ class Runtime:
             if data.get("error"):
                 continue
             try:
-                for b in data.get("builds" if platform == "ios" else "internal", []):
+                builds = (data.get("builds", []) if platform == "ios" else
+                          data.get("internal", []) + data.get("production", []))
+                for b in builds:
                     b["ci_verified"] = bool(b.get("sha")) and self.source_ci(b["sha"])
             except ProviderError as error:
                 snapshot[platform] = {"error": str(error)}
+        if levels.get("android") in {"production", "dry-run"}:
+            self.collect_distribution(snapshot, state)
         return snapshot
+
+    def collect_distribution(self, snapshot, state):
+        from release_train.android_distribution import manifest_digest, validate_downloads, receipt_matches
+
+        data = snapshot["distribution"] = {"downloads": [], "receipts": {}}
+        android = snapshot.get("android", {})
+        if android.get("error") or not android.get("lifecycle_complete"):
+            return
+        builds = {b["number"]: b for b in android.get("production", []) if b.get("ci_verified")}
+        for operation in state.get("operations", {}).values():
+            if operation["action"]["kind"] == "android-distribution":
+                b = operation["action"]["build"]
+                builds.setdefault(b["number"], b)
+        try:
+            paths = self.ledger.paths()
+            for number, build in builds.items():
+                path = f"artifacts/android-downloads/{number}.json"
+                if path not in paths:
+                    continue
+                record = self.ledger.read_json(path)
+                validate_downloads(record, build)
+                evidence = build | {"manifest_sha256": manifest_digest(record)}
+                data["downloads"].append(evidence)
+                receipt_path = f"distributions/android/{number}.json"
+                if receipt_path in paths:
+                    receipt = self.ledger.read_json(receipt_path)
+                    if not receipt_matches(receipt, evidence) or receipt.get("apks") != record["apks"]:
+                        raise ProviderError("Android distribution receipt identity differs")
+                    data["receipts"][str(number)] = receipt
+        except (ProviderError, LedgerError, KeyError, ValueError, TypeError):
+            data["error"] = "Original Android download evidence could not be verified"
 
     def deploy(self, environment, build, status, state, stage=None):
         key = environment + ":" + str(build["number"])
@@ -1081,6 +1142,36 @@ class Runtime:
         """Finish fallible note preparation before journaling a store mutation."""
         from release_train.release_notes import bundle_for_native, notes_for
 
+        if action["kind"] == "android-distribution":
+            from release_train.android_distribution import manifest_digest, validate_downloads
+            from release_train.setup import configure_build_credentials
+            try:
+                build = action["build"]
+                android = snapshot.get("android", {})
+                if (android.get("error") or not android.get("lifecycle_complete")
+                        or not build.get("ci_verified") or not any(
+                            all(b.get(k) == build.get(k) for k in ("number", "version", "sha"))
+                            and b.get("ci_verified") for b in android.get("production", []))):
+                    raise ProviderError("Exact Play production availability is not verified")
+                record = self.ledger.read_json(f"artifacts/android-downloads/{build['number']}.json")
+                validate_downloads(record, build)
+                if manifest_digest(record) != build.get("manifest_sha256"):
+                    raise ProviderError("Original APK evidence differs from the planned release")
+                configure_build_credentials(self.cm, self.env["PROVENANCE_TOKEN"],
+                                            self.env["PUBLIC_PEOPLE_LIST_POLICY"])
+                action["approval_epoch"] = snapshot["now"]
+                approval = {"schema": 1, "number": build["number"], "version": build["version"],
+                            "sha": build["sha"], "manifest_sha256": build["manifest_sha256"],
+                            "observed_at": snapshot["now"], "play_state": "PUBLISHED", "ci_verified": True}
+                path = (f"distributions/approvals/android/{build['number']}/"
+                        f"{action['attempt']}-{action['approval_epoch']}.json")
+                if not self.ledger.create_json(path, approval, f"Observe approved Android {build['number']}"):
+                    if self.ledger.read_json(path) != approval:
+                        raise ProviderError("Existing Android approval evidence differs")
+            except (ProviderError, LedgerError, KeyError, ValueError, TypeError):
+                raise BeforeStoreMutationError("Approved Android distribution could not be prepared") from None
+            return
+
         if action["kind"] == "build":
             self.prepare_build(action, snapshot)
             return
@@ -1119,6 +1210,17 @@ class Runtime:
         kind = action["kind"]
         platform = action["platform"]
         build = action.get("build")
+        if kind == "android-distribution":
+            result = self.cm("POST", "/apps/" + CM_APP_ID + "/builds", {
+                "workflow_id": "zapstore-publish", "branch": "main",
+                "inputs": {"PUBLISH_TO_GITHUB": "YES", "RELEASE_CHANNEL": "PRODUCTION"},
+                "environment": {"variables": {
+                    "APPROVED_BUILD_NUMBER": str(build["number"]),
+                    "APPROVED_VERSION": build["version"], "APPROVED_SOURCE_SHA": build["sha"],
+                    "DISTRIBUTION_ATTEMPT": str(action["attempt"]),
+                    "APPROVAL_OBSERVED_AT": str(action["approval_epoch"])}},
+                "labels": [f"release-distribution:android:{build['number']}:{build['sha']}:{action['attempt']}"]})
+            return {"build_id": result["data"]["id"]}
         if kind == "build":
             sha = action["sha"]
             bundle = self.prepared_bundle(action)
@@ -1472,6 +1574,7 @@ def main(env=os.environ):
     if env.get("GITHUB_STEP_SUMMARY"):
         Path(env["GITHUB_STEP_SUMMARY"]).write_text(text)
     active_holds = any(
-        levels.get(p) not in {"off", "dry-run"} for p in state.get("holds", {})
+        levels.get("android" if p == "android-distribution" else p) not in {"off", "dry-run"}
+        for p in state.get("holds", {})
     )
     return 1 if plan["errors"] or active_holds else 0

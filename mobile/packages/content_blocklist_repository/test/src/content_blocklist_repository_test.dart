@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -6433,10 +6434,61 @@ void main() {
 
     test(
       'a refused by-author watch does not become an uncaught error',
-      () async {
-        // The by-author watch is a long-lived REQ. A relay that runs out of
-        // subscription slots ends it with CLOSED, which reaches the stream as
-        // an error; without an onError handler it escapes to the zone.
+      () {
+        fakeAsync((async) {
+          // The by-author watch is a long-lived REQ. A relay that runs out of
+          // subscription slots ends it with CLOSED, which reaches the stream as
+          // an error; without an onError handler it escapes to the zone.
+          when(
+            () => mockNostrService.subscribe(
+              any(),
+              subscriptionId: any(
+                named: 'subscriptionId',
+                that: contains('author-watch'),
+              ),
+            ),
+          ).thenAnswer(
+            (_) => Stream<Event>.error(
+              const RelaySubscriptionRefusedException(
+                'error: too many subscriptions',
+              ),
+            ),
+          );
+
+          final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          relay.publish(
+            listEvent(
+              30000,
+              [
+                ['d', 'block'],
+                ['p', ourPubkey],
+              ],
+              createdAt: now,
+              id: 'block-event',
+            ),
+          );
+
+          unawaited(
+            service.syncBlockListsInBackground(
+              mockNostrService,
+              mockSigner,
+              ourPubkey,
+            ),
+          );
+          // Virtual time, so the retries of this always-refused watch cannot
+          // fire into later tests.
+          async
+            ..flushMicrotasks()
+            ..elapse(const Duration(minutes: 5));
+
+          expect(service.hasBlockedUs(blockerPubkey), isTrue);
+        });
+      },
+    );
+
+    test('a by-author watch that fails for another reason is not reopened', () {
+      fakeAsync((async) {
+        var watches = 0;
         when(
           () => mockNostrService.subscribe(
             any(),
@@ -6445,14 +6497,10 @@ void main() {
               that: contains('author-watch'),
             ),
           ),
-        ).thenAnswer(
-          (_) => Stream<Event>.error(
-            const RelaySubscriptionRefusedException(
-              'error: too many subscriptions',
-            ),
-          ),
-        );
-
+        ).thenAnswer((_) {
+          watches++;
+          return Stream<Event>.error(StateError('socket gone'));
+        });
         final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
         relay.publish(
           listEvent(
@@ -6466,14 +6514,90 @@ void main() {
           ),
         );
 
-        await service.syncBlockListsInBackground(
-          mockNostrService,
-          mockSigner,
-          ourPubkey,
+        unawaited(
+          service.syncBlockListsInBackground(
+            mockNostrService,
+            mockSigner,
+            ourPubkey,
+          ),
         );
-        await pumpEventQueue();
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(minutes: 10));
 
         expect(service.hasBlockedUs(blockerPubkey), isTrue);
+        expect(watches, equals(1));
+      });
+    });
+
+    test(
+      'a lifted block still arrives after every relay refused the by-author '
+      'watch once',
+      () {
+        fakeAsync((async) {
+          var watches = 0;
+          when(
+            () => mockNostrService.subscribe(
+              any(),
+              subscriptionId: any(
+                named: 'subscriptionId',
+                that: contains('author-watch'),
+              ),
+            ),
+          ).thenAnswer((invocation) {
+            if (++watches == 1) {
+              return Stream<Event>.error(
+                const RelaySubscriptionRefusedException(
+                  'error: too many subscriptions',
+                ),
+              );
+            }
+            return relay.subscribe(
+              invocation.positionalArguments.first as List<Filter>,
+            );
+          });
+          final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          relay.publish(
+            listEvent(
+              30000,
+              [
+                ['d', 'block'],
+                ['p', ourPubkey],
+              ],
+              createdAt: now,
+              id: 'block-event',
+            ),
+          );
+
+          unawaited(
+            service.syncBlockListsInBackground(
+              mockNostrService,
+              mockSigner,
+              ourPubkey,
+            ),
+          );
+          async
+            ..flushMicrotasks()
+            ..elapse(Duration.zero);
+          expect(service.hasBlockedUs(blockerPubkey), isTrue);
+          expect(watches, equals(1));
+
+          async.elapse(const Duration(minutes: 10));
+          relay.publish(
+            listEvent(
+              30000,
+              [
+                ['d', 'block'],
+                ['title', 'Block List'],
+              ],
+              createdAt: now + 60,
+              id: 'unblock-event',
+            ),
+          );
+          async.flushMicrotasks();
+
+          expect(service.hasBlockedUs(blockerPubkey), isFalse);
+        });
       },
     );
 

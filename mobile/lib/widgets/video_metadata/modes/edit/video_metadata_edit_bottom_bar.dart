@@ -30,12 +30,14 @@ class VideoMetadataEditBottomBar extends ConsumerStatefulWidget {
   const VideoMetadataEditBottomBar({
     required this.video,
     required this.initialCollaboratorPubkeys,
+    this.editorBaseline,
     this.pendingThumbnailPath,
     this.onVideoUpdated,
     super.key,
   });
 
   final VideoEvent video;
+  final VideoEvent? editorBaseline;
   final Set<String> initialCollaboratorPubkeys;
   final String? pendingThumbnailPath;
   final ValueChanged<VideoEvent>? onVideoUpdated;
@@ -94,6 +96,7 @@ class _VideoMetadataEditBottomBarState
       final service = ref.read(videoMetadataUpdateServiceProvider);
       final result = await service.updateVideo(
         originalVideo: widget.video,
+        editorBaseline: widget.editorBaseline,
         editorState: editorState,
         newThumbnailFile: widget.pendingThumbnailPath != null
             ? File(widget.pendingThumbnailPath!)

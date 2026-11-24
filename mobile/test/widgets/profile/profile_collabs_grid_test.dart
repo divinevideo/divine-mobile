@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
@@ -319,6 +321,8 @@ void main() {
           ).captured;
           expect(captured, hasLength(1));
           final args = captured.single as PooledFullscreenVideoFeedArgs;
+          expect(args.initialVideoId, videos.first.id);
+          expect(args.tileOrigin?.videoId, videos.first.id);
           expect(args.source, isA<CollabsViewSource>());
           expect(args.feedRepository, isNotNull);
         },
@@ -326,6 +330,42 @@ void main() {
     });
 
     group('scroll coordination with NestedScrollView', () {
+      testWidgets(
+        'keeps its scroll position measured when collabs replace the loading '
+        'state',
+        (tester) async {
+          final states = StreamController<ProfileCollabVideosState>.broadcast();
+          addTearDown(states.close);
+          whenListen(
+            mockBloc,
+            states.stream,
+            initialState: const ProfileCollabVideosState(
+              status: ProfileCollabVideosStatus.loading,
+            ),
+          );
+          await tester.pumpWidget(buildSubject());
+          final controller = PrimaryScrollController.of(
+            tester.element(find.byType(ProfileCollabsGrid)),
+          );
+          expect(controller.position.hasContentDimensions, isTrue);
+
+          states.add(
+            ProfileCollabVideosState(
+              status: ProfileCollabVideosStatus.success,
+              videos: _createTestVideos(count: 3),
+            ),
+          );
+          // A fling in the profile's NestedScrollView can read this position
+          // before the tab is laid out again, so stop the frame after build.
+          await tester.pump(Duration.zero, EnginePhase.build);
+
+          expect(controller.positions, hasLength(1));
+          expect(controller.position.hasContentDimensions, isTrue);
+          await tester.pump();
+          expect(find.byType(ProfileMasonryGrid), findsOneWidget);
+        },
+      );
+
       testWidgets(
         'uses PrimaryScrollController from NestedScrollView ancestor',
         (tester) async {

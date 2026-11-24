@@ -6,8 +6,10 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 
 void main() {
   final pubkeyA = 'a' * 64;
-  final pubkeyB = 'b' * 64;
-  final pubkeyC = 'c' * 64;
+  // On-curve keys (#8706), ordered a < d < e so the input-order test below
+  // still catches a sorting implementation.
+  final pubkeyB = 'd' * 64;
+  final pubkeyC = 'e' * 64;
 
   group('buildCollaboratorPTag', () {
     test(

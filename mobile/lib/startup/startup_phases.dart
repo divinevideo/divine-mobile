@@ -52,16 +52,9 @@ Future<void> initializeCoreServices(ProviderContainer container) async {
     category: LogCategory.system,
   );
 
-  // Relocate imported audio that older builds stored under whichever draft
-  // was open at the time. A track saved to My Sounds outlives that draft, so
-  // no draft owns it (#8024). Best-effort and idempotent; transient failures
-  // are retried on the next launch.
+  // Persisted audio paths already resolve to the library root. Move legacy
+  // imports before auth makes the editor and My Sounds available.
   await migrateDraftOwnedAudioImports();
-  Log.info(
-    '[INIT] ✅ Imported-audio storage checked',
-    name: 'Main',
-    category: LogCategory.system,
-  );
 
   // Initialize auth service
   // NOTE: NostrService (relay connections) is initialized lazily in AuthService

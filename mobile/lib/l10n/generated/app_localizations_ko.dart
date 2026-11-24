@@ -400,21 +400,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get contentPreferencesAudioInputDevice => '오디오 입력 장치';
-
-  @override
-  String get contentPreferencesAutoRecommended => '자동 (추천)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest => '가장 좋은 마이크를 자동으로 고르주세요';
-
-  @override
-  String get contentPreferencesSelectAudioInput => '오디오 입력 선택';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => '알 수 없는 마이크';
-
-  @override
   String get contentFiltersAdultContent => '성인 콘텐츠';
 
   @override
@@ -1987,6 +1972,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => '나도 참여';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => '시리즈 보기';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return '시리즈 보기: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -4224,6 +4217,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '릴레이가 업데이트를 받지 않았어요. 잠시 후 다시 시도해보세요.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      '이 영상이 다른 기기에서 변경되어 태그나 콜라보레이터가 너무 많아요. 다시 열어서 몇 개를 지워 주세요.';
+
+  @override
   String get videoUpdateErrorGeneric => '이 영상을 업데이트하지 못했어요. 다시 시도해보세요.';
 
   @override
@@ -4312,6 +4309,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get soundsNoSoundsFoundDescription => '다른 검색어로 시도해 보세요';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '사운드 $count개를 찾았어요',
+      zero: '사운드를 찾을 수 없어요',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => '사운드에 저장됨';
@@ -8973,6 +8981,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectEcho => '에코';
 
   @override
+  String get videoEditorEffectTimeSplit => '타임 스플릿';
+
+  @override
+  String get videoEditorEffectLongExposure => '장노출';
+
+  @override
+  String get videoEditorEffectMotionOnly => '움직임만';
+
+  @override
+  String get videoEditorEffectStutter => '스터터';
+
+  @override
+  String get videoEditorEffectTimeWarp => '타임 워프';
+
+  @override
   String get videoEditorEffectFisheye => '피시아이';
 
   @override
@@ -9174,6 +9197,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => '모션';
 
   @override
+  String get videoEditorEffectCategoryTime => '시간';
+
+  @override
   String get videoEditorEffectCategoryParticles => '파티클';
 
   @override
@@ -9279,6 +9305,14 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       '깜빡이는 효과는 한 번에 하나만 쓸 수 있어요. 깜빡임이 너무 많으면 민감한 사람에게 해로울 수 있어요.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      '시간 효과는 한 번에 하나만 쓸 수 있어요. 두 개를 함께 쓰면 내보낸 뒤 모습이 달라져서 여기서는 다른 효과를 바꿨어요.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      '시간 효과는 한 번에 하나만 쓸 수 있어요. 두 개를 함께 쓰면 내보낸 뒤 모습이 달라져요.';
 
   @override
   String get videoEditorEffectsOnBeat => '비트에 맞추기';
@@ -11289,6 +11323,34 @@ class AppLocalizationsKo extends AppLocalizations {
       '이 영상에 영상으로 답글을 단 사람을 보여 줘요. 시청자가 탭하면 답글을 볼 수 있어요.';
 
   @override
+  String get videoEditorSocialStickerAudienceTitle => '답할 수 있는 사람';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => '모두';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => '친구';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => '나만';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      '내가 팔로우하는 사람만 참여할 수 있어요. 다른 사람에게는 누군가 참여하면 스티커가 보여요.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      '스티커에는 내가 팔로우하는 사람의 영상 답글만 보여요. 다른 사람에게는 그중 누군가 답글을 달면 스티커가 보여요.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      '나만 참여할 수 있어요. 내가 참여하기 전까지 다른 사람에게는 스티커가 보이지 않아요.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      '스티커에는 내 영상 답글만 보여요. 내가 답글을 달기 전까지 다른 사람에게는 스티커가 보이지 않아요.';
+
+  @override
   String get videoEditorInteractiveCardAreaHint =>
       '시청자가 탭할 수 있도록 이 스티커는 이 상자 안에 있어요';
 
@@ -12027,13 +12089,13 @@ class AppLocalizationsKo extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => '배지 구독';
+  String get badgeSubscribeAction => '커뮤니티 팔로우';
 
   @override
-  String get badgeSubscribedAction => '구독 중';
+  String get badgeSubscribedAction => '커뮤니티 팔로우 중';
 
   @override
-  String get badgeAcceptedHoldersTitle => '배지를 수락한 사람';
+  String get badgeAcceptedHoldersTitle => '이 커뮤니티의 사람들';
 
   @override
   String get badgeSubscriptionLoadError => '배지 구독을 불러오지 못했어요. 다시 시도해 주세요.';
@@ -12991,6 +13053,21 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get devOptionsProtectedMinorClearedToast => '보호 대상 미성년자 재정의를 해제했어요';
+
+  @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
 
   @override
   String get commentsRecordVideoButtonLabel => '영상 댓글 녹화';
@@ -13987,6 +14064,65 @@ class AppLocalizationsKo extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return '$platform 계정 $identity 연결 해제';
   }
@@ -14018,7 +14154,26 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => '한 번 탭';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -14127,6 +14282,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get verifyErrorPublishFailed => '인증은 됐는데 업데이트를 받아준 릴레이가 없어. 다시 시도해.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -16023,4 +16190,48 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get collabRoomSeriesReadyHint => '모든 파트가 모였어요. 합쳐 보세요!';
+
+  @override
+  String get badgeDiscoveryTitle => '배지로 사람들과 연결돼요';
+
+  @override
+  String get badgeDiscoveryBody =>
+      '누구나 배지를 만들고 수여할 수 있어요. 프로필에 표시할 배지는 직접 선택해요. 배지를 둘러보며 커뮤니티를 알아보고 사람들을 팔로우해 보세요.';
+
+  @override
+  String get badgeDiscoveryMyBadges => '내 배지';
+
+  @override
+  String get badgeDiscoveryEmpty => '아직 커뮤니티를 찾지 못했어요. 아래로 당겨 다시 시도해 보세요.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      '커뮤니티 동영상을 팔로잉 피드에 추가해요. 사람들은 개별적으로 팔로우해요.';
+
+  @override
+  String get badgeOfficialLabel => '공식';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return '$website에서 자세히 알아보기';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return '$badgeName의 동영상';
+  }
 }

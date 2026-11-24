@@ -295,10 +295,7 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
             let args = call.arguments as? [String: Any] ?? [:]
             let enabled = args["enabled"] as? Bool ?? true
             setVolumeKeysEnabled(enabled: enabled, result: result)
-            
-        case "listAudioDevices":
-            listAudioDevices(result: result)
-            
+
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -610,31 +607,5 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
             return
         }
         result(controller.getCameraState())
-    }
-    
-    private func listAudioDevices(result: @escaping FlutterResult) {
-        #if os(macOS)
-        // Macs commonly record through USB or other external microphones.
-        let deviceTypes: [AVCaptureDevice.DeviceType]
-        if #available(macOS 14.0, *) {
-            deviceTypes = [.microphone, .external]
-        } else {
-            deviceTypes = [.builtInMicrophone, .externalUnknown]
-        }
-        #else
-        let deviceTypes: [AVCaptureDevice.DeviceType] = [.builtInMicrophone]
-        #endif
-        let discoverySession = AVCaptureDevice.DiscoverySession(
-            deviceTypes: deviceTypes,
-            mediaType: .audio,
-            position: .unspecified
-        )
-        let devices: [[String: String]] = discoverySession.devices.map { device in
-            [
-                "id": device.uniqueID,
-                "name": device.localizedName,
-            ]
-        }
-        result(devices)
     }
 }

@@ -2,7 +2,6 @@
 // ABOUTME: Handles native platform communication via Flutter method channels
 
 import 'package:divine_camera/divine_camera_platform_interface.dart';
-import 'package:divine_camera/src/models/audio_device.dart';
 import 'package:divine_camera/src/models/camera_lens.dart';
 import 'package:divine_camera/src/models/camera_state.dart';
 import 'package:divine_camera/src/models/camera_zoom_state.dart';
@@ -423,14 +422,5 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
       {'enabled': enabled},
     );
     return result ?? false;
-  }
-
-  @override
-  Future<List<AudioDevice>> listAudioDevices() async {
-    final result = await methodChannel.invokeListMethod<Map<dynamic, dynamic>>(
-      'listAudioDevices',
-    );
-    if (result == null) return [];
-    return result.map(AudioDevice.fromMap).toList();
   }
 }

@@ -3,12 +3,15 @@
 // ABOUTME: and relay query fallback.
 
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show VideoStats;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
@@ -294,6 +297,46 @@ void main() {
           tempRelays: any(named: 'tempRelays'),
         ),
       );
+    });
+
+    test('plays the signed caption file when the REST copy is older', () async {
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      // The subtitle event the embedded copy comes from is replaced after
+      // the video names its new file, and that publish can fail (#11250).
+      const editedVtt = 'WEBVTT\n\n1\n00:00:00.000 --> 00:00:01.000\nEdited\n';
+      final editedUrl = Uri.parse(
+        'https://media.divine.video/${sha256.convert(utf8.encode(editedVtt))}',
+      );
+      const relayRef = '39307:$testPubkey:subtitles:test-vine-id';
+      final video = VideoStats.fromJson({
+        'id': 'test-id',
+        'pubkey': testPubkey,
+        'created_at': 1700000000,
+        'd_tag': 'test-vine-id',
+        'text_track_ref': relayRef,
+        'text_track_content':
+            'WEBVTT\n\n1\n00:00:00.000 --> 00:00:01.000\nOld\n',
+        'tags': [
+          ['text-track', editedUrl.toString(), '', 'captions', 'en'],
+          const ['text-track', relayRef, '', 'captions', 'en'],
+        ],
+      }).toVideoEvent();
+      when(
+        () => mockHttpClient.get(editedUrl),
+      ).thenAnswer((_) async => http.Response(editedVtt, 200));
+
+      final cues = await container.read(
+        subtitleCuesProvider(
+          videoId: video.id,
+          textTrackRef: video.textTrackRef,
+          textTrackRefs: video.textTrackRefs,
+          textTrackContent: video.textTrackContent,
+        ).future,
+      );
+
+      expect(cues.single.text, equals('Edited'));
     });
 
     test(

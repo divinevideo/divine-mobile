@@ -46,9 +46,6 @@ class MockDivineCameraPlatform
   Future<bool> setVolumeKeysEnabled({required bool enabled}) async => true;
 
   @override
-  Future<List<AudioDevice>> listAudioDevices() async => const [];
-
-  @override
   Future<String?> getPlatformVersion() => Future.value('42');
 
   @override

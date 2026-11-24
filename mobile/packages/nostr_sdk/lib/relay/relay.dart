@@ -48,6 +48,9 @@ abstract class Relay {
   // NIP-45 COUNT queries
   final Map<String, Completer<CountResponse>> _countQueries = {};
 
+  // Observed COUNT support on the current socket.
+  bool? _supportsCount;
+
   Relay(this.url, this.relayStatus, {this.diagnosticsSink});
 
   final RelayDiagnosticsSink? diagnosticsSink;
@@ -71,13 +74,24 @@ abstract class Relay {
   );
 
   /// The method to call connect function by framework.
-  Future<bool> connect() async {
+  ///
+  /// Supplying [onReplayFailure] waits for saved REQs to be replayed and
+  /// reports the ID of each request that could not be sent.
+  Future<bool> connect({void Function(String id)? onReplayFailure}) async {
     try {
       relayStatus.authed = false;
       var result = await doConnect();
       if (result) {
         try {
-          onConnected(source: 'connect()');
+          final replay = onConnected(
+            source: 'connect()',
+            onReplayFailure: onReplayFailure,
+          );
+          if (onReplayFailure == null) {
+            unawaited(replay);
+          } else {
+            await replay;
+          }
         } catch (e) {
           log("onConnected exception.");
           log('$e');
@@ -134,16 +148,22 @@ abstract class Relay {
   /// permanently silent after any reconnect and its caller can only fall back
   /// to a timeout. Mirrors the post-AUTH replay and the zombie reconnect in
   /// `RelayPool`.
-  Future onConnected({String? source}) async {
+  Future<void> onConnected({
+    String? source,
+    void Function(String id)? onReplayFailure,
+  }) async {
     final isFresh = connectionIsFresh;
-    if (isFresh) _connectionGeneration = ++_lastConnectionGeneration;
+    if (isFresh) {
+      _connectionGeneration = ++_lastConnectionGeneration;
+      _supportsCount = null;
+    }
     final saved = isFresh
         ? [..._subscriptions.values, ..._queries.values]
         : const <Subscription>[];
     await _flushPendingMessages(source, {
       for (final s in saved) s.id,
     }, dropQueuedCloses: isFresh);
-    await _reissueSavedRequests(source, saved);
+    await _reissueSavedRequests(source, saved, onReplayFailure);
   }
 
   /// Sends the frames that failed while the socket was down.
@@ -226,6 +246,7 @@ abstract class Relay {
   Future<void> _reissueSavedRequests(
     String? source,
     List<Subscription> saved,
+    void Function(String id)? onReplayFailure,
   ) async {
     if (saved.isEmpty) return;
     diagnose(
@@ -240,14 +261,13 @@ abstract class Relay {
     for (final subscription in saved) {
       try {
         final sent = await send(subscription.toJson(), skipReconnect: true);
-        if (!sent) {
-          log('Saved relay request ${subscription.id} was not sent');
-          diagnose(
-            RelayDiagnosticSite.subscriptionReplay,
-            RelayDiagnosticLevel.warning,
-            'Saved relay request ${subscription.id} was not sent',
-          );
-        }
+        if (sent) continue;
+        log('Saved relay request ${subscription.id} was not sent');
+        diagnose(
+          RelayDiagnosticSite.subscriptionReplay,
+          RelayDiagnosticLevel.warning,
+          'Saved relay request ${subscription.id} was not sent',
+        );
       } catch (e, stackTrace) {
         diagnose(
           RelayDiagnosticSite.subscriptionReplay,
@@ -259,6 +279,7 @@ abstract class Relay {
         log('subscription re-issue exception onConnected');
         log('$e');
       }
+      onReplayFailure?.call(subscription.id);
     }
   }
 
@@ -455,13 +476,42 @@ abstract class Relay {
   /// Complete a COUNT query with the response
   void completeCountQuery(String id, CountResponse response) {
     final completer = _countQueries.remove(id);
-    completer?.complete(response);
+    if (completer == null) return;
+    _supportsCount = true;
+    completer.complete(response);
   }
 
   /// Complete a COUNT query with an error (e.g., CLOSED response)
   void failCountQuery(String id, String reason) {
     final completer = _countQueries.remove(id);
     completer?.completeError(CountNotSupportedException(reason));
+  }
+
+  /// Whether the current socket has refused COUNT.
+  ///
+  /// Once disconnected, allow the caller to try again on a fresh socket.
+  bool get countUnsupported =>
+      _supportsCount == false &&
+      relayStatus.connected == ClientConnected.connected;
+
+  /// Settles pending COUNTs after a known unknown-command notice unless the
+  /// socket has already answered COUNT. An ambiguous notice also needs to
+  /// agree with the advertised capabilities.
+  void handleCountUnknownCommandNotice(
+    String reason, {
+    required bool namesCount,
+  }) {
+    if (_countQueries.isEmpty || _supportsCount == true) return;
+    if (!namesCount && (info?.nips.any((nip) => '$nip' == '45') ?? false)) {
+      return;
+    }
+
+    _supportsCount = false;
+    final pending = _countQueries.values.toList();
+    _countQueries.clear();
+    for (final completer in pending) {
+      completer.completeError(CountNotSupportedException(reason));
+    }
   }
 
   Function? relayStatusCallback;

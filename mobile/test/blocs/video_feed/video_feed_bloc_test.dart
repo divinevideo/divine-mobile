@@ -50,6 +50,13 @@ class _MockBadgeAuthService extends Mock implements AuthService {}
 class _MockBadgeBlocklist extends Mock implements ContentBlocklistRepository {}
 
 class _MockVideosRepository extends Mock implements VideosRepository {
+  // These bloc tests supply content policy through the existing stub and
+  // have no seen-history service. Cache reads use that same supplied policy.
+  @override
+  Future<List<VideoEvent>> applyHomeFeedPreferences(
+    List<VideoEvent> videos,
+  ) async => applyContentPreferences(videos);
+
   @override
   bool isVideoKnownDeleted(VideoEvent video) => false;
 }
@@ -8565,6 +8572,103 @@ void main() {
             hasLength(3),
           ),
         ],
+      );
+
+      test(
+        'paginates while profiles load and skips in-flight creators',
+        () async {
+          final pendingProfiles = Completer<Map<String, UserProfile>>();
+          final requestedBatches = <List<String>>[];
+          when(
+            () => mockProfileRepository.fetchBatchProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenAnswer((invocation) async {
+            final pubkeys = invocation.namedArguments[#pubkeys] as List<String>;
+            requestedBatches.add(pubkeys);
+            if (pubkeys.contains(pubkeyB)) return pendingProfiles.future;
+            return {
+              for (final pubkey in pubkeys) pubkey: profileForPubkey(pubkey),
+            };
+          });
+
+          final pages = [
+            HomeFeedResult(
+              videos: [videoWithPubkey('v1', pubkeyA)],
+              paginationCursor: 'page-2',
+              hasMore: true,
+            ),
+            HomeFeedResult(
+              videos: [videoWithPubkey('v2', pubkeyB)],
+              paginationCursor: 'page-3',
+              hasMore: true,
+            ),
+            HomeFeedResult(
+              videos: [
+                videoWithPubkey('v3', pubkeyB),
+                videoWithPubkey('v4', pubkeyC),
+              ],
+            ),
+          ].iterator;
+          when(
+            () => mockVideosRepository.getHomeFeedVideos(
+              authors: any(named: 'authors'),
+              videoRefs: any(named: 'videoRefs'),
+              userPubkey: any(named: 'userPubkey'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer((_) async {
+            expect(pages.moveNext(), isTrue);
+            return pages.current;
+          });
+
+          final bloc = VideoFeedBloc(
+            videosRepository: mockVideosRepository,
+            followRepository: mockFollowRepository,
+            curatedListRepository: mockCuratedListRepository,
+            profileRepository: mockProfileRepository,
+          );
+          addTearDown(bloc.close);
+          addTearDown(() {
+            if (!pendingProfiles.isCompleted) pendingProfiles.complete({});
+          });
+
+          bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+          await pumpEventQueue();
+          bloc.add(const VideoFeedLoadMoreRequested());
+          await pumpEventQueue();
+          expect(bloc.state.paginationCursor, 'page-3');
+          expect(requestedBatches, [
+            [pubkeyA],
+            [pubkeyB],
+          ]);
+
+          bloc.add(const VideoFeedLoadMoreRequested());
+          await pumpEventQueue();
+          expect(bloc.state.videos.map((video) => video.id), [
+            'v1',
+            'v2',
+            'v3',
+            'v4',
+          ]);
+          expect(requestedBatches, [
+            [pubkeyA],
+            [pubkeyB],
+            [pubkeyC],
+          ]);
+          expect(
+            bloc.state.creatorProfiles.keys,
+            unorderedEquals([pubkeyA, pubkeyC]),
+          );
+
+          pendingProfiles.complete({pubkeyB: profileForPubkey(pubkeyB)});
+          await pumpEventQueue();
+          expect(
+            bloc.state.creatorProfiles.keys,
+            unorderedEquals([pubkeyA, pubkeyB, pubkeyC]),
+          );
+        },
       );
 
       feedBlocTest(

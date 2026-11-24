@@ -9,7 +9,10 @@ import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 
 /// Opens [videos] in the full-screen feed at [index] under [title], counted
-/// in the views as coming from [sourceDetail].
+/// in the views as coming from [sourceDetail]; [isAddYoursSeries] when they
+/// are the answers to an Add yours.
+///
+/// See [PooledFullscreenVideoFeedScreen.isAddYoursSeries].
 ///
 /// The feed itself applies only the viewer's blocks and source preferences.
 /// Content filters and the content warnings it shows come with [videos]: pass
@@ -20,6 +23,7 @@ Future<void> openVideoResponsesFeed(
   required List<VideoEvent> videos,
   required String title,
   required String sourceDetail,
+  bool isAddYoursSeries = false,
   int index = 0,
 }) async {
   if (videos.isEmpty) return;
@@ -33,6 +37,7 @@ Future<void> openVideoResponsesFeed(
       initialVideoId: videos[start].id,
       contextTitle: title,
       sourceDetail: sourceDetail,
+      isAddYoursSeries: isAddYoursSeries,
     ),
   );
 }

@@ -562,6 +562,7 @@ void main() {
             any(),
             subscriptionId: any(named: 'subscriptionId'),
             handleDeletionRequests: any(named: 'handleDeletionRequests'),
+            onEose: any(named: 'onEose'),
           ),
         ).thenAnswer((invocation) {
           subscribedFilters =
@@ -571,47 +572,141 @@ void main() {
               invocation.namedArguments[#handleDeletionRequests] as bool?;
           return relayStream.stream;
         });
-        when(() => nostrClient.unsubscribe(any())).thenAnswer((_) async {});
         repository = CommentsRepository(
           nostrClient: nostrClient,
           clock: () => DateTime.fromMillisecondsSinceEpoch(nowMillis),
         );
       });
 
-      test('subscribes to comment deletion requests from a minute ago', () {
-        repository.watchCommentDeletions(rootEventId: rootEventId);
+      Future<void> watchDeletionsBy(
+        Set<String> authors, {
+        bool includeVideoReplies = false,
+      }) async {
+        final subscription = repository
+            .watchCommentDeletions(
+              rootEventId: rootEventId,
+              commentAuthors: Stream.value(authors),
+              includeVideoReplies: includeVideoReplies,
+            )
+            .listen((_) {});
+        addTearDown(subscription.cancel);
+        await pumpEventQueue();
+      }
+
+      test("subscribes to the comment authors' deletion requests", () async {
+        await watchDeletionsBy({authorPubkey});
 
         final filter = subscribedFilters.single;
         expect(filter.kinds, equals([EventKind.eventDeletion]));
+        expect(filter.authors, equals([authorPubkey]));
         expect(filter.k, equals([_commentKind.toString()]));
         expect(filter.since, equals(nowMillis ~/ 1000 - 60));
         expect(subscribedId, startsWith('comment_deletions_watch'));
       });
 
-      test("keeps other accounts' requests out of the shared event cache", () {
-        repository.watchCommentDeletions(rootEventId: rootEventId);
+      test(
+        "keeps other accounts' requests out of the shared event cache",
+        () async {
+          await watchDeletionsBy({authorPubkey});
 
-        expect(subscribedHandlesDeletions, isFalse);
+          expect(subscribedHandlesDeletions, isFalse);
+        },
+      );
+
+      test('reports a subscription the client refuses on the stream', () async {
+        when(
+          () => nostrClient.subscribe(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            handleDeletionRequests: any(named: 'handleDeletionRequests'),
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenThrow(Exception('client is closed'));
+        final errors = <Object>[];
+        final subscription = repository
+            .watchCommentDeletions(
+              rootEventId: rootEventId,
+              commentAuthors: Stream.value({authorPubkey}),
+            )
+            .listen((_) {}, onError: errors.add);
+        addTearDown(subscription.cancel);
+        await pumpEventQueue();
+
+        expect(errors, [isA<WatchCommentsFailedException>()]);
       });
 
-      test('also watches video-reply deletions when video replies are on', () {
-        repository.watchCommentDeletions(
-          rootEventId: rootEventId,
-          includeVideoReplies: true,
-        );
+      test(
+        'keeps the open subscription when the client refuses a wider one',
+        () async {
+          final authors = StreamController<Set<String>>();
+          var subscribeCalls = 0;
+          when(
+            () => nostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              handleDeletionRequests: any(named: 'handleDeletionRequests'),
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer((invocation) {
+            if (++subscribeCalls == 2) throw Exception('too many REQs');
+            subscribedFilters =
+                invocation.positionalArguments.first as List<Filter>;
+            return relayStream.stream;
+          });
+          final received = <String>[];
+          final errors = <Object>[];
+          final subscription = repository
+              .watchCommentDeletions(
+                rootEventId: rootEventId,
+                commentAuthors: authors.stream,
+              )
+              .listen((d) => received.add(d.commentId), onError: errors.add);
+          addTearDown(subscription.cancel);
+          authors.add({authorPubkey});
+          await pumpEventQueue();
 
-        expect(
-          subscribedFilters.single.k,
-          equals([_commentKind.toString(), _rootEventKind.toString()]),
-        );
-      });
+          authors.add({authorPubkey, otherPubkey});
+          await pumpEventQueue();
+          expect(errors, [isA<WatchCommentsFailedException>()]);
+          relayStream.add(deletionRequest(by: authorPubkey, ids: [deletedId]));
+          await pumpEventQueue();
+          expect(received, equals([deletedId]));
+
+          authors.add({authorPubkey, otherPubkey});
+          await pumpEventQueue();
+          expect(subscribeCalls, 2);
+          const thirdPubkey = rootAuthorPubkey;
+          authors.add({authorPubkey, otherPubkey, thirdPubkey});
+          await pumpEventQueue();
+          expect(
+            subscribedFilters.single.authors,
+            unorderedEquals([authorPubkey, otherPubkey, thirdPubkey]),
+          );
+        },
+      );
+
+      test(
+        'also watches video-reply deletions when video replies are on',
+        () async {
+          await watchDeletionsBy({authorPubkey}, includeVideoReplies: true);
+
+          expect(
+            subscribedFilters.single.k,
+            equals([_commentKind.toString(), _rootEventKind.toString()]),
+          );
+        },
+      );
 
       test('emits one deletion per named comment', () async {
         final received = <CommentDeletion>[];
         final subscription = repository
-            .watchCommentDeletions(rootEventId: rootEventId)
+            .watchCommentDeletions(
+              rootEventId: rootEventId,
+              commentAuthors: Stream.value({authorPubkey}),
+            )
             .listen(received.add);
         addTearDown(subscription.cancel);
+        await pumpEventQueue();
 
         relayStream.add(
           deletionRequest(
@@ -647,23 +742,18 @@ void main() {
       test('drops events that are not deletion requests', () async {
         final received = <CommentDeletion>[];
         final subscription = repository
-            .watchCommentDeletions(rootEventId: rootEventId)
+            .watchCommentDeletions(
+              rootEventId: rootEventId,
+              commentAuthors: Stream.value({authorPubkey}),
+            )
             .listen(received.add);
         addTearDown(subscription.cancel);
+        await pumpEventQueue();
 
         relayStream.add(relayComment(deletedId));
         await pumpEventQueue();
 
         expect(received, isEmpty);
-      });
-
-      test('stopWatchingComments closes the deletion subscription', () async {
-        repository.watchCommentDeletions(rootEventId: rootEventId);
-        expect(subscribedId, isNotNull);
-
-        await repository.stopWatchingComments();
-
-        verify(() => nostrClient.unsubscribe(subscribedId!)).called(1);
       });
     });
 
@@ -683,6 +773,7 @@ void main() {
             any(),
             subscriptionId: any(named: 'subscriptionId'),
             handleDeletionRequests: any(named: 'handleDeletionRequests'),
+            onEose: any(named: 'onEose'),
           ),
         ).thenAnswer((invocation) {
           final id = invocation.namedArguments[#subscriptionId] as String?;
@@ -697,9 +788,13 @@ void main() {
         required String commentId,
       }) async {
         final subscription = repository
-            .watchCommentDeletions(rootEventId: rootEventId)
+            .watchCommentDeletions(
+              rootEventId: rootEventId,
+              commentAuthors: Stream.value({authorPubkey}),
+            )
             .listen((_) {});
         addTearDown(subscription.cancel);
+        await pumpEventQueue();
         deletionStream.add(deletionRequest(by: by, ids: [commentId]));
         await pumpEventQueue();
       }
@@ -796,9 +891,13 @@ void main() {
       test('keeps at most 8 requesters per comment, oldest first', () async {
         String key(int i) => (i + 1).toRadixString(16).padLeft(64, '0');
         final subscription = repository
-            .watchCommentDeletions(rootEventId: rootEventId)
+            .watchCommentDeletions(
+              rootEventId: rootEventId,
+              commentAuthors: Stream.value({authorPubkey}),
+            )
             .listen((_) {});
         addTearDown(subscription.cancel);
+        await pumpEventQueue();
         // The author asks first; eight other keys then name the same comment.
         deletionStream.add(deletionRequest(by: authorPubkey, ids: [deletedId]));
         for (var i = 0; i < 8; i++) {
@@ -814,9 +913,13 @@ void main() {
       test('keeps an author who asks again among the eight newest', () async {
         String key(int i) => (i + 1).toRadixString(16).padLeft(64, '0');
         final subscription = repository
-            .watchCommentDeletions(rootEventId: rootEventId)
+            .watchCommentDeletions(
+              rootEventId: rootEventId,
+              commentAuthors: Stream.value({authorPubkey}),
+            )
             .listen((_) {});
         addTearDown(subscription.cancel);
+        await pumpEventQueue();
         deletionStream.add(deletionRequest(by: authorPubkey, ids: [deletedId]));
         for (var i = 0; i < 7; i++) {
           deletionStream.add(deletionRequest(by: key(i), ids: [deletedId]));
@@ -835,9 +938,13 @@ void main() {
       test('forgets the oldest of more than 2000 requests', () async {
         String id(int i) => i.toRadixString(16).padLeft(64, '0');
         final subscription = repository
-            .watchCommentDeletions(rootEventId: rootEventId)
+            .watchCommentDeletions(
+              rootEventId: rootEventId,
+              commentAuthors: Stream.value({authorPubkey}),
+            )
             .listen((_) {});
         addTearDown(subscription.cancel);
+        await pumpEventQueue();
         for (var i = 0; i <= 2000; i++) {
           deletionStream.add(deletionRequest(by: authorPubkey, ids: [id(i)]));
         }

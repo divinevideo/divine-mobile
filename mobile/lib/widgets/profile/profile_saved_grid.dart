@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/profile_saved_videos/profile_saved_videos_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -24,6 +25,7 @@ import 'package:openvine/widgets/profile/profile_tab_error_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_loading_more_sliver.dart';
 import 'package:openvine/widgets/profile/profile_tab_loading_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_thumbnail.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -66,6 +68,10 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
   /// screen supplies.
   ScrollController? _primaryScrollController;
 
+  /// Shared by every state this tab shows; see
+  /// [ProfileTabLoadingState.scrollViewKey].
+  final GlobalKey _scrollViewKey = GlobalKey();
+
   @override
   ScrollController get paginationScrollController => _primaryScrollController!;
 
@@ -106,7 +112,7 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
         if (state.status == ProfileSavedVideosStatus.initial ||
             state.status == ProfileSavedVideosStatus.syncing ||
             state.status == ProfileSavedVideosStatus.loading) {
-          return const ProfileTabLoadingState();
+          return ProfileTabLoadingState(scrollViewKey: _scrollViewKey);
         }
 
         // A settled-empty tab is two different outcomes, and the state carries
@@ -116,6 +122,7 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
         if (state.status == ProfileSavedVideosStatus.failure ||
             state.hasUnresolvedSaves) {
           return ProfileTabErrorState(
+            scrollViewKey: _scrollViewKey,
             message: context.l10n.profileErrorLoadingSaved,
             physics: widget.physics,
           );
@@ -128,11 +135,13 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
           // every bookmark the viewer has.
           if (state.privateBookmarksLocked) {
             return ProfileTabErrorState(
+              scrollViewKey: _scrollViewKey,
               message: context.l10n.profileSavedPrivateItemsLocked,
               physics: widget.physics,
             );
           }
           return ProfileTabEmptyState(
+            scrollViewKey: _scrollViewKey,
             title: context.l10n.profileNoSavedVideosTitle,
             subtitle: context.l10n.profileSavedOwnEmpty,
             physics: widget.physics,
@@ -140,6 +149,7 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
         }
 
         return CustomScrollView(
+          key: _scrollViewKey,
           physics: widget.physics,
           slivers: [
             if (state.privateBookmarksLocked)
@@ -228,10 +238,11 @@ class _SavedGridTile extends ConsumerWidget {
                     .map((state) => state.hasMoreContent)
                     .startWith(bloc.state.hasMoreContent),
                 onLoadMore: () async =>
-                    bloc.add(const ProfileSavedVideosLoadMoreRequested()),
+                    bloc.addIfOpen(const ProfileSavedVideosLoadMoreRequested()),
               ),
               initialIndex: index,
               initialVideoId: videoEvent.id,
+              tileOrigin: VideoTileOrigin.captureVideo(context, videoEvent),
               trafficSource: ViewTrafficSource.profile,
             ),
           ).push<void>(context).whenComplete(() => releaseFeedLease?.call()),
@@ -244,9 +255,12 @@ class _SavedGridTile extends ConsumerWidget {
         borderRadius: BorderRadius.circular(4),
         child: DecoratedBox(
           decoration: BoxDecoration(color: context.vineColors.card),
-          child: ProfileTabThumbnail(
-            thumbnailUrl: videoEvent.thumbnailUrl,
-            blurhash: videoEvent.blurhash,
+          child: VideoTileThumbnailBoundary(
+            key: ValueKey(videoEvent.id),
+            child: ProfileTabThumbnail(
+              thumbnailUrl: videoEvent.thumbnailUrl,
+              blurhash: videoEvent.blurhash,
+            ),
           ),
         ),
       ),

@@ -8,8 +8,18 @@ import 'package:models/models.dart';
 /// [isSquare] is `true` when the controller has resolved the video
 /// dimensions and they are equal (1:1 aspect ratio). It is `false`
 /// when the video is not square or dimensions are not yet known.
+///
+/// [hasSourceFailure] is `true` once a playback source attempt for [index]
+/// has failed or stalled while loading continues (for example, while failover
+/// tries another URL or waits on media processing). Healthy loads pass `false`
+/// so loading overlays can avoid speculative network lookups on normal swipes.
 typedef LoadingBuilder =
-    Widget Function(BuildContext context, int index, {required bool isSquare});
+    Widget Function(
+      BuildContext context,
+      int index, {
+      required bool isSquare,
+      required bool hasSourceFailure,
+    });
 
 /// Builder for the error state.
 typedef ErrorBuilder =

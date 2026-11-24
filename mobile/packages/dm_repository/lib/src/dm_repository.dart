@@ -147,6 +147,16 @@ String _dmContentCorrelation({
   ).convert(utf8.encode(scopedContent)).toString().substring(0, 16);
 }
 
+/// Why [relay] did not accept the publish behind [outcome], for a log line.
+///
+/// "No response" means the relay got the event and stayed silent, so it may
+/// hold it; a relay the publish never reached cannot (#8380).
+String _relayVerdictForLog(PublishOutcome outcome, String relay) =>
+    outcome.rejectionCategories[relay] ??
+    (outcome.unreachableTargets.contains(relay)
+        ? 'unreachable'
+        : 'no response');
+
 /// Tuning for the one-time full-history drain
 /// (`DmRepository.backfillHistoryIfNeeded`).
 ///
@@ -2060,9 +2070,11 @@ class DmRepository {
   /// Before this, the self-copy went to the pool only. Divine advertises
   /// `nos.lol` and `relay.primal.net` in every account's kind-10050 (the app
   /// layer's `IndexerRelayConfig.dmInboxTaggedRelays`, passed in as
-  /// [_dmInboxTaggedRelays]), and neither joins the pool unless NIP-65
-  /// discovery came back empty — so the sender's own replies were absent from
-  /// two of the three relays their own inbox list points at.
+  /// [_dmInboxTaggedRelays]), and at the time neither joined the pool unless
+  /// NIP-65 discovery came back empty — so the sender's own replies were
+  /// absent from two of the three relays their own inbox list points at. The
+  /// app layer has added both to the pool on every discovery since #8378; the
+  /// union still reaches inbox relays an account lists outside the pool.
   Future<List<String>?> _selfWrapTargetRelays() async {
     final ownInbox = await _ownInboxRelays();
     if (ownInbox == null || ownInbox.isEmpty) return null;
@@ -2963,7 +2975,7 @@ class DmRepository {
   /// resumes from the persisted boundary on the next call. Concurrent
   /// callers share one in-flight run. Runs in the background — per-event
   /// decryption already offloads to a [compute] isolate — so it is safe to
-  /// fire-and-forget from the inbox BLoC on every open.
+  /// fire-and-forget whenever a DM surface opens.
   Future<void> backfillHistoryIfNeeded() {
     return _backfillHistoryIfNeeded();
   }
@@ -7041,7 +7053,7 @@ class DmRepository {
       if (!outcome.acceptedBy.contains(relayUrl)) {
         Log.warning(
           'kind-10050 publish: $relayUrl did not accept '
-          '(${outcome.rejectionCategories[relayUrl] ?? 'no response'}) — '
+          '(${_relayVerdictForLog(outcome, relayUrl)}) — '
           'will retry next login',
           category: LogCategory.system,
         );
@@ -7053,7 +7065,7 @@ class DmRepository {
         // changing its kind policy is visible in a bug report, never retried.
         Log.warning(
           'kind-10050 discovery publish to $url did not land '
-          '(${outcome.rejectionCategories[url] ?? 'no response'}) — '
+          '(${_relayVerdictForLog(outcome, url)}) — '
           'not retried',
           category: LogCategory.system,
         );
@@ -7089,7 +7101,7 @@ class DmRepository {
     if (!outcome.acceptedBy.contains(relayUrl)) {
       Log.warning(
         'kind-10050 re-send to $relayUrl did not land '
-        '(${outcome.rejectionCategories[relayUrl] ?? 'no response'}) — '
+        '(${_relayVerdictForLog(outcome, relayUrl)}) — '
         'will retry next login',
         category: LogCategory.system,
       );
@@ -8840,12 +8852,17 @@ class DmRepository {
           error: e,
           stackTrace: stackTrace,
         );
-        // Publish landed but local persistence failed — degraded
-        // state. Don't rethrow: the caller still gets the success
-        // result. The retry sweep will not pick this row up again
-        // because the publish succeeded; missing local persistence
-        // surfaces only as a sender-side gap until the self-wrap
-        // arrives via the receive pipeline.
+        // The publish landed but the local persist failed. The transaction
+        // rolled the queue transition back with the message, so the row
+        // keeps its status and the retry sweep re-drives it; receivers drop
+        // the replay by its rumor id. The attempt spends retry budget, so a
+        // persist failure that keeps recurring stops being republished once
+        // the budget runs out. The row then shows as failed with Resend,
+        // although the recipient has the message. The charge is a write of
+        // its own, so if the database cannot record it either, the sweep
+        // keeps re-driving the row. Don't rethrow: the caller still gets the
+        // success result.
+        await _chargeFailedReplay(dao: dao, rumorId: rumorId);
       }
     } else if (result.blocked) {
       // A confirmed policy block is terminal, not a transient error.

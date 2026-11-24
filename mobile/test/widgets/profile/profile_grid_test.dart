@@ -31,6 +31,8 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/profile/profile_grid.dart';
+import 'package:openvine/widgets/profile/profile_header_widget.dart';
+import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/profile_saved_grid.dart';
 import 'package:openvine/widgets/profile/profile_tab_kind.dart';
 import 'package:openvine/widgets/profile/profile_videos_grid_skeleton.dart';
@@ -1821,6 +1823,70 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('keeps a fling going when videos load under the status bar', (
+      tester,
+    ) async {
+      const statusBar = 47.0;
+      final topInset = FakeViewPadding(
+        top: statusBar * tester.view.devicePixelRatio,
+      );
+      tester.view
+        ..padding = topInset
+        ..viewPadding = topInset;
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          isLoadingVideos: true,
+          scrollController: scrollController,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump();
+      expect(find.byType(ProfileVideosGridSkeleton), findsOneWidget);
+      // While the header slides under the status bar, the pinned tab bar's
+      // inset grows by as much as the header leaves: the scroll range changes
+      // every frame, but the tab underneath is not laid out again.
+      final insetStart =
+          tester.getSize(find.byType(ProfileHeaderWidget)).height - statusBar;
+
+      await tester.fling(
+        find.byType(NestedScrollView),
+        const Offset(0, -100),
+        2500,
+      );
+      for (
+        var ms = 0;
+        ms < 1000 && scrollController.offset < insetStart + 5;
+        ms++
+      ) {
+        await tester.pump(const Duration(milliseconds: 1));
+      }
+      final offsetAtLoad = scrollController.offset;
+      expect(offsetAtLoad, greaterThan(insetStart));
+      expect(offsetAtLoad, lessThan(insetStart + statusBar));
+      expect(scrollController.position.isScrollingNotifier.value, isTrue);
+
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(30),
+          scrollController: scrollController,
+        ),
+        duration: const Duration(milliseconds: 1),
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(scrollController.offset, greaterThan(offsetAtLoad));
+      expect(find.byType(ProfileVideosGridSkeleton), findsNothing);
+      expect(find.byType(ProfileMasonryGrid), findsOneWidget);
     });
   });
 }

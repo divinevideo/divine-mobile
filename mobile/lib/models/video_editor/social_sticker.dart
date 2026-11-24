@@ -9,6 +9,7 @@ import 'package:models/models.dart'
         AudioEvent,
         NostrHexUtils,
         UserProfile,
+        VideoStickerAudience,
         VideoStickerKind,
         VideoStickerRegion;
 import 'package:openvine/models/video_editor/info_sticker.dart';
@@ -75,6 +76,10 @@ enum SocialStickerKind {
   /// clear of the feed's buttons and caption and above every other layer.
   bool get isInteractiveCard =>
       isPoll || this == question || this == addYours || this == replies;
+
+  /// Whether viewers answer the sticker with a video of their own, so its
+  /// creator can choose who may; see [SocialStickerData.audience].
+  bool get takesVideoAnswers => this == addYours || this == replies;
 
   /// The looks a sticker of this kind can take, the default first.
   ///
@@ -152,6 +157,7 @@ class SocialStickerData extends Equatable {
     this.sliderEmoji,
     this.prompt,
     this.chainRoot,
+    this.audience = VideoStickerAudience.everyone,
   });
 
   /// A new poll or quiz of [kind] with two empty answers, or a new slider
@@ -426,6 +432,16 @@ class SocialStickerData extends Equatable {
   /// sticker with the same chain, so every video in it counts the others.
   final String? chainRoot;
 
+  /// Who may answer an Add yours or replies sticker with a video;
+  /// [VideoStickerAudience.everyone] for any other kind. An answer to an Add
+  /// yours keeps the one its chain started with.
+  final VideoStickerAudience audience;
+
+  /// Whether the sticker stays out of the video's frames: an Add yours or
+  /// replies sticker only some may answer, which the player shows to them
+  /// and to everyone else once someone answered.
+  bool get isLeftOutOfFrames => kind.takesVideoAnswers && audience.isRestricted;
+
   /// The domain of a link's address, without `www.`, as the sticker shows
   /// it when it has no title.
   String? get linkDomain {
@@ -668,7 +684,11 @@ class SocialStickerData extends Equatable {
       VideoStickerKind.replies => SocialStickerKind.replies,
       VideoStickerKind.place || VideoStickerKind.reply => null,
     };
-    final style = InfoStickerStyle.values.asNameMap()[region.style];
+    // One only some may answer is in no frame, and published with no look:
+    // it takes its kind's only one.
+    final style =
+        InfoStickerStyle.values.asNameMap()[region.style] ??
+        (region.audience.isRestricted ? kind?.styles.first : null);
     final label = region.label;
     if (kind == null || style == null || !kind.styles.contains(style)) {
       return null;
@@ -720,6 +740,7 @@ class SocialStickerData extends Equatable {
         kind: kind,
         style: style,
         prompt: label,
+        audience: region.audience,
       ),
       VideoStickerKind.prompt => SocialStickerData(
         kind: kind,
@@ -727,6 +748,7 @@ class SocialStickerData extends Equatable {
         prompt: region.labelLines.first,
         hashtag: region.promptHashtag,
         chainRoot: region.target.isEmpty ? null : region.target,
+        audience: region.audience,
       ),
       VideoStickerKind.place || VideoStickerKind.reply => null,
     };
@@ -784,6 +806,8 @@ class SocialStickerData extends Equatable {
     'sliderEmoji': ?sliderEmoji,
     'prompt': ?prompt,
     'chainRoot': ?chainRoot,
+    if (kind.takesVideoAnswers && audience.isRestricted)
+      'audience': audience.name,
   };
 
   /// This sticker with what is given changed.
@@ -805,6 +829,7 @@ class SocialStickerData extends Equatable {
     int? quizAnswer,
     String? sliderEmoji,
     String? prompt,
+    VideoStickerAudience? audience,
   }) => SocialStickerData(
     kind: kind,
     style: style ?? this.style,
@@ -832,6 +857,7 @@ class SocialStickerData extends Equatable {
     sliderEmoji: sliderEmoji ?? this.sliderEmoji,
     prompt: prompt ?? this.prompt,
     chainRoot: chainRoot,
+    audience: audience ?? this.audience,
   );
 
   /// This sound credit crediting the sound [sound] credits instead: its
@@ -938,8 +964,20 @@ class SocialStickerData extends Equatable {
       sliderEmoji: text('sliderEmoji'),
       prompt: text('prompt'),
       chainRoot: text('chainRoot'),
+      audience: kind.takesVideoAnswers
+          ? _draftAudience(meta['audience'])
+          : VideoStickerAudience.everyone,
     );
   }
+
+  /// Who may answer, as a draft saved it: everyone when it names no one,
+  /// and only the creator when it names an audience this version does not
+  /// know, so a draft from a newer version stays out of the frames instead
+  /// of being drawn in for everyone.
+  static VideoStickerAudience _draftAudience(Object? saved) => saved == null
+      ? VideoStickerAudience.everyone
+      : VideoStickerAudience.values.asNameMap()[saved] ??
+            VideoStickerAudience.creator;
 
   /// The sticker [layer] shows, read from whichever of its two meta slots
   /// holds it.
@@ -976,6 +1014,7 @@ class SocialStickerData extends Equatable {
     sliderEmoji,
     prompt,
     chainRoot,
+    audience,
   ];
 }
 

@@ -15,12 +15,21 @@ import pro_video_editor
 ///
 /// Each subclass's kernel is the Android effect's fragment shader of the same
 /// name, line for line, and the picker tile's `shaders/<name>.frag`.
+///
+/// A subclass that asks for earlier frames, through ``historyOffsetsUs``, gets
+/// them as further textures after ``textures()``, newest first, each at
+/// ``historyScale`` of the frame's size. One the clip has not played far
+/// enough back for yet is the current frame, as on Android.
 class ShaderVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
   /// The intensity a new effect starts at, as in the Dart editor.
   static let defaultIntensity = 0.7
 
-  let historyOffsetsUs: [Int64] = []
-  let historyScale = 1.0
+  /// The earlier frames the kernel reads; none by default.
+  var historyOffsetsUs: [Int64] { [] }
+
+  /// The size the earlier frames are kept and read at, relative to the
+  /// frame.
+  var historyScale: Double { 1 }
 
   private let function: String
   private let source: String
@@ -46,20 +55,20 @@ class ShaderVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
   func textures() -> [CIImage] { [] }
 
   func render(_ frame: CustomVideoEffectFrame) -> CIImage {
-    draw(frame.image, effectTimeUs: frame.effectTimeUs)
+    draw(frame.image, history: frame.history, effectTimeUs: frame.effectTimeUs)
   }
 
   func render(_ image: CIImage, history: [CIImage?], timeUs: Int64, effectTimeUs: Int64)
     -> CIImage
   {
-    draw(image, effectTimeUs: effectTimeUs)
+    draw(image, history: history, effectTimeUs: effectTimeUs)
   }
 
-  private func draw(_ image: CIImage, effectTimeUs: Int64) -> CIImage {
+  private func draw(_ image: CIImage, history: [CIImage?], effectTimeUs: Int64) -> CIImage {
     let extent = image.extent
     guard !extent.isEmpty, !extent.isInfinite, let values = values(effectTimeUs: effectTimeUs)
     else { return image }
-    let textures = textures()
+    let textures = textures() + earlier(image, history)
     do {
       return try ShaderVideoEffectKernel.apply(
         withExtent: extent,
@@ -76,6 +85,20 @@ class ShaderVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
       return image
     }
   }
+
+  /// One image per ``historyOffsetsUs``, newest first, scaled down to
+  /// ``historyScale``: the earlier frame, or `image` where there is none.
+  ///
+  /// The earlier frames arrive scaled back up to the frame's extent; scaling
+  /// them down again hands the kernel the small copy instead of a full-size
+  /// one rendered from it.
+  private func earlier(_ image: CIImage, _ history: [CIImage?]) -> [CIImage] {
+    let scale = CGFloat(min(1, max(0.05, historyScale)))
+    return historyOffsetsUs.indices.map { k in
+      let frame = (k < history.count ? history[k] : nil) ?? image
+      return scale < 1 ? frame.transformed(by: CGAffineTransform(scaleX: scale, y: scale)) : frame
+    }
+  }
 }
 
 /// Runs one of Divine's effect shaders on the frame's Metal texture, as a node
@@ -84,8 +107,8 @@ class ShaderVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
 /// The shader's buffer holds the frame's layout in its first three `float4`s,
 /// which ``prelude``'s `frameOf` and `pixelOf` read, and the effect's own
 /// values from the fourth on. The frame is texture 0 and the output texture
-/// 1; any further inputs, such as a glyph atlas, follow from texture 2, each
-/// whole and with its first row at the top.
+/// 1; any further inputs, such as a glyph atlas or earlier frames, follow
+/// from texture 2, each whole and with its first row at the top.
 final class ShaderVideoEffectKernel: CIImageProcessorKernel {
   static let extentKey = "extent"
   /// The name of the kernel function to run.
@@ -234,6 +257,13 @@ final class ShaderVideoEffectKernel: CIImageProcessorKernel {
       q = clamp(q, float2(0.5), f.size - 0.5);
       float2 uv = (q + f.origin - f.inputOrigin) / f.inputSize;
       return frame.sample(linearClamp, float2(uv.x, 1.0 - uv.y)).rgb;
+    }
+
+    // An earlier frame, a whole texture of any size, at the point p of the
+    // frame, as Android's texture2D(uEarlier, vTexCoord) reads it.
+    static float3 earlierAt(texture2d<float, access::sample> earlier, Frame f, float2 p) {
+      float2 uv = p / f.size;
+      return earlier.sample(linearClamp, float2(uv.x, 1.0 - uv.y)).rgb;
     }
 
     """

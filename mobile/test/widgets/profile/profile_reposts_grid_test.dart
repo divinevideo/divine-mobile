@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
@@ -8,6 +10,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/profile_reposted_videos/profile_reposted_videos_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/profile_reposts_grid.dart';
@@ -343,16 +346,58 @@ void main() {
         await tester.tap(find.byType(GestureDetector).first);
         await tester.pumpAndSettle();
 
-        verify(
-          () => mockGoRouter.push<void>(
-            any(),
-            extra: any(named: 'extra'),
-          ),
-        ).called(1);
+        final args =
+            verify(
+                  () => mockGoRouter.push<void>(
+                    any(),
+                    extra: captureAny(named: 'extra'),
+                  ),
+                ).captured.single
+                as PooledFullscreenVideoFeedArgs;
+        addTearDown(() => args.tileOrigin?.takeImage()?.dispose());
+        expect(args.initialVideoId, videos.first.id);
+        expect(args.tileOrigin?.videoId, videos.first.id);
       });
     });
 
     group('scroll coordination with NestedScrollView', () {
+      testWidgets(
+        'keeps its scroll position measured when reposts replace the loading '
+        'state',
+        (tester) async {
+          final states =
+              StreamController<ProfileRepostedVideosState>.broadcast();
+          addTearDown(states.close);
+          whenListen(
+            mockBloc,
+            states.stream,
+            initialState: const ProfileRepostedVideosState(
+              status: ProfileRepostedVideosStatus.loading,
+            ),
+          );
+          await tester.pumpWidget(buildSubject());
+          final controller = PrimaryScrollController.of(
+            tester.element(find.byType(ProfileRepostsGrid)),
+          );
+          expect(controller.position.hasContentDimensions, isTrue);
+
+          states.add(
+            ProfileRepostedVideosState(
+              status: ProfileRepostedVideosStatus.success,
+              videos: _createTestVideos(count: 3),
+            ),
+          );
+          // A fling in the profile's NestedScrollView can read this position
+          // before the tab is laid out again, so stop the frame after build.
+          await tester.pump(Duration.zero, EnginePhase.build);
+
+          expect(controller.positions, hasLength(1));
+          expect(controller.position.hasContentDimensions, isTrue);
+          await tester.pump();
+          expect(find.byType(ProfileMasonryGrid), findsOneWidget);
+        },
+      );
+
       testWidgets(
         'uses PrimaryScrollController from NestedScrollView ancestor',
         (tester) async {

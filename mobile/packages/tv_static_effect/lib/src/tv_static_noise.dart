@@ -18,6 +18,10 @@ typedef PainterFactory =
 @visibleForTesting
 typedef ShaderLoader = Future<PainterFactory> Function();
 
+/// A function that asynchronously creates the noise [ui.FragmentShader].
+@visibleForTesting
+typedef FragmentShaderLoader = Future<ui.FragmentShader> Function();
+
 /// Renders an animated TV static / snow noise effect using a fragment shader.
 ///
 /// The effect resembles an old CRT television with no signal.
@@ -29,6 +33,7 @@ class TvStaticNoise extends StatefulWidget {
     super.key,
     this.opacity = defaultOpacity,
     @visibleForTesting this.shaderLoader,
+    @visibleForTesting this.fragmentShaderLoader,
   }) : assert(
          opacity >= 0.0 && opacity <= 1.0,
          'opacity must be between 0.0 and 1.0',
@@ -43,6 +48,11 @@ class TvStaticNoise extends StatefulWidget {
   /// Optional shader loader override for testing.
   final ShaderLoader? shaderLoader;
 
+  /// Optional override for the fragment shader the default painter draws
+  /// with, so tests can observe its lifetime. Ignored when [shaderLoader] is
+  /// set.
+  final FragmentShaderLoader? fragmentShaderLoader;
+
   @override
   State<TvStaticNoise> createState() => _TvStaticNoiseState();
 }
@@ -53,6 +63,7 @@ class _TvStaticNoiseState extends State<TvStaticNoise>
   double _elapsed = 0;
   int _frame = -1;
   PainterFactory? _createPainter;
+  ui.FragmentShader? _ownedShader;
   bool _loaded = false;
 
   /// Internal frame rate the shader quantizes to.
@@ -83,8 +94,28 @@ class _TvStaticNoiseState extends State<TvStaticNoise>
 
   Future<void> _loadShader() async {
     try {
-      final loader = widget.shaderLoader ?? _defaultShaderLoader;
-      _createPainter = await loader();
+      if (widget.shaderLoader != null) {
+        _createPainter = await widget.shaderLoader!();
+      } else {
+        final loadShader =
+            widget.fragmentShaderLoader ?? _loadAssetFragmentShader;
+        final shader = await loadShader();
+        if (!mounted) {
+          shader.dispose();
+          return;
+        }
+        _ownedShader = shader;
+        final paint = Paint();
+        // One shader for the widget's lifetime, disposed in [dispose];
+        // painters only set its uniforms.
+        _createPainter = ({required time, required opacity}) =>
+            _TvStaticPainter(
+              shader: shader,
+              paint: paint,
+              time: time,
+              opacity: opacity,
+            );
+      }
       if (mounted) {
         setState(() => _loaded = true);
       }
@@ -110,6 +141,8 @@ class _TvStaticNoiseState extends State<TvStaticNoise>
   @override
   void dispose() {
     _ticker.dispose();
+    _ownedShader?.dispose();
+    _ownedShader = null;
     super.dispose();
   }
 
@@ -128,28 +161,26 @@ class _TvStaticNoiseState extends State<TvStaticNoise>
   }
 }
 
-// coverage:ignore-start
-
 /// Asset path for the TV static fragment shader.
 const _shaderAssetPath = 'packages/tv_static_effect/shaders/tv_static.frag';
 
-/// Default shader loader that loads the real GLSL fragment shader.
-Future<PainterFactory> _defaultShaderLoader() async {
+// coverage:ignore-start
+
+// The package-qualified asset key resolves only in an app that depends on this
+// package, so this package's tests inject [TvStaticNoise.fragmentShaderLoader].
+Future<ui.FragmentShader> _loadAssetFragmentShader() async {
   final program = await ui.FragmentProgram.fromAsset(_shaderAssetPath);
-  // Explicit types required — Dart does not infer named parameter types
-  // from the return type of the enclosing function.
-  // ignore: avoid_types_on_closure_parameters
-  return ({required double time, required double opacity}) =>
-      _TvStaticPainter(program: program, time: time, opacity: opacity);
+  return program.fragmentShader();
 }
 
 class _TvStaticPainter extends CustomPainter {
   _TvStaticPainter({
-    required ui.FragmentProgram program,
+    required ui.FragmentShader shader,
+    required Paint paint,
     required this.time,
     required this.opacity,
-  }) : _shader = program.fragmentShader(),
-       _paint = Paint();
+  }) : _shader = shader,
+       _paint = paint;
 
   final ui.FragmentShader _shader;
   final Paint _paint;

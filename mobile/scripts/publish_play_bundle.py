@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from publish_github_release import effective_version
+from release_train.android_distribution import retain_downloads
 from release_train.ledger import GhLedgerStore
 from release_train.providers import DeferredReview, Play, ProviderError, play_token
 from release_train.release_notes import bundle_from_env, notes_for
@@ -46,6 +47,7 @@ def publish_bundle(env=os.environ, *, ledger=None, play=None):
         "recorded_at": datetime.now(UTC).isoformat(),
     }
     remote = f"artifacts/android/{number}.json"
+    retain_downloads(env, ledger, source, version, number)
 
     def retained_record(prior):
         if any(

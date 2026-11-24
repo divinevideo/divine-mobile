@@ -7,8 +7,8 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/hashtag_follows/cubit/hashtag_follows_cubit.dart';
 import 'package:openvine/features/hashtag_follows/view/hashtag_follows_scope.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/navigation/hashtag_feed_navigation.dart';
 import 'package:openvine/router/route_paths.dart';
-import 'package:openvine/router/routes/search_routes.dart';
 
 class FollowedHashtagsPage extends StatelessWidget {
   const FollowedHashtagsPage({super.key});
@@ -72,9 +72,11 @@ class _FollowedHashtagsView extends StatelessWidget {
                     color: context.vineColors.primaryText,
                   ),
                 ),
-                onTap: () => HashtagRouteData(
-                  tag: tag.displayTag,
-                ).push<void>(context),
+                onTap: () => openHashtagFeed(
+                  context,
+                  tag.displayTag,
+                  logName: 'FollowedHashtagsPage',
+                ),
                 trailing: DivineButton(
                   label: context.l10n.unfollowConfirmButton,
                   size: DivineButtonSize.small,

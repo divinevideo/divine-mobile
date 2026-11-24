@@ -61,6 +61,7 @@ class ShorebirdProvenanceTest(unittest.TestCase):
         self,
         output: Path | None = None,
         environment: dict[str, str] | None = None,
+        xcode_build: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
@@ -85,6 +86,7 @@ class ShorebirdProvenanceTest(unittest.TestCase):
                 str(self.defines),
                 "--output",
                 str(output or self.record),
+                *(["--xcode-build", xcode_build] if xcode_build is not None else []),
             ],
             cwd=REPO_ROOT,
             env=environment or self.environment,
@@ -124,6 +126,8 @@ class ShorebirdProvenanceTest(unittest.TestCase):
         ]
         if "release_commit" in overrides:
             arguments.extend(["--release-commit", overrides["release_commit"]])
+        if "xcode_build" in overrides:
+            arguments.extend(["--xcode-build", overrides["xcode_build"]])
         return subprocess.run(
             arguments,
             cwd=REPO_ROOT,
@@ -133,26 +137,79 @@ class ShorebirdProvenanceTest(unittest.TestCase):
             capture_output=True,
         )
 
-    def prepare_patch_policy(self, policy: str = "[]", invite: str = "", relay: str = "") -> subprocess.CompletedProcess[str]:
-        # Execute the actual Codemagic gate with the real Ruby authenticator and
-        # policy writer. Only the already-fetched record and temporary output
-        # paths replace remote/build inputs; no network operation is needed.
+    def test_ios_patch_uses_the_recorded_xcode_build(self) -> None:
+        release = self.emit(xcode_build="27B52")
+        self.assertEqual(0, release.returncode, release.stderr)
+        self.assertEqual("27B52", json.loads(self.record.read_text())["xcode_build"])
+
+        for overrides in ({}, {"xcode_build": "17F42"}):
+            with self.subTest(overrides=overrides):
+                rejected = self.verify(**overrides)
+                self.assertNotEqual(0, rejected.returncode)
+                self.assertIn("Xcode build does not match release provenance", rejected.stderr)
+                self.assertFalse(self.env_output.exists())
+
+        matched = self.verify(xcode_build="27B52")
+        self.assertEqual(0, matched.returncode, matched.stderr)
+
+    def test_release_rejects_a_malformed_xcode_build(self) -> None:
+        for value in ("", "Xcode 27.2", "Build version 27B52", "latest"):
+            with self.subTest(value=value):
+                result = self.emit(xcode_build=value)
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn("invalid release Xcode build", result.stderr)
+                self.assertFalse(self.record.exists())
+
+    def test_legacy_ios_patch_accepts_selected_xcode(self) -> None:
+        self.assertEqual(0, self.emit().returncode)
+        legacy = self.verify(xcode_build="17F42")
+        self.assertEqual(0, legacy.returncode, legacy.stderr)
+        self.assertIn("predates Xcode build recording", legacy.stderr)
+
+    def patch_gate(self) -> str:
+        # The fetch-and-verify step from the policy check onwards. Only the
+        # already-fetched record, temporary output paths and a stubbed
+        # xcodebuild replace remote/build inputs; no network operation is
+        # needed.
         contents = (REPO_ROOT / "codemagic.yaml").read_text()
         step = contents.split("    - &fetch_and_verify_shorebird_provenance\n", 1)[1]
-        gate = step.split("        PUBLIC_PEOPLE_LIST_POLICY_REQUIRED=", 1)[1]
-        gate = "PUBLIC_PEOPLE_LIST_POLICY_REQUIRED=" + gate.split(
-            "        ruby scripts/shorebird_provenance.rb verify", 1
-        )[0]
+        step = step.split("\n    - &", 1)[0]
+        gate = "PUBLIC_PEOPLE_LIST_POLICY_REQUIRED=" + step.split(
+            "        PUBLIC_PEOPLE_LIST_POLICY_REQUIRED=", 1
+        )[1]
         gate = gate.replace("${{ inputs.RELEASE_VERSION }}", "1.2.3+456")
-        gate = gate.replace("build/shorebird/dart_defines.json", shlex.quote(str(self.defines)))
+        return gate.replace("build/shorebird/dart_defines.json", shlex.quote(str(self.defines)))
+
+    def run_patch_gate(
+        self,
+        gate: str,
+        policy: str = "[]",
+        invite: str = "",
+        relay: str = "",
+        machine_xcode_build: str = "27B52",
+    ) -> subprocess.CompletedProcess[str]:
+        # The patch workflow runs on macOS; configuration CI runs on Linux, so a
+        # PATH stub answers for xcodebuild and the gate's own awk parsing stays
+        # under test.
+        xcodebuild = self.root / "xcodebuild"
+        xcodebuild.write_text(
+            "#!/bin/sh\n"
+            '[ "$#" -eq 1 ] && [ "$1" = -version ] || exit 1\n'
+            f"printf 'Xcode 27.2\\nBuild version {machine_xcode_build}\\n'\n"
+        )
+        xcodebuild.chmod(0o755)
         return subprocess.run(
             ["bash", "-c", "set -euo pipefail\n" + gate],
             cwd=REPO_ROOT / "mobile",
             env={
                 **self.environment,
+                "PATH": f"{self.root}{os.pathsep}{self.environment['PATH']}",
                 "PROVENANCE_PATH": str(self.record),
                 "SHOREBIRD_PLATFORM": "ios",
                 "CM_REPO_SLUG": "divinevideo/divine-mobile",
+                "FLUTTER_VERSION": "3.44.9",
+                "SHOREBIRD_CLI_VERSION": "Shorebird 1.6.117",
+                "SHOREBIRD_REVISION": "45facdd4e4b3c39e0d260107977584f0b7c66bec",
                 POLICY_NAME: policy,
                 "CONCORD_INVITE_URL": invite,
                 "CONCORD_RELAY_URL": relay,
@@ -161,6 +218,83 @@ class ShorebirdProvenanceTest(unittest.TestCase):
             text=True,
             capture_output=True,
         )
+
+    def prepare_patch_policy(self, policy: str = "[]", invite: str = "", relay: str = "") -> subprocess.CompletedProcess[str]:
+        # Execute the actual Codemagic gate with the real Ruby authenticator and
+        # policy writer, stopping before the verify call.
+        gate = self.patch_gate().split(
+            "        ruby scripts/shorebird_provenance.rb verify", 1
+        )[0]
+        return self.run_patch_gate(gate, policy, invite, relay)
+
+    def verify_patch_source(self, machine_xcode_build: str = "27B52") -> subprocess.CompletedProcess[str]:
+        # The same gate through `ruby ... verify`, so the Xcode build the step
+        # reads from xcodebuild is the one the authenticator compares.
+        gate = self.patch_gate()
+        gate = gate.replace("${{ inputs.RELEASE_COMMIT }}", "")
+        gate = gate.replace("build/shorebird/patch_source.env", shlex.quote(str(self.env_output)))
+        return self.run_patch_gate(gate, machine_xcode_build=machine_xcode_build)
+
+    def run_emit_step(self, platform: str) -> subprocess.CompletedProcess[str]:
+        # The emit step from where it reads the archive, up to the private
+        # store upload. PlistBuddy is an absolute path, so a PATH stub cannot
+        # answer for it; the step text points at the stub instead.
+        contents = (REPO_ROOT / "codemagic.yaml").read_text()
+        step = contents.split("    - &emit_shorebird_provenance\n", 1)[1]
+        step = step.split("\n    - &", 1)[0]
+        body = "set --\n" + step.split("        set --\n", 1)[1]
+        body = body.split("        bash scripts/shorebird_provenance_store.sh create", 1)[0]
+        plist_buddy = self.root / "PlistBuddy"
+        plist_buddy.write_text(
+            "#!/bin/sh\n"
+            '[ "$1" = -c ] && [ "$2" = "Print :DTXcodeBuild" ] || exit 1\n'
+            "printf '27B52\\n'\n"
+        )
+        plist_buddy.chmod(0o755)
+        body = body.replace("/usr/libexec/PlistBuddy", shlex.quote(str(plist_buddy)))
+        body = body.replace("build/shorebird/dart_defines.json", shlex.quote(str(self.defines)))
+        return subprocess.run(
+            ["bash", "-c", "set -euo pipefail\n" + body],
+            cwd=REPO_ROOT / "mobile",
+            env={
+                **self.environment,
+                "SHOREBIRD_PLATFORM": platform,
+                "SHOREBIRD_RELEASE_VERSION": "1.2.3+456",
+                "SOURCE_COMMIT": self.head,
+                "FLUTTER_VERSION": "3.44.9",
+                "SHOREBIRD_CLI_VERSION": "Shorebird 1.6.117",
+                "SHOREBIRD_REVISION": "45facdd4e4b3c39e0d260107977584f0b7c66bec",
+                "PROVENANCE_PATH": str(self.record),
+            },
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+
+    def test_release_step_records_the_archived_xcode_build_for_ios_only(self) -> None:
+        ios = self.run_emit_step("ios")
+        self.assertEqual(0, ios.returncode, ios.stderr)
+        self.assertEqual("27B52", json.loads(self.record.read_text())["xcode_build"])
+
+        self.record.unlink()
+        android = self.run_emit_step("android")
+        self.assertEqual(0, android.returncode, android.stderr)
+        self.assertNotIn("xcode_build", json.loads(self.record.read_text()))
+
+    def test_patch_step_verifies_with_the_machine_xcode_build(self) -> None:
+        self.assertEqual(0, self.emit(xcode_build="27B52").returncode)
+
+        matched = self.verify_patch_source()
+        self.assertEqual(0, matched.returncode, matched.stderr)
+        self.assertTrue(self.env_output.exists())
+
+    def test_patch_step_rejects_a_machine_on_another_xcode_build(self) -> None:
+        self.assertEqual(0, self.emit(xcode_build="27B52").returncode)
+
+        rejected = self.verify_patch_source(machine_xcode_build="27B53")
+        self.assertNotEqual(0, rejected.returncode)
+        self.assertIn("Xcode build does not match release provenance", rejected.stderr)
+        self.assertFalse(self.env_output.exists())
 
     def test_legacy_patch_ignores_current_invite_and_retains_exact_shape(self) -> None:
         baseline = self.defines.read_bytes()

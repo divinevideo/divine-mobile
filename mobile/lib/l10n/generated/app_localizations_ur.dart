@@ -482,22 +482,6 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get contentPreferencesAudioInputDevice => 'آڈیو ان پٹ ڈیوائس';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'خودکار (تجویز کردہ)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'خودبخود بہترین مائکروفون منتخب کرتا ہے';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'آڈیو ان پٹ منتخب کریں';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'نامعلوم مائکروفون';
-
-  @override
   String get contentFiltersAdultContent => 'بالغ مواد';
 
   @override
@@ -2145,6 +2129,14 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => 'آپ کی باری';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => 'سیریز دیکھیں';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'سیریز دیکھیں: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -4491,6 +4483,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'ریلے نے اپ ڈیٹ قبول نہیں کی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'یہ ویڈیو کسی دوسرے ڈیوائس پر بدلی گئی ہے اور اب اس میں بہت زیادہ ٹیگز یا شریک کار ہیں۔ اسے دوبارہ کھولیں اور کچھ ہٹا دیں۔';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'اس ویڈیو کو اپ ڈیٹ نہیں کیا جا سکا۔ دوبارہ کوشش کریں۔';
 
@@ -4584,6 +4580,18 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get soundsNoSoundsFoundDescription =>
       'کوئی اور تلاش کی اصطلاح آزمائیں';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count آوازیں ملیں',
+      one: '$count آواز ملی',
+      zero: 'کوئی آواز نہیں ملی',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'آوازوں میں محفوظ ہو گئی';
@@ -9417,6 +9425,21 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectEcho => 'گونج';
 
   @override
+  String get videoEditorEffectTimeSplit => 'وقت کی تقسیم';
+
+  @override
+  String get videoEditorEffectLongExposure => 'لانگ ایکسپوژر';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'صرف حرکت';
+
+  @override
+  String get videoEditorEffectStutter => 'اٹکاؤ';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'وقت کا خم';
+
+  @override
   String get videoEditorEffectFisheye => 'فش آئی';
 
   @override
@@ -9618,6 +9641,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'حرکت';
 
   @override
+  String get videoEditorEffectCategoryTime => 'وقت';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'ذرات';
 
   @override
@@ -9724,6 +9750,14 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے۔';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'ایک وقت میں صرف ایک وقت والا ایفیکٹ۔ دو ایک ساتھ ایکسپورٹ کے بعد مختلف دکھائی دیں گے، اس لیے ہم نے یہاں دوسرے کو بدل دیا۔';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'ایک وقت میں صرف ایک وقت والا ایفیکٹ۔ دو ایک ساتھ ایکسپورٹ کے بعد مختلف دکھائی دیں گے۔';
 
   @override
   String get videoEditorEffectsOnBeat => 'بیٹ کے ساتھ';
@@ -11832,6 +11866,34 @@ class AppLocalizationsUr extends AppLocalizations {
       'دکھاتا ہے کہ کس نے اس ویڈیو کا جواب ویڈیو سے دیا۔ ناظرین جوابات دیکھنے کے لیے اسے ٹیپ کرتے ہیں۔';
 
   @override
+  String get videoEditorSocialStickerAudienceTitle => 'جواب دینے کی اجازت';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'سب';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'دوست';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'صرف میں';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'صرف آپ کے فالو کردہ اکاؤنٹس حصہ لے سکتے ہیں۔ باقی سب کو اسٹیکر تب نظر آتا ہے جب کوئی حصہ لے لے۔';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'اسٹیکر صرف آپ کے فالو کردہ اکاؤنٹس کے ویڈیو جوابات دکھاتا ہے۔ باقی سب کو یہ تب نظر آتا ہے جب ان میں سے کوئی جواب دے دے۔';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'حصہ لینا صرف آپ کے لیے ہے۔ آپ کے حصہ لینے تک کسی اور کو اسٹیکر نظر نہیں آتا۔';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'اسٹیکر صرف آپ کے اپنے ویڈیو جوابات دکھاتا ہے۔ آپ کے جواب دینے تک کسی اور کو یہ نظر نہیں آتا۔';
+
+  @override
   String get videoEditorInteractiveCardAreaHint =>
       'یہ اسٹیکر اسی خانے میں رہتا ہے تاکہ ناظرین اسے ٹیپ کر سکیں';
 
@@ -12611,13 +12673,13 @@ class AppLocalizationsUr extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'بیج سبسکرائب کریں';
+  String get badgeSubscribeAction => 'کمیونٹی کو فالو کریں';
 
   @override
-  String get badgeSubscribedAction => 'سبسکرائب کر لیا';
+  String get badgeSubscribedAction => 'کمیونٹی کو فالو کر رہے ہیں';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'بیج قبول کرنے والے';
+  String get badgeAcceptedHoldersTitle => 'اس کمیونٹی کے لوگ';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -13626,6 +13688,21 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get devOptionsProtectedMinorClearedToast =>
       'محفوظ نابالغ اووررائیڈ صاف ہو گیا';
+
+  @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
 
   @override
   String get commentsRecordVideoButtonLabel => 'ویڈیو تبصرہ ریکارڈ کریں';
@@ -14669,6 +14746,65 @@ class AppLocalizationsUr extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return '$platform اکاؤنٹ $identity کا جوڑ ختم کریں';
   }
@@ -14700,7 +14836,26 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'ایک ٹیپ';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -14812,6 +14967,18 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'تصدیق ہو گئی، مگر کسی ریلے نے اپ ڈیٹ قبول نہیں کی۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -16791,4 +16958,49 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get collabRoomSeriesReadyHint => 'سب حصے آ گئے۔ انہیں جوڑیں!';
+
+  @override
+  String get badgeDiscoveryTitle => 'بیجز لوگوں کو اکٹھا کرتے ہیں';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'کوئی بھی بیجز بنا سکتا ہے اور دے سکتا ہے۔ آپ منتخب کرتے ہیں کہ آپ کے پروفائل پر کون سے بیجز نظر آئیں۔ کسی بیج کو دیکھ کر اس کی کمیونٹی سے واقف ہوں اور اس کے لوگوں کو فالو کریں۔';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'میرے بیجز';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'ابھی کوئی کمیونٹی نہیں ملی۔ دوبارہ کوشش کے لیے نیچے کھینچیں۔';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'کمیونٹی کی ویڈیوز آپ کی فالوونگ فیڈ میں شامل کرتا ہے۔ لوگوں کو الگ الگ فالو کریں۔';
+
+  @override
+  String get badgeOfficialLabel => 'آفیشل';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName، $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName، $issuerName، $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return '$website پر مزید جانیں';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return '$badgeName کی ویڈیوز';
+  }
 }

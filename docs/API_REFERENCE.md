@@ -167,8 +167,11 @@ Future<QueryResult> readEvents(
 ```
 Read events matching `filters` and report how the read ended — see
 `QueryResult`. The read stops at `deadline` (`timeout` from now when
-`deadline` is not given) and returns whatever events had arrived by then,
-whether or not the read finished.
+`deadline` is not given) and returns the events that had arrived and passed
+their signature check by then, whether or not the read finished. An event
+that arrived in time but was still being checked when the read ended is
+dropped, and the pool files one `inFlightEventDrop` debug diagnostic naming
+it.
 
 **Parameters:**
 - `filters`: Nostr filters
@@ -807,35 +810,6 @@ contacts.add(Contact(
 
 // Send to network
 await nostr.sendContactList(contacts, 'My follow list');
-```
-
-### NIP-29 (Relay-based Groups)
-
-```dart
-class NIP29 {
-  static Future<void> addMember(Nostr nostr, GroupIdentifier group, String pubkey);
-  static Future<void> removeMember(Nostr nostr, GroupIdentifier group, String pubkey);
-  static Future<void> deleteEvent(Nostr nostr, GroupIdentifier group, String eventId);
-  static Future<void> editStatus(Nostr nostr, GroupIdentifier group, bool? public, bool? open);
-}
-
-class GroupIdentifier {
-  final String groupId;
-  final String host;
-  
-  GroupIdentifier(this.groupId, this.host);
-}
-```
-
-**Example:**
-```dart
-final group = GroupIdentifier('my-group', 'wss://groups.relay.com');
-
-// Add member to group
-await NIP29.addMember(nostr, group, memberPubkey);
-
-// Change group visibility
-await NIP29.editStatus(nostr, group, public: false, open: true);
 ```
 
 ### NIP-44 (Versioned Encryption)

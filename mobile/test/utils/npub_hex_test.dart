@@ -6,9 +6,10 @@ import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
 
+import '../helpers/test_pubkeys.dart';
+
 void main() {
-  const selfHex =
-      '1111111111111111111111111111111111111111111111111111111111111111';
+  const selfHex = syntheticTestPubkey;
   const otherHex =
       '2222222222222222222222222222222222222222222222222222222222222222';
   // Encoded rather than pasted: a bech32 literal that does not decode would

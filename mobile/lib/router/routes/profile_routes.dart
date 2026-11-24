@@ -4,6 +4,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_error_screen.dart';
@@ -14,6 +16,7 @@ import 'package:openvine/router/widgets/following_screen_router.dart';
 import 'package:openvine/router/widgets/other_profile_screen_router.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
+import 'package:openvine/screens/verify/verify_confirmation_screen.dart';
 import 'package:openvine/screens/verify/verify_connect_screen.dart';
 import 'package:openvine/screens/verify/verify_screen.dart';
 import 'package:openvine/utils/npub_hex.dart';
@@ -30,6 +33,10 @@ List<RouteBase> profileRoutes() => $appRoutes;
     TypedGoRoute<VerifyConnectRouteData>(
       path: VerifyConnectPage.path,
       name: VerifyConnectPage.routeName,
+    ),
+    TypedGoRoute<VerifyConfirmationRouteData>(
+      path: VerifyConfirmationPage.path,
+      name: VerifyConfirmationPage.routeName,
     ),
   ],
 )
@@ -57,6 +64,26 @@ class VerifyConnectRouteData extends GoRouteData with $VerifyConnectRouteData {
   @override
   Widget build(BuildContext context, GoRouterState state) =>
       VerifyConnectPage(platformKey: platform, replacingIdentity: replacing);
+}
+
+/// The placeholder Divine Confirmation screen, open only while the
+/// `confirmationSignIn` flag is on.
+class VerifyConfirmationRouteData extends GoRouteData
+    with $VerifyConfirmationRouteData {
+  const VerifyConfirmationRouteData();
+
+  @override
+  String? redirect(BuildContext context, GoRouterState state) {
+    final enabled = ProviderScope.containerOf(
+      context,
+      listen: false,
+    ).read(isFeatureEnabledProvider(FeatureFlag.confirmationSignIn));
+    return enabled ? null : VerifyPage.path;
+  }
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const VerifyConfirmationPage();
 }
 
 @TypedGoRoute<EditProfileRouteData>(

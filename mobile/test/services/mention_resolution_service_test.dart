@@ -9,26 +9,23 @@ import 'package:openvine/services/mention_resolution_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:profile_repository/profile_repository.dart';
 
+import '../helpers/test_pubkeys.dart';
+
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 const _alicePubkey =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-const _bobPubkey =
-    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-const _carolPubkey =
-    'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
-const _frankPubkey =
-    'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
-const _onePubkey =
-    '1111111111111111111111111111111111111111111111111111111111111111';
+const String _bobPubkey = syntheticTestPubkey;
+const String _carolPubkey = syntheticOtherTestPubkey;
+final String _frankPubkey = testPubkeyFromSeed(6);
+final String _onePubkey = testPubkeyFromSeed(1);
 const _twoPubkey =
     '2222222222222222222222222222222222222222222222222222222222222222';
 const _threePubkey =
     '3333333333333333333333333333333333333333333333333333333333333333';
 const _fourPubkey =
     '4444444444444444444444444444444444444444444444444444444444444444';
-const _fivePubkey =
-    '5555555555555555555555555555555555555555555555555555555555555555';
+final String _fivePubkey = testPubkeyFromSeed(5);
 const _privateKey =
     'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
 

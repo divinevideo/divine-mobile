@@ -31,6 +31,14 @@
   "videoEditorSocialStickerQuestionNote": "መልሶች እንደ የግል መልእክት ይደርሱዎታል።",
   "videoEditorSocialStickerAddYoursNote": "ተመልካቾች በራሳቸው ቪዲዮ ይመልሳሉ። እያንዳንዱ መልስ ይህን ሃሽታግ ያገኛል፣ ወደ ቪዲዮዎም ይመራል።",
   "videoEditorSocialStickerRepliesNote": "ለዚህ ቪዲዮ በቪዲዮ ምላሽ የሰጡትን ያሳያል። ተመልካቾች ምላሾቹን ለማየት ይነኩታል።",
+  "videoEditorSocialStickerAudienceTitle": "ማን መመለስ ይችላል",
+  "videoEditorSocialStickerAudienceEveryone": "ሁሉም",
+  "videoEditorSocialStickerAudienceFollowing": "ጓደኞች",
+  "videoEditorSocialStickerAudienceCreator": "እኔ ብቻ",
+  "videoEditorSocialStickerAudienceFollowingAddYoursNote": "የሚከተሏቸው ሰዎች ብቻ ሊሳተፉ ይችላሉ። ሌሎች ሁሉ አንድ ሰው ከተሳተፈ በኋላ ተለጣፊውን ያያሉ።",
+  "videoEditorSocialStickerAudienceFollowingRepliesNote": "ተለጣፊው የሚያሳየው እርስዎ ከሚከተሏቸው ሰዎች የመጡ የቪዲዮ ምላሾችን ብቻ ነው። ሌሎች ሁሉ ከእነሱ አንዱ ምላሽ ከሰጠ በኋላ ያዩታል።",
+  "videoEditorSocialStickerAudienceCreatorAddYoursNote": "እርስዎ ብቻ መሳተፍ ይችላሉ። እርስዎ እስኪሳተፉ ድረስ ሌላ ማንም ተለጣፊውን አያይም።",
+  "videoEditorSocialStickerAudienceCreatorRepliesNote": "ተለጣፊው የሚያሳየው የእርስዎን የቪዲዮ ምላሾች ብቻ ነው። እርስዎ ምላሽ እስኪሰጡ ድረስ ሌላ ማንም አያየውም።",
   "videoEditorInteractiveCardAreaHint": "ተመልካቾች መንካት እንዲችሉ ይህ ተለጣፊ በዚህ ሳጥን ውስጥ ይቆያል",
   "videoStickerPollSignInToVote": "ድምፅ ለመስጠት ይግቡ።",
   "videoStickerPollNotReady": "አሁንም በመገናኘት ላይ። ትንሽ ቆይተው እንደገና ይሞክሩ።",
@@ -40,6 +48,8 @@
   "videoStickerQuestionAnswerHint": "ለመመለስ ይንኩ",
   "videoStickerQuestionAnswerSemanticLabel": "መልስ፦ {question}",
   "videoStickerAddYoursButton": "የእርስዎ ተራ",
+  "videoStickerAddYoursWatchSeries": "ተከታታዩን ይመልከቱ",
+  "videoStickerAddYoursWatchSeriesSemanticLabel": "ተከታታዩን ይመልከቱ፦ {prompt}",
   "videoStickerAddYoursJoined": "{count, plural, =0{ቀድመው ይጀምሩ} =1{{count} ተሳታፊ} other{{count} ተሳታፊዎች}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} ተሳታፊዎች",
   "videoStickerAddYoursOpenSemanticLabel": "ተሳታፊዎችን ይመልከቱ",
@@ -297,11 +307,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "የድምጽ ግቤት መሣሪያ",
-  "contentPreferencesAutoRecommended": "ራስ-ሰር (የሚመከር)",
-  "contentPreferencesAutoSelectsBest": "በጣም ጥሩውን ማይክሮፎን በራስ-ሰር ይመርጣል",
-  "contentPreferencesSelectAudioInput": "የድምጽ ግቤትን ይምረጡ",
-  "contentPreferencesUnknownMicrophone": "ያልታወቀ ማይክሮፎን",
   "contentFiltersAdultContent": "የአዋቂዎች ይዘት",
   "contentFiltersViolenceGore": "ግፍ እና ደም",
   "contentFiltersSubstances": "ንጥረ ነገሮች",
@@ -1992,6 +1997,7 @@
   "videoUpdateErrorNoPlayableVideo": "ይህ ቪዲዮ ሊጫወት የሚችል ምንጭ የለውም፣ ስለዚህ ሊስተካከል አይችልም።",
   "videoUpdateErrorCouldNotSign": "ማዘመኛውን መፈረም አልተቻለም። እንደገና ሞክር።",
   "videoUpdateErrorPublishRejected": "ማስተላለፊያው ማዘመኛውን አልተቀበለም። ትንሽ ቆይተህ እንደገና ሞክር።",
+  "videoUpdateErrorConcurrentEditsOverLimit": "ይህ ቪዲዮ በሌላ መሣሪያ ላይ ተቀይሯል፤ አሁን በጣም ብዙ መለያዎች ወይም ተባባሪዎች አሉት። እንደገና ከፍተው ጥቂቶቹን ያስወግዱ።",
   "videoUpdateErrorGeneric": "ይህን ቪዲዮ ማዘመን አልተቻለም። እንደገና ሞክር።",
   "shareMenuDeleteVideoQuestion": "ቪዲዮ ይሰረዝ?",
   "shareMenuDeleteCleanupInProgress": "ቪዲዮው እየተወገደ ነው…",
@@ -2021,6 +2027,7 @@
   "soundsSearchResults": "የፍለጋ ውጤቶች",
   "soundsNoSoundsFound": "ምንም ድምፆች አልተገኙም።",
   "soundsNoSoundsFoundDescription": "የተለየ የፍለጋ ቃል ይሞክሩ",
+  "soundsSearchResultCount": "{count, plural, =0{ምንም ድምፆች አልተገኙም} one{{count} ድምፅ ተገኝቷል} other{{count} ድምፆች ተገኝተዋል}}",
   "profileTitle": "መገለጫ",
   "profileMoreOptions": "ተጨማሪ አማራጮች",
   "profileBlockedUser": "ታግዷል {name}",
@@ -3362,6 +3369,11 @@
   "videoEditorEffectWave": "ሞገድ",
   "videoEditorEffectGlow": "ፍካት",
   "videoEditorEffectEcho": "ማሚቶ",
+  "videoEditorEffectTimeSplit": "የጊዜ ክፍፍል",
+  "videoEditorEffectLongExposure": "ረጅም ተጋላጭነት",
+  "videoEditorEffectMotionOnly": "እንቅስቃሴ ብቻ",
+  "videoEditorEffectStutter": "መንተባተብ",
+  "videoEditorEffectTimeWarp": "የጊዜ መጣመም",
   "videoEditorEffectFisheye": "ፊሽአይ",
   "videoEditorEffectDrops": "ጠብታዎች",
   "videoEditorEffectLightLeak": "የብርሃን ፍሰት",
@@ -3429,6 +3441,7 @@
   "videoEditorEffectCategoryDistort": "ማዛባት",
   "videoEditorEffectCategoryLight": "ብርሃን",
   "videoEditorEffectCategoryMotion": "እንቅስቃሴ",
+  "videoEditorEffectCategoryTime": "ጊዜ",
   "videoEditorEffectCategoryParticles": "ቅንጣቶች",
   "videoEditorEffectCategoryLooks": "ገጽታዎች",
   "videoEditorEffectCategoryIntro": "መግቢያ",
@@ -3464,6 +3477,8 @@
   "videoEditorDropsShuffle": "አደባልቅ",
   "videoEditorEffectsFlashingReplaced": "አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል፣ ስለዚህ ሌላውን እዚህ ተክተነዋል።",
   "videoEditorEffectsFlashingNotDuplicated": "አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል።",
+  "videoEditorEffectsTimeReplaced": "አንድ የጊዜ ኢፌክት በአንድ ጊዜ። ሁለቱ አብረው ሲሆኑ ከኤክስፖርት በኋላ የተለየ ይመስላሉ፣ ስለዚህ ሌላውን እዚህ ተክተነዋል።",
+  "videoEditorEffectsTimeNotDuplicated": "አንድ የጊዜ ኢፌክት በአንድ ጊዜ። ሁለቱ አብረው ሲሆኑ ከኤክስፖርት በኋላ የተለየ ይመስላሉ።",
   "videoEditorEffectsOnBeat": "ከምቱ ጋር",
   "videoEditorEffectsOnBeatFinding": "ምቱን በመፈለግ ላይ…",
   "videoEditorEffectsOnBeatNoBeat": "በዚህ ድምፅ ውስጥ ቋሚ ምት የለም",
@@ -6506,9 +6521,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "ተከትለዋል",
-  "badgeSubscribeAction": "ባጁን ተከተል",
-  "badgeAcceptedHoldersTitle": "ባጁን የተቀበሉ",
+  "badgeSubscribedAction": "ማህበረሰቡን እየተከተሉ ነው",
+  "badgeSubscribeAction": "ማህበረሰቡን ይከተሉ",
+  "badgeAcceptedHoldersTitle": "በዚህ ማህበረሰብ ያሉ ሰዎች",
   "badgeSubscriptionLoadError": "የባጅ ምዝገባዎችዎን መጫን አልተቻለም። እንደገና ይሞክሩ።",
   "minorAccountReviewVideoSubmittedBody": "ቪዲዮዎ ለግምገማ ተልኳል።",
   "minorAccountReviewVideoSubmittedTitle": "ቪዲዮው ተልኳል",
@@ -6611,5 +6626,23 @@
   "collabRoomPartLengthLabel": "እያንዳንዱ ክፍል",
   "collabRoomSwapOrderHint": "ቅደም ተከተሉን ለመቀያየር ሁለት ክፍሎችን ይንኩ።",
   "collabRoomFilmSeriesHint": "እያንዳንዱ ሰው የራሱን ክፍል እስከ {seconds} ሰከንድ ይቀርጻል። ክፍሎቹ አንዱ ከሌላው በኋላ ይጫወታሉ።",
-  "collabRoomSeriesReadyHint": "ሁሉም ክፍሎች ደርሰዋል። ያገናኙት!"
+  "collabRoomSeriesReadyHint": "ሁሉም ክፍሎች ደርሰዋል። ያገናኙት!",
+  "badgeDiscoveryTitle": "ባጆች ሰዎችን ያገናኛሉ",
+  "badgeDiscoveryBody": "ማንኛውም ሰው ባጆችን መፍጠር እና መሸለም ይችላል። በመገለጫዎ ላይ የሚታዩትን እርስዎ ይመርጣሉ። ማህበረሰቡን ለማወቅ እና አባላቱን ለመከተል ባጅ ያስሱ።",
+  "badgeDiscoveryMyBadges": "የእኔ ባጆች",
+  "badgeDiscoveryEmpty": "እስካሁን ማህበረሰቦች አልተገኙም። እንደገና ለመሞከር ወደ ታች ይጎትቱ።",
+  "badgeCommunityFollowHint": "የማህበረሰቡን ቪዲዮዎች ወደሚከተሏቸው ዝርዝር ያክላል። ሰዎችን በተናጠል ይከተሉ።",
+  "badgeOfficialLabel": "ይፋዊ",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "በ{website} ላይ ተጨማሪ ይወቁ",
+  "badgeDiscoveryVideosLabel": "የ{badgeName} ቪዲዮዎች",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

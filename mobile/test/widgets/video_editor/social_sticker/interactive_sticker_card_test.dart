@@ -263,6 +263,36 @@ void main() {
             equals(without),
           );
         });
+
+        testWidgets('an Add yours inviting to watch its series the size of '
+            'the one to join, so it fills the same box', (tester) async {
+          await pump(
+            tester,
+            const FittedBox(
+              child: InteractiveStickerCard(data: addYours, responses: joined),
+            ),
+            locale: german,
+          );
+          final joinable = tester.getSize(find.byType(InteractiveStickerCard));
+          await pump(
+            tester,
+            const FittedBox(
+              child: InteractiveStickerCard(
+                data: addYours,
+                overFrames: true,
+                responses: joined,
+                watchOnly: true,
+              ),
+            ),
+            locale: german,
+          );
+
+          expect(find.text(de.videoStickerAddYoursWatchSeries), findsOneWidget);
+          expect(
+            tester.getSize(find.byType(InteractiveStickerCard)),
+            equals(joinable),
+          );
+        });
       });
     });
 
@@ -321,6 +351,37 @@ void main() {
         await tester.tap(find.text(l10n.videoStickerAddYoursJoined(3)));
 
         expect(joined, equals(1));
+        expect(opened, equals(1));
+      });
+
+      testWidgets('an Add yours a viewer may not join opens its series, '
+          'counting the answers beyond its thumbnails', (tester) async {
+        var opened = 0;
+        await pump(
+          tester,
+          InteractiveStickerCopy(
+            data: addYours,
+            responses: const StickerResponses(
+              count: 7,
+              latest: [
+                StickerResponsePreview(),
+                StickerResponsePreview(),
+                StickerResponsePreview(),
+              ],
+            ),
+            watchOnly: true,
+            onOpenResponses: () => opened++,
+          ),
+        );
+
+        expect(find.text(l10n.videoStickerAddYoursButton), findsNothing);
+        expect(find.text('+5'), findsOneWidget);
+        tester.semantics.tap(
+          find.semantics.byLabel(
+            l10n.videoStickerAddYoursWatchSeriesSemanticLabel('Show your desk'),
+          ),
+        );
+
         expect(opened, equals(1));
       });
 

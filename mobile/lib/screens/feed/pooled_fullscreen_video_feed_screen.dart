@@ -50,6 +50,7 @@ import 'package:openvine/widgets/video_feed_item/fullscreen_sponsor_disclosure.d
 import 'package:openvine/widgets/video_feed_item/inline_comment_composer_bar.dart';
 import 'package:openvine/widgets/video_feed_item/reaction_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/reel_dm_reply_bar.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Always centers — including contain-fit (non-portrait) videos.
@@ -99,6 +100,8 @@ class PooledFullscreenVideoFeedArgs {
     this.sourceDetail,
     this.autoOpenComments = false,
     this.onPageChanged,
+    this.tileOrigin,
+    this.isAddYoursSeries = false,
   });
 
   /// The feed to display, resolved via [feedRepository].
@@ -130,6 +133,9 @@ class PooledFullscreenVideoFeedArgs {
   /// Additional context for the traffic source (e.g., hashtag name).
   final String? sourceDetail;
 
+  /// See [PooledFullscreenVideoFeedScreen.isAddYoursSeries].
+  final bool isAddYoursSeries;
+
   /// Whether to open the comments sheet immediately after the first frame.
   ///
   /// Used when navigating from a comment/reply notification.
@@ -139,6 +145,10 @@ class PooledFullscreenVideoFeedArgs {
   ///
   /// Used by embedded surfaces to keep the URL in sync.
   final void Function(int index)? onPageChanged;
+
+  /// The grid tile the feed was opened from, which the player grows out of.
+  /// `null` keeps the default page transition.
+  final VideoTileOrigin? tileOrigin;
 }
 
 /// Profile-backed arguments for fullscreen playback.
@@ -155,6 +165,7 @@ class ProfilePooledFullscreenVideoFeedArgs {
     this.initialStableId,
     this.contextTitle,
     this.onPageChanged,
+    this.tileOrigin,
   });
 
   final String userIdHex;
@@ -164,6 +175,9 @@ class ProfilePooledFullscreenVideoFeedArgs {
   final String? initialStableId;
   final String? contextTitle;
   final void Function(int index)? onPageChanged;
+
+  /// See [PooledFullscreenVideoFeedArgs.tileOrigin].
+  final VideoTileOrigin? tileOrigin;
 }
 
 /// Fullscreen video feed screen using FeedVideos.
@@ -200,6 +214,7 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
     this.onActiveVideoChanged,
     this.dmReplyContext,
     this.onBack,
+    this.isAddYoursSeries = false,
     super.key,
   });
 
@@ -217,6 +232,12 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
   final String? sponsorName;
   final ViewTrafficSource trafficSource;
   final String? sourceDetail;
+
+  /// Whether the feed is the series an Add yours collects, opened from its
+  /// sticker: each answer carries the same sticker, and one only the player
+  /// draws, which only some may answer, is left out here and shown in the
+  /// other feeds.
+  final bool isAddYoursSeries;
 
   /// Present when the reel was opened from a DM thread — drives the in-player
   /// reply/reaction bar. Null on feed/profile opens.
@@ -340,6 +361,7 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
         sponsorName: sponsorName,
         trafficSource: trafficSource,
         sourceDetail: sourceDetail,
+        isAddYoursSeries: isAddYoursSeries,
         autoOpenComments: autoOpenComments,
         focusCommentId: focusCommentId,
         onPageChanged: onPageChanged,
@@ -377,6 +399,7 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
     this.initialVideoKey,
     this.loadMoreOnEndSwipe = false,
     this.onBack,
+    this.isAddYoursSeries = false,
     super.key,
   });
 
@@ -391,6 +414,9 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
 
   /// Additional context for the traffic source (e.g., hashtag name).
   final String? sourceDetail;
+
+  /// See [PooledFullscreenVideoFeedScreen.isAddYoursSeries].
+  final bool isAddYoursSeries;
 
   /// When true, opens the comments sheet immediately after the first frame.
   ///
@@ -1037,6 +1063,8 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                                                 // keyboard.
                                                 isActive:
                                                     !_replyComposerFocused,
+                                                // The app bar sits over the video.
+                                                showTopScrim: true,
                                                 videos: state.videos,
                                                 contextTitle:
                                                     widget.contextTitle,
@@ -1055,6 +1083,8 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                                                     _trafficSourceForVideo,
                                                 sourceDetail:
                                                     widget.sourceDetail,
+                                                isAddYoursSeries:
+                                                    widget.isAddYoursSeries,
                                                 onActiveVideoChanged: (video, index) {
                                                   ref
                                                       .read(

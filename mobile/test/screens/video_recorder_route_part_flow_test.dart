@@ -4,8 +4,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/collab_room/collab_room_providers.dart';
 import 'package:openvine/collab_room/view/collab_room_flow_scopes.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/observability/screen_frame_trace.dart';
 import 'package:openvine/router/challenge_recording_gate.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
+import 'package:openvine/widgets/screen_frame_trace_scope.dart';
 
 const _roomId = '0123456789abcdef0123456789abcdef';
 
@@ -40,13 +42,27 @@ void main() {
       return widget;
     }
 
+    testWidgets('traces visits to the standalone recorder', (tester) async {
+      final scope = await built(tester, const VideoRecorderRoute());
+
+      expect(
+        scope,
+        isA<ScreenFrameTraceScope>().having(
+          (scope) => scope.screen,
+          'screen',
+          TracedScreen.recorder,
+        ),
+      );
+    });
+
     testWidgets("ends the part's flow with the recorder's route", (
       tester,
     ) async {
-      final gate = await built(
+      final scope = await built(
         tester,
         const VideoRecorderRoute(collabRoomId: _roomId),
-      ) as ChallengeRecordingGate;
+      ) as ScreenFrameTraceScope;
+      final gate = scope.child as ChallengeRecordingGate;
 
       expect(
         gate.child,
@@ -59,10 +75,11 @@ void main() {
     });
 
     testWidgets('leaves a recorder of no room out of the flow', (tester) async {
-      final gate = await built(
+      final scope = await built(
         tester,
         const VideoRecorderRoute(),
-      ) as ChallengeRecordingGate;
+      ) as ScreenFrameTraceScope;
+      final gate = scope.child as ChallengeRecordingGate;
 
       expect(gate.child, isNot(isA<CollabRoomPartFlowScope>()));
     });

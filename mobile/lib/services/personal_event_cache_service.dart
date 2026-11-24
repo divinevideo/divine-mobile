@@ -10,10 +10,10 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// Caches the signed-in user's own events so they are instantly available.
 ///
-/// Reads are synchronous — `sourceOriginalVideoTags` is a plain function and
-/// `GetCachedEventsByKindCallback` is a synchronous typedef in the
-/// `follow_repository` package — so the service keeps an in-memory mirror of
-/// the owner's rows and writes through to [PersonalEventsDao].
+/// Reads are synchronous — `GetCachedEventsByKindCallback` is a synchronous
+/// typedef in the `follow_repository` package — so the service keeps an
+/// in-memory mirror of the owner's rows and writes through to
+/// [PersonalEventsDao].
 ///
 /// The mirror is what the Hive implementation had too: `Hive.openBox` is
 /// non-lazy, so the whole box was resident. The difference is that the mirror

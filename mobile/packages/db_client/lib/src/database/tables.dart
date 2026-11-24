@@ -1308,9 +1308,8 @@ class PersonalReposts extends Table {
 ///   Before #6986 every follow/unfollow appended a full 42.5 KiB kind-3 row
 ///   that was never evicted.
 /// * Everything else is durable and trimmed to the newest rows per owner. The
-///   load-bearing members are the signed-but-unpublished video event that
-///   "Try Again" reuses, and the raw tags `sourceOriginalVideoTags` recovers
-///   before a metadata edit.
+///   load-bearing member is the signed-but-unpublished video event that
+///   "Try Again" reuses.
 @TableIndex.sql(
   'CREATE INDEX IF NOT EXISTS idx_personal_events_pubkey_kind_created_at '
   'ON personal_events (pubkey, kind, created_at DESC)',

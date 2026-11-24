@@ -2,6 +2,7 @@
 library;
 
 export 'src/blocked_profile_filter.dart';
+export 'src/confirmation_access.dart';
 export 'src/divine_username_lookup.dart';
 export 'src/divine_username_policy.dart';
 export 'src/exceptions.dart';

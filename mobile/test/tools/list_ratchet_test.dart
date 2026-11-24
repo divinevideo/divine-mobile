@@ -188,6 +188,28 @@ run_list_ratchet
       });
     });
 
+    group('UPDATE_BASELINE', () {
+      test('keeps each reason, including for an item holding a tab', () {
+        baseline.writeAsStringSync(
+          '# probe baseline\n'
+          'a.dart\t3 # fixed site: kept\n'
+          'plain.dart # plain: kept\n',
+        );
+        writeCurrent(['a.dart\t3', 'plain.dart']);
+
+        final res = run(update: true);
+
+        expect(res.exitCode, 0, reason: res.stdout.toString());
+        expect(
+          baseline.readAsLinesSync(),
+          containsAll([
+            'a.dart\t3 # fixed site: kept',
+            'plain.dart # plain: kept',
+          ]),
+        );
+      });
+    });
+
     group('base-ref handling', () {
       test('skips the growth check when the base ref has no baseline yet', () {
         seedBaseRef(['a']);

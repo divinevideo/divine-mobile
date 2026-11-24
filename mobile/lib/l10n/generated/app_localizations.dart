@@ -829,36 +829,6 @@ abstract class AppLocalizations {
   /// **'Done ({count} selected)'**
   String contentPreferencesDoneCount(int count);
 
-  /// No description provided for @contentPreferencesAudioInputDevice.
-  ///
-  /// In en, this message translates to:
-  /// **'Audio Input Device'**
-  String get contentPreferencesAudioInputDevice;
-
-  /// No description provided for @contentPreferencesAutoRecommended.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto (recommended)'**
-  String get contentPreferencesAutoRecommended;
-
-  /// No description provided for @contentPreferencesAutoSelectsBest.
-  ///
-  /// In en, this message translates to:
-  /// **'Automatically selects the best microphone'**
-  String get contentPreferencesAutoSelectsBest;
-
-  /// No description provided for @contentPreferencesSelectAudioInput.
-  ///
-  /// In en, this message translates to:
-  /// **'Select Audio Input'**
-  String get contentPreferencesSelectAudioInput;
-
-  /// No description provided for @contentPreferencesUnknownMicrophone.
-  ///
-  /// In en, this message translates to:
-  /// **'Unknown Microphone'**
-  String get contentPreferencesUnknownMicrophone;
-
   /// No description provided for @contentFiltersAdultContent.
   ///
   /// In en, this message translates to:
@@ -3612,6 +3582,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add yours'**
   String get videoStickerAddYoursButton;
+
+  /// Shown on an Add yours sticker, beside the latest answers' thumbnails, to a viewer who may not join it: a tap opens the answers in a feed. Short: it fits beside three thumbnails.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch the series'**
+  String get videoStickerAddYoursWatchSeries;
+
+  /// Screen reader label of an Add yours sticker shown to a viewer who may not join it; a tap opens its answers. {prompt} is what the sticker prompts its answers to show.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch the series: {prompt}'**
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt);
 
   /// On an Add yours sticker in the player: how many people answered its prompt with a video.
   ///
@@ -7525,6 +7507,12 @@ abstract class AppLocalizations {
   /// **'The relay wouldn\'t accept the update. Try again in a moment.'**
   String get videoUpdateErrorPublishRejected;
 
+  /// Shown when saving video details fails because this device's edit and another device's edit together go over the hashtag or collaborator limit. Saving the same edit again fails the same way; reopening the video loads the other device's changes.
+  ///
+  /// In en, this message translates to:
+  /// **'This video changed on another device and now has too many tags or collaborators. Open it again and remove some.'**
+  String get videoUpdateErrorConcurrentEditsOverLimit;
+
   /// No description provided for @videoUpdateErrorGeneric.
   ///
   /// In en, this message translates to:
@@ -7692,6 +7680,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try a different search term'**
   String get soundsNoSoundsFoundDescription;
+
+  /// Screen-reader announcement when a search in the sound picker has answered, saying how many sounds the list now shows.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No sounds found} =1{{count} sound found} other{{count} sounds found}}'**
+  String soundsSearchResultCount(int count);
 
   /// No description provided for @soundsSavedToLibrary.
   ///
@@ -10825,7 +10819,7 @@ abstract class AppLocalizations {
   /// **'This conversation is closed.'**
   String get dmRetiredThreadClosedTitle;
 
-  /// Neutral name shown in place of the official "Divine Moderation" name for a retired moderation key whose official branding is withdrawn because someone could still sign as it (archived or compromised custody, #9963). Deliberately does not say Divine: do not translate it toward the Divine Moderation account name in `inboxSupportRowTitle`.
+  /// Neutral name shown in place of the official "Divine Moderation" name for a retired moderation key whose official branding is withdrawn because someone could still sign as it (archived or compromised custody, #9963). Deliberately does not say Divine: do not translate it toward the Divine Moderation account name in `inboxSupportRowTitle`. It is shown on one line and cut at the end when it is too long. Where the language allows, put the word for "former" early: if the cut removes it, what is left reads as the moderation account itself. It stands in for a person's name, so it also appears inside strings that take a name, such as "Block {name}?" and "{name} and 2 others".
   ///
   /// In en, this message translates to:
   /// **'Former moderation account'**
@@ -15773,6 +15767,36 @@ abstract class AppLocalizations {
   /// **'Echo'**
   String get videoEditorEffectEcho;
 
+  /// Name of a video effect: the red, green and blue of the picture come from slightly different moments, so still parts keep their colours and moving parts get rainbow ghosts.
+  ///
+  /// In en, this message translates to:
+  /// **'Time Split'**
+  String get videoEditorEffectTimeSplit;
+
+  /// Name of a video effect: bright parts of the picture leave trails of light, like a long-exposure photo of a torch or a sparkler.
+  ///
+  /// In en, this message translates to:
+  /// **'Long Exposure'**
+  String get videoEditorEffectLongExposure;
+
+  /// Name of a video effect: still parts of the picture go dark and only what moves stays visible, glowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Motion Only'**
+  String get videoEditorEffectMotionOnly;
+
+  /// Name of a video effect: the picture holds each frame a little longer, so it plays choppily at a few frames a second.
+  ///
+  /// In en, this message translates to:
+  /// **'Stutter'**
+  String get videoEditorEffectStutter;
+
+  /// Name of a video effect: each band of the picture, from top to bottom, comes from a slightly earlier moment, so moving people bend and stretch.
+  ///
+  /// In en, this message translates to:
+  /// **'Time Warp'**
+  String get videoEditorEffectTimeWarp;
+
   /// Name of a video effect: the middle of the picture bulges out, as through a fisheye (very wide-angle) lens.
   ///
   /// In en, this message translates to:
@@ -16169,11 +16193,17 @@ abstract class AppLocalizations {
   /// **'Light'**
   String get videoEditorEffectCategoryLight;
 
-  /// Name of a group in the video effects picker: effects that make the picture shake, pulse or leave a trail.
+  /// Name of a group in the video effects picker: effects that make the picture shake, pulse or streak.
   ///
   /// In en, this message translates to:
   /// **'Motion'**
   String get videoEditorEffectCategoryMotion;
+
+  /// Name of a group in the video effects picker: effects built from earlier frames as well as the current one, so they only show where something moves, such as an echo trail, rainbow ghosts or held frames.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get videoEditorEffectCategoryTime;
 
   /// Name of a group in the video effects picker: effects where snow, confetti, hearts or sparkles fall or float over the picture.
   ///
@@ -16384,6 +16414,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'One flashing effect at a time. Too much flashing can hurt people who are sensitive to it.'**
   String get videoEditorEffectsFlashingNotDuplicated;
+
+  /// Snack bar after a Time video effect (echo, time split, long exposure, motion only, stutter, time warp) replaced another Time effect where the two overlapped on the timeline. Explains, without technical terms, that two of them together would render differently in the exported video than in the preview. 'Time' is the effects picker group named by videoEditorEffectCategoryTime.
+  ///
+  /// In en, this message translates to:
+  /// **'One Time effect at a time. Two together would look different once exported, so we swapped out the other one here.'**
+  String get videoEditorEffectsTimeReplaced;
+
+  /// Snack bar when the user tries to duplicate a Time video effect: the copy would play on top of the original, so it is not duplicated. Same reason as videoEditorEffectsTimeReplaced.
+  ///
+  /// In en, this message translates to:
+  /// **'One Time effect at a time. Two together would look different once exported.'**
+  String get videoEditorEffectsTimeNotDuplicated;
 
   /// Switch in the video effects editor: the picked effect fires on every beat of the video's music (one zoom, flash or glitch per beat) instead of playing all the time. Keep it short.
   ///
@@ -20153,6 +20195,54 @@ abstract class AppLocalizations {
   /// **'Shows who replied to this video with a video. Viewers tap it to watch the replies.'**
   String get videoEditorSocialStickerRepliesNote;
 
+  /// Heading over the choice of who may answer an Add yours or replies sticker with a video.
+  ///
+  /// In en, this message translates to:
+  /// **'Who can answer'**
+  String get videoEditorSocialStickerAudienceTitle;
+
+  /// Choice: anyone may answer the sticker. The default; the sticker is drawn into the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone'**
+  String get videoEditorSocialStickerAudienceEveryone;
+
+  /// Choice: only the people the creator follows may answer the sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Friends'**
+  String get videoEditorSocialStickerAudienceFollowing;
+
+  /// Choice: only the creator may answer the sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Only me'**
+  String get videoEditorSocialStickerAudienceCreator;
+
+  /// Help line under the choice when only people the creator follows may join an Add yours. The sticker is then left out of the video and shows to everyone else once someone joined.
+  ///
+  /// In en, this message translates to:
+  /// **'Only people you follow can join in. Everyone else sees the sticker once someone has.'**
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote;
+
+  /// Help line under the choice when the replies sticker shows only the video replies of people the creator follows. It says what the sticker shows, not who can post a video reply: older app versions and other clients can still post one. The sticker is left out of the video and shows to everyone else once one of those people replied.
+  ///
+  /// In en, this message translates to:
+  /// **'The sticker shows only video replies from people you follow. Everyone else sees it once one of them has replied.'**
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote;
+
+  /// Help line under the choice when only the creator may join their own Add yours. Nobody else sees the sticker until the creator joined.
+  ///
+  /// In en, this message translates to:
+  /// **'Only you can join in. Nobody else sees the sticker until you do.'**
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote;
+
+  /// Help line under the choice when the replies sticker shows only the creator's own video replies. It says what the sticker shows, not who can post a video reply: older app versions and other clients can still post one. Nobody else sees the sticker until the creator replied.
+  ///
+  /// In en, this message translates to:
+  /// **'The sticker shows only your own video replies. Nobody else sees it until you have replied.'**
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote;
+
   /// Line beside the outlined box shown while the creator moves a poll, quiz, slider, question, Add yours or replies sticker: the sticker can only stand inside it, clear of the feed's buttons and caption.
   ///
   /// In en, this message translates to:
@@ -21381,22 +21471,22 @@ abstract class AppLocalizations {
   /// **'Your badge subscriptions are public.'**
   String get badgeSubscriptionsPublicNotice;
 
-  /// No description provided for @badgeSubscribeAction.
+  /// Button on a badge page that adds the badge community's videos to the Following feed. It does not follow any person.
   ///
   /// In en, this message translates to:
-  /// **'Subscribe to badge'**
+  /// **'Follow community'**
   String get badgeSubscribeAction;
 
-  /// No description provided for @badgeSubscribedAction.
+  /// The Follow community button once the community's videos are in the Following feed; tapping it again stops.
   ///
   /// In en, this message translates to:
-  /// **'Subscribed'**
+  /// **'Following community'**
   String get badgeSubscribedAction;
 
   /// No description provided for @badgeAcceptedHoldersTitle.
   ///
   /// In en, this message translates to:
-  /// **'Accepted holders'**
+  /// **'People in this community'**
   String get badgeAcceptedHoldersTitle;
 
   /// Shown when badge subscription preferences could not be read; retry reloads only subscriptions.
@@ -21741,7 +21831,7 @@ abstract class AppLocalizations {
   /// **'Share'**
   String get badgeDetailShareAction;
 
-  /// Body of the share sheet when sharing a badge. The link is an naddr reference.
+  /// Body of the share sheet when sharing a badge. The link is a badges.divine.video URL, or a raw badge coordinate when the badge identifier is too long for an naddr.
   ///
   /// In en, this message translates to:
   /// **'Check out this badge on Divine: {link}'**
@@ -22994,6 +23084,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Protected-minor override cleared'**
   String get devOptionsProtectedMinorClearedToast;
+
+  /// Developer options section heading for forcing whether this account has Divine Confirmation, for testing.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation access'**
+  String get devOptionsConfirmationAccessTitle;
+
+  /// Developer options choice that uses the verifier's real answer for whether this account has Divine Confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Real answer'**
+  String get devOptionsConfirmationAccessReal;
+
+  /// Developer options choice that makes the app act as if this account has Divine Confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Has Confirmation'**
+  String get devOptionsConfirmationAccessHas;
+
+  /// Developer options choice that makes the app act as if this account doesn't have Divine Confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Doesn\'t have Confirmation'**
+  String get devOptionsConfirmationAccessHasNot;
+
+  /// Developer options choice that makes the app act as if it couldn't find out whether this account has Divine Confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check'**
+  String get devOptionsConfirmationAccessUnknown;
 
   /// Semantics label for the button that opens the recorder to create a video reply in comments.
   ///
@@ -24681,6 +24801,108 @@ abstract class AppLocalizations {
   /// **'Account changed'**
   String get verifyStatusAccountChanged;
 
+  /// Pill on an account linked by signing in that doesn't count because its owner doesn't have Divine Confirmation right now. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs Confirmation'**
+  String get verifyStatusNeedsConfirmation;
+
+  /// App bar title and headline of the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation'**
+  String get verifyConfirmationTitle;
+
+  /// Short pitch under the headline of the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation lets you link your accounts on other platforms by signing in to them.'**
+  String get verifyConfirmationHeroBody;
+
+  /// Heading of the list of what Divine Confirmation includes. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s included'**
+  String get verifyConfirmationIncludedTitle;
+
+  /// List item on the Divine Confirmation screen: linking accounts by signing in. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Link accounts by signing in'**
+  String get verifyConfirmationIncludedSignIn;
+
+  /// Label of the disabled buy button on the Divine Confirmation screen, shown because it cannot be bought yet. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon'**
+  String get verifyConfirmationComingSoon;
+
+  /// Small print at the bottom of the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Details will appear here when Divine Confirmation is ready.'**
+  String get verifyConfirmationSmallPrint;
+
+  /// Shown in place of a button that would buy Divine Confirmation when this build cannot be billed by a store: on the Divine Confirmation screen, on the link-an-account screen, in the sheet shown when a sign-in link is refused for Divine Confirmation, and under a linked account on the verify dashboard in place of the Renew Confirmation button. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation is available in the App Store and Google Play versions of Divine.'**
+  String get verifyConfirmationStoreOnly;
+
+  /// Screen reader label for the disabled buy button on the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation, coming soon, unavailable'**
+  String get verifyConfirmationBuySemantic;
+
+  /// Screen reader label for the disabled restore link on the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore purchases, unavailable'**
+  String get verifyConfirmationRestoreSemantic;
+
+  /// Title of the card on the link-an-account screen that takes the place of the sign-in button when linking by signing in needs Divine Confirmation and the person doesn't have it. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Link by signing in'**
+  String get verifyConfirmationCardTitle;
+
+  /// Body of the card on the link-an-account screen that takes the place of the sign-in button when linking by signing in needs Divine Confirmation and the person doesn't have it. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'One-tap linking is part of Divine Confirmation.'**
+  String get verifyConfirmationCardBody;
+
+  /// Button that opens the Divine Confirmation screen, on the link-an-account screen and in the sheet shown when a sign-in link is refused for Divine Confirmation. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Get Divine Confirmation'**
+  String get verifyGetConfirmation;
+
+  /// Heading of the proof-post section of the link-an-account screen, used in place of the usual heading while the Divine Confirmation card replaces the sign-in button, to say a proof post still links the account without it. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof posts are always available'**
+  String get verifyProofAlwaysAvailable;
+
+  /// Title of the sheet shown when the verification service refuses a sign-in link because linking by signing in needs Divine Confirmation, which the person doesn't have. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Linking by signing in needs Divine Confirmation'**
+  String get verifyConfirmationSheetTitle;
+
+  /// Text under the title of the sheet shown when a sign-in link is refused for Divine Confirmation. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'You can still link this account with a proof post.'**
+  String get verifyConfirmationSheetSubtitle;
+
+  /// Button in the sheet shown when a sign-in link is refused for Divine Confirmation. Drops the sign-in and goes to the proof-post section of the link-an-account screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a proof post'**
+  String get verifyConfirmationSheetUseProof;
+
   /// Screen reader label for the button that removes a linked account.
   ///
   /// In en, this message translates to:
@@ -24723,11 +24945,35 @@ abstract class AppLocalizations {
   /// **'Link your {platform} account'**
   String verifyLinkSemanticLabel(String platform);
 
+  /// Screen reader label for a row that opens the flow for linking one platform, when linking it by signing in needs Divine Confirmation the user lacks. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Link your {platform} account. Signing in needs Divine Confirmation'**
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform);
+
   /// Small marker on platforms that can be linked by signing in, without posting a proof.
   ///
   /// In en, this message translates to:
   /// **'One tap'**
   String get verifyOneTapBadge;
+
+  /// Small marker on a platform that can be linked by signing in, when that needs Divine Confirmation the person does not have. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'One tap with Confirmation'**
+  String get verifyOneTapWithConfirmationBadge;
+
+  /// Button on a linked account that needs Divine Confirmation to count as verified. Opens the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Renew Confirmation'**
+  String get verifyRenewConfirmation;
+
+  /// Screen reader label for the button that opens the Divine Confirmation screen from a linked account that needs it. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Renew Divine Confirmation to restore {platform} account {identity}'**
+  String verifyRenewConfirmationSemanticLabel(String platform, String identity);
 
   /// Notice under the sign-in explainer on the connect screen, saying how long a sign-in link lasts. Shown only when the verifier reports a lifetime for that platform; platforms whose links last until unlinked omit it, so the notice is not shown there.
   ///
@@ -24896,6 +25142,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Verified, but no relay took the update. Try again.'**
   String get verifyErrorPublishFailed;
+
+  /// Error shown when the verification service refused a sign-in link because linking by signing in needs Divine Confirmation, which the person doesn't have. A proof post can still link the account. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Linking by signing in needs Divine Confirmation. You can still link with a proof post.'**
+  String get verifyErrorConfirmationRequired;
+
+  /// Error shown when the verification service couldn't check Divine Confirmation while confirming a sign-in link. The sign-in is kept, so the person can try linking again later. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.'**
+  String get verifyErrorConfirmationUnavailable;
+
+  /// Error shown when a sign-in link is refused for Divine Confirmation right after the app read that the person has it, as happens just after buying it. The sign-in is kept to try again. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'This can take a minute after buying. Try again shortly.'**
+  String get verifyErrorConfirmationPending;
 
   /// Error shown when the platform's one-tap sign-in has no credentials configured on the verification service, so only the proof-post route works.
   ///
@@ -28088,6 +28352,70 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All parts are in. Put it together!'**
   String get collabRoomSeriesReadyHint;
+
+  /// No description provided for @badgeDiscoveryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Badges bring people together'**
+  String get badgeDiscoveryTitle;
+
+  /// No description provided for @badgeDiscoveryBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Anyone can create and award badges. You choose which ones appear on your profile. Explore a badge to meet its community and follow its people.'**
+  String get badgeDiscoveryBody;
+
+  /// No description provided for @badgeDiscoveryMyBadges.
+  ///
+  /// In en, this message translates to:
+  /// **'My badges'**
+  String get badgeDiscoveryMyBadges;
+
+  /// No description provided for @badgeDiscoveryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No communities found yet. Pull down to try again.'**
+  String get badgeDiscoveryEmpty;
+
+  /// Note under the Follow community button. 'Following' is the name of the Home feed of followed accounts; people in the community are followed one by one.
+  ///
+  /// In en, this message translates to:
+  /// **'Adds community videos to your Following feed. Follow people individually.'**
+  String get badgeCommunityFollowHint;
+
+  /// Label for a badge issued by the pinned official Divine badge issuer.
+  ///
+  /// In en, this message translates to:
+  /// **'Official'**
+  String get badgeOfficialLabel;
+
+  /// Screen reader label for a badge discovery card.
+  ///
+  /// In en, this message translates to:
+  /// **'{badgeName}, {issuerName}'**
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName);
+
+  /// Screen reader label for an official Divine badge discovery card.
+  ///
+  /// In en, this message translates to:
+  /// **'{badgeName}, {issuerName}, {officialLabel}'**
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  );
+
+  /// Screen reader label for the external badge discovery website link.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn more at {website}'**
+  String badgeDiscoveryWebsiteLabel(String website);
+
+  /// Screen reader label for opening a badge community video feed.
+  ///
+  /// In en, this message translates to:
+  /// **'Videos from {badgeName}'**
+  String badgeDiscoveryVideosLabel(String badgeName);
 }
 
 class _AppLocalizationsDelegate

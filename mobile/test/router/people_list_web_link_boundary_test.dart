@@ -29,6 +29,7 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 
 import '../helpers/test_provider_overrides.dart';
+import '../helpers/test_pubkeys.dart';
 
 class _MockListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
@@ -37,7 +38,7 @@ class _MockListsRepository extends Mock implements PeopleListsRepository {}
 
 final _refProvider = Provider<Ref>((ref) => ref);
 final String _owner = 'a' * 64;
-final String _foreignOwner = 'b' * 64;
+const String _foreignOwner = syntheticOtherTestPubkey;
 
 UserList _list(String id, {bool editable = true}) => UserList(
   id: id,

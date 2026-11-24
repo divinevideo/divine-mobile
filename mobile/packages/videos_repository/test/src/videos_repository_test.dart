@@ -381,6 +381,29 @@ void main() {
       });
     });
 
+    group('isVideoKnownDeleted', () {
+      final video = VideoEvent(
+        id: 'a' * 64,
+        pubkey: 'b' * 64,
+        createdAt: 1704067200,
+        content: '',
+        timestamp: DateTime.fromMillisecondsSinceEpoch(1704067200000),
+      );
+      test('defaults to visible without a deletion resolver', () {
+        expect(repository.isVideoKnownDeleted(video), isFalse);
+      });
+      test('reads current deletion state without caching it', () {
+        var deleted = false;
+        final videos = VideosRepository(
+          nostrClient: mockNostrClient,
+          deletedFilter: (_) => deleted,
+        );
+        expect(videos.isVideoKnownDeleted(video), isFalse);
+        deleted = true;
+        expect(videos.isVideoKnownDeleted(video), isTrue);
+      });
+    });
+
     group('refreshAudioReusePolicy', () {
       final video = VideoEvent(
         id: 'video-id',
@@ -518,34 +541,6 @@ void main() {
           throwsA(isA<FunnelcakeNotConfiguredException>()),
         );
       });
-    });
-
-    test('isVideoKnownDeleted delegates to the injected deletion filter', () {
-      final visibleVideo = VideoEvent(
-        id: 'visible-video',
-        pubkey: 'pubkey',
-        createdAt: 1704067200,
-        content: '',
-        timestamp: DateTime.fromMillisecondsSinceEpoch(1704067200 * 1000),
-        videoUrl: 'https://example.com/visible.mp4',
-      );
-      final deletedVideo = visibleVideo.copyWith(id: 'deleted-video');
-
-      expect(repository.isVideoKnownDeleted(visibleVideo), isFalse);
-
-      final repositoryWithDeletionFilter = VideosRepository(
-        nostrClient: mockNostrClient,
-        deletedFilter: (video) => video.id == deletedVideo.id,
-      );
-
-      expect(
-        repositoryWithDeletionFilter.isVideoKnownDeleted(visibleVideo),
-        isFalse,
-      );
-      expect(
-        repositoryWithDeletionFilter.isVideoKnownDeleted(deletedVideo),
-        isTrue,
-      );
     });
 
     group('getNewVideos', () {
@@ -3182,6 +3177,7 @@ void main() {
                     comments: 0,
                     reposts: 0,
                     embeddedLoops: 5,
+                    loops: 50,
                     views: 42,
                   ),
                 },
@@ -3201,6 +3197,7 @@ void main() {
             expect(result.videos, hasLength(1));
             expect(result.videos.first.rawTags['views'], equals('7'));
             expect(result.videos.first.totalLoops, equals(12));
+            expect(result.videos.first.loopCountSnapshot?.count, 55);
             verify(
               () => mockFunnelcakeClient.getBulkVideoStats(['event-1']),
             ).called(1);
@@ -3208,78 +3205,101 @@ void main() {
           },
         );
 
-        test('chunks bulk stat hydration for large API result sets', () async {
-          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-          when(
-            () => mockFunnelcakeClient.getHomeFeed(
-              pubkey: any(named: 'pubkey'),
-              limit: any(named: 'limit'),
-              before: any(named: 'before'),
-            ),
-          ).thenAnswer(
-            (_) async => HomeFeedResponse(
-              videos: List.generate(
-                101,
-                (index) => _createVideoStats(
-                  id: 'event-$index',
-                  pubkey: 'followed-user',
-                  dTag: 'dtag-$index',
-                  videoUrl: 'https://example.com/video-$index.mp4',
-                  loops: 0,
+        for (final failSecondBatch in [false, true]) {
+          test(
+            failSecondBatch
+                ? 'keeps successful stats when a parallel batch fails'
+                : 'hydrates large API results in parallel batches',
+            () async {
+              final firstBatchDone = Completer<void>();
+              addTearDown(() {
+                if (!firstBatchDone.isCompleted) firstBatchDone.complete();
+              });
+              when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+              when(
+                () => mockFunnelcakeClient.getHomeFeed(
+                  pubkey: any(named: 'pubkey'),
+                  limit: any(named: 'limit'),
+                  before: any(named: 'before'),
                 ),
-              ),
-            ),
-          );
-          when(() => mockFunnelcakeClient.getBulkVideoStats(any())).thenAnswer((
-            invocation,
-          ) async {
-            final ids = invocation.positionalArguments.single as List<String>;
-            return BulkVideoStatsResponse(
-              stats: {
-                for (final id in ids)
-                  id: BulkVideoStatsEntry(
-                    eventId: id,
-                    reactions: 0,
-                    comments: 0,
-                    reposts: 0,
-                    views: int.parse(id.split('-').last) + 1,
+              ).thenAnswer(
+                (_) async => HomeFeedResponse(
+                  videos: List.generate(
+                    101,
+                    (index) => _createVideoStats(
+                      id: 'event-$index',
+                      pubkey: 'followed-user',
+                      dTag: 'dtag-$index',
+                      videoUrl: 'https://example.com/video-$index.mp4',
+                      loops: 0,
+                    ),
                   ),
-              },
-            );
-          });
+                ),
+              );
+              when(
+                () => mockFunnelcakeClient.getBulkVideoStats(any()),
+              ).thenAnswer((
+                invocation,
+              ) async {
+                final ids =
+                    invocation.positionalArguments.single as List<String>;
+                if (ids.contains('event-0')) {
+                  await firstBatchDone.future;
+                } else if (failSecondBatch) {
+                  throw const FunnelcakeException('bulk stats unavailable');
+                }
+                return BulkVideoStatsResponse(
+                  stats: {
+                    for (final id in ids)
+                      id: BulkVideoStatsEntry(
+                        eventId: id,
+                        reactions: 0,
+                        comments: 0,
+                        reposts: 0,
+                        views: int.parse(id.split('-').last) + 1,
+                      ),
+                  },
+                );
+              });
 
-          final repositoryWithApi = VideosRepository(
-            nostrClient: mockNostrClient,
-            funnelcakeApiClient: mockFunnelcakeClient,
-          );
+              final repositoryWithApi = VideosRepository(
+                nostrClient: mockNostrClient,
+                funnelcakeApiClient: mockFunnelcakeClient,
+              );
 
-          final result = await repositoryWithApi.getHomeFeedVideos(
-            authors: ['followed-user'],
-            userPubkey: 'my-pubkey',
-            limit: 101,
-          );
+              final load = repositoryWithApi.getHomeFeedVideos(
+                authors: ['followed-user'],
+                userPubkey: 'my-pubkey',
+                limit: 101,
+              );
+              await pumpEventQueue();
+              final captured = verify(
+                () => mockFunnelcakeClient.getBulkVideoStats(captureAny()),
+              ).captured;
+              expect(captured, hasLength(2));
+              expect(captured.first as List<String>, hasLength(100));
+              expect(captured.last as List<String>, ['event-100']);
+              firstBatchDone.complete();
 
-          expect(result.videos, hasLength(101));
-          final firstVideo = result.videos.firstWhere(
-            (video) => video.id == 'event-0',
+              final result = await load;
+              expect(result.videos, hasLength(101));
+              final firstVideo = result.videos.firstWhere(
+                (video) => video.id == 'event-0',
+              );
+              final lastVideo = result.videos.firstWhere(
+                (video) => video.id == 'event-100',
+              );
+              expect(firstVideo.totalLoops, equals(1));
+              expect(firstVideo.loopCountSnapshot?.count, 1);
+              expect(lastVideo.totalLoops, failSecondBatch ? 0 : 101);
+              expect(
+                captured.expand((ids) => ids as List<String>),
+                containsAll(['event-0', 'event-100']),
+              );
+              verifyNever(() => mockNostrClient.queryEvents(any()));
+            },
           );
-          final lastVideo = result.videos.firstWhere(
-            (video) => video.id == 'event-100',
-          );
-          expect(firstVideo.totalLoops, equals(1));
-          expect(lastVideo.totalLoops, equals(101));
-          final captured = verify(
-            () => mockFunnelcakeClient.getBulkVideoStats(captureAny()),
-          ).captured;
-          expect(captured, hasLength(2));
-          expect(captured.first as List<String>, hasLength(100));
-          expect(captured.last as List<String>, hasLength(1));
-          expect(
-            captured.expand((ids) => ids as List<String>),
-            containsAll(['event-0', 'event-100']),
-          );
-          verifyNever(() => mockNostrClient.queryEvents(any()));
-        });
+        }
 
         test(
           'skips bulk stats when a Vine row already has its archive and views',
@@ -6635,6 +6655,49 @@ void main() {
         expect(result.videos.map((v) => v.id), unorderedEquals(archiveOrder));
       });
 
+      test(
+        'replaces archive interaction counts with bulk stats and shuffles '
+        'the hydrated page',
+        () async {
+          stubArchive(archivePage(20));
+          when(() => mockFunnelcakeClient.getBulkVideoStats(any())).thenAnswer(
+            (invocation) async {
+              final ids = invocation.positionalArguments.single as List<String>;
+              return BulkVideoStatsResponse(
+                stats: {
+                  for (final id in ids)
+                    id: BulkVideoStatsEntry(
+                      eventId: id,
+                      reactions: 100 + int.parse(id.split('-').last),
+                      comments: 7,
+                      reposts: 3,
+                    ),
+                },
+              );
+            },
+          );
+
+          final result = await buildRepository(
+            random: Random(7),
+          ).getClassicVideos(limit: 20);
+
+          final archiveOrder = [for (var i = 0; i < 20; i++) 'vine-$i'];
+          expect(result.videos.map((v) => v.id), isNot(archiveOrder));
+          expect(
+            result.videos.map((v) => v.id),
+            unorderedEquals(archiveOrder),
+          );
+          for (final video in result.videos) {
+            expect(
+              video.nostrLikeCount,
+              equals(100 + int.parse(video.id.split('-').last)),
+            );
+            expect(video.nostrCommentCount, equals(7));
+            expect(video.nostrRepostCount, equals(3));
+          }
+        },
+      );
+
       test('draws a different slice on each cache-missing fetch', () async {
         stubArchive(archivePage(20));
 
@@ -9608,6 +9671,46 @@ void main() {
 
         expect(result.videos.single.id, normal.id);
         expect(result.complete, isTrue);
+      });
+    });
+
+    group('visibleVideoFromEvent', () {
+      final event = _createVideoEvent(
+        id: 'dtag1',
+        pubkey: 'pubkey1',
+        videoUrl: 'https://example.com/video.mp4',
+        createdAt: 1704067200,
+      );
+
+      test('returns the video this viewer may see', () {
+        final video = repository.visibleVideoFromEvent(event);
+
+        expect(video?.id, equals(event.id));
+        expect(video?.vineId, equals('dtag1'));
+        verifyNever(() => mockNostrClient.readEvents(any()));
+      });
+
+      test('leaves out a video whose author the viewer blocked', () {
+        final blocking = VideosRepository(
+          nostrClient: mockNostrClient,
+          blockFilter: (pubkey) => pubkey == 'pubkey1',
+        );
+
+        expect(blocking.visibleVideoFromEvent(event), isNull);
+      });
+
+      test('leaves out an event that is no video', () {
+        final note = Event.fromJson({
+          'id': 'a' * 64,
+          'pubkey': 'pubkey1',
+          'created_at': 1704067200,
+          'kind': EventKind.textNote,
+          'tags': const <List<String>>[],
+          'content': 'hello',
+          'sig': '',
+        });
+
+        expect(repository.visibleVideoFromEvent(note), isNull);
       });
     });
 

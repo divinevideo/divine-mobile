@@ -16,6 +16,7 @@ import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:verifier_client/verifier_client.dart' show SigninRequirement;
 
 class _MockIdentityClaimsRepository extends Mock
     implements IdentityClaimsRepository {}
@@ -55,6 +56,24 @@ class _RecordingCrashReporter implements CrashReporter {
   Future<void> setCustomKey(String key, Object value) async {}
 }
 
+/// Answers Confirmation access reads, and records whether each one asked for
+/// a refresh.
+class _AccessReader {
+  /// What every read answers, unless [respond] is set.
+  ConfirmationAccess answer = ConfirmationAccess.unknown;
+
+  /// Answers a read in place of [answer], to hold or order answers.
+  Future<ConfirmationAccess> Function({required bool refresh})? respond;
+
+  /// The `refresh` argument of every read, in order.
+  final reads = <bool>[];
+
+  Future<ConfirmationAccess> call({bool refresh = false}) {
+    reads.add(refresh);
+    return respond?.call(refresh: refresh) ?? Future.value(answer);
+  }
+}
+
 /// Hands every error the cubit reports to [onReported], closed or not:
 /// `addError` itself never checks.
 class _ErrorRecordingCubit extends VerifyConnectCubit {
@@ -65,6 +84,8 @@ class _ErrorRecordingCubit extends VerifyConnectCubit {
     required super.launchOAuth,
     required super.oauthReturnUrl,
     required super.analytics,
+    required super.confirmationSignIn,
+    required super.readConfirmationAccess,
     required this.onReported,
   });
 
@@ -145,6 +166,7 @@ void main() {
   group(VerifyConnectCubit, () {
     late _MockIdentityClaimsRepository repository;
     late _MockAnalyticsEventSink analytics;
+    late _AccessReader accessReader;
     late List<Uri> launched;
     late String? startedReturnUrl;
     late String? startedCheck;
@@ -166,6 +188,7 @@ void main() {
     setUp(() {
       repository = _MockIdentityClaimsRepository();
       analytics = _MockAnalyticsEventSink();
+      accessReader = _AccessReader();
       when(
         () => analytics.logEvent(
           name: any(named: 'name'),
@@ -213,6 +236,7 @@ void main() {
       Random? random,
       Future<void> Function(Duration)? wait,
       String? replacingIdentity,
+      bool confirmationSignIn = false,
     }) => VerifyConnectCubit(
       repository: repository,
       pubkey: _pubkey,
@@ -220,6 +244,8 @@ void main() {
       replacingIdentity: replacingIdentity,
       oauthReturnUrl: _returnUrl,
       analytics: analytics,
+      confirmationSignIn: confirmationSignIn,
+      readConfirmationAccess: accessReader.call,
       random: random ?? Random(1),
       wait: wait ?? (_) async {},
       launchOAuth:
@@ -263,6 +289,102 @@ void main() {
         supported: true,
         oauth: false,
       );
+
+      group('Divine Confirmation access', () {
+        const twitterGated = VerifierPlatform(
+          key: 'twitter',
+          label: 'Twitter / X',
+          supported: true,
+          oauth: true,
+          signinRequires: SigninRequirement.confirmation,
+        );
+        const twitterOpen = VerifierPlatform(
+          key: 'twitter',
+          label: 'Twitter / X',
+          supported: true,
+          oauth: true,
+        );
+
+        setUp(() => accessReader.answer = ConfirmationAccess.hasNot);
+
+        blocTest<VerifyConnectCubit, VerifyConnectState>(
+          'reads access for a gated platform with the flag on',
+          setUp: () => when(
+            () => repository.platform('twitter'),
+          ).thenAnswer((_) async => twitterGated),
+          build: () => build(twitterStandIn, confirmationSignIn: true),
+          act: (cubit) => cubit.loadPlatform(),
+          expect: () => [
+            isA<VerifyConnectState>()
+                .having((s) => s.platform, 'platform', twitterGated)
+                .having(
+                  (s) => s.confirmationAccess,
+                  'confirmationAccess',
+                  ConfirmationAccess.unknown,
+                ),
+            isA<VerifyConnectState>().having(
+              (s) => s.confirmationAccess,
+              'confirmationAccess',
+              ConfirmationAccess.hasNot,
+            ),
+          ],
+          // Once, and from what the repository remembers.
+          verify: (_) => expect(accessReader.reads, equals([false])),
+        );
+
+        blocTest<VerifyConnectCubit, VerifyConnectState>(
+          'makes no access read with the flag off',
+          setUp: () => when(
+            () => repository.platform('twitter'),
+          ).thenAnswer((_) async => twitterGated),
+          build: () => build(twitterStandIn),
+          act: (cubit) => cubit.loadPlatform(),
+          expect: () => [
+            isA<VerifyConnectState>()
+                .having((s) => s.platform, 'platform', twitterGated)
+                .having(
+                  (s) => s.confirmationAccess,
+                  'confirmationAccess',
+                  ConfirmationAccess.unknown,
+                ),
+          ],
+          verify: (_) => expect(accessReader.reads, isEmpty),
+        );
+
+        blocTest<VerifyConnectCubit, VerifyConnectState>(
+          'makes no access read for a platform without signin_requires',
+          setUp: () => when(
+            () => repository.platform('twitter'),
+          ).thenAnswer((_) async => twitterOpen),
+          build: () => build(twitterStandIn, confirmationSignIn: true),
+          act: (cubit) => cubit.loadPlatform(),
+          expect: () => [
+            isA<VerifyConnectState>().having(
+              (s) => s.platform,
+              'platform',
+              twitterOpen,
+            ),
+          ],
+          verify: (_) => expect(accessReader.reads, isEmpty),
+        );
+
+        test('still reads access while a sign-in waits', () async {
+          // The platform is dropped then, but the answer is about the
+          // account, and the screen needs it once that sign-in ends.
+          when(
+            () => repository.platform('twitter'),
+          ).thenAnswer((_) async => twitterGated);
+          final cubit = build(_twitter, confirmationSignIn: true);
+          addTearDown(cubit.close);
+          await cubit.connectWithOAuth();
+          expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+
+          await cubit.loadPlatform();
+
+          expect(cubit.state.platform, equals(_twitter));
+          expect(cubit.state.confirmationAccess, ConfirmationAccess.hasNot);
+        });
+      });
 
       blocTest<VerifyConnectCubit, VerifyConnectState>(
         "takes the repository's answer for the platform",
@@ -436,6 +558,8 @@ void main() {
           oauthReturnUrl: _returnUrl,
           analytics: analytics,
           launchOAuth: (_) async => null,
+          confirmationSignIn: false,
+          readConfirmationAccess: _AccessReader().call,
           onReported: reported.add,
         );
 
@@ -1671,8 +1795,14 @@ void main() {
 
       Future<VerifyConnectCubit> waiting({
         Future<void> Function(Duration)? wait,
+        bool confirmationSignIn = false,
       }) async {
-        final cubit = build(_twitter, random: _ZeroRandom(), wait: wait);
+        final cubit = build(
+          _twitter,
+          random: _ZeroRandom(),
+          wait: wait,
+          confirmationSignIn: confirmationSignIn,
+        );
         await cubit.connectWithOAuth();
         expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
         return cubit;
@@ -1773,6 +1903,8 @@ void main() {
             analytics: analytics,
             random: _ZeroRandom(),
             launchOAuth: (_) async => answer(Uri.parse(startedReturnUrl!)),
+            confirmationSignIn: false,
+            readConfirmationAccess: accessReader.call,
           );
           unawaited(cubit.connectWithOAuth());
           async.flushMicrotasks();
@@ -2395,6 +2527,475 @@ void main() {
           await cubit.close();
         },
       );
+
+      group('when the verifier needs Divine Confirmation', () {
+        SignInConfirmException required() =>
+            SignInConfirmException(403, SignInRefusal.confirmationRequired);
+
+        test(
+          'confirmation_required with the flag on keeps the sign-in [P3]',
+          () async {
+            whenConfirm().thenThrow(required());
+            final cubit = await waiting(confirmationSignIn: true);
+            addTearDown(cubit.close);
+
+            await cubit.approveSignIn();
+
+            // Final for this attempt: retrying would get the same answer.
+            expectConfirmCalls(1);
+            verifyNever(() => repository.publishSignedClaim(any()));
+            expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+            expect(cubit.state.signedInAccount, 'jack');
+            expect(cubit.state.error, VerifyConnectError.confirmationRequired);
+            expect(cubit.state.confirmationRefused, isTrue);
+          },
+        );
+
+        test(
+          'a refusal marks the platform as needing Confirmation when its '
+          'list entry did not say so',
+          () async {
+            whenConfirm().thenThrow(required());
+            final cubit = await waiting(confirmationSignIn: true);
+            addTearDown(cubit.close);
+            expect(cubit.state.platform.signinRequires, isNull);
+
+            await cubit.approveSignIn();
+
+            // So the screen offers Confirmation, not a sign-in the verifier
+            // refuses the same way, once this one is cancelled.
+            expect(
+              cubit.state.platform.signinRequires,
+              SigninRequirement.confirmation,
+            );
+            expect(cubit.state.platform.key, _twitter.key);
+            expect(cubit.state.platform.supportsOAuth, isTrue);
+          },
+        );
+
+        test(
+          'confirmation_required with the flag off drops the sign-in [D3a]',
+          () async {
+            whenConfirm().thenThrow(required());
+            final cubit = await waiting();
+            addTearDown(cubit.close);
+
+            await cubit.approveSignIn();
+
+            expectConfirmCalls(1);
+            expect(cubit.state.status, VerifyConnectStatus.editing);
+            expect(cubit.state.signedInAccount, isNull);
+            expect(cubit.state.error, VerifyConnectError.confirmationRequired);
+            expect(cubit.state.confirmationRefused, isTrue);
+
+            // Dropped, so approving again sends nothing.
+            await cubit.approveSignIn();
+            verifyNever(
+              () => repository.confirmSignIn(
+                code: any(named: 'code'),
+                startSecret: any(named: 'startSecret'),
+                signed: any(named: 'signed'),
+              ),
+            );
+          },
+        );
+
+        test(
+          'a refusal after access read has is confirmationPending [P3]',
+          () async {
+            whenConfirm().thenThrow(required());
+            final cubit = await waiting(confirmationSignIn: true);
+            addTearDown(cubit.close);
+
+            await cubit.approveSignIn();
+            expect(cubit.state.error, VerifyConnectError.confirmationRequired);
+
+            // Back from buying: the verifier now says yes, but the gate has
+            // not caught up yet.
+            accessReader.answer = ConfirmationAccess.has;
+            await cubit.refreshConfirmationAccess();
+            await cubit.approveSignIn();
+            expect(cubit.state.error, VerifyConnectError.confirmationPending);
+            expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+
+            // Only the first refusal after that answer: another one with no
+            // new read is the plain refusal again.
+            await cubit.approveSignIn();
+            expect(cubit.state.error, VerifyConnectError.confirmationRequired);
+          },
+        );
+
+        test(
+          'confirmation_required with the flag on reads as no access, keeping '
+          'the sign-in',
+          () async {
+            whenConfirm().thenThrow(required());
+            accessReader.answer = ConfirmationAccess.has;
+            final cubit = await waiting(confirmationSignIn: true);
+            addTearDown(cubit.close);
+            await cubit.refreshConfirmationAccess();
+            final reads = accessReader.reads.length;
+
+            await cubit.approveSignIn();
+
+            // The refusal is the newer answer, and asks the verifier nothing.
+            expect(cubit.state.confirmationAccess, ConfirmationAccess.hasNot);
+            expect(accessReader.reads, hasLength(reads));
+            expect(cubit.state.signedInAccount, 'jack');
+            expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+
+            // A later re-check that says yes restores the sign-in path.
+            accessReader.answer = ConfirmationAccess.has;
+            await cubit.refreshConfirmationAccess();
+            expect(cubit.state.confirmationAccess, ConfirmationAccess.has);
+          },
+        );
+
+        test(
+          'confirmation_required with the flag off leaves access alone',
+          () async {
+            whenConfirm().thenThrow(required());
+            final cubit = await waiting();
+            addTearDown(cubit.close);
+
+            await cubit.approveSignIn();
+
+            expect(cubit.state.confirmationAccess, ConfirmationAccess.unknown);
+          },
+        );
+
+        test(
+          'an access answer asked before the refusal does not undo it',
+          () async {
+            whenConfirm().thenThrow(required());
+            final cubit = await waiting(confirmationSignIn: true);
+            addTearDown(cubit.close);
+            final held = Completer<ConfirmationAccess>();
+            accessReader.respond = ({required refresh}) => held.future;
+            final refreshing = cubit.refreshConfirmationAccess();
+
+            await cubit.approveSignIn();
+            held.complete(ConfirmationAccess.has);
+            await refreshing;
+
+            expect(cubit.state.confirmationAccess, ConfirmationAccess.hasNot);
+          },
+        );
+
+        test(
+          'the no-access a refusal sets is not a read for the pending copy',
+          () async {
+            whenConfirm().thenThrow(required());
+            final cubit = await waiting(confirmationSignIn: true);
+            addTearDown(cubit.close);
+
+            await cubit.approveSignIn();
+            await cubit.approveSignIn();
+            expect(cubit.state.error, VerifyConnectError.confirmationRequired);
+
+            // A has read after the refusal still makes the next refusal the
+            // pending copy, once.
+            accessReader.answer = ConfirmationAccess.has;
+            await cubit.refreshConfirmationAccess();
+            await cubit.approveSignIn();
+            expect(cubit.state.error, VerifyConnectError.confirmationPending);
+            expect(cubit.state.confirmationAccess, ConfirmationAccess.hasNot);
+          },
+        );
+
+        test(
+          'a refusal after access read hasNot stays confirmationRequired',
+          () async {
+            whenConfirm().thenThrow(required());
+            accessReader.answer = ConfirmationAccess.hasNot;
+            final cubit = await waiting(confirmationSignIn: true);
+            addTearDown(cubit.close);
+
+            await cubit.refreshConfirmationAccess();
+            await cubit.approveSignIn();
+
+            expect(cubit.state.error, VerifyConnectError.confirmationRequired);
+          },
+        );
+
+        test(
+          'the kept sign-in confirms on the next approve with no new platform '
+          'sign-in',
+          () async {
+            var calls = 0;
+            whenConfirm().thenAnswer((_) async {
+              calls++;
+              if (calls == 1) throw required();
+              return confirmed;
+            });
+            final cubit = await waiting(confirmationSignIn: true);
+            addTearDown(cubit.close);
+
+            await cubit.approveSignIn();
+            expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+            await cubit.approveSignIn();
+
+            expect(cubit.state.status, VerifyConnectStatus.linked);
+            expect(launched, hasLength(1));
+            // The same signed event goes again.
+            verify(
+              () => repository.signClaim(
+                any(),
+                confirmBinding: any(named: 'confirmBinding'),
+              ),
+            ).called(1);
+            expectConfirmCalls(2);
+            verify(() => repository.publishSignedClaim(signed)).called(1);
+          },
+        );
+
+        for (final flagOn in [true, false]) {
+          test(
+            'confirmation_unavailable is retried inside the window, then '
+            'keeps the sign-in [D3c] (flag ${flagOn ? 'on' : 'off'})',
+            () async {
+              final waits = <Duration>[];
+              whenConfirm().thenThrow(
+                SignInConfirmException(
+                  503,
+                  SignInRefusal.confirmationUnavailable,
+                ),
+              );
+              final cubit = await waiting(
+                wait: (delay) async => waits.add(delay),
+                confirmationSignIn: flagOn,
+              );
+              addTearDown(cubit.close);
+
+              await cubit.approveSignIn();
+
+              expectConfirmCalls(5);
+              expect(waits, List.filled(4, const Duration(seconds: 2)));
+              verifyNever(() => repository.publishSignedClaim(any()));
+              expect(
+                cubit.state.error,
+                VerifyConnectError.confirmationUnavailable,
+              );
+              expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+              expect(cubit.state.signedInAccount, 'jack');
+              // Not a refusal: the verifier could not say.
+              expect(cubit.state.confirmationRefused, isFalse);
+            },
+          );
+        }
+
+        test(
+          'links the account once confirmation_unavailable clears on a retry',
+          () async {
+            var calls = 0;
+            whenConfirm().thenAnswer((_) async {
+              calls++;
+              if (calls < 3) {
+                throw SignInConfirmException(
+                  503,
+                  SignInRefusal.confirmationUnavailable,
+                );
+              }
+              return confirmed;
+            });
+            final cubit = await waiting(confirmationSignIn: true);
+            addTearDown(cubit.close);
+
+            await cubit.approveSignIn();
+
+            expectConfirmCalls(3);
+            expect(cubit.state.status, VerifyConnectStatus.linked);
+          },
+        );
+
+        test('an unknown refusal code still signs in again', () async {
+          whenConfirm().thenThrow(
+            SignInConfirmException(403, SignInRefusal.other),
+          );
+          final cubit = await waiting(confirmationSignIn: true);
+          addTearDown(cubit.close);
+
+          await cubit.approveSignIn();
+
+          expectConfirmCalls(1);
+          expect(cubit.state.error, VerifyConnectError.signInNotConfirmed);
+          expect(cubit.state.status, VerifyConnectStatus.editing);
+          expect(cubit.state.signedInAccount, isNull);
+          expect(cubit.state.confirmationRefused, isFalse);
+        });
+      });
+    });
+
+    group('refreshConfirmationAccess', () {
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'reads with refresh and emits the new answer',
+        setUp: () => accessReader.answer = ConfirmationAccess.has,
+        build: () => build(_twitter, confirmationSignIn: true),
+        act: (cubit) => cubit.refreshConfirmationAccess(),
+        expect: () => [
+          isA<VerifyConnectState>().having(
+            (s) => s.confirmationAccess,
+            'confirmationAccess',
+            ConfirmationAccess.has,
+          ),
+        ],
+        verify: (_) => expect(accessReader.reads, equals([true])),
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'makes no access read with the flag off',
+        setUp: () => accessReader.answer = ConfirmationAccess.has,
+        build: () => build(_twitter),
+        act: (cubit) => cubit.refreshConfirmationAccess(),
+        expect: () => const <VerifyConnectState>[],
+        verify: (_) => expect(accessReader.reads, isEmpty),
+      );
+
+      test('counts a read that throws as unknown, naming no one', () async {
+        await LogCaptureService().clearAllLogs();
+        final cubit = build(_twitter, confirmationSignIn: true);
+        addTearDown(cubit.close);
+        // An answer from before, so taking unknown is visible.
+        accessReader.answer = ConfirmationAccess.hasNot;
+        await cubit.refreshConfirmationAccess();
+        expect(cubit.state.confirmationAccess, ConfirmationAccess.hasNot);
+
+        accessReader.respond = ({required refresh}) async =>
+            throw StateError('signer for $_pubkey is gone');
+        await cubit.refreshConfirmationAccess();
+
+        expect(cubit.state.confirmationAccess, ConfirmationAccess.unknown);
+        final logged = LogCaptureService()
+            .getRecentLogs()
+            .map((entry) => entry.message)
+            .join('\n');
+        expect(logged, contains('Confirmation access read failed'));
+        expect(logged, isNot(contains(_pubkey)));
+      });
+
+      test('a read that throws leaves the sign-in flow working', () async {
+        accessReader.respond = ({required refresh}) async =>
+            throw const FormatException('bad');
+        when(() => repository.platform('twitter')).thenAnswer(
+          (_) async => const VerifierPlatform(
+            key: 'twitter',
+            label: 'Twitter / X',
+            supported: true,
+            oauth: true,
+            signinRequires: SigninRequirement.confirmation,
+          ),
+        );
+        final cubit = build(_twitter, confirmationSignIn: true);
+        addTearDown(cubit.close);
+
+        await cubit.loadPlatform();
+        await cubit.connectWithOAuth();
+
+        expect(cubit.state.platform.supportsOAuth, isTrue);
+        expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+      });
+
+      test('takes the newer of two overlapping refreshes', () async {
+        final held = <Completer<ConfirmationAccess>>[];
+        accessReader.respond = ({required refresh}) {
+          final answer = Completer<ConfirmationAccess>();
+          held.add(answer);
+          return answer.future;
+        };
+        final cubit = build(_twitter, confirmationSignIn: true);
+        addTearDown(cubit.close);
+
+        final older = cubit.refreshConfirmationAccess();
+        final newer = cubit.refreshConfirmationAccess();
+        held[1].complete(ConfirmationAccess.has);
+        await newer;
+        held[0].complete(ConfirmationAccess.hasNot);
+        await older;
+
+        expect(cubit.state.confirmationAccess, ConfirmationAccess.has);
+      });
+
+      test('ignores an answer that arrives after the screen closed', () async {
+        final held = Completer<ConfirmationAccess>();
+        accessReader.respond = ({required refresh}) => held.future;
+        final cubit = build(_twitter, confirmationSignIn: true);
+
+        final refreshing = cubit.refreshConfirmationAccess();
+        await cubit.close();
+        held.complete(ConfirmationAccess.has);
+        await refreshing;
+
+        expect(cubit.state.confirmationAccess, ConfirmationAccess.unknown);
+      });
+
+      group('racing the read loadPlatform makes', () {
+        const twitterGated = VerifierPlatform(
+          key: 'twitter',
+          label: 'Twitter / X',
+          supported: true,
+          oauth: true,
+          signinRequires: SigninRequirement.confirmation,
+        );
+
+        // One completer per read, in the order the reads were made.
+        late List<Completer<ConfirmationAccess>> held;
+
+        setUp(() {
+          held = [];
+          accessReader.respond = ({required refresh}) {
+            final answer = Completer<ConfirmationAccess>();
+            held.add(answer);
+            return answer.future;
+          };
+          when(
+            () => repository.platform('twitter'),
+          ).thenAnswer((_) async => twitterGated);
+        });
+
+        test(
+          'drops an answer to a read started before the refresh, even when '
+          'it lands last',
+          () async {
+            final cubit = build(_twitter, confirmationSignIn: true);
+            addTearDown(cubit.close);
+
+            final loading = cubit.loadPlatform();
+            await pumpEventQueue();
+            final refreshing = cubit.refreshConfirmationAccess();
+            expect(accessReader.reads, equals([false, true]));
+
+            held[1].complete(ConfirmationAccess.has);
+            await refreshing;
+            held[0].complete(ConfirmationAccess.hasNot);
+            await loading;
+
+            expect(cubit.state.confirmationAccess, ConfirmationAccess.has);
+          },
+        );
+
+        test(
+          'takes the refresh over a remembered answer read after it started',
+          () async {
+            // The repository answers a plain read from what it remembers at
+            // once, while the refresh it overtook is still asking.
+            final cubit = build(_twitter, confirmationSignIn: true);
+            addTearDown(cubit.close);
+
+            final refreshing = cubit.refreshConfirmationAccess();
+            final loading = cubit.loadPlatform();
+            await pumpEventQueue();
+            expect(accessReader.reads, equals([true, false]));
+
+            held[1].complete(ConfirmationAccess.hasNot);
+            await loading;
+            expect(cubit.state.confirmationAccess, ConfirmationAccess.hasNot);
+            held[0].complete(ConfirmationAccess.has);
+            await refreshing;
+
+            expect(cubit.state.confirmationAccess, ConfirmationAccess.has);
+          },
+        );
+      });
     });
 
     group('needsIdentityInput', () {
@@ -2691,6 +3292,55 @@ void main() {
           );
         },
       );
+
+      for (final flagOn in [true, false]) {
+        test(
+          'a refused renewal brings back the proof post '
+          '(flag ${flagOn ? 'on' : 'off'})',
+          () async {
+            when(
+              () => repository.confirmSignIn(
+                code: any(named: 'code'),
+                startSecret: any(named: 'startSecret'),
+                signed: any(named: 'signed'),
+              ),
+            ).thenThrow(
+              SignInConfirmException(403, SignInRefusal.confirmationRequired),
+            );
+            final cubit = build(
+              _bluesky,
+              replacingIdentity: 'alice.bsky.social',
+              confirmationSignIn: flagOn,
+            );
+            addTearDown(cubit.close);
+            answer = (returnUrl) => returnUrl.replace(
+              queryParameters: {
+                ...returnUrl.queryParameters,
+                'platform': 'bluesky',
+                'identity': 'bob.bsky.social',
+                'oauth_confirm': 'C' * 43,
+              },
+            );
+            // Signed in under another handle, which would have replaced the
+            // renewed link.
+            cubit.identityChanged('bob.bsky.social');
+            await cubit.connectWithOAuth();
+            expect(cubit.state.renewsBySignInOnly, isTrue);
+            expect(cubit.state.identityLocked, isFalse);
+
+            await cubit.approveSignIn();
+
+            expect(cubit.state.confirmationRefused, isTrue);
+            expect(cubit.state.renewsBySignInOnly, isFalse);
+            expect(cubit.state.identityLocked, isTrue);
+            // The proof post is for the renewed handle, as after a sign-in
+            // that failed to start.
+            expect(cubit.state.identity, equals('alice.bsky.social'));
+            cubit.identityChanged('carol.bsky.social');
+            expect(cubit.state.identity, equals('alice.bsky.social'));
+          },
+        );
+      }
 
       group('after a sign-in fails to start', () {
         // Every handle the sign-in was started with.

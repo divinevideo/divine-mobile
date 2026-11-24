@@ -1259,8 +1259,9 @@ void main() {
             InfiniteVideoFeed(
               videos: videos,
               cache: cache,
-              loadingBuilder: (_, _, {required isSquare}) =>
-                  const Text('loading'),
+              loadingBuilder:
+                  (_, _, {required isSquare, required hasSourceFailure}) =>
+                      const Text('loading'),
             ),
           ),
         );
@@ -1363,8 +1364,9 @@ void main() {
             InfiniteVideoFeed(
               videos: videos,
               cache: cache,
-              loadingBuilder: (_, _, {required isSquare}) =>
-                  const Text('loading'),
+              loadingBuilder:
+                  (_, _, {required isSquare, required hasSourceFailure}) =>
+                      const Text('loading'),
             ),
           ),
         );
@@ -1437,8 +1439,9 @@ void main() {
                   cache: cache,
                   prefetchCount: 0,
                   preloadGracePeriod: Duration.zero,
-                  loadingBuilder: (_, _, {required isSquare}) =>
-                      Text('loading:isSquare=$isSquare'),
+                  loadingBuilder:
+                      (_, _, {required isSquare, required hasSourceFailure}) =>
+                          Text('loading:isSquare=$isSquare'),
                   videoBuilder: (_, _, _, _) {
                     return const Text('video');
                   },
@@ -1521,8 +1524,9 @@ void main() {
                 cache: cache,
                 prefetchCount: 0,
                 preloadGracePeriod: Duration.zero,
-                loadingBuilder: (_, _, {required isSquare}) =>
-                    const Text('loading'),
+                loadingBuilder:
+                    (_, _, {required isSquare, required hasSourceFailure}) =>
+                        const Text('loading'),
                 videoBuilder: (_, _, _, _) {
                   return const Text('video');
                 },
@@ -1569,6 +1573,98 @@ void main() {
             eventChannelName,
             null,
           );
+        },
+      );
+
+      testWidgets(
+        'passes hasSourceFailure=true to loadingBuilder when primary source '
+        'fails during failover and clears it on tail replacement',
+        (tester) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install(
+            playerIds: const <int>[0, 1],
+            firstFrameRenderedOnListen: false,
+          );
+          final key = GlobalKey<InfiniteVideoFeedState>();
+          const sha256 =
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+          final videoWithFallbacks = VideoEvent(
+            id: 'failover_video',
+            pubkey: 'a' * 64,
+            createdAt: 1700000000,
+            content: '',
+            timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+            videoUrl: 'https://media.divine.video/$sha256/720p',
+            sha256: sha256,
+          );
+
+          // First attempt fails (triggers failover to bare Divine blob);
+          // second attempt opens with firstFrameRenderedOnListen=false so
+          // loadingBuilder stays mounted while failover completes.
+          harness.setClipsFailures[0] = <Exception>[
+            PlatformException(
+              code: 'not_found',
+              message: 'HTTP 404 Not Found',
+            ),
+          ];
+
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  key: key,
+                  videos: [videoWithFallbacks],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                  loadingBuilder:
+                      (_, _, {required isSquare, required hasSourceFailure}) =>
+                          Text('loading:failed=$hasSourceFailure'),
+                ),
+              ),
+            );
+
+            // Initially healthy before the first source fails.
+            expect(find.text('loading:failed=false'), findsOneWidget);
+
+            // Allow controller init + source #0 failure + fallback open.
+            await tester.pump();
+            await tester.pump();
+
+            expect(
+              harness.countCallsForPlayer(0, 'setClips'),
+              greaterThanOrEqualTo(2),
+            );
+            expect(find.text('loading:failed=true'), findsOneWidget);
+
+            // Calling debugMarkLoadingSourceFailed when already set is a no-op
+            // and tail replacement clears hasSourceFailure for the new video.
+            key.currentState!.debugMarkLoadingSourceFailed(0);
+            await tester.pump();
+            expect(find.text('loading:failed=true'), findsOneWidget);
+
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  key: key,
+                  videos: [_makeVideo('replacement_video')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                  loadingBuilder:
+                      (_, _, {required isSquare, required hasSourceFailure}) =>
+                          Text('loading:failed=$hasSourceFailure'),
+                ),
+              ),
+            );
+            expect(find.text('loading:failed=false'), findsOneWidget);
+          } finally {
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            await harness.dispose();
+          }
         },
       );
 
@@ -3669,8 +3765,13 @@ void main() {
                   prefetchCount: 0,
                   errorBuilder: (_, _, _, errorType) =>
                       Text('ERROR:${errorType.name}'),
-                  loadingBuilder: (_, index, {required isSquare}) =>
-                      Text('LOADING:$index'),
+                  loadingBuilder:
+                      (
+                        _,
+                        index, {
+                        required isSquare,
+                        required hasSourceFailure,
+                      }) => Text('LOADING:$index'),
                 ),
               ),
             );
@@ -3703,8 +3804,13 @@ void main() {
                   prefetchCount: 0,
                   errorBuilder: (_, _, _, errorType) =>
                       Text('ERROR:${errorType.name}'),
-                  loadingBuilder: (_, index, {required isSquare}) =>
-                      Text('LOADING:$index'),
+                  loadingBuilder:
+                      (
+                        _,
+                        index, {
+                        required isSquare,
+                        required hasSourceFailure,
+                      }) => Text('LOADING:$index'),
                 ),
               ),
             );

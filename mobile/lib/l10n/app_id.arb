@@ -31,6 +31,14 @@
   "videoEditorSocialStickerQuestionNote": "Jawaban masuk ke kamu sebagai pesan pribadi.",
   "videoEditorSocialStickerAddYoursNote": "Penonton menjawab dengan video mereka sendiri. Setiap jawaban mendapat hashtag ini dan tertaut ke videomu.",
   "videoEditorSocialStickerRepliesNote": "Menampilkan siapa saja yang membalas video ini dengan video. Penonton mengetuknya untuk menonton balasannya.",
+  "videoEditorSocialStickerAudienceTitle": "Siapa yang bisa menjawab",
+  "videoEditorSocialStickerAudienceEveryone": "Semua orang",
+  "videoEditorSocialStickerAudienceFollowing": "Teman",
+  "videoEditorSocialStickerAudienceCreator": "Hanya aku",
+  "videoEditorSocialStickerAudienceFollowingAddYoursNote": "Hanya orang yang kamu ikuti yang bisa ikut. Orang lain melihat stikernya setelah ada yang ikut.",
+  "videoEditorSocialStickerAudienceFollowingRepliesNote": "Stiker hanya menampilkan balasan video dari orang yang kamu ikuti. Orang lain melihatnya setelah salah satu dari mereka membalas.",
+  "videoEditorSocialStickerAudienceCreatorAddYoursNote": "Hanya kamu yang bisa ikut. Orang lain tidak akan melihat stikernya sampai kamu ikut.",
+  "videoEditorSocialStickerAudienceCreatorRepliesNote": "Stiker hanya menampilkan balasan video darimu sendiri. Orang lain tidak akan melihatnya sampai kamu membalas.",
   "videoEditorInteractiveCardAreaHint": "Stiker ini tetap di kotak ini agar penonton bisa mengetuknya",
   "videoStickerPollSignInToVote": "Masuk untuk memilih.",
   "videoStickerPollNotReady": "Masih menyambungkan. Coba lagi sebentar lagi.",
@@ -40,6 +48,8 @@
   "videoStickerQuestionAnswerHint": "Ketuk untuk menjawab",
   "videoStickerQuestionAnswerSemanticLabel": "Jawab: {question}",
   "videoStickerAddYoursButton": "Giliranmu",
+  "videoStickerAddYoursWatchSeries": "Tonton serinya",
+  "videoStickerAddYoursWatchSeriesSemanticLabel": "Tonton serinya: {prompt}",
   "videoStickerAddYoursJoined": "{count, plural, =0{Jadilah yang pertama} =1{{count} orang ikut} other{{count} orang ikut}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} orang ikut",
   "videoStickerAddYoursOpenSemanticLabel": "Lihat siapa saja yang ikut",
@@ -269,11 +279,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "Perangkat Masukan Audio",
-  "contentPreferencesAutoRecommended": "Otomatis (direkomendasikan)",
-  "contentPreferencesAutoSelectsBest": "Pilih mikrofon terbaik secara otomatis",
-  "contentPreferencesSelectAudioInput": "Pilih Masukan Audio",
-  "contentPreferencesUnknownMicrophone": "Mikrofon Tidak Dikenal",
   "profileBlockedAccountNotAvailable": "Akun ini tidak tersedia",
   "profileInvalidId": "ID profil tidak valid",
   "profileShareText": "Lihat {displayName} di Divine!\n\n{url}",
@@ -1547,6 +1552,7 @@
   "videoUpdateErrorNoPlayableVideo": "Video ini tidak punya sumber yang bisa diputar, jadi tidak bisa diedit.",
   "videoUpdateErrorCouldNotSign": "Gagal menandatangani pembaruan. Coba lagi.",
   "videoUpdateErrorPublishRejected": "Relay tidak menerima pembaruan. Coba lagi sebentar lagi.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "Video ini diubah di perangkat lain dan sekarang punya terlalu banyak tag atau kolaborator. Buka lagi dan hapus beberapa.",
   "videoUpdateErrorGeneric": "Gagal memperbarui video ini. Coba lagi.",
   "shareMenuDeleteVideoQuestion": "Hapus Video?",
   "shareMenuDeleteCleanupInProgress": "Menghapus video…",
@@ -1576,6 +1582,7 @@
   "soundsSearchResults": "Hasil Pencarian",
   "soundsNoSoundsFound": "Tidak ada suara ditemukan",
   "soundsNoSoundsFoundDescription": "Coba istilah pencarian lain",
+  "soundsSearchResultCount": "{count, plural, =0{Tidak ada suara ditemukan} other{{count} suara ditemukan}}",
   "profileTitle": "Profil",
   "profileMoreOptions": "Opsi lainnya",
   "profileBlockedUser": "Memblokir {name}",
@@ -2700,6 +2707,11 @@
   "videoEditorEffectWave": "Gelombang",
   "videoEditorEffectGlow": "Pendar",
   "videoEditorEffectEcho": "Gema",
+  "videoEditorEffectTimeSplit": "Waktu Terbelah",
+  "videoEditorEffectLongExposure": "Eksposur Panjang",
+  "videoEditorEffectMotionOnly": "Hanya Gerakan",
+  "videoEditorEffectStutter": "Patah-patah",
+  "videoEditorEffectTimeWarp": "Distorsi Waktu",
   "videoEditorEffectFisheye": "Mata Ikan",
   "videoEditorEffectDrops": "Tetesan",
   "videoEditorEffectLightLeak": "Kebocoran Cahaya",
@@ -2767,6 +2779,7 @@
   "videoEditorEffectCategoryDistort": "Distorsi",
   "videoEditorEffectCategoryLight": "Cahaya",
   "videoEditorEffectCategoryMotion": "Gerakan",
+  "videoEditorEffectCategoryTime": "Waktu",
   "videoEditorEffectCategoryParticles": "Partikel",
   "videoEditorEffectCategoryLooks": "Nuansa",
   "videoEditorEffectCategoryIntro": "Intro",
@@ -2802,6 +2815,8 @@
   "videoEditorDropsShuffle": "Acak",
   "videoEditorEffectsFlashingReplaced": "Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif, jadi kami mengganti efek lainnya di sini.",
   "videoEditorEffectsFlashingNotDuplicated": "Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif.",
+  "videoEditorEffectsTimeReplaced": "Satu efek Waktu dalam satu waktu. Dua sekaligus akan terlihat berbeda setelah diekspor, jadi kami mengganti efek lainnya di sini.",
+  "videoEditorEffectsTimeNotDuplicated": "Satu efek Waktu dalam satu waktu. Dua sekaligus akan terlihat berbeda setelah diekspor.",
   "videoEditorEffectsOnBeat": "Sesuai ketukan",
   "videoEditorEffectsOnBeatFinding": "Mencari ketukan…",
   "videoEditorEffectsOnBeatNoBeat": "Tidak ada ketukan yang stabil di suara ini",
@@ -6453,9 +6468,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "Diikuti",
-  "badgeSubscribeAction": "Ikuti lencana",
-  "badgeAcceptedHoldersTitle": "Pemegang lencana yang menerima",
+  "badgeSubscribedAction": "Mengikuti komunitas",
+  "badgeSubscribeAction": "Ikuti komunitas",
+  "badgeAcceptedHoldersTitle": "Orang di komunitas ini",
   "badgeSubscriptionLoadError": "Langganan lencana kamu tidak dapat dimuat. Coba lagi.",
   "minorAccountReviewVideoSubmittedBody": "Videomu telah dikirim untuk ditinjau.",
   "minorAccountReviewVideoSubmittedTitle": "Video terkirim",
@@ -6558,5 +6573,23 @@
   "collabRoomPartLengthLabel": "Tiap bagian",
   "collabRoomSwapOrderHint": "Ketuk dua bagian untuk menukar urutannya.",
   "collabRoomFilmSeriesHint": "Semua merekam bagiannya sendiri, maksimal {seconds} dtk. Bagian-bagiannya diputar berurutan.",
-  "collabRoomSeriesReadyHint": "Semua bagian sudah masuk. Satukan sekarang!"
+  "collabRoomSeriesReadyHint": "Semua bagian sudah masuk. Satukan sekarang!",
+  "badgeDiscoveryTitle": "Lencana mempertemukan orang",
+  "badgeDiscoveryBody": "Siapa pun bisa membuat dan memberikan lencana. Kamu memilih mana yang tampil di profilmu. Jelajahi lencana untuk mengenal komunitasnya dan mengikuti orang-orang di dalamnya.",
+  "badgeDiscoveryMyBadges": "Lencanaku",
+  "badgeDiscoveryEmpty": "Belum ada komunitas ditemukan. Tarik ke bawah untuk mencoba lagi.",
+  "badgeCommunityFollowHint": "Menambahkan video komunitas ke feed Mengikuti. Ikuti orang satu per satu.",
+  "badgeOfficialLabel": "Resmi",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Pelajari selengkapnya di {website}",
+  "badgeDiscoveryVideosLabel": "Video dari {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

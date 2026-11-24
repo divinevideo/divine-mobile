@@ -503,23 +503,6 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get contentPreferencesAudioInputDevice =>
-      'Dispozitiv de intrare audio';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Automat (recomandat)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'Alege automat cel mai bun microfon';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Alege intrarea audio';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Microfon necunoscut';
-
-  @override
   String get contentFiltersAdultContent => 'CONȚINUT PENTRU ADULȚI';
 
   @override
@@ -2204,6 +2187,14 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => 'Rândul tău';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => 'Urmărește seria';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Urmărește seria: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -4627,6 +4618,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Releul nu a acceptat modificarea. Încearcă din nou în scurt timp.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Acest videoclip s-a schimbat pe alt dispozitiv și acum are prea multe etichete sau prea multe persoane care colaborează. Deschide-l din nou și elimină câteva.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'N-am putut actualiza acest videoclip. Încearcă din nou.';
 
@@ -4719,6 +4714,19 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get soundsNoSoundsFoundDescription => 'Încearcă alt termen de căutare';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de sunete găsite',
+      few: '$count sunete găsite',
+      one: '$count sunet găsit',
+      zero: 'Niciun sunet găsit',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'Salvat în Sunete';
@@ -9633,6 +9641,21 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectEcho => 'Ecou';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Timp despicat';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Expunere lungă';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Doar mișcare';
+
+  @override
+  String get videoEditorEffectStutter => 'Sacadat';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Distorsiune temporală';
+
+  @override
   String get videoEditorEffectFisheye => 'Ochi de pește';
 
   @override
@@ -9834,6 +9857,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'Mișcare';
 
   @override
+  String get videoEditorEffectCategoryTime => 'Timp';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'Particule';
 
   @override
@@ -9940,6 +9966,14 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'Un singur efect Timp odată. Două împreună ar arăta altfel după export, așa că l-am înlocuit aici pe celălalt.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'Un singur efect Timp odată. Două împreună ar arăta altfel după export.';
 
   @override
   String get videoEditorEffectsOnBeat => 'Pe ritm';
@@ -12072,6 +12106,34 @@ class AppLocalizationsRo extends AppLocalizations {
       'Arată cine a răspuns la acest videoclip cu un videoclip. Cei care se uită îl ating ca să vadă răspunsurile.';
 
   @override
+  String get videoEditorSocialStickerAudienceTitle => 'Cine poate răspunde';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Oricine';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Cercul de prieteni';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Doar eu';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Doar persoanele pe care le urmărești pot participa. Restul văd stickerul imediat ce participă cineva.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Stickerul arată doar răspunsurile video ale persoanelor pe care le urmărești. Restul îl văd imediat ce răspunde una dintre ele.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Doar tu poți participa. Nimeni altcineva nu vede stickerul până nu participi.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Stickerul arată doar propriile tale răspunsuri video. Nimeni altcineva nu îl vede până nu răspunzi.';
+
+  @override
   String get videoEditorInteractiveCardAreaHint =>
       'Stickerul rămâne în acest chenar ca să-l poată atinge cei care se uită';
 
@@ -12869,13 +12931,13 @@ class AppLocalizationsRo extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'Abonează-te la insignă';
+  String get badgeSubscribeAction => 'Urmărește comunitatea';
 
   @override
-  String get badgeSubscribedAction => 'Abonat';
+  String get badgeSubscribedAction => 'Urmărești comunitatea';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'Persoane care au acceptat insigna';
+  String get badgeAcceptedHoldersTitle => 'Oameni din această comunitate';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -13898,6 +13960,21 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get devOptionsProtectedMinorClearedToast =>
       'Suprascrierea de minor protejat a fost ștearsă';
+
+  @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
 
   @override
   String get commentsRecordVideoButtonLabel => 'Înregistrează comentariu video';
@@ -14977,6 +15054,65 @@ class AppLocalizationsRo extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Dezleagă contul $platform $identity';
   }
@@ -15008,7 +15144,26 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'Un tap';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -15120,6 +15275,18 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'Verificat, dar niciun releu nu a acceptat actualizarea. Mai încearcă.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -17122,4 +17289,49 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get collabRoomSeriesReadyHint =>
       'Toate părțile au ajuns. Pune-le cap la cap!';
+
+  @override
+  String get badgeDiscoveryTitle => 'Insignele aduc oamenii împreună';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'Oricine poate crea și acorda insigne. Tu alegi care apar pe profilul tău. Explorează o insignă ca să-i cunoști comunitatea și să urmărești oamenii din ea.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'Insignele mele';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'Nu am găsit comunități încă. Trage în jos ca să încerci din nou.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'Adaugă videoclipurile comunității în fluxul Urmăriți. Urmărește oamenii individual.';
+
+  @override
+  String get badgeOfficialLabel => 'Oficială';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return 'Află mai multe pe $website';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return 'Videoclipuri de la $badgeName';
+  }
 }

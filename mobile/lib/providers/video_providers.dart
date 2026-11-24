@@ -77,6 +77,7 @@ import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/services/video_source_visibility_policy.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/services/view_event_publisher.dart';
+import 'package:openvine/utils/video_update_stream.dart';
 import 'package:reposts_repository/reposts_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -284,7 +285,8 @@ VideoEventService videoEventService(Ref ref) {
   // Teach the OG Viner badge cache from every video that flows through the
   // service. The cache filters internally (only videos funnelcake marks
   // `isVerifiedArchive` contribute pubkeys), so it's safe to feed it every
-  // batch — popular, new, classics, profile, hashtag, search, anything.
+  // batch: popular, new, classics, profile, hashtag. Search results never pass
+  // through filterVideoList, so the search results page teaches the cache.
   final ogVinerCache = ref.read(ogVinerCacheServiceProvider);
   final disposeObserver = service.addVideoObserver(
     (videos) => unawaited(ogVinerCache.learnFromVideos(videos)),
@@ -306,8 +308,9 @@ VideoEventPublisher videoEventPublisher(Ref ref) {
   final profileRepository = ref.watch(profileRepositoryProvider);
   final profileStatsDao = ref.watch(databaseProvider).profileStatsDao;
   final savedSoundsService = ref.watch(savedSoundsServiceProvider);
+  final videosRepository = ref.watch(videosRepositoryProvider);
   final consentResolver = AudioReuseConsentResolver(
-    videosRepository: ref.watch(videosRepositoryProvider),
+    videosRepository: videosRepository,
   );
 
   // REST-first publish: POST the signed event to {eventPublishBaseUrl}/api/events with
@@ -350,6 +353,10 @@ VideoEventPublisher videoEventPublisher(Ref ref) {
     publishedEventLocalEcho: PublishedEventLocalEcho(
       (event) => ref.read(videoLocalStorageProvider).saveEventsBatch([event]),
     ),
+    // The watch above already rebuilds this provider with the repository, so
+    // hand over that instance. Reading `ref` here would throw for a publish
+    // still in flight on the instance that rebuild replaced.
+    videosRepositoryGetter: () => videosRepository,
   );
 }
 
@@ -841,15 +848,17 @@ VideoEventResolver videoEventResolver(Ref ref) {
 /// Service that orchestrates the video-metadata-edit republish flow.
 @riverpod
 VideoMetadataUpdateService videoMetadataUpdateService(Ref ref) {
+  final nostrClient = ref.watch(nostrServiceProvider);
   return VideoMetadataUpdateService(
     authService: ref.watch(authServiceProvider),
     blossomService: ref.watch(blossomUploadServiceProvider),
     relayPublisher: SignedEventRelayPublisher(
-      nostrClient: ref.watch(nostrServiceProvider),
+      nostrClient: nostrClient,
       trustedRelayUrl: ref.watch(currentEnvironmentProvider).relayUrl,
     ),
     personalEventCache: ref.watch(personalEventCacheServiceProvider),
     videoEventService: ref.watch(videoEventServiceProvider),
+    nostrClient: nostrClient,
     collaboratorInviteService: CollaboratorInviteService(
       dmRepository: ref.watch(dmRepositoryProvider),
       l10n: currentAppL10n(ref.read(sharedPreferencesProvider)),
@@ -954,9 +963,9 @@ VideoLocalStorage videoLocalStorage(Ref ref) {
 /// Works without authentication for public feeds.
 ///
 /// Rebuilds (yielding a fresh in-memory cache) when content filter, aspect
-/// ratio, or Divine-host filter preferences change. The version providers
-/// act as rebuild triggers since the underlying services are long-lived
-/// ChangeNotifiers that don't themselves cause provider invalidation.
+/// ratio, Divine-host, or seen-video filter preferences change. Version and
+/// flag-state providers trigger rebuilds because the underlying services are
+/// long-lived ChangeNotifiers that keep their identity when preferences change.
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)
@@ -982,8 +991,11 @@ VideosRepository videosRepository(Ref ref) {
   final seenVideosService = ref.watch(seenVideosServiceProvider);
   final clientSeenFilteringEnabled = () {
     try {
-      final flagService = ref.watch(featureFlagServiceProvider);
-      return flagService.isEnabled(FeatureFlag.clientSeenFiltering);
+      // The service keeps its identity when flags change. Watch the resolved
+      // flag so toggling it replaces this repository and its feed cache.
+      return ref.watch(
+        isFeatureEnabledProvider(FeatureFlag.clientSeenFiltering),
+      );
     } catch (_) {
       return true;
     }
@@ -1010,6 +1022,7 @@ VideosRepository videosRepository(Ref ref) {
     blockFilter: createBlockedAuthorFilter(ref),
     deletedFilter: videoEventService.isVideoEventKnownDeleted,
     removedVideoIds: videoEventService.removedVideoIds,
+    replacedVideos: videoUpdatesOf(videoEventService),
     contentFilter: (video) =>
         nsfwFilter(video) ||
         VideoSourceVisibilityPolicy.isHiddenBySourcePreferences(

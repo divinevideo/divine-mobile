@@ -55,6 +55,17 @@ void main() {
       expect((target! as NostrProfileTarget).hexPubkey, equals(authorHex));
     });
 
+    // x = 5 is well-formed and checksums, but is no point on secp256k1, so no
+    // account can own it and search must not open it as a profile (#8706).
+    test('does not classify an npub no account can own as a profile', () {
+      expect(
+        resolveNostrSearchTarget(
+          'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzsfj2hcx',
+        ),
+        isNull,
+      );
+    });
+
     test('classifies a bare hex value as ambiguous and lowercases it', () {
       final target = resolveNostrSearchTarget(hexId.toUpperCase());
 
@@ -106,13 +117,11 @@ void main() {
     });
 
     test('rejects an nprofile whose relay entry is not valid text', () {
-      // Valid checksum, pubkey entry intact, relay entry with bytes that are
-      // not UTF-8. The SDK rejects a string with a damaged entry, so this
-      // must come back as "not an identifier" rather than an exception.
+      // Keep the valid profile payload from above so only the relay entry
+      // can cause rejection.
+      final profileData = Bech32Decoder().convert(nprofile, 1000).data;
       final tlv = <int>[
-        TLVType.defaultType,
-        32,
-        ...List<int>.generate(32, (i) => i),
+        ...Nip19.convertBits(profileData, 5, 8, false),
         TLVType.relay,
         2,
         0xff,
@@ -163,24 +172,38 @@ void main() {
       expect((action! as OpenVideoAction).routeId, equals(note1));
     });
 
-    test('opens the video when a bare hex names an event', () async {
+    test('opens an off-curve event id without looking up a profile', () async {
+      var lookedUpProfile = false;
       final action = await resolver(
-        profileExists: (_) async => false,
+        profileExists: (_) async {
+          lookedUpProfile = true;
+          return false;
+        },
         videoExists: (routeId) async => routeId == hexId,
       ).resolve(hexId);
 
       expect(action, isA<OpenVideoAction>());
       expect((action! as OpenVideoAction).routeId, equals(hexId));
+      expect(lookedUpProfile, isFalse);
+    });
+
+    test('does not open an off-curve bare hex value as a profile', () async {
+      final action = await resolver(
+        profileExists: (_) async => true,
+        videoExists: (_) async => false,
+      ).resolve(hexId);
+
+      expect(action, isNull);
     });
 
     test('opens the profile when a bare hex names only a pubkey', () async {
       final action = await resolver(
-        profileExists: (pubkey) async => pubkey == hexId,
+        profileExists: (pubkey) async => pubkey == authorHex,
         videoExists: (_) async => false,
-      ).resolve(hexId);
+      ).resolve(authorHex);
 
       expect(action, isA<OpenProfileAction>());
-      expect((action! as OpenProfileAction).hexPubkey, equals(hexId));
+      expect((action! as OpenProfileAction).hexPubkey, equals(authorHex));
     });
 
     test(
@@ -192,8 +215,8 @@ void main() {
         var resolved = false;
         final pending = resolver(
           profileExists: (_) => profileLookup.future,
-          videoExists: (routeId) async => routeId == hexId,
-        ).resolve(hexId).whenComplete(() => resolved = true);
+          videoExists: (routeId) async => routeId == authorHex,
+        ).resolve(authorHex).whenComplete(() => resolved = true);
 
         await pumpEventQueue();
         expect(resolved, isTrue);
@@ -207,7 +230,7 @@ void main() {
       final action = await resolver(
         profileExists: (_) async => true,
         videoExists: (_) async => true,
-      ).resolve(hexId);
+      ).resolve(authorHex);
 
       expect(action, isA<OpenVideoAction>());
     });
@@ -216,7 +239,7 @@ void main() {
       final action = await resolver(
         profileExists: (_) async => false,
         videoExists: (_) async => false,
-      ).resolve(hexId);
+      ).resolve(authorHex);
 
       expect(action, isNull);
     });
@@ -225,7 +248,7 @@ void main() {
       final action = await resolver(
         profileExists: (_) async => throw Exception('offline'),
         videoExists: (_) async => false,
-      ).resolve(hexId);
+      ).resolve(authorHex);
 
       expect(action, isNull);
     });

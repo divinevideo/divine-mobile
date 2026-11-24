@@ -3,9 +3,11 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' show VideoEvent;
+import 'package:models/models.dart' show NIP71VideoKinds, VideoEvent;
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/video_metadata_update_service.dart';
+
+import '../helpers/test_pubkeys.dart';
 
 class MockCollaboratorInviteService extends Mock
     implements CollaboratorInviteService {}
@@ -19,8 +21,7 @@ void main() {
     });
 
     test('sends an invite for a collaborator added after publish', () async {
-      const collaboratorPubkey =
-          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      const collaboratorPubkey = syntheticTestPubkey;
       when(
         () => inviteService.sendInvite(
           collaboratorPubkey: any(named: 'collaboratorPubkey'),
@@ -59,8 +60,7 @@ void main() {
     });
 
     test('does not invite collaborators already present before edit', () async {
-      const collaboratorPubkey =
-          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      const collaboratorPubkey = syntheticTestPubkey;
 
       final results = await sendPostPublishCollaboratorInvites(
         inviteService: inviteService,
@@ -82,11 +82,26 @@ void main() {
       );
     });
 
+    test('reports a failed invite for a video without a coordinate', () async {
+      const collaboratorPubkey = syntheticTestPubkey;
+
+      final results = await sendPostPublishCollaboratorInvites(
+        inviteService: inviteService,
+        video: _video(addressableDTag: null),
+        previousCollaboratorPubkeys: const [],
+        updatedCollaboratorPubkeys: const [collaboratorPubkey],
+      );
+
+      expect(results.keys, [collaboratorPubkey]);
+      expect(results[collaboratorPubkey]?.success, isFalse);
+      expect(results[collaboratorPubkey]?.error, contains('no address'));
+      verifyZeroInteractions(inviteService);
+    });
+
     test(
       'returns structured failure when a new collaborator invite throws',
       () async {
-        const collaboratorPubkey =
-            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+        const collaboratorPubkey = syntheticTestPubkey;
         when(
           () => inviteService.sendInvite(
             collaboratorPubkey: any(named: 'collaboratorPubkey'),
@@ -113,7 +128,10 @@ void main() {
   });
 }
 
-VideoEvent _video({List<String> collaboratorPubkeys = const []}) {
+VideoEvent _video({
+  List<String> collaboratorPubkeys = const [],
+  String? addressableDTag = 'video-d-tag',
+}) {
   return VideoEvent(
     id: 'event-id',
     pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
@@ -124,6 +142,11 @@ VideoEvent _video({List<String> collaboratorPubkeys = const []}) {
     videoUrl: 'https://cdn.example.com/video.mp4',
     thumbnailUrl: 'https://cdn.example.com/thumb.jpg',
     vineId: 'video-d-tag',
+    eventKind: NIP71VideoKinds.addressableShortVideo,
+    addressableDTag: addressableDTag,
+    nostrEventTags: [
+      if (addressableDTag != null) ['d', addressableDTag],
+    ],
     collaboratorPubkeys: collaboratorPubkeys,
   );
 }

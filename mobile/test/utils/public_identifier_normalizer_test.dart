@@ -49,6 +49,44 @@ void main() {
 
       expect(normalizePublicIdentifier(shortKey), isNull);
     });
+
+    // x = 5 has no point on secp256k1, so no account can own it (#8706). Its
+    // neighbour x = 6 does, so the two differ only in curve membership.
+    group('for a key no account can own', () {
+      const offCurve =
+          '0000000000000000000000000000000000000000000000000000000000000005';
+      const onCurveNeighbour =
+          '0000000000000000000000000000000000000000000000000000000000000006';
+
+      test('returns null for the hex form', () {
+        expect(normalizePublicIdentifier(offCurve), isNull);
+      });
+
+      test('returns null for a crafted npub1 with a valid checksum', () {
+        expect(
+          normalizePublicIdentifier(
+            'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzsfj2hcx',
+          ),
+          isNull,
+        );
+      });
+
+      test('returns null for a crafted nprofile1', () {
+        expect(
+          normalizePublicIdentifier(
+            'nprofile1qqsqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpg3wh54s',
+          ),
+          isNull,
+        );
+      });
+
+      test('still accepts the on-curve neighbour', () {
+        expect(
+          normalizePublicIdentifier(onCurveNeighbour)?.hexPubkey,
+          onCurveNeighbour,
+        );
+      });
+    });
   });
 
   group('normalizeToHex', () {

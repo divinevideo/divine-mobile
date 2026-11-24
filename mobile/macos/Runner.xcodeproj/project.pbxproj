@@ -23,6 +23,7 @@
 /* Begin PBXBuildFile section */
 		12017EC8A153B0DB3BEA68BB /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A6C2A45D43535997A0768D3 /* Pods_Runner.framework */; };
 		26CB3538B89B8106B7675352 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 02829D77F031B60A9BF4C487 /* GoogleService-Info.plist */; };
+		A1B2C3D4E5F60718293A4B5C /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5D /* PrivacyInfo.xcprivacy */; };
 		2DD63C4A2E00A62100B40DED /* NativeCameraPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DD63C492E00A62100B40DED /* NativeCameraPlugin.swift */; };
 		2DD63C4B2E00A62100B40DED /* NativeCameraPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DD63C492E00A62100B40DED /* NativeCameraPlugin.swift */; };
 		331C80D8294CF71000263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C80D7294CF71000263BE5 /* RunnerTests.swift */; };
@@ -53,6 +54,7 @@
 		41986BCDC2BBB92506CBD0DB /* DiscoVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ACDA4FBEE1E7CD223369535 /* DiscoVideoEffect.swift */; };
 		B3AB2D12EEE42F551C1CBEB4 /* LaserVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F595F76FBC17F4007473DB1 /* LaserVideoEffect.swift */; };
 		E86CA63F0E6EEF1A2B4DFFC3 /* LightningVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DCE56077DA82375D95AA638 /* LightningVideoEffect.swift */; };
+		7E11B0A1C0DE4A1B9E2D3F04 /* TimeVideoEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E11B0A1C0DE4A1B9E2D3F03 /* TimeVideoEffects.swift */; };
 		E3B01AFB61D0B49DF35E1DA7 /* IntroOutroVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02A7268985479BEE7954FDF1 /* IntroOutroVideoEffect.swift */; };
 		71D5B9672C414D4DF83CCC58 /* EightBitVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5251575E4EB17C9E3B50C7F3 /* EightBitVideoEffect.swift */; };
 		E648F7BDCA3BBAC723D4FF76 /* AnaglyphVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A65A51122E2800D0638386 /* AnaglyphVideoEffect.swift */; };
@@ -120,6 +122,7 @@
 		33CC10F22044A3C60003C045 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = Runner/Assets.xcassets; sourceTree = "<group>"; };
 		33CC10F52044A3C60003C045 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		33CC10F72044A3C60003C045 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = Runner/Info.plist; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B5D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = Runner/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		33CC11122044BFA00003C045 /* MainFlutterWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlutterWindow.swift; sourceTree = "<group>"; };
 		33CEB47222A05771004F2AC0 /* Flutter-Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Flutter-Debug.xcconfig"; sourceTree = "<group>"; };
 		33CEB47422A05771004F2AC0 /* Flutter-Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Flutter-Release.xcconfig"; sourceTree = "<group>"; };
@@ -150,6 +153,7 @@
 		0ACDA4FBEE1E7CD223369535 /* DiscoVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiscoVideoEffect.swift; path = ../ios/Runner/DiscoVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		2F595F76FBC17F4007473DB1 /* LaserVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LaserVideoEffect.swift; path = ../ios/Runner/LaserVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		2DCE56077DA82375D95AA638 /* LightningVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LightningVideoEffect.swift; path = ../ios/Runner/LightningVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		7E11B0A1C0DE4A1B9E2D3F03 /* TimeVideoEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TimeVideoEffects.swift; path = ../ios/Runner/TimeVideoEffects.swift; sourceTree = SOURCE_ROOT; };
 		02A7268985479BEE7954FDF1 /* IntroOutroVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IntroOutroVideoEffect.swift; path = ../ios/Runner/IntroOutroVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		5251575E4EB17C9E3B50C7F3 /* EightBitVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EightBitVideoEffect.swift; path = ../ios/Runner/EightBitVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		44A65A51122E2800D0638386 /* AnaglyphVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AnaglyphVideoEffect.swift; path = ../ios/Runner/AnaglyphVideoEffect.swift; sourceTree = SOURCE_ROOT; };
@@ -251,6 +255,7 @@
 				33CC10F22044A3C60003C045 /* Assets.xcassets */,
 				33CC10F42044A3C60003C045 /* MainMenu.xib */,
 				33CC10F72044A3C60003C045 /* Info.plist */,
+				A1B2C3D4E5F60718293A4B5D /* PrivacyInfo.xcprivacy */,
 			);
 			name = Resources;
 			path = ..;
@@ -295,6 +300,7 @@
 				0ACDA4FBEE1E7CD223369535 /* DiscoVideoEffect.swift */,
 				2F595F76FBC17F4007473DB1 /* LaserVideoEffect.swift */,
 				2DCE56077DA82375D95AA638 /* LightningVideoEffect.swift */,
+				7E11B0A1C0DE4A1B9E2D3F03 /* TimeVideoEffects.swift */,
 				02A7268985479BEE7954FDF1 /* IntroOutroVideoEffect.swift */,
 				5251575E4EB17C9E3B50C7F3 /* EightBitVideoEffect.swift */,
 				44A65A51122E2800D0638386 /* AnaglyphVideoEffect.swift */,
@@ -461,6 +467,7 @@
 				33CC10F32044A3C60003C045 /* Assets.xcassets in Resources */,
 				33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */,
 				26CB3538B89B8106B7675352 /* GoogleService-Info.plist in Resources */,
+				A1B2C3D4E5F60718293A4B5C /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -582,7 +589,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\n#!/bin/bash\nPATH=\"${PATH}:$FLUTTER_ROOT/bin:${PUB_CACHE}/bin:$HOME/.pub-cache/bin\"\n\nif [ -z \"$PODS_ROOT\" ] || [ ! -d \"$PODS_ROOT/FirebaseCrashlytics\" ]; then\n  # Cannot use \"BUILD_DIR%/Build/*\" as per Firebase documentation, it points to \"flutter-project/build/ios/*\" path which doesn't have run script\n  DERIVED_DATA_PATH=$(echo \"$BUILD_ROOT\" | sed -E 's|(.*DerivedData/[^/]+).*|\\1|')\n  PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT=\"${DERIVED_DATA_PATH}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n  # Fallback: Flutter build uses build/macos/ instead of DerivedData\n  if [ ! -f \"$PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT\" ]; then\n    FLUTTER_BUILD_PATH=$(echo \"$BUILD_ROOT\" | sed -E 's|(.*/build/macos)/Build/.*|\\1|')\n    PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT=\"${FLUTTER_BUILD_PATH}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n  fi\nelse\n  PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT=\"$PODS_ROOT/FirebaseCrashlytics/run\"\nfi\n\n# Command to upload symbols script used to upload symbols to Firebase server\nflutterfire upload-crashlytics-symbols --upload-symbols-script-path=\"$PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT\" --platform=macos --apple-project-path=\"${SRCROOT}\" --env-platform-name=\"${PLATFORM_NAME}\" --env-configuration=\"${CONFIGURATION}\" --env-project-dir=\"${PROJECT_DIR}\" --env-built-products-dir=\"${BUILT_PRODUCTS_DIR}\" --env-dwarf-dsym-folder-path=\"${DWARF_DSYM_FOLDER_PATH}\" --env-dwarf-dsym-file-name=\"${DWARF_DSYM_FILE_NAME}\" --env-infoplist-path=\"${INFOPLIST_PATH}\" --default-config=default\n";
+			shellScript = "\n#!/bin/bash\nPATH=\"${PATH}:$FLUTTER_ROOT/bin:${PUB_CACHE}/bin:$HOME/.pub-cache/bin\"\n\nif ! command -v flutterfire >/dev/null 2>&1; then\n  echo \"warning: flutterfire CLI not found; skipping macOS Crashlytics dSYM upload\"\n  exit 0\nfi\n\nif [ -z \"$PODS_ROOT\" ] || [ ! -d \"$PODS_ROOT/FirebaseCrashlytics\" ]; then\n  # Cannot use \"BUILD_DIR%/Build/*\" as per Firebase documentation, it points to \"flutter-project/build/ios/*\" path which doesn't have run script\n  DERIVED_DATA_PATH=$(echo \"$BUILD_ROOT\" | sed -E 's|(.*DerivedData/[^/]+).*|\\1|')\n  PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT=\"${DERIVED_DATA_PATH}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n  # Fallback: Flutter build uses build/macos/ instead of DerivedData\n  if [ ! -f \"$PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT\" ]; then\n    FLUTTER_BUILD_PATH=$(echo \"$BUILD_ROOT\" | sed -E 's|(.*/build/macos)/Build/.*|\\1|')\n    PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT=\"${FLUTTER_BUILD_PATH}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n  fi\nelse\n  PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT=\"$PODS_ROOT/FirebaseCrashlytics/run\"\nfi\n\n# Command to upload symbols script used to upload symbols to Firebase server\nflutterfire upload-crashlytics-symbols --upload-symbols-script-path=\"$PATH_TO_CRASHLYTICS_UPLOAD_SCRIPT\" --platform=macos --apple-project-path=\"${SRCROOT}\" --env-platform-name=\"${PLATFORM_NAME}\" --env-configuration=\"${CONFIGURATION}\" --env-project-dir=\"${PROJECT_DIR}\" --env-built-products-dir=\"${BUILT_PRODUCTS_DIR}\" --env-dwarf-dsym-folder-path=\"${DWARF_DSYM_FOLDER_PATH}\" --env-dwarf-dsym-file-name=\"${DWARF_DSYM_FILE_NAME}\" --env-infoplist-path=\"${INFOPLIST_PATH}\" --default-config=default\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -624,6 +631,7 @@
 				41986BCDC2BBB92506CBD0DB /* DiscoVideoEffect.swift in Sources */,
 				B3AB2D12EEE42F551C1CBEB4 /* LaserVideoEffect.swift in Sources */,
 				E86CA63F0E6EEF1A2B4DFFC3 /* LightningVideoEffect.swift in Sources */,
+				7E11B0A1C0DE4A1B9E2D3F04 /* TimeVideoEffects.swift in Sources */,
 				E3B01AFB61D0B49DF35E1DA7 /* IntroOutroVideoEffect.swift in Sources */,
 				71D5B9672C414D4DF83CCC58 /* EightBitVideoEffect.swift in Sources */,
 				E648F7BDCA3BBAC723D4FF76 /* AnaglyphVideoEffect.swift in Sources */,

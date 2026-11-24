@@ -7,8 +7,10 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/people_list_owner.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 
+import '../helpers/test_pubkeys.dart';
+
 void main() {
-  final owner = 'abcdef' * 10 + 'abcd';
+  const owner = syntheticTestPubkey;
   final npub = NostrKeyUtils.encodePubKey(owner);
   final nprofile = NIP19Tlv.encodeNprofile(
     Nprofile(pubkey: owner, relays: const ['wss://example.invalid']),

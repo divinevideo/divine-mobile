@@ -400,6 +400,8 @@ void main() {
                     ),
                   ).captured.single
                   as PooledFullscreenVideoFeedArgs;
+          expect(args.initialVideoId, videos.first.id);
+          expect(args.tileOrigin?.videoId, videos.first.id);
           final subscription = args.feedRepository
               .watchView(args.source)
               .listen((_) {});
@@ -449,6 +451,42 @@ void main() {
     });
 
     group('scroll coordination with NestedScrollView', () {
+      testWidgets(
+        'keeps its scroll position measured when videos replace the loading '
+        'state',
+        (tester) async {
+          final states = StreamController<ProfileLikedVideosState>.broadcast();
+          addTearDown(states.close);
+          whenListen(
+            mockBloc,
+            states.stream,
+            initialState: const ProfileLikedVideosState(
+              status: ProfileLikedVideosStatus.loading,
+            ),
+          );
+          await tester.pumpWidget(buildSubject());
+          final controller = PrimaryScrollController.of(
+            tester.element(find.byType(ProfileLikedGrid)),
+          );
+          expect(controller.position.hasContentDimensions, isTrue);
+
+          states.add(
+            ProfileLikedVideosState(
+              status: ProfileLikedVideosStatus.success,
+              videos: _createTestVideos(count: 3),
+            ),
+          );
+          // A fling in the profile's NestedScrollView can read this position
+          // before the tab is laid out again, so stop the frame after build.
+          await tester.pump(Duration.zero, EnginePhase.build);
+
+          expect(controller.positions, hasLength(1));
+          expect(controller.position.hasContentDimensions, isTrue);
+          await tester.pump();
+          expect(find.byType(ProfileMasonryGrid), findsOneWidget);
+        },
+      );
+
       testWidgets(
         'uses PrimaryScrollController from NestedScrollView ancestor',
         (tester) async {

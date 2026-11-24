@@ -35,7 +35,6 @@ void main() {
       expect(Contact, isA<Type>());
       expect(ContactList, isA<Type>());
       expect(Nip19, isA<Type>());
-      expect(GroupIdentifier, isA<Type>());
     });
 
     test('Utility classes are exported', () {

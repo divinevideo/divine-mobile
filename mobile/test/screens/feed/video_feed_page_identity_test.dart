@@ -14,6 +14,8 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
 import 'package:openvine/config/adaptive_classics.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
@@ -31,6 +33,7 @@ import '../../helpers/test_provider_overrides.dart';
 class _VideosRepository extends Mock implements VideosRepository {
   _VideosRepository({Stream<String> removals = const Stream.empty()}) {
     when(() => removedVideoIds).thenAnswer((_) => removals);
+    when(() => replacedVideos).thenAnswer((_) => const Stream.empty());
   }
 
   @override
@@ -172,6 +175,7 @@ class _SafetyPolicyHome {
 
 Future<_SafetyPolicyHome> _mountSafetyPolicyHome(
   WidgetTester tester, {
+  FeedMode initialMode = FeedMode.forYou,
   Stream<String> removals = const Stream.empty(),
   VideosRepository? Function()? currentRepository,
   List<Override> overrides = const [],
@@ -206,7 +210,7 @@ Future<_SafetyPolicyHome> _mountSafetyPolicyHome(
   );
   await tester.pumpWidget(
     testMaterialApp(
-      home: const Scaffold(body: VideoFeedPage()),
+      home: Scaffold(body: VideoFeedPage(initialMode: initialMode)),
       mockSharedPreferences: preferences,
       mockAuthService: createMockAuthService(
         authState: AuthState.authenticated,
@@ -318,6 +322,52 @@ void main() {
   });
 
   group('VideoFeedPage account and repository identity', () {
+    testWidgets(
+      'seen-filter toggles replace Home while unrelated flags retain it',
+      (
+        tester,
+      ) async {
+        final home = await _mountSafetyPolicyHome(
+          tester,
+          initialMode: FeedMode.following,
+        );
+        final flags = home.container.read(featureFlagServiceProvider);
+        final debugToolsEnabled = flags.isEnabled(FeatureFlag.debugTools);
+        await flags.setFlag(FeatureFlag.debugTools, !debugToolsEnabled);
+        await tester.pumpAndSettle();
+        expect(flags.isEnabled(FeatureFlag.debugTools), !debugToolsEnabled);
+        final view = tester.element(find.byType(VideoFeedView));
+        expect(view.read<VideoFeedBloc>(), same(home.originalFeed));
+        expect(
+          view.read<VideoPlaybackStatusCubit>(),
+          same(home.originalPlayback),
+        );
+
+        var previousFeed = home.originalFeed;
+        for (final enabled in [false, true]) {
+          await flags.setFlag(FeatureFlag.clientSeenFiltering, enabled);
+          await tester.pumpAndSettle();
+          await tester.runAsync(pumpEventQueue);
+          await tester.pump();
+          final feed = tester
+              .element(find.byType(VideoFeedView))
+              .read<VideoFeedBloc>();
+          expect(previousFeed.isClosed, isTrue);
+          expect(feed, isNot(same(previousFeed)));
+          expect(feed.state.status, VideoFeedStatus.success);
+          expect(feed.state.source, const VideoFeedSource.forYou());
+          expect(
+            home.preferences.getString('selected_feed_mode_$_policyViewer'),
+            'forYou',
+          );
+          previousFeed = feed;
+        }
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.runAsync(pumpEventQueue);
+      },
+    );
+
     testWidgets('wires repository deletion notifications to the Home bloc', (
       tester,
     ) async {

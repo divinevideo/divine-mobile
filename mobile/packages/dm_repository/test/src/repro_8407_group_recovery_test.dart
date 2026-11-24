@@ -861,6 +861,16 @@ void main() {
         0,
         reason: 'the failed room must remain eligible for a later retry',
       );
+      // The room's row rolled back, so its messages must have stayed where
+      // they were. Moved without it, they would sit under an id no
+      // conversation lists (#8408).
+      expect(
+        await messages.getMessagesForConversation(
+          failedGroupId,
+          ownerPubkey: _me,
+        ),
+        isEmpty,
+      );
     });
 
     test(

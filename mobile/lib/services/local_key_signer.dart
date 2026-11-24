@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:bip340/bip340.dart' as schnorr;
 import 'package:crypto/crypto.dart';
+import 'package:meta/meta.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -68,9 +69,18 @@ class LocalKeySigner implements IsolateDecryptSigner {
   /// exposes, an attempted operation either succeeds or throws
   /// [LocalSignerOperationException]. Unexpected Dart [Error]s propagate so
   /// programming-invariant failures remain visible and reportable.
-  LocalKeySigner(this._keyContainer);
+  LocalKeySigner(
+    this._keyContainer, {
+    @visibleForTesting NativeSchnorrSign? nativeSchnorrSigner,
+  }) : _nativeSchnorrSignerOverride = nativeSchnorrSigner;
 
   final SecureKeyContainer _keyContainer;
+  final NativeSchnorrSign? _nativeSchnorrSignerOverride;
+  bool _nativeSignerDisabled = false;
+
+  NativeSchnorrSign? get _activeNativeSigner => _nativeSignerDisabled
+      ? null
+      : (_nativeSchnorrSignerOverride ?? resolveNativeSchnorrSigner());
 
   /// Returns the current public key for creator-bound signing flows.
   Future<String> currentPubkey() async {
@@ -105,6 +115,23 @@ class LocalKeySigner implements IsolateDecryptSigner {
   Future<String> signCanonicalPayload(Uint8List payload) async {
     try {
       final digest = sha256.convert(payload).toString();
+      final nativeSigner = _activeNativeSigner;
+      if (nativeSigner != null) {
+        final sigFuture = _keyContainer.withPrivateKey<Future<String>>(
+          (privateKeyHex) => Future<String>.sync(
+            () => nativeSigner(
+              privateKey: privateKeyHex,
+              message: digest,
+              auxRand: _canonicalPayloadAux,
+            ),
+          ),
+        );
+        try {
+          return await sigFuture;
+        } on Object catch (_) {
+          _nativeSignerDisabled = true;
+        }
+      }
       return _keyContainer.withPrivateKey<String>((privateKeyHex) {
         return schnorr.sign(privateKeyHex, digest, _canonicalPayloadAux);
       });
@@ -119,6 +146,25 @@ class LocalKeySigner implements IsolateDecryptSigner {
   @override
   Future<Event> signEvent(Event event) async {
     try {
+      final nativeSigner = _activeNativeSigner;
+      if (nativeSigner != null) {
+        final auxRand = getRandomHexString();
+        final sigFuture = _keyContainer.withPrivateKey<Future<String>>(
+          (privateKeyHex) => Future<String>.sync(
+            () => nativeSigner(
+              privateKey: privateKeyHex,
+              message: event.id,
+              auxRand: auxRand,
+            ),
+          ),
+        );
+        try {
+          event.sig = await sigFuture;
+          return event;
+        } on Object catch (_) {
+          _nativeSignerDisabled = true;
+        }
+      }
       return _keyContainer.withPrivateKey<Event>((privateKeyHex) {
         event.sign(privateKeyHex);
         return event;

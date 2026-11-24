@@ -7,11 +7,14 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/video_feed/home_feed_cache.dart';
 import 'package:openvine/blocs/video_feed/home_feed_resume_manager.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
+
+class _MockNostrClient extends Mock implements NostrClient {}
 
 /// [HomeFeedCache] fake whose writes block until [releaseNextWrite] is called,
 /// recording the order in which writes actually *complete* (not just start).
@@ -20,6 +23,7 @@ class _GatedCache implements HomeFeedCache {
   final List<List<String>> completedWrites = [];
   int writeCallCount = 0;
   int clearCallCount = 0;
+  List<VideoEvent>? cachedVideos;
 
   @override
   Future<void> writeVideos({
@@ -50,7 +54,7 @@ class _GatedCache implements HomeFeedCache {
   Future<List<VideoEvent>?> readVideos({
     required String? pubkey,
     required String mode,
-  }) async => null;
+  }) async => cachedVideos;
 }
 
 VideoEvent _video(String id, {String? vineId}) => VideoEvent(
@@ -81,6 +85,59 @@ void main() {
         videosRepository: _MockVideosRepository(),
       );
     });
+
+    for (final filteringEnabled in [false, true]) {
+      test(
+        'restored Home window applies seen policy ($filteringEnabled)',
+        () async {
+          final own = _video('1' * 64);
+          final watched = _video('2' * 64).copyWith(pubkey: 'b' * 64);
+          final fresh = _video('3' * 64).copyWith(pubkey: 'b' * 64);
+          cache.cachedVideos = [own, watched, fresh];
+          var historyReady = false;
+          final nostr = _MockNostrClient();
+          when(() => nostr.publicKey).thenReturn('a' * 64);
+          final repository = VideosRepository(
+            nostrClient: nostr,
+            seenVideoLookup: filteringEnabled
+                ? SeenVideoLookup(
+                    initialize: () async {
+                      await Future<void>.value();
+                      historyReady = true;
+                    },
+                    wasSeenRecently: (
+                      id, {
+                      within = seenVideoExclusionWindow,
+                    }) => historyReady && (id == own.id || id == watched.id),
+                  )
+                : null,
+          );
+          final resume = HomeFeedResumeManager(
+            cache: cache,
+            videosRepository: repository,
+          );
+          final restored = await resume.readServeableWindow(
+            pubkey: 'a' * 64,
+            mode: 'forYou',
+          );
+          expect(
+            restored.map((video) => video.id),
+            filteringEnabled
+                ? [own.id, fresh.id]
+                : [own.id, watched.id, fresh.id],
+          );
+          // Revalidation cannot splice a seen prefix back ahead of fresh data.
+          expect(
+            resume
+                .splice(existing: restored, fresh: [fresh], currentIndex: 0)
+                .map((video) => video.id),
+            filteringEnabled
+                ? [own.id, fresh.id]
+                : [own.id, watched.id, fresh.id],
+          );
+        },
+      );
+    }
 
     test(
       'serialises same-key writes so a slow earlier write cannot clobber the '

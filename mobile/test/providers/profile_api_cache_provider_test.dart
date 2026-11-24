@@ -14,8 +14,51 @@ class _Api extends Mock implements FunnelcakeApiClient {}
 void main() {
   const pubkey =
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const otherPubkey =
+      'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
   group('profileApiCacheProvider', () {
+    setUpAll(() => registerFallbackValue(<String>[]));
+
+    test(
+      'keeps batchWindow disabled so single lookups preserve archived_loops',
+      () async {
+        final api = _Api();
+        when(() => api.isAvailable).thenReturn(true);
+        when(() => api.getUserProfile(any())).thenAnswer(
+          (invocation) async => UserProfileNotPublished(
+            pubkey: invocation.positionalArguments.single as String,
+            isOgDiviner: false,
+          ),
+        );
+        final container = ProviderContainer(
+          overrides: [funnelcakeApiClientProvider.overrideWithValue(api)],
+        );
+        addTearDown(container.dispose);
+
+        final cache = container.read(profileApiCacheProvider);
+        await Future.wait([
+          cache.getProfile(pubkey),
+          cache.getProfile(otherPubkey),
+        ]);
+
+        verify(() => api.getUserProfile(pubkey)).called(1);
+        verify(() => api.getUserProfile(otherPubkey)).called(1);
+        verifyNever(() => api.getBulkProfiles(any()));
+      },
+    );
+
+    test('disposes cleanly with the container', () {
+      final api = _Api();
+      when(() => api.isAvailable).thenReturn(true);
+      final container = ProviderContainer(
+        overrides: [funnelcakeApiClientProvider.overrideWithValue(api)],
+      );
+
+      container.read(profileApiCacheProvider);
+      expect(container.dispose, returnsNormally);
+    });
+
     test(
       'replaces the eligibility cache with the environment client',
       () async {

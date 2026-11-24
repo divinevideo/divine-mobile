@@ -337,11 +337,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "Audio Input Device",
-  "contentPreferencesAutoRecommended": "Auto (recommended)",
-  "contentPreferencesAutoSelectsBest": "Automatically selects the best microphone",
-  "contentPreferencesSelectAudioInput": "Select Audio Input",
-  "contentPreferencesUnknownMicrophone": "Unknown Microphone",
   "contentFiltersAdultContent": "ADULT CONTENT",
   "contentFiltersViolenceGore": "VIOLENCE & GORE",
   "contentFiltersSubstances": "SUBSTANCES",
@@ -1505,6 +1500,19 @@
   "videoStickerAddYoursButton": "Add yours",
   "@videoStickerAddYoursButton": {
     "description": "Button on an Add yours sticker that opens the camera to answer its prompt with a video. Short; the same as the sticker's name."
+  },
+  "videoStickerAddYoursWatchSeries": "Watch the series",
+  "@videoStickerAddYoursWatchSeries": {
+    "description": "Shown on an Add yours sticker, beside the latest answers' thumbnails, to a viewer who may not join it: a tap opens the answers in a feed. Short: it fits beside three thumbnails."
+  },
+  "videoStickerAddYoursWatchSeriesSemanticLabel": "Watch the series: {prompt}",
+  "@videoStickerAddYoursWatchSeriesSemanticLabel": {
+    "description": "Screen reader label of an Add yours sticker shown to a viewer who may not join it; a tap opens its answers. {prompt} is what the sticker prompts its answers to show.",
+    "placeholders": {
+      "prompt": {
+        "type": "String"
+      }
+    }
   },
   "videoStickerAddYoursJoined": "{count, plural, =0{Be the first} =1{1 joined} other{{count} joined}}",
   "@videoStickerAddYoursJoined": {
@@ -3101,6 +3109,10 @@
   "videoUpdateErrorNoPlayableVideo": "This video has no playable source, so it can't be updated.",
   "videoUpdateErrorCouldNotSign": "Couldn't sign the update. Try again.",
   "videoUpdateErrorPublishRejected": "The relay wouldn't accept the update. Try again in a moment.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "This video changed on another device and now has too many tags or collaborators. Open it again and remove some.",
+  "@videoUpdateErrorConcurrentEditsOverLimit": {
+    "description": "Shown when saving video details fails because this device's edit and another device's edit together go over the hashtag or collaborator limit. Saving the same edit again fails the same way; reopening the video loads the other device's changes."
+  },
   "videoUpdateErrorGeneric": "Couldn't update this video. Try again.",
   "shareMenuOriginalVideoUnavailable": "Couldn't load the original video. Try again in a moment.",
   "@shareMenuOriginalVideoUnavailable": {
@@ -3135,6 +3147,15 @@
   "soundsSearchResults": "Search Results",
   "soundsNoSoundsFound": "No sounds found",
   "soundsNoSoundsFoundDescription": "Try a different search term",
+  "soundsSearchResultCount": "{count, plural, =0{No sounds found} =1{{count} sound found} other{{count} sounds found}}",
+  "@soundsSearchResultCount": {
+    "description": "Screen-reader announcement when a search in the sound picker has answered, saying how many sounds the list now shows.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "soundsSavedToLibrary": "Saved to Sounds",
   "soundsAlreadySavedToLibrary": "Already in Sounds",
   "soundsSavedEmptyTitle": "No saved sounds yet",
@@ -4442,7 +4463,7 @@
   },
   "dmFormerModerationAccountName": "Former moderation account",
   "@dmFormerModerationAccountName": {
-    "description": "Neutral name shown in place of the official \"Divine Moderation\" name for a retired moderation key whose official branding is withdrawn because someone could still sign as it (archived or compromised custody, #9963). Deliberately does not say Divine: do not translate it toward the Divine Moderation account name in `inboxSupportRowTitle`."
+    "description": "Neutral name shown in place of the official \"Divine Moderation\" name for a retired moderation key whose official branding is withdrawn because someone could still sign as it (archived or compromised custody, #9963). Deliberately does not say Divine: do not translate it toward the Divine Moderation account name in `inboxSupportRowTitle`. It is shown on one line and cut at the end when it is too long. Where the language allows, put the word for \"former\" early: if the cut removes it, what is left reads as the moderation account itself. It stands in for a person's name, so it also appears inside strings that take a name, such as \"Block {name}?\" and \"{name} and 2 others\"."
   },
   "messageRequestModerationNoticeCannotBeRemoved": "This Divine Moderation notice can't be removed.",
   "@messageRequestModerationNoticeCannotBeRemoved": {
@@ -6917,6 +6938,26 @@
   "@videoEditorEffectEcho": {
     "description": "Name of a video effect: moving subjects leave fading copies of where they just were, like an echo or ghost trail."
   },
+  "videoEditorEffectTimeSplit": "Time Split",
+  "@videoEditorEffectTimeSplit": {
+    "description": "Name of a video effect: the red, green and blue of the picture come from slightly different moments, so still parts keep their colours and moving parts get rainbow ghosts."
+  },
+  "videoEditorEffectLongExposure": "Long Exposure",
+  "@videoEditorEffectLongExposure": {
+    "description": "Name of a video effect: bright parts of the picture leave trails of light, like a long-exposure photo of a torch or a sparkler."
+  },
+  "videoEditorEffectMotionOnly": "Motion Only",
+  "@videoEditorEffectMotionOnly": {
+    "description": "Name of a video effect: still parts of the picture go dark and only what moves stays visible, glowing."
+  },
+  "videoEditorEffectStutter": "Stutter",
+  "@videoEditorEffectStutter": {
+    "description": "Name of a video effect: the picture holds each frame a little longer, so it plays choppily at a few frames a second."
+  },
+  "videoEditorEffectTimeWarp": "Time Warp",
+  "@videoEditorEffectTimeWarp": {
+    "description": "Name of a video effect: each band of the picture, from top to bottom, comes from a slightly earlier moment, so moving people bend and stretch."
+  },
   "videoEditorEffectFisheye": "Fisheye",
   "@videoEditorEffectFisheye": {
     "description": "Name of a video effect: the middle of the picture bulges out, as through a fisheye (very wide-angle) lens."
@@ -7183,7 +7224,11 @@
   },
   "videoEditorEffectCategoryMotion": "Motion",
   "@videoEditorEffectCategoryMotion": {
-    "description": "Name of a group in the video effects picker: effects that make the picture shake, pulse or leave a trail."
+    "description": "Name of a group in the video effects picker: effects that make the picture shake, pulse or streak."
+  },
+  "videoEditorEffectCategoryTime": "Time",
+  "@videoEditorEffectCategoryTime": {
+    "description": "Name of a group in the video effects picker: effects built from earlier frames as well as the current one, so they only show where something moves, such as an echo trail, rainbow ghosts or held frames."
   },
   "videoEditorEffectCategoryParticles": "Particles",
   "@videoEditorEffectCategoryParticles": {
@@ -7324,6 +7369,14 @@
   "videoEditorEffectsFlashingNotDuplicated": "One flashing effect at a time. Too much flashing can hurt people who are sensitive to it.",
   "@videoEditorEffectsFlashingNotDuplicated": {
     "description": "Snack bar when the user tries to duplicate a flashing video effect (strobe, negative flash): the copy would flash on top of the original, so it is not duplicated. Same reason as videoEditorEffectsFlashingReplaced."
+  },
+  "videoEditorEffectsTimeReplaced": "One Time effect at a time. Two together would look different once exported, so we swapped out the other one here.",
+  "@videoEditorEffectsTimeReplaced": {
+    "description": "Snack bar after a Time video effect (echo, time split, long exposure, motion only, stutter, time warp) replaced another Time effect where the two overlapped on the timeline. Explains, without technical terms, that two of them together would render differently in the exported video than in the preview. 'Time' is the effects picker group named by videoEditorEffectCategoryTime."
+  },
+  "videoEditorEffectsTimeNotDuplicated": "One Time effect at a time. Two together would look different once exported.",
+  "@videoEditorEffectsTimeNotDuplicated": {
+    "description": "Snack bar when the user tries to duplicate a Time video effect: the copy would play on top of the original, so it is not duplicated. Same reason as videoEditorEffectsTimeReplaced."
   },
   "videoEditorEffectsOnBeat": "On the beat",
   "@videoEditorEffectsOnBeat": {
@@ -9359,6 +9412,38 @@
   "@videoEditorSocialStickerRepliesNote": {
     "description": "Help line in the replies sticker sheet."
   },
+  "videoEditorSocialStickerAudienceTitle": "Who can answer",
+  "@videoEditorSocialStickerAudienceTitle": {
+    "description": "Heading over the choice of who may answer an Add yours or replies sticker with a video."
+  },
+  "videoEditorSocialStickerAudienceEveryone": "Everyone",
+  "@videoEditorSocialStickerAudienceEveryone": {
+    "description": "Choice: anyone may answer the sticker. The default; the sticker is drawn into the video."
+  },
+  "videoEditorSocialStickerAudienceFollowing": "Friends",
+  "@videoEditorSocialStickerAudienceFollowing": {
+    "description": "Choice: only the people the creator follows may answer the sticker."
+  },
+  "videoEditorSocialStickerAudienceCreator": "Only me",
+  "@videoEditorSocialStickerAudienceCreator": {
+    "description": "Choice: only the creator may answer the sticker."
+  },
+  "videoEditorSocialStickerAudienceFollowingAddYoursNote": "Only people you follow can join in. Everyone else sees the sticker once someone has.",
+  "@videoEditorSocialStickerAudienceFollowingAddYoursNote": {
+    "description": "Help line under the choice when only people the creator follows may join an Add yours. The sticker is then left out of the video and shows to everyone else once someone joined."
+  },
+  "videoEditorSocialStickerAudienceFollowingRepliesNote": "The sticker shows only video replies from people you follow. Everyone else sees it once one of them has replied.",
+  "@videoEditorSocialStickerAudienceFollowingRepliesNote": {
+    "description": "Help line under the choice when the replies sticker shows only the video replies of people the creator follows. It says what the sticker shows, not who can post a video reply: older app versions and other clients can still post one. The sticker is left out of the video and shows to everyone else once one of those people replied."
+  },
+  "videoEditorSocialStickerAudienceCreatorAddYoursNote": "Only you can join in. Nobody else sees the sticker until you do.",
+  "@videoEditorSocialStickerAudienceCreatorAddYoursNote": {
+    "description": "Help line under the choice when only the creator may join their own Add yours. Nobody else sees the sticker until the creator joined."
+  },
+  "videoEditorSocialStickerAudienceCreatorRepliesNote": "The sticker shows only your own video replies. Nobody else sees it until you have replied.",
+  "@videoEditorSocialStickerAudienceCreatorRepliesNote": {
+    "description": "Help line under the choice when the replies sticker shows only the creator's own video replies. It says what the sticker shows, not who can post a video reply: older app versions and other clients can still post one. Nobody else sees the sticker until the creator replied."
+  },
   "videoEditorInteractiveCardAreaHint": "This sticker stays in this box so viewers can tap it",
   "@videoEditorInteractiveCardAreaHint": {
     "description": "Line beside the outlined box shown while the creator moves a poll, quiz, slider, question, Add yours or replies sticker: the sticker can only stand inside it, clear of the feed's buttons and caption."
@@ -10140,9 +10225,15 @@
   "@badgeSubscriptionsPublicNotice": {
     "description": "Disclosure next to the badge subscription button: subscribing publishes the selected badge coordinates publicly on Nostr."
   },
-  "badgeSubscribeAction": "Subscribe to badge",
-  "badgeSubscribedAction": "Subscribed",
-  "badgeAcceptedHoldersTitle": "Accepted holders",
+  "badgeSubscribeAction": "Follow community",
+  "@badgeSubscribeAction": {
+    "description": "Button on a badge page that adds the badge community's videos to the Following feed. It does not follow any person."
+  },
+  "badgeSubscribedAction": "Following community",
+  "@badgeSubscribedAction": {
+    "description": "The Follow community button once the community's videos are in the Following feed; tapping it again stops."
+  },
+  "badgeAcceptedHoldersTitle": "People in this community",
   "badgeSubscriptionLoadError": "Could not load your badge subscriptions. Try again.",
   "@badgeSubscriptionLoadError": {
     "description": "Shown when badge subscription preferences could not be read; retry reloads only subscriptions."
@@ -10221,7 +10312,7 @@
   "badgeDetailShareAction": "Share",
   "badgeDetailShareMessage": "Check out this badge on Divine: {link}",
   "@badgeDetailShareMessage": {
-    "description": "Body of the share sheet when sharing a badge. The link is an naddr reference.",
+    "description": "Body of the share sheet when sharing a badge. The link is a badges.divine.video URL, or a raw badge coordinate when the badge identifier is too long for an naddr.",
     "placeholders": {
       "link": {
         "type": "String"
@@ -10587,6 +10678,26 @@
   "devOptionsProtectedMinorEnabledToast": "Protected-minor state forced on",
   "devOptionsProtectedMinorNonMinorToast": "Protected-minor state forced off",
   "devOptionsProtectedMinorClearedToast": "Protected-minor override cleared",
+  "devOptionsConfirmationAccessTitle": "Divine Confirmation access",
+  "@devOptionsConfirmationAccessTitle": {
+    "description": "Developer options section heading for forcing whether this account has Divine Confirmation, for testing."
+  },
+  "devOptionsConfirmationAccessReal": "Real answer",
+  "@devOptionsConfirmationAccessReal": {
+    "description": "Developer options choice that uses the verifier's real answer for whether this account has Divine Confirmation."
+  },
+  "devOptionsConfirmationAccessHas": "Has Confirmation",
+  "@devOptionsConfirmationAccessHas": {
+    "description": "Developer options choice that makes the app act as if this account has Divine Confirmation."
+  },
+  "devOptionsConfirmationAccessHasNot": "Doesn't have Confirmation",
+  "@devOptionsConfirmationAccessHasNot": {
+    "description": "Developer options choice that makes the app act as if this account doesn't have Divine Confirmation."
+  },
+  "devOptionsConfirmationAccessUnknown": "Couldn't check",
+  "@devOptionsConfirmationAccessUnknown": {
+    "description": "Developer options choice that makes the app act as if it couldn't find out whether this account has Divine Confirmation."
+  },
   "commentsRecordVideoButtonLabel": "Record video comment",
   "@commentsRecordVideoButtonLabel": {
     "description": "Semantics label for the button that opens the recorder to create a video reply in comments."
@@ -11681,6 +11792,74 @@
   "@verifyStatusAccountChanged": {
     "description": "Pill on a linked account whose handle now points to a different account than the one that signed in."
   },
+  "verifyStatusNeedsConfirmation": "Needs Confirmation",
+  "@verifyStatusNeedsConfirmation": {
+    "description": "Pill on an account linked by signing in that doesn't count because its owner doesn't have Divine Confirmation right now. Placeholder until #8278."
+  },
+  "verifyConfirmationTitle": "Divine Confirmation",
+  "@verifyConfirmationTitle": {
+    "description": "App bar title and headline of the Divine Confirmation screen. Placeholder until #8278."
+  },
+  "verifyConfirmationHeroBody": "Divine Confirmation lets you link your accounts on other platforms by signing in to them.",
+  "@verifyConfirmationHeroBody": {
+    "description": "Short pitch under the headline of the Divine Confirmation screen. Placeholder until #8278."
+  },
+  "verifyConfirmationIncludedTitle": "What's included",
+  "@verifyConfirmationIncludedTitle": {
+    "description": "Heading of the list of what Divine Confirmation includes. Placeholder until #8278."
+  },
+  "verifyConfirmationIncludedSignIn": "Link accounts by signing in",
+  "@verifyConfirmationIncludedSignIn": {
+    "description": "List item on the Divine Confirmation screen: linking accounts by signing in. Placeholder until #8278."
+  },
+  "verifyConfirmationComingSoon": "Coming soon",
+  "@verifyConfirmationComingSoon": {
+    "description": "Label of the disabled buy button on the Divine Confirmation screen, shown because it cannot be bought yet. Placeholder until #8278."
+  },
+  "verifyConfirmationSmallPrint": "Details will appear here when Divine Confirmation is ready.",
+  "@verifyConfirmationSmallPrint": {
+    "description": "Small print at the bottom of the Divine Confirmation screen. Placeholder until #8278."
+  },
+  "verifyConfirmationStoreOnly": "Divine Confirmation is available in the App Store and Google Play versions of Divine.",
+  "@verifyConfirmationStoreOnly": {
+    "description": "Shown in place of a button that would buy Divine Confirmation when this build cannot be billed by a store: on the Divine Confirmation screen, on the link-an-account screen, in the sheet shown when a sign-in link is refused for Divine Confirmation, and under a linked account on the verify dashboard in place of the Renew Confirmation button. Placeholder until #8278."
+  },
+  "verifyConfirmationBuySemantic": "Divine Confirmation, coming soon, unavailable",
+  "@verifyConfirmationBuySemantic": {
+    "description": "Screen reader label for the disabled buy button on the Divine Confirmation screen. Placeholder until #8278."
+  },
+  "verifyConfirmationRestoreSemantic": "Restore purchases, unavailable",
+  "@verifyConfirmationRestoreSemantic": {
+    "description": "Screen reader label for the disabled restore link on the Divine Confirmation screen. Placeholder until #8278."
+  },
+  "verifyConfirmationCardTitle": "Link by signing in",
+  "@verifyConfirmationCardTitle": {
+    "description": "Title of the card on the link-an-account screen that takes the place of the sign-in button when linking by signing in needs Divine Confirmation and the person doesn't have it. Placeholder until #8278."
+  },
+  "verifyConfirmationCardBody": "One-tap linking is part of Divine Confirmation.",
+  "@verifyConfirmationCardBody": {
+    "description": "Body of the card on the link-an-account screen that takes the place of the sign-in button when linking by signing in needs Divine Confirmation and the person doesn't have it. Placeholder until #8278."
+  },
+  "verifyGetConfirmation": "Get Divine Confirmation",
+  "@verifyGetConfirmation": {
+    "description": "Button that opens the Divine Confirmation screen, on the link-an-account screen and in the sheet shown when a sign-in link is refused for Divine Confirmation. Placeholder until #8278."
+  },
+  "verifyProofAlwaysAvailable": "Proof posts are always available",
+  "@verifyProofAlwaysAvailable": {
+    "description": "Heading of the proof-post section of the link-an-account screen, used in place of the usual heading while the Divine Confirmation card replaces the sign-in button, to say a proof post still links the account without it. Placeholder until #8278."
+  },
+  "verifyConfirmationSheetTitle": "Linking by signing in needs Divine Confirmation",
+  "@verifyConfirmationSheetTitle": {
+    "description": "Title of the sheet shown when the verification service refuses a sign-in link because linking by signing in needs Divine Confirmation, which the person doesn't have. Placeholder until #8278."
+  },
+  "verifyConfirmationSheetSubtitle": "You can still link this account with a proof post.",
+  "@verifyConfirmationSheetSubtitle": {
+    "description": "Text under the title of the sheet shown when a sign-in link is refused for Divine Confirmation. Placeholder until #8278."
+  },
+  "verifyConfirmationSheetUseProof": "Use a proof post",
+  "@verifyConfirmationSheetUseProof": {
+    "description": "Button in the sheet shown when a sign-in link is refused for Divine Confirmation. Drops the sign-in and goes to the proof-post section of the link-an-account screen. Placeholder until #8278."
+  },
   "verifyUnlinkSemanticLabel": "Unlink {platform} account {identity}",
   "@verifyUnlinkSemanticLabel": {
     "description": "Screen reader label for the button that removes a linked account.",
@@ -11747,9 +11926,41 @@
       }
     }
   },
+  "verifyLinkNeedsConfirmationSemanticLabel": "Link your {platform} account. Signing in needs Divine Confirmation",
+  "@verifyLinkNeedsConfirmationSemanticLabel": {
+    "description": "Screen reader label for a row that opens the flow for linking one platform, when linking it by signing in needs Divine Confirmation the user lacks. Placeholder until #8278.",
+    "placeholders": {
+      "platform": {
+        "type": "String",
+        "example": "Bluesky"
+      }
+    }
+  },
   "verifyOneTapBadge": "One tap",
   "@verifyOneTapBadge": {
     "description": "Small marker on platforms that can be linked by signing in, without posting a proof."
+  },
+  "verifyOneTapWithConfirmationBadge": "One tap with Confirmation",
+  "@verifyOneTapWithConfirmationBadge": {
+    "description": "Small marker on a platform that can be linked by signing in, when that needs Divine Confirmation the person does not have. Placeholder until #8278."
+  },
+  "verifyRenewConfirmation": "Renew Confirmation",
+  "@verifyRenewConfirmation": {
+    "description": "Button on a linked account that needs Divine Confirmation to count as verified. Opens the Divine Confirmation screen. Placeholder until #8278."
+  },
+  "verifyRenewConfirmationSemanticLabel": "Renew Divine Confirmation to restore {platform} account {identity}",
+  "@verifyRenewConfirmationSemanticLabel": {
+    "description": "Screen reader label for the button that opens the Divine Confirmation screen from a linked account that needs it. Placeholder until #8278.",
+    "placeholders": {
+      "platform": {
+        "type": "String",
+        "example": "Twitter / X"
+      },
+      "identity": {
+        "type": "String",
+        "example": "jack"
+      }
+    }
   },
   "verifyConnectSignInLifetime": "Sign-in links last {days, plural, =1{{days} day} other{{days} days}}. After that, sign in again to keep the link.",
   "@verifyConnectSignInLifetime": {
@@ -11890,6 +12101,18 @@
   "verifyErrorPublishFailed": "Verified, but no relay took the update. Try again.",
   "@verifyErrorPublishFailed": {
     "description": "Error shown when the account verified but no relay accepted the identity event carrying the link."
+  },
+  "verifyErrorConfirmationRequired": "Linking by signing in needs Divine Confirmation. You can still link with a proof post.",
+  "@verifyErrorConfirmationRequired": {
+    "description": "Error shown when the verification service refused a sign-in link because linking by signing in needs Divine Confirmation, which the person doesn't have. A proof post can still link the account. Placeholder until #8278."
+  },
+  "verifyErrorConfirmationUnavailable": "Couldn't check Divine Confirmation right now. Try again in a few minutes.",
+  "@verifyErrorConfirmationUnavailable": {
+    "description": "Error shown when the verification service couldn't check Divine Confirmation while confirming a sign-in link. The sign-in is kept, so the person can try linking again later. Placeholder until #8278."
+  },
+  "verifyErrorConfirmationPending": "This can take a minute after buying. Try again shortly.",
+  "@verifyErrorConfirmationPending": {
+    "description": "Error shown when a sign-in link is refused for Divine Confirmation right after the app read that the person has it, as happens just after buying it. The sign-in is kept to try again. Placeholder until #8278."
   },
   "verifyErrorOauthUnavailable": "One-tap sign-in isn't set up for this one yet. Use the proof post below.",
   "@verifyErrorOauthUnavailable": {
@@ -13712,13 +13935,21 @@
     "description": "Error shown on the invite page when the system share sheet fails to open. Nothing was sent."
   },
   "messagesPublicRoomsDisclosure": "These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.",
-  "@messagesPublicRoomsDisclosure": {"description": "Privacy notice for the real public community rooms. A room can be linked to a Discord channel, which shows each message there under the member's profile name and picture."},
+  "@messagesPublicRoomsDisclosure": {
+    "description": "Privacy notice for the real public community rooms. A room can be linked to a Discord channel, which shows each message there under the member's profile name and picture."
+  },
   "messagesRoomRetiredDraft": "This older message wasn’t confirmed. Restore it as a draft to send again.",
-  "@messagesRoomRetiredDraft": {"description": "Status for an unconfirmed message encrypted with an earlier room epoch. It cannot be retried as its old carrier."},
+  "@messagesRoomRetiredDraft": {
+    "description": "Status for an unconfirmed message encrypted with an earlier room epoch. It cannot be retried as its old carrier."
+  },
   "messagesRoomRestoreDraft": "Restore draft",
-  "@messagesRoomRestoreDraft": {"description": "Copies a retained earlier-epoch message into the current room composer without publishing it."},
+  "@messagesRoomRestoreDraft": {
+    "description": "Copies a retained earlier-epoch message into the current room composer without publishing it."
+  },
   "messagesRoomDiscardDraft": "Discard draft",
-  "@messagesRoomDiscardDraft": {"description": "Deletes only this account's retained unconfirmed local room draft."},
+  "@messagesRoomDiscardDraft": {
+    "description": "Deletes only this account's retained unconfirmed local room draft."
+  },
   "minorAccountReviewVideoSubmittedBody": "Your video has been submitted for review.",
   "minorAccountReviewVideoSubmittedTitle": "Video submitted",
   "minorAccountReviewRecordConsentPrivacyBody": "Your video goes privately to Divine Support and Trust & Safety for review. It is not published or shared with other users.",
@@ -14106,5 +14337,62 @@
   "collabRoomSeriesReadyHint": "All parts are in. Put it together!",
   "@collabRoomSeriesReadyHint": {
     "description": "Hint for the host of a Together room once every part is in and the parts play one after another; the button below puts the video together."
+  },
+  "badgeDiscoveryTitle": "Badges bring people together",
+  "badgeDiscoveryBody": "Anyone can create and award badges. You choose which ones appear on your profile. Explore a badge to meet its community and follow its people.",
+  "badgeDiscoveryMyBadges": "My badges",
+  "badgeDiscoveryEmpty": "No communities found yet. Pull down to try again.",
+  "badgeCommunityFollowHint": "Adds community videos to your Following feed. Follow people individually.",
+  "@badgeCommunityFollowHint": {
+    "description": "Note under the Follow community button. 'Following' is the name of the Home feed of followed accounts; people in the community are followed one by one."
+  },
+  "badgeOfficialLabel": "Official",
+  "@badgeOfficialLabel": {
+    "description": "Label for a badge issued by the pinned official Divine badge issuer."
+  },
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "@badgeDiscoveryCardLabel": {
+    "description": "Screen reader label for a badge discovery card.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      },
+      "issuerName": {
+        "type": "String"
+      }
+    }
+  },
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "@badgeDiscoveryOfficialCardLabel": {
+    "description": "Screen reader label for an official Divine badge discovery card.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      },
+      "issuerName": {
+        "type": "String"
+      },
+      "officialLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "badgeDiscoveryWebsiteLabel": "Learn more at {website}",
+  "@badgeDiscoveryWebsiteLabel": {
+    "description": "Screen reader label for the external badge discovery website link.",
+    "placeholders": {
+      "website": {
+        "type": "String"
+      }
+    }
+  },
+  "badgeDiscoveryVideosLabel": "Videos from {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
   }
 }

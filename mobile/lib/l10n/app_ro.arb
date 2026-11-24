@@ -31,6 +31,14 @@
   "videoEditorSocialStickerQuestionNote": "Răspunsurile îți vin ca mesaje private.",
   "videoEditorSocialStickerAddYoursNote": "Cei care se uită răspund cu un videoclip al lor. Fiecare răspuns primește acest hashtag și trimite înapoi la videoclipul tău.",
   "videoEditorSocialStickerRepliesNote": "Arată cine a răspuns la acest videoclip cu un videoclip. Cei care se uită îl ating ca să vadă răspunsurile.",
+  "videoEditorSocialStickerAudienceTitle": "Cine poate răspunde",
+  "videoEditorSocialStickerAudienceEveryone": "Oricine",
+  "videoEditorSocialStickerAudienceFollowing": "Cercul de prieteni",
+  "videoEditorSocialStickerAudienceCreator": "Doar eu",
+  "videoEditorSocialStickerAudienceFollowingAddYoursNote": "Doar persoanele pe care le urmărești pot participa. Restul văd stickerul imediat ce participă cineva.",
+  "videoEditorSocialStickerAudienceFollowingRepliesNote": "Stickerul arată doar răspunsurile video ale persoanelor pe care le urmărești. Restul îl văd imediat ce răspunde una dintre ele.",
+  "videoEditorSocialStickerAudienceCreatorAddYoursNote": "Doar tu poți participa. Nimeni altcineva nu vede stickerul până nu participi.",
+  "videoEditorSocialStickerAudienceCreatorRepliesNote": "Stickerul arată doar propriile tale răspunsuri video. Nimeni altcineva nu îl vede până nu răspunzi.",
   "videoEditorInteractiveCardAreaHint": "Stickerul rămâne în acest chenar ca să-l poată atinge cei care se uită",
   "videoStickerPollSignInToVote": "Conectează-te ca să votezi.",
   "videoStickerPollNotReady": "Încă se conectează. Încearcă din nou peste o clipă.",
@@ -40,6 +48,8 @@
   "videoStickerQuestionAnswerHint": "Atinge ca să răspunzi",
   "videoStickerQuestionAnswerSemanticLabel": "Răspunde: {question}",
   "videoStickerAddYoursButton": "Rândul tău",
+  "videoStickerAddYoursWatchSeries": "Urmărește seria",
+  "videoStickerAddYoursWatchSeriesSemanticLabel": "Urmărește seria: {prompt}",
   "videoStickerAddYoursJoined": "{count, plural, =0{Începe tu} =1{{count} participare} few{{count} participări} other{{count} de participări}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} de participări",
   "videoStickerAddYoursOpenSemanticLabel": "Vezi cine participă",
@@ -269,11 +279,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "Dispozitiv de intrare audio",
-  "contentPreferencesAutoRecommended": "Automat (recomandat)",
-  "contentPreferencesAutoSelectsBest": "Alege automat cel mai bun microfon",
-  "contentPreferencesSelectAudioInput": "Alege intrarea audio",
-  "contentPreferencesUnknownMicrophone": "Microfon necunoscut",
   "profileBlockedAccountNotAvailable": "Acest cont nu e disponibil",
   "profileInvalidId": "ID de profil invalid",
   "profileShareText": "Aruncă o privire la {displayName} pe Divine!\n\n{url}",
@@ -1550,6 +1555,7 @@
   "videoUpdateErrorNoPlayableVideo": "Acest videoclip nu are o sursă redabilă, așa că nu poate fi editat.",
   "videoUpdateErrorCouldNotSign": "N-am putut semna modificarea. Încearcă din nou.",
   "videoUpdateErrorPublishRejected": "Releul nu a acceptat modificarea. Încearcă din nou în scurt timp.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "Acest videoclip s-a schimbat pe alt dispozitiv și acum are prea multe etichete sau prea multe persoane care colaborează. Deschide-l din nou și elimină câteva.",
   "videoUpdateErrorGeneric": "N-am putut actualiza acest videoclip. Încearcă din nou.",
   "shareMenuDeleteVideoQuestion": "Ștergi videoclipul?",
   "shareMenuDeleteCleanupInProgress": "Se elimină videoclipul…",
@@ -1579,6 +1585,7 @@
   "soundsSearchResults": "Rezultatele căutării",
   "soundsNoSoundsFound": "Niciun sunet găsit",
   "soundsNoSoundsFoundDescription": "Încearcă alt termen de căutare",
+  "soundsSearchResultCount": "{count, plural, =0{Niciun sunet găsit} one{{count} sunet găsit} few{{count} sunete găsite} other{{count} de sunete găsite}}",
   "profileTitle": "Profil",
   "profileMoreOptions": "Mai multe opțiuni",
   "profileBlockedUser": "L-ai blocat pe {name}",
@@ -2730,6 +2737,11 @@
   "videoEditorEffectWave": "Val",
   "videoEditorEffectGlow": "Strălucire",
   "videoEditorEffectEcho": "Ecou",
+  "videoEditorEffectTimeSplit": "Timp despicat",
+  "videoEditorEffectLongExposure": "Expunere lungă",
+  "videoEditorEffectMotionOnly": "Doar mișcare",
+  "videoEditorEffectStutter": "Sacadat",
+  "videoEditorEffectTimeWarp": "Distorsiune temporală",
   "videoEditorEffectFisheye": "Ochi de pește",
   "videoEditorEffectDrops": "Picături",
   "videoEditorEffectLightLeak": "Scurgere de lumină",
@@ -2797,6 +2809,7 @@
   "videoEditorEffectCategoryDistort": "Distorsiune",
   "videoEditorEffectCategoryLight": "Lumină",
   "videoEditorEffectCategoryMotion": "Mișcare",
+  "videoEditorEffectCategoryTime": "Timp",
   "videoEditorEffectCategoryParticles": "Particule",
   "videoEditorEffectCategoryLooks": "Looks",
   "videoEditorEffectCategoryIntro": "Intro",
@@ -2832,6 +2845,8 @@
   "videoEditorDropsShuffle": "Amestecă",
   "videoEditorEffectsFlashingReplaced": "Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile, așa că l-am înlocuit aici pe celălalt.",
   "videoEditorEffectsFlashingNotDuplicated": "Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile.",
+  "videoEditorEffectsTimeReplaced": "Un singur efect Timp odată. Două împreună ar arăta altfel după export, așa că l-am înlocuit aici pe celălalt.",
+  "videoEditorEffectsTimeNotDuplicated": "Un singur efect Timp odată. Două împreună ar arăta altfel după export.",
   "videoEditorEffectsOnBeat": "Pe ritm",
   "videoEditorEffectsOnBeatFinding": "Se caută ritmul…",
   "videoEditorEffectsOnBeatNoBeat": "Sunetul acesta nu are un ritm constant",
@@ -6453,9 +6468,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "Abonat",
-  "badgeSubscribeAction": "Abonează-te la insignă",
-  "badgeAcceptedHoldersTitle": "Persoane care au acceptat insigna",
+  "badgeSubscribedAction": "Urmărești comunitatea",
+  "badgeSubscribeAction": "Urmărește comunitatea",
+  "badgeAcceptedHoldersTitle": "Oameni din această comunitate",
   "badgeSubscriptionLoadError": "Abonamentele tale la insigne nu au putut fi încărcate. Încearcă din nou.",
   "minorAccountReviewVideoSubmittedBody": "Videoclipul tău a fost trimis pentru verificare.",
   "minorAccountReviewVideoSubmittedTitle": "Videoclip trimis",
@@ -6558,5 +6573,23 @@
   "collabRoomPartLengthLabel": "Fiecare parte",
   "collabRoomSwapOrderHint": "Atinge două părți ca să le schimbi ordinea.",
   "collabRoomFilmSeriesHint": "Fiecare își filmează propria parte, de până la {seconds} s. Părțile rulează una după alta.",
-  "collabRoomSeriesReadyHint": "Toate părțile au ajuns. Pune-le cap la cap!"
+  "collabRoomSeriesReadyHint": "Toate părțile au ajuns. Pune-le cap la cap!",
+  "badgeDiscoveryTitle": "Insignele aduc oamenii împreună",
+  "badgeDiscoveryBody": "Oricine poate crea și acorda insigne. Tu alegi care apar pe profilul tău. Explorează o insignă ca să-i cunoști comunitatea și să urmărești oamenii din ea.",
+  "badgeDiscoveryMyBadges": "Insignele mele",
+  "badgeDiscoveryEmpty": "Nu am găsit comunități încă. Trage în jos ca să încerci din nou.",
+  "badgeCommunityFollowHint": "Adaugă videoclipurile comunității în fluxul Urmăriți. Urmărește oamenii individual.",
+  "badgeOfficialLabel": "Oficială",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Află mai multe pe {website}",
+  "badgeDiscoveryVideosLabel": "Videoclipuri de la {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

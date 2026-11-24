@@ -39,10 +39,6 @@ class InboxPage extends ConsumerWidget {
     final dmRepository = ref.watch(dmRepositoryProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
-    // Read once for constructor seeding; subsequent changes are handled by
-    // ref.listen below via _InboxRepositorySync, avoiding page rebuild on
-    // profileRepository null → instance transition at cold start.
-    final profileRepository = ref.read(profileRepositoryProvider);
     final currentUserPubkey =
         ref.watch(authServiceProvider).currentPublicKeyHex ?? '';
     final protectedMinorInboxGate = ref.watch(protectedMinorInboxGateProvider);
@@ -58,7 +54,7 @@ class InboxPage extends ConsumerWidget {
       // instances are owner-scoped; only the ready one gets credentials and
       // starts listening. A
       // BlocProvider factory runs once and captures whichever instance was
-      // current at mount; if the inbox is opened during the not-ready
+      // current when it ran; if Messages first opens during the not-ready
       // window the ConversationListBloc stays wired to that owner-scoped but
       // non-listening repository, so it misses later ingestion. Re-key on the captured
       // repositories' identities so the blocs are rebuilt bound to the
@@ -77,19 +73,24 @@ class InboxPage extends ConsumerWidget {
       )),
       providers: [
         BlocProvider(
+          // Lazy on purpose: only the Messages pane reads this bloc, and its
+          // start event runs the DM history restore, so both wait until
+          // Messages first opens (#11020). Do not read it outside that pane.
+          //
           // Deliberately unkeyed on profileRepository. A key here would NOT
           // narrow anything: `providers[0]` is the OUTERMOST entry in the
           // nested chain, so keying it re-inflates every provider below plus
           // the whole InboxView subtree — losing the tab selection, scroll
-          // offset and search text. The nullable-gated instance is delivered
-          // in place by ConversationListProfileRepositoryChanged from
-          // _InboxRepositorySync below, refreshing only this bloc's
-          // dependency. The constructor still carries the initial value.
+          // offset and search text. The nullable-gated instance is read when
+          // the bloc is created, which can be long after this page built, and
+          // later changes arrive in place as
+          // ConversationListProfileRepositoryChanged from
+          // `_ConversationListSync` in inbox_view.dart.
           create: (_) => ConversationListBloc(
             dmRepository: dmRepository,
             followRepository: followRepository,
             contentBlocklistRepository: blocklistRepository,
-            profileRepository: profileRepository,
+            profileRepository: ref.read(profileRepositoryProvider),
             protectedMinorInboxGate: protectedMinorInboxGate,
             // Pinned Divine Moderation support row (#6283). The identity is
             // the release-pinned one — the same anchor the protected-minor
@@ -131,13 +132,13 @@ class InboxPage extends ConsumerWidget {
   }
 }
 
-/// Forwards late-resolving repositories to the blocs that need them, without
-/// re-keying any provider.
+/// Forwards the late-resolving notification repository to the badge cubit,
+/// without re-keying any provider: a `ValueKey` on the owning `BlocProvider`
+/// would tear down the entire downstream provider chain and the `InboxView`
+/// subtree with it.
 ///
-/// Both of these dependencies resolve after mount, and both are consumed by a
-/// single bloc. Pushing them in as a setter/event refreshes only that bloc —
-/// whereas a `ValueKey` on the owning `BlocProvider` would tear down the entire
-/// downstream provider chain and the `InboxView` subtree with it.
+/// The conversation list's late dependencies are forwarded from inside the
+/// Messages pane instead, by `_ConversationListSync` (#11020).
 class _InboxRepositorySync extends ConsumerWidget {
   const _InboxRepositorySync({required this.child});
 
@@ -147,11 +148,6 @@ class _InboxRepositorySync extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.listen(notificationRepositoryProvider, (_, repository) {
       context.read<NotificationBadgeCubit>().setRepository(repository);
-    });
-    ref.listen(profileRepositoryProvider, (_, repository) {
-      context.read<ConversationListBloc>().add(
-        ConversationListProfileRepositoryChanged(repository),
-      );
     });
     return child;
   }

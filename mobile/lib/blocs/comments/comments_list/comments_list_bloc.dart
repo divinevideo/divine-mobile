@@ -10,6 +10,7 @@ import 'package:openvine/blocs/comments/comments_list/batched_subscription.dart'
 import 'package:openvine/blocs/comments/comments_list/comments_list_helpers.dart';
 import 'package:openvine/blocs/comments/comments_list/reportable_sites.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 part 'comments_list_event.dart';
@@ -172,6 +173,9 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         includeVideoReplies: true,
       );
       final loadedModeration = await moderation;
+      // The sheet can close while the page loads: a watch opened now would
+      // have no owner left to close it (#9689).
+      if (isClosed) return;
 
       final commentsById = {
         ...state.commentsById,
@@ -892,7 +896,10 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       _commentDeletionSubscription = _commentsRepository
           .watchCommentDeletions(
             rootEventId: state.rootEventId,
-            includeVideoReplies: true,
+            commentAuthors: this.stream
+                .map((state) => state.commentAuthors)
+                .startWith(state.commentAuthors),
+            includeVideoReplies: _includeVideoReplies,
           )
           .listen(
             (deletion) {
@@ -924,11 +931,15 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
 
   @override
   Future<void> close() async {
-    await _commentStreamSubscription?.cancel();
-    await _commentDeletionSubscription?.cancel();
-    await _viewerBlocksSubscription?.cancel();
-    await _commentsRepository.stopWatchingComments();
-    return super.close();
+    // Cancelling a watch closes its relay subscription. Nothing is awaited
+    // before super.close(), which flips isClosed at once: a page that lands
+    // during an earlier await would open a watch past these cancels (#9689).
+    final cancels = [
+      _commentStreamSubscription?.cancel(),
+      _commentDeletionSubscription?.cancel(),
+      _viewerBlocksSubscription?.cancel(),
+    ];
+    await Future.wait([super.close(), ...cancels.nonNulls]);
   }
 
   bool _hasMoreContent({

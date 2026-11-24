@@ -893,4 +893,60 @@ void main() {
       expect(log.message, contains('push-failed'));
     });
   });
+
+  // #8706: a link can carry a well-formed key that is no point on secp256k1.
+  // No account can own it, so the screen treats it like a malformed id instead
+  // of rendering a profile whose Message button cannot deliver.
+  group('identifier validation', () {
+    Future<void> pumpScreen(WidgetTester tester, String npub) async {
+      final parent = createContainer(StateProvider<bool>((ref) => false));
+      addTearDown(parent.dispose);
+      final container = ProviderContainer(
+        parent: parent,
+        overrides: [
+          identityClaimsRepositoryProvider.overrideWithValue(
+            _MockIdentityClaimsRepository(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: VineTheme.theme,
+            home: BlocProvider<PeopleListsBloc>.value(
+              value: peopleListsBloc,
+              child: OtherProfileScreen(npub: npub),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('shows invalid profile id for a key no account can own', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await pumpScreen(
+        tester,
+        'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzsfj2hcx',
+      );
+
+      expect(find.text(l10n.profileInvalidId), findsOneWidget);
+      expect(find.text(l10n.profileMessageLabel), findsNothing);
+    });
+
+    testWidgets('shows invalid profile id for a malformed npub', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await pumpScreen(tester, 'npub1notavalidkey');
+
+      expect(find.text(l10n.profileInvalidId), findsOneWidget);
+    });
+  });
 }

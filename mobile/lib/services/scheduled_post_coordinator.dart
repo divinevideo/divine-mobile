@@ -29,8 +29,8 @@ typedef ScheduledEventSigner = Future<Event?> Function({
 });
 
 /// Broadcasts an already-signed event. Bound to
-/// `SignedEventRelayPublisher.publish`, whose retry-mode presence check keeps
-/// a post the relay already published from being sent twice.
+/// `VideoEventPublisher.broadcastScheduledEvent`, which keeps a post the relay
+/// already published, under this id or an earlier one, from being sent twice.
 typedef ScheduledEventBroadcaster = Future<EventPublishOutcome> Function(
   Event event, {
   bool isRetry,

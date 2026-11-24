@@ -733,8 +733,8 @@ void main() {
       );
     });
 
-    test('separateFlashingVideoEffects cuts the other flashing effect in '
-        'place and reports it', () {
+    test('separateExclusiveVideoEffects cuts the other flashing effect in '
+        'place and reports its group', () {
       const strobe = EditorVideoEffect(
         id: 'strobe',
         effect: VideoEffect.strobe(
@@ -757,7 +757,10 @@ void main() {
       };
       when(() => stateManager.activeMeta).thenReturn(activeMeta);
 
-      expect(editor.separateFlashingVideoEffects('negative'), isTrue);
+      expect(
+        editor.separateExclusiveVideoEffects('negative'),
+        EditorEffectExclusiveGroup.flashing,
+      );
 
       verifyNever(() => editor.addHistory(meta: any(named: 'meta')));
       expect(
@@ -769,7 +772,7 @@ void main() {
           ('negative', const Duration(seconds: 3), const Duration(seconds: 6)),
         ],
       );
-      expect(editor.separateFlashingVideoEffects('negative'), isFalse);
+      expect(editor.separateExclusiveVideoEffects('negative'), isNull);
     });
 
     test('videoEffectEntries skips an entry this build cannot read and '

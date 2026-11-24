@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -13,12 +14,15 @@ import 'package:nostr_app_bridge_repository/nostr_app_bridge_repository.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/apps/nostr_app_sandbox_bridge.dart';
 import 'package:openvine/screens/apps/nostr_app_sandbox_screen.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
+
+import '../../helpers/test_provider_overrides.dart' show MockAuthService;
 
 class _MockImagePicker extends Mock implements ImagePicker {}
 
@@ -271,6 +275,58 @@ void main() {
         expect(find.text(l10n.appsSandboxBlockedTitle), findsNothing);
       },
     );
+
+    group('page completion lifecycle', () {
+      testWidgets('ignores page completion after the sandbox is disposed', (
+        tester,
+      ) async {
+        final platform = _BootstrapAwareWebViewPlatform();
+        WebViewPlatform.instance = platform;
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        final auth = MockAuthService();
+        when(() => auth.currentPublicKeyHex).thenReturn('f' * 64);
+        final injectedScripts = <String>[];
+        final bootstrapClient = MockClient((_) async => http.Response('', 200));
+        addTearDown(bootstrapClient.close);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [authServiceProvider.overrideWithValue(auth)],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: NostrAppSandboxScreen(
+                app: _fixtureApp(),
+                bootstrapHttpClientOverride: bootstrapClient,
+                bridgeNonceOverride: 'page-completion-nonce',
+                javaScriptRunnerOverride: (script) async =>
+                    injectedScripts.add(script),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        debugDefaultTargetPlatformOverride = null;
+        final onPageFinished = platform.navigationDelegate!.onPageFinished!;
+
+        onPageFinished(_fixtureApp().launchUrl);
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+        expect(injectedScripts, hasLength(1));
+        expect(injectedScripts.single, contains("_pubkey: '${'f' * 64}'"));
+        expect(injectedScripts.single, contains('page-completion-nonce'));
+        expect(find.byType(BrandedLoadingIndicator), findsNothing);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        expect(find.byType(NostrAppSandboxScreen), findsNothing);
+
+        onPageFinished(_fixtureApp().launchUrl);
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(injectedScripts, hasLength(1));
+      });
+    });
 
     group('pages without a web origin', () {
       // What Android WebView reported to onPageFinished in the crash (#10888).

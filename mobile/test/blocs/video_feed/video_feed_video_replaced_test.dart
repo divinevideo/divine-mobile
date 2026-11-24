@@ -1,0 +1,374 @@
+// ABOUTME: A video republished from this device replaces the older revision
+// ABOUTME: Home holds, so the tile and a second edit both see the new one (#11250).
+
+import 'dart:async';
+
+import 'package:curated_list_repository/curated_list_repository.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:follow_repository/follow_repository.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
+import 'package:openvine/blocs/video_feed/home_feed_cache.dart';
+import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
+import 'package:videos_repository/videos_repository.dart';
+
+import '../../helpers/feed_bloc_test_helper.dart';
+
+class _MockVideosRepository extends Mock implements VideosRepository {}
+
+class _MockFollowRepository extends Mock implements FollowRepository {}
+
+class _MockCuratedListRepository extends Mock
+    implements CuratedListRepository {}
+
+class _MemoryHomeFeedCache extends HomeFeedCache {
+  List<VideoEvent>? saved;
+
+  @override
+  Future<List<VideoEvent>?> readVideos({
+    required String? pubkey,
+    required String mode,
+  }) async => null;
+
+  @override
+  Future<void> writeVideos({
+    required String? pubkey,
+    required String mode,
+    required List<VideoEvent> videos,
+  }) async => saved = videos;
+
+  @override
+  Future<void> clearVideos({
+    required String? pubkey,
+    required String mode,
+  }) async => saved = null;
+}
+
+/// Revision [id] of the video at `34236:<owner>:<dTag>`.
+VideoEvent _revision(
+  String id, {
+  String dTag = 'clip',
+  int createdAt = 1700000000,
+  String title = 'Title',
+}) => VideoEvent(
+  id: id * 64,
+  pubkey: 'a' * 64,
+  createdAt: createdAt,
+  eventCreatedAt: createdAt,
+  content: '',
+  title: title,
+  timestamp: DateTime.utc(2026),
+  videoUrl: 'https://example.com/$dTag.mp4',
+  vineId: dTag,
+  addressableDTag: dTag,
+  eventKind: 34236,
+);
+
+void main() {
+  setUpAll(() {
+    registerFallbackValue(_revision('0'));
+    registerFallbackValue(<VideoEvent>[]);
+  });
+  group(VideoFeedVideoReplaced, () {
+    late _MockVideosRepository videos;
+    late StreamController<VideoEvent> replacements;
+    late _MemoryHomeFeedCache cache;
+
+    setUp(() {
+      videos = _MockVideosRepository();
+      replacements = StreamController<VideoEvent>.broadcast();
+      cache = _MemoryHomeFeedCache();
+      when(() => videos.removedVideoIds)
+          .thenAnswer((_) => const Stream.empty());
+      when(() => videos.replacedVideos).thenAnswer((_) => replacements.stream);
+      when(() => videos.isVideoKnownDeleted(any())).thenReturn(false);
+      when(() => videos.applyContentPreferences(any())).thenAnswer(
+        (call) => call.positionalArguments.single as List<VideoEvent>,
+      );
+    });
+
+    tearDown(() => replacements.close());
+
+    VideoFeedBloc createBloc() => VideoFeedBloc(
+      videosRepository: videos,
+      replacedVideosStream: videos.replacedVideos,
+      followRepository: _MockFollowRepository(),
+      curatedListRepository: _MockCuratedListRepository(),
+      homeFeedCache: cache,
+    );
+
+    feedBlocTest(
+      'shows the newer revision in place of the one the feed holds',
+      build: createBloc,
+      seed: () => VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        videos: [
+          _revision('1'),
+          _revision('2', dTag: 'other'),
+        ],
+        videoListSources: {
+          '1' * 64: const {'list'},
+        },
+        listOnlyVideoIds: {'1' * 64},
+      ),
+      act: (_) => replacements.add(
+        _revision('3', createdAt: 1700000500, title: 'Edited'),
+      ),
+      wait: Duration.zero,
+      expect: () => [
+        isA<VideoFeedBlocState>()
+            .having(
+              (state) => state.videos.map((v) => (v.id, v.title)).toList(),
+              'videos',
+              [('3' * 64, 'Edited'), ('2' * 64, 'Title')],
+            )
+            .having(
+              (state) => state.videoListSources,
+              'list provenance',
+              {
+                '3' * 64: {'list'},
+              },
+            )
+            .having(
+              (state) => state.listOnlyVideoIds,
+              'list-only revisions',
+              {'3' * 64},
+            ),
+      ],
+    );
+
+    feedBlocTest(
+      'keeps the revision it holds when an older one is announced',
+      build: createBloc,
+      seed: () => VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        videos: [_revision('3', createdAt: 1700000500)],
+      ),
+      act: (_) => replacements.add(_revision('1')),
+      wait: Duration.zero,
+      expect: () => <VideoFeedBlocState>[],
+    );
+
+    feedBlocTest(
+      'ignores a video the feed does not hold',
+      build: createBloc,
+      seed: () => VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        videos: [_revision('1')],
+      ),
+      act: (_) => replacements.add(
+        _revision('4', dTag: 'elsewhere', createdAt: 1700000500),
+      ),
+      wait: Duration.zero,
+      expect: () => <VideoFeedBlocState>[],
+    );
+
+    feedBlocTest(
+      'removes a video whose edited revision is hidden by content preferences',
+      build: createBloc,
+      seed: () => VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        videos: [
+          _revision('1'),
+          _revision('2', dTag: 'other'),
+        ],
+      ),
+      act: (_) {
+        final edited = _revision('3', createdAt: 1700000500);
+        when(() => videos.applyContentPreferences([edited])).thenReturn([]);
+        replacements.add(edited);
+      },
+      wait: Duration.zero,
+      expect: () => [
+        isA<VideoFeedBlocState>().having(
+          (state) => state.videos.map((video) => video.id),
+          'visible revisions',
+          ['2' * 64],
+        ),
+      ],
+    );
+
+    feedBlocTest(
+      'applies preferences using retained server metadata',
+      build: createBloc,
+      seed: () => VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        videos: [
+          _revision('1').copyWith(
+            moderationLabels: const ['violence'],
+            rawTags: const {'views': '17', 'old-tag': 'stale'},
+            nostrCommentCount: 4,
+          ),
+        ],
+      ),
+      act: (_) {
+        when(() => videos.applyContentPreferences(any())).thenAnswer((call) {
+          final candidate =
+              (call.positionalArguments.single as List<VideoEvent>).single;
+          return [
+            candidate.copyWith(warnLabels: candidate.moderationLabels),
+          ];
+        });
+        replacements.add(_revision('3', createdAt: 1700000500));
+      },
+      wait: Duration.zero,
+      expect: () => [
+        isA<VideoFeedBlocState>()
+            .having(
+              (state) => state.videos.single.warnLabels,
+              'warning labels',
+              ['violence'],
+            )
+            .having(
+              (state) => state.videos.single.rawTags,
+              'runtime view counts without stale authored tags',
+              {'views': '17'},
+            )
+            .having(
+              (state) => state.videos.single.nostrCommentCount,
+              'comment count',
+              4,
+            ),
+      ],
+    );
+
+    test('saves the updated window so a cold start shows it too', () async {
+      final bloc = createBloc()
+        ..emit(
+          VideoFeedBlocState(
+            status: VideoFeedStatus.success,
+            // The resume window starts after the playing video.
+            videos: [
+              _revision('5', dTag: 'playing'),
+              _revision('1'),
+            ],
+          ),
+        );
+      addTearDown(bloc.close);
+
+      replacements.add(_revision('3', createdAt: 1700000500));
+      await pumpEventQueue();
+
+      expect(cache.saved?.map((video) => video.id).toList(), ['3' * 64]);
+    });
+
+    test('keeps the republished Classic when the viewer swipes', () async {
+      final original = _revision('1');
+      final next = _revision('2', dTag: 'other');
+      final edited = _revision('3', createdAt: 1700000500, title: 'Edited');
+      final session = ClassicFeedSession(
+        initialVideos: [original, next],
+        loadPage: (_) async => const HomeFeedResult(videos: [], hasMore: false),
+      );
+      final bloc =
+          VideoFeedBloc(
+            videosRepository: videos,
+            replacedVideosStream: replacements.stream,
+            followRepository: _MockFollowRepository(),
+            curatedListRepository: _MockCuratedListRepository(),
+            classicSession: session,
+          )..emit(
+            VideoFeedBlocState(
+              status: VideoFeedStatus.success,
+              source: const VideoFeedSource.classic(),
+              videos: [original, next],
+            ),
+          );
+      addTearDown(bloc.close);
+
+      replacements.add(edited);
+      await pumpEventQueue();
+      expect(bloc.state.videos.first.id, edited.id);
+
+      bloc.add(const VideoFeedActiveIndexChanged(1));
+      await pumpEventQueue();
+      expect(bloc.state.currentIndex, 1);
+      expect(bloc.state.videos.map((video) => video.id), [edited.id, next.id]);
+    });
+
+    // NIP-01 keeps the lower id when two revisions share a created_at.
+    feedBlocTest(
+      'takes an announced revision with the same timestamp and a lower id',
+      build: createBloc,
+      seed: () => VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        videos: [_revision('5')],
+      ),
+      act: (_) => replacements.add(_revision('3', title: 'Tie')),
+      wait: Duration.zero,
+      expect: () => [
+        isA<VideoFeedBlocState>().having(
+          (state) => state.videos.map((v) => (v.id, v.title)).toList(),
+          'videos',
+          [('3' * 64, 'Tie')],
+        ),
+      ],
+    );
+
+    feedBlocTest(
+      'keeps the revision it holds when a tie has a higher id',
+      build: createBloc,
+      seed: () => VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        videos: [_revision('3')],
+      ),
+      act: (_) => replacements.add(_revision('5', title: 'Tie')),
+      wait: Duration.zero,
+      expect: () => <VideoFeedBlocState>[],
+    );
+
+    late _MockVideosRepository rebuilt;
+    late StreamController<VideoEvent> rebuiltReplacements;
+    late StreamController<VideosRepository> repositories;
+
+    feedBlocTest(
+      'follows the replacements of a rebuilt repository',
+      setUp: () {
+        rebuilt = _MockVideosRepository();
+        rebuiltReplacements = StreamController<VideoEvent>.broadcast();
+        repositories = StreamController<VideosRepository>.broadcast(
+          sync: true,
+        );
+        addTearDown(rebuiltReplacements.close);
+        addTearDown(repositories.close);
+        when(
+          () => rebuilt.removedVideoIds,
+        ).thenAnswer((_) => const Stream.empty());
+        when(
+          () => rebuilt.replacedVideos,
+        ).thenAnswer((_) => rebuiltReplacements.stream);
+        when(() => rebuilt.isVideoKnownDeleted(any())).thenReturn(false);
+        when(() => rebuilt.applyContentPreferences(any())).thenAnswer(
+          (call) => call.positionalArguments.single as List<VideoEvent>,
+        );
+      },
+      build: () => VideoFeedBloc(
+        videosRepository: videos,
+        replacedVideosStream: videos.replacedVideos,
+        removalRepositoryStream: repositories.stream,
+        followRepository: _MockFollowRepository(),
+        curatedListRepository: _MockCuratedListRepository(),
+        homeFeedCache: cache,
+      ),
+      seed: () => VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        videos: [_revision('1')],
+      ),
+      act: (_) async {
+        repositories.add(rebuilt);
+        await pumpEventQueue();
+        rebuiltReplacements.add(
+          _revision('3', createdAt: 1700000500, title: 'Edited'),
+        );
+      },
+      wait: Duration.zero,
+      expect: () => [
+        isA<VideoFeedBlocState>().having(
+          (state) => state.videos.map((v) => (v.id, v.title)).toList(),
+          'videos',
+          [('3' * 64, 'Edited')],
+        ),
+      ],
+    );
+  });
+}

@@ -6,6 +6,7 @@
 import 'dart:convert';
 
 import 'package:meta/meta.dart';
+import 'package:models/src/caption_text_track.dart';
 import 'package:models/src/nip71_video_kinds.dart';
 import 'package:models/src/sound_credit.dart';
 import 'package:models/src/video_attribution.dart';
@@ -250,6 +251,7 @@ class VideoEvent {
     this.isFlaggedContent = false,
     this.moderationStatus,
     this.originalLoops,
+    this.loopCountSnapshot,
     this.originalLikes,
     this.originalComments,
     this.originalReposts,
@@ -310,6 +312,7 @@ class VideoEvent {
     DateTime? optDate(Object? value) =>
         value == null ? null : DateTime.parse(value as String);
 
+    final snapshot = json['loopCountSnapshot'];
     final createdAt = optInt(json['createdAt']) ?? 0;
     final timestamp = json['timestamp'];
     final textTrackRef = json['textTrackRef'] as String?;
@@ -363,6 +366,13 @@ class VideoEvent {
       isFlaggedContent: json['isFlaggedContent'] as bool? ?? false,
       moderationStatus: json['moderationStatus'] as String?,
       originalLoops: optInt(json['originalLoops']),
+      loopCountSnapshot: switch (snapshot) {
+        {'count': final int count, 'fetchedAt': final String date} => (
+          count: count,
+          fetchedAt: DateTime.parse(date),
+        ),
+        _ => null,
+      },
       originalLikes: optInt(json['originalLikes']),
       originalComments: optInt(json['originalComments']),
       originalReposts: optInt(json['originalReposts']),
@@ -715,6 +725,9 @@ class VideoEvent {
           // Subtitle/caption track reference
           // Format: ['text-track', '<coords-or-url>', '<relay>', 'captions',
           //          '<lang>']
+          // Playback falls back through these refs in order, so a chapters
+          // or metadata track must not become one.
+          if (!isCaptionTextTrackType(tag.length > 3 ? tag[3] : null)) break;
           if (tagValue.isNotEmpty) {
             textTrackRefsLocal.add(tagValue);
           }
@@ -914,6 +927,9 @@ class VideoEvent {
 
   // Original Vine metrics (from imported data)
   final int? originalLoops; // Original loop count from classic Vine
+
+  /// Reconciled playback total and fetch time from the bulk stats endpoint.
+  final ({int count, DateTime fetchedAt})? loopCountSnapshot;
   final int? originalLikes; // Original like count from classic Vine
   final int? originalComments; // Original comment count from classic Vine
   final int? originalReposts; // Original repost count from classic Vine
@@ -1625,10 +1641,29 @@ class VideoEvent {
   ///
   /// The meaning of `platform` differs by ingestion path, and any publisher
   /// can write the tag, so this is a display signal rather than archive
-  /// provenance. Decisions that rely on provenance (badges, filters, credit,
-  /// audio reuse) read [isVerifiedArchive] or [countsAsArchiveVine] instead.
+  /// provenance. Decisions that rely on provenance (trust badges, filters,
+  /// credit, audio reuse) read [isVerifiedArchive] or [countsAsArchiveVine]
+  /// instead; [isClassicVine] also respects that server decision.
   bool get isOriginalVine {
     return rawTags['platform'] == 'vine';
+  }
+
+  /// Whether a Vine-origin video from 2017 or earlier shows the Classic Vine
+  /// chip.
+  ///
+  /// Use the original publish date, or a legacy event date from before Vine
+  /// shut down. Respect an explicit server rejection, falling back to the
+  /// platform tag only when archive verification is unavailable. This label
+  /// does not grant verification or audio reuse.
+  bool get isClassicVine {
+    if (!countsAsArchiveVine) return false;
+
+    final originalPublishedAt =
+        int.tryParse(publishedAt ?? '') ??
+        int.tryParse(rawTags['published_at'] ?? '') ??
+        (createdAt < _vineShutdownAtUtcSeconds ? createdAt : 0);
+    return originalPublishedAt > 0 &&
+        originalPublishedAt < _classicVineCutoffUtcSeconds;
   }
 
   /// Whether trust decisions (the "verified only" preference, the Not Divine
@@ -1731,6 +1766,9 @@ class VideoEvent {
   }
 
   static const int _vineShutdownAtUtcSeconds = 1484611200;
+
+  // January 1, 2018 UTC: the Classic Vine display label includes all of 2017.
+  static const int _classicVineCutoffUtcSeconds = 1514764800;
 
   /// Whether [key] names a video URL inside an `imeta` tag.
   ///
@@ -1913,6 +1951,7 @@ class VideoEvent {
     bool? isFlaggedContent,
     String? moderationStatus,
     int? originalLoops,
+    ({int count, DateTime fetchedAt})? loopCountSnapshot,
     int? originalLikes,
     int? originalComments,
     int? originalReposts,
@@ -1985,6 +2024,7 @@ class VideoEvent {
     originalLoops: clearOriginalLoops
         ? null
         : (originalLoops ?? this.originalLoops),
+    loopCountSnapshot: loopCountSnapshot ?? this.loopCountSnapshot,
     originalLikes: clearOriginalLikes
         ? null
         : (originalLikes ?? this.originalLikes),
@@ -2087,6 +2127,11 @@ class VideoEvent {
     'isFlaggedContent': isFlaggedContent,
     'moderationStatus': moderationStatus,
     'originalLoops': originalLoops,
+    if (loopCountSnapshot case final snapshot?)
+      'loopCountSnapshot': {
+        'count': snapshot.count,
+        'fetchedAt': snapshot.fetchedAt.toIso8601String(),
+      },
     'originalLikes': originalLikes,
     'originalComments': originalComments,
     'originalReposts': originalReposts,

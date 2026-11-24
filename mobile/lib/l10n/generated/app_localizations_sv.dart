@@ -469,22 +469,6 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get contentPreferencesAudioInputDevice => 'Ljudingångsenhet';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Auto (rekommenderas)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'Väljer automatiskt den bästa mikrofonen';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Välj ljudingång';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Okänd mikrofon';
-
-  @override
   String get contentFiltersAdultContent => 'VUXENINNEHÅLL';
 
   @override
@@ -2140,6 +2124,14 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => 'Din tur';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => 'Se serien';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'Se serien: $prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -4483,6 +4475,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Relät accepterade inte ändringen. Försök igen om en stund.';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'Videon har ändrats på en annan enhet och har nu för många taggar eller samarbetspartner. Öppna den igen och ta bort några.';
+
+  @override
   String get videoUpdateErrorGeneric =>
       'Kunde inte uppdatera videon. Försök igen.';
 
@@ -4573,6 +4569,18 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get soundsNoSoundsFoundDescription => 'Testa en annan sökterm';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ljud hittades',
+      one: '$count ljud hittades',
+      zero: 'Inga ljud hittades',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'Sparat i Ljud';
@@ -9415,6 +9423,21 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectEcho => 'Eko';
 
   @override
+  String get videoEditorEffectTimeSplit => 'Tidsdelning';
+
+  @override
+  String get videoEditorEffectLongExposure => 'Lång exponering';
+
+  @override
+  String get videoEditorEffectMotionOnly => 'Bara rörelse';
+
+  @override
+  String get videoEditorEffectStutter => 'Hackig';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'Tidsförvrängning';
+
+  @override
   String get videoEditorEffectFisheye => 'Fisköga';
 
   @override
@@ -9616,6 +9639,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'Rörelse';
 
   @override
+  String get videoEditorEffectCategoryTime => 'Tid';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'Partiklar';
 
   @override
@@ -9721,6 +9747,14 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       'En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer.';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      'En Tid-effekt i taget. Två tillsammans skulle se annorlunda ut efter exporten, så vi har ersatt den andra här.';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      'En Tid-effekt i taget. Två tillsammans skulle se annorlunda ut efter exporten.';
 
   @override
   String get videoEditorEffectsOnBeat => 'I takt';
@@ -11838,6 +11872,34 @@ class AppLocalizationsSv extends AppLocalizations {
       'Visar vilka som har svarat på den här videon med en video. Tittarna trycker på den för att se svaren.';
 
   @override
+  String get videoEditorSocialStickerAudienceTitle => 'Vem kan svara';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => 'Alla';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => 'Vänner';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => 'Bara jag';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'Bara personer du följer kan vara med. Alla andra ser klistermärket så fort någon har varit med.';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'Klistermärket visar bara videosvar från personer du följer. Alla andra ser det så fort någon av dem har svarat.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      'Bara du kan vara med. Ingen annan ser klistermärket förrän du har varit med.';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'Klistermärket visar bara dina egna videosvar. Ingen annan ser det förrän du har svarat.';
+
+  @override
   String get videoEditorInteractiveCardAreaHint =>
       'Klistermärket stannar i den här rutan så att tittarna kan trycka på det';
 
@@ -12613,13 +12675,13 @@ class AppLocalizationsSv extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'Prenumerera på märket';
+  String get badgeSubscribeAction => 'Följ gemenskapen';
 
   @override
-  String get badgeSubscribedAction => 'Prenumererar';
+  String get badgeSubscribedAction => 'Följer gemenskapen';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'Personer som godkänt märket';
+  String get badgeAcceptedHoldersTitle => 'Personer i den här gemenskapen';
 
   @override
   String get badgeSubscriptionLoadError =>
@@ -13631,6 +13693,21 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get devOptionsProtectedMinorClearedToast =>
       'Överstyrningen för skyddad minderårig rensad';
+
+  @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
 
   @override
   String get commentsRecordVideoButtonLabel => 'Spela in videokommentar';
@@ -14683,6 +14760,65 @@ class AppLocalizationsSv extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Ta bort länken till $platform-kontot $identity';
   }
@@ -14714,7 +14850,26 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'Ett tryck';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -14826,6 +14981,18 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get verifyErrorPublishFailed =>
       'Verifierat, men ingen relä tog emot uppdateringen. Försök igen.';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -16807,4 +16974,49 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get collabRoomSeriesReadyHint => 'Alla delar är klara. Sätt ihop dem!';
+
+  @override
+  String get badgeDiscoveryTitle => 'Märken för människor samman';
+
+  @override
+  String get badgeDiscoveryBody =>
+      'Alla kan skapa och dela ut märken. Du väljer vilka som visas på din profil. Utforska ett märke för att lära känna gemenskapen och följa människorna där.';
+
+  @override
+  String get badgeDiscoveryMyBadges => 'Mina märken';
+
+  @override
+  String get badgeDiscoveryEmpty =>
+      'Inga gemenskaper hittades än. Dra nedåt för att försöka igen.';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'Lägger till gemenskapens videor i ditt Följer-flöde. Följ personer var för sig.';
+
+  @override
+  String get badgeOfficialLabel => 'Officiellt';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName, $issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName, $issuerName, $officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return 'Läs mer på $website';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return 'Videor från $badgeName';
+  }
 }

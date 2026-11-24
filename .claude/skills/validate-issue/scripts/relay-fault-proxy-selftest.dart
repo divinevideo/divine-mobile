@@ -438,6 +438,39 @@ Future<void> main() async {
   });
 
   await scenario(
+    '--notice-count answers COUNT with the unknown-command NOTICE',
+    ['--notice-count'],
+    (proxy) async {
+      final client = await proxy.connect();
+      client
+        ..send([
+          'COUNT',
+          'c1',
+          {
+            'kinds': [7],
+          },
+        ])
+        ..send(['REQ', 's1', <String, Object?>{}]);
+      _expect(
+        await _within(() => client.of('EOSE').length == 1),
+        'a REQ should still finish, got ${client.frames}',
+      );
+      _expect(
+        await _within(() => client.of('NOTICE').length == 1),
+        'the COUNT should be answered with a NOTICE, got ${client.frames}',
+      );
+      _expect(
+        client.of('NOTICE').single[1] == 'ERROR: bad msg: unknown cmd',
+        'the NOTICE should carry strfry\'s text, got ${client.frames}',
+      );
+      _expect(
+        relay.count('COUNT') == 0,
+        'the COUNT should not reach the relay',
+      );
+    },
+  );
+
+  await scenario(
     '--delay-ms holds every relay frame, not the client leg',
     ['--delay-ms', '700'],
     (proxy) async {

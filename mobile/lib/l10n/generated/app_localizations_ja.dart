@@ -399,21 +399,6 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get contentPreferencesAudioInputDevice => '音声入力デバイス';
-
-  @override
-  String get contentPreferencesAutoRecommended => '自動 (おすすめ)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest => '最適なマイクを自動で選ぶよ';
-
-  @override
-  String get contentPreferencesSelectAudioInput => '音声入力を選ぶ';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => '不明なマイク';
-
-  @override
   String get contentFiltersAdultContent => 'アダルトコンテンツ';
 
   @override
@@ -1976,6 +1961,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoStickerAddYoursButton => 'あなたの番';
+
+  @override
+  String get videoStickerAddYoursWatchSeries => 'シリーズを見る';
+
+  @override
+  String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt) {
+    return 'シリーズを見る：$prompt';
+  }
 
   @override
   String videoStickerAddYoursJoined(int count) {
@@ -4206,6 +4199,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'リレーが更新を受け付けなかった。少ししてからもう一回試してみて。';
 
   @override
+  String get videoUpdateErrorConcurrentEditsOverLimit =>
+      'この動画は別のデバイスで変更され、タグまたはコラボレーターが多すぎます。もう一度開いて、いくつか削除してください。';
+
+  @override
   String get videoUpdateErrorGeneric => 'この動画を更新できなかった。もう一回試してみて。';
 
   @override
@@ -4294,6 +4291,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get soundsNoSoundsFoundDescription => '別のキーワードで検索してみて';
+
+  @override
+  String soundsSearchResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'サウンドが$count件見つかった',
+      zero: 'サウンドが見つからない',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get soundsSavedToLibrary => 'サウンドに保存しました';
@@ -8954,6 +8962,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectEcho => 'エコー';
 
   @override
+  String get videoEditorEffectTimeSplit => 'タイムスプリット';
+
+  @override
+  String get videoEditorEffectLongExposure => '長時間露光';
+
+  @override
+  String get videoEditorEffectMotionOnly => '動きだけ';
+
+  @override
+  String get videoEditorEffectStutter => 'コマ落とし';
+
+  @override
+  String get videoEditorEffectTimeWarp => 'タイムワープ';
+
+  @override
   String get videoEditorEffectFisheye => '魚眼';
 
   @override
@@ -9155,6 +9178,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectCategoryMotion => 'モーション';
 
   @override
+  String get videoEditorEffectCategoryTime => '時間';
+
+  @override
   String get videoEditorEffectCategoryParticles => 'パーティクル';
 
   @override
@@ -9260,6 +9286,14 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get videoEditorEffectsFlashingNotDuplicated =>
       '点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあります。';
+
+  @override
+  String get videoEditorEffectsTimeReplaced =>
+      '時間エフェクトは一度にひとつだけ。ふたつ重ねると書き出し後の見え方が変わるので、ここではもう一方を置き換えました。';
+
+  @override
+  String get videoEditorEffectsTimeNotDuplicated =>
+      '時間エフェクトは一度にひとつだけ。ふたつ重ねると書き出し後の見え方が変わります。';
 
   @override
   String get videoEditorEffectsOnBeat => 'ビートに合わせる';
@@ -11267,6 +11301,34 @@ class AppLocalizationsJa extends AppLocalizations {
       'この動画に動画で返信した人を表示します。視聴者がタップすると返信を見られます。';
 
   @override
+  String get videoEditorSocialStickerAudienceTitle => '回答できる人';
+
+  @override
+  String get videoEditorSocialStickerAudienceEveryone => '全員';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowing => '友だち';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreator => '自分のみ';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingAddYoursNote =>
+      'フォローしている人だけが参加できます。ほかの人には、誰かが参加するとステッカーが表示されます。';
+
+  @override
+  String get videoEditorSocialStickerAudienceFollowingRepliesNote =>
+      'ステッカーには、フォローしている人の動画返信だけが表示されます。ほかの人には、そのうちの誰かが返信するとステッカーが表示されます。';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorAddYoursNote =>
+      '参加できるのはあなただけです。あなたが参加するまで、ほかの人にはステッカーは表示されません。';
+
+  @override
+  String get videoEditorSocialStickerAudienceCreatorRepliesNote =>
+      'ステッカーには、あなた自身の動画返信だけが表示されます。あなたが返信するまで、ほかの人にはステッカーは表示されません。';
+
+  @override
   String get videoEditorInteractiveCardAreaHint =>
       '視聴者がタップできるよう、このステッカーは枠の中に配置されます';
 
@@ -12006,13 +12068,13 @@ class AppLocalizationsJa extends AppLocalizations {
       'Your badge subscriptions are public.';
 
   @override
-  String get badgeSubscribeAction => 'バッジを購読';
+  String get badgeSubscribeAction => 'コミュニティをフォロー';
 
   @override
-  String get badgeSubscribedAction => '購読中';
+  String get badgeSubscribedAction => 'コミュニティをフォロー中';
 
   @override
-  String get badgeAcceptedHoldersTitle => 'バッジを承認した人';
+  String get badgeAcceptedHoldersTitle => 'このコミュニティの人たち';
 
   @override
   String get badgeSubscriptionLoadError => 'バッジの購読を読み込めませんでした。もう一度お試しください。';
@@ -12970,6 +13032,21 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get devOptionsProtectedMinorClearedToast => '保護対象の未成年の上書きを解除しました';
+
+  @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
 
   @override
   String get commentsRecordVideoButtonLabel => '動画コメントを録画';
@@ -13965,6 +14042,65 @@ class AppLocalizationsJa extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return '$platform のアカウント $identity の連携を解除';
   }
@@ -13996,7 +14132,26 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String verifyLinkNeedsConfirmationSemanticLabel(String platform) {
+    return 'Link your $platform account. Signing in needs Divine Confirmation';
+  }
+
+  @override
   String get verifyOneTapBadge => 'ワンタップ';
+
+  @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
 
   @override
   String verifyConnectSignInLifetime(int days) {
@@ -14106,6 +14261,18 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get verifyErrorPublishFailed => '認証はできたけど、どのリレーも更新を受け取らなかった。もう一度試して。';
+
+  @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
 
   @override
   String get verifyErrorOauthUnavailable =>
@@ -16004,4 +16171,48 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get collabRoomSeriesReadyHint => '全員のパートがそろいました。つなげましょう！';
+
+  @override
+  String get badgeDiscoveryTitle => 'バッジで人とつながる';
+
+  @override
+  String get badgeDiscoveryBody =>
+      '誰でもバッジを作成し、贈ることができます。プロフィールに表示するバッジは自分で選べます。バッジを開いてコミュニティを知り、気になる人をフォローしましょう。';
+
+  @override
+  String get badgeDiscoveryMyBadges => '自分のバッジ';
+
+  @override
+  String get badgeDiscoveryEmpty => 'コミュニティがまだ見つかりません。下に引っ張って再試行してください。';
+
+  @override
+  String get badgeCommunityFollowHint =>
+      'コミュニティの動画をフォロー中のフィードに追加します。人のフォローは個別に行います。';
+
+  @override
+  String get badgeOfficialLabel => '公式';
+
+  @override
+  String badgeDiscoveryCardLabel(String badgeName, String issuerName) {
+    return '$badgeName、$issuerName';
+  }
+
+  @override
+  String badgeDiscoveryOfficialCardLabel(
+    String badgeName,
+    String issuerName,
+    String officialLabel,
+  ) {
+    return '$badgeName、$issuerName、$officialLabel';
+  }
+
+  @override
+  String badgeDiscoveryWebsiteLabel(String website) {
+    return '詳しくは$websiteへ';
+  }
+
+  @override
+  String badgeDiscoveryVideosLabel(String badgeName) {
+    return '$badgeNameの動画';
+  }
 }

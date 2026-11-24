@@ -23,6 +23,7 @@ import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
@@ -158,6 +159,41 @@ void main() {
       expect(sequence.loop, isFalse);
       expect(sequence.startTime, equals(Duration.zero));
       expect(sequence.endTime, isNull);
+    });
+
+    test('leaves an Add yours only some may answer out of the frames', () {
+      pie.ExportedLayer sticker(model.VideoStickerAudience audience) {
+        final meta = const SocialStickerData(
+          kind: SocialStickerKind.addYours,
+          prompt: 'Show your desk',
+          hashtag: 'desksetup',
+        ).copyWith(audience: audience).toMeta();
+        return pie.ExportedLayer(
+          layer: pie.WidgetLayer(
+            widget: const SizedBox(),
+            meta: meta,
+            exportConfigs: pie.WidgetLayerExportConfigs(meta: meta),
+          ),
+          bytes: Uint8List.fromList(const [1, 2, 3]),
+          // Told apart by their size once rendered.
+          logicalSize: Size(10, 20.0 + audience.index),
+        );
+      }
+
+      final exported = VideoEditorRenderService.buildImageLayers(
+        capturedLayers: [
+          sticker(model.VideoStickerAudience.everyone),
+          sticker(model.VideoStickerAudience.following),
+          sticker(model.VideoStickerAudience.creator),
+        ],
+        bodySize: const Size(100, 200),
+        videoSize: const Size(300, 600),
+        targetAspectRatio: vertical,
+        timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
+      )!;
+
+      // The everyone sticker alone, at three times the body's scale.
+      expect(exported.map((l) => l.size), equals([const Size(30, 60)]));
     });
 
     test('draws each layer in the blend mode the canvas shows it in', () {

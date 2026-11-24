@@ -35,6 +35,7 @@ import 'package:openvine/widgets/profile/profile_tab_thumbnail.dart';
 import 'package:openvine/widgets/profile/profile_tab_thumbnail_placeholder.dart';
 import 'package:openvine/widgets/profile/profile_videos_grid_skeleton.dart';
 import 'package:openvine/widgets/profile/profile_videos_load_failed.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 
 /// Internal class that represents a video entry in the grid
 /// It can be a video event or an uploading video
@@ -145,6 +146,10 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
 
   /// Resolved from [PrimaryScrollController] provided by [NestedScrollView].
   ScrollController? _primaryScrollController;
+
+  /// Shared by every state this tab shows; see
+  /// [ProfileVideosGridSkeleton.scrollViewKey].
+  final GlobalKey _scrollViewKey = GlobalKey();
 
   @override
   ScrollController get paginationScrollController => _primaryScrollController!;
@@ -270,6 +275,7 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
     VideoEvent tappedVideo, {
     required int fallbackIndex,
     required List<VideoEvent> displayedVideos,
+    VideoTileOrigin? origin,
   }) {
     final currentFeedVideos = context.read<ProfileFeedCubit>().state.videos;
     final videos = currentFeedVideos.isNotEmpty
@@ -290,6 +296,7 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
           seedVideos: videos,
           initialVideoId: tappedVideo.id,
           initialStableId: tappedVideo.stableId,
+          tileOrigin: origin,
         ),
       ).push<void>(context),
       'open profile video',
@@ -391,13 +398,17 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
 
     if (allVideos.isEmpty) {
       if (widget.isLoading) {
-        return const ProfileVideosGridSkeleton();
+        return ProfileVideosGridSkeleton(scrollViewKey: _scrollViewKey);
       }
       if (feedState.status == ProfileFeedStatus.failure) {
-        return ProfileVideosLoadFailed(isOwnProfile: isOwnProfile);
+        return ProfileVideosLoadFailed(
+          isOwnProfile: isOwnProfile,
+          scrollViewKey: _scrollViewKey,
+        );
       }
       if (!isOwnProfile || feedState.unavailablePinnedCoordinates.isEmpty) {
         return ProfileTabEmptyState(
+          scrollViewKey: _scrollViewKey,
           title: context.l10n.profileNoVideosTitle,
           subtitle: isOwnProfile
               ? context.l10n.profileNoVideosOwnSubtitle
@@ -420,6 +431,7 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
         : const <PendingCollaboratorInviteGroup>[];
 
     return CustomScrollView(
+      key: _scrollViewKey,
       physics: const ClampingScrollPhysics(),
       slivers: [
         if (pendingInviteGroups.isNotEmpty)
@@ -493,7 +505,7 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
                   viewerPubkey: currentUserPubkey,
                   onOwnerLongPress: () =>
                       _showOwnVideoActions(eventEntry.videoEvent),
-                  onTap: () {
+                  onTap: (origin) {
                     // Adjust index to account for uploading videos at the top
                     final publishedIndex = index - uploadingCount;
                     if (publishedIndex >= 0) {
@@ -502,6 +514,7 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
                         eventEntry.videoEvent,
                         fallbackIndex: publishedIndex,
                         displayedVideos: displayedVideos,
+                        origin: origin,
                       );
                     }
                   },
@@ -582,7 +595,9 @@ class _VideoGridTile extends StatelessWidget {
 
   /// The creator pinned this video to the top of their profile.
   final bool isPinned;
-  final VoidCallback onTap;
+
+  /// Opens the video, growing the player out of this tile.
+  final ValueChanged<VideoTileOrigin?> onTap;
 
   /// The signed-in viewer, or `null` when no one is signed in.
   final String? viewerPubkey;
@@ -595,7 +610,7 @@ class _VideoGridTile extends StatelessWidget {
     video: videoEvent,
     viewerPubkey: viewerPubkey,
     index: index,
-    onTap: onTap,
+    onTap: () => onTap(VideoTileOrigin.captureVideo(context, videoEvent)),
     onOwnerLongPress: onOwnerLongPress,
     // Read after the label ("Video thumbnail 2, Pinned"): the badge itself
     // is decorative, so this is the only way a screen reader learns of the
@@ -608,9 +623,12 @@ class _VideoGridTile extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            ProfileTabThumbnail(
-              thumbnailUrl: videoEvent.thumbnailUrl,
-              blurhash: videoEvent.blurhash,
+            VideoTileThumbnailBoundary(
+              key: ValueKey(videoEvent.id),
+              child: ProfileTabThumbnail(
+                thumbnailUrl: videoEvent.thumbnailUrl,
+                blurhash: videoEvent.blurhash,
+              ),
             ),
             if (isPinned) const _PinnedBadge(),
           ],

@@ -31,6 +31,14 @@
   "videoEditorSocialStickerQuestionNote": "Antworten kommen bei dir als private Nachrichten an.",
   "videoEditorSocialStickerAddYoursNote": "Wer zuschaut, antwortet mit einem eigenen Video. Jede Antwort bekommt diesen Hashtag und verlinkt zurück auf dein Video.",
   "videoEditorSocialStickerRepliesNote": "Zeigt, wer mit einem Video auf dieses Video geantwortet hat. Ein Tipp darauf öffnet die Antworten.",
+  "videoEditorSocialStickerAudienceTitle": "Wer antworten kann",
+  "videoEditorSocialStickerAudienceEveryone": "Alle",
+  "videoEditorSocialStickerAudienceFollowing": "Freundeskreis",
+  "videoEditorSocialStickerAudienceCreator": "Nur ich",
+  "videoEditorSocialStickerAudienceFollowingAddYoursNote": "Nur Leute, denen du folgst, können mitmachen. Alle anderen sehen den Sticker, sobald jemand mitgemacht hat.",
+  "videoEditorSocialStickerAudienceFollowingRepliesNote": "Der Sticker zeigt nur Video-Antworten von Leuten, denen du folgst. Alle anderen sehen ihn, sobald jemand von ihnen geantwortet hat.",
+  "videoEditorSocialStickerAudienceCreatorAddYoursNote": "Nur du kannst mitmachen. Niemand sonst sieht den Sticker, bis du mitgemacht hast.",
+  "videoEditorSocialStickerAudienceCreatorRepliesNote": "Der Sticker zeigt nur deine eigenen Video-Antworten. Niemand sonst sieht ihn, bis du geantwortet hast.",
   "videoEditorInteractiveCardAreaHint": "Dieser Sticker bleibt in diesem Rahmen, damit man ihn antippen kann",
   "videoStickerPollSignInToVote": "Melde dich an, um abzustimmen.",
   "videoStickerPollNotReady": "Verbindung wird noch aufgebaut. Versuch es gleich noch mal.",
@@ -40,6 +48,8 @@
   "videoStickerQuestionAnswerHint": "Tippen zum Antworten",
   "videoStickerQuestionAnswerSemanticLabel": "Antworten: {question}",
   "videoStickerAddYoursButton": "Du bist dran",
+  "videoStickerAddYoursWatchSeries": "Serie ansehen",
+  "videoStickerAddYoursWatchSeriesSemanticLabel": "Serie ansehen: {prompt}",
   "videoStickerAddYoursJoined": "{count, plural, =0{Fang du an} =1{{count} macht mit} other{{count} machen mit}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} machen mit",
   "videoStickerAddYoursOpenSemanticLabel": "Sehen, wer mitmacht",
@@ -269,11 +279,6 @@
       }
     }
   },
-  "contentPreferencesAudioInputDevice": "Audio-Eingabegerät",
-  "contentPreferencesAutoRecommended": "Automatisch (empfohlen)",
-  "contentPreferencesAutoSelectsBest": "Wählt automatisch das beste Mikrofon",
-  "contentPreferencesSelectAudioInput": "Audio-Eingabe wählen",
-  "contentPreferencesUnknownMicrophone": "Unbekanntes Mikrofon",
   "profileBlockedAccountNotAvailable": "Dieses Konto ist nicht verfügbar",
   "profileInvalidId": "Ungültige Profil-ID",
   "profileShareText": "Schau dir {displayName} auf Divine an!\n\n{url}",
@@ -1550,6 +1555,7 @@
   "videoUpdateErrorNoPlayableVideo": "Dieses Video hat keine abspielbare Quelle und kann nicht bearbeitet werden.",
   "videoUpdateErrorCouldNotSign": "Die Änderung konnte nicht signiert werden. Versuch es nochmal.",
   "videoUpdateErrorPublishRejected": "Das Relay hat die Änderung nicht angenommen. Versuch es gleich nochmal.",
+  "videoUpdateErrorConcurrentEditsOverLimit": "Dieses Video wurde auf einem anderen Gerät geändert und hat jetzt zu viele Tags oder Mitwirkende. Öffne es noch mal und entferne ein paar.",
   "videoUpdateErrorGeneric": "Dieses Video konnte nicht aktualisiert werden. Versuch es nochmal.",
   "shareMenuDeleteVideoQuestion": "Video löschen?",
   "shareMenuDeleteCleanupInProgress": "Video wird entfernt…",
@@ -1579,6 +1585,7 @@
   "soundsSearchResults": "Suchergebnisse",
   "soundsNoSoundsFound": "Keine Sounds gefunden",
   "soundsNoSoundsFoundDescription": "Versuch einen anderen Suchbegriff",
+  "soundsSearchResultCount": "{count, plural, =0{Keine Sounds gefunden} one{{count} Sound gefunden} other{{count} Sounds gefunden}}",
   "profileTitle": "Profil",
   "profileMoreOptions": "Weitere Optionen",
   "profileBlockedUser": "{name} blockiert",
@@ -2730,6 +2737,11 @@
   "videoEditorEffectWave": "Welle",
   "videoEditorEffectGlow": "Leuchten",
   "videoEditorEffectEcho": "Echo",
+  "videoEditorEffectTimeSplit": "Zeitversatz",
+  "videoEditorEffectLongExposure": "Langzeitbelichtung",
+  "videoEditorEffectMotionOnly": "Nur Bewegung",
+  "videoEditorEffectStutter": "Ruckeln",
+  "videoEditorEffectTimeWarp": "Zeitkrümmung",
   "videoEditorEffectFisheye": "Fischauge",
   "videoEditorEffectDrops": "Tropfen",
   "videoEditorEffectLightLeak": "Lichteinfall",
@@ -2797,6 +2809,7 @@
   "videoEditorEffectCategoryDistort": "Verzerrung",
   "videoEditorEffectCategoryLight": "Licht",
   "videoEditorEffectCategoryMotion": "Bewegung",
+  "videoEditorEffectCategoryTime": "Zeit",
   "videoEditorEffectCategoryParticles": "Partikel",
   "videoEditorEffectCategoryLooks": "Looks",
   "videoEditorEffectCategoryIntro": "Intro",
@@ -2832,6 +2845,8 @@
   "videoEditorDropsShuffle": "Neu mischen",
   "videoEditorEffectsFlashingReplaced": "Immer nur ein blinkender Effekt. Zu viel Blinken kann empfindlichen Menschen schaden, deshalb haben wir den anderen hier ersetzt.",
   "videoEditorEffectsFlashingNotDuplicated": "Immer nur ein blinkender Effekt. Zu viel Blinken kann empfindlichen Menschen schaden.",
+  "videoEditorEffectsTimeReplaced": "Immer nur ein Zeit-Effekt. Zwei zusammen sähen nach dem Export anders aus, deshalb haben wir den anderen hier ersetzt.",
+  "videoEditorEffectsTimeNotDuplicated": "Immer nur ein Zeit-Effekt. Zwei zusammen sähen nach dem Export anders aus.",
   "videoEditorEffectsOnBeat": "Im Takt",
   "videoEditorEffectsOnBeatFinding": "Takt wird gesucht…",
   "videoEditorEffectsOnBeatNoBeat": "Kein gleichmäßiger Takt in diesem Sound",
@@ -6453,9 +6468,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "Abonniert",
-  "badgeSubscribeAction": "Abzeichen abonnieren",
-  "badgeAcceptedHoldersTitle": "Personen mit angenommenem Abzeichen",
+  "badgeSubscribedAction": "Du folgst der Community",
+  "badgeSubscribeAction": "Community folgen",
+  "badgeAcceptedHoldersTitle": "Menschen in dieser Community",
   "badgeSubscriptionLoadError": "Deine Abzeichen-Abonnements konnten nicht geladen werden. Versuche es erneut.",
   "minorAccountReviewVideoSubmittedBody": "Dein Video wurde zur Prüfung eingereicht.",
   "minorAccountReviewVideoSubmittedTitle": "Video eingereicht",
@@ -6558,5 +6573,23 @@
   "collabRoomPartLengthLabel": "Jeder Teil",
   "collabRoomSwapOrderHint": "Tippe zwei Teile an, um ihre Reihenfolge zu tauschen.",
   "collabRoomFilmSeriesHint": "Alle filmen ihren eigenen Teil, bis zu {seconds} s. Die Teile laufen nacheinander.",
-  "collabRoomSeriesReadyHint": "Alle Teile sind da. Setz sie zusammen!"
+  "collabRoomSeriesReadyHint": "Alle Teile sind da. Setz sie zusammen!",
+  "badgeDiscoveryTitle": "Abzeichen bringen Menschen zusammen",
+  "badgeDiscoveryBody": "Alle können Abzeichen erstellen und verleihen. Du entscheidest, welche in deinem Profil erscheinen. Entdecke ein Abzeichen, lerne seine Community kennen und folge ihren Mitgliedern.",
+  "badgeDiscoveryMyBadges": "Meine Abzeichen",
+  "badgeDiscoveryEmpty": "Noch keine Communitys gefunden. Zieh nach unten, um es erneut zu versuchen.",
+  "badgeCommunityFollowHint": "Fügt Community-Videos zu deinem „Folge ich“-Feed hinzu. Personen folgst du einzeln.",
+  "badgeOfficialLabel": "Offiziell",
+  "badgeDiscoveryCardLabel": "{badgeName}, {issuerName}",
+  "badgeDiscoveryOfficialCardLabel": "{badgeName}, {issuerName}, {officialLabel}",
+  "badgeDiscoveryWebsiteLabel": "Mehr erfahren auf {website}",
+  "badgeDiscoveryVideosLabel": "Videos von {badgeName}",
+  "@badgeDiscoveryVideosLabel": {
+    "description": "Screen reader label for opening a badge community video feed.",
+    "placeholders": {
+      "badgeName": {
+        "type": "String"
+      }
+    }
+  }
 }

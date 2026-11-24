@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 import 'package:openvine/widgets/blurhash_display.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
@@ -15,9 +16,10 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 /// 32 × 32 blurhash bilinearly stretched — visually equivalent to a heavy
 /// gaussian blur of the poster at zero per-frame raster cost. The
 /// runtime-blur fallback ([ImageFiltered], sigma 30) only runs for videos
-/// without a blurhash; that fullscreen blur pass over the live video
-/// texture was a major raster-thread cost (on-device: Impeller janked
-/// every frame), so the blurhash path is strongly preferred.
+/// without a blurhash, and not on web (see [useRuntimeBlur]); that fullscreen
+/// blur pass over the live video texture was a major raster-thread cost
+/// (on-device: Impeller janked every frame), so the blurhash path is strongly
+/// preferred.
 ///
 /// When [videoAspectRatio] is known, the backdrop paints only in the letterbox
 /// bars — one `RepaintBoundary`-isolated fill per bar, from the screen edge up
@@ -41,7 +43,15 @@ class BlurredVideoBackdrop extends StatelessWidget {
     this.filePath,
     this.blurhash,
     this.videoAspectRatio,
+    this.useRuntimeBlur = !kIsWeb,
   });
+
+  /// Largest decoded width or height for the blurred poster fallback. The
+  /// heavy blur removes the detail a larger decode would carry, so this saves
+  /// decode time and image memory with no visible difference. The blur's own
+  /// raster cost scales with the widget, not the image. Where [useRuntimeBlur]
+  /// is off the dimmed poster shows at this resolution.
+  static const int maxBlurredPosterDecodePx = 96;
 
   final String? url;
 
@@ -55,6 +65,12 @@ class BlurredVideoBackdrop extends StatelessWidget {
   /// paints fullscreen — the safe fallback when dimensions are unknown.
   final double? videoAspectRatio;
 
+  /// Whether to blur the poster at runtime when there is no [blurhash].
+  ///
+  /// Defaults to `false` on web, where compiling the 30 px blur shader stalls
+  /// WebGL; the poster is then dimmed but not blurred.
+  final bool useRuntimeBlur;
+
   @override
   Widget build(BuildContext context) {
     final aspectRatio = videoAspectRatio;
@@ -63,6 +79,8 @@ class BlurredVideoBackdrop extends StatelessWidget {
         url: url,
         filePath: filePath,
         blurhash: blurhash,
+        isolatePosterPaint: true,
+        useRuntimeBlur: useRuntimeBlur,
       );
     }
     return LayoutBuilder(
@@ -87,6 +105,7 @@ class BlurredVideoBackdrop extends StatelessWidget {
                     url: url,
                     filePath: filePath,
                     blurhash: blurhash,
+                    useRuntimeBlur: useRuntimeBlur,
                   ),
                 ),
               ),
@@ -98,13 +117,22 @@ class BlurredVideoBackdrop extends StatelessWidget {
 }
 
 /// The blurred fill itself, without any letterbox clip. Prefers the cheap
-/// stretched-blurhash path and falls back to a runtime gaussian of the poster.
+/// stretched-blurhash path and falls back to the poster, blurred at runtime
+/// when [useRuntimeBlur] is on.
 class _BackdropContent extends StatelessWidget {
-  const _BackdropContent({this.url, this.filePath, this.blurhash});
+  const _BackdropContent({
+    required this.useRuntimeBlur,
+    this.url,
+    this.filePath,
+    this.blurhash,
+    this.isolatePosterPaint = false,
+  });
 
   final String? url;
   final String? filePath;
   final String? blurhash;
+  final bool isolatePosterPaint;
+  final bool useRuntimeBlur;
 
   @override
   Widget build(BuildContext context) {
@@ -119,17 +147,25 @@ class _BackdropContent extends StatelessWidget {
       return LayoutBuilder(
         builder: (context, constraints) {
           final pixelRatio = MediaQuery.devicePixelRatioOf(context);
-          return _blurredPoster(
+          final targetWidth =
+              constraints.hasBoundedWidth && constraints.maxWidth > 0
+              ? (constraints.maxWidth * pixelRatio).ceil().clamp(
+                  1,
+                  BlurredVideoBackdrop.maxBlurredPosterDecodePx,
+                )
+              : BlurredVideoBackdrop.maxBlurredPosterDecodePx;
+          final targetHeight =
+              constraints.hasBoundedHeight && constraints.maxHeight > 0
+              ? (constraints.maxHeight * pixelRatio).ceil().clamp(
+                  1,
+                  BlurredVideoBackdrop.maxBlurredPosterDecodePx,
+                )
+              : BlurredVideoBackdrop.maxBlurredPosterDecodePx;
+          return _posterFallback(
             VineCachedImage(
               imageUrl: posterUrl,
-              memCacheWidth:
-                  constraints.hasBoundedWidth && constraints.maxWidth > 0
-                  ? (constraints.maxWidth * pixelRatio).ceil()
-                  : null,
-              memCacheHeight:
-                  constraints.hasBoundedHeight && constraints.maxHeight > 0
-                  ? (constraints.maxHeight * pixelRatio).ceil()
-                  : null,
+              memCacheWidth: targetWidth,
+              memCacheHeight: targetHeight,
               resizePolicy: ResizeImagePolicy.fit,
               // Fall back to nothing on error — the parent
               // [ColoredBox(VineTheme.surfaceContainerHigh)] shows through.
@@ -140,7 +176,7 @@ class _BackdropContent extends StatelessWidget {
       );
     }
     if (posterPath != null && posterPath.isNotEmpty) {
-      return _blurredPoster(
+      return _posterFallback(
         ClipThumbnailImage(
           path: posterPath,
           fit: BoxFit.cover,
@@ -152,16 +188,24 @@ class _BackdropContent extends StatelessWidget {
     return const SizedBox.shrink();
   }
 
-  Widget _blurredPoster(Widget poster) {
-    return ClipRect(
-      // `ImageFiltered` applies the blur on the GPU side; `ClipRect`
-      // keeps the bleeding edge of the blur kernel from leaking
-      // outside the widget's box and over the surrounding chrome.
-      child: ImageFiltered(
-        imageFilter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-        child: Opacity(opacity: 0.5, child: poster),
-      ),
-    );
+  Widget _posterFallback(Widget poster) {
+    final Widget fallbackPoster;
+    if (useRuntimeBlur) {
+      fallbackPoster = ClipRect(
+        // `ImageFiltered` applies the blur on the GPU side; `ClipRect`
+        // keeps the bleeding edge of the blur kernel from leaking
+        // outside the widget's box and over the surrounding chrome.
+        child: ImageFiltered(
+          imageFilter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+          child: Opacity(opacity: 0.5, child: poster),
+        ),
+      );
+    } else {
+      fallbackPoster = ClipRect(child: Opacity(opacity: 0.25, child: poster));
+    }
+    return isolatePosterPaint
+        ? RepaintBoundary(child: fallbackPoster)
+        : fallbackPoster;
   }
 }
 
@@ -203,9 +247,8 @@ List<Rect> letterboxBands(Rect video, Size box) {
 
 /// The rect a video of [aspectRatio] occupies when `BoxFit.contain`-fitted and
 /// centered in [box] — mirrors the player's `FittedBox(fit: contain)`. Locates
-/// the letterbox bars the blurred fill covers. Exposed for testing the
-/// letterbox geometry, which is the seam-risk load-bearing logic.
-@visibleForTesting
+/// the letterbox bars the blurred fill covers, and the frame a grid tile's
+/// picture flies to when it opens the video.
 Rect letterboxVideoRect(double aspectRatio, Size box) {
   final boxAspect = box.width / box.height;
   final double width;
@@ -245,3 +288,18 @@ bool videoCoversFeedViewport({
   required double? aspectRatio,
   required bool shouldPortraitExpand,
 }) => shouldPortraitExpand && aspectRatio != null && aspectRatio != 1.0;
+
+/// The aspect ratio the fullscreen feed letterboxes a [width] by [height]
+/// video at, or null when the video fills the screen: it is cropped to cover
+/// it, or its dimensions are unknown.
+///
+/// The fullscreen feed expands portrait videos, so only a square video is
+/// letterboxed.
+double? fullscreenFeedLetterboxAspectRatio(int? width, int? height) {
+  final aspectRatio = backdropAspectRatio(width, height);
+  final covers = videoCoversFeedViewport(
+    aspectRatio: aspectRatio,
+    shouldPortraitExpand: true,
+  );
+  return covers ? null : aspectRatio;
+}

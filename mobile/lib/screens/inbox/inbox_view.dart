@@ -65,18 +65,19 @@ class _InboxViewState extends ConsumerState<InboxView>
   /// Currently selected tab.
   InboxTab _selectedTab = InboxTab.notifications;
 
-  /// Whether the Messages tab UI has been opened at least once. The
-  /// `ConversationListBloc` is provided by `InboxPage` and starts immediately
-  /// so DM backfill and streams can warm the tab before it is visible; this flag
-  /// only keeps the Messages pane out of the animated stack until first open.
-  /// After that first open, the pane stays mounted so later switches preserve
-  /// UI state. Notifications is the default tab and is always mounted.
+  /// Whether the Messages tab UI has been opened at least once. Until then
+  /// the Messages pane, the only reader of `ConversationListBloc`, stays out
+  /// of the animated stack. `InboxPage` provides that bloc lazily, so the bloc
+  /// is created, and the DM history restore starts, when Messages first opens,
+  /// not when the inbox does (#11020). A chat and the message requests page
+  /// start the restore on their own too. After the first open the pane stays
+  /// mounted so later switches preserve UI state. Notifications is the
+  /// default tab and is always mounted.
   bool _messagesActivated = false;
 
   /// Pubkey the current tab state belongs to. When the signed-in identity
   /// changes we collapse back to Notifications and re-arm lazy Messages UI
-  /// activation. The account-scoped DM bloc still starts from `InboxPage` so
-  /// Messages can be ready by the time the user opens it.
+  /// activation.
   String? _activePubkey;
   bool _pubkeyObserved = false;
 
@@ -131,15 +132,6 @@ class _InboxViewState extends ConsumerState<InboxView>
     // Rebuild the inbox surfaces when auth identity changes so per-screen UI
     // state does not linger across account switches.
     ref.watch(currentAuthStateProvider);
-
-    // Re-filter conversation list when blocklist changes.
-    ref.listen(blocklistVersionProvider, (previous, current) {
-      if (previous != null && current > previous) {
-        context.read<ConversationListBloc>().add(
-          const ConversationListBlocklistChanged(),
-        );
-      }
-    });
 
     // Watch unread counts for both segments. Without a Messages-side badge
     // users had no signal that a still-lit bottom-nav inbox dot was caused
@@ -377,6 +369,34 @@ class _PeerLabelSyncState extends State<_PeerLabelSync> {
   Widget build(BuildContext context) => widget.child;
 }
 
+/// Forwards profile repository and blocklist changes to
+/// `ConversationListBloc`. It lives inside the Messages pane, like
+/// [_PeerLabelSync], so it never creates the bloc, and starts the DM history
+/// restore, before Messages opens (#11020). Earlier changes need no
+/// forwarding: the bloc reads both when it starts.
+class _ConversationListSync extends ConsumerWidget {
+  const _ConversationListSync({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(profileRepositoryProvider, (_, repository) {
+      context.read<ConversationListBloc>().add(
+        ConversationListProfileRepositoryChanged(repository),
+      );
+    });
+    ref.listen(blocklistVersionProvider, (previous, current) {
+      if (previous != null && current > previous) {
+        context.read<ConversationListBloc>().add(
+          const ConversationListBlocklistChanged(),
+        );
+      }
+    });
+    return child;
+  }
+}
+
 /// Content for the Messages tab: following bar + conversation list or
 /// empty state, with a FAB for composing new messages.
 class _MessagesContent extends ConsumerWidget {
@@ -414,8 +434,10 @@ class _MessagesContent extends ConsumerWidget {
       },
       child: Stack(
         children: [
-          _PeerLabelSync(
-            child: _MessagesScrollView(currentUserPubkey: currentPubkey),
+          _ConversationListSync(
+            child: _PeerLabelSync(
+              child: _MessagesScrollView(currentUserPubkey: currentPubkey),
+            ),
           ),
           // FAB positioned bottom-right
           PositionedDirectional(

@@ -92,13 +92,13 @@ void main() {
       when(
         () => commentsRepository.watchCommentDeletions(
           rootEventId: any(named: 'rootEventId'),
+          commentAuthors: any(named: 'commentAuthors'),
           includeVideoReplies: any(named: 'includeVideoReplies'),
         ),
       ).thenAnswer((_) => const Stream<CommentDeletion>.empty());
       when(
         () => commentsRepository.findAuthorDeletedComments(any()),
       ).thenAnswer((_) async => <String>{});
-      when(commentsRepository.stopWatchingComments).thenAnswer((_) async {});
       when(
         () => moderationRepository.loadModeration(
           rootAddressableId: any(named: 'rootAddressableId'),
@@ -108,6 +108,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(<Comment>[]);
+      registerFallbackValue(const Stream<Set<String>>.empty());
       registerFallbackValue(_comment('fallback'));
     });
 

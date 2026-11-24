@@ -1023,6 +1023,25 @@ void main() {
           expect(holders, [testPubkey]);
         },
       );
+
+      test('reports a non-string holder as a malformed response', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer(
+          (_) async => http.Response(
+            '{"holders":["$testPubkey",{"pubkey":"$testPubkey"}]}',
+            200,
+          ),
+        );
+
+        await expectLater(
+          client.getBadgeHolderPreview(
+            creatorPubkey: testPubkey,
+            dTag: 'art/day',
+          ),
+          throwsA(isA<FunnelcakeException>()),
+        );
+      });
     });
 
     group('getHomeFeed', () {
@@ -5437,110 +5456,6 @@ void main() {
             reason: body,
           );
         }
-      });
-    });
-
-    group('getTrendingSounds', () {
-      test('requests trending sounds and parses their usage counts', () async {
-        when(
-          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
-        ).thenAnswer(
-          (_) async => http.Response(
-            '[{"id": "sound-a", "pubkey": "$testPubkey", "title": "Beat", '
-            '"created_at": 1780000000, "usage_count": 28}]',
-            200,
-          ),
-        );
-
-        final sounds = await client.getTrendingSounds(limit: 20);
-
-        expect(sounds.single.id, 'sound-a');
-        expect(sounds.single.usageCount, 28);
-        final uri =
-            verify(
-                  () => mockHttpClient.get(
-                    captureAny(),
-                    headers: any(named: 'headers'),
-                  ),
-                ).captured.single
-                as Uri;
-        expect(uri.path, '/api/sounds');
-        expect(uri.queryParameters, {'sort': 'trending', 'limit': '20'});
-      });
-
-      test('asks for the ranking past offset', () async {
-        when(
-          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
-        ).thenAnswer((_) async => http.Response('[]', 200));
-
-        await client.getTrendingSounds(offset: 100);
-
-        final uri =
-            verify(
-                  () => mockHttpClient.get(
-                    captureAny(),
-                    headers: any(named: 'headers'),
-                  ),
-                ).captured.single
-                as Uri;
-        expect(uri.queryParameters, {
-          'sort': 'trending',
-          'limit': '50',
-          'offset': '100',
-        });
-      });
-
-      test('throws FunnelcakeNotConfiguredException when not available', () {
-        final emptyClient = FunnelcakeApiClient(
-          baseUrl: '',
-          httpClient: mockHttpClient,
-        );
-
-        expect(
-          emptyClient.getTrendingSounds,
-          throwsA(isA<FunnelcakeNotConfiguredException>()),
-        );
-
-        emptyClient.dispose();
-      });
-
-      test('throws FunnelcakeApiException on a non-200 response', () {
-        when(
-          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
-        ).thenAnswer((_) async => http.Response('nope', 503));
-
-        expect(
-          client.getTrendingSounds,
-          throwsA(
-            isA<FunnelcakeApiException>().having(
-              (e) => e.statusCode,
-              'statusCode',
-              503,
-            ),
-          ),
-        );
-      });
-
-      test('throws FunnelcakeTimeoutException on timeout', () {
-        when(
-          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
-        ).thenThrow(TimeoutException('slow'));
-
-        expect(
-          client.getTrendingSounds,
-          throwsA(isA<FunnelcakeTimeoutException>()),
-        );
-      });
-
-      test('wraps an unreadable body in a FunnelcakeException', () {
-        when(
-          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
-        ).thenAnswer((_) async => http.Response('not json', 200));
-
-        expect(
-          client.getTrendingSounds,
-          throwsA(isA<FunnelcakeException>()),
-        );
       });
     });
 

@@ -14,7 +14,7 @@ Validates that all exported classes and constants are properly accessible from t
 - Core classes (Nostr, Event, EventKind, Subscription)
 - Signing implementations (NostrSigner, LocalNostrSigner, UnauthenticatedSigner)
 - Relay classes (Relay, RelayPool, RelayStatus, RelayType, EventFilter)
-- NIP implementations (Contact, ContactList, Nip19, GroupIdentifier)
+- NIP implementations (Contact, ContactList, Nip19)
 - Utility classes (StringUtil, DateFormatUtil, UploadUtil)
 - Constants validation
 
@@ -103,7 +103,6 @@ This test suite was created using a **test-driven approach** to validate library
 - Relay connection and messaging
 - NIP-02 contact list operations
 - Full Nostr client integration tests
-- NIP-29 group functionality
 - File upload operations
 - Error handling edge cases
 - Performance testing

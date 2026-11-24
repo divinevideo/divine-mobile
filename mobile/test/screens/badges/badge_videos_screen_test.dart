@@ -9,12 +9,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:openvine/blocs/badges/badge_videos_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/badges/badge_videos_screen.dart';
+import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:videos_repository/videos_repository.dart';
 
+import '../../helpers/go_router.dart';
 import '../../helpers/test_provider_overrides.dart';
 
 class _MockBadgeVideosCubit extends MockCubit<BadgeVideosState>
@@ -160,6 +163,46 @@ void main() {
         expect(find.text('open'), findsOneWidget);
       });
 
+      testWidgets('opens a tapped video growing out of its tile', (
+        tester,
+      ) async {
+        final videos = [_video('a'), _video('b')];
+        when(() => cubit.state).thenReturn(
+          BadgeVideosState(status: BadgeVideosStatus.loaded, videos: videos),
+        );
+        final router = MockGoRouter();
+        when(
+          () => router.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async {});
+
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: MockGoRouterProvider(
+              goRouter: router,
+              child: BlocProvider<BadgeVideosCubit>.value(
+                value: cubit,
+                child: const BadgeVideosView(coordinate: _coordinate),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.byKey(ValueKey(videos[1].id)));
+        await tester.pump();
+
+        final args =
+            verify(
+                  () => router.push<void>(
+                    any(),
+                    extra: captureAny(named: 'extra'),
+                  ),
+                ).captured.single
+                as PooledFullscreenVideoFeedArgs;
+        addTearDown(() => args.tileOrigin?.takeImage()?.dispose());
+        expect(args.initialVideoId, videos[1].id);
+        expect(args.tileOrigin?.videoId, videos[1].id);
+      });
+
       testWidgets('retries a failed load', (tester) async {
         when(() => cubit.state).thenReturn(
           const BadgeVideosState(status: BadgeVideosStatus.failure),
@@ -213,6 +256,15 @@ void main() {
     });
   });
 }
+
+VideoEvent _video(String id) => VideoEvent(
+  id: id.padLeft(64, '0'),
+  pubkey: '0000000000000000000000000000000000000000000000000000000000000066',
+  createdAt: 1000,
+  content: '',
+  timestamp: DateTime.fromMillisecondsSinceEpoch(1000 * 1000),
+  videoUrl: 'https://example.com/$id.mp4',
+);
 
 const _coordinate = BadgeCoordinate(
   pubkey: '0000000000000000000000000000000000000000000000000000000000000065',

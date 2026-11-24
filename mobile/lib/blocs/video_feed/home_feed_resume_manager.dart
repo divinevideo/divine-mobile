@@ -33,7 +33,7 @@ const _spliceLookahead = 2;
 const _persistDebounce = Duration(milliseconds: 600);
 
 /// Coordinates the persisted forward window that lets `VideoFeedBloc` serve the
-/// home feed instantly on cold start and resume past already-seen videos.
+/// Home feed from disk on cold start and resume past already-seen videos.
 class HomeFeedResumeManager {
   HomeFeedResumeManager({
     required HomeFeedCache cache,
@@ -57,18 +57,18 @@ class HomeFeedResumeManager {
   /// the latest submitted — is written last and wins.
   Future<void> _writeChain = Future<void>.value();
 
-  /// Reads the cached window for [mode] and content-filters it, returning the
-  /// videos that can be served immediately (empty when nothing is usable).
+  /// Reads the cached window for [mode] and applies the current content and
+  /// seen-video filters, waiting for history to load when filtering is enabled.
   ///
-  /// The window already starts at the resume position — already-watched videos
-  /// were dropped on write — so the caller serves it at index 0.
+  /// The persisted window starts after the last active index, so the caller
+  /// serves the surviving videos at index 0.
   Future<List<VideoEvent>> readServeableWindow({
     required String? pubkey,
     required String mode,
   }) async {
     final cached = await _cache.readVideos(pubkey: pubkey, mode: mode);
     if (cached == null || cached.isEmpty) return const [];
-    final filtered = _videosRepository.applyContentPreferences(cached);
+    final filtered = await _videosRepository.applyHomeFeedPreferences(cached);
     return filtered.where((v) => v.videoUrl != null).toList();
   }
 

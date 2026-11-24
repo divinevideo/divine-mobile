@@ -8,12 +8,14 @@ import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
 import 'package:openvine/features/creator_highlights/invite_friends_screen.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/observability/editor_ready_trace.dart';
 import 'package:openvine/router/fade_upwards_page.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/pooled_fullscreen_feed_route.dart';
 import 'package:openvine/router/recorder_sound_selection.dart';
 import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/routes/route_extras.dart';
+import 'package:openvine/router/video_tile_transition_page.dart';
 import 'package:openvine/router/widgets/sound_detail_loader.dart';
 import 'package:openvine/screens/creator_analytics_screen.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
@@ -271,7 +273,8 @@ class VideoEditorRouteData extends GoRouteData with $VideoEditorRouteData {
   /// it only sets the `entry` of the `editor_ready` performance trace.
   final String? from;
 
-  /// The in-memory analytics session of a confirmed library reaction, if any.
+  /// The in-memory analytics session of a confirmed library reaction, or the
+  /// [EditorOpenRequest] of the recorder's "Next", if any.
   final Object? $extra;
 
   @override
@@ -280,6 +283,7 @@ class VideoEditorRouteData extends GoRouteData with $VideoEditorRouteData {
         child: VideoEditorScreen(
           fromLibrary: from == VideoEditorScreen.libraryOrigin,
           analyticsSession: extraAs<CreationAnalyticsSession>($extra),
+          openRequest: extraAs<EditorOpenRequest>($extra),
         ),
       );
 }
@@ -412,6 +416,17 @@ class PooledFullscreenVideoFeedRouteData extends GoRouteData
   @override
   String? redirect(BuildContext context, GoRouterState state) =>
       fullscreenFeedRedirect($extra, fallbackVideoId: video);
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) {
+    final origin = fullscreenFeedTileOrigin(state.extra);
+    if (origin == null) return super.buildPage(context, state);
+    return videoTileTransitionPage(
+      state: state,
+      origin: origin,
+      child: build(context, state),
+    );
+  }
 
   @override
   Widget build(BuildContext context, GoRouterState state) =>

@@ -1,3 +1,9 @@
+## Unreleased
+
+### Removed
+
+- **Relay-based Groups (NIP-29)**: the `NIP29` and `GroupIdentifier` helpers and the unexported group classes in `lib/nip29/`. Nothing in the app or its packages used them, and `NIP29.editStatus` sent kind 9006, which NIP-29 dropped in 2024 in favour of kind 9002 (`edit-metadata`) (#7772).
+
 ## 0.1.0
 
 ### 🎉 Initial Public Release

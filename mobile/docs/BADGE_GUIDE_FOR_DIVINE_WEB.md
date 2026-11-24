@@ -65,7 +65,7 @@ Important:
 
 - A `platform: vine` tag on its own is not a trigger, except on a row the server could not check
 - A verified archive Vine shows neither `Human Made` nor `Not Divine Hosted`, even when it also has proof tags
-- Mobile's badge row (`MetadataBadgesRow`) renders no separate `Original` chip; the status shows as that suppression
+- Mobile's metadata badge row (`MetadataBadgesRow`) has no `Original` chip. It displays `Classic Vine` for videos that satisfy `countsAsArchiveVine` above and have a positive original `published_at` through 2017 UTC, using the event timestamp as a fallback only before Vine's shutdown. An explicit server rejection suppresses the chip; the platform tag stands in only when server verification is unavailable. The chip is display-only.
 
 ### 3. `Not Divine Hosted`
 

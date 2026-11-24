@@ -15,6 +15,7 @@ void main() {
       String url = testUrl,
       String? blurhash,
       double? videoAspectRatio,
+      bool useRuntimeBlur = true,
     }) {
       return WidgetsApp(
         localizationsDelegates: appLocalizationsDelegates,
@@ -27,6 +28,7 @@ void main() {
             url: url,
             blurhash: blurhash,
             videoAspectRatio: videoAspectRatio,
+            useRuntimeBlur: useRuntimeBlur,
           ),
         ),
       );
@@ -38,6 +40,45 @@ void main() {
       expect(find.byType(ClipRect), findsOneWidget);
       expect(find.byType(ImageFiltered), findsOneWidget);
     });
+
+    testWidgets(
+      'omits $ImageFiltered and dims poster when useRuntimeBlur is false',
+      (tester) async {
+        await tester.pumpWidget(
+          WidgetsApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            color: const Color(0xFF000000),
+            builder: (_, _) => const SizedBox(
+              width: 400,
+              height: 800,
+              child: BlurredVideoBackdrop(
+                url: testUrl,
+                useRuntimeBlur: false,
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byType(ClipRect), findsOneWidget);
+        expect(find.byType(ImageFiltered), findsNothing);
+        final opacity = tester.widget<Opacity>(find.byType(Opacity));
+        expect(opacity.opacity, equals(0.25));
+      },
+    );
+
+    testWidgets(
+      'dims the poster in each letterbox bar when useRuntimeBlur is false',
+      (tester) async {
+        await tester.pumpWidget(
+          buildWidget(videoAspectRatio: 1, useRuntimeBlur: false),
+        );
+
+        expect(find.byType(ImageFiltered), findsNothing);
+        final opacities = tester.widgetList<Opacity>(find.byType(Opacity));
+        expect(opacities.map((o) => o.opacity), equals([0.25, 0.25]));
+      },
+    );
 
     testWidgets(
       'renders $BlurhashDisplay without any blur pass when a blurhash '
@@ -137,27 +178,74 @@ void main() {
       },
     );
 
-    testWidgets('bounds the network poster decode to physical layout size', (
-      tester,
-    ) async {
-      tester.view
-        ..physicalSize = const Size(800, 1600)
-        ..devicePixelRatio = 2;
-      addTearDown(() {
+    testWidgets(
+      'caps the blurred network poster decode size and isolates paint',
+      (
+        tester,
+      ) async {
         tester.view
-          ..resetPhysicalSize()
-          ..resetDevicePixelRatio();
-      });
-      await tester.pumpWidget(buildWidget());
+          ..physicalSize = const Size(800, 1600)
+          ..devicePixelRatio = 2;
+        addTearDown(() {
+          tester.view
+            ..resetPhysicalSize()
+            ..resetDevicePixelRatio();
+        });
+        await tester.pumpWidget(buildWidget());
 
-      final image = tester.widget<VineCachedImage>(
-        find.byType(VineCachedImage),
-      );
-      expect(image.imageUrl, equals(testUrl));
-      expect(image.memCacheWidth, 800);
-      expect(image.memCacheHeight, 1600);
-      expect(image.resizePolicy, ResizeImagePolicy.fit);
-    });
+        final image = tester.widget<VineCachedImage>(
+          find.byType(VineCachedImage),
+        );
+        expect(image.imageUrl, equals(testUrl));
+        expect(
+          image.memCacheWidth,
+          equals(BlurredVideoBackdrop.maxBlurredPosterDecodePx),
+        );
+        expect(
+          image.memCacheHeight,
+          equals(BlurredVideoBackdrop.maxBlurredPosterDecodePx),
+        );
+        expect(image.resizePolicy, ResizeImagePolicy.fit);
+        expect(
+          find.descendant(
+            of: find.byType(BlurredVideoBackdrop),
+            matching: find.ancestor(
+              of: find.byType(ImageFiltered),
+              matching: find.byType(RepaintBoundary),
+            ),
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'decodes a layout smaller than the cap at its own physical size',
+      (tester) async {
+        tester.view.devicePixelRatio = 2;
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          WidgetsApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            color: const Color(0xFF000000),
+            builder: (_, _) => const Center(
+              child: SizedBox(
+                width: 20,
+                height: 40,
+                child: BlurredVideoBackdrop(url: testUrl),
+              ),
+            ),
+          ),
+        );
+
+        final image = tester.widget<VineCachedImage>(
+          find.byType(VineCachedImage),
+        );
+        expect(image.memCacheWidth, equals(40));
+        expect(image.memCacheHeight, equals(80));
+      },
+    );
 
     testWidgets('uses $BoxFit cover with half opacity', (tester) async {
       await tester.pumpWidget(buildWidget());
@@ -191,6 +279,22 @@ void main() {
     });
 
     group('letterbox bands', () {
+      testWidgets('uses one paint boundary per blurred poster band', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget(videoAspectRatio: 1));
+
+        expect(find.byType(ImageFiltered), findsNWidgets(2));
+        for (final blur in find.byType(ImageFiltered).evaluate()) {
+          var boundaries = 0;
+          blur.visitAncestorElements((element) {
+            if (element.widget is RepaintBoundary) boundaries++;
+            return element.widget is! BlurredVideoBackdrop;
+          });
+          expect(boundaries, 1);
+        }
+      });
+
       testWidgets(
         'renders a RepaintBoundary-isolated blur fill in each letterbox bar '
         'when the aspect ratio is known',
@@ -348,6 +452,24 @@ void main() {
           );
         },
       );
+    });
+
+    group('fullscreenFeedLetterboxAspectRatio', () {
+      test('letterboxes a square video', () {
+        expect(fullscreenFeedLetterboxAspectRatio(1080, 1080), equals(1));
+      });
+
+      test('fills the screen with a portrait video', () {
+        expect(fullscreenFeedLetterboxAspectRatio(1080, 1920), isNull);
+      });
+
+      test('fills the screen with a landscape video', () {
+        expect(fullscreenFeedLetterboxAspectRatio(1920, 1080), isNull);
+      });
+
+      test('fills the screen when the dimensions are unknown', () {
+        expect(fullscreenFeedLetterboxAspectRatio(null, null), isNull);
+      });
     });
   });
 }

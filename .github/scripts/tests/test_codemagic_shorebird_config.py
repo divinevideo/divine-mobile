@@ -86,6 +86,61 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_ios_release_and_simulator_use_sdk_27(self) -> None:
+        workflows = self._resolved_config()["workflows"]
+        for name in ("ios-build", "ios-scheduled-build", "ios-simulator-build"):
+            with self.subTest(workflow=name):
+                self.assertEqual("27.2", workflows[name]["environment"]["xcode"])
+
+        native = self.mobile_ci_contents.split("  ios-native-tests:\n", 1)[1]
+        self.assertIn("    runs-on: xcode-27\n", native.split("    steps:", 1)[0])
+
+    def test_archive_sdk_guard_accepts_only_the_ios_27_device_sdk(self) -> None:
+        build = self._definition_block("build_ios")
+        guard = "APP_PATH=" + build.split("        APP_PATH=", 1)[1]
+        guard = guard.split("        esac\n", 1)[0] + "        esac\n"
+        with tempfile.TemporaryDirectory() as directory:
+            # The release runs on macOS; configuration CI runs on Linux, so a
+            # stub answers for PlistBuddy and the guard's own case runs as is.
+            plist_buddy = Path(directory) / "PlistBuddy"
+            plist_buddy.write_text(
+                "#!/bin/sh\n"
+                '[ "$1" = -c ] && [ "$2" = "Print :DTSDKName" ] || exit 1\n'
+                'printf "%s\\n" "$SDK_NAME"\n'
+            )
+            plist_buddy.chmod(0o755)
+            guard = guard.replace("/usr/libexec/PlistBuddy", shlex.quote(str(plist_buddy)))
+            for sdk, accepted in (
+                ("iphoneos27.2", True),
+                ("iphoneos26.5", False),
+                ("iphonesimulator27.2", False),
+                ("iphoneos270.0", False),
+            ):
+                with self.subTest(sdk=sdk):
+                    result = subprocess.run(
+                        ["bash", "-c", "set -euo pipefail\n" + guard],
+                        env={"PATH": os.environ["PATH"], "SDK_NAME": sdk},
+                        check=False,
+                        text=True,
+                        capture_output=True,
+                    )
+                    if accepted:
+                        self.assertEqual(0, result.returncode, result.stderr)
+                    else:
+                        self.assertNotEqual(0, result.returncode)
+                        self.assertIn("expected the iOS 27 SDK", result.stderr)
+
+    def test_ios_patch_can_select_the_release_xcode(self) -> None:
+        workflow = self._resolved_config()["workflows"]["ios-patch"]
+        self.assertEqual("${{ inputs.XCODE_VERSION }}", workflow["environment"]["xcode"])
+        self.assertEqual("27.2", workflow["inputs"]["XCODE_VERSION"]["default"])
+        emit = self._definition_block("emit_shorebird_provenance")
+        verify = self._definition_block("fetch_and_verify_shorebird_provenance")
+        self.assertIn("Print :DTXcodeBuild", emit)
+        self.assertIn("xcodebuild -version", verify)
+        self.assertIn('--xcode-build "$XCODE_BUILD"', emit)
+        self.assertIn('--xcode-build "$XCODE_BUILD"', verify)
+
     def test_ios_e2e_uses_one_simulator_for_boot_install_and_maestro(
         self,
     ) -> None:
@@ -311,7 +366,7 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
 
     def test_release_channel_is_explicit_and_defaults_to_beta(self) -> None:
         config = self._resolved_config()
-        for name in ('ios-build', 'android-build', 'macos-build'):
+        for name in ('ios-build', 'android-build'):
             channel = config['workflows'][name]['inputs']['RELEASE_CHANNEL']
             self.assertEqual(channel['default'], 'BETA')
             self.assertEqual(channel['options'], ['BETA', 'PRODUCTION'])
@@ -321,12 +376,12 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn('zapstore-publish', workflows)
         workflow = workflows['zapstore-publish']
         self.assertEqual(workflow['environment']['groups'],
-                         ['github_credentials', 'zapstore_credentials'])
+                         ['github_credentials', 'zapstore_credentials', 'store_release_credentials'])
         self.assertEqual(workflow['triggering']['events'], [])
         self.assertNotIn('publishing', workflow)
         self.assertNotIn('android_signing', workflow['environment'])
-        self.assertEqual(len(workflow['scripts']), 2)
-        self.assertEqual(workflow['scripts'][1],
+        self.assertEqual(len(workflow['scripts']), 4)
+        self.assertEqual(workflow['scripts'][2],
                          next(step for step in workflows['android-build']['scripts']
                               if step['name'] == 'Publish to Zapstore'))
         self.assertEqual(workflow['inputs']['PUBLISH_TO_GITHUB']['default'], 'YES')
@@ -375,7 +430,7 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             self.assertEqual(list(root.iterdir()), [root / 'zapstore.yaml'])
 
     def test_stable_publish_refuses_non_main_branches(self) -> None:
-        scripts = self._resolved_config()['workflows']['macos-build']['scripts']
+        scripts = self._resolved_config()['workflows']['ios-build']['scripts']
         original = next(step['script'] for step in scripts if step['name'] == 'Publish to GitHub Release')
         for channel, branch, allowed in [('PRODUCTION', 'main', True),
                                           ('PRODUCTION', 'feature/test', False),
@@ -1379,6 +1434,107 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         )
         self.assertIn("`shorebird_code_push` is a runtime dependency", self.shorebird_doc_contents)
         self.assertIn("Crashlytics", self.shorebird_doc_contents)
+
+    def test_macos_build_signs_and_packages_for_mac_app_store(self) -> None:
+        resolved = self._resolved_config()["workflows"]
+        workflow = resolved["macos-build"]
+        self.assertEqual(
+            workflow["integrations"]["app_store_connect"],
+            "API key for Codemagic",
+        )
+        groups = workflow["environment"]["groups"]
+        self.assertIn("macos_signing_credentials", groups)
+        for other_name, other_workflow in resolved.items():
+            if other_name == "macos-build":
+                continue
+            other_groups = (other_workflow.get("environment") or {}).get("groups") or []
+            self.assertNotIn("macos_signing_credentials", other_groups)
+
+        env_vars = workflow["environment"]["vars"]
+        self.assertEqual(env_vars["BUNDLE_ID"], "co.openvine.app")
+        self.assertNotIn("FIREBASE_ANALYTICS_WITHOUT_ADID", env_vars)
+
+        step_names = [step["name"] for step in workflow["scripts"]]
+        self.assertIn("Check macOS App Store configuration", step_names)
+        self.assertIn("Setup Mac App Store code signing", step_names)
+        self.assertIn("Build macOS app", step_names)
+        self.assertIn("Archive and export Mac App Store pkg", step_names)
+        self.assertNotIn("Package macOS DMG", step_names)
+        self.assertNotIn("Publish to GitHub Release", step_names)
+        self.assertLess(
+            step_names.index("Setup Mac App Store code signing"),
+            step_names.index("Build macOS app"),
+        )
+        self.assertLess(
+            step_names.index("Build macOS app"),
+            step_names.index("Archive and export Mac App Store pkg"),
+        )
+
+        allocate_script = next(
+            step["script"]
+            for step in workflow["scripts"]
+            if "release_identity.py direct" in step["script"]
+        )
+        self.assertIn(
+            "app-store-connect get-latest-testflight-build-number",
+            allocate_script,
+        )
+        self.assertNotIn("|| echo", allocate_script)
+        self.assertNotIn("2>/dev/null", allocate_script)
+
+        build_macos = self._definition_block("build_macos")
+        self.assertNotIn("CODE_SIGNING_ALLOWED=NO", build_macos)
+        self.assertNotIn("CODE_SIGNING_REQUIRED=NO", build_macos)
+
+        self.assertIn("build/macos/pkg/*.pkg", workflow["artifacts"])
+        self.assertNotIn("build/macos/Build/Products/Release/*.dmg", workflow["artifacts"])
+        publishing = workflow["publishing"]["app_store_connect"]
+        self.assertEqual(publishing["auth"], "integration")
+        self.assertIs(publishing["submit_to_testflight"], True)
+        self.assertIs(publishing["submit_to_app_store"], False)
+
+    def test_macos_signing_script_identity_lookup_works_with_posix_ere_sed(self) -> None:
+        script_path = CODEMAGIC_PATH.parent / "mobile/scripts/setup_macos_mas_signing.sh"
+        script_text = script_path.read_text()
+        self.assertNotIn(r"\|", script_text)
+        self.assertIn("Library/Developer/Xcode/UserData/Provisioning Profiles", script_text)
+        self.assertIn("--profiles-dir", script_text)
+
+        sample = (
+            '  1) AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA "Apple Development: Example (TEAM1)"\n'
+            '  2) BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB "Apple Distribution: Verse Communications, Inc. (GZCZBKH7MY)"\n'
+            '  3) CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC "3rd Party Mac Developer Installer: Verse Communications, Inc. (GZCZBKH7MY)"\n'
+        )
+        for fn_name, expected in (
+            (
+                "find_app_signing_identity",
+                "Apple Distribution: Verse Communications, Inc. (GZCZBKH7MY)",
+            ),
+            (
+                "find_installer_signing_identity",
+                "3rd Party Mac Developer Installer: Verse Communications, Inc. (GZCZBKH7MY)",
+            ),
+        ):
+            with self.subTest(fn=fn_name):
+                sed_match = re.search(
+                    rf"{fn_name}\(\)\s*\{{(.*?)\n\}}",
+                    script_text,
+                    re.DOTALL,
+                )
+                self.assertIsNotNone(sed_match)
+                body = sed_match.group(1)
+                cmd = (
+                    f'security() {{ printf "%s" {shlex.quote(sample)}; }}\n'
+                    f"{fn_name}() {{\n{body}\n}}\n"
+                    f"{fn_name}\n"
+                )
+                result = subprocess.run(
+                    ["bash", "-c", cmd],
+                    check=True,
+                    text=True,
+                    capture_output=True,
+                )
+                self.assertEqual(expected, result.stdout.strip())
 
     def _definition_block(self, anchor_name: str) -> str:
         start = self.contents.index(f"    - &{anchor_name}\n")

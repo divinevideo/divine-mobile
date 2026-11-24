@@ -64,6 +64,45 @@ enum VideoStickerKind {
   /// Whether viewers answer the sticker, by a vote, a private message or a
   /// video of their own, rather than opening what it shows.
   bool get takesAnswers => isPoll || this == question || this == prompt;
+
+  /// Whether viewers answer the sticker with a video of their own: a prompt
+  /// they join, or the video replies a replies sticker shows. Only these
+  /// carry a [VideoStickerAudience].
+  bool get takesVideoAnswers => this == prompt || this == replies;
+}
+
+/// Who may answer a sticker viewers answer with a video of their own, a
+/// [VideoStickerKind.prompt] or a [VideoStickerKind.replies] sticker.
+///
+/// Nothing keeps another client from publishing an answer, so the Divine
+/// player holds to it: it offers the camera only to whoever may answer, and
+/// shows and counts only their answers.
+enum VideoStickerAudience {
+  /// Anyone. The sticker is drawn into the video's frames like any other.
+  everyone,
+
+  /// The sticker's owner and the people they follow.
+  following,
+
+  /// The sticker's owner alone.
+  creator;
+
+  /// Whether only some viewers may answer. Such a sticker is left out of the
+  /// video's frames, and the player shows it to whoever may answer and to
+  /// everyone else only once someone answered.
+  bool get isRestricted => this != everyone;
+
+  /// Whether [pubkey] may answer a sticker [owner] owns, who follows
+  /// [ownerFollows]. All three are hex public keys.
+  bool admits(
+    String pubkey, {
+    required String owner,
+    Set<String> ownerFollows = const {},
+  }) => switch (this) {
+    everyone => true,
+    following => pubkey == owner || ownerFollows.contains(pubkey),
+    creator => pubkey == owner,
+  };
 }
 
 /// A sticker on a published video that opens what it points to when tapped,
@@ -76,13 +115,18 @@ enum VideoStickerKind {
 /// gets no area.
 ///
 /// Published as a `sticker` tag of kind, target, `"cx cy w h"`, degrees,
-/// start and end in milliseconds, style and the text the sticker shows, for
+/// start and end in milliseconds, style, the text the sticker shows and, for
+/// a prompt or replies sticker only some may answer, its [audience], for
 /// example `["sticker", "link", "https://divine.video/", "0.5 0.3 0.4 0.06",
 /// "0", "1500", "4200", "light", "divine.video"]`. A missing start or end
 /// means the sticker shows from the video's start or until its end; without a
 /// style and text a viewer still gets the area, just not the sticker drawn
 /// over it. A poll, quiz or slider needs both: without them it shows only as
 /// it is in the frames.
+///
+/// A sticker only some may answer is in no frame, and is published without a
+/// style: an app that does not know [audience] would show it to everyone, and
+/// without a style it draws nothing.
 class VideoStickerRegion extends Equatable {
   /// Creates the area of a tappable sticker.
   const VideoStickerRegion({
@@ -97,6 +141,7 @@ class VideoStickerRegion extends Equatable {
     this.end,
     this.style,
     this.label,
+    this.audience = VideoStickerAudience.everyone,
   });
 
   /// The name of the event tag a region is published in.
@@ -153,6 +198,10 @@ class VideoStickerRegion extends Equatable {
   /// its `#`, one per line; the title of a replies sticker.
   final String? label;
 
+  /// Who may answer a prompt or replies sticker;
+  /// [VideoStickerAudience.everyone] for any other kind.
+  final VideoStickerAudience audience;
+
   /// The longest [label] a tag may carry.
   static const int maxLabelLength = 300;
 
@@ -204,6 +253,7 @@ class VideoStickerRegion extends Equatable {
     end: end,
     style: style,
     label: label,
+    audience: audience,
   );
 
   /// Whether the sticker shows at [position] of the published video.
@@ -236,6 +286,7 @@ class VideoStickerRegion extends Equatable {
       '${end?.inMilliseconds ?? ''}',
       style ?? '',
       label ?? '',
+      if (kind.takesVideoAnswers && audience.isRestricted) audience.name,
     ];
     while (tag.last.isEmpty) {
       tag.removeLast();
@@ -278,6 +329,12 @@ class VideoStickerRegion extends Equatable {
       return null;
     }
     if (kind == VideoStickerKind.replies && !_isOneLine(label)) return null;
+    final audience = kind.takesVideoAnswers
+        ? _audience(tag.elementAtOrNull(9))
+        : VideoStickerAudience.everyone;
+    // One a later version restricts in a way this one does not know must not
+    // show to everyone.
+    if (audience == null) return null;
     final region = VideoStickerRegion(
       kind: kind,
       target: target,
@@ -291,6 +348,7 @@ class VideoStickerRegion extends Equatable {
       end: end is Duration ? end : null,
       style: style.isEmpty ? null : style,
       label: label.isEmpty || label.length > maxLabelLength ? null : label,
+      audience: audience,
     );
     // Off the frame, a huge centre would overflow once laid out.
     return region.isOnFrame ? region : null;
@@ -422,6 +480,14 @@ class VideoStickerRegion extends Equatable {
     }
   }
 
+  /// [raw] as who may answer: everyone when absent or empty, `null` when it
+  /// names no audience this version knows.
+  static VideoStickerAudience? _audience(String? raw) {
+    final value = raw?.trim() ?? '';
+    if (value.isEmpty) return VideoStickerAudience.everyone;
+    return VideoStickerAudience.values.asNameMap()[value];
+  }
+
   /// The start of the year 10000 in Unix seconds, past which a date no longer
   /// fits a four-digit year.
   static const int _maxCountdownEnd = 253402300800;
@@ -462,5 +528,6 @@ class VideoStickerRegion extends Equatable {
     end,
     style,
     label,
+    audience,
   ];
 }

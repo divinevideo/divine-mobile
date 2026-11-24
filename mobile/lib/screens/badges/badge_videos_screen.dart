@@ -1,7 +1,5 @@
 // ABOUTME: Paginated videos by every currently accepted holder of one badge.
 
-import 'dart:async';
-
 import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
@@ -18,6 +16,7 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/utils/badge_links.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
@@ -36,7 +35,7 @@ class BadgeVideosScreen extends ConsumerStatefulWidget {
 
   /// Path for [coordinate].
   static String pathFor(BadgeCoordinate coordinate) =>
-      '/badges/b/${coordinate.toNaddr()}/videos';
+      '/badges/b/${badgeRouteReference(coordinate)}/videos';
 
   /// Badge whose holders supply the videos.
   final BadgeCoordinate coordinate;
@@ -160,7 +159,7 @@ class BadgeVideosView extends ConsumerWidget {
             emptyBuilder: () => Center(
               child: Text(context.l10n.exploreNoVideosAvailable),
             ),
-            onVideoTap: (videos, index) => unawaited(
+            onVideoTap: (videos, index, captureOrigin) => runDetached(
               PooledFullscreenVideoFeedRouteData(
                 video: videos[index].id,
                 $extra: PooledFullscreenVideoFeedArgs(
@@ -168,10 +167,14 @@ class BadgeVideosView extends ConsumerWidget {
                   feedRepository: ref.read(feedRepositoryProvider),
                   initialIndex: index,
                   initialVideoId: videos[index].id,
+                  tileOrigin: captureOrigin(),
                   trafficSource: ViewTrafficSource.discoveryBadges,
                   sourceDetail: coordinate.value,
                 ),
               ).push<void>(context),
+              'open badge video',
+              logName: 'BadgeVideosScreen',
+              category: LogCategory.ui,
             ),
           ),
         },

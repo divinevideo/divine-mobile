@@ -583,6 +583,8 @@ jobs:
             --dart-define=BACKEND_URL=https://api.divine.video \
             --dart-define-from-file=build/public_people_list_defines.json \
             --no-source-maps
+      - name: Version CanvasKit by engine revision
+        run: bash scripts/version_web_canvaskit.sh build/web
       - name: Check web bundle file sizes
         run: bash scripts/check_web_bundle_file_size.sh build/web
 
@@ -602,24 +604,19 @@ jobs:
     # verdict discarded by the gate below, so it must not pay for a macOS
     # runner.
     if: ${{ needs.changes.outputs.ios_native == 'true' && !inputs.update_goldens }}
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 60
     defaults:
       run:
         working-directory: mobile/
     steps:
       - uses: actions/checkout@v7.0.1
-      - name: Select Xcode 26
-        # The image defaults to Xcode 16; divine_camera targets iOS 26 API
-        # behind `#available(iOS 26.0, *)`, which needs the iOS 26 SDK.
+      - name: Verify iOS SDK
         run: |
-          xcode="$(printf '%s\n' /Applications/Xcode_26*.app | sort -V | tail -1)"
-          if [ ! -d "$xcode" ]; then
-            echo "::error::No Xcode 26 on this runner image"
-            exit 1
-          fi
-          sudo xcode-select -s "$xcode"
           xcodebuild -version
+          sdk="$(xcrun --sdk iphoneos --show-sdk-version)"
+          echo "iOS SDK: $sdk"
+          [[ "$sdk" == 27.* ]]
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:

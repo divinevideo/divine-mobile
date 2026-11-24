@@ -60,6 +60,11 @@
 #   - Secure DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS forwarded from the repository policy
 #   - Application-scoped; native store workflows import it last. Other workflows keep github_credentials.
 #   - Public GitHub publishing retains github_credentials; candidate-tag credentials never enter a native build.
+# 13 - Create app-level environment variable group "macos_signing_credentials" with:
+#   - CERTIFICATE_PRIVATE_KEY (mark as secure) — persistent 2048-bit RSA private key in PEM format
+#     matching the team's Mac App Distribution and Mac Installer Distribution certificates.
+#   - Imported only by `macos-build`. Create this group in Codemagic UI before merging a YAML
+#     change that references it, or Codemagic rejects every workflow in this file.
 #
 # Public people-list discovery exclusions come from the GitHub repository
 # variable DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS (JSON array). Native store
@@ -298,6 +303,12 @@ definitions:
         SHOREBIRD_CLI_VERSION=$("$HOME/.shorebird/bin/shorebird" --version | head -1)
         SHOREBIRD_REVISION=$(git -C "$HOME/.shorebird" rev-parse HEAD)
         PROVENANCE_PATH="build/shorebird/${SHOREBIRD_PLATFORM}_provenance.json"
+        set --
+        if [ "$SHOREBIRD_PLATFORM" = ios ]; then
+          XCODE_BUILD=$(/usr/libexec/PlistBuddy -c 'Print :DTXcodeBuild' \
+            build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app/Info.plist)
+          set -- --xcode-build "$XCODE_BUILD"
+        fi
         ruby scripts/shorebird_provenance.rb emit \
           --platform "$SHOREBIRD_PLATFORM" \
           --release-version "$SHOREBIRD_RELEASE_VERSION" \
@@ -307,7 +318,7 @@ definitions:
           --shorebird-cli-version "$SHOREBIRD_CLI_VERSION" \
           --shorebird-cli-revision "$SHOREBIRD_REVISION" \
           --defines build/shorebird/dart_defines.json \
-          --output "$PROVENANCE_PATH"
+          --output "$PROVENANCE_PATH" "$@"
         bash scripts/shorebird_provenance_store.sh create \
           "$SHOREBIRD_PLATFORM" "$SHOREBIRD_RELEASE_VERSION" "$PROVENANCE_PATH"
     - &fetch_and_verify_shorebird_provenance
@@ -348,6 +359,12 @@ definitions:
           echo "ERROR: could not establish the release's public community configuration shape."
           exit 1
         fi
+        set --
+        if [ "$SHOREBIRD_PLATFORM" = ios ]; then
+          XCODE_BUILD=$(xcodebuild -version | awk '/^Build version / {print $3}')
+          test -n "$XCODE_BUILD"
+          set -- --xcode-build "$XCODE_BUILD"
+        fi
         ruby scripts/shorebird_provenance.rb verify \
           --platform "$SHOREBIRD_PLATFORM" \
           --release-version "${{ inputs.RELEASE_VERSION }}" \
@@ -357,7 +374,7 @@ definitions:
           --release-commit "${{ inputs.RELEASE_COMMIT }}" \
           --defines build/shorebird/dart_defines.json \
           --record "$PROVENANCE_PATH" \
-          --env-output build/shorebird/patch_source.env
+          --env-output build/shorebird/patch_source.env "$@"
     - &write_shorebird_private_key
       name: Write Shorebird patch private key
       script: |
@@ -421,11 +438,10 @@ definitions:
       name: Build Android APK
       script: |
         set -euo pipefail
-        if [ "${RELEASE_TRAIN_SCHEDULED:-false}" = true ]; then
-          echo 'Scheduled Android builds skip direct APKs.'
-          exit 0
-        fi
         . build/shorebird/android_release.env
+        if [ "${RELEASE_TRAIN_SCHEDULED:-false}" = true ]; then
+          PROJECT_BUILD_NUMBER=$SHOREBIRD_BUILD_NUMBER
+        fi
         # Deliberately NOT a Shorebird release. Shorebird has no
         # --split-per-abi; its Android artifact is either an AAB or one
         # universal APK. These per-ABI APKs go to Zapstore / direct download,
@@ -500,20 +516,20 @@ definitions:
           --dart-define-from-file=build/shorebird/dart_defines.json \
           --public-key-path=build/shorebird/patch_public_key.pem \
           --private-key-path=build/shorebird/patch_private_key.pem
+    - &setup_macos_mas_signing
+      name: Setup Mac App Store code signing
+      script: bash scripts/setup_macos_mas_signing.sh
     - &build_macos
       name: Build macOS app
       script: |
         set -euo pipefail
-        # This workflow packages a DMG for direct download. It does not provision
-        # a macOS signing identity/profile in Codemagic, so disable signing for
-        # the CI build and handle signing/notarization separately when needed.
         python3 scripts/write_public_people_list_defines.py \
           --output build/public_people_list_defines.json \
           --github-repository "$CM_REPO_SLUG"
         ruby scripts/write_concord_release_defines.rb \
           --output build/public_people_list_defines.json
         . build/shorebird/macos_release.env
-        env CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO flutter build macos --release \
+        flutter build macos --release \
           --build-name=$SHOREBIRD_BUILD_NAME --build-number=$SHOREBIRD_BUILD_NUMBER \
           --dart-define-from-file=build/public_people_list_defines.json \
           --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
@@ -522,15 +538,9 @@ definitions:
           --dart-define=DEFAULT_ENV=${{ inputs.DEFAULT_ENV }} \
           --dart-define=PROOFMODE_SIGNING_SERVER_ENDPOINT=$PROOFMODE_SIGNING_SERVER_ENDPOINT \
           --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN
-    - &package_macos_dmg
-      name: Package macOS DMG
-      script: |
-        APP_PATH="build/macos/Build/Products/Release"
-        APP_NAME=$(ls "$APP_PATH" | grep '\.app$' | head -1)
-        DMG_NAME="Divine-macOS.dmg"
-        echo "Packaging $APP_NAME as $DMG_NAME"
-        hdiutil create -volname "Divine" -srcfolder "$APP_PATH/$APP_NAME" \
-          -ov -format UDZO "$APP_PATH/$DMG_NAME"
+    - &package_macos_mas_pkg
+      name: Archive and export Mac App Store pkg
+      script: bash scripts/package_macos_mas_pkg.sh
     - &publish_github_release
       name: Publish to GitHub Release
       script: |
@@ -560,12 +570,23 @@ definitions:
           echo "Skipping Zapstore: beta builds are distributed through GitHub only"
           exit 0
         fi
-        VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
+        if [ "${ANDROID_DISTRIBUTION_COMPLETE:-false}" = true ]; then
+          echo 'This exact Android distribution already has a verified publication receipt.'
+          if [ -n "${APPROVED_BUILD_NUMBER:-}" ]; then
+            printf '%s\n%s\n' "$ANDROID_DISTRIBUTION_VERSION" "$CM_BUILD_ID" > build/distribution/zapstore-succeeded
+          fi
+          exit 0
+        fi
+        VERSION="${ANDROID_DISTRIBUTION_VERSION:-$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')}"
+        if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo 'Invalid Zapstore release version.'
+          exit 1
+        fi
         TAG="$VERSION"
         # zsp fetches the newest GitHub release it can download an APK from,
         # so a stale or missing release would publish someone else's APK under
         # this signing key. Only publish when the newest release is the one
-        # this build just cut. Drafts and betas are excluded, matching zsp.
+        # this job selected. Drafts and betas are excluded, matching zsp.
         REMOTE_TAG=$(gh release list --repo "$CM_REPO_SLUG" --limit 1 \
           --exclude-drafts --exclude-pre-releases --json tagName --jq '.[0].tagName')
         if [ "$REMOTE_TAG" != "$TAG" ]; then
@@ -598,6 +619,9 @@ definitions:
         ruby -ryaml -e '
           config = YAML.safe_load(File.read(ARGV.fetch(0)))
           config["release_filter"] = "^#{Regexp.escape(ARGV.fetch(1))}$"
+          unless ENV.fetch("APPROVED_BUILD_NUMBER", "").empty?
+            config["match"] = "^#{Regexp.escape("app-arm64-v8a-release.apk")}$"
+          end
           File.write(ARGV.fetch(2), YAML.dump(config))
         ' zapstore.yaml "$TAG" "$ZAPSTORE_CONFIG"
         # --check proves the arm64 asset resolves before anything is signed.
@@ -609,6 +633,9 @@ definitions:
         SIGN_WITH="$ZAPSTORE_NSEC" GITHUB_TOKEN="$GITHUB_TOKEN" \
           "$ZSP_BIN" publish "$ZAPSTORE_CONFIG" --quiet --skip-preview \
           --skip-certificate-linking
+        if [ -n "${APPROVED_BUILD_NUMBER:-}" ]; then
+          printf '%s\n%s\n' "$TAG" "$CM_BUILD_ID" > "$CM_BUILD_DIR/mobile/build/distribution/zapstore-succeeded"
+        fi
     - &build_ios
       name: Build and sign iOS (Shorebird release)
       script: |
@@ -616,6 +643,7 @@ definitions:
         . build/shorebird/ios_release.env
         BUILD_NAME=$SHOREBIRD_BUILD_NAME
         BUILD_NUMBER=$SHOREBIRD_BUILD_NUMBER
+        xcodebuild -version
         echo "iOS build number: $BUILD_NUMBER (release: $SHOREBIRD_RELEASE_VERSION)"
         # Shorebird wraps `flutter build ipa` with its own engine so the release
         # carries the updater. A plain `flutter build` here would ship a
@@ -625,19 +653,27 @@ definitions:
           --public-key-path=build/shorebird/patch_public_key.pem \
           --export-options-plist=/Users/builder/export_options.plist
 
+        # Check the SDK embedded in the archive that Codemagic will upload.
+        APP_PATH=build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+        IOS_SDK=$(/usr/libexec/PlistBuddy -c 'Print :DTSDKName' "$APP_PATH/Info.plist")
+        case "$IOS_SDK" in
+          iphoneos27.*) echo "Archived iOS SDK: $IOS_SDK" ;;
+          *) echo "ERROR: expected the iOS 27 SDK in the archive, got $IOS_SDK" >&2; exit 1 ;;
+        esac
+
         # Prove CocoaPods and Xcode copied each manifest into the exact
         # Shorebird archive before later steps can promote its artifacts.
-        bash scripts/check_privacy_manifest_coverage.sh \
-          --archive build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+        bash scripts/check_privacy_manifest_coverage.sh --archive "$APP_PATH"
 
         # Prove FIREBASE_ANALYTICS_WITHOUT_ADID reached Swift package
         # resolution: the archive must link FirebaseAnalyticsCore, not the
         # ads-measurement SDK the default product carries (#7303).
-        bash scripts/check_ios_analytics_product.sh \
-          --app build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+        bash scripts/check_ios_analytics_product.sh --app "$APP_PATH"
     - &patch_ios
       name: Patch iOS (Shorebird)
       script: |
+        set -euo pipefail
+        xcodebuild -version
         # See the Android patch step for why there is no --flutter-version and
         # why the dart-defines must match the release's.
         # See the Android patch step for why both key halves are required.
@@ -978,7 +1014,7 @@ workflows:
           - "YES"
     environment:
       flutter: 3.47.9
-      xcode: latest
+      xcode: "27.2"
       cocoapods: default
       groups:
         - zendesk_credentials
@@ -1082,7 +1118,7 @@ workflows:
           - POC
     environment:
       flutter: 3.47.9
-      xcode: latest
+      xcode: "27.2"
       cocoapods: default
       groups:
         - zendesk_credentials
@@ -1192,7 +1228,8 @@ workflows:
       - build/shorebird/android_upload.json
       - build/app/outputs/mapping/**/mapping.txt
   # Publish a promoted GitHub release with the existing Codemagic signer.
-  # No APK rebuild, GitHub upload, or Play submission runs in this workflow.
+  # Automated approval inputs first publish the retained APKs to GitHub.
+  # This workflow never rebuilds APKs or submits to Play.
   zapstore-publish:
     name: Publish existing release to Zapstore
     working_directory: mobile
@@ -1206,7 +1243,7 @@ workflows:
         options:
           - "YES"
       RELEASE_CHANNEL:
-        description: Publish only the existing stable GitHub release matching mobile/pubspec.yaml.
+        description: Publish only the exact stable GitHub release selected for this job.
         type: choice
         default: PRODUCTION
         options:
@@ -1215,6 +1252,7 @@ workflows:
       groups:
         - github_credentials
         - zapstore_credentials
+        - store_release_credentials
     triggering:
       events: []
     scripts:
@@ -1225,7 +1263,11 @@ workflows:
             echo "ERROR: Zapstore publication must run from main."
             exit 1
           fi
+      - name: Publish approved Android downloads to GitHub
+        script: python3 scripts/publish_approved_android.py
       - *publish_zapstore
+      - name: Record verified Android distribution
+        script: python3 scripts/publish_approved_android.py record
 
   # Patch workflows ship a Dart-only fix to an already-released build over the
   # air. They publish to Shorebird, not to Play or the App Store, and are
@@ -1260,6 +1302,10 @@ workflows:
           number (e.g. 1.0.9+247). Get it from `shorebird releases list` or the
           Shorebird console — a value with no matching release fails the build.
         type: string
+      XCODE_VERSION:
+        description: Xcode version from the original iOS release build log
+        type: string
+        default: "27.2"
       PATCH_BRANCH:
         description: >-
           Exact remote release-patch branch to build. It must be named
@@ -1284,7 +1330,7 @@ workflows:
           - POC
     environment:
       flutter: 3.47.9
-      xcode: latest
+      xcode: ${{ inputs.XCODE_VERSION }}
       cocoapods: default
       groups:
         - zendesk_credentials
@@ -1417,10 +1463,12 @@ workflows:
       - *patch_android
 
   macos-build:
-    name: macOS Build
+    name: macOS App Store Build
     working_directory: mobile
     max_build_duration: 60
     instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: API key for Codemagic # Setup in Codemagic UI
     inputs:
       DEFAULT_ENV:
         description: Default environment for fresh app installs
@@ -1430,20 +1478,6 @@ workflows:
           - PRODUCTION
           - STAGING
           - POC
-      RELEASE_CHANNEL:
-        description: GitHub release channel; publish ready direct downloads independently of store rollout. PRODUCTION sets Latest; existing clients may prompt before their store has the update.
-        type: choice
-        default: BETA
-        options:
-          - BETA
-          - PRODUCTION
-      PUBLISH_TO_GITHUB:
-        description: Upload DMG to GitHub Release (for direct distribution)
-        type: choice
-        default: "NO"
-        options:
-          - "NO"
-          - "YES"
     environment:
       flutter: 3.47.9
       xcode: latest
@@ -1452,6 +1486,9 @@ workflows:
         - zendesk_credentials
         - proofmode_credentials
         - github_credentials
+        - macos_signing_credentials
+      vars:
+        BUNDLE_ID: co.openvine.app
     cache:
       cache_paths:
         - $HOME/Library/Caches/CocoaPods
@@ -1461,28 +1498,51 @@ workflows:
     scripts:
       - *check_signing_endpoint
       - *check_supporters_config
+      - name: Check macOS App Store configuration
+        script: bash scripts/check_macos_app_store_config.sh
       - *install_flutterfire
       - *enable_spm
       - *flutter_pub_get
-      - *pod_install
-      - name: Allocate effective direct distribution identity
+      - *setup_macos_mas_signing
+      - name: Allocate effective macOS distribution identity
         script: |
           set -euo pipefail
           mkdir -p build/shorebird
           git ls-remote --tags origin | awk '{print $2}' > build/shorebird/stable_tags.txt
+          # Fail closed on App Store Connect auth/network errors; an empty
+          # stdout with exit 0 means no macOS build has been uploaded yet.
+          LATEST_ASC_BUILD=$(
+            app-store-connect get-latest-testflight-build-number \
+              --platform MAC_OS \
+              "6747959501"
+          )
+          LATEST_ASC_BUILD="${LATEST_ASC_BUILD:-0}"
+          if ! [[ "$LATEST_ASC_BUILD" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: Unexpected macOS TestFlight build number from App Store Connect: '$LATEST_ASC_BUILD'" >&2
+            exit 1
+          fi
+          NEXT_ASC_BUILD=$((LATEST_ASC_BUILD + 1))
+          BUILD_NUM="$PROJECT_BUILD_NUMBER"
+          if [ "$NEXT_ASC_BUILD" -gt "$BUILD_NUM" ]; then
+            BUILD_NUM="$NEXT_ASC_BUILD"
+          fi
           python3 scripts/release_identity.py direct \
             --pubspec pubspec.yaml --source-sha "$(git rev-parse HEAD)" \
             --stable-tags build/shorebird/stable_tags.txt \
-            --build-number "$PROJECT_BUILD_NUMBER" \
+            --build-number "$BUILD_NUM" \
             --output build/shorebird/macos_release.env
           echo SHOREBIRD_PLATFORM=macos >> "$CM_ENV"
       - *build_macos
-      - *package_macos_dmg
-      - *publish_github_release
+      - *package_macos_mas_pkg
     artifacts:
-      - build/macos/Build/Products/Release/*.dmg
+      - build/macos/pkg/*.pkg
+      - build/macos/archive/Runner.xcarchive/dSYMs/**
       - build/shorebird/macos_release.env
-      - build/macos/Build/Products/Release/*.app
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
 
   e2e-smoke-ios:
     name: E2E Smoke Tests (iOS)

@@ -5443,6 +5443,53 @@ void main() {
       });
 
       test(
+        'subscribes to the contact list again after every relay refuses it',
+        () {
+          fakeAsync((async) {
+            final liveIds = <String>[];
+            final relayRead = StreamController<Event>();
+            when(
+              () => mockNostrClient.subscribe(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                tempRelays: any(named: 'tempRelays'),
+                targetRelays: any(named: 'targetRelays'),
+                relayTypes: any(named: 'relayTypes'),
+                sendAfterAuth: any(named: 'sendAfterAuth'),
+                onEose: any(named: 'onEose'),
+              ),
+            ).thenAnswer((invocation) {
+              final id = invocation.namedArguments[#subscriptionId] as String?;
+              if (id == null) return relayRead.stream;
+              liveIds.add(id);
+              return liveIds.length == 1
+                  ? Stream.error(
+                      const RelaySubscriptionRefusedException(
+                        'rate-limited: slow down',
+                      ),
+                    )
+                  : const Stream.empty();
+            });
+
+            unawaited(repository.initialize());
+            // The relay read never answers; initialize moves on at its timeout.
+            async
+              ..flushMicrotasks()
+              ..elapse(const Duration(seconds: 6));
+            expect(liveIds, hasLength(1));
+
+            async.elapse(const Duration(minutes: 10));
+
+            expect(liveIds.length, greaterThan(1));
+            expect(liveIds.toSet(), hasLength(1));
+            unawaited(repository.dispose());
+            unawaited(relayRead.close());
+            async.flushMicrotasks();
+          });
+        },
+      );
+
+      test(
         'skips subscription when pubkey is empty',
         () async {
           when(() => mockNostrClient.publicKey).thenReturn('');

@@ -261,6 +261,7 @@ void main() {
         try {
           publishSuccess = await videoEventPublisher.publishDirectUpload(
             upload,
+            allowVideoReuse: false,
           );
         } catch (e, stackTrace) {
           debugPrint('❌ Publishing failed with exception:');
