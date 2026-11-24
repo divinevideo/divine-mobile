@@ -129,29 +129,37 @@ submitting. TestFlight and Play internal testing stay available to test fixes.
 
 - **Apple** blocks the return of unsupported audio or Bluetooth background
   modes, which caused review trouble before. Changes to supported devices or
-  store assets prompt an iPad screenshot check. Permission purpose strings,
-  entitlements, privacy manifests and export declarations prompt a review of
-  the applicable App Store Connect answers. Use the documented past
+  store assets prompt an iPad screenshot check. Permission purpose strings, App
+  Transport Security, entitlements, privacy manifests, export declarations and
+  dependency or Flutter upgrades prompt a review of the applicable App Store
+  Connect answers. Use the documented past
   [Apple review resolutions](../../mobile/docs/APPLE_REVIEW_RESPONSE.md#appendix-a-historical-review-resolutions)
   and the [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/).
-- **Google Play** flags Android manifest, app Gradle and listing changes for
-  checking the merged bundle’s permissions, target API and App content
-  declarations. The production track edit must pass the
+- **Google Play** flags Android manifest, app Gradle, fastlane configuration,
+  dependency lockfile and Flutter version changes for checking the merged
+  bundle’s permissions, target API and App content declarations. The
+  production track edit must pass the
   [Android Publisher edit validation](https://developers.google.com/android-publisher/api-ref/rest/v3/edits/validate)
-  before the coordinator commits it. A refused validation leaves the build
-  available for retry after the issue is fixed. Check Play Console’s
+  before the coordinator commits it. A refused validation discards the edit and
+  leaves the build available for retry after the issue is fixed. Check Play Console’s
   [pre-review checks](https://support.google.com/googleplay/android-developer/answer/14807773)
   when reviewing the listing and the candidate.
-- **Both stores** flag changes to known moderation, reviewer access, account
-  deletion, consent and legal/support code. Exercise the affected flows on the
-  selected build and update reviewer access instructions or disclosures as needed.
+- **Both stores** flag changes to the screens and code behind moderation
+  (filtering, reporting and blocking), reviewer access, account deletion,
+  consent and legal/support flows. Exercise the affected flows on the selected
+  build and update reviewer access instructions or disclosures as needed.
 
 Fix confirmed problems before submitting. When the flagged flows and store
 listing are ready, copy the summary’s `approve_store_review` value into a
 manual `Store release train` dispatch with `dry_run=false`. The confirmation
-applies to one platform, build, production baseline and set of findings in
-that run. If the next candidate or baseline changes, use its new report. Missing
-provenance and known regressions require a fix before the train can proceed.
+applies to one platform, build, production baseline and set of findings. The
+coordinator keeps it until that store accepts the build, so a deferred or
+refused attempt is retried by later ticks without another dispatch. A different
+candidate, baseline or set of findings needs its own report. Scheduled runs and
+dry runs never accept a new value. Missing provenance, a production commit
+outside the candidate’s history, other comparison failures and known
+regressions offer no value to confirm: they stop that store’s submission until
+fixed, while builds, betas and the other store continue.
 
 Check screenshots, reviewer login and declarations changed directly in the
 store consoles as part of the console change. Exercise remotely enabled

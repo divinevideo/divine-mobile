@@ -265,7 +265,7 @@ def execute_plan(plan, state, snapshot, store, provider):
                 # The store took this build, so its review confirmation is spent.
                 state.get("store_review_confirmations", {}).pop(action["platform"], None)
         except BeforeStoreMutationError as error:
-            # No store request has occurred, so preserve the prior retryable
+            # Nothing was submitted or published, so preserve the prior retryable
             # intent rather than manufacturing an ambiguous submission hold.
             if old is None:
                 state["operations"].pop(key)
