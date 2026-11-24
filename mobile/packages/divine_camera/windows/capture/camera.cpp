@@ -664,10 +664,10 @@ HRESULT Camera::ConfigureOutputMirroring() {
   if (FAILED(hr)) return hr;
   DWORD record_stream = 0, preview_stream = 0;
   hr = source->GetStreamIndexFromFriendlyName(
-      MF_CAPTURE_ENGINE_PREFERRED_SOURCE_STREAM_FOR_VIDEO_RECORD, &record_stream);
+      static_cast<UINT32>(MF_CAPTURE_ENGINE_PREFERRED_SOURCE_STREAM_FOR_VIDEO_RECORD), &record_stream);
   if (FAILED(hr)) return hr;
   hr = source->GetStreamIndexFromFriendlyName(
-      MF_CAPTURE_ENGINE_PREFERRED_SOURCE_STREAM_FOR_VIDEO_PREVIEW, &preview_stream);
+      static_cast<UINT32>(MF_CAPTURE_ENGINE_PREFERRED_SOURCE_STREAM_FOR_VIDEO_PREVIEW), &preview_stream);
   if (FAILED(hr)) return hr;
   hr = CoCreateInstance(CLSID_VideoProcessorMFT, nullptr, CLSCTX_INPROC_SERVER,
                         IID_PPV_ARGS(&output_mirror_effect_));
