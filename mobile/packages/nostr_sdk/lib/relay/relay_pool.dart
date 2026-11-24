@@ -1126,14 +1126,12 @@ class RelayPool {
   /// Keeps what [relay] still owed an answer to as it leaves the pool, for
   /// the object that replaces it under the same url; see [_orphanedRequests].
   ///
-  /// The queries leave [relay] too, so a frame its socket delivers late, such
-  /// as an event still being verified off the main isolate, cannot hand the
-  /// query back to it once the replacement has asked again.
+  /// The queries stay on [relay] as well, so an event its socket delivered
+  /// before closing, still being verified off the main isolate, reaches the
+  /// caller. The query's outcome ignores what [relay] reports once a
+  /// replacement has taken the query over.
   void _orphanRequestsOf(Relay relay) {
     final queries = relay.getQueries();
-    for (final query in queries) {
-      relay.discardQuery(query.id);
-    }
     final counts = relay.takePendingCountQueries();
     if (queries.isEmpty && counts.isEmpty) return;
     final earlier = _orphanedRequests[relay.url];
