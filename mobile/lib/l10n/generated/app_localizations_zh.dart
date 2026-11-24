@@ -12901,6 +12901,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
 
   @override
+  String get devOptionsConfirmationRequirementSimulatedTitle =>
+      'Act as if Confirmation is required';
+
+  @override
+  String get devOptionsConfirmationRequirementSimulatedSubtitle =>
+      'Treats signing in as needing Confirmation even when the verifier doesn\'t. Needs the Confirmation Sign-in flag; choose \"Doesn\'t have Confirmation\" above to see the offer. The verifier still approves sign-ins.';
+
+  @override
   String get commentsRecordVideoButtonLabel => '录制视频评论';
 
   @override

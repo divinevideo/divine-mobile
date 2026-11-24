@@ -237,6 +237,7 @@ void main() {
       Future<void> Function(Duration)? wait,
       String? replacingIdentity,
       bool confirmationSignIn = false,
+      bool simulateConfirmationRequirement = false,
     }) => VerifyConnectCubit(
       repository: repository,
       pubkey: _pubkey,
@@ -245,6 +246,7 @@ void main() {
       oauthReturnUrl: _returnUrl,
       analytics: analytics,
       confirmationSignIn: confirmationSignIn,
+      simulateConfirmationRequirement: simulateConfirmationRequirement,
       readConfirmationAccess: accessReader.call,
       random: random ?? Random(1),
       wait: wait ?? (_) async {},
@@ -266,6 +268,36 @@ void main() {
       ).captured;
       return (captured[0] as IdentityClaim, captured[1] as String?);
     }
+
+    group('starting platform', () {
+      const twitterOpen = VerifierPlatform(
+        key: 'twitter',
+        label: 'Twitter / X',
+        supported: true,
+        oauth: true,
+      );
+      const twitterGated = VerifierPlatform(
+        key: 'twitter',
+        label: 'Twitter / X',
+        supported: true,
+        oauth: true,
+        signinRequires: SigninRequirement.confirmation,
+      );
+
+      test(
+        'with the requirement simulated, starts from a gated platform',
+        () async {
+          final cubit = build(
+            twitterOpen,
+            confirmationSignIn: true,
+            simulateConfirmationRequirement: true,
+          );
+          addTearDown(cubit.close);
+
+          expect(cubit.state.platform, equals(twitterGated));
+        },
+      );
+    });
 
     group('loadPlatform', () {
       // What the screen starts from when no platform list was loaded: sign-in
@@ -330,6 +362,25 @@ void main() {
           ],
           // Once, and from what the repository remembers.
           verify: (_) => expect(accessReader.reads, equals([false])),
+        );
+
+        blocTest<VerifyConnectCubit, VerifyConnectState>(
+          'with the requirement simulated, marks the loaded platform as '
+          'gated and reads access',
+          setUp: () => when(
+            () => repository.platform('twitter'),
+          ).thenAnswer((_) async => twitterOpen),
+          build: () => build(
+            twitterStandIn,
+            confirmationSignIn: true,
+            simulateConfirmationRequirement: true,
+          ),
+          act: (cubit) => cubit.loadPlatform(),
+          verify: (cubit) {
+            expect(cubit.state.platform, equals(twitterGated));
+            expect(accessReader.reads, equals([false]));
+            expect(cubit.state.confirmationAccess, ConfirmationAccess.hasNot);
+          },
         );
 
         blocTest<VerifyConnectCubit, VerifyConnectState>(

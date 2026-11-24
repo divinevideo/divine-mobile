@@ -325,6 +325,52 @@ void main() {
     });
   });
 
+  group('simulated Confirmation requirement', () {
+    late bool previousHitTestWarningShouldBeFatal;
+
+    setUp(() {
+      previousHitTestWarningShouldBeFatal =
+          WidgetController.hitTestWarningShouldBeFatal;
+      WidgetController.hitTestWarningShouldBeFatal = true;
+    });
+
+    tearDown(() {
+      WidgetController.hitTestWarningShouldBeFatal =
+          previousHitTestWarningShouldBeFatal;
+    });
+
+    bool switchOn(WidgetTester tester, String title) => tester
+        .widget<DivineSwitchTile>(
+          find.widgetWithText(DivineSwitchTile, title, skipOffstage: false),
+        )
+        .value;
+
+    testWidgets('turning it on stores the setting, and off clears it', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final prefs = await mockPrefs();
+      await pumpScreen(tester, prefs);
+      final title = l10n.devOptionsConfirmationRequirementSimulatedTitle;
+      final row = find.widgetWithText(DivineSwitchTile, title);
+      // The list builds rows as they scroll in.
+      await scrollUntilTappable(tester, row, 300);
+      expect(switchOn(tester, title), isFalse);
+
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+
+      expect(prefs.getBool('confirmation_requirement_simulated'), isTrue);
+      expect(switchOn(tester, title), isTrue);
+
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+
+      expect(prefs.containsKey('confirmation_requirement_simulated'), isFalse);
+      expect(switchOn(tester, title), isFalse);
+    });
+  });
+
   group('protected-minor simulation (#5721)', () {
     late bool previousHitTestWarningShouldBeFatal;
 

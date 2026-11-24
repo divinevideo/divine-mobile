@@ -15,20 +15,27 @@ part 'verify_state.dart';
 /// Loads and mutates the current user's NIP-39 identity claims.
 class VerifyCubit extends Cubit<VerifyState> {
   /// Creates a [VerifyCubit] for [pubkey].
+  ///
+  /// [simulateConfirmationRequirement] is the developer setting that treats
+  /// every platform whose sign-in is on as requiring Divine Confirmation, as
+  /// the verifier reports while its requirement is on.
   VerifyCubit({
     required IdentityClaimsRepository repository,
     required String pubkey,
     required bool confirmationSignIn,
     required ConfirmationAccessReader readConfirmationAccess,
+    bool simulateConfirmationRequirement = false,
   }) : _repository = repository,
        _pubkey = pubkey,
        _confirmationSignIn = confirmationSignIn,
        _readConfirmationAccess = readConfirmationAccess,
+       _simulateConfirmationRequirement = simulateConfirmationRequirement,
        super(VerifyState());
 
   final IdentityClaimsRepository _repository;
   final String _pubkey;
   final bool _confirmationSignIn;
+  final bool _simulateConfirmationRequirement;
 
   /// The reader this cubit was made with; the Verify page re-keys the cubit
   /// when it changes, so an account change never reuses this one.
@@ -53,6 +60,11 @@ class VerifyCubit extends Cubit<VerifyState> {
     List<VerifierPlatform> platforms;
     try {
       platforms = await _repository.supportedPlatforms();
+      if (_simulateConfirmationRequirement) {
+        platforms = platforms
+            .map(withSimulatedConfirmationRequirement)
+            .toList();
+      }
     } on Object catch (error, stackTrace) {
       if (isClosed) return;
       addError(error, stackTrace);

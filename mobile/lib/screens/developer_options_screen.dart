@@ -151,6 +151,9 @@ class _DeveloperOptionsScreenState
     final confirmationAccessOverride = ref.watch(
       confirmationAccessOverrideProvider,
     );
+    final confirmationRequirementSimulated = ref.watch(
+      confirmationRequirementSimulatedProvider,
+    );
 
     final environments = selectableEnvironments(
       current: currentConfig.environment,
@@ -425,6 +428,23 @@ class _DeveloperOptionsScreenState
                   ),
                 );
               }),
+              DivineSwitchTile(
+                title: context
+                    .l10n
+                    .devOptionsConfirmationRequirementSimulatedTitle,
+                subtitle: context
+                    .l10n
+                    .devOptionsConfirmationRequirementSimulatedSubtitle,
+                value: confirmationRequirementSimulated,
+                onChanged: (on) => runDetached(
+                  ref
+                      .read(confirmationRequirementSimulatedProvider.notifier)
+                      .set(on: on),
+                  'set the simulated Confirmation requirement',
+                  logName: 'DeveloperOptionsScreen',
+                  category: LogCategory.system,
+                ),
+              ),
 
               if (kDebugMode) ...[
                 Divider(color: context.vineColors.outline, height: 32),

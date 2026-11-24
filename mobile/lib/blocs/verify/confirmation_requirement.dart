@@ -1,5 +1,5 @@
-// ABOUTME: The pure rule for when Divine Confirmation gates a sign-in link,
-// ABOUTME: and when the app offers the upsell for it.
+// ABOUTME: The pure rules for when Divine Confirmation gates a sign-in link,
+// ABOUTME: when the app offers its upsell, and the developer simulation of it.
 
 import 'package:profile_repository/profile_repository.dart';
 import 'package:verifier_client/verifier_client.dart';
@@ -45,4 +45,25 @@ bool showsConfirmationUpsell({
   required ConfirmationAccess access,
 }) {
   return required && access == ConfirmationAccess.hasNot;
+}
+
+/// [platform] as the verifier reports it while its Confirmation requirement
+/// is on, for the developer setting that simulates that requirement against a
+/// verifier with it off.
+///
+/// Like the verifier, it marks only a platform whose sign-in is on. The
+/// verifier itself is unchanged and still approves a sign-in without
+/// Confirmation, so a refusal at confirm can't be simulated this way.
+VerifierPlatform withSimulatedConfirmationRequirement(
+  VerifierPlatform platform,
+) {
+  if (platform.oauth != true) return platform;
+  return VerifierPlatform(
+    key: platform.key,
+    label: platform.label,
+    supported: platform.supported,
+    oauth: platform.oauth,
+    signinExpiresAfterDays: platform.signinExpiresAfterDays,
+    signinRequires: SigninRequirement.confirmation,
+  );
 }

@@ -61,6 +61,11 @@ class VerifyPage extends ConsumerWidget {
     // new cubit. Tear-offs of one instance compare equal, so nothing else
     // re-keys it.
     final readConfirmationAccess = ref.watch(confirmationAccessReaderProvider);
+    // Watched and in the key for the same reason: turning the developer
+    // setting over starts over with the platforms as it shows them.
+    final simulateConfirmationRequirement = ref.watch(
+      simulateConfirmationRequirementProvider,
+    );
 
     if (pubkey == null || pubkey.isEmpty) {
       return const _VerifyScaffold(body: _VerifySignedOut());
@@ -68,10 +73,15 @@ class VerifyPage extends ConsumerWidget {
 
     return BlocProvider(
       // Re-create on a repository swap: the captured signer and client belong
-      // to the identity that was current when the flow opened. The reader is
-      // in the key too, so changing the developer override starts over with
-      // the new answer.
-      key: ValueKey((repository, pubkey, readConfirmationAccess)),
+      // to the identity that was current when the flow opened. The reader and
+      // the simulated requirement are in the key too, so changing either
+      // developer setting starts over.
+      key: ValueKey((
+        repository,
+        pubkey,
+        readConfirmationAccess,
+        simulateConfirmationRequirement,
+      )),
       create: (_) {
         final cubit = VerifyCubit(
           repository: repository,
@@ -85,6 +95,7 @@ class VerifyPage extends ConsumerWidget {
           // new cubit with the new account's reader rather than keeping the
           // old account's remembered answer.
           readConfirmationAccess: readConfirmationAccess,
+          simulateConfirmationRequirement: simulateConfirmationRequirement,
         );
         runDetached(
           cubit.load(),

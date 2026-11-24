@@ -52,6 +52,11 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   /// kept to approve again. With it off, no access is read and that refusal
   /// ends the sign-in: there is nowhere to buy, and a waiting sign-in keeps
   /// the proof post closed.
+  ///
+  /// [simulateConfirmationRequirement] is the developer setting that treats
+  /// [platform], and the platform [loadPlatform] reads, as requiring Divine
+  /// Confirmation whenever its sign-in is on, as the verifier reports while
+  /// its requirement is on.
   VerifyConnectCubit({
     required IdentityClaimsRepository repository,
     required String pubkey,
@@ -61,6 +66,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     required AnalyticsEventSink analytics,
     required bool confirmationSignIn,
     required ConfirmationAccessReader readConfirmationAccess,
+    bool simulateConfirmationRequirement = false,
     String? replacingIdentity,
     Random? random,
     Future<void> Function(Duration)? wait,
@@ -71,11 +77,14 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
        _oauthReturnUrl = oauthReturnUrl,
        _confirmationSignIn = confirmationSignIn,
        _readConfirmationAccess = readConfirmationAccess,
+       _simulateConfirmationRequirement = simulateConfirmationRequirement,
        _random = random ?? Random.secure(),
        _wait = wait,
        super(
          VerifyConnectState(
-           platform: platform,
+           platform: simulateConfirmationRequirement
+               ? withSimulatedConfirmationRequirement(platform)
+               : platform,
            identity: replacingIdentity ?? '',
            replacingIdentity: replacingIdentity,
          ),
@@ -88,6 +97,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   final String _oauthReturnUrl;
   final bool _confirmationSignIn;
   final ConfirmationAccessReader _readConfirmationAccess;
+  final bool _simulateConfirmationRequirement;
   final Random _random;
   // Tests pass their own; otherwise the wait is [_async]'s, so closing the
   // cubit ends it.
@@ -124,7 +134,10 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   Future<void> loadPlatform() async {
     final VerifierPlatform platform;
     try {
-      platform = await _repository.platform(state.platform.key);
+      final read = await _repository.platform(state.platform.key);
+      platform = _simulateConfirmationRequirement
+          ? withSimulatedConfirmationRequirement(read)
+          : read;
     } on Object catch (error, stackTrace) {
       if (isClosed) return;
       addError(error, stackTrace);

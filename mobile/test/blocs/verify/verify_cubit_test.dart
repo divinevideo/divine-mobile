@@ -85,11 +85,15 @@ void main() {
       return accessAnswer;
     }
 
-    VerifyCubit build({bool confirmationSignIn = false}) => VerifyCubit(
+    VerifyCubit build({
+      bool confirmationSignIn = false,
+      bool simulateConfirmationRequirement = false,
+    }) => VerifyCubit(
       repository: repository,
       pubkey: _pubkey,
       confirmationSignIn: confirmationSignIn,
       readConfirmationAccess: readAccess,
+      simulateConfirmationRequirement: simulateConfirmationRequirement,
     );
 
     // A verifier whose Twitter sign-in needs Divine Confirmation.
@@ -324,6 +328,61 @@ void main() {
         act: (cubit) => cubit.load(refreshAccess: true),
         verify: (_) => expect(accessReads, equals([true])),
       );
+
+      group('with the requirement simulated', () {
+        // A verifier with its requirement off: it names none.
+        setUp(() {
+          when(() => repository.supportedPlatforms()).thenAnswer(
+            (_) async => const [
+              VerifierPlatform(
+                key: 'github',
+                label: 'GitHub',
+                supported: true,
+                oauth: false,
+              ),
+              VerifierPlatform(
+                key: 'twitter',
+                label: 'Twitter / X',
+                supported: true,
+                oauth: true,
+              ),
+            ],
+          );
+        });
+
+        blocTest<VerifyCubit, VerifyState>(
+          'marks the platforms whose sign-in is on and reads access',
+          build: () => build(
+            confirmationSignIn: true,
+            simulateConfirmationRequirement: true,
+          ),
+          act: (cubit) => cubit.load(),
+          verify: (cubit) {
+            expect(
+              cubit.state.platforms.map((p) => (p.key, p.signinRequires)),
+              equals([
+                ('github', null),
+                ('twitter', SigninRequirement.confirmation),
+              ]),
+            );
+            expect(accessReads, equals([false]));
+            expect(cubit.state.confirmationAccess, ConfirmationAccess.hasNot);
+          },
+        );
+
+        blocTest<VerifyCubit, VerifyState>(
+          "leaves the verifier's answer as it is when off",
+          build: () => build(confirmationSignIn: true),
+          act: (cubit) => cubit.load(),
+          verify: (cubit) {
+            expect(
+              cubit.state.platforms.map((p) => (p.key, p.signinRequires)),
+              equals([('github', null), ('twitter', null)]),
+            );
+            expect(accessReads, isEmpty);
+          },
+        );
+      });
 
       blocTest<VerifyCubit, VerifyState>(
         'makes no access read for a proof-only platform that names a '

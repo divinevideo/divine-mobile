@@ -25,10 +25,12 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/verify/verify_connect_screen.dart';
 import 'package:openvine/screens/verify/verify_platform_labels.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:verifier_client/verifier_client.dart' show SigninRequirement;
 
 import '../../helpers/test_provider_overrides.dart';
@@ -101,6 +103,7 @@ void main() {
       bool confirmationSignIn = false,
       ConfirmationAccessReader readConfirmationAccess = _unknownAccess,
       bool canBuy = true,
+      bool simulateConfirmationRequirement = false,
     }) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -112,6 +115,9 @@ void main() {
             ).overrideWithValue(confirmationSignIn),
             confirmationAccessReaderProvider.overrideWithValue(
               readConfirmationAccess,
+            ),
+            simulateConfirmationRequirementProvider.overrideWithValue(
+              simulateConfirmationRequirement,
             ),
             authServiceProvider.overrideWithValue(
               createMockAuthService(
@@ -302,6 +308,150 @@ void main() {
 
         expect(reads, equals([false]));
       });
+
+      group('on a verifier that names no requirement', () {
+        setUp(() {
+          const twitterOpen = VerifierPlatform(
+            key: 'twitter',
+            label: 'Twitter / X',
+            supported: true,
+            oauth: true,
+          );
+          when(
+            () => repository.startingPlatform('twitter'),
+          ).thenReturn(twitterOpen);
+          when(
+            () => repository.platform('twitter'),
+          ).thenAnswer((_) async => twitterOpen);
+        });
+
+        testWidgets(
+          'reads no access and keeps the sign-in with the simulated '
+          'requirement off',
+          (tester) async {
+            final reads = <bool>[];
+            await pump(
+              tester,
+              platformKey: 'twitter',
+              confirmationSignIn: true,
+              readConfirmationAccess: ({bool refresh = false}) async {
+                reads.add(refresh);
+                return ConfirmationAccess.hasNot;
+              },
+            );
+            await tester.pump();
+
+            expect(reads, isEmpty);
+            expect(find.text(l10n.verifyConfirmationCardTitle), findsNothing);
+            expect(signInButton('twitter'), findsOneWidget);
+          },
+        );
+
+        testWidgets(
+          'reads access and shows the Confirmation card with the simulated '
+          'requirement on',
+          (tester) async {
+            final reads = <bool>[];
+            await pump(
+              tester,
+              platformKey: 'twitter',
+              confirmationSignIn: true,
+              simulateConfirmationRequirement: true,
+              readConfirmationAccess: ({bool refresh = false}) async {
+                reads.add(refresh);
+                return ConfirmationAccess.hasNot;
+              },
+            );
+            await tester.pump();
+
+            expect(reads, equals([false]));
+            expect(
+              find.text(l10n.verifyConfirmationCardTitle),
+              findsOneWidget,
+            );
+            expect(signInButton('twitter'), findsNothing);
+          },
+        );
+      });
+
+      testWidgets(
+        'turning the simulated requirement over keeps the open flow and its '
+        'cubit',
+        (tester) async {
+          // Turning it over must not close a cubit that may hold a sign-in to
+          // approve, so the page reads it once per flow, as it does the flag.
+          SharedPreferences.setMockInitialValues({});
+          final prefs = await SharedPreferences.getInstance();
+          const twitterOpen = VerifierPlatform(
+            key: 'twitter',
+            label: 'Twitter / X',
+            supported: true,
+            oauth: true,
+          );
+          when(
+            () => repository.startingPlatform('twitter'),
+          ).thenReturn(twitterOpen);
+          when(
+            () => repository.platform('twitter'),
+          ).thenAnswer((_) async => twitterOpen);
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                identityClaimsRepositoryProvider.overrideWithValue(repository),
+                sharedPreferencesProvider.overrideWithValue(prefs),
+                confirmationAccessDebugBuildProvider.overrideWithValue(true),
+                supporterStoreBillingAvailableProvider.overrideWithValue(true),
+                isFeatureEnabledProvider(
+                  FeatureFlag.confirmationSignIn,
+                ).overrideWithValue(true),
+                confirmationAccessReaderProvider.overrideWithValue(
+                  _unknownAccess,
+                ),
+                authServiceProvider.overrideWithValue(
+                  createMockAuthService(
+                    authState: AuthState.authenticated,
+                    currentPublicKeyHex: _pubkey,
+                  ),
+                ),
+                currentAuthStateProvider.overrideWithValue(
+                  AuthState.authenticated,
+                ),
+                appOAuthSupportProvider.overrideWith((ref) async => true),
+                analyticsEventSinkProvider.overrideWithValue(
+                  const NoOpAnalyticsEventSink(),
+                ),
+              ],
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                theme: VineTheme.theme,
+                home: const VerifyConnectPage(platformKey: 'twitter'),
+              ),
+            ),
+          );
+          await tester.pump();
+          VerifyConnectCubit cubit() => tester
+              .element(find.byType(VerifyConnectView))
+              .read<VerifyConnectCubit>();
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(VerifyConnectPage)),
+          );
+          final before = cubit();
+
+          await container
+              .read(confirmationRequirementSimulatedProvider.notifier)
+              .set(on: true);
+          await tester.pump();
+
+          expect(
+            container.read(simulateConfirmationRequirementProvider),
+            isTrue,
+          );
+          expect(cubit(), same(before));
+          expect(before.isClosed, isFalse);
+          expect(cubit().state.platform, equals(twitterOpen));
+        },
+      );
 
       testWidgets(
         'asks the new account, not the old one, after an account change',

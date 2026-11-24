@@ -628,6 +628,8 @@ const _knownUntranslatedDebt = <String>{
   'devOptionsConfirmationAccessHas',
   'devOptionsConfirmationAccessHasNot',
   'devOptionsConfirmationAccessUnknown',
+  'devOptionsConfirmationRequirementSimulatedTitle',
+  'devOptionsConfirmationRequirementSimulatedSubtitle',
   'verifyErrorConfirmationRequired',
   'verifyErrorConfirmationUnavailable',
   'verifyErrorConfirmationPending',

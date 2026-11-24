@@ -1,5 +1,5 @@
-// ABOUTME: Tests for where the app reads Divine Confirmation access from, and
-// ABOUTME: the developer override that forces an answer for testing.
+// ABOUTME: Tests for the Divine Confirmation access reader and the developer
+// ABOUTME: settings that force an answer or simulate the requirement.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -50,10 +50,12 @@ void main() {
   Future<ProviderContainer> containerWith({
     required bool developerMode,
     String? storedOverride,
+    bool? storedSimulation,
     bool debugBuild = false,
   }) async {
     SharedPreferences.setMockInitialValues({
       confirmationAccessOverrideKey: ?storedOverride,
+      confirmationRequirementSimulatedKey: ?storedSimulation,
     });
     final prefs = await SharedPreferences.getInstance();
     final container = ProviderContainer(
@@ -200,6 +202,70 @@ void main() {
       await notifier.set(null);
       expect(container.read(confirmationAccessOverrideProvider), isNull);
       expect(prefs.containsKey(confirmationAccessOverrideKey), isFalse);
+    });
+  });
+
+  group('simulateConfirmationRequirementProvider', () {
+    test('applies a stored choice in developer mode', () async {
+      final container = await containerWith(
+        storedSimulation: true,
+        developerMode: true,
+      );
+
+      expect(container.read(simulateConfirmationRequirementProvider), isTrue);
+    });
+
+    test('applies a stored choice in a debug build', () async {
+      final container = await containerWith(
+        storedSimulation: true,
+        developerMode: false,
+        debugBuild: true,
+      );
+
+      expect(container.read(simulateConfirmationRequirementProvider), isTrue);
+    });
+
+    test('is off with nothing stored', () async {
+      final container = await containerWith(
+        developerMode: true,
+        debugBuild: true,
+      );
+
+      expect(container.read(simulateConfirmationRequirementProvider), isFalse);
+    });
+
+    test('a stored choice is ignored once developer mode is off', () async {
+      final container = await containerWith(
+        storedSimulation: true,
+        developerMode: true,
+      );
+      expect(container.read(simulateConfirmationRequirementProvider), isTrue);
+
+      (container.read(
+        isDeveloperModeEnabledProvider.notifier,
+      ) as _DeveloperMode).turnOff();
+
+      expect(container.read(simulateConfirmationRequirementProvider), isFalse);
+      // Still stored: turning developer mode back on restores it.
+      expect(container.read(confirmationRequirementSimulatedProvider), isTrue);
+    });
+  });
+
+  group('confirmationRequirementSimulatedProvider', () {
+    test('set stores the choice, and false clears it', () async {
+      final container = await containerWith(developerMode: true);
+      final notifier = container.read(
+        confirmationRequirementSimulatedProvider.notifier,
+      );
+      final prefs = container.read(sharedPreferencesProvider);
+
+      await notifier.set(on: true);
+      expect(container.read(confirmationRequirementSimulatedProvider), isTrue);
+      expect(prefs.getBool(confirmationRequirementSimulatedKey), isTrue);
+
+      await notifier.set(on: false);
+      expect(container.read(confirmationRequirementSimulatedProvider), isFalse);
+      expect(prefs.containsKey(confirmationRequirementSimulatedKey), isFalse);
     });
   });
 }
