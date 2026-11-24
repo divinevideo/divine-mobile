@@ -403,6 +403,11 @@ static void camera_desktop_plugin_handle_method_call(
     respond_with_portal_devices(method_call, {});
     return;
   }
+  if (strcmp(method, "testActiveBusWatches") == 0) {
+    g_autoptr(FlValue) value = fl_value_new_int(Camera::ActiveBusWatchesForTest());
+    fl_method_call_respond_success(method_call, value, nullptr);
+    return;
+  }
   if (strcmp(method, "testMainLoopBarrier") == 0) {
     // Drain earlier normal/idle callbacks before the synthetic test proceeds.
     g_idle_add_full(G_PRIORITY_LOW, [](gpointer data) -> gboolean {

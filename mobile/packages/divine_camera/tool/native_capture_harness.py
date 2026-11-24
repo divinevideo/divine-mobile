@@ -37,7 +37,7 @@ Future<void> main() async {
   runApp(const SizedBox());
   final root = Directory(Platform.environment['DIVINE_CAPTURE_OUTPUT']!);
   final testCase = Platform.environment['DIVINE_CAPTURE_CASE'] ?? 'video';
-  final audio = testCase != 'video';
+  final audio = testCase != 'video' && testCase != 'startup-failure';
   int? id;
   var stage = 'enumeration';
   void setStage(String value) {
@@ -76,7 +76,21 @@ Future<void> main() async {
     if (testCase == 'texture-unavailable') throw StateError('Texture allocation failure was ignored');
     id = created!['cameraId']! as int;
     setStage('initialization');
-    final initialized = await channel.invokeMapMethod<String, Object?>('initialize', {'cameraId': id});
+    Map<String, Object?>? initialized;
+    try {
+      initialized = await channel.invokeMapMethod<String, Object?>('initialize', {'cameraId': id});
+    } on PlatformException catch (error) {
+      if (testCase != 'startup-failure' || error.code != 'initialization_failed') rethrow;
+      await channel.invokeMethod<void>('dispose', {'cameraId': id});
+      id = null;
+      setStage('startup-watch-release');
+      final watches = await channel.invokeMethod<int>('testActiveBusWatches');
+      stdout.writeln('DIVINE_CAPTURE_RESOURCE_COUNT bus_watch $watches');
+      if (watches != 0) throw StateError('Failed camera retained its native bus watch');
+      stdout.writeln('DIVINE_CAPTURE_PASS');
+      exit(0);
+    }
+    if (testCase == 'startup-failure') throw StateError('Pipeline startup failure was ignored');
     if ((initialized!['previewWidth']! as num) <= 0) throw StateError('No preview');
     await verifyFirstPreviewFrame(id);
     if (testCase == 'audio-unavailable') {
@@ -343,10 +357,73 @@ os.close(fd)
 """
 
 
+def trace_failure_signatures(trace):
+    """Keep known API names and HRESULTs; discard attributes and raw messages."""
+    classes = {
+        'CMFCaptureEngineDetours', 'CMFCaptureSourceDetours',
+        'CMFMediaSourceDetours', 'CMFMediaSourceExDetours',
+        'CMFMediaEventDetours', 'CMFActivateDetours', 'CMFAttributesDetours',
+        'CMFSourceReaderDetours', 'CMFReadWriteClassFactoryDetours',
+        'COle32ExportDetours',
+    }
+    methods = {
+        'Initialize', 'ActivateObject', 'QueryInterface', 'GetSourceAttributes',
+        'GetStreamAttributes', 'GetService', 'GetUnknown', 'GetGUID',
+        'GetString', 'GetAllocatedString', 'GetUINT32', 'GetStatus', 'GetEvent',
+        'BeginGetEvent', 'EndGetEvent', 'CreateInstance', 'CoCreateInstance',
+        'Trace', 'HandleEvent', 'SetCurrentMediaType',
+    }
+    signatures = set()
+    for line in trace.splitlines():
+        codes = re.findall(r'\b(?:hr|hresult|status)\s*[:=]\s*(0x[89a-f][0-9a-f]{7})(?![0-9a-f])', line, re.I)
+        if not codes:
+            continue
+        symbol = next((owner + '::' + method
+                       for owner, method in re.findall(r'\b([A-Za-z][A-Za-z0-9_]*)::([A-Za-z][A-Za-z0-9_]*)\b', line)
+                       if owner in classes and method in methods), 'unattributed')
+        signatures.update((symbol, code.lower()) for code in codes)
+    return sorted(signatures, key=lambda value: (value[1] != '0x80070005', value))
+
+
+def capture_trace_tool():
+    """Use an already-installed x64 Windows SDK tool, without changing access."""
+    direct = shutil.which('mftrace.exe')
+    if direct:
+        return Path(direct)
+    sdk = Path(os.environ.get('ProgramFiles(x86)', r'C:\Program Files (x86)')) / 'Windows Kits/10/bin'
+    versions = sorted(sdk.glob('*/x64/mftrace.exe'))
+    return versions[-1] if versions else None
+
+
+def trace_capture_failure(command, app, env):
+    """Supplement an unchanged failing assertion; tracing cannot make it pass."""
+    tracer = capture_trace_tool()
+    print('DIVINE_CAPTURE_TRACE_TOOL', 'present' if tracer else 'unavailable', flush=True)
+    if not tracer:
+        return
+    try:
+        # MFTrace defaults to stdout. Keep it in memory, never in a raw log.
+        traced = subprocess.run([str(tracer), '-dc', '-l', '5'] + command,
+                                cwd=app, env=env, capture_output=True, timeout=30)
+        streams = [traced.stdout, traced.stderr]
+    except subprocess.TimeoutExpired as failure:
+        print('DIVINE_CAPTURE_TRACE_STAGE timeout', flush=True)
+        streams = [failure.stdout or b'', failure.stderr or b'']
+    except OSError:
+        print('DIVINE_CAPTURE_TRACE_STAGE execution_failed', flush=True)
+        return
+    text = '\n'.join(stream.decode('utf-16' if stream.startswith((b'\xff\xfe', b'\xfe\xff')) else 'utf-8',
+                                   errors='replace') for stream in streams)
+    signatures = trace_failure_signatures(text)
+    print('DIVINE_CAPTURE_TRACE_FAILURE_COUNT', len(signatures), flush=True)
+    for symbol, code in signatures[:80]:
+        print('DIVINE_CAPTURE_TRACE_STATUS', symbol, code, flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--platform', choices=['linux', 'windows'], required=True)
-    parser.add_argument('--case', choices=['video', 'audio', 'audio-unavailable', 'texture-unavailable'], default='video')
+    parser.add_argument('--case', choices=['video', 'audio', 'audio-unavailable', 'texture-unavailable', 'startup-failure'], default='video')
     parser.add_argument('--workspace', type=Path, help='Optional private incremental build directory.')
     args = parser.parse_args()
     flutter = ['flutter']
@@ -435,6 +512,8 @@ dependencies:
             env['CAMERA_DESKTOP_LOG'] = '1'
         if args.case == 'audio-unavailable':
             env['DIVINE_CAPTURE_TEST_AUDIO_UNAVAILABLE'] = '1'
+        if args.case == 'startup-failure':
+            env['DIVINE_CAPTURE_TEST_PIPELINE_START_FAILURE'] = '1'
         if args.case == 'texture-unavailable':
             env['DIVINE_CAPTURE_TEST_TEXTURE_FAILURE'] = '1'
         if args.platform == 'linux':
@@ -462,8 +541,10 @@ dependencies:
             if line.startswith('DIVINE_CAPTURE_') or 'GStreamer error:' in line or 'RecordHandler::Setup failed:' in line or 'Audio setup failed:' in line:
                 print(line, flush=True)
         if result.returncode != 0 or 'DIVINE_CAPTURE_PASS' not in result.stdout:
+            if args.platform == 'windows' and args.case == 'audio' and 'DIVINE_CAPTURE_FAIL initialization' in result.stdout:
+                trace_capture_failure(command, app, env)
             raise RuntimeError('Native capture failed; exit=' + str(result.returncode))
-        if args.case in ['audio-unavailable', 'texture-unavailable']:
+        if args.case in ['audio-unavailable', 'texture-unavailable', 'startup-failure']:
             print('DIVINE_CAPTURE_EXPECTED_FAILURE_PASS', flush=True)
             return
         # FFmpeg is an independent test oracle, never a production dependency.

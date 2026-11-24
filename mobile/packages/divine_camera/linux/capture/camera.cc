@@ -10,6 +10,11 @@
 #include <cstdio>
 #include <cstring>
 
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+static std::atomic<int> active_bus_watches{0};
+int Camera::ActiveBusWatchesForTest() { return active_bus_watches.load(); }
+#endif
+
 static const guint kInitTimeoutMs = 8000;
 
 // Cap on MethodChannel fallback frames queued on the main loop but not yet
@@ -93,6 +98,7 @@ void Camera::Initialize(FlMethodCall* method_call) {
 
   GError* error = nullptr;
   if (!BuildPipeline(&error)) {
+    ReleasePipeline();
     g_info("[camera_desktop] Camera %d: BuildPipeline failed: %s", camera_id_,
            error ? error->message : "unknown error");
     RespondToPendingInit(false, error->message);
@@ -107,10 +113,8 @@ void Camera::Initialize(FlMethodCall* method_call) {
   if (ret == GST_STATE_CHANGE_FAILURE) {
     g_info("[camera_desktop] Camera %d: gst_element_set_state(PLAYING) failed",
            camera_id_);
+    ReleasePipeline();
     RespondToPendingInit(false, "Failed to start GStreamer pipeline");
-    gst_object_unref(pipeline_);
-    pipeline_ = nullptr;
-    appsink_ = nullptr;
     state_.store(CameraState::kCreated);
     return;
   }
@@ -150,7 +154,9 @@ bool Camera::BuildPipeline(GError** error) {
 #ifdef DIVINE_CAMERA_TEST_CAPTURE
   if (config_.backend == CameraBackend::kSynthetic) {
     pipeline_str = g_strdup_printf(
-        "videotestsrc is-live=true pattern=smpte ! videoconvert %s", preview_tail);
+        "videotestsrc is-live=true pattern=smpte ! videoconvert %s %s", preview_tail,
+        g_getenv("DIVINE_CAPTURE_TEST_PIPELINE_START_FAILURE")
+            ? "fakesrc ! fakesink state-error=2 async=false" : "");
   } else
 #endif
   if (config_.backend == CameraBackend::kPipeWire) {
@@ -242,7 +248,13 @@ bool Camera::BuildPipeline(GError** error) {
 
   // Set up bus watch for error messages.
   GstBus* bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline_));
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+  bus_watch_id_ = gst_bus_add_watch_full(bus, G_PRIORITY_DEFAULT,
+      Camera::OnBusMessage, this, [](gpointer) { --active_bus_watches; });
+  if (bus_watch_id_ != 0) ++active_bus_watches;
+#else
   bus_watch_id_ = gst_bus_add_watch(bus, Camera::OnBusMessage, this);
+#endif
   gst_object_unref(bus);
 
   // Release our ref on the appsink (pipeline holds one).
@@ -784,6 +796,21 @@ void Camera::SetMirror(bool mirrored) {
   g_object_set(videoflip_, "method", mirrored ? 4 : 0, nullptr);
 }
 
+void Camera::ReleasePipeline() {
+  if (bus_watch_id_ > 0) {
+    g_source_remove(bus_watch_id_);
+    bus_watch_id_ = 0;
+  }
+  if (pipeline_) {
+    gst_element_set_state(pipeline_, GST_STATE_NULL);
+    gst_object_unref(pipeline_);
+    pipeline_ = nullptr;
+  }
+  appsink_ = nullptr;
+  videoflip_ = nullptr;
+  tee_ = nullptr;
+}
+
 void Camera::Dispose() {
   g_info("[camera_desktop] Camera %d: disposing", camera_id_);
   // C-2: use atomic exchange so the check-and-set is race-free. If two threads
@@ -810,17 +837,7 @@ void Camera::Dispose() {
   // gst_element_set_state(NULL) blocks until the GStreamer streaming thread
   // (which runs OnNewSample and accesses image_stream_buffer_) is fully
   // stopped. Freeing before this point was a use-after-free.
-  if (pipeline_) {
-    videoflip_ = nullptr;
-    gst_element_set_state(pipeline_, GST_STATE_NULL);
-    if (bus_watch_id_ > 0) {
-      g_source_remove(bus_watch_id_);
-      bus_watch_id_ = 0;
-    }
-    gst_object_unref(pipeline_);
-    pipeline_ = nullptr;
-    appsink_ = nullptr;
-  }
+  ReleasePipeline();
 
   // Now safe: the GStreamer streaming thread is guaranteed to have exited
   // OnNewSample and will never access image_stream_buffer_ again.

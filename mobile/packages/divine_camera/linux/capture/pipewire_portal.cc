@@ -12,7 +12,8 @@ static const char* kCameraInterface = "org.freedesktop.portal.Camera";
 static const char* kRequestInterface = "org.freedesktop.portal.Request";
 
 PipeWirePortal::PipeWirePortal()
-    : connection_(nullptr),
+    : callback_lifetime_(std::make_shared<CallbackLifetime>(CallbackLifetime{this})),
+      connection_(nullptr),
       pw_fd_(-1),
       signal_subscription_id_(0),
       request_counter_(0) {
@@ -26,10 +27,8 @@ PipeWirePortal::PipeWirePortal()
 }
 
 PipeWirePortal::~PipeWirePortal() {
-  if (signal_subscription_id_ > 0 && connection_) {
-    g_dbus_connection_signal_unsubscribe(connection_, signal_subscription_id_);
-    signal_subscription_id_ = 0;
-  }
+  callback_lifetime_->owner = nullptr;
+  CompleteEnumeration({});
   if (pw_fd_ >= 0) {
     close(pw_fd_);
     pw_fd_ = -1;
@@ -78,7 +77,13 @@ std::string PipeWirePortal::MakeHandleToken() {
 }
 
 void PipeWirePortal::EnumerateDevicesAsync(EnumerateCallback callback) {
-  pending_callback_ = std::move(callback);
+  if (!callback_lifetime_->owner) {
+    callback({});
+    return;
+  }
+  pending_callbacks_.push_back(std::move(callback));
+  if (enumerating_) return;
+  enumerating_ = true;
 
   if (!connection_) {
     FinishWithoutDevices();
@@ -149,15 +154,22 @@ void PipeWirePortal::EnumerateDevicesAsync(EnumerateCallback callback) {
       -1,  // default timeout
       nullptr,
       PipeWirePortal::OnAccessCameraReply,
-      this);
+      new AccessReply{callback_lifetime_, request_counter_});
 }
 
 void PipeWirePortal::OnAccessCameraReply(GObject* source, GAsyncResult* res,
                                          gpointer user_data) {
-  auto* self = static_cast<PipeWirePortal*>(user_data);
+  std::unique_ptr<AccessReply> reply(static_cast<AccessReply*>(user_data));
   GError* error = nullptr;
   GVariant* result = g_dbus_connection_call_finish(
       G_DBUS_CONNECTION(source), res, &error);
+  const auto lifetime = reply->lifetime.lock();
+  auto* self = lifetime ? lifetime->owner : nullptr;
+  if (!self || !self->enumerating_ || reply->request != self->request_counter_) {
+    if (result) g_variant_unref(result);
+    g_clear_error(&error);
+    return;
+  }
 
   if (error) {
     g_warning("PipeWirePortal: AccessCamera call failed: %s", error->message);
@@ -345,18 +357,23 @@ void PipeWirePortal::EnumeratePipeWireNodes() {
     g_info("[camera_desktop]   → %s (%s)", d.name.c_str(), d.device_path.c_str());
   }
 
-  if (pending_callback_) {
-    auto cb = std::move(pending_callback_);
-    pending_callback_ = nullptr;
-    cb(std::move(devices));
-  }
+  CompleteEnumeration(std::move(devices));
 }
 
 void PipeWirePortal::FinishWithoutDevices() {
   g_info("[camera_desktop] Camera portal returned no authorized devices");
-  if (pending_callback_) {
-    auto cb = std::move(pending_callback_);
-    pending_callback_ = nullptr;
-    cb({});  // Empty vector triggers V4L2 fallback in the caller.
+  CompleteEnumeration({});
+}
+
+void PipeWirePortal::CompleteEnumeration(std::vector<DeviceInfo> devices) {
+  if (signal_subscription_id_ > 0 && connection_) {
+    g_dbus_connection_signal_unsubscribe(connection_, signal_subscription_id_);
   }
+  signal_subscription_id_ = 0;
+  enumerating_ = false;
+  auto callbacks = std::move(pending_callbacks_);
+  pending_callbacks_.clear();
+  // Each caller owns its completion. Move the batch before invoking callbacks
+  // so a reentrant enumeration starts a new request without losing a waiter.
+  for (auto& callback : callbacks) callback(devices);
 }

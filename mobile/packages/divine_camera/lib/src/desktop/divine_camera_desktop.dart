@@ -591,10 +591,12 @@ class DivineCameraDesktop extends DivineCameraPlatform
   Future<void> pausePreview({bool releaseAudio = true}) {
     if (releaseAudio &&
         (_initializationCancellation != null ||
-            _nativeStartCancellation != null)) {
+            _nativeStartCancellation != null ||
+            _nativeStopCancellation != null)) {
       _generation++;
       _cancelPendingInitialization();
       _cancelNativeStart();
+      _cancelNativeStop();
       _resumeOnForeground = true;
     }
     return _pausePreview(releaseAudio: releaseAudio);

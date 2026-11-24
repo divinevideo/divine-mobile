@@ -1163,6 +1163,54 @@ void main() {
         }
       });
 
+      test(
+        'backgrounding releases a camera while a foreground stop is pending',
+        () async {
+          final directory = await Directory.systemTemp.createTemp(
+            'background-stop-',
+          );
+          final source = await File(
+            '${directory.path}/take.mp4',
+          ).writeAsBytes([1, 2, 3]);
+          final gate = Completer<void>();
+          backend
+            ..recordedFile = XFile(source.path)
+            ..stopGate = gate;
+          await camera.initializeCamera();
+          await camera.startRecording();
+          expect(backend.activeCameraIds, {7});
+          Object? stopError;
+          final stopping = camera.stopRecording().then<void>(
+            (_) {},
+            onError: (Object error) => stopError = error,
+          );
+          await backend.stopEntered.future;
+          var paused = false;
+          final pausing = camera.pausePreview().then((_) => paused = true);
+          try {
+            await pumpEventQueue();
+            expect(paused, isTrue);
+            expect(backend.activeCameraIds, isEmpty);
+            expect(backend.stopCalls, 1);
+            await stopping;
+            expect(stopError, isA<StateError>());
+            await camera.resumePreview();
+            expect(backend.activeCameraIds, {8});
+            expect((await camera.getCameraState()).isInitialized, isTrue);
+            gate.complete();
+            await pumpEventQueue();
+            expect(source.existsSync(), isFalse);
+            expect(backend.activeCameraIds, {8});
+          } finally {
+            if (!gate.isCompleted) gate.complete();
+            await stopping;
+            await pausing;
+            await camera.disposeCamera();
+            await directory.delete(recursive: true);
+          }
+        },
+      );
+
       for (final deviceError in [false, true]) {
         final action = deviceError ? 'device error' : 'disposal';
         test(

@@ -56,6 +56,9 @@ class Camera {
          const CameraConfig& config);
   ~Camera();
 
+#ifdef DIVINE_CAMERA_TEST_CAPTURE
+  static int ActiveBusWatchesForTest();
+#endif
   int camera_id() const { return camera_id_; }
   int64_t texture_id() const { return texture_id_; }
   CameraState state() const { return state_; }
@@ -101,6 +104,8 @@ class Camera {
   void DisposeAsync(std::function<void()> on_released);
 
  private:
+  void ReleasePipeline();
+
   bool BuildPipeline(GError** error);
   void RespondToPendingInit(bool success, const char* error_message);
 

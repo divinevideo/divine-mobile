@@ -5,6 +5,7 @@
 #include <gst/gst.h>
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -60,6 +61,16 @@ class PipeWirePortal {
   void OpenPipeWireRemote();
   void EnumeratePipeWireNodes();
   void FinishWithoutDevices();
+  void CompleteEnumeration(std::vector<DeviceInfo> devices);
+
+  // GIO replies can arrive after plugin disposal or an earlier request finishes.
+  struct CallbackLifetime { PipeWirePortal* owner; };
+  struct AccessReply {
+    std::weak_ptr<CallbackLifetime> lifetime;
+    int request;
+  };
+  std::shared_ptr<CallbackLifetime> callback_lifetime_;
+  bool enumerating_ = false;
 
   // Builds a unique request token for the portal handle.
   std::string MakeHandleToken();
@@ -67,7 +78,7 @@ class PipeWirePortal {
   GDBusConnection* connection_;
   int pw_fd_;
   guint signal_subscription_id_;
-  EnumerateCallback pending_callback_;
+  std::vector<EnumerateCallback> pending_callbacks_;
   int request_counter_;
 };
 
