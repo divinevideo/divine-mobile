@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/video_dm_outbox.dart';
@@ -22,7 +23,8 @@ enum DraftDmShareState {
 }
 
 /// Prepares an editable project for the active account's DM outbox.
-class DraftDmShareCubit extends Cubit<DraftDmShareState> {
+class DraftDmShareCubit extends Cubit<DraftDmShareState>
+    with CloseGuardedEmit<DraftDmShareState> {
   DraftDmShareCubit({
     required this.senderPubkey,
     required this.recipientPubkey,
@@ -58,7 +60,7 @@ class DraftDmShareCubit extends Cubit<DraftDmShareState> {
         state == DraftDmShareState.queued) {
       return;
     }
-    emit(DraftDmShareState.preparing);
+    emitIfOpen(DraftDmShareState.preparing);
 
     File? bundle;
     try {
@@ -66,7 +68,7 @@ class DraftDmShareCubit extends Cubit<DraftDmShareState> {
       final draft = await _loadDraft(draftId);
       if (!_checkSession()) return;
       if (draft == null) {
-        emit(DraftDmShareState.failed);
+        emitIfOpen(DraftDmShareState.failed);
         return;
       }
 
@@ -81,9 +83,9 @@ class DraftDmShareCubit extends Cubit<DraftDmShareState> {
         file: bundle,
       );
       bundle = null;
-      emit(DraftDmShareState.queued);
+      emitIfOpen(DraftDmShareState.queued);
     } on DmVideoTooLargeException {
-      if (_checkSession()) emit(DraftDmShareState.tooLarge);
+      if (_checkSession()) emitIfOpen(DraftDmShareState.tooLarge);
     } on Object catch (error, stackTrace) {
       Log.warning(
         'Could not export an editable draft for a DM',
@@ -92,7 +94,7 @@ class DraftDmShareCubit extends Cubit<DraftDmShareState> {
         error: error,
         stackTrace: stackTrace,
       );
-      if (_checkSession()) emit(DraftDmShareState.failed);
+      if (_checkSession()) emitIfOpen(DraftDmShareState.failed);
     } finally {
       if (bundle != null) {
         try {
@@ -112,7 +114,7 @@ class DraftDmShareCubit extends Cubit<DraftDmShareState> {
   bool _checkSession() {
     if (isClosed) return false;
     if (_ownsSession()) return true;
-    emit(DraftDmShareState.accountChanged);
+    emitIfOpen(DraftDmShareState.accountChanged);
     return false;
   }
 
@@ -120,17 +122,17 @@ class DraftDmShareCubit extends Cubit<DraftDmShareState> {
     final decision = await _sendPolicy(recipientPubkey);
     if (!_checkSession()) return false;
     if (_isBlocked(recipientPubkey)) {
-      emit(DraftDmShareState.recipientBlockedByUs);
+      emitIfOpen(DraftDmShareState.recipientBlockedByUs);
       return false;
     }
     switch (decision) {
       case DmSendPolicyDecision.allowed:
         return true;
       case DmSendPolicyDecision.terminallyBlockedRetain:
-        emit(DraftDmShareState.retiredRecipient);
+        emitIfOpen(DraftDmShareState.retiredRecipient);
       case DmSendPolicyDecision.terminallyBlockedDiscard:
       case DmSendPolicyDecision.temporarilyBlocked:
-        emit(DraftDmShareState.blocked);
+        emitIfOpen(DraftDmShareState.blocked);
     }
     return false;
   }

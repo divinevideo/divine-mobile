@@ -209,140 +209,149 @@ void main() {
     );
   }
 
-  test(
-    'encrypted project round trips, opens in the editor, edits and returns',
-    () async {
-      final original = makeDraft();
-      expect(displayedText(original), 'Original caption');
-      await senderStorage.saveDraft(original);
-      final project = await transfer.exportDraft(
-        original,
-        temporaryDirectory: outbox,
-      );
-      final imported = await transfer.importDraft(
-        messageId: '1' * 64,
-        senderPubkey: _sender,
-        storage: recipientStorage,
-        download: () => encryptedDownload(project),
-        stillWanted: () => true,
+  group(DraftTransferService, () {
+    group('importDraft', () {
+      test(
+        'encrypted project round trips, opens in the editor, edits and returns',
+        () async {
+          final original = makeDraft();
+          expect(displayedText(original), 'Original caption');
+          await senderStorage.saveDraft(original);
+          final project = await transfer.exportDraft(
+            original,
+            temporaryDirectory: outbox,
+          );
+          final imported = await transfer.importDraft(
+            messageId: '1' * 64,
+            senderPubkey: _sender,
+            storage: recipientStorage,
+            download: () => encryptedDownload(project),
+            stillWanted: () => true,
+          );
+
+          expect(imported.id, isNot(original.id));
+          expect(await senderStorage.getDraftById(imported.id), isNull);
+          final opened = (await recipientStorage.getDraftById(imported.id))!;
+          expect(opened.canPost, isTrue);
+          expect(opened.publishStatus, PublishStatus.draft);
+          expect(opened.collaboratorPubkeys, isEmpty);
+          expect(opened.scheduledAt, isNull);
+          expect(opened.clips.first.recordingSha256, isNull);
+          expect(opened.clips.first.sourceCredits.first.authorPubkey, _sender);
+          expect(opened.clips.first.trimStart, const Duration(seconds: 1));
+          expect(opened.clips.first.volume, 0.4);
+          final copiedVideo = File(opened.clips.first.requireVideo.file!.path);
+          expect(
+            copiedVideo.path,
+            isNot(original.clips.first.requireVideo.file!.path),
+          );
+          expect(copiedVideo.readAsBytesSync(), [1, 2, 3]);
+          expect(
+            File(opened.clips.last.stopMotionFrames!.single.path)
+                .readAsBytesSync(),
+            [4, 5],
+          );
+          expect(displayedText(opened), 'Original caption');
+          final copiedAudio = opened.selectedSound!;
+          expect(
+            copiedAudio.localFilePath,
+            isNot(original.selectedSound!.localFilePath),
+          );
+          expect(File(copiedAudio.localFilePath!).readAsBytesSync(), [6, 7]);
+
+          final editedAudio = copiedAudio.copyWith(volume: 0.2);
+          final edited = opened.copyWith(
+            clips: [
+              opened.clips.first.copyWith(
+                trimStart: const Duration(seconds: 2),
+              ),
+              opened.clips.last,
+            ],
+            editorStateHistory: history('Recipient caption', editedAudio),
+            selectedSound: editedAudio,
+          );
+          await recipientStorage.saveDraft(edited);
+          final reopened = await transfer.importDraft(
+            messageId: '1' * 64,
+            senderPubkey: _sender,
+            storage: recipientStorage,
+            download: () async => throw StateError('Already imported'),
+            stillWanted: () => true,
+          );
+          expect(displayedText(reopened), 'Recipient caption');
+
+          final revision = await transfer.exportDraft(
+            reopened,
+            temporaryDirectory: outbox,
+          );
+          final returned = await transfer.importDraft(
+            messageId: '2' * 64,
+            senderPubkey: _recipient,
+            storage: senderStorage,
+            download: () => encryptedDownload(revision),
+            stillWanted: () => true,
+          );
+          expect(displayedText(returned), 'Recipient caption');
+          expect(returned.clips.first.trimStart, const Duration(seconds: 2));
+          expect(returned.selectedSound!.volume, 0.2);
+          expect(
+            displayedText((await senderStorage.getDraftById(original.id))!),
+            'Original caption',
+          );
+        },
       );
 
-      expect(imported.id, isNot(original.id));
-      expect(await senderStorage.getDraftById(imported.id), isNull);
-      final opened = (await recipientStorage.getDraftById(imported.id))!;
-      expect(opened.canPost, isTrue);
-      expect(opened.publishStatus, PublishStatus.draft);
-      expect(opened.collaboratorPubkeys, isEmpty);
-      expect(opened.scheduledAt, isNull);
-      expect(opened.clips.first.recordingSha256, isNull);
-      expect(opened.clips.first.sourceCredits.first.authorPubkey, _sender);
-      expect(opened.clips.first.trimStart, const Duration(seconds: 1));
-      expect(opened.clips.first.volume, 0.4);
-      final copiedVideo = File(opened.clips.first.requireVideo.file!.path);
-      expect(
-        copiedVideo.path,
-        isNot(original.clips.first.requireVideo.file!.path),
-      );
-      expect(copiedVideo.readAsBytesSync(), [1, 2, 3]);
-      expect(
-        File(opened.clips.last.stopMotionFrames!.single.path).readAsBytesSync(),
-        [4, 5],
-      );
-      expect(displayedText(opened), 'Original caption');
-      final copiedAudio = opened.selectedSound!;
-      expect(
-        copiedAudio.localFilePath,
-        isNot(original.selectedSound!.localFilePath),
-      );
-      expect(File(copiedAudio.localFilePath!).readAsBytesSync(), [6, 7]);
+      test(
+        'rejects project media that names a local file instead of an index',
+        () async {
+          final draft = makeDraft();
+          final package = await transfer.exportDraft(
+            draft,
+            temporaryDirectory: outbox,
+          );
+          final bytes = package.readAsBytesSync();
+          final header = ByteData.sublistView(bytes, 0, 8);
+          final end = 8 + header.getUint32(4);
+          final manifest =
+              jsonDecode(utf8.decode(bytes.sublist(8, end))) as Map;
+          final timeline = (manifest['project'] as Map)['clips'] as List;
+          (timeline.first as Map)['filePath'] = '../private.mp4';
+          final json = utf8.encode(jsonEncode(manifest));
+          final badHeader = ByteData(8)
+            ..setUint32(0, header.getUint32(0))
+            ..setUint32(4, json.length);
+          final modified = Uint8List.fromList([
+            ...badHeader.buffer.asUint8List(),
+            ...json,
+            ...bytes.sublist(end),
+          ]);
+          final before = directory.listSync().length;
 
-      final editedAudio = copiedAudio.copyWith(volume: 0.2);
-      final edited = opened.copyWith(
-        clips: [
-          opened.clips.first.copyWith(trimStart: const Duration(seconds: 2)),
-          opened.clips.last,
-        ],
-        editorStateHistory: history('Recipient caption', editedAudio),
-        selectedSound: editedAudio,
+          await expectLater(
+            transfer.importDraft(
+              messageId: '3' * 64,
+              senderPubkey: _sender,
+              storage: recipientStorage,
+              download: () async => modified,
+              stillWanted: () => true,
+            ),
+            throwsFormatException,
+          );
+          expect(await recipientStorage.getDraftCount(), 0);
+          expect(directory.listSync().length, before);
+        },
       );
-      await recipientStorage.saveDraft(edited);
-      final reopened = await transfer.importDraft(
-        messageId: '1' * 64,
-        senderPubkey: _sender,
-        storage: recipientStorage,
-        download: () async => throw StateError('Already imported'),
-        stillWanted: () => true,
-      );
-      expect(displayedText(reopened), 'Recipient caption');
-
-      final revision = await transfer.exportDraft(
-        reopened,
-        temporaryDirectory: outbox,
-      );
-      final returned = await transfer.importDraft(
-        messageId: '2' * 64,
-        senderPubkey: _recipient,
-        storage: senderStorage,
-        download: () => encryptedDownload(revision),
-        stillWanted: () => true,
-      );
-      expect(displayedText(returned), 'Recipient caption');
-      expect(returned.clips.first.trimStart, const Duration(seconds: 2));
-      expect(returned.selectedSound!.volume, 0.2);
-      expect(
-        displayedText((await senderStorage.getDraftById(original.id))!),
-        'Original caption',
-      );
-    },
-  );
-
-  test('does not export a project with missing source media', () async {
-    final draft = makeDraft();
-    File(draft.clips.first.requireVideo.file!.path).deleteSync();
-    await expectLater(
-      transfer.exportDraft(draft, temporaryDirectory: outbox),
-      throwsFormatException,
-    );
-    expect(outbox.listSync(), isEmpty);
+    });
+    group('exportDraft', () {
+      test('does not export a project with missing source media', () async {
+        final draft = makeDraft();
+        File(draft.clips.first.requireVideo.file!.path).deleteSync();
+        await expectLater(
+          transfer.exportDraft(draft, temporaryDirectory: outbox),
+          throwsFormatException,
+        );
+        expect(outbox.listSync(), isEmpty);
+      });
+    });
   });
-
-  test(
-    'rejects project media that names a local file instead of an index',
-    () async {
-      final draft = makeDraft();
-      final package = await transfer.exportDraft(
-        draft,
-        temporaryDirectory: outbox,
-      );
-      final bytes = package.readAsBytesSync();
-      final header = ByteData.sublistView(bytes, 0, 8);
-      final end = 8 + header.getUint32(4);
-      final manifest = jsonDecode(utf8.decode(bytes.sublist(8, end))) as Map;
-      final timeline = (manifest['project'] as Map)['clips'] as List;
-      (timeline.first as Map)['filePath'] = '../private.mp4';
-      final json = utf8.encode(jsonEncode(manifest));
-      final badHeader = ByteData(8)
-        ..setUint32(0, header.getUint32(0))
-        ..setUint32(4, json.length);
-      final modified = Uint8List.fromList([
-        ...badHeader.buffer.asUint8List(),
-        ...json,
-        ...bytes.sublist(end),
-      ]);
-      final before = directory.listSync().length;
-
-      await expectLater(
-        transfer.importDraft(
-          messageId: '3' * 64,
-          senderPubkey: _sender,
-          storage: recipientStorage,
-          download: () async => modified,
-          stillWanted: () => true,
-        ),
-        throwsFormatException,
-      );
-      expect(await recipientStorage.getDraftCount(), 0);
-      expect(directory.listSync().length, before);
-    },
-  );
 }

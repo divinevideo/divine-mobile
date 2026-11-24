@@ -94,74 +94,78 @@ void main() {
     });
   });
 
-  test('hands a new export to the one-to-one outbox only once', () async {
-    await Future.wait([cubit.send(_draftId), cubit.send(_draftId)]);
+  group(DraftDmShareCubit, () {
+    group('send', () {
+      test('hands a new export to the one-to-one outbox only once', () async {
+        await Future.wait([cubit.send(_draftId), cubit.send(_draftId)]);
 
-    expect(exported, isTrue);
-    expect(cubit.state, DraftDmShareState.queued);
-    verify(() => send(file: output)).called(1);
-    expect(await source.readAsString(), 'source');
-    expect(output.existsSync(), isTrue);
+        expect(exported, isTrue);
+        expect(cubit.state, DraftDmShareState.queued);
+        verify(() => send(file: output)).called(1);
+        expect(await source.readAsString(), 'source');
+        expect(output.existsSync(), isTrue);
+      });
+
+      test('reports an export failure without sending the source', () async {
+        export = () async => throw StateError('export failed');
+
+        await cubit.send(_draftId);
+
+        expect(cubit.state, DraftDmShareState.failed);
+        verifyZeroInteractions(outbox);
+        expect(source.existsSync(), isTrue);
+      });
+
+      test('cleans up if the account switches while exporting', () async {
+        export = () async {
+          ownsSession = false;
+          return output.writeAsString('abandoned export');
+        };
+
+        await cubit.send(_draftId);
+
+        expect(cubit.state, DraftDmShareState.accountChanged);
+        expect(output.existsSync(), isFalse);
+        verifyZeroInteractions(outbox);
+      });
+
+      test('cleans up if the confirmation closes while exporting', () async {
+        export = () async {
+          await cubit.close();
+          return output.writeAsString('cancelled export');
+        };
+
+        await cubit.send(_draftId);
+
+        expect(output.existsSync(), isFalse);
+        verifyZeroInteractions(outbox);
+      });
+
+      test('rechecks recipient permissions after exporting', () async {
+        export = () async {
+          policy = DmSendPolicyDecision.temporarilyBlocked;
+          return output.writeAsString('blocked export');
+        };
+
+        await cubit.send(_draftId);
+
+        expect(cubit.state, DraftDmShareState.blocked);
+        expect(output.existsSync(), isFalse);
+        verifyZeroInteractions(outbox);
+      });
+
+      test(
+        'does not export or send for a recipient the user has blocked',
+        () async {
+          blocked = true;
+
+          await cubit.send(_draftId);
+
+          expect(exported, isFalse);
+          expect(cubit.state, DraftDmShareState.recipientBlockedByUs);
+          verifyZeroInteractions(outbox);
+        },
+      );
+    });
   });
-
-  test('reports an export failure without sending the source', () async {
-    export = () async => throw StateError('export failed');
-
-    await cubit.send(_draftId);
-
-    expect(cubit.state, DraftDmShareState.failed);
-    verifyZeroInteractions(outbox);
-    expect(source.existsSync(), isTrue);
-  });
-
-  test('cleans up if the account switches while exporting', () async {
-    export = () async {
-      ownsSession = false;
-      return output.writeAsString('abandoned export');
-    };
-
-    await cubit.send(_draftId);
-
-    expect(cubit.state, DraftDmShareState.accountChanged);
-    expect(output.existsSync(), isFalse);
-    verifyZeroInteractions(outbox);
-  });
-
-  test('cleans up if the confirmation closes while exporting', () async {
-    export = () async {
-      await cubit.close();
-      return output.writeAsString('cancelled export');
-    };
-
-    await cubit.send(_draftId);
-
-    expect(output.existsSync(), isFalse);
-    verifyZeroInteractions(outbox);
-  });
-
-  test('rechecks recipient permissions after exporting', () async {
-    export = () async {
-      policy = DmSendPolicyDecision.temporarilyBlocked;
-      return output.writeAsString('blocked export');
-    };
-
-    await cubit.send(_draftId);
-
-    expect(cubit.state, DraftDmShareState.blocked);
-    expect(output.existsSync(), isFalse);
-    verifyZeroInteractions(outbox);
-  });
-
-  test(
-    'does not export or send for a recipient the user has blocked',
-    () async {
-      blocked = true;
-
-      await cubit.send(_draftId);
-
-      expect(exported, isFalse);
-      expect(cubit.state, DraftDmShareState.recipientBlockedByUs);
-      verifyZeroInteractions(outbox);
-    },
-  );
 }
