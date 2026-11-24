@@ -6165,6 +6165,9 @@
   "settingsAppPreferencesSubtitle": "መልክ፣ ቋንቋ፣ ማከማቻ እና የላቁ አማራጮች",
   "settingsConnectionsSubtitle": "መተግበሪያዎች፣ ሬሌዎች፣ የሚዲያ አገልጋዮች እና ፈቃዶች",
   "settingsHelpAboutSubtitle": "ድጋፍ፣ ሕጋዊ መረጃ እና የመተግበሪያ ዝርዝሮች",
+  "settingsDiscordTitle": "የDiscord ሰርቨራችንን ይቀላቀሉ",
+  "settingsDiscordSubtitle": "ከDivine ቡድን እና ማኅበረሰብ ጋር ይወያዩ",
+  "settingsDiscordOpenError": "Discordን መክፈት አልተቻለም",
   "listLoopsCount": "{count, plural, =1{{formatted} ሉፕ} other{{formatted} ሉፖች}}",
   "@listLoopsCount": {
     "placeholders": {

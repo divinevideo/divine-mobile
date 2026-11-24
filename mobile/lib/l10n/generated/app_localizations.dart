@@ -26325,6 +26325,24 @@ abstract class AppLocalizations {
   /// **'Support, legal information, and app details'**
   String get settingsHelpAboutSubtitle;
 
+  /// Settings row title that opens an invite link to the official Divine Discord server.
+  ///
+  /// In en, this message translates to:
+  /// **'Join our Discord server'**
+  String get settingsDiscordTitle;
+
+  /// Settings row subtitle explaining that the Discord server is where to talk to the Divine team and community.
+  ///
+  /// In en, this message translates to:
+  /// **'Talk to the Divine team and community'**
+  String get settingsDiscordSubtitle;
+
+  /// Error snackbar shown when the official Divine Discord invite link could not be launched.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open Discord'**
+  String get settingsDiscordOpenError;
+
   /// Loop total in a list's stats line. 'formatted' is the compact figure shown (e.g. 89.4B); 'count' is the same total as a number and only selects the plural form.
   ///
   /// In en, this message translates to:

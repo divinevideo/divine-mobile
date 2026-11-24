@@ -15909,6 +15909,16 @@ class AppLocalizationsEs extends AppLocalizations {
       'Soporte, información legal y detalles de la app';
 
   @override
+  String get settingsDiscordTitle => 'Unite a nuestro servidor de Discord';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Charlá con el equipo y la comunidad de Divine';
+
+  @override
+  String get settingsDiscordOpenError => 'No se pudo abrir Discord';
+
+  @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

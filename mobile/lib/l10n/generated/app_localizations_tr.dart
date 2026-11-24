@@ -15649,6 +15649,16 @@ class AppLocalizationsTr extends AppLocalizations {
       'Destek, yasal bilgiler ve uygulama ayrıntıları';
 
   @override
+  String get settingsDiscordTitle => 'Discord sunucumuza katıl';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Divine ekibi ve topluluğuyla sohbet et';
+
+  @override
+  String get settingsDiscordOpenError => 'Discord açılamadı';
+
+  @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

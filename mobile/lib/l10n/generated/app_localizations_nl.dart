@@ -15807,6 +15807,16 @@ class AppLocalizationsNl extends AppLocalizations {
       'Ondersteuning, juridische informatie en appgegevens';
 
   @override
+  String get settingsDiscordTitle => 'Word lid van onze Discord-server';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Praat met het team en de community van Divine';
+
+  @override
+  String get settingsDiscordOpenError => 'Discord kon niet worden geopend';
+
+  @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

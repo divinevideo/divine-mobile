@@ -16038,6 +16038,16 @@ class AppLocalizationsRo extends AppLocalizations {
       'Asistență, informații legale și detalii despre aplicație';
 
   @override
+  String get settingsDiscordTitle => 'Alătură-te serverului nostru de Discord';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Vorbește cu echipa și comunitatea Divine';
+
+  @override
+  String get settingsDiscordOpenError => 'Discord nu a putut fi deschis';
+
+  @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

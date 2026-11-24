@@ -15348,6 +15348,15 @@ class AppLocalizationsAm extends AppLocalizations {
   String get settingsHelpAboutSubtitle => 'ድጋፍ፣ ሕጋዊ መረጃ እና የመተግበሪያ ዝርዝሮች';
 
   @override
+  String get settingsDiscordTitle => 'የDiscord ሰርቨራችንን ይቀላቀሉ';
+
+  @override
+  String get settingsDiscordSubtitle => 'ከDivine ቡድን እና ማኅበረሰብ ጋር ይወያዩ';
+
+  @override
+  String get settingsDiscordOpenError => 'Discordን መክፈት አልተቻለም';
+
+  @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

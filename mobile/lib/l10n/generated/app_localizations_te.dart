@@ -16094,6 +16094,16 @@ class AppLocalizationsTe extends AppLocalizations {
       'సహాయం, చట్టపరమైన సమాచారం, యాప్ వివరాలు';
 
   @override
+  String get settingsDiscordTitle => 'మా Discord సర్వర్‌లో చేరండి';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Divine బృందం, కమ్యూనిటీ సభ్యులతో మాట్లాడండి';
+
+  @override
+  String get settingsDiscordOpenError => 'Discordను తెరవలేకపోయాం';
+
+  @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

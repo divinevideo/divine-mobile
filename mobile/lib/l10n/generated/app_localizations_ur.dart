@@ -15725,6 +15725,15 @@ class AppLocalizationsUr extends AppLocalizations {
       'مدد، قانونی معلومات اور ایپ کی تفصیلات';
 
   @override
+  String get settingsDiscordTitle => 'ہمارے Discord سرور میں شامل ہوں';
+
+  @override
+  String get settingsDiscordSubtitle => 'Divine کی ٹیم اور کمیونٹی سے بات کریں';
+
+  @override
+  String get settingsDiscordOpenError => 'Discord نہیں کھل سکا';
+
+  @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

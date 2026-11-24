@@ -15664,6 +15664,16 @@ class AppLocalizationsVi extends AppLocalizations {
       'Hỗ trợ, thông tin pháp lý và chi tiết ứng dụng';
 
   @override
+  String get settingsDiscordTitle => 'Tham gia máy chủ Discord của chúng mình';
+
+  @override
+  String get settingsDiscordSubtitle =>
+      'Trò chuyện với đội ngũ và cộng đồng Divine';
+
+  @override
+  String get settingsDiscordOpenError => 'Không thể mở Discord';
+
+  @override
   String listLoopsCount(int count, String formatted) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

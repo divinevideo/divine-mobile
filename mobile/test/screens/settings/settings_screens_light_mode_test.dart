@@ -26,6 +26,9 @@ import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/contrast.dart';
+import '../../helpers/scroll.dart';
+
 class _MockAuthService extends Mock implements AuthService {}
 
 class _MockLocaleCubit extends MockCubit<LocaleState> implements LocaleCubit {}
@@ -77,7 +80,7 @@ void main() {
 
     tearDown(() => VineThemeColors.debugFallbackCount = 0);
 
-    testWidgets('SettingsScreen paints the light palette', (tester) async {
+    testWidgets('SettingsScreen has legible light colors', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -102,6 +105,33 @@ void main() {
 
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
       expect(scaffold.backgroundColor, VineTheme.lightColors.surface);
+
+      final l10n = tester.element(find.byType(SettingsScreen)).l10n;
+      final discordTitle = find.text(l10n.settingsDiscordTitle);
+      await scrollUntilTappable(
+        tester,
+        discordTitle,
+        200,
+        scrollable: find.byType(Scrollable),
+      );
+      final discordTile = find.widgetWithText(
+        DivineListTile,
+        l10n.settingsDiscordTitle,
+      );
+      final externalLinkIcon = tester.widget<DivineIcon>(
+        find.descendant(
+          of: discordTile,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon &&
+                widget.icon == DivineIconName.arrowUpRight,
+          ),
+        ),
+      );
+      expect(
+        contrastRatio(externalLinkIcon.color!, scaffold.backgroundColor!),
+        greaterThanOrEqualTo(3),
+      );
 
       final appBar = tester.widget<AppBar>(find.byType(AppBar));
       expect(appBar.backgroundColor, VineTheme.lightColors.nav);
