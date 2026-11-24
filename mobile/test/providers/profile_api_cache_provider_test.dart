@@ -1,9 +1,6 @@
 // ABOUTME: Ensures eligibility response caches follow the active API client.
 // ABOUTME: An environment change cannot reuse another backend's badge answer.
 
-import 'dart:async';
-
-import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
@@ -23,57 +20,43 @@ void main() {
   group('profileApiCacheProvider', () {
     setUpAll(() => registerFallbackValue(<String>[]));
 
-    test('sends lookups started within one window as one bulk request', () {
-      fakeAsync((async) {
+    test(
+      'keeps batchWindow disabled so single lookups preserve archived_loops',
+      () async {
         final api = _Api();
         when(() => api.isAvailable).thenReturn(true);
-        when(
-          () => api.getBulkProfiles(any()),
-        ).thenAnswer((_) => Completer<BulkProfilesResponse>().future);
+        when(() => api.getUserProfile(any())).thenAnswer(
+          (invocation) async => UserProfileNotPublished(
+            pubkey: invocation.positionalArguments.single as String,
+            isOgDiviner: false,
+          ),
+        );
         final container = ProviderContainer(
           overrides: [funnelcakeApiClientProvider.overrideWithValue(api)],
         );
+        addTearDown(container.dispose);
+
         final cache = container.read(profileApiCacheProvider);
-        unawaited(cache.getProfile(pubkey));
-        unawaited(cache.getProfile(otherPubkey));
-
-        async.elapse(
-          profileLookupBatchWindow - const Duration(milliseconds: 1),
-        );
-        verifyNever(() => api.getBulkProfiles(any()));
-        async.elapse(const Duration(milliseconds: 1));
-
-        final asked = verify(
-          () => api.getBulkProfiles(captureAny()),
-        ).captured;
-        expect(asked, [
-          [pubkey, otherPubkey],
+        await Future.wait([
+          cache.getProfile(pubkey),
+          cache.getProfile(otherPubkey),
         ]);
-        container.dispose();
-      });
-    });
 
-    test('disposes the cache with the container', () {
-      fakeAsync((async) {
-        final api = _Api();
-        when(() => api.isAvailable).thenReturn(true);
-        final container = ProviderContainer(
-          overrides: [funnelcakeApiClientProvider.overrideWithValue(api)],
-        );
-        Object? result = #pending;
-        unawaited(
-          container
-              .read(profileApiCacheProvider)
-              .getProfile(pubkey)
-              .then((value) => result = value),
-        );
+        verify(() => api.getUserProfile(pubkey)).called(1);
+        verify(() => api.getUserProfile(otherPubkey)).called(1);
+        verifyNever(() => api.getBulkProfiles(any()));
+      },
+    );
 
-        container.dispose();
-        async.elapse(profileLookupBatchWindow);
+    test('disposes cleanly with the container', () {
+      final api = _Api();
+      when(() => api.isAvailable).thenReturn(true);
+      final container = ProviderContainer(
+        overrides: [funnelcakeApiClientProvider.overrideWithValue(api)],
+      );
 
-        expect(result, isNull);
-        verifyNever(() => api.getUserProfile(any()));
-      });
+      container.read(profileApiCacheProvider);
+      expect(container.dispose, returnsNormally);
     });
 
     test(
