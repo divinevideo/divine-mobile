@@ -1456,6 +1456,10 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertNotIn("FIREBASE_ANALYTICS_WITHOUT_ADID", env_vars)
 
         step_names = [step["name"] for step in workflow["scripts"]]
+        self.assertEqual(
+            workflow["scripts"][0]["script"].strip(),
+            "bash scripts/verify_release_source.sh",
+        )
         self.assertIn("Check macOS App Store configuration", step_names)
         self.assertIn("Setup Mac App Store code signing", step_names)
         self.assertIn("Build macOS app", step_names)

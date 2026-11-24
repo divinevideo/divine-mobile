@@ -130,8 +130,65 @@ class StartMacosReleaseTest(unittest.TestCase):
         self.assertEqual(self.posted_payloads[0]['workflow_id'], 'macos-build')
         self.assertEqual(self.posted_payloads[0]['branch'], 'main')
         self.assertEqual(self.posted_payloads[0]['inputs'], {'DEFAULT_ENV': 'PRODUCTION'})
+        self.assertEqual(
+            self.posted_payloads[0]['environment'],
+            {'variables': {'RELEASE_EXPECTED_SHA': SHA}},
+        )
+        serialized_payload = json.dumps(self.posted_payloads[0])
+        self.assertNotIn(self.env['PROVENANCE_TOKEN'], serialized_payload)
+        self.assertNotIn(self.env['CODEMAGIC_API_TOKEN'], serialized_payload)
         stored_names = {v['name'] for v in self.group_vars}
         self.assertEqual(stored_names, {'PROVENANCE_TOKEN', 'DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS'})
+
+    def test_rejects_mismatched_source_sha_and_wrong_fetched_commit(self):
+        for bad_sha in ('abcd', 'd' * 40):
+            with self.subTest(source_sha=bad_sha):
+                env = dict(self.env, SOURCE_SHA=bad_sha)
+                with self.assertRaises(self.driver.ReleaseError):
+                    self.driver.run_release(env, request=self.api, checked_out_sha=SHA, sleep=lambda _: None)
+                self.assertEqual(self.posted_payloads, [])
+
+        self.build_states = [
+            {'status': 'fetching', 'app_store_connect_status': None, 'commit': {'hash': 'd' * 40}},
+        ]
+        with self.assertRaisesRegex(self.driver.ReleaseError, 'different source commit'):
+            self.driver.run_release(
+                self.env,
+                request=self.api,
+                checked_out_sha=SHA,
+                sleep=lambda _: None,
+                monotonic=self._monotonic,
+            )
+
+    def test_retry_reuses_matching_build_and_fails_closed_when_missing(self):
+        label = f'github:example/repo:12345:macos-testflight:{SHA}'
+        self.existing_builds = [
+            {
+                'id': BUILD_ID,
+                'app_id': self.driver.APP_ID,
+                'workflow': {'id': 'macos-build'},
+                'branch': 'main',
+                'status': 'building',
+                'app_store_connect_status': None,
+                'commit': {'hash': SHA},
+                'labels': [label],
+            }
+        ]
+        retry_env = dict(self.env, GITHUB_RUN_ATTEMPT='2')
+        selected = self.driver.run_release(
+            retry_env,
+            request=self.api,
+            checked_out_sha=SHA,
+            sleep=lambda _: None,
+            monotonic=self._monotonic,
+        )
+        self.assertEqual(selected, BUILD_ID)
+        self.assertEqual(self.posted_payloads, [])
+
+        self.existing_builds = []
+        with self.assertRaisesRegex(self.driver.ReleaseError, 'reconcil'):
+            self.driver.run_release(retry_env, request=self.api, checked_out_sha=SHA, sleep=lambda _: None)
+        self.assertEqual(self.posted_payloads, [])
 
     def test_rejects_non_main_workflow_ref(self):
         self.env['GITHUB_WORKFLOW_REF'] = 'example/repo/.github/workflows/macos_testflight_release.yml@refs/heads/feature'

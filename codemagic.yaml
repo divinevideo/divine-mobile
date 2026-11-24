@@ -1497,6 +1497,7 @@ workflows:
     triggering:
       events: []
     scripts:
+      - *verify_shorebird_release_source
       - *check_signing_endpoint
       - *check_supporters_config
       - name: Check macOS App Store configuration

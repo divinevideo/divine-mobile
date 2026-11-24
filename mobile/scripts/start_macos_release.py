@@ -205,6 +205,7 @@ def run_release(
             'workflow_id': WORKFLOW_ID,
             'branch': 'main',
             'inputs': inputs,
+            'environment': {'variables': {'RELEASE_EXPECTED_SHA': source}},
             'labels': [label],
         }
         try:
