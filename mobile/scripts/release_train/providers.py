@@ -389,12 +389,16 @@ class Play:
             self.call("POST", f"/edits/{edit}:validate")
         except ProviderError as error:
             # An uncommitted edit cannot send a release for review. Discard it
-            # without letting a cleanup failure hide the validation result.
+            # without letting a cleanup failure hide the original failure.
             try:
                 self.call("DELETE", f"/edits/{edit}")
             except ProviderError:
                 pass
-            raise BeforeStoreMutationError(str(error), diagnostic=error.diagnostic) from None
+            if isinstance(error, DeferredReview):
+                raise error from None
+            raise BeforeStoreMutationError(
+                f"{error}. Nothing was committed.", diagnostic=error.diagnostic
+            ) from None
         return self.commit(edit)
 
     def upload(self, path, number, digest, *, notes):

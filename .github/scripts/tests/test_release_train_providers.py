@@ -71,6 +71,21 @@ class ProviderTest(unittest.TestCase):
                 self.assertEqual([call[0] for call in http.calls], ["POST", "PUT", "POST", "DELETE"])
                 self.assertNotIn(":commit", " ".join(call[1] for call in http.calls))
 
+    def test_play_in_review_deferral_before_commit_stays_a_deferral(self):
+        http = FakeHTTP()
+        http.responses = [{"id": "edit"}, {}, DeferredReview("CHANGES_ALREADY_IN_REVIEW"), {}]
+        with self.assertRaises(DeferredReview) as deferral:
+            Play("token", request=http).promote(123, notes=play_notes())
+        self.assertNotIsInstance(deferral.exception, BeforeStoreMutationError)
+        self.assertEqual([call[0] for call in http.calls], ["POST", "PUT", "POST", "DELETE"])
+        self.assertNotIn(":commit", " ".join(call[1] for call in http.calls))
+
+    def test_play_refusal_says_nothing_was_committed(self):
+        http = FakeHTTP()
+        http.responses = [{"id": "edit"}, {}, ProviderError("timed out"), {}]
+        with self.assertRaisesRegex(BeforeStoreMutationError, "Nothing was committed"):
+            Play("token", request=http).promote(123, notes=play_notes())
+
     def test_play_commit_failure_is_not_reclassified_as_a_preflight_failure(self):
         http = FakeHTTP()
         http.responses = [{"id": "edit"}, {}, {}, DeferredReview("in review")]
