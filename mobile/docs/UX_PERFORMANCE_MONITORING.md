@@ -50,8 +50,8 @@ ends because the app went to the background reports at once and misses up to a
 second of its last frames, which the engine had not reported yet.
 
 The traced screens are fixed: `recorder` and `editor`; `home_feed`, the home
-tab's feed; `fullscreen_feed`, the player opened from a grid, which Explore, a
-profile, search, hashtags, lists, sounds, Classics and video links share;
+tab's feed; `fullscreen_feed`, the fullscreen player, wherever it opens: from a
+grid, Classics, replies or a video link;
 `explore`, Explore's tabs and grids; `search`, search and its results; and
 `profile`, a profile's header and grids, the account's own or someone else's.
 Tapping a video in a grid opens the fullscreen feed on top of the whole app, so
