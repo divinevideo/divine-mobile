@@ -182,6 +182,9 @@ class DmFileMetadata extends Equatable {
     this.thumbnailUrl,
   });
 
+  /// MIME type of a versioned Divine video editing project.
+  static const editableDraftMimeType = 'application/vnd.divine.video-draft';
+
   /// MIME type of the file before encryption (e.g. `image/jpeg`).
   final String fileType;
 
@@ -217,6 +220,9 @@ class DmFileMetadata extends Equatable {
 
   /// Whether this is a video file.
   bool get isVideo => fileType.startsWith('video/');
+
+  /// Whether this encrypted file is an editable draft project.
+  bool get isEditableDraft => fileType == editableDraftMimeType;
 
   /// Whether this is an audio file.
   bool get isAudio => fileType.startsWith('audio/');

@@ -5193,6 +5193,24 @@
   "libraryDraftActionPost": "Post",
   "libraryDraftActionEdit": "Edit",
   "libraryDraftActionDuplicate": "Duplicate",
+  "libraryDraftActionShare": "Share draft",
+  "libraryDraftShareConfirm": "Send an editable draft to {name}?",
+  "libraryDraftShareNotice": "They can edit the cuts, text, and audio, then post their copy or send it back.",
+  "libraryDraftShareFailed": "Couldn’t send the draft.",
+  "libraryDraftShareTooLarge": "The draft is too large to send.",
+  "dmSharedDraft": "Shared draft",
+  "dmOpenDraft": "Import and edit",
+  "dmDraftImportFailed": "Couldn’t import the draft.",
+  "libraryDraftSent": "Draft sent",
+  "@libraryDraftShareConfirm": {
+    "description": "Confirmation before sending an editable draft project in a one-to-one DM.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Casey"
+      }
+    }
+  },
   "libraryDraftActionDelete": "Delete draft",
   "libraryDraftCopyTitle": "{title} (copy {number})",
   "@libraryDraftCopyTitle": {

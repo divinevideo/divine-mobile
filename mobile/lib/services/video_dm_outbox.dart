@@ -157,6 +157,7 @@ class VideoDmOutbox {
   final Duration _prePublicationTimeout;
   final Duration _signerReadinessTimeout;
   final Set<DmVideoSendCancellation> _attempts = {};
+  final Map<String, File> _ownedVideos = {};
 
   DmVideoSendCancellation _newAttempt() {
     final attempt = DmVideoSendCancellation(
@@ -224,24 +225,52 @@ class VideoDmOutbox {
   /// Queues [file] to be sent to [recipientPubkey] in [conversationId] as a
   /// NIP-17 kind 15 file message.
   ///
-  /// Returns at once; the queued entry is published before it returns. Does
-  /// nothing after [dispose].
+  /// Returns at once; the queued entry is published before it returns.
   void sendVideo({
     required String conversationId,
     required String recipientPubkey,
     required File file,
+  }) => _sendFile(
+    conversationId: conversationId,
+    recipientPubkey: recipientPubkey,
+    file: file,
+    isDraft: false,
+  );
+
+  /// Queues an editable project and owns its temporary file from here on.
+  void sendDraft({
+    required String conversationId,
+    required String recipientPubkey,
+    required File file,
+  }) => _sendFile(
+    conversationId: conversationId,
+    recipientPubkey: recipientPubkey,
+    file: file,
+    isDraft: true,
+  );
+
+  void _sendFile({
+    required String conversationId,
+    required String recipientPubkey,
+    required File file,
+    required bool isDraft,
   }) {
-    if (_disposed) return;
+    if (_disposed) {
+      if (isDraft) _deleteOwnedVideo(file);
+      return;
+    }
     final entry = OutgoingVideoDm(
       id: _newId(),
       conversationId: conversationId,
       recipientPubkey: recipientPubkey,
       localPath: file.path,
       requestedAt: _now(),
+      isDraft: isDraft,
     );
+    if (isDraft) _ownedVideos[entry.id] = file;
     _entries.add([..._entries.value, entry]);
     _queue.add(_VideoJob(entry.id));
-    _readFrameFor(entry.id, file);
+    if (!isDraft) _readFrameFor(entry.id, file);
     _startWorker();
   }
 
@@ -308,7 +337,11 @@ class VideoDmOutbox {
   }
 
   /// Drops entry [id] when it has failed. Does nothing otherwise.
-  void remove(String id) => _drop(id, OutgoingVideoDmPhase.failed);
+  void remove(String id) {
+    if (_entry(id)?.phase != OutgoingVideoDmPhase.failed) return;
+    _drop(id, OutgoingVideoDmPhase.failed);
+    _releaseOwnedVideo(id);
+  }
 
   /// Drops entry [id] when it was sent, once its message row is on screen.
   /// Does nothing otherwise.
@@ -339,6 +372,18 @@ class VideoDmOutbox {
     _queue.clear();
     for (final attempt in _attempts) {
       attempt.cancel('outbox disposed');
+    }
+    if (_ownedVideos.isNotEmpty) {
+      runDetached(
+        _workerDone.whenComplete(() {
+          _ownedVideos.values.forEach(_deleteOwnedVideo);
+          _ownedVideos.clear();
+        }),
+        'release outgoing video DM copies',
+        logName: _logName,
+        category: LogCategory.video,
+        reporter: _reporter,
+      );
     }
     unawaited(_entries.close());
     unawaited(_outcomes.close());
@@ -390,6 +435,7 @@ class VideoDmOutbox {
     final entry = _entry(id);
     if (entry == null) return;
     final failure = await _sendEntry(entry);
+    if (failure == null) _releaseOwnedVideo(id);
     _emitOutcome(
       entry,
       _outcomeStatusFor(failure),
@@ -397,6 +443,19 @@ class VideoDmOutbox {
       total: 1,
     );
   }
+
+  void _releaseOwnedVideo(String id) {
+    final file = _ownedVideos.remove(id);
+    if (file != null) _deleteOwnedVideo(file);
+  }
+
+  void _deleteOwnedVideo(File file) => runDetached(
+    file.delete(),
+    'delete outgoing video DM copy',
+    logName: _logName,
+    category: LogCategory.video,
+    reporter: _reporter,
+  );
 
   /// Checks the clips of [ids] as one batch, then sends them in order,
   /// stopping at the first that fails. Emits one outcome for the batch.
@@ -636,7 +695,9 @@ class VideoDmOutbox {
         _sendService().sendVideo(
           recipientPubkey: entry.recipientPubkey,
           videoFile: File(entry.localPath),
-          mimeType: videoDmMimeTypeFor(entry.localPath),
+          mimeType: entry.isDraft
+              ? DmFileMetadata.editableDraftMimeType
+              : videoDmMimeTypeFor(entry.localPath),
           extraTags: extraTags,
           cancellation: currentAttempt,
           onPhase: (phase) {
@@ -810,6 +871,7 @@ class VideoDmOutbox {
         status: status,
         sentCount: sentCount,
         total: total,
+        isDraft: entry.isDraft,
       ),
     );
   }

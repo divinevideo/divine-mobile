@@ -7361,6 +7361,36 @@ class AppLocalizationsPl extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplikuj';
 
   @override
+  String get libraryDraftActionShare => 'Udostępnij szkic';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Wysłać edytowalny szkic do $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Ta osoba może zmienić cięcia, tekst i dźwięk, a potem opublikować swoją kopię lub Ci ją odesłać.';
+
+  @override
+  String get libraryDraftShareFailed => 'Nie udało się wysłać szkicu.';
+
+  @override
+  String get libraryDraftShareTooLarge => 'Szkic jest za duży, żeby go wysłać.';
+
+  @override
+  String get dmSharedDraft => 'Udostępniony szkic';
+
+  @override
+  String get dmOpenDraft => 'Importuj i edytuj';
+
+  @override
+  String get dmDraftImportFailed => 'Nie udało się zaimportować szkicu.';
+
+  @override
+  String get libraryDraftSent => 'Wysłano szkic';
+
+  @override
   String get libraryDraftActionDelete => 'Usuń wersję roboczą';
 
   @override

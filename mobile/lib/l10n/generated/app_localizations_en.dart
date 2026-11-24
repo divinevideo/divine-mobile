@@ -7254,6 +7254,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplicate';
 
   @override
+  String get libraryDraftActionShare => 'Share draft';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Send an editable draft to $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'They can edit the cuts, text, and audio, then post their copy or send it back.';
+
+  @override
+  String get libraryDraftShareFailed => 'Couldn’t send the draft.';
+
+  @override
+  String get libraryDraftShareTooLarge => 'The draft is too large to send.';
+
+  @override
+  String get dmSharedDraft => 'Shared draft';
+
+  @override
+  String get dmOpenDraft => 'Import and edit';
+
+  @override
+  String get dmDraftImportFailed => 'Couldn’t import the draft.';
+
+  @override
+  String get libraryDraftSent => 'Draft sent';
+
+  @override
   String get libraryDraftActionDelete => 'Delete draft';
 
   @override

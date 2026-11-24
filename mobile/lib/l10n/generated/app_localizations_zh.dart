@@ -6751,6 +6751,35 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryDraftActionDuplicate => '创建副本';
 
   @override
+  String get libraryDraftActionShare => '分享草稿';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return '向$name发送可编辑的草稿？';
+  }
+
+  @override
+  String get libraryDraftShareNotice => '对方可以修改剪辑、文字和音频，然后发布自己的副本或发送回来。';
+
+  @override
+  String get libraryDraftShareFailed => '无法发送草稿。';
+
+  @override
+  String get libraryDraftShareTooLarge => '草稿太大，无法发送。';
+
+  @override
+  String get dmSharedDraft => '已分享的草稿';
+
+  @override
+  String get dmOpenDraft => '导入并编辑';
+
+  @override
+  String get dmDraftImportFailed => '无法导入草稿。';
+
+  @override
+  String get libraryDraftSent => '草稿已发送';
+
+  @override
   String get libraryDraftActionDelete => '删除草稿';
 
   @override

@@ -7162,6 +7162,37 @@ class AppLocalizationsSv extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplicera';
 
   @override
+  String get libraryDraftActionShare => 'Dela utkast';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Skicka ett redigerbart utkast till $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Mottagaren kan ändra klippningen, texten och ljudet och sedan publicera sin kopia eller skicka tillbaka den.';
+
+  @override
+  String get libraryDraftShareFailed => 'Det gick inte att skicka utkastet.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'Utkastet är för stort för att skicka.';
+
+  @override
+  String get dmSharedDraft => 'Delat utkast';
+
+  @override
+  String get dmOpenDraft => 'Importera och redigera';
+
+  @override
+  String get dmDraftImportFailed => 'Det gick inte att importera utkastet.';
+
+  @override
+  String get libraryDraftSent => 'Utkastet skickades';
+
+  @override
   String get libraryDraftActionDelete => 'Ta bort utkast';
 
   @override

@@ -7168,6 +7168,36 @@ class AppLocalizationsMs extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplikasi';
 
   @override
+  String get libraryDraftActionShare => 'Kongsi draf';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Hantar draf yang boleh diedit kepada $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Penerima boleh mengedit potongan, teks dan audio, kemudian menyiarkan salinannya atau menghantarnya semula.';
+
+  @override
+  String get libraryDraftShareFailed => 'Draf tidak dapat dihantar.';
+
+  @override
+  String get libraryDraftShareTooLarge => 'Draf terlalu besar untuk dihantar.';
+
+  @override
+  String get dmSharedDraft => 'Draf yang dikongsi';
+
+  @override
+  String get dmOpenDraft => 'Import dan edit';
+
+  @override
+  String get dmDraftImportFailed => 'Draf tidak dapat diimport.';
+
+  @override
+  String get libraryDraftSent => 'Draf dihantar';
+
+  @override
   String get libraryDraftActionDelete => 'Padam draf';
 
   @override

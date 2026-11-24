@@ -13,6 +13,7 @@ import 'package:dm_repository/dm_repository.dart'
         parseCollabRoomMessage,
         parseSoundRequestMessage;
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter/services.dart'
     show Clipboard, ClipboardData, HapticFeedback;
@@ -53,6 +54,7 @@ import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/inbox/conversation/dm_clip_picker.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
+import 'package:openvine/screens/inbox/conversation/widgets/editable_draft_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/sound_request_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
@@ -1836,6 +1838,7 @@ class _MessageList extends StatelessWidget {
       isSent: isSent,
       isVideoShare: videoTarget != null,
       isEncryptedVideo: message.fileMetadata?.isVideo == true,
+      isEditableDraft: message.fileMetadata?.isEditableDraft == true,
       canAddToClips: canAddToClips,
       senderBlock: senderBlock,
       showPicker: showPicker,
@@ -1864,7 +1867,10 @@ class _MessageList extends StatelessWidget {
         // An encrypted video's content is its ciphertext URL, which is never
         // user-visible; the action sheet withholds the tile, and this guard
         // keeps it off the clipboard if the action is ever returned.
-        if (message.fileMetadata?.isVideo == true) return;
+        if (message.fileMetadata?.isVideo == true ||
+            message.fileMetadata?.isEditableDraft == true) {
+          return;
+        }
         await ClipboardUtils.copy(context, message.content);
       case MessageAction.copyVideoUrl:
         if (videoTarget == null) return;
@@ -2278,12 +2284,13 @@ class _MessageList extends StatelessWidget {
           DmDeliveryStatus status, {
           DmPeerNameResolution? author,
         }) {
+          final isDraft = message.fileMetadata?.isEditableDraft == true;
           Widget bubbleWith({
             String? encryptedVideoFramePath,
             DmVideoHold? encryptedVideoHold,
             String? encryptedVideoFrameBlurhash,
           }) => MessageBubble(
-            message: message.content,
+            message: isDraft ? context.l10n.dmSharedDraft : message.content,
             timestamp: LocalizedTimeFormatter.formatMessageTime(
               context.l10n,
               message.createdAt,
@@ -2339,6 +2346,19 @@ class _MessageList extends StatelessWidget {
             sharedVideoRef: ownShareVideoRef,
             quotedVideoRef: quotedVideoRef,
             fileMetadata: message.fileMetadata,
+            draftAttachment: isDraft
+                ? EditableDraftCard(
+                    message: message,
+                    canOpen:
+                        !kIsWeb &&
+                        !isSent &&
+                        !isGroup &&
+                        !blockedSenders.contains(
+                          message.senderPubkey.toLowerCase(),
+                        ) &&
+                        message.retractionStatus == DmRetractionStatus.none,
+                  )
+                : null,
             isClip: message.isDivineClip,
             senderName: author?.visualName,
             isSenderNameResolving: author?.isResolving ?? false,

@@ -7231,6 +7231,37 @@ class AppLocalizationsPt extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplicar';
 
   @override
+  String get libraryDraftActionShare => 'Compartilhar rascunho';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Enviar um rascunho editável para $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Quem receber pode editar os cortes, o texto e o áudio, depois postar a própria cópia ou enviar de volta.';
+
+  @override
+  String get libraryDraftShareFailed => 'Não foi possível enviar o rascunho.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'O rascunho é grande demais para enviar.';
+
+  @override
+  String get dmSharedDraft => 'Rascunho compartilhado';
+
+  @override
+  String get dmOpenDraft => 'Importar e editar';
+
+  @override
+  String get dmDraftImportFailed => 'Não foi possível importar o rascunho.';
+
+  @override
+  String get libraryDraftSent => 'Rascunho enviado';
+
+  @override
   String get libraryDraftActionDelete => 'Excluir rascunho';
 
   @override

@@ -7095,6 +7095,37 @@ class AppLocalizationsTr extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Çoğalt';
 
   @override
+  String get libraryDraftActionShare => 'Taslağı paylaş';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return '$name adlı hesaba düzenlenebilir taslak gönderilsin mi?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Alıcı kurguyu, metni ve sesi düzenleyip kendi kopyasını yayınlayabilir veya geri gönderebilir.';
+
+  @override
+  String get libraryDraftShareFailed => 'Taslak gönderilemedi.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'Taslak gönderilemeyecek kadar büyük.';
+
+  @override
+  String get dmSharedDraft => 'Paylaşılan taslak';
+
+  @override
+  String get dmOpenDraft => 'İçe aktar ve düzenle';
+
+  @override
+  String get dmDraftImportFailed => 'Taslak içe aktarılamadı.';
+
+  @override
+  String get libraryDraftSent => 'Taslak gönderildi';
+
+  @override
   String get libraryDraftActionDelete => 'Taslağı sil';
 
   @override

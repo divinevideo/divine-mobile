@@ -22,6 +22,8 @@ import 'package:unified_logger/unified_logger.dart' show LogCaptureService;
 
 class _MockDmVideoSendService extends Mock implements DmVideoSendService {}
 
+class _MockFile extends Mock implements File {}
+
 class _MockClipProvenanceVerifier extends Mock
     implements ClipProvenanceVerifier {}
 
@@ -227,6 +229,42 @@ void main() {
       readFrame = (_) async => null;
       idCounter = 0;
     });
+
+    test(
+      'keeps an owned draft package for retry and deletes it after send',
+      () async {
+        final file = _MockFile();
+        when(() => file.path).thenReturn('/v/project.divinedraft');
+        when(file.delete).thenAnswer((_) async => file);
+        stubControlledSend();
+        outbox = createOutbox();
+        final entries = recordConversation('c1');
+
+        outbox.sendDraft(
+          conversationId: 'c1',
+          recipientPubkey: _recipientPubkey,
+          file: file,
+        );
+        await pumpEventQueue();
+        sends.single.completer.complete(
+          const NIP17SendResult.failure('offline'),
+        );
+        await pumpEventQueue();
+        final failed = entries.last.single;
+        expect(failed.canRetry, isTrue);
+        verifyNever(file.delete);
+
+        outbox.retry(failed.id);
+        await pumpEventQueue();
+        expect(sends.last.videoFile.path, file.path);
+        expect(sends.last.mimeType, DmFileMetadata.editableDraftMimeType);
+        sends.last.completer.complete(_success('preview'));
+        await pumpEventQueue();
+
+        expect(entries.last.single.phase, OutgoingVideoDmPhase.sent);
+        verify(file.delete).called(1);
+      },
+    );
 
     test('stalled upload fails and releases the account queue', () {
       fakeAsync((clock) {

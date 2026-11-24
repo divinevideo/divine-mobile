@@ -7180,6 +7180,37 @@ class AppLocalizationsAr extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'تكرار';
 
   @override
+  String get libraryDraftActionShare => 'مشاركة المسودة';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'هل تريد إرسال مسودة قابلة للتعديل إلى $name؟';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'يمكن للطرف الآخر تعديل المقاطع والنص والصوت، ثم نشر نسخته أو إرسالها إليك.';
+
+  @override
+  String get libraryDraftShareFailed => 'تعذّر إرسال المسودة.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'حجم المسودة أكبر من الحد المسموح للإرسال.';
+
+  @override
+  String get dmSharedDraft => 'مسودة مشتركة';
+
+  @override
+  String get dmOpenDraft => 'استيراد وتعديل';
+
+  @override
+  String get dmDraftImportFailed => 'تعذّر استيراد المسودة.';
+
+  @override
+  String get libraryDraftSent => 'تم إرسال المسودة';
+
+  @override
   String get libraryDraftActionDelete => 'حذف المسودة';
 
   @override

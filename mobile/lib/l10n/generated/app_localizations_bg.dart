@@ -7239,6 +7239,37 @@ class AppLocalizationsBg extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Дублирай';
 
   @override
+  String get libraryDraftActionShare => 'Сподели чернова';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Да изпратим ли чернова за редактиране на $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Получателят може да редактира клиповете, текста и звука и да публикува или върне своето копие.';
+
+  @override
+  String get libraryDraftShareFailed => 'Черновата не можа да се изпрати.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'Черновата е твърде голяма за изпращане.';
+
+  @override
+  String get dmSharedDraft => 'Споделена чернова';
+
+  @override
+  String get dmOpenDraft => 'Импортирай и редактирай';
+
+  @override
+  String get dmDraftImportFailed => 'Черновата не можа да се импортира.';
+
+  @override
+  String get libraryDraftSent => 'Черновата е изпратена';
+
+  @override
   String get libraryDraftActionDelete => 'Изтрий черновата';
 
   @override

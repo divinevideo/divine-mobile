@@ -7240,6 +7240,37 @@ class AppLocalizationsEs extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplicar';
 
   @override
+  String get libraryDraftActionShare => 'Compartir borrador';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return '¿Querés enviarle un borrador editable a $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Esta persona puede editar los cortes, el texto y el audio, y publicar su copia o mandártela de vuelta.';
+
+  @override
+  String get libraryDraftShareFailed => 'No se pudo enviar el borrador.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'El borrador es demasiado grande para enviarlo.';
+
+  @override
+  String get dmSharedDraft => 'Borrador compartido';
+
+  @override
+  String get dmOpenDraft => 'Importar y editar';
+
+  @override
+  String get dmDraftImportFailed => 'No se pudo importar el borrador.';
+
+  @override
+  String get libraryDraftSent => 'Borrador enviado';
+
+  @override
   String get libraryDraftActionDelete => 'Eliminar borrador';
 
   @override

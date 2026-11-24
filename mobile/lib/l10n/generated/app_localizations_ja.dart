@@ -6793,6 +6793,36 @@ class AppLocalizationsJa extends AppLocalizations {
   String get libraryDraftActionDuplicate => '複製';
 
   @override
+  String get libraryDraftActionShare => '下書きを共有';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return '編集できる下書きを$nameさんに送信しますか？';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      '相手はカット、テキスト、音声を編集し、自分のコピーを投稿したり、送り返したりできます。';
+
+  @override
+  String get libraryDraftShareFailed => '下書きを送信できませんでした。';
+
+  @override
+  String get libraryDraftShareTooLarge => '下書きが大きすぎて送信できません。';
+
+  @override
+  String get dmSharedDraft => '共有された下書き';
+
+  @override
+  String get dmOpenDraft => 'インポートして編集';
+
+  @override
+  String get dmDraftImportFailed => '下書きをインポートできませんでした。';
+
+  @override
+  String get libraryDraftSent => '下書きを送信しました';
+
+  @override
   String get libraryDraftActionDelete => '下書きを削除';
 
   @override

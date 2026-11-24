@@ -89,7 +89,10 @@ class DmVideoSendService {
       cancellation?.throwIfCancelled();
       // Read alongside the upload. Observe errors immediately even if an
       // interrupted upload returns before the preview settles.
-      final preview = blurhash == null && dimensions == null
+      final preview =
+          mimeType.startsWith('video/') &&
+              blurhash == null &&
+              dimensions == null
           ? _readPreview(videoFile)
           : Future.value((blurhash: blurhash, dimensions: dimensions));
       unawaited(

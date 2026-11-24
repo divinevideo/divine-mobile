@@ -7213,6 +7213,37 @@ class AppLocalizationsFil extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'I-duplicate';
 
   @override
+  String get libraryDraftActionShare => 'I-share ang draft';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Magpapadala ng draft na puwedeng i-edit kay $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Puwede nilang i-edit ang mga cut, text, at audio, tapos i-post ang kopya nila o ipadala ito pabalik.';
+
+  @override
+  String get libraryDraftShareFailed => 'Hindi naipadala ang draft.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'Masyadong malaki ang draft para maipadala.';
+
+  @override
+  String get dmSharedDraft => 'Na-share na draft';
+
+  @override
+  String get dmOpenDraft => 'I-import at i-edit';
+
+  @override
+  String get dmDraftImportFailed => 'Hindi na-import ang draft.';
+
+  @override
+  String get libraryDraftSent => 'Naipadala ang draft';
+
+  @override
   String get libraryDraftActionDelete => 'Burahin ang draft';
 
   @override

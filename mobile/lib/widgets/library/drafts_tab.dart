@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -17,6 +18,7 @@ import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/utils/draft_copy_naming.dart';
+import 'package:openvine/widgets/library/draft_dm_share_sheet.dart';
 import 'package:openvine/widgets/library/draft_status_badge.dart';
 import 'package:openvine/widgets/library/empty_library_state.dart';
 import 'package:openvine/widgets/library/scheduled_section.dart';
@@ -182,6 +184,7 @@ class _DraftsList extends ConsumerWidget {
     WidgetRef ref,
     DraftSummary draft,
   ) async {
+    var shareDraft = false;
     await VineBottomSheetActionMenu.show(
       context: context,
       title: DraftListTile(draft: draft, enableShrink: true),
@@ -191,6 +194,12 @@ class _DraftsList extends ConsumerWidget {
             iconPath: DivineIconName.paperPlaneTilt.assetPath,
             label: context.l10n.libraryDraftActionPost,
             onTap: () => _postDraft(context, ref, draft),
+          ),
+        if (!kIsWeb && draft.canPost)
+          VineBottomSheetActionData(
+            iconPath: DivineIconName.chatCircle.assetPath,
+            label: context.l10n.libraryDraftActionShare,
+            onTap: () => shareDraft = true,
           ),
         VineBottomSheetActionData(
           iconPath: DivineIconName.pencilSimple.assetPath,
@@ -210,6 +219,9 @@ class _DraftsList extends ConsumerWidget {
         ),
       ],
     );
+    if (shareDraft && context.mounted) {
+      await showDraftDmShare(context, ref, draft.id);
+    }
   }
 
   void _duplicateDraft(BuildContext context, DraftSummary draft) {

@@ -7274,6 +7274,37 @@ class AppLocalizationsFr extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Dupliquer';
 
   @override
+  String get libraryDraftActionShare => 'Partager le brouillon';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Envoyer un brouillon modifiable à $name ?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Cette personne peut modifier le montage, le texte et le son, puis publier sa copie ou te la renvoyer.';
+
+  @override
+  String get libraryDraftShareFailed => 'Impossible d’envoyer le brouillon.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'Le brouillon est trop volumineux pour être envoyé.';
+
+  @override
+  String get dmSharedDraft => 'Brouillon partagé';
+
+  @override
+  String get dmOpenDraft => 'Importer et modifier';
+
+  @override
+  String get dmDraftImportFailed => 'Impossible d’importer le brouillon.';
+
+  @override
+  String get libraryDraftSent => 'Brouillon envoyé';
+
+  @override
   String get libraryDraftActionDelete => 'Supprimer le brouillon';
 
   @override

@@ -76,9 +76,19 @@ class DraftsLibraryBloc extends Bloc<DraftsLibraryEvent, DraftsLibraryState> {
   }
 
   /// Fetch current content only when Post is selected; never retain it in state.
-  Future<DivineVideoDraft?> loadDraftForPost(String id) async {
+  Future<DivineVideoDraft?> loadDraftForPost(String id) =>
+      _loadListableDraft(() => _draftStorageService.getValidatedDraftById(id));
+
+  /// Load the full composition for sharing, including any missing sources
+  /// so the exporter can refuse an incomplete project.
+  Future<DivineVideoDraft?> loadDraftForShare(String id) =>
+      _loadListableDraft(() => _draftStorageService.getDraftById(id));
+
+  Future<DivineVideoDraft?> _loadListableDraft(
+    Future<DivineVideoDraft?> Function() load,
+  ) async {
     try {
-      final draft = await _draftStorageService.getValidatedDraftById(id);
+      final draft = await load();
       return draft != null &&
               draft.canPost &&
               _isListable(DraftSummary.fromDraft(draft))

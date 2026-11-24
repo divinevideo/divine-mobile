@@ -7264,6 +7264,38 @@ class AppLocalizationsDe extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplizieren';
 
   @override
+  String get libraryDraftActionShare => 'Entwurf teilen';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Bearbeitbaren Entwurf an $name senden?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Die andere Person kann Schnitte, Texte und Ton ändern und ihre Kopie posten oder zurücksenden.';
+
+  @override
+  String get libraryDraftShareFailed =>
+      'Der Entwurf konnte nicht gesendet werden.';
+
+  @override
+  String get libraryDraftShareTooLarge => 'Der Entwurf ist zu groß zum Senden.';
+
+  @override
+  String get dmSharedDraft => 'Geteilter Entwurf';
+
+  @override
+  String get dmOpenDraft => 'Importieren und bearbeiten';
+
+  @override
+  String get dmDraftImportFailed =>
+      'Der Entwurf konnte nicht importiert werden.';
+
+  @override
+  String get libraryDraftSent => 'Entwurf gesendet';
+
+  @override
   String get libraryDraftActionDelete => 'Entwurf löschen';
 
   @override

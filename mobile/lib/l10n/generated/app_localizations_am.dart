@@ -7002,6 +7002,36 @@ class AppLocalizationsAm extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'አባዛ';
 
   @override
+  String get libraryDraftActionShare => 'ረቂቅ አጋራ';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'ሊታረም የሚችል ረቂቅ ለ$name ይላክ?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'ተቀባዩ ቅንጥቦቹን፣ ጽሑፉን እና ድምፁን መቀየር፣ ቅጂውንም ማተም ወይም መልሶ መላክ ይችላል።';
+
+  @override
+  String get libraryDraftShareFailed => 'ረቂቁን መላክ አልተቻለም።';
+
+  @override
+  String get libraryDraftShareTooLarge => 'ረቂቁ ለመላክ በጣም ትልቅ ነው።';
+
+  @override
+  String get dmSharedDraft => 'የተጋራ ረቂቅ';
+
+  @override
+  String get dmOpenDraft => 'አስገባና አርም';
+
+  @override
+  String get dmDraftImportFailed => 'ረቂቁን ማስገባት አልተቻለም።';
+
+  @override
+  String get libraryDraftSent => 'ረቂቁ ተልኳል';
+
+  @override
   String get libraryDraftActionDelete => 'ረቂቅ ሰርዝ';
 
   @override

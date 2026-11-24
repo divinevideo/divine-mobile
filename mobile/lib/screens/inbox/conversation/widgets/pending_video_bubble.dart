@@ -55,11 +55,14 @@ class PendingVideoBubble extends StatelessWidget {
       OutgoingVideoDmPhase.publishing => l10n.dmPendingVideoSending,
       OutgoingVideoDmPhase.sent => null,
       OutgoingVideoDmPhase.failed => switch (entry.failure) {
+        OutgoingVideoDmFailure.tooLarge when entry.isDraft =>
+          l10n.libraryDraftShareTooLarge,
         OutgoingVideoDmFailure.tooLarge => l10n.dmVideoTooLarge(
           '$videoDmMaxMegabytes',
         ),
         OutgoingVideoDmFailure.clipNotVerified => l10n.dmClipSendNotVerified,
-        OutgoingVideoDmFailure.failed || null => l10n.dmVideoSendFailed,
+        OutgoingVideoDmFailure.failed || null =>
+          entry.isDraft ? l10n.libraryDraftShareFailed : l10n.dmVideoSendFailed,
       },
     };
     final semanticsLabel = isFailed
@@ -90,7 +93,10 @@ class PendingVideoBubble extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   spacing: 8,
                   children: [
-                    ExcludeSemantics(child: _PendingCard(entry: entry)),
+                    if (entry.isDraft)
+                      _StatusText(l10n.dmSharedDraft)
+                    else
+                      ExcludeSemantics(child: _PendingCard(entry: entry)),
                     // A failure's line says why it failed, which the label
                     // does not; in flight the label already reads it.
                     if (statusText != null)
