@@ -1417,8 +1417,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     EditorReadyTrace trace,
     DivineVideoPlayerController player,
   ) async {
-    await player.firstFrameRendered;
-    if (!mounted || !identical(_videoPlayer, player)) return;
+    final rendered = await player.firstFrameRendered;
+    if (!rendered || !mounted || !identical(_videoPlayer, player)) return;
     trace.previewFirstFrame();
   }
 

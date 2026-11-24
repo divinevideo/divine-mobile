@@ -4,6 +4,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:divine_video_player/divine_video_player.dart';
+import 'package:divine_video_player/src/linux/linux_video_player_backend.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, debugDefaultTargetPlatformOverride;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -583,6 +586,79 @@ void main() {
       }
     });
 
+    testWidgets('dual-channel transient failure reaches healthy final source', (
+      tester,
+    ) async {
+      const rawPath =
+          '/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      const hls = '$raw/hls/master.m3u8';
+      const bunnyRaw = 'https://media-bunny.divine.video$rawPath';
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      final harness = _NativePlayerHarness(tester);
+      await harness.install(playerIds: const [0]);
+      final key = GlobalKey<InfiniteVideoFeedState>();
+      try {
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              key: key,
+              videos: [_makeVideo('current', videoUrl: raw)],
+              cache: cache,
+              urlResolver: (_) => hls,
+              bunnyPlaybackPaths: const {rawPath},
+              prefetchCount: 0,
+              autoRetryMaxAttempts: 0,
+              preloadGracePeriod: Duration.zero,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        final opening = Completer<void>();
+        harness.setClipsDelays[0] = opening;
+        harness.setClipsFailures[0] = [
+          PlatformException(code: 'service_unavailable'),
+        ];
+        await harness.sendEvent(0, {
+          'status': 'error',
+          'errorCode': 'parse_error',
+          'errorMessage': 'Synthetic canonical playback failure',
+        });
+        await tester.pump();
+        await tester.pump();
+        await harness.sendEvent(0, {'status': 'buffering'});
+        await harness.sendEvent(0, {
+          'status': 'error',
+          'errorCode': 'service_unavailable',
+          'errorMessage': 'HTTP 503',
+        });
+        await tester.pump();
+        opening.complete();
+        await tester.pump();
+        await tester.pump();
+        await harness.sendEvent(0, {
+          'status': 'playing',
+          'isFirstFrameRendered': true,
+        });
+        await tester.pump();
+
+        expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+          hls,
+          bunnyRaw,
+          raw,
+        ]);
+        expect(
+          key.currentState!.errorTypeAt(0),
+          isNull,
+          reason: 'healthy canonical attempted once and reported playing',
+        );
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await harness.dispose();
+      }
+    });
+
     testWidgets('a Bunny error while changing sources resumes on canonical', (
       tester,
     ) async {
@@ -1127,6 +1203,76 @@ void main() {
   });
 
   group(InfiniteVideoFeed, () {
+    test('reports support for Windows and rejects unsupported targets', () {
+      try {
+        debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
+        expect(InfiniteVideoFeed.isSupported, isFalse);
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        expect(InfiniteVideoFeed.isSupported, isTrue);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('records a frame only after a cancelled output is replaced', (
+      tester,
+    ) async {
+      final originalFactory = DivineVideoPlayerController.linuxBackendFactory;
+      final originalForce = DivineVideoPlayerController.debugForceLinuxBackend;
+      final backend = _DesktopReadinessBackend();
+      DivineVideoPlayerController.debugForceLinuxBackend = true;
+      DivineVideoPlayerController.linuxBackendFactory = () => backend;
+      const videoId =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      final metrics = <FeedFirstFrameMetric>[];
+      final subscription = FeedFirstFrameMetrics.events
+          .where((metric) => metric.videoId == videoId)
+          .listen(metrics.add);
+      addTearDown(subscription.cancel);
+      addTearDown(() {
+        DivineVideoPlayerController.linuxBackendFactory = originalFactory;
+        DivineVideoPlayerController.debugForceLinuxBackend = originalForce;
+      });
+      try {
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              videos: [_makeVideo(videoId)],
+              cache: cache,
+              prefetchCount: 0,
+              preloadGracePeriod: Duration.zero,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(backend.played, isTrue);
+        expect(metrics, isEmpty);
+        backend.frame.complete(false);
+        await tester.pump();
+        await tester.pump();
+
+        expect(metrics, isEmpty, reason: 'no output rendered a frame');
+        backend
+          ..frame = Completer<bool>()
+          ..emitState(
+            const DivineVideoPlayerState(status: PlaybackStatus.buffering),
+          );
+        await tester.pump();
+        expect(metrics, isEmpty);
+        backend.frame.complete(true);
+        backend.emitState(
+          const DivineVideoPlayerState(isFirstFrameRendered: true),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(metrics, hasLength(1));
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      }
+    });
+
     test('isSupported can be evaluated', () {
       expect(InfiniteVideoFeed.isSupported, isA<bool>());
     });
@@ -5699,6 +5845,149 @@ void main() {
       });
     });
 
+    group('errors during source recovery', () {
+      testWidgets(
+        'exhausts processing retries when each play reports processing',
+        (
+          tester,
+        ) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install(playerIds: const [0]);
+          final key = GlobalKey<InfiniteVideoFeedState>();
+          Completer<void>? playing;
+          const processing = <Object?, Object?>{
+            'status': 'error',
+            'errorCode': 'media_processing',
+            'errorMessage': 'HTTP 202',
+          };
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  key: key,
+                  videos: [_makeVideo('persistent_processing')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                  errorBuilder: (_, _, _, error) =>
+                      Text('VIDEO_ERROR:${error.name}'),
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+            await harness.sendEvent(0, processing);
+            await tester.pump();
+            for (final seconds in [1, 2, 3, 5, 8]) {
+              playing = Completer<void>();
+              harness.callDelays['player_0:play'] = playing;
+              await tester.pump(Duration(seconds: seconds));
+              await tester.pump();
+              await harness.sendEvent(0, const <Object?, Object?>{
+                'status': 'buffering',
+              });
+              await harness.sendEvent(0, processing);
+              await tester.pump();
+              playing.complete();
+              await tester.pump();
+              await tester.pump();
+            }
+
+            expect(key.currentState!.errorTypeAt(0), VideoErrorType.generic);
+            expect(find.text('VIDEO_ERROR:generic'), findsOneWidget);
+            expect(harness.countCalls('play'), 6);
+          } finally {
+            if (playing != null && !playing.isCompleted) playing.complete();
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump(const Duration(seconds: 9));
+            await tester.pump();
+            await harness.dispose();
+          }
+        },
+      );
+
+      for (final processing in [false, true]) {
+        final recovery = processing ? 'processing' : 'fallback';
+        for (final repeated in [false, true]) {
+          testWidgets(
+            'shows auth failure during $recovery play '
+            'with repeat notification $repeated',
+            (tester) async {
+              DivineVideoPlayerController.resetIdCounterForTesting();
+              final harness = _NativePlayerHarness(tester);
+              await harness.install(playerIds: const [0]);
+              final key = GlobalKey<InfiniteVideoFeedState>();
+              final playing = Completer<void>();
+              const url =
+                  'https://media.divine.video/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/720p.mp4';
+              try {
+                await tester.pumpWidget(
+                  _wrapFeed(
+                    InfiniteVideoFeed(
+                      key: key,
+                      videos: [_makeVideo('recovery', videoUrl: url)],
+                      cache: cache,
+                      prefetchCount: 0,
+                      preloadGracePeriod: Duration.zero,
+                      errorBuilder: (_, _, _, error) =>
+                          Text('VIDEO_ERROR:${error.name}'),
+                    ),
+                  ),
+                );
+                await tester.pump();
+                await tester.pump();
+                expect(harness.countCalls('play'), 1);
+                harness.callDelays['player_0:play'] = playing;
+                await harness.sendEvent(0, <Object?, Object?>{
+                  'status': 'error',
+                  'errorCode': processing ? 'media_processing' : 'parse_error',
+                  'errorMessage': processing
+                      ? 'HTTP 202'
+                      : 'Synthetic parse failure',
+                });
+                if (processing) {
+                  await tester.pump(const Duration(milliseconds: 1100));
+                }
+                await tester.pump();
+                expect(harness.countCalls('play'), 2);
+                await harness.sendEvent(0, const <Object?, Object?>{
+                  'status': 'buffering',
+                });
+                const failure = <Object?, Object?>{
+                  'status': 'error',
+                  'errorCode': 'auth_required',
+                  'errorMessage': 'HTTP 401',
+                };
+                await harness.sendEvent(0, failure);
+                await tester.pump();
+                expect(key.currentState!.errorTypeAt(0), isNull);
+                playing.complete();
+                await tester.pump();
+                if (repeated) {
+                  await harness.sendEvent(0, failure);
+                  await tester.pump();
+                }
+                await tester.pump();
+
+                expect(
+                  key.currentState!.errorTypeAt(0),
+                  VideoErrorType.ageRestricted,
+                );
+                expect(find.text('VIDEO_ERROR:ageRestricted'), findsOneWidget);
+                expect(harness.countCalls('setClips'), 2);
+              } finally {
+                if (!playing.isCompleted) playing.complete();
+                await tester.pumpWidget(const SizedBox.shrink());
+                await tester.pump();
+                await harness.dispose();
+              }
+            },
+          );
+        }
+      }
+    });
+
     group('runtime processing retry', () {
       testWidgets(
         'does not drive a stale controller after the slot is reinitialized',
@@ -5790,4 +6079,46 @@ void main() {
       );
     });
   });
+}
+
+class _DesktopReadinessBackend extends Fake
+    implements LinuxVideoPlayerBackend, DesktopVideoFrameReadiness {
+  Completer<bool> frame = Completer<bool>();
+  bool played = false;
+  late void Function(DivineVideoPlayerState) emitState;
+
+  @override
+  Future<bool> get firstFrameRendered => frame.future;
+
+  @override
+  Future<void> initialize({
+    required void Function(DivineVideoPlayerState) onStateChanged,
+    required void Function(Object) onError,
+  }) async {
+    emitState = onStateChanged;
+  }
+
+  @override
+  Future<void> setClips(
+    List<VideoClip> clips, {
+    Duration? startPosition,
+  }) async {}
+
+  @override
+  Future<void> setLooping({required bool looping}) async {}
+
+  @override
+  Future<void> setVolume(double volume) async {}
+
+  @override
+  Future<void> play() async => played = true;
+
+  @override
+  Future<void> pause() async {}
+
+  @override
+  Widget buildView() => const SizedBox.shrink();
+
+  @override
+  Future<void> dispose() async {}
 }

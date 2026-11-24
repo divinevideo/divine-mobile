@@ -541,6 +541,26 @@ definitions:
     - &package_macos_mas_pkg
       name: Archive and export Mac App Store pkg
       script: bash scripts/package_macos_mas_pkg.sh
+    - &package_macos_dmg
+      name: Package macOS DMG
+      script: |
+        if [ "${{ inputs.PUBLISH_TO_GITHUB }}" != "YES" ]; then
+          echo "Skipping DMG packaging (PUBLISH_TO_GITHUB != YES)"
+          exit 0
+        fi
+        set -euo pipefail
+        APP_PATH="build/macos/Build/Products/Release"
+        APP_NAME=$(ls "$APP_PATH" | grep '\.app$' | head -1)
+        DMG_NAME="Divine-macOS.dmg"
+        # CI compilation may be unsigned. Never turn that output into a DMG
+        # that can also be published later through artifact recovery.
+        SIGNING_TEAM=$(awk '$1 == "DIVINE_RELEASE_DEVELOPMENT_TEAM" && $2 == "=" {print $3}' \
+          macos/Runner/Configs/Release.xcconfig)
+        python3 scripts/desktop/validate_macos_distribution.py \
+          "$APP_PATH/$APP_NAME" --bundle-id co.openvine.app --team-id "$SIGNING_TEAM"
+        echo "Packaging $APP_NAME as $DMG_NAME"
+        hdiutil create -volname "Divine" -srcfolder "$APP_PATH/$APP_NAME" \
+          -ov -format UDZO "$APP_PATH/$DMG_NAME"
     - &publish_github_release
       name: Publish to GitHub Release
       script: |
