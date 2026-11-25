@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show Tristate;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart' show ValueListenable, kIsWeb;
@@ -55,6 +56,7 @@ import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/go_router.dart';
+import '../helpers/large_screen_layout.dart';
 
 class _MockGallerySaveService extends Mock implements GallerySaveService {}
 
@@ -626,6 +628,80 @@ void main() {
 
         expect(sharedPreferences.getInt(ClipGridColumns.prefsKey), equals(2));
         expect(announcements, contains(en.libraryGridSizeColumns(2)));
+      });
+
+      testWidgets('reports the grid columns in a wide library panel', (
+        tester,
+      ) async {
+        final announcements = _captureAnnouncements(tester);
+        setTestWindowSize(tester, 1400);
+        final clip = DivineVideoClip(
+          id: 'panel-clip',
+          video: EditorVideo.file('/test/panel-clip.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        );
+        when(
+          () => mockClipLibraryService.getAllClips(),
+        ).thenAnswer((_) async => [clip]);
+        when(
+          () => mockClipLibraryService.recoverMissingAssets([clip]),
+        ).thenAnswer((_) async => [clip]);
+        await tester.pumpWidget(
+          largeScreenLayoutApp(
+            enabled: true,
+            theme: VineTheme.theme,
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+              gallerySaveServiceProvider.overrideWithValue(
+                mockGallerySaveService,
+              ),
+              clipLibraryServiceProvider.overrideWithValue(
+                mockClipLibraryService,
+              ),
+              draftStorageServiceProvider.overrideWithValue(
+                mockDraftStorageService,
+              ),
+              clipManagerProvider.overrideWith(ClipManagerNotifier.new),
+            ],
+            home: const Center(
+              child: SizedBox(
+                width: 650,
+                child: LibraryScreen(
+                  initialTabIndex: LibraryScreen.clipsTabIndex,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final thumbnail = find.byType(VideoClipThumbnailCard);
+        expect(tester.getSize(thumbnail).width, closeTo(159.5, 0.5));
+
+        await tester.tap(find.bySemanticsLabel(en.libraryDisplayOptionsLabel));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(en.libraryGridSizeLabel));
+        await tester.pumpAndSettle();
+
+        expect(find.text(en.libraryGridSizeColumns(2)), findsNothing);
+        expect(find.text(en.libraryGridSizeColumns(3)), findsOneWidget);
+        expect(
+          tester
+              .getSemantics(find.bySemanticsLabel(en.libraryGridSizeColumns(4)))
+              .getSemanticsData()
+              .flagsCollection
+              .isSelected,
+          Tristate.isTrue,
+        );
+        await tester.tap(find.text(en.libraryGridSizeColumns(6)));
+        await tester.pumpAndSettle();
+
+        expect(tester.getSize(thumbnail).width, closeTo(105, 0.5));
+        expect(sharedPreferences.getInt(ClipGridColumns.prefsKey), 5);
+        expect(announcements, contains(en.libraryGridSizeColumns(6)));
       });
 
       testWidgets('$ClipSelectionFooter in selection mode', (tester) async {
