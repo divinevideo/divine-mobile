@@ -2110,6 +2110,9 @@ class AppDatabase extends _$AppDatabase {
         if (schemaVersion >= 37) 'skip_nip04_fallback',
         if (schemaVersion >= 38) 'is_video_share',
       ],
+      'processed_gift_wraps': [
+        if (schemaVersion >= 39) 'verified_message_id',
+      ],
       'removed_conversations': ['rejoined_at'],
       'personal_reactions': ['addressable_id'],
       'profile_statistics': ['follower_counts_updated_at'],

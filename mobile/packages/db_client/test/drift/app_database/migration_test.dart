@@ -406,6 +406,37 @@ void main() {
       expect(row.environment, 'staging');
     });
 
+    test('v38 gift wrap ledger rows keep their dedup evidence and gain no '
+        'verified alias', () async {
+      final schema = await verifier.schemaAt(38);
+      final wrapId = 'a' * 64;
+      final owner = 'b' * 64;
+      schema.rawDatabase.execute(
+        'INSERT INTO processed_gift_wraps (gift_wrap_id, processed_at, '
+        'owner_pubkey) VALUES (?,?,?)',
+        [wrapId, 1700000000, owner],
+      );
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+
+      await verifier.migrateAndValidate(db, 39);
+
+      final row = await db.select(db.processedGiftWraps).getSingle();
+      expect(row.giftWrapId, wrapId);
+      expect(row.ownerPubkey, owner);
+      expect(row.processedAt, 1700000000);
+      expect(row.verifiedMessageId, isNull);
+    });
+
+    test('the v32 ledger rebuild leaves verified_message_id out of a v38 '
+        'target', () async {
+      final schema = await verifier.schemaAt(31);
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+
+      await verifier.migrateAndValidate(db, 38);
+    });
+
     test('current schema version is 39', () {
       expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 39);
     });
