@@ -198,7 +198,7 @@ def bundle_for_native(bundle):
     return compact
 
 
-def production_baseline(platform, data):
+def production_build(platform, data):
     if platform == "ios":
         live = [
             v
@@ -225,6 +225,11 @@ def production_baseline(platform, data):
             "Previous production release is missing verified source provenance"
         )
     parse_version(build["version"])
+    return build
+
+
+def production_baseline(platform, data):
+    build = production_build(platform, data)
     return {"version": build["version"], "sha": build["sha"]}
 
 
