@@ -40,6 +40,7 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
   Timer? _expiry;
   bool _viewing = false;
   bool _muted = true;
+  bool _inactive = false;
   final _muteRequests = ValueNotifier<int>(0);
   final _seen = <String>{};
   final _unplayable = <String>{};
@@ -51,6 +52,7 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     final lifecycle = WidgetsBinding.instance.lifecycleState;
+    _inactive = lifecycle == AppLifecycleState.inactive;
     if (lifecycle == null || lifecycle == AppLifecycleState.resumed) {
       unawaited(_load(muted: _muted, retire: false));
     }
@@ -130,17 +132,22 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
       return;
     }
     _expiry?.cancel();
-    _expiry = Timer(
-      remaining,
-      () =>
-          unawaited(_load(muted: _muted, retire: true, keepCurrent: _viewing)),
-    );
+    _expiry = Timer(remaining, _onExpiry);
     setState(() {
       _manifest = manifest;
       _clips = clips;
       _page = 0;
       _muted = muted;
     });
+  }
+
+  void _onExpiry() {
+    if (!mounted) return;
+    if (_inactive) {
+      setState(_resetToWelcome);
+      return;
+    }
+    unawaited(_load(muted: _muted, retire: true, keepCurrent: _viewing));
   }
 
   void _toggleSound() {
@@ -156,11 +163,20 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      unawaited(_refresh());
-    } else {
-      if (_viewing) _muteRequests.value++;
-      setState(_resetToWelcome);
+    switch (state) {
+      case AppLifecycleState.resumed:
+        final needsRefresh =
+            _manifest == null || !_manifest!.expiresAt.isAfter(widget.now());
+        if (_inactive) setState(() => _inactive = false);
+        if (needsRefresh) unawaited(_refresh());
+      case AppLifecycleState.inactive:
+        if (!_inactive) setState(() => _inactive = true);
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _inactive = false;
+        if (_viewing) _muteRequests.value++;
+        setState(_resetToWelcome);
     }
   }
 
@@ -240,6 +256,7 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
                   key: ValueKey(clip.id),
                   clip: clip,
                   muted: _muted,
+                  paused: _inactive,
                   muteRequests: _muteRequests,
                   allowed: () =>
                       mounted &&
@@ -343,6 +360,7 @@ class _GuestPlayer extends StatefulWidget {
   const _GuestPlayer({
     required this.clip,
     required this.muted,
+    required this.paused,
     required this.muteRequests,
     required this.allowed,
     required this.firstFrame,
@@ -351,6 +369,7 @@ class _GuestPlayer extends StatefulWidget {
   });
   final GuestClassic clip;
   final bool muted;
+  final bool paused;
   final ValueNotifier<int> muteRequests;
   final bool Function() allowed;
   final VoidCallback firstFrame;
@@ -379,6 +398,25 @@ class _GuestPlayerState extends State<_GuestPlayer> {
     unawaited(_start());
   }
 
+  @override
+  void didUpdateWidget(covariant _GuestPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.paused == widget.paused) return;
+    if (widget.paused) {
+      _watchdog?.cancel();
+      _watchdog = null;
+    } else if (!_reported) {
+      _watchdog ??= Timer(const Duration(seconds: 6), _fail);
+    }
+    if (_player.isInitialized) {
+      unawaited(
+        (widget.paused ? _player.pause() : _player.play()).catchError(
+          (Object _) => _fail(),
+        ),
+      );
+    }
+  }
+
   void _silence() {
     if (_player.isInitialized) {
       unawaited(_player.setVolume(0).catchError((Object _) => _fail()));
@@ -388,7 +426,9 @@ class _GuestPlayerState extends State<_GuestPlayer> {
   bool get _allowed => mounted && widget.allowed();
 
   Future<void> _start() async {
-    _watchdog = Timer(const Duration(seconds: 6), _fail);
+    if (!widget.paused) {
+      _watchdog = Timer(const Duration(seconds: 6), _fail);
+    }
     try {
       await _player.initialize();
       if (!_allowed) return;
@@ -413,6 +453,7 @@ class _GuestPlayerState extends State<_GuestPlayer> {
       if (!_allowed) return;
       setState(() => _ready = true);
       _reportPresentation();
+      if (!_allowed || widget.paused) return;
       await _player.play();
     } on Object {
       _fail();

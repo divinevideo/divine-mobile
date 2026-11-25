@@ -466,5 +466,50 @@ void main() {
         expect(native.volumes.last, 0);
       },
     );
+
+    testWidgets(
+      'inactive pauses and resumes without retiring while backgrounding retires',
+      (tester) async {
+        final native = _NativePlayback(tester);
+        addTearDown(tester.binding.resetInternalState);
+        var loads = 0;
+        await openGuest(tester, (_, {required muted}) async {
+          loads++;
+          return manifest([1, 2]);
+        });
+        await native.firstFrame();
+        expect(loads, 1);
+
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        await tester.pump();
+        expect(native.calls.last, 'pause');
+        expect(find.text('Creator 1'), findsOneWidget);
+        expect(find.text('Welcome'), findsNothing);
+
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        expect(native.calls.last, 'play');
+        expect(loads, 1);
+        expect(find.text('Creator 1'), findsOneWidget);
+
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        await tester.pump();
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        await tester.pump();
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        expect(loads, 2);
+        expect(find.text('Welcome'), findsOneWidget);
+        expect(find.byType(DivineVideoPlayer), findsNothing);
+      },
+    );
   });
 }
