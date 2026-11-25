@@ -920,27 +920,7 @@
   },
   "listAttributionFallback": "列表",
   "shareVideoLabel": "分享视频",
-  "sharePostSharedWith": "已分享给 {recipientName}",
-  "sharePostSharedWithCount": "{count, plural, one{已分享给 {count} 个人} other{已分享给 {count} 个人}}",
-  "@sharePostSharedWithCount": {
-    "description": "Snackbar after sharing a video to two or more people at once. Only used for count >= 2.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "@sharePostSharedWith": {
-    "placeholders": {
-      "recipientName": {
-        "type": "String"
-      }
-    }
-  },
-  "shareStillTryingToSendTo": "仍在尝试发送给 {recipientName}",
-  "shareStillTryingToSendToCount": "{count, plural, one{仍在尝试发送给 {count} 个人} other{仍在尝试发送给 {count} 个人}}",
   "shareCouldNotSendTo": "无法发送给 {recipientName}",
-  "shareCouldNotSendToCount": "{count, plural, one{无法发送给 {count} 个人} other{无法发送给 {count} 个人}}",
   "shareFailedToSend": "视频发送失败",
   "shareAddedToBookmarks": "已加入收藏",
   "shareRemovedFromBookmarks": "已从收藏移除",
@@ -957,6 +937,9 @@
   "shareWithTitle": "分享给",
   "shareFindPeople": "找人",
   "shareFindPeopleMultiline": "寻找\n朋友",
+  "shareDeliveryFailed": "暂时无法发送",
+  "shareDeliveryHeld": "可联系到{name}时将发送",
+  "shareDeliveryForRecipient": "{name} — {status}",
   "shareSent": "已发送",
   "shareSelectedRecipientAnnouncement": "已选择 {name}",
   "@shareSelectedRecipientAnnouncement": {
@@ -967,6 +950,8 @@
       }
     }
   },
+  "shareRecipientSend": "发送",
+  "shareRecipientSendTo": "发送给{name}",
   "shareMessageHint": "附上一句话（可选）...",
   "videoActionUnlike": "取消点赞视频",
   "videoActionLike": "点赞视频",

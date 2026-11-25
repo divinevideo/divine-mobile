@@ -180,7 +180,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 36;
+  int get schemaVersion => 38;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -453,6 +453,7 @@ class AppDatabase extends _$AppDatabase {
       }
       await _withholdV31Columns(to);
       await _withholdV34Columns(to);
+      await _migrateShareDelivery(to);
     },
     beforeOpen: (details) async {
       // Salvage may preserve only one of these local-only tables. A missing
@@ -500,6 +501,7 @@ class AppDatabase extends _$AppDatabase {
         }
         await _withholdV31Columns(details.versionNow);
         await _withholdV34Columns(details.versionNow);
+        await _migrateShareDelivery(details.versionNow);
       }
 
       // Run cleanup of expired data on every app startup
@@ -616,6 +618,8 @@ class AppDatabase extends _$AppDatabase {
       TableMigration(
         directMessages,
         newColumns: [
+          if (!messageColumns.contains('recipient_accepted_environment'))
+            directMessages.recipientAcceptedEnvironment,
           if (!messageColumns.contains('held_deletion_wraps'))
             directMessages.heldDeletionWraps,
         ],
@@ -827,6 +831,35 @@ class AppDatabase extends _$AppDatabase {
     if (version >= 34) return;
     for (final (table, column) in _v34Columns) {
       if ((await _columnNames(table)).contains(column)) {
+        await customStatement('ALTER TABLE $table DROP COLUMN $column');
+      }
+    }
+  }
+
+  /// Adds the v37/v38 columns, or drops them again from a database opened at
+  /// an earlier [version] (only a migration test does); see
+  /// [_withholdV31Columns].
+  Future<void> _migrateShareDelivery(int version) async {
+    const columns = [
+      (37, 'direct_messages', 'recipient_accepted_environment', 'TEXT NULL'),
+      (
+        37,
+        'outgoing_dms',
+        'skip_nip04_fallback',
+        'INTEGER NOT NULL DEFAULT 0 CHECK (skip_nip04_fallback IN (0, 1))',
+      ),
+      (
+        38,
+        'outgoing_dms',
+        'is_video_share',
+        'INTEGER NOT NULL DEFAULT 0 CHECK (is_video_share IN (0, 1))',
+      ),
+    ];
+    for (final (added, table, column, definition) in columns) {
+      if (version >= added) {
+        await _addColumnIfMissing(table, column, definition);
+      } else if ((await _columnNames(table)).contains(column)) {
+        // Rebuilds use today's table definitions on historical upgrades.
         await customStatement('ALTER TABLE $table DROP COLUMN $column');
       }
     }
@@ -2019,6 +2052,7 @@ class AppDatabase extends _$AppDatabase {
         'has_comment_target',
       ],
       'direct_messages': [
+        if (schemaVersion >= 37) 'recipient_accepted_environment',
         'message_kind',
         'file_type',
         'encryption_algorithm',
@@ -2050,6 +2084,8 @@ class AppDatabase extends _$AppDatabase {
         'send_batch_id',
         'environment',
         if (schemaVersion >= 34) 'unconfirmed_recipient_wrap_json',
+        if (schemaVersion >= 37) 'skip_nip04_fallback',
+        if (schemaVersion >= 38) 'is_video_share',
       ],
       'removed_conversations': ['rejoined_at'],
       'personal_reactions': ['addressable_id'],

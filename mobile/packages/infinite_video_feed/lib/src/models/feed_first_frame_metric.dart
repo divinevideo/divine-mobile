@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
+import 'package:divine_video_player/divine_video_player.dart';
+import 'package:infinite_video_feed/src/models/feed_playback_session_metric.dart';
 import 'package:infinite_video_feed/src/models/feed_playback_telemetry.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -47,10 +50,18 @@ abstract final class FeedFirstFrameMetrics {
   static final _controller = StreamController<FeedFirstFrameMetric>.broadcast(
     sync: true,
   );
+  static final _sessionController =
+      StreamController<FeedPlaybackSessionMetric>.broadcast(sync: true);
   static final _activePlaybackAttempts = <FeedFirstFrameTimer>{};
 
   /// Completed measurements from every mounted fullscreen feed widget.
   static Stream<FeedFirstFrameMetric> get events => _controller.stream;
+
+  /// One measurement per ended activation, published when it ends.
+  ///
+  /// Unlike [events], it includes activations that never rendered a frame.
+  static Stream<FeedPlaybackSessionMetric> get sessions =>
+      _sessionController.stream;
 
   /// Ends active operational attempts before ordinary collection suspension.
   ///
@@ -84,12 +95,30 @@ abstract final class FeedFirstFrameMetrics {
       category: LogCategory.video,
     );
   }
+
+  static void _recordSession(String videoId, FeedPlaybackSessionMetric metric) {
+    _sessionController.add(metric);
+    Log.info(
+      'videoId=$videoId index=${metric.index} '
+      'outcome=${metric.outcome.name} end=${metric.end.name} '
+      'activeMs=${metric.active.inMilliseconds} '
+      'ttffMs=${metric.timeToFirstFrame?.inMilliseconds} '
+      'watchedMs=${metric.watched?.inMilliseconds} '
+      'stalls=${metric.stallCount} '
+      'stallMs=${metric.stalled?.inMilliseconds} '
+      'error=${metric.error?.name} '
+      'cache=${metric.loadedFromCache ? 'hit' : 'miss'}',
+      name: 'FeedPlaybackSession',
+      category: LogCategory.video,
+    );
+  }
 }
 
-/// A one-shot monotonic timer created by [FeedFirstFrameMetrics.start].
+/// Measures one activation created by [FeedFirstFrameMetrics.start]: its
+/// first frame, then its playback until [end].
 class FeedFirstFrameTimer {
   FeedFirstFrameTimer._({required this.videoId, required this.index})
-    : _stopwatch = Stopwatch()..start(),
+    : _stopwatch = clock.stopwatch()..start(),
       _attempt = FeedPlaybackTelemetry.startAttempt() {
     if (_attempt != null) {
       FeedFirstFrameMetrics._activePlaybackAttempts.add(this);
@@ -121,8 +150,28 @@ class FeedFirstFrameTimer {
   /// Terminates operational telemetry without creating a success trace.
   ///
   /// A retry or late first frame can still [complete] the success measurement.
+  /// When [sessionErrorCategory] is given, the session metric keeps that
+  /// error category while operational telemetry receives [errorCategory].
   void finish({
     required FeedPlaybackOutcome outcome,
+    FeedPlaybackError errorCategory = FeedPlaybackError.none,
+    FeedPlaybackError? sessionErrorCategory,
+    String localCache = 'unknown',
+  }) {
+    if (!_ended && outcome == FeedPlaybackOutcome.error) {
+      _failure = sessionErrorCategory ?? errorCategory;
+    }
+    _finishAttempt(
+      outcome: outcome,
+      elapsed: _stopwatch.elapsed,
+      errorCategory: errorCategory,
+      localCache: localCache,
+    );
+  }
+
+  void _finishAttempt({
+    required FeedPlaybackOutcome outcome,
+    required Duration elapsed,
     FeedPlaybackError errorCategory = FeedPlaybackError.none,
     String localCache = 'unknown',
   }) {
@@ -130,7 +179,7 @@ class FeedFirstFrameTimer {
     FeedFirstFrameMetrics._activePlaybackAttempts.remove(this);
     _attempt?.finish(
       outcome: outcome,
-      elapsed: _stopwatch.elapsed,
+      elapsed: elapsed,
       localCache: localCache,
       error: errorCategory,
       controllerInitialized: _controllerInitializedAt,
@@ -140,6 +189,12 @@ class FeedFirstFrameTimer {
   }
 
   bool _completed = false;
+  bool _ended = false;
+  bool _autoPlayBlocked = false;
+  FeedPlaybackError? _failure;
+  Duration? _firstFrameAt;
+  bool? _firstFrameLoadedFromCache;
+  _PlaybackClock? _playback;
   Duration? _controllerInitializedAt;
   Duration? _sourceReadyAt;
   Duration? _playbackRequestedAt;
@@ -159,19 +214,31 @@ class FeedFirstFrameTimer {
     _playbackRequestedAt ??= _stopwatch.elapsed;
   }
 
-  /// Stops and publishes this measurement once.
+  /// Records whether the feed let this video start playing on its own.
+  ///
+  /// An activation that the feed held back, such as a video behind a
+  /// content warning, and that ended without a frame is not reported.
+  void markAutoPlay({required bool allowed}) {
+    if (_ended) return;
+    _autoPlayBlocked = !allowed;
+  }
+
+  /// Publishes the first-frame measurement once.
   FeedFirstFrameMetric? complete({required bool loadedFromCache}) {
-    if (_completed) return null;
+    if (_completed || _ended) return null;
     _completed = true;
-    _stopwatch.stop();
-    finish(
+    final elapsed = _stopwatch.elapsed;
+    _firstFrameAt = elapsed;
+    _firstFrameLoadedFromCache = loadedFromCache;
+    _finishAttempt(
       outcome: FeedPlaybackOutcome.firstFrame,
+      elapsed: elapsed,
       localCache: loadedFromCache ? 'hit' : 'unknown',
     );
     final metric = FeedFirstFrameMetric(
       videoId: videoId,
       index: index,
-      duration: _stopwatch.elapsed,
+      duration: elapsed,
       loadedFromCache: loadedFromCache,
       controllerInitializedAt: _controllerInitializedAt,
       sourceReadyAt: _sourceReadyAt,
@@ -179,5 +246,124 @@ class FeedFirstFrameTimer {
     );
     FeedFirstFrameMetrics._record(metric);
     return metric;
+  }
+
+  /// Follows [controller], the player showing this video, once it rendered
+  /// its first frame.
+  ///
+  /// Counts the time it reports playing and, when [reportsStalls], the
+  /// buffering after playback started. Following a replacement controller
+  /// moves the measurement over to it.
+  void observePlayback(
+    DivineVideoPlayerController controller, {
+    required bool reportsStalls,
+  }) {
+    if (_ended || _firstFrameAt == null) return;
+    (_playback ??= _PlaybackClock(
+      () => _stopwatch.elapsed,
+      reportsStalls: reportsStalls,
+    )).follow(controller);
+  }
+
+  /// Ends this activation and publishes its playback session once.
+  ///
+  /// [loadedFromCache] applies when no first frame rendered; otherwise the
+  /// value given to [complete] is kept. Returns `null` when it already ended,
+  /// or when autoplay was held back and no frame rendered.
+  FeedPlaybackSessionMetric? end(
+    FeedPlaybackSessionEnd reason, {
+    required bool loadedFromCache,
+  }) {
+    if (_ended) return null;
+    _stopwatch.stop();
+    final active = _stopwatch.elapsed;
+    _finishAttempt(outcome: FeedPlaybackOutcome.cancelled, elapsed: active);
+    _ended = true;
+    final playback = _playback?..close();
+    final firstFrame = _firstFrameAt;
+    if (firstFrame == null && _autoPlayBlocked) return null;
+    final played = firstFrame != null;
+    final failure = played ? null : _failure;
+    final stallsReported = played && (playback?.reportsStalls ?? false);
+    final metric = FeedPlaybackSessionMetric(
+      index: index,
+      outcome: played
+          ? FeedPlaybackSessionOutcome.played
+          : failure != null
+          ? FeedPlaybackSessionOutcome.failed
+          : FeedPlaybackSessionOutcome.abandoned,
+      end: reason,
+      loadedFromCache: _firstFrameLoadedFromCache ?? loadedFromCache,
+      active: active,
+      error: failure,
+      timeToFirstFrame: firstFrame,
+      controllerInitializedAt: _controllerInitializedAt,
+      sourceReadyAt: _sourceReadyAt,
+      playbackRequestedAt: _playbackRequestedAt,
+      watched: played ? playback?.watched ?? Duration.zero : null,
+      stallCount: stallsReported ? playback?.stalls : null,
+      stalled: stallsReported ? playback?.stalled : null,
+    );
+    FeedFirstFrameMetrics._recordSession(videoId, metric);
+    return metric;
+  }
+}
+
+/// Splits an activation's time after its first frame into playing and
+/// stalled spans, from the status its player reports.
+final class _PlaybackClock {
+  _PlaybackClock(this._now, {required this.reportsStalls});
+
+  final Duration Function() _now;
+
+  /// Whether the player reports a wait for data as buffering.
+  final bool reportsStalls;
+
+  DivineVideoPlayerController? _controller;
+  StreamSubscription<DivineVideoPlayerState>? _subscription;
+  bool _started = false;
+  Duration? _playingSince;
+  Duration? _stalledSince;
+  Duration watched = Duration.zero;
+  Duration stalled = Duration.zero;
+  int stalls = 0;
+
+  void follow(DivineVideoPlayerController controller) {
+    if (identical(controller, _controller)) return;
+    _controller = controller;
+    unawaited(_subscription?.cancel());
+    _apply(controller.state);
+    _subscription = controller.stateStream.listen(
+      _apply,
+      onDone: () => _apply(const DivineVideoPlayerState()),
+    );
+  }
+
+  void _apply(DivineVideoPlayerState state) {
+    final now = _now();
+    if (state.isPlaying) {
+      _started = true;
+      _playingSince ??= now;
+    } else if (_playingSince case final since?) {
+      watched += now - since;
+      _playingSince = null;
+    }
+    // Buffering before playback first started is the start-up wait, which
+    // the first-frame milestones already describe.
+    if (reportsStalls && _started && state.isBuffering) {
+      if (_stalledSince == null) {
+        _stalledSince = now;
+        stalls++;
+      }
+    } else if (_stalledSince case final since?) {
+      stalled += now - since;
+      _stalledSince = null;
+    }
+  }
+
+  void close() {
+    unawaited(_subscription?.cancel());
+    _subscription = null;
+    _apply(const DivineVideoPlayerState());
   }
 }

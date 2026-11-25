@@ -584,12 +584,7 @@
   },
   "listAttributionFallback": "Listahan",
   "shareVideoLabel": "I-share ang video",
-  "sharePostSharedWith": "Naipadala ang post kay {recipientName}",
-  "sharePostSharedWithCount": "{count, plural, one{Naipadala ang post sa {count} tao} other{Naipadala ang post sa {count} tao}}",
-  "shareStillTryingToSendTo": "Sinusubukan pa ring ipadala kay {recipientName}",
-  "shareStillTryingToSendToCount": "{count, plural, one{Sinusubukan pa ring ipadala sa {count} tao} other{Sinusubukan pa ring ipadala sa {count} tao}}",
   "shareCouldNotSendTo": "Hindi maipadala kay {recipientName}",
-  "shareCouldNotSendToCount": "{count, plural, one{Hindi maipadala sa {count} tao} other{Hindi maipadala sa {count} tao}}",
   "shareFailedToSend": "Nabigong ipadala ang video",
   "shareAddedToBookmarks": "Naidagdag sa bookmarks",
   "shareRemovedFromBookmarks": "Tinanggal sa bookmarks",
@@ -600,6 +595,9 @@
   "shareWithTitle": "I-share kasama si",
   "shareFindPeople": "Maghanap ng tao",
   "shareFindPeopleMultiline": "Maghanap\nng tao",
+  "shareDeliveryFailed": "Hindi pa maipadala",
+  "shareDeliveryHeld": "Ipapadala kapag maaabot na si {name}",
+  "shareDeliveryForRecipient": "{name} — {status}",
   "shareSent": "Naipadala",
   "shareSelectedRecipientAnnouncement": "Napili si {name}",
   "@shareSelectedRecipientAnnouncement": {
@@ -610,6 +608,8 @@
       }
     }
   },
+  "shareRecipientSend": "Ipadala",
+  "shareRecipientSendTo": "Ipadala kay {name}",
   "shareMessageHint": "Magdagdag ng optional na mensahe...",
   "videoActionUnlike": "I-unlike ang video",
   "videoActionLike": "I-like ang video",

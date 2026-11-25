@@ -873,14 +873,25 @@ void main() {
       );
     });
 
-    test(
-      'derives group creation and protocol from the recovered room',
-      () async {
+    for (final hasSent in [false, true]) {
+      final status = hasSent ? 'replied' : 'unreplied';
+      test('restores room metadata and keeps the room $status', () async {
         final oneToOneId = await seedConversation(
           [_me, _alice],
           createdAt: 1600000000,
           dmProtocol: 'nip04',
         );
+        if (hasSent) {
+          // The user's message belongs to the surviving 1:1. The room
+          // inherits its status even though only peer messages are moved.
+          await seedMessage(
+            id: 'one-to-one-sent',
+            conversationId: oneToOneId,
+            sender: _me,
+            pTags: [_alice],
+            createdAt: 1600000001,
+          );
+        }
         final groupId = await seedConversation([_me, _alice, _bob]);
         await seedMessage(
           id: 'g1',
@@ -907,12 +918,13 @@ void main() {
         expect(restored, isNotNull);
         expect(restored!.createdAt, equals(1700000002));
         expect(restored.dmProtocol, equals('nip17'));
+        expect(restored.currentUserHasSent, equals(hasSent));
         expect(
           await conversations.getConversation(oneToOneId, ownerPubkey: _me),
           isNotNull,
         );
-      },
-    );
+      });
+    }
 
     test('leaves the unattested reply-mention shape alone', () async {
       final oneToOneId = await seedConversation([_me, _alice]);

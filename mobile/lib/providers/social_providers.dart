@@ -761,6 +761,7 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
       ref.watch(flutterSecureStorageProvider),
     ),
     onAccountStateWritesStop: accountWrites.stop,
+    shareRecents: ref.watch(shareRecentsStoreProvider),
   );
 
   Future<void> clearSharedAccountStores({

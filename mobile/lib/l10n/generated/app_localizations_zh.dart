@@ -1683,51 +1683,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shareVideoLabel => '分享视频';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return '已分享给 $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '已分享给 $count 个人',
-      one: '已分享给 $count 个人',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return '仍在尝试发送给 $recipientName';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '仍在尝试发送给 $count 个人',
-      one: '仍在尝试发送给 $count 个人',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return '无法发送给 $recipientName';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '无法发送给 $count 个人',
-      one: '无法发送给 $count 个人',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1761,11 +1718,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shareFindPeopleMultiline => '寻找\n朋友';
 
   @override
+  String get shareDeliveryFailed => '暂时无法发送';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return '可联系到$name时将发送';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => '已发送';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return '已选择 $name';
+  }
+
+  @override
+  String get shareRecipientSend => '发送';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return '发送给$name';
   }
 
   @override

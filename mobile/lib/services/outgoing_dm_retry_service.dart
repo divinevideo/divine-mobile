@@ -1156,7 +1156,7 @@ class OutgoingDmRetryService {
         }
         await _terminalizeRow(
           row.id,
-          error: 'Message not sent: device offline',
+          error: outgoingDmOfflineError,
         );
         flipped++;
       }

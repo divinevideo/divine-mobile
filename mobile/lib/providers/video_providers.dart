@@ -8,7 +8,7 @@ import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart' show TableUpdateQuery, UpdateKind;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart'
-    show Notifier, NotifierProvider, Provider;
+    show Notifier, NotifierProvider, Provider, ProviderListenableSelect;
 import 'package:image_picker/image_picker.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:openvine/blocs/gallery_clip_import/gallery_clip_import_cubit.dart';
@@ -63,6 +63,7 @@ import 'package:openvine/services/nsfw_content_filter.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/published_event_local_echo.dart';
 import 'package:openvine/services/seen_videos_service.dart';
+import 'package:openvine/services/share_recents_store.dart';
 import 'package:openvine/services/subscribed_list_video_cache.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_dm_outbox.dart';
@@ -457,6 +458,31 @@ SubscribedListVideoCache? subscribedListVideoCache(Ref ref) {
   return cache;
 }
 
+final shareRecentsStoreProvider = Provider<ShareRecentsStore>((ref) {
+  return ShareRecentsStore(
+    ref.watch(sharedPreferencesProvider),
+    loadProfiles: (keys) async =>
+        await ref
+            .read(profileReadRepositoryProvider)
+            ?.getCachedProfiles(pubkeys: keys) ??
+        [],
+  );
+});
+
+final shareRecentsWarmProvider = Provider<void>((ref) {
+  final owner = ref.watch(nostrSessionProvider.select((state) => state.pubkey));
+  if (owner == null ||
+      owner.isEmpty ||
+      ref.watch(profileReadRepositoryProvider) == null) {
+    return;
+  }
+  runProviderDetached(
+    ref.watch(shareRecentsStoreProvider).warm(owner),
+    'warm local share recents',
+    logName: 'ShareRecentsStore',
+  );
+});
+
 /// Video sharing service
 ///
 /// Returns `null` until an identity is known, because it is built from
@@ -481,7 +507,7 @@ VideoSharingService? videoSharingService(Ref ref) {
 
   return VideoSharingService(
     authService: authService,
-    profileRepository: profileRepository,
+    recentsStore: ref.watch(shareRecentsStoreProvider),
     dmRepository: dmRepository,
     shortLinkClient: ref.watch(shortLinkClientProvider),
   );
@@ -858,7 +884,9 @@ VideoMetadataUpdateService videoMetadataUpdateService(Ref ref) {
     ),
     personalEventCache: ref.watch(personalEventCacheServiceProvider),
     videoEventService: ref.watch(videoEventServiceProvider),
-    nostrClient: nostrClient,
+    readLatestRevision: ref
+        .watch(videosRepositoryProvider)
+        .fetchLatestVideoRevision,
     collaboratorInviteService: CollaboratorInviteService(
       dmRepository: ref.watch(dmRepositoryProvider),
       l10n: currentAppL10n(ref.read(sharedPreferencesProvider)),

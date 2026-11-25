@@ -173,7 +173,9 @@ void main() {
         published.add(event);
         return PublishOutcome(
           eventId: event.id,
-          acceptedBy: const [_poolRelay],
+          acceptedBy:
+              invocation.namedArguments[#targetRelays] as List<String>? ??
+              const [_poolRelay],
           rejectedBy: const {},
           noResponseFrom: const [],
         );

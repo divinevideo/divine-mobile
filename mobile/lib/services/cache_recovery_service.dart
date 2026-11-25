@@ -150,7 +150,9 @@ class CacheRecoveryService {
   /// deleted by cache clearing. It holds the live SQLite database
   /// ({appSupport}/openvine/database/divine_db.db) — local-only user data
   /// (drafts, DMs, pending uploads/actions, reactions, reposts) that cannot be
-  /// re-fetched. Segments mirror db_client's `buildSharedDatabasePath`.
+  /// re-fetched. Segments mirror db_client's `buildSharedDatabasePath`. A Mac
+  /// that replaced the iPad app keeps that app's database one level above
+  /// {appSupport} instead, beyond anything this service clears.
   ///
   /// Deleting this directory while the Drift connection is open unlinks the
   /// file's inode, so every later write returns SqliteException(1032 DBMOVED)

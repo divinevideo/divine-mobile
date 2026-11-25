@@ -917,6 +917,29 @@ void main() {
 
         expect(rows.map((r) => r.id), equals(['request_unread']));
       });
+
+      // The classifier, not this query, decides whether a group the user has
+      // not written in reaches the inbox or Message requests (#7684).
+      test('returns a group the user has not written in', () async {
+        await dao.upsertConversation(
+          id: 'request_group',
+          participantPubkeys: '["$unreadOnlyOwner","peer_b","peer_c"]',
+          isGroup: true,
+          createdAt: 1700000000,
+          lastMessageTimestamp: 1700000200,
+          isRead: false,
+          ownerPubkey: unreadOnlyOwner,
+        );
+
+        final rows = await dao
+            .watchPotentialRequestConversations(ownerPubkey: unreadOnlyOwner)
+            .first;
+
+        expect(
+          rows.map((r) => r.id),
+          unorderedEquals(['request_group', 'request_read', 'request_unread']),
+        );
+      });
     });
 
     group('watchConversation', () {

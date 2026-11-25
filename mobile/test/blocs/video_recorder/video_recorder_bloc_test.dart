@@ -38,6 +38,7 @@ import 'package:wakelock_plus_platform_interface/wakelock_plus_platform_interfac
 
 import '../../helpers/test_helpers.dart' show TestHelpers;
 import '../../mocks/mock_path_provider_platform.dart';
+import 'helpers/start_observing_recorder.dart';
 
 class _MockCameraService extends Mock implements CameraService {}
 
@@ -312,6 +313,15 @@ void main() {
       liveChromaKeySupported: liveChromaKeySupported,
     );
   }
+
+  /// The recorder [buildBloc] builds, reporting when a start handler ends.
+  StartObservingRecorder buildStartObservingBloc() => StartObservingRecorder(
+    readClipManager: () => clipManager,
+    readVideoEditor: () => videoEditor,
+    readVideoEditorState: VideoEditorProviderState.new,
+    readSharedPreferences: () => prefs,
+    cameraService: cameraService,
+  );
 
   group(VideoRecorderBloc, () {
     test('initial state has all defaults zeroed', () {
@@ -3844,7 +3854,7 @@ void main() {
         },
       );
 
-      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+      blocTest<StartObservingRecorder, VideoRecorderBlocState>(
         'discards the orphaned file of an aborted in-flight start — the '
         'recording is never surfaced, so its file must not leak on disk',
         setUp: () {
@@ -3865,7 +3875,7 @@ void main() {
             () => cameraService.stopRecording(),
           ).thenAnswer((_) async => aborted);
         },
-        build: buildBloc,
+        build: buildStartObservingBloc,
         act: (bloc) async {
           bloc.add(const VideoRecorderRecordingStartRequested());
           await pumpEventQueue();
@@ -3874,7 +3884,7 @@ void main() {
           // Native start finally reports success after the lock landed — the
           // handler stops it and must delete the orphaned file.
           startGate.complete(true);
-          await pumpEventQueue();
+          await bloc.startDone.future;
         },
         verify: (_) {
           verify(() => cameraService.stopRecording()).called(1);
@@ -3883,7 +3893,7 @@ void main() {
         },
       );
 
-      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+      blocTest<StartObservingRecorder, VideoRecorderBlocState>(
         'aborts a started recording when navigation locks during the '
         'wakelock-enable await — the clip manager timer is never armed and '
         "the just-started session's file is discarded",
@@ -3909,7 +3919,7 @@ void main() {
           wakelockPlusPlatformInstance = _FakeWakelockPlatform();
           orphanFile.parent.deleteSync(recursive: true);
         },
-        build: buildBloc,
+        build: buildStartObservingBloc,
         act: (bloc) async {
           bloc.add(const VideoRecorderRecordingStartRequested());
           await pumpEventQueue();
@@ -3919,7 +3929,7 @@ void main() {
           bloc.add(const VideoRecorderRecordingLockedForNavigation());
           await pumpEventQueue();
           gatedWakelock.enableGate.complete();
-          await pumpEventQueue();
+          await bloc.startDone.future;
         },
         verify: (bloc) {
           expect(bloc.state.recordingState, VideoRecorderState.idle);

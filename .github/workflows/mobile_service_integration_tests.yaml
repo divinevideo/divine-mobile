@@ -119,6 +119,11 @@ jobs:
       # gstreamer-1.0 + gstreamer-pbutils-1.0 (pro_video_editor).
       - name: 🧰 Linux desktop toolchain
         run: |
+          # EC2 mirror downloads consumed 40 minutes in a timed-out run;
+          # change only that URI, preserving suites, components and signing.
+          sudo python3 ../.github/scripts/use_ubuntu_archive_mirror.py \
+            /etc/apt/sources.list.d/ubuntu.sources \
+            /etc/apt/apt-mirrors.txt
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             clang cmake ninja-build pkg-config \

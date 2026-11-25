@@ -342,6 +342,49 @@ void main() {
 
         await videoFile.delete();
       });
+
+      // pro_video_editor answers a frame it could not decode, such as one
+      // past the end of the video on iOS, with an empty entry, not an error.
+      test('tries the next timestamp when a frame comes back empty', () async {
+        final videoFile = File(testVideoPath)..writeAsBytesSync([1, 2, 3, 4]);
+        addTearDown(videoFile.deleteSync);
+        final frame = Uint8List.fromList([0xFF, 0xD8, 0xFF]);
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async {
+              if (call.method != 'getThumbnails') return null;
+              final arguments = call.arguments as Map<Object?, Object?>;
+              final timestamps = arguments['timestamps']! as List<Object?>;
+              // Only the 50 ms fallback decodes.
+              return timestamps.single == 50000 ? [frame] : [Uint8List(0)];
+            });
+
+        final result = await VideoThumbnailService.extractThumbnailBytes(
+          videoPath: testVideoPath,
+          timestamp: const Duration(seconds: 9),
+        );
+
+        expect(result?.bytes, equals(frame));
+        expect(result?.timestamp, equals(const Duration(milliseconds: 50)));
+      });
+
+      test('returns null when no timestamp decodes a frame', () async {
+        final videoFile = File(testVideoPath)..writeAsBytesSync([1, 2, 3, 4]);
+        addTearDown(videoFile.deleteSync);
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async {
+              return switch (call.method) {
+                'getMetadata' => <String, Object?>{'duration': 6000},
+                'getThumbnails' => [Uint8List(0)],
+                _ => null,
+              };
+            });
+
+        final result = await VideoThumbnailService.extractThumbnailBytes(
+          videoPath: testVideoPath,
+        );
+
+        expect(result, isNull);
+      });
     });
 
     group('extractMultipleThumbnails', () {

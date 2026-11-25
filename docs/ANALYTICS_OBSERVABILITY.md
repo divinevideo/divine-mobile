@@ -1,18 +1,20 @@
 # Analytics Observability
 
-Status: Current contract with semantic route screen views, comments sheet
-surface load instrumentation, authenticated identity, and creator funnel
-instrumentation live.
+Status: Current contract with semantic route screen views, surface load
+instrumentation for the comments sheet, the sound picker and the main screens,
+authenticated identity, and creator funnel instrumentation live.
 Baseline validated against:
 `mobile/packages/analytics/lib/src/screen_analytics_service.dart`,
 `mobile/packages/analytics/lib/src/page_load_observer.dart`,
-`mobile/lib/screens/comments/comments_screen.dart`.
+`mobile/lib/screens/comments/comments_screen.dart`,
+`mobile/lib/observability/screen_load_telemetry.dart`.
 
 Current code still contains legacy `screen_load` and `screen_data_loaded`
 analytics paths for compatibility. The required semantic `screen_view`
 parameters are implemented for routes, and `surface_load` is live for
-`comments_sheet`. Additional user-visible surfaces should use the same
-`surface_load` contract as they are instrumented.
+`comments_sheet`, `featured_tab`, `sound_picker`, and the
+[main screens](#main-screens). Additional user-visible surfaces should use the
+same `surface_load` contract as they are instrumented.
 
 ## Purpose
 
@@ -120,6 +122,60 @@ The comments sheet measures:
 - `feature_flag`, which is always `video_replies_enabled` now that video
   replies are always on
 - whether the user dismissed before data loaded
+
+## Main Screens
+
+The main screens report `surface_load` once per open: from the moment the
+screen's bloc starts its first load until the first state the screen renders
+as content, as its empty state, or as its error. That state is the boundary,
+not the request returning: a screen that shows cached or locally stored
+content first completes on it, even while a refresh is still in flight. A
+user who leaves before anything showed is reported `dismissed`. The adapter is
+`ScreenLoadTelemetry` (`mobile/lib/observability/screen_load_telemetry.dart`);
+the owning blocs call it, and widgets do not, except where Explore's feed tabs
+report their grid (below).
+
+None of these screens marks a first frame, so `visible_ms` is `-1` and
+`data_ms` equals `total_ms`. Read `total_ms`.
+
+| `surface_name` | Starts | Ends | `entry_point` |
+| --- | --- | --- | --- |
+| `profile` | The profile's video feed starts its first load | The Videos tab replaces its loading skeleton: videos from the persisted snapshot, the relay or REST, the empty state, or the load error | `own_profile` (the profile tab, grid mode) or `other_profile` |
+| `notifications` | The All list starts its first refresh | The first notifications show, cached ones included, or the first refresh settled on the empty state or the failure screen | `inbox_tab` or `notifications_route` |
+| `inbox` | The Messages pane first opens | The conversation list or its error shows; `item_count` includes the pinned support row | `messages_tab` |
+| `search_results` | A query, once typing pauses (the debounce is not included), or a new sort order | The first video results land, the search finished with none, or it failed; a query cleared or replaced first is `dismissed` | `query` or `sort_change`, with `sort_mode` |
+| `explore` | Explore first opens on its New or Trending tab | That tab's grid, empty state or error shows; switching tabs first is `dismissed` | `explore_tab`, with `tab` = `new` or `popular` |
+| `video_detail` | A link's video lookup starts, including the retries the lookup makes | The video, the notice that the viewer's settings hide it (`empty`), or the load error (`failure`, also for a video that was not found) | `link`, or `retry` for the Retry button |
+
+What is not measured, and why:
+
+- Each screen is timed on its first load only. Pull-to-refresh, pagination,
+  and returning to a tab the shell kept alive are not timed again.
+- A profile opened while another one is still loading takes the session over,
+  and the first is reported `dismissed`; the tracker keeps one session per
+  surface. The same holds for the own profile when the user opens a video
+  from its grid.
+- Notifications time only the All list. The filter tabs (Likes, Comments,
+  Follows, Reposts) would take the single session over.
+- Search times the video results, the section a query lands on. People, tags
+  and lists load in parallel and are not timed. A re-run after a block is not
+  timed either.
+- Explore's feed tabs are Riverpod providers that the tab widgets render, so
+  no bloc state marks their content. `ExploreTabsCubit` owns the session and
+  the New and Trending tabs report what their grid shows. An Explore that
+  opens on another tab, or through a featured-tab link, is not timed; the
+  featured tab has its own `featured_tab` surface.
+- `video_detail` times only lookups. A video handed over by the screen that
+  opened it shows at once and is not timed. The video's first frame is the
+  separate `video_first_frame` Performance trace.
+- The legacy `screen_load` and `screen_data_loaded` events for
+  `explore_screen`, `own_profile`, other profiles and `video_detail` keep
+  firing alongside; they carry no `result`.
+
+Each open adds one Analytics event. These are Analytics events, not Firebase
+Performance traces, and they draw nothing from the shared per-device
+Performance budget described in
+[UX performance monitoring](../mobile/docs/UX_PERFORMANCE_MONITORING.md#effect-on-the-existing-performance-traces).
 
 ## Sound Picker
 
@@ -328,6 +384,35 @@ First target filter:
 ```text
 surface_name = comments_sheet
 ```
+
+For the main screens, split by `entry_point` before comparing `total_ms`: an
+own profile served from its persisted snapshot and another account's profile
+loaded cold are different waits.
+
+```sql
+SELECT
+  (SELECT value.string_value FROM UNNEST(event_params)
+    WHERE key = 'surface_name') AS surface_name,
+  (SELECT value.string_value FROM UNNEST(event_params)
+    WHERE key = 'entry_point') AS entry_point,
+  (SELECT value.string_value FROM UNNEST(event_params)
+    WHERE key = 'result') AS result,
+  COUNT(*) AS loads,
+  APPROX_QUANTILES(
+    (SELECT value.int_value FROM UNNEST(event_params)
+      WHERE key = 'total_ms'), 100)[OFFSET(50)] AS p50_ms,
+  APPROX_QUANTILES(
+    (SELECT value.int_value FROM UNNEST(event_params)
+      WHERE key = 'total_ms'), 100)[OFFSET(95)] AS p95_ms
+FROM `openvine-co.analytics_<property_id>.events_*`
+WHERE _TABLE_SUFFIX BETWEEN @start_suffix AND @end_suffix
+  AND event_name = 'surface_load'
+GROUP BY surface_name, entry_point, result
+ORDER BY surface_name, entry_point, result;
+```
+
+Read `dismissed` as a share, not a duration: its `total_ms` is how long the
+user waited before leaving.
 
 ## Divine Brain Check
 

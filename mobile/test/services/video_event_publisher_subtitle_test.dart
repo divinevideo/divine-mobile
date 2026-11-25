@@ -1,6 +1,6 @@
 // ABOUTME: Tests for VideoEventPublisher.republishWithSubtitles method.
 // ABOUTME: Verifies tag construction, publishing, and that the republish is
-// ABOUTME: built from the relays' newest revision (#11250).
+// ABOUTME: built from the newest revision read (#11250).
 
 import 'package:collection/collection.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +8,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' hide NIP71VideoKinds;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/nostr_sdk.dart' show generatePrivateKey, getPublicKey;
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -134,7 +135,7 @@ void main() {
       ).thenAnswer((_) async => revision);
     }
 
-    /// Republishes [existingEvent] while the relays' newest revision is that
+    /// Republishes [existingEvent] while the newest revision read is that
     /// same event, the common case.
     Future<VideoEvent?> republishMirrored({
       required VideoEvent existingEvent,
@@ -617,7 +618,7 @@ void main() {
       verify(() => mockPersonalEventCache.cacheUserEvent(any())).called(1);
     });
 
-    group('newest revision on the relays', () {
+    group('newest revision read', () {
       late List<List<String>> capturedTags;
       late int capturedKind;
       late String capturedContent;
@@ -872,12 +873,129 @@ void main() {
         verify(() => mockVideoEventService.updateVideoEvent(result!)).called(1);
       });
 
+      test('rebuilds from the signed opened copy the personal event cache '
+          'holds when the relays cannot tell', () async {
+        final privateKey = generatePrivateKey();
+        final key = getPublicKey(privateKey);
+        final held = Event(
+          key,
+          34236,
+          existingTags,
+          'Held description',
+          createdAt: 1700000000,
+        )..sign(privateKey);
+        when(() => mockAuthService.currentPublicKeyHex).thenReturn(key);
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        ).thenAnswer(
+          (invocation) async => Event(
+            key,
+            invocation.namedArguments[#kind] as int,
+            invocation.namedArguments[#tags] as List<List<String>>,
+            invocation.namedArguments[#content] as String,
+            createdAt: invocation.namedArguments[#createdAt] as int?,
+          )..sign(privateKey),
+        );
+        when(() => mockPersonalEventCache.getEventById(held.id)).thenReturn(
+          held,
+        );
+        relaysAnswer(const LatestVideoRevisionUnknown());
+
+        final result = await publisher.republishWithSubtitles(
+          existingEvent: VideoEvent.fromNostrEvent(held),
+          textTrackRef: textTrackRef,
+        );
+
+        expect(result, isNotNull);
+        expect(result!.content, 'Held description');
+        expect(result.textTrackRef, textTrackRef);
+      });
+
+      group('rebuilds from the revision read before the upload, which this '
+          'device never cached, when the read here', () {
+        late String privateKey;
+        late Event readBefore;
+
+        setUp(() {
+          privateKey = generatePrivateKey();
+          final key = getPublicKey(privateKey);
+          readBefore = Event(
+            key,
+            34236,
+            existingTags,
+            'Read before the upload',
+            createdAt: 1700000500,
+          )..sign(privateKey);
+          when(() => mockAuthService.currentPublicKeyHex).thenReturn(key);
+          when(
+            () => mockAuthService.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+            ),
+          ).thenAnswer(
+            (invocation) async => Event(
+              key,
+              invocation.namedArguments[#kind] as int,
+              invocation.namedArguments[#tags] as List<List<String>>,
+              invocation.namedArguments[#content] as String,
+              createdAt: invocation.namedArguments[#createdAt] as int?,
+            )..sign(privateKey),
+          );
+        });
+
+        for (final (name, revision) in [
+          (
+            'returns nothing and did not complete',
+            () => const LatestVideoRevisionUnknown(),
+          ),
+          (
+            'returns an older revision',
+            () => LatestVideoRevisionFound(
+              Event(
+                getPublicKey(privateKey),
+                34236,
+                existingTags,
+                'Older',
+                createdAt: 1700000000,
+              )..sign(privateKey),
+            ),
+          ),
+        ]) {
+          test(name, () async {
+            relaysAnswer(revision());
+
+            final result = await publisher.republishWithSubtitles(
+              existingEvent: VideoEvent.fromNostrEvent(
+                readBefore,
+              ).copyWith(eventCreatedAt: readBefore.createdAt),
+              textTrackRef: textTrackRef,
+              readBeforeUpload: readBefore,
+            );
+
+            expect(result, isNotNull);
+            expect(result!.content, 'Read before the upload');
+            verifyNever(
+              () => mockPersonalEventCache.getEventById(readBefore.id),
+            );
+          });
+        }
+      });
+
       for (final (name, revision) in [
-        ('cannot tell', const LatestVideoRevisionUnknown()),
-        ('hold none', const LatestVideoRevisionAbsent()),
+        (
+          'returns nothing, does not complete and no copy is held',
+          const LatestVideoRevisionUnknown(),
+        ),
+        ('finds the video gone', const LatestVideoRevisionAbsent()),
       ]) {
-        test('returns null without publishing when the relays $name what '
-            'the newest revision is', () async {
+        test('returns null without publishing when the read $name', () async {
           relaysAnswer(revision);
 
           final result = await publisher.republishWithSubtitles(

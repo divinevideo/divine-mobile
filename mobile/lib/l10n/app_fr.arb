@@ -709,19 +709,7 @@
   },
   "listAttributionFallback": "Liste",
   "shareVideoLabel": "Partager la vidéo",
-  "sharePostSharedWith": "Post partagé avec {recipientName}",
-  "sharePostSharedWithCount": "{count, plural, one{Post partagé avec {count} personne} other{Post partagé avec {count} personnes}}",
-  "@sharePostSharedWith": {
-    "placeholders": {
-      "recipientName": {
-        "type": "String"
-      }
-    }
-  },
-  "shareStillTryingToSendTo": "On essaie encore d'envoyer à {recipientName}",
-  "shareStillTryingToSendToCount": "{count, plural, one{On essaie encore d'envoyer à {count} personne} other{On essaie encore d'envoyer à {count} personnes}}",
   "shareCouldNotSendTo": "Impossible d'envoyer à {recipientName}",
-  "shareCouldNotSendToCount": "{count, plural, one{Impossible d'envoyer à {count} personne} other{Impossible d'envoyer à {count} personnes}}",
   "shareFailedToSend": "Échec de l'envoi de la vidéo",
   "shareAddedToBookmarks": "Ajouté aux favoris",
   "shareRemovedFromBookmarks": "Retiré des favoris",
@@ -732,6 +720,9 @@
   "shareWithTitle": "Partager avec",
   "shareFindPeople": "Trouver des gens",
   "shareFindPeopleMultiline": "Trouver\ndes gens",
+  "shareDeliveryFailed": "Échec de l’envoi pour le moment",
+  "shareDeliveryHeld": "L’envoi se fera quand {name} sera joignable",
+  "shareDeliveryForRecipient": "{name} — {status}",
   "shareSent": "Envoyé",
   "shareSelectedRecipientAnnouncement": "{name} sélectionné",
   "@shareSelectedRecipientAnnouncement": {
@@ -742,6 +733,8 @@
       }
     }
   },
+  "shareRecipientSend": "Envoyer",
+  "shareRecipientSendTo": "Envoyer à {name}",
   "shareMessageHint": "Ajouter un message (facultatif)...",
   "videoActionUnlike": "Ne plus aimer la vidéo",
   "videoActionLike": "Aimer la vidéo",

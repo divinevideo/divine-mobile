@@ -11,8 +11,10 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/nostr_sdk.dart' show generatePrivateKey, getPublicKey;
 import 'package:openvine/repositories/subtitle_repository.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/subtitle_fetcher.dart';
 import 'package:openvine/services/subtitle_service.dart';
 import 'package:openvine/services/video_event_publisher.dart';
@@ -36,6 +38,9 @@ class _MockNostrClient extends Mock implements NostrClient {}
 class _MockHttpClient extends Mock implements http.Client {}
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
+
+class _MockPersonalEventCache extends Mock
+    implements PersonalEventCacheService {}
 
 final _video = VideoEvent(
   id: 'vid1',
@@ -72,6 +77,7 @@ void main() {
     late _MockAuth auth;
     late _MockHttpClient httpClient;
     late _MockVideosRepository videos;
+    late _MockPersonalEventCache personalEventCache;
     late SubtitleRepository repo;
 
     setUp(() {
@@ -80,10 +86,12 @@ void main() {
       auth = _MockAuth();
       httpClient = _MockHttpClient();
       videos = _MockVideosRepository();
+      personalEventCache = _MockPersonalEventCache();
       repo = SubtitleRepository(
         blossomUploadService: blossom,
         videoEventPublisher: publisher,
         videosRepository: videos,
+        personalEventCache: personalEventCache,
         authService: auth,
         nostrClient: _MockNostrClient(),
         httpClient: httpClient,
@@ -193,6 +201,7 @@ void main() {
           textTrackRef: any(named: 'textTrackRef'),
           extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
           textTrackLang: any(named: 'textTrackLang'),
+          readBeforeUpload: any(named: 'readBeforeUpload'),
         ),
       ).thenAnswer((_) async {
         when(() => auth.currentPublicKeyHex).thenReturn('other-account');
@@ -238,6 +247,7 @@ void main() {
           textTrackRef: any(named: 'textTrackRef'),
           extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
           textTrackLang: any(named: 'textTrackLang'),
+          readBeforeUpload: any(named: 'readBeforeUpload'),
         ),
       ).thenAnswer((_) async => _updatedVideo);
 
@@ -255,6 +265,7 @@ void main() {
           existingEvent: any(named: 'existingEvent'),
           textTrackRef: 'https://media.divine.video/hash',
           extraTextTrackRefs: const ['39307:pk1:subtitles:my-vine-id'],
+          readBeforeUpload: any(named: 'readBeforeUpload'),
         ),
         () => publisher.publishSubtitleEvent(
           video: _updatedVideo,
@@ -304,6 +315,7 @@ void main() {
           textTrackRef: any(named: 'textTrackRef'),
           extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
           textTrackLang: any(named: 'textTrackLang'),
+          readBeforeUpload: any(named: 'readBeforeUpload'),
         ),
       ).thenAnswer((_) async => _updatedVideo);
 
@@ -329,6 +341,7 @@ void main() {
           textTrackRef: any(named: 'textTrackRef'),
           extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
           textTrackLang: 'pt-BR',
+          readBeforeUpload: any(named: 'readBeforeUpload'),
         ),
       ).called(1);
     });
@@ -384,6 +397,7 @@ void main() {
             textTrackRef: any(named: 'textTrackRef'),
             extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
             textTrackLang: any(named: 'textTrackLang'),
+            readBeforeUpload: any(named: 'readBeforeUpload'),
           ),
         ).thenAnswer((_) async => _updatedVideo);
         when(
@@ -407,6 +421,7 @@ void main() {
                 textTrackRef: any(named: 'textTrackRef'),
                 extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
                 textTrackLang: captureAny(named: 'textTrackLang'),
+                readBeforeUpload: any(named: 'readBeforeUpload'),
               ),
             ).captured.single
             as String?;
@@ -623,6 +638,7 @@ void main() {
             textTrackRef: any(named: 'textTrackRef'),
             extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
             textTrackLang: any(named: 'textTrackLang'),
+            readBeforeUpload: any(named: 'readBeforeUpload'),
           ),
         ).thenAnswer((_) async => null);
 
@@ -643,8 +659,9 @@ void main() {
 
       group('the republish reads the relays again', () {
         /// Saves from [video] while the relays hold [newest], and returns the
-        /// video the republish was told to read no older than.
-        Future<VideoEvent> floorOfSecondRead(
+        /// video the republish was told to read no older than, and the signed
+        /// revision it was handed to fall back to.
+        Future<({VideoEvent floor, Object? handed})> floorOfSecondRead(
           VideoEvent video,
           Event newest,
         ) async {
@@ -657,6 +674,7 @@ void main() {
               textTrackRef: any(named: 'textTrackRef'),
               extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
               textTrackLang: any(named: 'textTrackLang'),
+              readBeforeUpload: any(named: 'readBeforeUpload'),
             ),
           ).thenAnswer((_) async => _updatedVideo);
           when(
@@ -670,15 +688,16 @@ void main() {
 
           await repo.publishEditedSubtitles(video: video, cues: _cues);
 
-          return verify(
-                () => publisher.republishWithSubtitles(
-                  existingEvent: captureAny(named: 'existingEvent'),
-                  textTrackRef: any(named: 'textTrackRef'),
-                  extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
-                  textTrackLang: any(named: 'textTrackLang'),
-                ),
-              ).captured.single
-              as VideoEvent;
+          final captured = verify(
+            () => publisher.republishWithSubtitles(
+              existingEvent: captureAny(named: 'existingEvent'),
+              textTrackRef: any(named: 'textTrackRef'),
+              extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
+              textTrackLang: any(named: 'textTrackLang'),
+              readBeforeUpload: captureAny(named: 'readBeforeUpload'),
+            ),
+          ).captured;
+          return (floor: captured[0] as VideoEvent, handed: captured[1]);
         }
 
         test('no older than the revision this save was built on', () async {
@@ -692,10 +711,27 @@ void main() {
             createdAt: 1700000500,
           );
 
-          final floor = await floorOfSecondRead(_video, newer);
+          final (:floor, handed: _) = await floorOfSecondRead(_video, newer);
 
           expect(floor.id, newer.id);
           expect(floor.eventCreatedAt, newer.createdAt);
+        });
+
+        test('hands it the revision this save was built on, so the read '
+            'after the upload can fall back to it', () async {
+          final newer = Event(
+            'a' * 64,
+            34236,
+            [
+              ['d', 'my-vine-id'],
+            ],
+            'revision from another device',
+            createdAt: 1700000500,
+          );
+
+          final (floor: _, :handed) = await floorOfSecondRead(_video, newer);
+
+          expect(handed, same(newer));
         });
 
         test('no older than the opened event when its copy has no Nostr '
@@ -713,11 +749,71 @@ void main() {
           final opened = _video.copyWith(id: relayCopy.id);
           expect(opened.eventCreatedAt, isNull);
 
-          final floor = await floorOfSecondRead(opened, relayCopy);
+          final (:floor, handed: _) = await floorOfSecondRead(
+            opened,
+            relayCopy,
+          );
 
           expect(floor.id, relayCopy.id);
           expect(floor.eventCreatedAt, relayCopy.createdAt);
         });
+      });
+
+      test('builds on the signed opened copy the cache holds when no '
+          'revision is read', () async {
+        final privateKey = generatePrivateKey();
+        final owner = getPublicKey(privateKey);
+        final held = Event(
+          owner,
+          34236,
+          [
+            ['d', 'my-vine-id'],
+            ['url', 'https://media.divine.video/video.mp4'],
+          ],
+          'held copy',
+          createdAt: 1700000000,
+        )..sign(privateKey);
+        when(() => auth.currentPublicKeyHex).thenReturn(owner);
+        when(
+          () => videos.fetchLatestVideoRevision(any()),
+        ).thenAnswer((_) async => const LatestVideoRevisionUnknown());
+        when(() => personalEventCache.getEventById(held.id)).thenReturn(held);
+        when(
+          () => publisher.republishWithSubtitles(
+            existingEvent: any(named: 'existingEvent'),
+            textTrackRef: any(named: 'textTrackRef'),
+            extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
+            textTrackLang: any(named: 'textTrackLang'),
+            readBeforeUpload: any(named: 'readBeforeUpload'),
+          ),
+        ).thenAnswer((_) async => _updatedVideo);
+        when(
+          () => publisher.publishSubtitleEvent(
+            video: any(named: 'video'),
+            vttContent: any(named: 'vttContent'),
+            blossomUrl: any(named: 'blossomUrl'),
+            lang: any(named: 'lang'),
+          ),
+        ).thenAnswer((_) async => '39307:$owner:subtitles:my-vine-id');
+
+        await repo.publishEditedSubtitles(
+          video: VideoEvent.fromNostrEvent(held),
+          cues: _cues,
+        );
+
+        final republished =
+            verify(
+                  () => publisher.republishWithSubtitles(
+                    existingEvent: captureAny(named: 'existingEvent'),
+                    textTrackRef: any(named: 'textTrackRef'),
+                    extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
+                    textTrackLang: any(named: 'textTrackLang'),
+                    readBeforeUpload: any(named: 'readBeforeUpload'),
+                  ),
+                ).captured.single
+                as VideoEvent;
+        expect(republished.id, held.id);
+        expect(republished.eventCreatedAt, held.createdAt);
       });
 
       group('fails the save when the subtitle event', () {
@@ -730,6 +826,7 @@ void main() {
               textTrackRef: any(named: 'textTrackRef'),
               extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
               textTrackLang: any(named: 'textTrackLang'),
+              readBeforeUpload: any(named: 'readBeforeUpload'),
             ),
           ).thenAnswer((_) async => _updatedVideo);
         });
@@ -770,11 +867,11 @@ void main() {
 
     group('refuses before uploading anything', () {
       for (final (reason, revision) in [
-        ('no relay answered in full', const LatestVideoRevisionUnknown()),
         (
-          'the relays return no signed revision',
-          const LatestVideoRevisionAbsent(),
+          'no revision is read and no signed copy of the opened one is held',
+          const LatestVideoRevisionUnknown(),
         ),
+        ('the read finds the video gone', const LatestVideoRevisionAbsent()),
       ]) {
         test('when $reason', () async {
           when(

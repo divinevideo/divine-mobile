@@ -1,6 +1,7 @@
 // ABOUTME: ConsumerWidget page that provides NotificationFeedBloc to the
 // ABOUTME: notifications view. Bridges Riverpod dependencies into BLoC.
 
+import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/notifications/bloc/notification_feed_bloc.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/notifications/view/notifications_view.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -64,6 +66,11 @@ class NotificationsPage extends ConsumerWidget {
         followRepository: followRepository,
         appBadgeClearer: appBadgeClearer,
         consumptionAnalytics: ref.read(consumptionAnalyticsTrackerProvider),
+        loadTelemetry: ScreenLoadTelemetry(
+          tracker: ref.read(surfacePerformanceTrackerProvider),
+          surface: AnalyticsSurface.notifications,
+          entryPoint: ScreenLoadEntryPoint.notificationsRoute,
+        ),
       )..add(const NotificationFeedStarted()),
       child: const NotificationsView(),
     );

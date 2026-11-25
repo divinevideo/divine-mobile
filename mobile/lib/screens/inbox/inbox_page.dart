@@ -4,6 +4,7 @@
 // ABOUTME: gift-wrap subscription is auth-session-scoped via
 // ABOUTME: dmRepositoryProvider, not driven by this screen's lifecycle.
 
+import 'package:analytics/analytics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -13,6 +14,7 @@ import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
@@ -101,6 +103,11 @@ class InboxPage extends ConsumerWidget {
               moderationPresentationResolverProvider,
             ),
             retiredModerationAccount: isRetiredModerationAccount,
+            loadTelemetry: ScreenLoadTelemetry(
+              tracker: ref.read(surfacePerformanceTrackerProvider),
+              surface: AnalyticsSurface.inbox,
+              entryPoint: ScreenLoadEntryPoint.messagesTab,
+            ),
           )..add(const ConversationListStarted()),
         ),
         // Inbox-scope NotificationBadgeCubit feeds the segmented

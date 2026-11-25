@@ -336,8 +336,7 @@ void main() {
       );
     });
 
-    test("files the tagged person's own answer with them, as it would "
-        'have in order', () async {
+    test("files Bob's answer in an unreplied 1:1 with him", () async {
       final parent = hello();
       final reply = ccBob(parent);
       final bobAnswers = message(
@@ -356,6 +355,11 @@ void main() {
         await conversations(),
         equals('1:1(alice,me)=[cc bob; hello] | 1:1(bob,me)=[bob here]'),
       );
+      final withBob = await conversationsDao.getConversation(
+        _id([_owner, _bob]),
+        ownerPubkey: _owner,
+      );
+      expect(withBob?.currentUserHasSent, isFalse);
     });
 
     test('joins the one-to-one when its parent arrives on a later '

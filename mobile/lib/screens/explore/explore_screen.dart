@@ -1,11 +1,13 @@
 // ABOUTME: Explore screen Page — thin route entry that provides
 // ABOUTME: ExploreTabsCubit to the ExploreView body.
 
+import 'package:analytics/analytics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/explore_tabs/explore_tabs_cubit.dart';
 import 'package:openvine/blocs/featured_tabs/featured_tabs_cubit.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/featured_tabs_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
@@ -95,12 +97,17 @@ class ExploreScreen extends ConsumerWidget {
       providers: [
         BlocProvider(
           key: ValueKey(requiredFeaturedFeedId),
-          // Both providers are stable keepAlive Providers that are never
+          // These providers are stable keepAlive Providers that are never
           // invalidated, so ref.read is safe here (state_management.md §1).
           create: (_) => ExploreTabsCubit(
             screenAnalytics: ref.read(screenAnalyticsServiceProvider),
             topHashtags: ref.read(topHashtagsServiceProvider),
             reserveFeaturedSlot: requiredFeaturedFeedId != null,
+            loadTelemetry: ScreenLoadTelemetry(
+              tracker: ref.read(surfacePerformanceTrackerProvider),
+              surface: AnalyticsSurface.explore,
+              entryPoint: ScreenLoadEntryPoint.exploreTab,
+            ),
           ),
         ),
         BlocProvider(

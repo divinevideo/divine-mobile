@@ -86,6 +86,7 @@ void main() {
     late Completer<void> discovery;
     late List<String> lookups;
     late bool failPublishes;
+    String? acceptingRelayOverride;
 
     ({List<Event> events, bool timedOut, bool noRelays}) answerLookup(
       List<nostr_filter.Filter> filters,
@@ -153,6 +154,7 @@ void main() {
       discovery = Completer<void>();
       lookups = [];
       failPublishes = false;
+      acceptingRelayOverride = null;
 
       when(() => nostrClient.connectedRelayCount).thenReturn(1);
       when(() => nostrClient.configuredRelayCount).thenReturn(1);
@@ -200,7 +202,12 @@ void main() {
         published.add(event);
         return PublishOutcome(
           eventId: event.id,
-          acceptedBy: failPublishes ? const [] : const [_poolRelay],
+          acceptedBy: failPublishes
+              ? const []
+              : acceptingRelayOverride != null
+              ? [acceptingRelayOverride!]
+              : (invocation.namedArguments[#targetRelays] as List<String>?) ??
+                    const [_poolRelay],
           rejectedBy: failPublishes
               ? const {_poolRelay: 'error: temporarily unavailable'}
               : const {},
@@ -263,6 +270,78 @@ void main() {
         expect(await outgoingDao.getById(row.id), isNull);
         final messages = await repository.getMessages(row.conversationId);
         expect(messages.single.id, row.rumorId);
+      },
+    );
+
+    test(
+      'a synced self-copy stays queued until the recipient route accepts',
+      () async {
+        final queued = await repository.sendMessage(
+          recipientPubkey: peerB,
+          content: 'shared video',
+          backgroundDelivery: true,
+        );
+        final id = queued.queuedRumorId!;
+        final row = (await outgoingDao.getById(id))!;
+        final states = repository.watchDeliveryState(
+          ownerPubkey: owner,
+          rumorId: id,
+        );
+        try {
+          await DirectMessagesDao(db).insertMessage(
+            id: id,
+            conversationId: row.conversationId,
+            senderPubkey: owner,
+            content: row.content,
+            createdAt: row.createdAt,
+            giftWrapId: 'history-wrap',
+            ownerPubkey: owner,
+          );
+          expect(await states.first, DmDeliveryState.queued);
+        } finally {
+          final finished = repository.recoverFullSend(rumorId: id);
+          discovery.complete();
+          await finished;
+        }
+        expect(await outgoingDao.getById(id), isNull);
+        expect(await states.first, DmDeliveryState.accepted);
+        expect(
+          await repository
+              .watchDeliveryState(ownerPubkey: peerC, rumorId: id)
+              .first,
+          DmDeliveryState.cancelled,
+        );
+      },
+    );
+
+    test(
+      'an OK from outside the advertised inbox never confirms a share',
+      () async {
+        inboxes[peerB] = _Inbox.found;
+        acceptingRelayOverride = _poolRelay;
+        final queued = await repository.sendMessage(
+          recipientPubkey: peerB,
+          content: 'share',
+          backgroundDelivery: true,
+        );
+        final id = queued.queuedRumorId!;
+        final attempt = repository.recoverFullSend(rumorId: id);
+        discovery.complete();
+        expect((await attempt).success, isFalse);
+        expect(
+          await repository
+              .watchDeliveryState(ownerPubkey: owner, rumorId: id)
+              .first,
+          DmDeliveryState.queued,
+        );
+        acceptingRelayOverride = null;
+        expect((await repository.recoverFullSend(rumorId: id)).success, isTrue);
+        expect(
+          await repository
+              .watchDeliveryState(ownerPubkey: owner, rumorId: id)
+              .first,
+          DmDeliveryState.accepted,
+        );
       },
     );
 

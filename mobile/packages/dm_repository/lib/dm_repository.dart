@@ -1,3 +1,5 @@
+export 'package:db_client/db_client.dart' show DmDeliveryState;
+
 export 'src/collab_room.dart';
 export 'src/collaborator_invite_recovery.dart';
 export 'src/dm_batch_send_budget.dart';

@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/widgets.dart';
 import 'package:infinite_video_feed/src/models/builders.dart';
 import 'package:infinite_video_feed/src/models/feed_first_frame_metric.dart';
+import 'package:infinite_video_feed/src/models/feed_playback_session_metric.dart';
 import 'package:infinite_video_feed/src/models/feed_playback_telemetry.dart';
 import 'package:infinite_video_feed/src/models/video_error_type.dart';
 import 'package:infinite_video_feed/src/models/video_retry_result.dart';
@@ -390,6 +391,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   final _loadingSourceFailures = <int>{};
   final _errorTypes = <int, VideoErrorType>{};
   final _terminalErrorTypesByVideoId = <String, VideoErrorType>{};
+  final _terminalPlaybackErrorsByVideoId = <String, FeedPlaybackError>{};
   // Viewer auth headers per index, applied to every resolved playback source
   // for that index. The age-gate token is a hash-bound BUD-01 (kind 24242)
   // auth, valid for any variant URL of the same blob, so one header set covers
@@ -457,6 +459,16 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   late final LoadWatchdog _watchdog;
   late final StalePlaybackDetector _staleDetector;
   late final ControllerSubscriptions _subscriptions;
+
+  /// Whether a wait for data after playback started still goes through the
+  /// stale detector's recovery: on iOS and macOS, where AVPlayer reported
+  /// such waits as playing until it reported them as buffering.
+  static bool get _staleDetectorWatchesBuffering =>
+      !kIsWeb &&
+      {
+        TargetPlatform.iOS,
+        TargetPlatform.macOS,
+      }.contains(defaultTargetPlatform);
 
   // ─── Public API ─────────────────────────────────────────────────────────
 
@@ -611,6 +623,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         _retryWithNextSource(index, detectedStall: true),
       ),
       log: _log,
+      watchesBuffering: _staleDetectorWatchesBuffering,
     );
     // coverage:ignore-end
     _subscriptions = ControllerSubscriptions();
@@ -679,6 +692,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     );
 
     _terminalErrorTypesByVideoId.clear();
+    _terminalPlaybackErrorsByVideoId.clear();
+    _endPlaybackSession(FeedPlaybackSessionEnd.replaced);
     final sameVideos = identical(widget.videos, oldWidget.videos);
     _teardownAllControllers(
       keepViewerHeaders: sameVideos && bunnyRoutingChanged,
@@ -748,9 +763,11 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   ) {
     for (var i = startIndex; i < oldWidget.videos.length; i++) {
       _terminalErrorTypesByVideoId.remove(oldWidget.videos[i].id);
+      _terminalPlaybackErrorsByVideoId.remove(oldWidget.videos[i].id);
     }
     for (var i = startIndex; i < newWidget.videos.length; i++) {
       _terminalErrorTypesByVideoId.remove(newWidget.videos[i].id);
+      _terminalPlaybackErrorsByVideoId.remove(newWidget.videos[i].id);
     }
     for (var i = startIndex; i < oldWidget.videos.length; i++) {
       _errors.remove(i);
@@ -762,7 +779,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   @override
   void dispose() {
-    _activeFirstFrameTimer?.finish(outcome: FeedPlaybackOutcome.cancelled);
+    _endPlaybackSession(FeedPlaybackSessionEnd.closed);
     _cancelPreloadGraceTimers();
     _telemetryLoads.clear();
     for (final subscription in _networkSubscriptions.values) {
@@ -825,11 +842,20 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       final currentController = _controllers[_currentIndex];
       // A player that kept its painted frame while the feed was hidden has no
       // first frame left to wait for, so timing it would publish a ~0 ms
-      // sample for a video the viewer never waited on.
+      // sample for a video the viewer never waited on. Likewise, an already
+      // failed slot that will not re-initialize on reactivation is not
+      // starting a new playback attempt, so timing it would emit a bogus
+      // abandoned sample when the viewer leaves the error tile.
       final alreadyPainted =
           currentController != null &&
           currentController.state.isFirstFrameRendered;
-      if (alreadyPainted) {
+      final alreadyFailed =
+          _errors.contains(_currentIndex) &&
+          !_needsReinitOnActivate &&
+          !(widget.releaseNeighboursWhenInactive &&
+              currentController == null &&
+              !_hasTerminalError(_currentIndex));
+      if (alreadyPainted || alreadyFailed) {
         _activeFirstFrameTimer = null;
       } else {
         _beginFirstFrameMeasurement(_currentIndex);
@@ -853,7 +879,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         unawaited(_onIndexChanged(_currentIndex));
       }
     } else {
-      _activeFirstFrameTimer?.finish(outcome: FeedPlaybackOutcome.cancelled);
+      _endPlaybackSession(FeedPlaybackSessionEnd.hidden);
       _cancelPreloadGraceTimers();
       _pauseCurrentPlayback();
       _cancelAutoRetry(_currentIndex);
@@ -971,6 +997,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final isAllowed = _canAutoPlayAt(_currentIndex);
     _lastAppliedGate = isAllowed;
     if (wasAllowed == null || wasAllowed == isAllowed) return;
+    _firstFrameTimerFor(_currentIndex)?.markAutoPlay(allowed: isAllowed);
     if (isAllowed) {
       _resumeCurrentPlaybackIfReady();
     } else {
@@ -1001,6 +1028,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     if (!stillOwnsController() || !controller.isInitialized) return;
     final allowed = _canAutoPlayAt(index);
     if (index == _currentIndex) _lastAppliedGate = allowed;
+    _firstFrameTimerFor(index)?.markAutoPlay(allowed: allowed);
     if (!allowed) return;
     if (applyVolume) {
       await controller.setVolume(_volume);
@@ -1112,16 +1140,24 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     };
   }
 
+  /// Ends the active video's playback session, which publishes its sample.
+  void _endPlaybackSession(FeedPlaybackSessionEnd reason) {
+    final timer = _activeFirstFrameTimer;
+    if (timer == null) return;
+    _activeFirstFrameTimer = null;
+    timer.end(reason, loadedFromCache: _loadedFromCache.contains(timer.index));
+  }
+
   void _beginFirstFrameMeasurement(int index) {
-    _activeFirstFrameTimer?.finish(outcome: FeedPlaybackOutcome.cancelled);
-    if (index < 0 || index >= widget.videos.length || !_isActive) {
-      _activeFirstFrameTimer = null;
-      return;
-    }
-    _activeFirstFrameTimer = FeedFirstFrameMetrics.start(
-      videoId: widget.videos[index].id,
-      index: index,
-    )..attachLoad(_telemetryLoads[index]);
+    _endPlaybackSession(FeedPlaybackSessionEnd.swipe);
+    if (index < 0 || index >= widget.videos.length || !_isActive) return;
+    _activeFirstFrameTimer =
+        FeedFirstFrameMetrics.start(
+            videoId: widget.videos[index].id,
+            index: index,
+          )
+          ..attachLoad(_telemetryLoads[index])
+          ..markAutoPlay(allowed: _canAutoPlayAt(index));
   }
 
   FeedFirstFrameTimer? _firstFrameTimerFor(int index) {
@@ -1147,8 +1183,15 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         !identical(_activeFirstFrameTimer, timer)) {
       return;
     }
-    timer.complete(loadedFromCache: _loadedFromCache.contains(index));
+    timer
+      ..complete(loadedFromCache: _loadedFromCache.contains(index))
+      ..observePlayback(controller, reportsStalls: _reportsStalls);
   }
+
+  /// Whether the player reports a wait for data as buffering. AVPlayer keeps
+  /// its rate while it waits, so iOS and macOS report such a wait as playing.
+  static bool get _reportsStalls =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   Future<void> _updatePlayerWindow(int index) async {
     final generation = ++_playerWindowGeneration;
@@ -1657,7 +1700,11 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
             nativePlayerErrorCodeFromError(e),
             e.toString(),
           )) {
-        _stopAndMarkTerminalError(index, errorType);
+        _stopAndMarkTerminalError(
+          index,
+          errorType,
+          errorCategory: FeedPlaybackError.initialization,
+        );
       } else {
         _errorTypes[index] = errorType;
         _errors.add(index);
@@ -1738,6 +1785,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final videoId = _videoIdAt(index);
     if (videoId != null) {
       _terminalErrorTypesByVideoId.remove(videoId);
+      _terminalPlaybackErrorsByVideoId.remove(videoId);
     }
     if (httpHeaders.isEmpty) {
       _httpHeadersByIndex.remove(index);
@@ -1751,6 +1799,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _subscriptions.unsubscribe(index);
     unawaited(_controllers.remove(index)?.dispose());
     _rebuildPage(index);
+    if (index == _currentIndex && _isActive && _activeFirstFrameTimer == null) {
+      _beginFirstFrameMeasurement(index);
+    }
     // Skip cache on manual retry so a corrupt cached file does not loop
     // the same failure indefinitely.
     final initialized = await _initController(index, skipCache: true);
@@ -2085,14 +2136,19 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   /// Like [_stopAndMarkError] but records the failure as terminal for this
   /// video id, so it will not auto-retry and is restored on revisit.
-  void _stopAndMarkTerminalError(int index, VideoErrorType type) {
+  void _stopAndMarkTerminalError(
+    int index,
+    VideoErrorType type, {
+    FeedPlaybackError errorCategory = FeedPlaybackError.playback,
+  }) {
     _firstFrameTimerFor(index)?.finish(
       outcome: FeedPlaybackOutcome.error,
-      errorCategory: FeedPlaybackError.playback,
+      errorCategory: errorCategory,
     );
     final videoId = _videoIdAt(index);
     if (videoId != null) {
       _terminalErrorTypesByVideoId[videoId] = type;
+      _terminalPlaybackErrorsByVideoId[videoId] = errorCategory;
     }
     _cancelAutoRetry(index);
     unawaited(_controllers[index]?.stop());
@@ -2122,6 +2178,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _firstFrameTimerFor(index)?.finish(
       outcome: FeedPlaybackOutcome.error,
       errorCategory: FeedPlaybackError.source,
+      sessionErrorCategory: _terminalPlaybackErrorsByVideoId[videoId],
     );
     _rebuildPage(index);
     return true;

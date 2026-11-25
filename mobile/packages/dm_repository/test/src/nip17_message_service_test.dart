@@ -1445,6 +1445,210 @@ void main() {
           );
         });
       });
+
+      group('confirmation on the intended route', () {
+        const inbox = 'wss://inbox.example.com';
+        late List<Event> selfWraps;
+
+        setUp(() => selfWraps = []);
+
+        Future<NIP17SendResult> sendRouted(
+          PublishOutcome recipient, {
+          int eventKind = EventKind.privateDirectMessage,
+          bool selfWrapOnSoftUnconfirmed = false,
+          void Function(Event? prebuiltSelfWrap)? onSelfWrapDue,
+        }) {
+          when(
+            () => mockNostrClient.publishEventAwaitOk(
+              any(),
+              targetRelays: any(named: 'targetRelays'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((_) async => recipient);
+          when(() => mockNostrClient.publishEvent(any())).thenAnswer((
+            inv,
+          ) async {
+            final event = inv.positionalArguments[0] as Event;
+            selfWraps.add(event);
+            return PublishSuccess(event: event);
+          });
+          return okService.sendRumor(
+            rumorEvent: okService.buildRumor(
+              recipientPubkey: _recipientPubkey,
+              content: eventKind == EventKind.reaction ? '🔥' : 'hi',
+              eventKind: eventKind,
+            ),
+            recipientPubkey: _recipientPubkey,
+            targetRelays: const [inbox],
+            awaitRecipientOk: true,
+            selfWrapOnSoftUnconfirmed: selfWrapOnSoftUnconfirmed,
+            onSelfWrapDue: onSelfWrapDue,
+          );
+        }
+
+        test('an OK from the inbox, written with a trailing slash, confirms '
+            'the send', () async {
+          final result = await sendRouted(
+            outcome(accepted: const ['$inbox/']),
+          );
+
+          expect(result.success, isTrue);
+          expect(result.selfWrapPublished, isTrue);
+          expect(selfWraps, hasLength(1));
+        });
+
+        test('an OK only from a relay off the route is a retryable failure '
+            'with no sender copy', () async {
+          // The pool the client fell back to took the wrap; the recipient
+          // reads only their inbox.
+          final result = await sendRouted(
+            outcome(accepted: const ['wss://relay.example.com']),
+          );
+
+          expect(result.success, isFalse);
+          expect(result.retryablePending, isTrue);
+          expect(selfWraps, isEmpty);
+        });
+
+        test('an OK only from a relay off the route hands no copy to '
+            'onSelfWrapDue', () async {
+          final due = <Event?>[];
+
+          final result = await sendRouted(
+            outcome(accepted: const ['wss://relay.example.com']),
+            onSelfWrapDue: due.add,
+          );
+
+          expect(result.success, isFalse);
+          expect(due, isEmpty);
+        });
+
+        test(
+          'a reaction an off-route relay confirms is not delivered',
+          () async {
+            final result = await sendRouted(
+              outcome(accepted: const ['wss://relay.example.com']),
+              eventKind: EventKind.reaction,
+              selfWrapOnSoftUnconfirmed: true,
+            );
+
+            expect(result.success, isFalse);
+            expect(result.retryablePending, isTrue);
+            expect(result.error, contains('Reaction recipient OK unconfirmed'));
+          },
+        );
+      });
+    });
+
+    group('sendRumor publishRefusal', () {
+      const refusal = NIP17SendResult.blocked(
+        'Recipient is unavailable',
+        disposition: NIP17BlockedSendDisposition.retain,
+      );
+      late List<String> steps;
+      late NIP17MessageService refusing;
+
+      setUp(() {
+        steps = [];
+        refusing = NIP17MessageService(
+          signer: LocalNostrSigner(_testPrivateKey),
+          senderPublicKey: getPublicKey(_testPrivateKey),
+          nostrService: mockNostrClient,
+          giftWrapBuilder: (nostr, rumor, recipient) {
+            steps.add('build wrap');
+            return GiftWrapUtil.getGiftWrapEvent(nostr, rumor, recipient);
+          },
+        );
+        when(
+          () => mockNostrClient.publishEventAwaitOk(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (inv) async => PublishOutcome(
+            eventId: (inv.positionalArguments[0] as Event).id,
+            acceptedBy: const ['wss://relay.example.com'],
+            rejectedBy: const {},
+            noResponseFrom: const [],
+          ),
+        );
+        when(
+          () => mockNostrClient.publishEvent(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer(
+          (inv) async =>
+              PublishSuccess(event: inv.positionalArguments[0] as Event),
+        );
+      });
+
+      NIP17SendResult? refuse() {
+        steps.add('refuse');
+        return refusal;
+      }
+
+      Future<NIP17SendResult> send({
+        required NIP17SendResult? Function() publishRefusal,
+        bool awaitRecipientOk = true,
+      }) => refusing.sendRumor(
+        rumorEvent: refusing.buildRumor(
+          recipientPubkey: _recipientPubkey,
+          content: 'shared video',
+        ),
+        recipientPubkey: _recipientPubkey,
+        awaitRecipientOk: awaitRecipientOk,
+        publishRefusal: publishRefusal,
+      );
+
+      void verifyNothingPublished() {
+        verifyNever(
+          () => mockNostrClient.publishEventAwaitOk(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+            timeout: any(named: 'timeout'),
+          ),
+        );
+        verifyNever(
+          () => mockNostrClient.publishEvent(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        );
+      }
+
+      for (final awaitRecipientOk in [true, false]) {
+        final publish = awaitRecipientOk ? 'OK-confirmed' : 'frame-accepted';
+        test('returns the refusal and publishes nothing ($publish)', () async {
+          final result = await send(
+            publishRefusal: refuse,
+            awaitRecipientOk: awaitRecipientOk,
+          );
+
+          expect(result, same(refusal));
+          verifyNothingPublished();
+        });
+      }
+
+      test('asks only once the gift wrap is built', () async {
+        await send(publishRefusal: refuse);
+
+        expect(steps, ['build wrap', 'refuse']);
+      });
+
+      test('publishes when the hook has no refusal', () async {
+        final result = await send(publishRefusal: () => null);
+
+        expect(result.success, isTrue);
+        verify(
+          () => mockNostrClient.publishEventAwaitOk(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).called(1);
+      });
     });
 
     group('publishSelfApplicationMarker (#4977)', () {

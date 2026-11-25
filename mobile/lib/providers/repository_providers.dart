@@ -1145,9 +1145,13 @@ DmRepository dmRepository(Ref ref) {
   // sampled per rumor, so a flag flip applies without rebuilding this
   // repository.
   final featureFlagService = ref.read(featureFlagServiceProvider);
+  // keepAlive and built only from SharedPreferences, so this instance
+  // outlives every DM repository and a replay never reads a disposed Ref.
+  final blocklist = ref.watch(contentBlocklistRepositoryProvider);
 
   final repository = DmRepository(
     nostrClient: nostrService,
+    isShareRecipientHidden: blocklist.shouldFilterFromFeeds,
     directMessagesDao: db.directMessagesDao,
     conversationsDao: db.conversationsDao,
     outgoingDmsDao: db.outgoingDmsDao,

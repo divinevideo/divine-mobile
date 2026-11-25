@@ -64,7 +64,13 @@ The primary slot remains the rollback contract; older builds cannot recover
 an interrupted rewrite themselves, so a successful launch of this build is
 required before rolling back after such an interruption. The rewrite is skipped
 while protected data is unavailable.
-macOS keeps `unlocked` (#5563), so nothing is rewritten there.
+macOS writes new keys under `unlocked` (#5563) and never rewrites one. A Mac
+that replaced the iPad app inherits that app's items instead: the primary and
+recovery copy under `first_unlock`, `.v2` under `first_unlock_this_device`.
+The macOS plugin puts the class into every read, write and delete, so the
+bootstrap also reads and deletes those slots under the iPad classes, and
+rotates an inherited primary in its own class. A key restored from either
+copy is written back under `unlocked`.
 
 Internal builds briefly shipped the opposite design (#9380): the key moved to
 `db.cipher.key.v2` under `first_unlock_this_device`, on every platform, and

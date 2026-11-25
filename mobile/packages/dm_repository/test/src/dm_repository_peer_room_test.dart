@@ -379,6 +379,29 @@ void main() {
         await expectOnlyTheRoomHolding([rumor.id]);
       });
 
+      // What the follow classifier routes to the inbox or Message requests
+      // (#6294), read back from the database the way the inbox reads it.
+      test('reads back as an unread potential request the user has not '
+          'written in', () async {
+        final rumor = message(author: _alice, pTags: [_owner, _bob]);
+
+        await deliver(rumor, authorSecret: _aliceSecret);
+
+        final potential = await repository.watchPotentialRequests().first;
+        expect(
+          potential.map((conversation) => conversation.id),
+          equals([_roomId]),
+        );
+        final room = potential.single;
+        expect(room.isGroup, isTrue);
+        expect(
+          room.participantPubkeys,
+          unorderedEquals([_owner, _alice, _bob]),
+        );
+        expect(room.currentUserHasSent, isFalse);
+        expect(room.isRead, isFalse);
+      });
+
       for (final (first, second) in [
         ('alice', 'bob'),
         ('bob', 'alice'),

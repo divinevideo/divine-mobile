@@ -30,29 +30,28 @@ void main() {
           defaultThumbnailTimestamp: Duration.zero,
         );
 
-    /// Writes a thumbnail file the way the native extractor would.
+    final frame = Uint8List.fromList([0xFF, 0xD8, 0xFF]);
+
+    /// Hands back a decoded frame the way the app's thumbnail service does.
     Future<ThumbnailExtraction?> extractFrame({
       required String videoPath,
       required Duration targetTimestamp,
       required int quality,
-    }) async {
-      final path = '${tempDir.path}/thumb.jpg';
-      File(path).writeAsBytesSync([0xFF, 0xD8, 0xFF]);
-      return (path: path);
-    }
+    }) async => (bytes: frame);
 
     void stubThumbnailUpload(BlossomUploadResult result) {
       when(
-        () => blossom.uploadImage(
-          imageFile: any(named: 'imageFile'),
+        () => blossom.uploadImageBytes(
+          bytes: any(named: 'bytes'),
           nostrPubkey: any(named: 'nostrPubkey'),
+          filename: any(named: 'filename'),
           allowResumable: any(named: 'allowResumable'),
         ),
       ).thenAnswer((_) async => result);
     }
 
     setUpAll(() {
-      registerFallbackValue(File(''));
+      registerFallbackValue(Uint8List(0));
     });
 
     setUp(() async {
@@ -84,6 +83,34 @@ void main() {
         expect(result.failure, isNull);
       });
 
+      // On iOS 1.0.34 writing the frame to a file failed after the video had
+      // landed; the frame now goes from decoder to PUT without a file.
+      test('uploads the decoded frame as one PUT without a file', () async {
+        stubThumbnailUpload(
+          const BlossomUploadResult(
+            success: true,
+            url: 'https://media.divine.video/thumb',
+          ),
+        );
+
+        await leg(
+          extractFrame,
+        ).run(videoFile: videoFile, nostrPubkey: _pubkey, upload: upload);
+
+        verify(
+          () => blossom.uploadImageBytes(
+            bytes: frame,
+            nostrPubkey: _pubkey,
+            filename: 'thumbnail.jpg',
+            allowResumable: false,
+          ),
+        ).called(1);
+        expect(
+          tempDir.listSync().map((entry) => entry.path),
+          equals([videoFile.path]),
+        );
+      });
+
       test('names an extractor that found no frame', () async {
         final result =
             await leg(
@@ -106,14 +133,15 @@ void main() {
         expect(result.failure?.cause, contains('no frame'));
       });
 
-      test('names a thumbnail file that vanished after extraction', () async {
+      // On iOS a frame the decoder could not produce arrives as empty bytes.
+      test('names an empty frame as no frame and uploads nothing', () async {
         final result =
             await leg(
               ({
                 required String videoPath,
                 required Duration targetTimestamp,
                 required int quality,
-              }) async => (path: '${tempDir.path}/gone.jpg'),
+              }) async => (bytes: Uint8List(0)),
             ).run(
               videoFile: videoFile,
               nostrPubkey: _pubkey,
@@ -124,7 +152,15 @@ void main() {
           result.failure?.stage,
           equals(ThumbnailUploadFailureStage.extraction),
         );
-        expect(result.failure?.cause, contains('missing'));
+        expect(result.failure?.cause, contains('no frame'));
+        verifyNever(
+          () => blossom.uploadImageBytes(
+            bytes: any(named: 'bytes'),
+            nostrPubkey: any(named: 'nostrPubkey'),
+            filename: any(named: 'filename'),
+            allowResumable: any(named: 'allowResumable'),
+          ),
+        );
       });
 
       test('keeps what an extractor threw as an extraction failure', () async {
@@ -174,9 +210,10 @@ void main() {
 
       test('keeps what the upload threw as an upload failure', () async {
         when(
-          () => blossom.uploadImage(
-            imageFile: any(named: 'imageFile'),
+          () => blossom.uploadImageBytes(
+            bytes: any(named: 'bytes'),
             nostrPubkey: any(named: 'nostrPubkey'),
+            filename: any(named: 'filename'),
             allowResumable: any(named: 'allowResumable'),
           ),
         ).thenThrow(StateError('auth provider closed'));

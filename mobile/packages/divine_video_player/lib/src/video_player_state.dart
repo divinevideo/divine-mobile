@@ -15,7 +15,10 @@ enum PlaybackStatus {
   /// Paused by user.
   paused,
 
-  /// Temporarily buffering.
+  /// Temporarily waiting for data.
+  ///
+  /// On iOS and macOS this includes a streamed clip whose picture fell behind
+  /// a clock that kept running, since AVPlayer does not wait for its data.
   buffering,
 
   /// Reached the end of all clips.

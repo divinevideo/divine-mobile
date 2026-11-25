@@ -13,7 +13,7 @@ choosing an optimization.
 | Creator media cleanup | `creator_delete_enforcement` | Entire enabled enforcement call; `total_ms`, cumulative `signing_ms` and `http_ms`, `request_count`, `poll_count`; final `outcome` and `reason` |
 | Startup bottlenecks | `startup_phase` | Custom **`elapsed_ms`**, filtered by fixed `phase`; completed phases only |
 | Startup readiness | `startup_milestone` | Custom **`elapsed_ms`** from startup monitor initialization to `first_frame`, `auth_shell_ready`, `ui_ready`, or `video_ready`. `video_ready` is the first rendered native frame of any fullscreen-feed video after launch, and it also ends `startup_phase` `total` |
-| Fullscreen video playback | `video_first_frame` | Custom **`ttff_ms`**, activation to rendered native first frame; `cache=hit/miss`, `position=initial/subsequent`; optional controller/source/playback milestones measured from activation |
+| Fullscreen video playback | `video_first_frame` | One sample per fullscreen-feed activation, sent when it ends (see below). `outcome=played/abandoned/failed`, `end=swipe/hidden/closed/replaced`, `cache=hit/miss`, `position=initial/subsequent`, and for `failed` the `error` category (`initialization`, `source`, `playback`). `active_ms` from activation to its end; custom **`ttff_ms`**, activation to rendered native first frame, and the controller/source/playback milestones it reached; for `played`, `watched_ms` (time the player reported playing) and, on Android only, `stall_count` and `stall_ms` (buffering after playback started) |
 | Feed retrieval (existing) | `feed_load_*` | First raw feed event/cache result, timeout, cancellation, and result counts; does not measure first rendered video |
 | Opening the video editor | `editor_ready` | Live trace from entering the editor route until the editor is usable: it shows its clips (at once from the recorder or the Library; a draft once restored with its thumbnails and fonts) and, for video clips, the preview player loaded them and showed its first frame. `total_ms`, plus `clips_loaded_ms`, `player_ready_ms`, and `first_frame_ms` for the phases reached, and `pre_route_ms` for an editor opened with the recorder's "Next" (the wait from the tap to the route); `entry=recording/clips/draft`, `clips=0/1/2-3/4-6/7+/unknown`, `preview=video/stop_motion/none/unknown`, `outcome=ready/failed/left` |
 | Opening the recorder's camera | `camera_startup` | Live trace from the recorder asking the camera to open until it is fitted to the recorder mode. `init_ms` until the camera opened (on iOS its first preview frame, on Android the attached preview surface), `mode_apply_ms` for dual-camera capture and stabilization, `total_ms`; `lens`, `quality`, `outcome=success/failed/error`, and `dual_camera=on/off` on success. A camera that does not open ends the trace at `init_ms` |
@@ -79,8 +79,53 @@ below. Tab hops shorter than a second send nothing.
 Select their custom millisecond metric, never the default trace duration. Early
 startup measurements are buffered by the existing startup service and exported
 once after Firebase initialization. The playback observer subscribes once at the
-app root and cancels with its provider container. It emits once per completed
+app root and cancels with its provider container. It emits once per ended
 video activation, not once per rendered frame.
+
+**`video_first_frame` reports every activation, not only the ones that
+rendered.** An activation starts when a video becomes the active video of the
+visible fullscreen feed. It ends when another video becomes active (`end=swipe`,
+which includes auto-advance), when the feed stops playing (`hidden`: the app
+loses focus or goes to the background, or a route, an overlay such as the
+comments, or another tab hides the feed), when the feed closes (`closed`), or
+when its video list changes under the active video (`replaced`). The sample is
+sent then, so a played video's sample arrives when the viewer leaves it, and an
+activation still open when the process dies sends nothing. `outcome=played`
+means the first frame rendered during the activation, `failed` that the video
+showed an error and never rendered, and `abandoned` that the viewer left first.
+A video the feed held back from autoplay, such as one behind a content warning,
+sends nothing when it ends without a frame, and returning to a video that kept
+its frame while the feed was hidden — or to a failed video that is not
+re-initialized — starts no new sample (a manual retry starts one). The `played` share of
+all samples is the playback success rate; `active_ms` on `abandoned` shows how
+long viewers waited before leaving; the share of `played` samples with a
+`stall_count` above zero is the rebuffer frequency, and `stall_ms` over
+`watched_ms` the stalled share of watching.
+
+**Stalls are measured on Android only.** `stall_count` and `stall_ms` count the
+episodes in which the player reported buffering after playback had started,
+including the wait after a seek and the restart of each lap of a looping video
+from another host's HLS, which Android loops by seeking; the start-up wait
+before playback first moves is not a stall. On iOS, AVPlayer keeps its playback rate while it waits for
+data, and `divine_video_player` reports any rate above zero as playing, so a
+stall in the middle of playback never reaches Dart as buffering. iOS samples
+leave both metrics out rather than report zero, and their `watched_ms` includes
+those waits.
+
+**The trace was extended rather than replaced.** A second trace for the end of
+an activation would have sent two events for every played video, from the
+shared budget described below. A new name for the same single sample would have
+broken the `ttff_ms` series at the release that introduced it, while the
+release comparisons compare builds within one trace. Extending keeps `ttff_ms`
+and its milestones comparable: they are still set only when a first frame
+rendered, which is every sample older builds sent. Two things change at that
+release: the trace's sample count now counts all activations, so it rises, and
+older builds carry no `outcome` (their rows appear with `outcome = NULL` when
+grouping by `outcome`, as `custom-metrics.sql` does, whereas new builds carry
+`outcome=played`). Filter on `outcome=played`, or on samples that
+have `ttff_ms`, before comparing counts across it, and match new `outcome=played`
+rows with older `outcome IS NULL` rows when comparing `ttff_ms` across that
+boundary.
 
 **The recorder traces are live traces, emitted once per user action.** Read
 their duration or `total_ms`, the same span measured in Dart. Until this
@@ -152,6 +197,21 @@ reading; polling backoff contributes to `total_ms`. This does not change timeout
 retry, signing, deletion, or UI behavior. Telemetry completion is not awaited by
 the user operation, and new trace failures are contained.
 
+**How long the main screens take to show their content is an Analytics event,
+not a trace.** Profile, notifications, the inbox's Messages pane, search
+results, Explore and video links report `surface_load` once per open, from the
+first load until the screen shows content, its empty state or its error; see
+[Analytics observability](../../docs/ANALYTICS_OBSERVABILITY.md#main-screens).
+They get no Firebase Performance trace on purpose. These screens open far more
+often than the recorder or the editor, and a trace per open would draw on the
+shared per-device budget described below, which `http_operation` already fills
+one sample per request; the busiest devices would lose samples of the
+existing traces. `surface_load` costs none of that budget, and its
+percentiles come from the BigQuery export. What it lacks is the Performance
+console's duration alerts. If one screen needs those, its bloc already marks
+the boundary: a trace can start and stop at the same `ScreenLoadTelemetry`
+calls.
+
 ## Reports and release comparisons
 
 The SQL in `scripts/performance/` reads the existing iOS and Android Firebase
@@ -214,10 +274,12 @@ The two new custom traces are emitted at a fixed, bounded rate:
   recorder's `start` returns null). The population is therefore the same one
   the app already sends through `FirebaseHttpMetricRecorder`; the custom trace
   adds a sibling code trace per network request, not a new request event.
-- **`video_first_frame`** — exactly one `DURATION_TRACE` per completed
-  fullscreen-feed activation, i.e. per distinct active video that reached a
-  rendered native first frame. It is not per rendered frame, per buffering
-  event, or per cached byte.
+- **`video_first_frame`** — exactly one `DURATION_TRACE` per ended
+  fullscreen-feed activation, whether or not it rendered a native first frame.
+  Older builds sent one per activation that rendered, so the count grows by the
+  share of activations that viewers left before the first frame or that failed;
+  held-back autoplay without a frame sends nothing.
+  It is not per rendered frame, per buffering event, or per cached byte.
 
 Neither trace is emitted per frame, per chunk, or per video byte, and
 third-party hosts stay excluded (see
@@ -283,7 +345,8 @@ Debug/profile and non-distributed local builds retain the current collection
 exclusions. Add `creator_delete_enforcement` to the custom trace dashboard and
 filter outcome/reason. For `http_operation`, filter operation, method, status,
 and outcome before interpreting latency. Add the startup `elapsed_ms` and video
-`ttff_ms` custom metrics to the dashboard.
+`ttff_ms`, `watched_ms` and `stall_ms` custom metrics to the dashboard, and read
+`video_first_frame` by `outcome`.
 
 For stable Network Requests rows, configure these custom URL patterns for both
 apps in Firebase Performance:
@@ -321,9 +384,10 @@ cached/uncached video activation. Verify unchanged user-facing outcomes and one
 terminal sample per completed operation. Compare emitted startup/playback custom
 metrics with the existing local measurements, not with snapshot trace duration.
 
-Playback samples only cover successfully rendered first frames from the existing
-fullscreen-feed event bus. They do not establish playback success rate, rebuffer
-frequency, abandoned activations, background playback, or native image latency.
+Playback samples cover fullscreen-feed activations only. They establish playback
+success, abandoned activations and, on Android, rebuffer frequency; iOS stalls
+stay unmeasured until the player reports a wait for data, and so do background
+playback and native image latency.
 Feed/search/profile HTTP metrics measure retrieval, not every screen's time to
 usable content. Native screen frame ratios cover the
 whole Flutter app, so they are not per-route jank measurements; `screen_frames`

@@ -102,9 +102,7 @@ void main() {
             }) async {
               extractions++;
               if (!extractorFindsFrame) return null;
-              final path = '${tempDir.path}/thumb_$extractions.jpg';
-              File(path).writeAsBytesSync([0xFF, 0xD8, 0xFF]);
-              return (path: path);
+              return (bytes: Uint8List.fromList([0xFF, 0xD8, 0xFF]));
             },
         blurhashGenerator: (Uint8List bytes) async => null,
         transientRenderCleaner: _NoopTransientRenderCleaner(),
@@ -122,9 +120,10 @@ void main() {
     /// Answers the thumbnail PUTs with [results] in order, repeating the last.
     void stubThumbnailUploads(List<BlossomUploadResult> results) {
       when(
-        () => blossom.uploadImage(
-          imageFile: any(named: 'imageFile'),
+        () => blossom.uploadImageBytes(
+          bytes: any(named: 'bytes'),
           nostrPubkey: any(named: 'nostrPubkey'),
+          filename: any(named: 'filename'),
           allowResumable: any(named: 'allowResumable'),
         ),
       ).thenAnswer(
@@ -164,6 +163,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(File(''));
+      registerFallbackValue(Uint8List(0));
     });
 
     setUp(() async {
@@ -323,9 +323,10 @@ void main() {
       // retry right behind the transfer, with no storage write between.
       stubVideoTransfer(waitFor: firstThumbnailFailed.future);
       when(
-        () => blossom.uploadImage(
-          imageFile: any(named: 'imageFile'),
+        () => blossom.uploadImageBytes(
+          bytes: any(named: 'bytes'),
           nostrPubkey: any(named: 'nostrPubkey'),
+          filename: any(named: 'filename'),
           allowResumable: any(named: 'allowResumable'),
         ),
       ).thenAnswer((_) async {

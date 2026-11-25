@@ -313,7 +313,11 @@ class VideoThumbnailService {
         ),
       );
 
-      if (thumbnails.isEmpty) {
+      // pro_video_editor answers a frame it could not decode with an empty
+      // entry (on iOS also a timestamp past the end), not with an error.
+      // Treat it as no frame, or the fallbacks below never run and callers
+      // write a zero-byte image.
+      if (thumbnails.isEmpty || thumbnails.first.isEmpty) {
         Log.error(
           'Failed to generate thumbnail',
           name: 'VideoThumbnailService',
@@ -321,7 +325,7 @@ class VideoThumbnailService {
         );
         if (logToCrashlytics) {
           await crashReporter.recordError(
-            Exception('Thumbnail extraction failed - thumbnails list is empty'),
+            Exception('Thumbnail extraction failed - no frame was decoded'),
             StackTrace.current,
             // No path: a clip added from a DM is named after its message.
             reason:

@@ -1575,24 +1575,23 @@ class FunnelcakeApiClient {
     }
   }
 
-  /// Fetches videos by hashtag, sorted by trending score.
+  /// Fetches a ranked hashtag page with its opaque continuation cursor.
   ///
-  /// [hashtag] is the hashtag to filter by (without `#` prefix).
-  /// [limit] is the maximum number of videos to return (defaults to 50).
-  /// [before] is an optional Unix timestamp cursor for pagination.
-  ///
-  /// Returns a list of [VideoStats] objects sorted by trending score.
+  /// [cursor] is the previous page's `nextCursor`; omit it for the first page.
+  /// A null `nextCursor` means there is no next page. The cursor comes from
+  /// Funnelcake and survives client-side row filtering.
   ///
   /// Throws:
   /// - [FunnelcakeNotConfiguredException] if the API is not configured.
-  /// - [FunnelcakeException] if the hashtag is empty.
-  /// - [FunnelcakeApiException] if the request fails.
+  /// - [FunnelcakeException] if [hashtag] is empty or just `#`.
+  /// - [FunnelcakeApiException] if the server returns a non-200 status.
   /// - [FunnelcakeTimeoutException] if the request times out.
   /// - [FunnelcakeException] for other errors.
-  Future<List<VideoStats>> getVideosByHashtag({
+  Future<({List<VideoStats> videos, String? nextCursor})>
+  getVideosByHashtagPage({
     required String hashtag,
     int limit = 50,
-    int? before,
+    String? cursor,
   }) async {
     if (!isAvailable) {
       throw const FunnelcakeNotConfiguredException();
@@ -1607,27 +1606,29 @@ class FunnelcakeApiClient {
       'tag': normalizedTag,
       'sort': 'trending',
       'limit': limit.toString(),
+      'cursor': ?cursor,
     });
-    if (before != null) {
-      queryParams['before'] = before.toString();
-    }
 
     final uri = Uri.parse(
-      '$_baseUrl/api/videos',
+      '$_baseUrl/api/v2/videos',
     ).replace(queryParameters: queryParams);
 
     try {
       final response = await _get(uri);
 
       if (response.statusCode == 200) {
-        final (:items, hasMore: _, nextCursor: _) = _unwrapListResponse(
+        final (:items, :hasMore, :nextCursor) = _unwrapListResponse(
           jsonDecode(response.body),
         );
 
-        return items
+        final videos = items
             .map((v) => VideoStats.fromJson(v as Map<String, dynamic>))
             .where((v) => v.id.isNotEmpty && v.videoUrl.isNotEmpty)
             .toList();
+        return (
+          videos: videos,
+          nextCursor: hasMore == false ? null : nextCursor,
+        );
       } else {
         throw FunnelcakeApiException(
           message: 'Failed to fetch videos by hashtag',

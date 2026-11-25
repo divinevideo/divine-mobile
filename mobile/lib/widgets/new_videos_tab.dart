@@ -4,9 +4,11 @@
 import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/explore_tabs/explore_tabs_cubit.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
@@ -118,6 +120,18 @@ class _NewVideosTabState extends ConsumerState<NewVideosTab> {
 
       // Get feed state for pagination info
       final feedState = newVideosAsync.value!;
+      // A failed first page arrives as data carrying the error, shown as the
+      // empty grid.
+      final exploreTabs = context.read<ExploreTabsCubit?>();
+      if (videos.isEmpty && feedState.error != null) {
+        exploreTabs?.reportFeedTabFailed(exploreDefaultTabName);
+      } else {
+        exploreTabs?.reportFeedTabShown(
+          exploreDefaultTabName,
+          itemCount: videos.length,
+          hasMore: feedState.hasMoreContent,
+        );
+      }
       return _NewVideosContent(
         videos: videos,
         isLoadingMore: feedState.isLoadingMore,
@@ -127,6 +141,9 @@ class _NewVideosTabState extends ConsumerState<NewVideosTab> {
 
     if (newVideosAsync.hasError) {
       _trackErrorState(newVideosAsync.error);
+      context.read<ExploreTabsCubit?>()?.reportFeedTabFailed(
+        exploreDefaultTabName,
+      );
       return RefreshableFeedStateView(
         onRefresh: _refreshNewVideos,
         child: _NewVideosErrorState(error: newVideosAsync.error),

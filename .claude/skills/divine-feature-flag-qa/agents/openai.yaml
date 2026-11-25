@@ -1,0 +1,3 @@
+interface:
+  display_name: "Divine Feature Flag QA"
+  short_description: "Review flagged features for release readiness"

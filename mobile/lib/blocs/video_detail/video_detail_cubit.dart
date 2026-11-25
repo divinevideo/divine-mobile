@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/observability/screen_load_telemetry.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -21,9 +22,11 @@ class VideoDetailCubit extends Cubit<VideoDetailState>
     required VideosRepository Function() videosRepository,
     required bool Function() isRelayReady,
     required Stream<bool> Function() relayReadyStream,
+    ScreenLoadTelemetry? loadTelemetry,
   }) : _videosRepository = videosRepository,
        _isRelayReady = isRelayReady,
        _relayReadyStream = relayReadyStream,
+       _loadTelemetry = loadTelemetry,
        super(const VideoDetailState());
 
   static const _retryDelays = [
@@ -38,6 +41,10 @@ class VideoDetailCubit extends Cubit<VideoDetailState>
   final VideosRepository Function() _videosRepository;
   final bool Function() _isRelayReady;
   final Stream<bool> Function() _relayReadyStream;
+
+  /// Times each lookup until the video, its hidden notice or the load error
+  /// shows; null where unmeasured.
+  final ScreenLoadTelemetry? _loadTelemetry;
   StreamSubscription<bool>? _relayReadySubscription;
   Timer? _retryTimer;
   Timer? _timeoutTimer;
@@ -49,9 +56,41 @@ class VideoDetailCubit extends Cubit<VideoDetailState>
     List<String> fallbackRouteIds = const [],
     VideoEvent? initialVideo,
     bool allowRelayReadyRetry = true,
+  }) => _startSearch(
+    routeId: routeId,
+    expectedAuthor: expectedAuthor,
+    fallbackRouteIds: fallbackRouteIds,
+    initialVideo: initialVideo,
+    allowRelayReadyRetry: allowRelayReadyRetry,
+    loadEntryPoint: ScreenLoadEntryPoint.link,
+  );
+
+  /// Starts a fresh search after the viewer chooses Retry.
+  void retry() => _startSearch(
+    routeId: state.routeId,
+    expectedAuthor: state.expectedAuthor,
+    fallbackRouteIds: state.fallbackRouteIds,
+    allowRelayReadyRetry: false,
+    loadEntryPoint: ScreenLoadEntryPoint.retry,
+  );
+
+  void _startSearch({
+    required String routeId,
+    required String? expectedAuthor,
+    required List<String> fallbackRouteIds,
+    required bool allowRelayReadyRetry,
+    required String loadEntryPoint,
+    VideoEvent? initialVideo,
   }) {
     if (isClosed) return;
     cancelSearch();
+    // A video handed over by the screen that opened this one shows at once,
+    // so only a lookup is timed.
+    if (initialVideo == null) {
+      _loadTelemetry?.start(entryPoint: loadEntryPoint);
+    } else {
+      _loadTelemetry?.dismiss();
+    }
     emitIfOpen(
       VideoDetailState(
         routeId: routeId,
@@ -68,14 +107,6 @@ class VideoDetailCubit extends Cubit<VideoDetailState>
     _timeoutTimer = Timer(_searchTimeout, _showLoadFailure);
     _loadDetached(allowRelayReadyRetry: allowRelayReadyRetry);
   }
-
-  /// Starts a fresh search after the viewer chooses Retry.
-  void retry() => search(
-    routeId: state.routeId,
-    expectedAuthor: state.expectedAuthor,
-    fallbackRouteIds: state.fallbackRouteIds,
-    allowRelayReadyRetry: false,
-  );
 
   /// Stops scheduled work and invalidates results already in flight.
   void cancelSearch() {
@@ -107,8 +138,29 @@ class VideoDetailCubit extends Cubit<VideoDetailState>
     emitIfOpen(state.copyWith(status: VideoDetailStatus.ready, video: video));
   }
 
+  /// Completes a timed lookup once its outcome shows. A video the viewer's
+  /// settings hide shows a notice instead of the video, so it counts as
+  /// empty.
+  @override
+  void onChange(Change<VideoDetailState> change) {
+    super.onChange(change);
+    final telemetry = _loadTelemetry;
+    if (telemetry == null || !telemetry.isTiming) return;
+    switch (change.nextState.status) {
+      case VideoDetailStatus.ready:
+        telemetry.completeLoaded(itemCount: 1);
+      case VideoDetailStatus.hiddenBySettings:
+        telemetry.completeLoaded(itemCount: 0);
+      case VideoDetailStatus.loadFailed:
+        telemetry.completeFailure();
+      case VideoDetailStatus.searching:
+        break;
+    }
+  }
+
   @override
   Future<void> close() {
+    _loadTelemetry?.dismiss();
     _cancelResources();
     return super.close();
   }

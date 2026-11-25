@@ -1,5 +1,5 @@
 // ABOUTME: Finds files that publish a replaceable Nostr kind without reading
-// ABOUTME: its current version through NostrClient.readCurrentVersion (#11317).
+// ABOUTME: its base through readCurrentVersion or newestVideoRevision (#11317).
 
 import 'dart:io';
 
@@ -68,8 +68,20 @@ const publishingMethods = <String, int>{
   'sendProfileAwaitOk': 0,
 };
 
+/// Calls other than `readCurrentVersion` that read the base of a replaceable
+/// publish, with the kinds each clears in its file, as printed.
+///
+/// `newestVideoRevision` reads a video republish's base by maintainer ruling
+/// (#11466; see AGENTS.md). A republish keeps the opened event's kind, which
+/// the detector cannot resolve, so the call clears [unresolvedKind] too. That
+/// covers every unresolved publish in the file, as an unresolved
+/// `readCurrentVersion` does: review a new data-driven publish there by hand.
+const baseReadingCalls = <String, Set<String>>{
+  'newestVideoRevision': {'34235', '34236', unresolvedKind},
+};
+
 /// One file that publishes a replaceable [kind] and never reads that kind
-/// through `readCurrentVersion`.
+/// through `readCurrentVersion` or a [baseReadingCalls] call.
 class ReplaceablePublishViolation {
   const ReplaceablePublishViolation({
     required this.path,
@@ -418,6 +430,8 @@ class _UnitScan extends RecursiveAstVisitor<void> {
     final kind = _namedArgument(node.argumentList, 'kind');
     if (name == 'readCurrentVersion') {
       if (kind != null) reads.addAll(_resolveAt(kind, node));
+    } else if (baseReadingCalls[name] case final kinds?) {
+      reads.addAll([for (final read in kinds) _Hit(read, _line(node))]);
     } else if (_insidePublishingMethod(node)) {
       // The event a publishing method builds is its caller's publish.
     } else if (name == 'createAndSignEvent' || _signerNames.contains(name)) {

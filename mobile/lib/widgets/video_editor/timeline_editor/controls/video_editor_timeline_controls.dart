@@ -517,7 +517,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
           ),
         if (onStabilize != null)
           TimelineActionButton(
-            icon: .userFocus,
+            icon: .stabilization,
             label: context.l10n.videoEditorStabilizeLabel,
             semanticLabel: context.l10n.videoEditorStabilizeSemanticLabel,
             onPressed: isStabilizing ? null : onStabilize,

@@ -792,6 +792,114 @@ void main() {
         expect(captured.text, 'Test comment');
       });
 
+      testWidgets('a delayed draft update preserves the active edit', (
+        tester,
+      ) async {
+        final states = StreamController<CommentComposerState>();
+        addTearDown(states.close);
+        whenListen(
+          mockComposerBloc,
+          states.stream,
+          initialState: const CommentComposerState(),
+        );
+        await tester.pumpWidget(buildTestWidget());
+        final field = find.byType(TextField);
+        await tester.enterText(field, 'Nice cl');
+
+        const latestEdit = TextEditingValue(
+          text: 'Nice clip',
+          selection: TextSelection.collapsed(offset: 8),
+          composing: TextRange(start: 5, end: 9),
+        );
+        tester.testTextInput.updateEditingValue(latestEdit);
+        final controller = tester.widget<TextField>(field).controller!;
+        expect(controller.value, latestEdit);
+
+        states.add(const CommentComposerState(mainInputText: 'Nice cl'));
+        await tester.pump();
+
+        expect(controller.value, latestEdit);
+        states.add(const CommentComposerState(mainInputText: 'Nice clip'));
+        await tester.pump();
+        expect(controller.value, latestEdit);
+      });
+
+      testWidgets('loads, clears and restores programmatic drafts', (
+        tester,
+      ) async {
+        final states = StreamController<CommentComposerState>();
+        addTearDown(states.close);
+        const draft = CommentComposerState(mainInputText: 'A draft');
+        whenListen(mockComposerBloc, states.stream, initialState: draft);
+        await tester.pumpWidget(buildTestWidget());
+        final controller = tester
+            .widget<TextField>(find.byType(TextField))
+            .controller!;
+        expect(controller.text, 'A draft');
+
+        final editing = draft.copyWith(
+          activeEditCommentId: TestCommentIds.comment1Id,
+          editInputText: 'An existing comment',
+          replaceDraft: true,
+        );
+        states.add(editing);
+        await tester.pump();
+        expect(controller.text, 'An existing comment');
+
+        final composing = editing.clearEditMode();
+        states.add(composing);
+        await tester.pump();
+        expect(controller.text, 'A draft');
+
+        final cleared = composing.copyWith(
+          mainInputText: '',
+          replaceDraft: true,
+        );
+        states.add(cleared);
+        await tester.pump();
+        expect(controller.text, isEmpty);
+
+        states.add(
+          cleared.copyWith(mainInputText: 'A draft', replaceDraft: true),
+        );
+        await tester.pump();
+        expect(controller.text, 'A draft');
+        expect(controller.selection, const TextSelection.collapsed(offset: 7));
+      });
+
+      testWidgets('rewriting a hidden draft leaves the field alone', (
+        tester,
+      ) async {
+        final states = StreamController<CommentComposerState>();
+        addTearDown(states.close);
+        whenListen(
+          mockComposerBloc,
+          states.stream,
+          initialState: const CommentComposerState(),
+        );
+        await tester.pumpWidget(buildTestWidget());
+        final field = find.byType(TextField);
+        await tester.enterText(field, 'Nice clip');
+        final controller = tester.widget<TextField>(field).controller!;
+        expect(controller.text, 'Nice clip');
+
+        // The bloc's copy lags the field by a keystroke on purpose.
+        states.add(const CommentComposerState(mainInputText: 'Nice cl'));
+        await tester.pump();
+        // A failed reply then rolls back its hidden draft.
+        states.add(
+          const CommentComposerState(
+            mainInputText: 'Nice cl',
+            replyInputText: 'old reply',
+            draftRevision: 1,
+          ),
+        );
+        await tester.pump();
+
+        expect(controller.text, 'Nice clip');
+        expect(controller.selection, const TextSelection.collapsed(offset: 9));
+      });
+
       testWidgets('expands sheet to max when the composer gains focus', (
         tester,
       ) async {
@@ -1006,6 +1114,156 @@ void main() {
           findsOneWidget,
         );
         expect(_divineIcon(DivineIconName.x), findsWidgets);
+      });
+
+      testWidgets('swaps the field to the reply draft and back', (
+        tester,
+      ) async {
+        final states = StreamController<CommentComposerState>();
+        addTearDown(states.close);
+        const draft = CommentComposerState(mainInputText: 'A draft');
+        whenListen(mockComposerBloc, states.stream, initialState: draft);
+        await tester.pumpWidget(buildTestWidget());
+        final controller = tester
+            .widget<TextField>(find.byType(TextField))
+            .controller!;
+        expect(controller.text, 'A draft');
+
+        final replying = draft.copyWith(
+          activeReplyCommentId: TestCommentIds.comment1Id,
+          replyInputText: '',
+        );
+        states.add(replying);
+        await tester.pump();
+        expect(controller.text, isEmpty);
+
+        states.add(replying.clearActiveReply());
+        await tester.pump();
+        expect(controller.text, 'A draft');
+      });
+
+      testWidgets('keeps the edit draft when Reply is tapped while editing', (
+        tester,
+      ) async {
+        final states = StreamController<CommentComposerState>();
+        addTearDown(states.close);
+        const editing = CommentComposerState(
+          activeEditCommentId: TestCommentIds.comment1Id,
+          editInputText: 'Fixed typo',
+        );
+        whenListen(mockComposerBloc, states.stream, initialState: editing);
+        await tester.pumpWidget(buildTestWidget());
+        final field = find.byType(TextField);
+        await tester.showKeyboard(field);
+        const midEdit = TextEditingValue(
+          text: 'Fixed typo',
+          selection: TextSelection.collapsed(offset: 5),
+        );
+        tester.testTextInput.updateEditingValue(midEdit);
+        final controller = tester.widget<TextField>(field).controller!;
+        expect(controller.value, midEdit);
+
+        states.add(
+          editing.copyWith(
+            activeReplyCommentId: TestCommentIds.comment2Id,
+            replyInputText: '',
+          ),
+        );
+        await tester.pump();
+
+        expect(controller.value, midEdit);
+      });
+
+      testWidgets('send replies when its comment is still in the list', (
+        tester,
+      ) async {
+        final parent = CommentBuilder()
+            .withId(TestCommentIds.comment1Id)
+            .withAuthorPubkey(TestCommentIds.author1Pubkey)
+            .withContent('Parent comment')
+            .build();
+        await tester.pumpWidget(
+          buildTestWidget(
+            listState: CommentsListState(
+              rootEventId: testVideoEventId,
+              rootAuthorPubkey: testVideoAuthorPubkey,
+              status: CommentsStatus.success,
+              commentsById: {parent.id: parent},
+            ),
+            composerState: const CommentComposerState(
+              activeReplyCommentId: TestCommentIds.comment1Id,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.enterText(find.byType(TextField), 'hi');
+        await tester.pump();
+
+        await tester.tap(find.bySemanticsIdentifier('send_comment_button'));
+        await tester.pump();
+
+        final sent = verify(() => mockComposerBloc.add(captureAny())).captured;
+        final submitted = sent.whereType<CommentSubmitted>().single;
+        expect(submitted.parentCommentId, TestCommentIds.comment1Id);
+        expect(submitted.parentAuthorPubkey, TestCommentIds.author1Pubkey);
+        expect(sent.whereType<CommentReplyToggled>(), isEmpty);
+      });
+
+      testWidgets('send cancels the reply when its comment has left the list', (
+        tester,
+      ) async {
+        final parent = CommentBuilder()
+            .withId(TestCommentIds.comment1Id)
+            .withAuthorPubkey(TestCommentIds.author1Pubkey)
+            .withContent('Parent comment')
+            .build();
+        final listStates = StreamController<CommentsListState>();
+        addTearDown(listStates.close);
+        whenListen(
+          mockListBloc,
+          listStates.stream,
+          initialState: CommentsListState(
+            rootEventId: testVideoEventId,
+            rootAuthorPubkey: testVideoAuthorPubkey,
+            status: CommentsStatus.success,
+            commentsById: {parent.id: parent},
+          ),
+        );
+        const replying = CommentComposerState(
+          activeReplyCommentId: TestCommentIds.comment1Id,
+        );
+        final composerStates = StreamController<CommentComposerState>();
+        addTearDown(composerStates.close);
+        whenListen(
+          mockComposerBloc,
+          composerStates.stream,
+          initialState: replying,
+        );
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pump();
+
+        // Its author deletes it, or the viewer blocks them, mid-reply.
+        listStates.add(
+          const CommentsListState(
+            rootEventId: testVideoEventId,
+            rootAuthorPubkey: testVideoAuthorPubkey,
+            status: CommentsStatus.success,
+          ),
+        );
+        await tester.pump();
+        await tester.enterText(find.byType(TextField), 'hi');
+        composerStates.add(replying.copyWith(replyInputText: 'hi'));
+        await tester.pump();
+
+        await tester.tap(find.bySemanticsIdentifier('send_comment_button'));
+        await tester.pump();
+
+        final sent = verify(() => mockComposerBloc.add(captureAny())).captured;
+        expect(
+          sent.whereType<CommentReplyToggled>().map((e) => e.commentId),
+          [TestCommentIds.comment1Id],
+        );
+        expect(sent.whereType<CommentSubmitted>(), isEmpty);
       });
     });
 

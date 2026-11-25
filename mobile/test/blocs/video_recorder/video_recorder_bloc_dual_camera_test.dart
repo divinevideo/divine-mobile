@@ -29,6 +29,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:wakelock_plus_platform_interface/wakelock_plus_platform_interface.dart';
 
 import '../../mocks/mock_path_provider_platform.dart';
+import 'helpers/start_observing_recorder.dart';
 
 class _MockDualCameraService extends Mock
     implements CameraService, DualCameraCapture {}
@@ -62,30 +63,6 @@ class _GatedProVideoEditor extends Fake
 class _MockVideoEditor extends Mock implements VideoEditorNotifier {}
 
 class _MockSharedPreferences extends Mock implements SharedPreferences {}
-
-class _StartObservedRecorderBloc extends VideoRecorderBloc {
-  _StartObservedRecorderBloc({
-    required super.readClipManager,
-    required super.readVideoEditor,
-    required super.readVideoEditorState,
-    required super.readSharedPreferences,
-    required super.cameraService,
-  });
-
-  final startFinished = Completer<void>();
-
-  @override
-  void onDone(
-    VideoRecorderEvent event, [
-    Object? error,
-    StackTrace? stackTrace,
-  ]) {
-    super.onDone(event, error, stackTrace);
-    if (event is VideoRecorderRecordingStartRequested) {
-      startFinished.complete();
-    }
-  }
-}
 
 class _FakeWakelockPlatform extends WakelockPlusPlatformInterface {
   @override
@@ -1040,7 +1017,7 @@ void main() {
       });
 
       test("deletes both cameras' files", () async {
-        final bloc = _StartObservedRecorderBloc(
+        final bloc = StartObservingRecorder(
           readClipManager: () => clipManager,
           readVideoEditor: _MockVideoEditor.new,
           readVideoEditorState: VideoEditorProviderState.new,
@@ -1054,8 +1031,7 @@ void main() {
         await pumpEventQueue();
 
         started.complete(true);
-        // Navigation resets the state to idle before async file cleanup ends.
-        await bloc.startFinished.future;
+        await bloc.startDone.future;
 
         expect(bloc.state.isRecording, isFalse);
         expect(mainFile.existsSync(), isFalse);

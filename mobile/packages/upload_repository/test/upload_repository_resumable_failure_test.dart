@@ -106,11 +106,7 @@ void main() {
               required String videoPath,
               required Duration targetTimestamp,
               required int quality,
-            }) async {
-              final path = '${tempDir.path}/thumb.jpg';
-              File(path).writeAsBytesSync([0xFF, 0xD8, 0xFF]);
-              return (path: path);
-            },
+            }) async => (bytes: Uint8List.fromList([0xFF, 0xD8, 0xFF])),
         blurhashGenerator: (Uint8List bytes) async => null,
         transientRenderCleaner: _NoopTransientRenderCleaner(),
         connectivityProvider: () async => UploadConnectivity.wifi,
@@ -133,9 +129,10 @@ void main() {
     void stubVideoTransfer(BlossomUploadResult result) {
       when(() => blossom.isBlossomEnabled()).thenAnswer((_) async => false);
       when(
-        () => blossom.uploadImage(
-          imageFile: any(named: 'imageFile'),
+        () => blossom.uploadImageBytes(
+          bytes: any(named: 'bytes'),
           nostrPubkey: any(named: 'nostrPubkey'),
+          filename: any(named: 'filename'),
           allowResumable: any(named: 'allowResumable'),
         ),
       ).thenAnswer(
@@ -177,6 +174,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(File(''));
+      registerFallbackValue(Uint8List(0));
     });
 
     setUp(() async {
