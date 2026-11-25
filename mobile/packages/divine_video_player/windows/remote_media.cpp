@@ -356,9 +356,11 @@ IAsyncAction DownloadAsync(std::shared_ptr<const RequestContext> context,
         std::min<uint64_t>(status == 200 ? start : 0, body.size()));
     const auto length = static_cast<std::ptrdiff_t>(
         std::min<uint64_t>(body.size() - static_cast<size_t>(skip), wanted));
-    body.erase(body.begin() + skip + length, body.end());
-    body.erase(body.begin(), body.begin() + skip);
-    out->data = std::make_shared<const std::vector<uint8_t>>(std::move(body));
+    // Cache only the requested bytes. Erasing the rest leaves the whole
+    // response's allocation in the vector, outside the cache's byte budget.
+    const auto chunk_start = body.cbegin() + skip;
+    out->data = std::make_shared<const std::vector<uint8_t>>(
+        chunk_start, chunk_start + length);
     report("complete", true);
   } catch (const winrt::hresult_canceled&) {
     report("cancelled", true);
