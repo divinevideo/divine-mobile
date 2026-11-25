@@ -2203,7 +2203,7 @@ class VideosRepository {
     try {
       final event = await client.getVideoEvent(address.dTag);
       if (event != null && _isSignedRevisionAt(event, address)) return event;
-    } on Object catch (error) {
+    } on Exception catch (error) {
       Log.warning(
         'Funnelcake could not answer the newest revision of '
         '${address.toAString()}; asking the relays: $error',
