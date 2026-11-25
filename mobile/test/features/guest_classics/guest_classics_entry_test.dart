@@ -241,5 +241,79 @@ void main() {
         ]);
       },
     );
+
+    testWidgets(
+      'loads the manifest on cold start when lifecycleState is null',
+      (
+        tester,
+      ) async {
+        tester.binding.resetInternalState();
+        addTearDown(tester.binding.resetInternalState);
+        var loads = 0;
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: GuestClassicsEntry(
+              load: (_, {required muted}) async {
+                loads++;
+                return manifest([1]);
+              },
+              now: () => _now,
+              welcome: (open) =>
+                  TextButton(onPressed: open, child: const Text('Welcome')),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(loads, 1);
+        expect(find.byType(DivineVideoPlayer), findsNothing);
+        expect(
+          tester.widget<TextButton>(find.byType(TextButton)).onPressed,
+          isNotNull,
+        );
+      },
+    );
+
+    testWidgets(
+      'skips initial manifest load when mounted outside foreground',
+      (tester) async {
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        addTearDown(tester.binding.resetInternalState);
+        var loads = 0;
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: GuestClassicsEntry(
+              load: (_, {required muted}) async {
+                loads++;
+                return manifest([1]);
+              },
+              now: () => _now,
+              welcome: (open) =>
+                  TextButton(onPressed: open, child: const Text('Welcome')),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(loads, 0);
+        expect(
+          tester.widget<TextButton>(find.byType(TextButton)).onPressed,
+          isNull,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        expect(loads, 1);
+        expect(
+          tester.widget<TextButton>(find.byType(TextButton)).onPressed,
+          isNotNull,
+        );
+      },
+    );
   });
 }

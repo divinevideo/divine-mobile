@@ -50,8 +50,9 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
-      unawaited(_refresh());
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (lifecycle == null || lifecycle == AppLifecycleState.resumed) {
+      unawaited(_load(muted: _muted, retire: false));
     }
   }
 
