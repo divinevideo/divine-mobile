@@ -51,6 +51,11 @@ typedef _ProfileRead = FreshProfileRead;
 const _nip50SearchTimeout = Duration(seconds: 5);
 const _nip50RelayQueryTimeout = Duration(milliseconds: 4500);
 
+// How long people search waits for Funnelcake before the cache and NIP-50
+// relays stand in. Shorter than the client's own timeout, which also spans its
+// retries, so a stalled backend falls back within seconds.
+const _restSearchTimeout = Duration(seconds: 5);
+
 // Caps each step of the people-search lookup of who owns a typed Divine
 // username: the name server's NIP-05 answer, which runs beside the local and
 // REST phases, and the search that confirms the owner is discoverable.
@@ -2480,18 +2485,22 @@ class ProfileRepository implements ProfileReader {
   /// - a per-source outcome map ([ProgressiveSearchResult.sources])
   /// - an [ProgressiveSearchResult.isComplete] flag on the terminal yield
   ///
-  /// Starts local cache, Funnelcake REST and NIP-50 WebSocket searches
-  /// concurrently, emitting each available answer without waiting for the
-  /// other sources. Local and relay searches run on the first page only;
-  /// NIP-50 retains [_nip50SearchTimeout]. Remote requests start while durable
-  /// vanish policy loads, but no results are emitted before it is loaded.
+  /// Funnelcake REST is the result whenever it answers: its page is published
+  /// once, in the server's order, and the NIP-50 relays are not asked
+  /// ([SearchSourceSkipped]). The local cache search runs beside it on the
+  /// first page, but only to supply newer revisions of profiles on the page.
+  ///
+  /// When Funnelcake fails, takes longer than [_restSearchTimeout] or is
+  /// unconfigured, the cache matches and a NIP-50 WebSocket search (bounded
+  /// by [_nip50SearchTimeout]) stand in, published as each answers. Both run
+  /// on the first page only. Remote requests start while durable vanish
+  /// policy loads, but no results are emitted before it is loaded.
   ///
   /// On [offset] > 0 the local and NIP-50 phases are recorded as
   /// [SearchSourceSkipped]. When Funnelcake is unconfigured it is also
   /// recorded as [SearchSourceSkipped]. Any phase that throws (REST as
   /// an [Exception], NIP-50 as an [Object] since WebSocket errors
-  /// surface as [Error]) is recorded as [SearchSourceFailed]; the stream
-  /// continues to publish the other sources.
+  /// surface as [Error]) is recorded as [SearchSourceFailed].
   ///
   /// When [boostPubkeys] is non-empty, profiles whose pubkey is in the set
   /// are promoted to the front of each emission while preserving the
@@ -2529,8 +2538,17 @@ class ProfileRepository implements ProfileReader {
 
     Future<void> searchAll() async {
       if (isCancelled()) return;
-      final visibilityReady = loadVanishedPubkeys();
+      // Each source awaits the policy before it publishes, and a failure then
+      // fails the stream. ignore() only keeps a failure that arrives before
+      // any source awaits it from also being reported as unhandled.
+      final visibilityReady = loadVanishedPubkeys()..ignore();
       final resultMap = <String, UserProfile>{};
+      // Cache matches, published only when REST does not answer.
+      final localResults = <String, UserProfile>{};
+      SearchSourceStatus? localOutcome;
+      var localApplied = false;
+      var restAnswered = false;
+      // Cache matches published as results, which REST did not vouch for.
       final localPubkeys = <String>{};
       final restResultsByPubkey = <String, ProfileSearchResult>{};
       final serverSelectedPubkeys = <String>{};
@@ -2592,9 +2610,7 @@ class ProfileRepository implements ProfileReader {
       // cleared.
       void mergeRestResult(ProfileSearchResult result) {
         if (isVanished(result.pubkey)) revalidateVanishOnce(result.pubkey);
-        final cached = localPubkeys.contains(result.pubkey)
-            ? resultMap[result.pubkey]
-            : null;
+        final cached = localResults[result.pubkey];
         final serverRevision = result.createdAt;
         // Compare event revisions before conversion: an older API can omit
         // created_at, and toUserProfile's fallback is not an event timestamp.
@@ -2630,21 +2646,15 @@ class ProfileRepository implements ProfileReader {
           );
           await visibilityReady;
           if (isCancelled()) return;
-          final preCount = resultMap.length;
           for (final profile in local) {
-            localPubkeys.add(profile.pubkey);
-            resultMap[profile.pubkey] = profile;
-            // A cache answer may arrive after REST. Apply the same revision
-            // comparison in either completion order, retaining REST counts.
-            final rest = restResultsByPubkey[profile.pubkey];
-            if (rest != null) mergeRestResult(rest);
+            localResults[profile.pubkey] = profile;
           }
-          sources[SearchSource.localCache] = SearchSourceSuccess(
-            resultCount: resultMap.length - preCount,
+          localOutcome = SearchSourceSuccess(
+            resultCount: 0,
             latencyMs: watch.elapsedMilliseconds,
           );
         } on Object catch (e) {
-          sources[SearchSource.localCache] = SearchSourceFailed(
+          localOutcome = SearchSourceFailed(
             reason: SearchSourceFailureReason.other,
             latencyMs: watch.elapsedMilliseconds,
           );
@@ -2654,29 +2664,63 @@ class ProfileRepository implements ProfileReader {
             category: LogCategory.api,
           );
         }
-        emit();
       }
 
-      Future<void> searchRest() async {
+      // Records the cache answer once it and REST have both settled. Beside a
+      // REST page the cache only replaces revisions of the page's profiles, in
+      // either completion order; without one its matches become results.
+      // Returns whether anything was applied.
+      bool applyLocal() {
+        final outcome = localOutcome;
+        if (localApplied || outcome == null || isCancelled()) return false;
+        localApplied = true;
+        final preCount = resultMap.length;
+        for (final profile in localResults.values) {
+          final rest = restResultsByPubkey[profile.pubkey];
+          if (rest != null) {
+            mergeRestResult(rest);
+          } else if (!restAnswered) {
+            localPubkeys.add(profile.pubkey);
+            resultMap[profile.pubkey] = profile;
+          }
+        }
+        sources[SearchSource.localCache] = switch (outcome) {
+          SearchSourceSuccess(:final latencyMs) => SearchSourceSuccess(
+            resultCount: resultMap.length - preCount,
+            latencyMs: latencyMs,
+          ),
+          _ => outcome,
+        };
+        return true;
+      }
+
+      // Returns whether REST answered with a page; the other sources then
+      // stay out of the results.
+      Future<bool> searchRest() async {
         if (sources[SearchSource.funnelcakeApi] is SearchSourceSkipped ||
             isCancelled()) {
-          return;
+          return false;
         }
         final watch = Stopwatch()..start();
-        var restResults = <ProfileSearchResult>[];
-        SearchSourceStatus? failure;
+        final List<ProfileSearchResult> restResults;
         try {
-          restResults = await _funnelcakeApiClient!.searchProfiles(
-            query: trimmed,
-            limit: limit,
-            offset: offset,
-            sortBy: sortBy,
-            hasVideos: hasVideos,
-          );
-          if (isCancelled()) return;
+          restResults = await _funnelcakeApiClient!
+              .searchProfiles(
+                query: trimmed,
+                limit: limit,
+                offset: offset,
+                sortBy: sortBy,
+                hasVideos: hasVideos,
+              )
+              .timeout(_restSearchTimeout);
+          if (isCancelled()) return false;
         } on Exception catch (e) {
-          failure = SearchSourceFailed(
-            reason: SearchSourceFailureReason.network,
+          // The owner is pinned only onto a REST page, which there is none of.
+          ownerLookup?.ignore();
+          sources[SearchSource.funnelcakeApi] = SearchSourceFailed(
+            reason: e is TimeoutException
+                ? SearchSourceFailureReason.timeout
+                : SearchSourceFailureReason.network,
             latencyMs: watch.elapsedMilliseconds,
           );
           Log.warning(
@@ -2684,23 +2728,22 @@ class ProfileRepository implements ProfileReader {
             name: 'ProfileRepository.searchUsersProgressive',
             category: LogCategory.api,
           );
+          return false;
         }
-        // Resolve the exact owner before publishing the REST page, as before.
-        // Other sources continue to publish while this request is pending.
+        // Resolve the exact owner before publishing the REST page.
         final candidate = await ownerLookup;
-        if (isCancelled()) return;
+        if (isCancelled()) return false;
         ProfileSearchResult? discovered;
         if (candidate != null &&
             !restResults.any((r) => r.pubkey == candidate.pubkey)) {
           discovered = await _discoverableUsernameOwner(candidate);
         }
         await visibilityReady;
-        if (isCancelled()) return;
+        if (isCancelled()) return false;
+        restAnswered = true;
         final preCount = resultMap.length;
-        if (failure == null) {
-          nextRestOffset = offset + restResults.length;
-          restHasMore = restResults.length == limit;
-        }
+        nextRestOffset = offset + restResults.length;
+        restHasMore = restResults.length == limit;
         for (final result in restResults) {
           restPubkeys.add(result.pubkey);
           restPositions.putIfAbsent(result.pubkey, () => restPositions.length);
@@ -2715,13 +2758,16 @@ class ProfileRepository implements ProfileReader {
         if (candidate != null && restPubkeys.contains(candidate.pubkey)) {
           ownerPubkey = candidate.pubkey;
         }
-        sources[SearchSource.funnelcakeApi] =
-            failure ??
-            SearchSourceSuccess(
-              resultCount: resultMap.length - preCount,
-              latencyMs: watch.elapsedMilliseconds,
-            );
+        sources[SearchSource.funnelcakeApi] = SearchSourceSuccess(
+          resultCount: resultMap.length - preCount,
+          latencyMs: watch.elapsedMilliseconds,
+        );
+        if (offset == 0) {
+          sources[SearchSource.nip50Relay] = const SearchSourceSkipped();
+        }
+        applyLocal();
         emit();
+        return true;
       }
 
       Future<void> searchRelay() async {
@@ -2773,8 +2819,7 @@ class ProfileRepository implements ProfileReader {
         emit();
       }
 
-      Future<void> recheckCached(Future<void> localAndRest) async {
-        await localAndRest;
+      Future<void> recheckCached() async {
         if (offset != 0 ||
             isCancelled() ||
             !(_funnelcakeApiClient?.isAvailable ?? false)) {
@@ -2819,12 +2864,21 @@ class ProfileRepository implements ProfileReader {
         }
       }
 
-      final localAndRest = Future.wait([searchLocal(), searchRest()]);
-      await Future.wait([
-        recheckCached(localAndRest),
-        searchRelay(),
-        visibilityReady,
-      ]);
+      final localSearch = searchLocal();
+      if (await searchRest()) {
+        // A revision the cache supplies now reaches the final yield.
+        await localSearch;
+        applyLocal();
+      } else {
+        Future<void> fallBackToCache() async {
+          await localSearch;
+          if (!applyLocal()) return;
+          emit();
+          await recheckCached();
+        }
+
+        await Future.wait([fallBackToCache(), searchRelay(), visibilityReady]);
+      }
       if (isCancelled()) return;
       final enriched = await _enrichFromCache(
         resultMap.values.toList(),
@@ -3016,10 +3070,10 @@ class ProfileRepository implements ProfileReader {
   /// A [profileSearchSortRelevance] search keeps Funnelcake's order for the
   /// matching profiles it returned: the server already weighs match strength
   /// against creator activity, so an active near match can lead an empty
-  /// exact one. Profiles only a local source found follow, by textual
-  /// relevance, as does everything before the server answers. A follower
-  /// sort orders by textual relevance before the REST counts, so an exact
-  /// account match is never buried beneath popular substring matches.
+  /// exact one. Without a REST page, the cache and NIP-50 matches standing in
+  /// for it are ordered by textual relevance. A follower sort orders by
+  /// textual relevance before the REST counts, so an exact account match is
+  /// never buried beneath popular substring matches.
   static List<UserProfile> _rankSearchResults(
     String query,
     List<UserProfile> profiles,
@@ -3048,12 +3102,12 @@ class ProfileRepository implements ProfileReader {
         profile.pubkey: _searchRelevance(profile, normalizedQuery, queryHex),
     };
     return matching..sort((a, b) {
-      if (serverOrdered) {
-        final first = serverPositions[a.pubkey];
-        final second = serverPositions[b.pubkey];
-        if (first != null && second != null) return first.compareTo(second);
-        if (first != null) return -1;
-        if (second != null) return 1;
+      // Beside a REST page the results are the page's own rows.
+      if (serverOrdered && serverPositions.isNotEmpty) {
+        final last = serverPositions.length;
+        return (serverPositions[a.pubkey] ?? last).compareTo(
+          serverPositions[b.pubkey] ?? last,
+        );
       }
       final relevance = relevanceByPubkey[b.pubkey]!.compareTo(
         relevanceByPubkey[a.pubkey]!,
