@@ -633,7 +633,6 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     try {
       final canonical = _videoSharingService.generateShareUrl(_video);
       final url = _videoSharingService.cachedShortUrl(canonical) ?? canonical;
-      if (isClosed || emit.isDone) return;
       emit(
         state.copyWith(
           actionResult: ShareSheetCopiedToClipboard(
@@ -653,7 +652,6 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         name: 'ShareSheetBloc',
         category: LogCategory.ui,
       );
-      if (isClosed || emit.isDone) return;
       emit(state.copyWith(actionResult: ShareSheetActionFailure()));
     }
   }
@@ -689,7 +687,6 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         name: 'ShareSheetBloc',
         category: LogCategory.ui,
       );
-      if (isClosed || emit.isDone) return;
       emit(state.copyWith(actionResult: ShareSheetActionFailure()));
     }
   }
