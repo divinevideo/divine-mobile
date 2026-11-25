@@ -98,8 +98,8 @@ Duration? _noAutomaticRetry(int retryCount, Object error) => null;
 /// Provider for the videos published by the members of a user list.
 ///
 /// The members' newest videos come from
-/// [VideosRepository.getVideosByAuthors]: one relay filter over the list,
-/// Funnelcake per member as the fallback. Whatever the feed pool already
+/// [VideosRepository.getVideosByAuthors]: Funnelcake first, the relays when
+/// it fails or holds none of their videos. Whatever the feed pool already
 /// holds from those members shows first, so a list of followed people paints
 /// before the round trip returns; the fetched set is then merged in. A fetch
 /// that fails after that first paint keeps the pooled videos; one that fails

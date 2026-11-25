@@ -68,14 +68,14 @@ const int _authorFeedHasMoreThreshold = 10;
 /// is covered: the cap bounds the filter, not the feed.
 const int _membersFeedRelayFilterAuthors = 100;
 
-/// How many members the Funnelcake fallback of a members feed can cover, one
-/// videos-by-author call each. A larger list is not answered by the fallback
-/// at all: a feed missing most of its members would pass for the complete
-/// one.
-const int _membersFeedApiAuthorCap = 100;
+/// How many members one Funnelcake by-authors read of a members feed names:
+/// the most the endpoint takes. A larger list is read as one request per two
+/// hundred members.
+const int _membersFeedApiAuthorsPerRequest = 200;
 
-/// How many of the fallback's per-member calls are in flight at once.
-const int _membersFeedApiConcurrency = 20;
+/// The most videos one Funnelcake by-authors read returns, whatever limit it
+/// is asked for.
+const int _membersFeedApiPageLimit = 100;
 
 /// How many events naming one file a file-hash lookup reads. Normally one
 /// post names a file. Relays answer newest first, so the window is wide
@@ -3375,51 +3375,75 @@ class VideosRepository {
   /// Fetches the newest videos published by any of [authorPubkeys], newest
   /// first, at most [limit].
   ///
-  /// This is the feed behind a people list. A relay filter over every member
-  /// — one per [_membersFeedRelayFilterAuthors] members, read in parallel —
-  /// answers "what did these people post lately" in one round trip, hydrated
-  /// with Funnelcake counts when the API is up. No member is left out for
-  /// being past the filter size. Funnelcake has no multi-author endpoint, so
-  /// it is the fallback rather than the first source: when the relay read
-  /// fails and the API is available, a list of up to
-  /// [_membersFeedApiAuthorCap] members is paged one videos-by-author call
-  /// each and merged. A member the API does not know contributes nothing;
-  /// the other members' pages still show. A larger list gets the relay
-  /// failure instead of a fallback feed missing most of its members.
+  /// This is the feed behind a people list. Funnelcake answers first: one
+  /// by-authors read per [_membersFeedApiAuthorsPerRequest] members, merged
+  /// newest first. Its index catches up with a new video within a minute or
+  /// two, and its rows carry engagement counts, so they need no hydration.
   ///
-  /// A read that reached no relay, ran out of time, or settled before every
-  /// relay answered counts as a failure even though the relay layer reports
-  /// it as an empty list. Those answers are the same value as a genuinely
-  /// empty one and mean the opposite, and taking them at face value leaves a
-  /// caller rendering "no videos" for a network failure, with nothing to
-  /// retry because nothing threw. The partial case is the common one: the
-  /// public relays answer this filter at once with nothing, while the Divine
-  /// relay holding the videos is still busy. An empty answer that every relay
-  /// did give is returned as the empty list it is.
+  /// The relays answer when Funnelcake cannot: it is not configured, one of
+  /// its reads fails, or it holds no video by any member. The last case
+  /// covers members who post only to relays Funnelcake does not index. The
+  /// relay read is one filter per [_membersFeedRelayFilterAuthors] members,
+  /// read in parallel, so no member is left out for being past the filter
+  /// size, and hydrated with Funnelcake counts when the API is up.
+  ///
+  /// A relay read that reached no relay, ran out of time, or settled before
+  /// every relay answered counts as a failure even though the relay layer
+  /// reports it as an empty list. Those answers are the same value as a
+  /// genuinely empty one and mean the opposite, and taking them at face value
+  /// leaves a caller rendering "no videos" for a network failure, with
+  /// nothing to retry because nothing threw. The partial case is the common
+  /// one: the public relays answer this filter at once with nothing, while
+  /// the Divine relay holding the videos is still busy. An empty answer that
+  /// every relay did give is returned as the empty list it is.
+  ///
+  /// When Funnelcake answered with nothing and the relay read then fails,
+  /// Funnelcake's empty answer stands: it is a real answer, and members who
+  /// have not posted yet are the usual reason for it.
   ///
   /// [until] bounds the read to videos no newer than that Unix timestamp, on
-  /// both paths, so a feed can page backwards from its oldest video. A relay
-  /// treats the bound as inclusive, so that video can come back again; the
-  /// caller drops the repeat.
+  /// both paths, so a feed can page backwards from its oldest video. The
+  /// bound is inclusive, so that video can come back again; the caller drops
+  /// the repeat.
   ///
   /// Returns an empty list when [authorPubkeys] is empty.
   ///
-  /// Throws:
+  /// Throws, when the relays were the last source left (Funnelcake is not
+  /// configured, or its read failed):
   ///
-  /// * the relay error, unchanged, when there is no Funnelcake client to
-  ///   fall back to, or the list has more members than the fallback covers —
-  ///   an empty result would read as "these people have no videos" for what
-  ///   is a network failure.
-  /// * [RelayReadUnavailableException] when the read answered with nothing
-  ///   because it could not be completed and the fallback does not run.
-  /// * [FunnelcakeException] when the fallback fails as well, for any reason
-  ///   other than a member the API does not know.
+  /// * the relay error, unchanged — an empty result would read as "these
+  ///   people have no videos" for what is a network failure.
+  /// * [RelayReadUnavailableException] when the relay read answered with
+  ///   nothing because it could not be completed.
   Future<List<VideoEvent>> getVideosByAuthors({
     required List<String> authorPubkeys,
     int limit = _defaultLimit,
     int? until,
   }) async {
     if (authorPubkeys.isEmpty) return const [];
+
+    List<VideoEvent>? emptyApiAnswer;
+    final api = _funnelcakeApiClient;
+    if (api != null && api.isAvailable) {
+      try {
+        final page = await _videosByAuthorsFromApi(
+          api,
+          authorPubkeys,
+          limit: limit,
+          until: until,
+        );
+        if (page.serverItemCount > 0) return page.videos;
+        emptyApiAnswer = page.videos;
+      } on Exception catch (error, stackTrace) {
+        Log.warning(
+          'Members feed API read failed; reading relays instead',
+          name: 'VideosRepository',
+          category: LogCategory.video,
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+    }
 
     final List<Event> events;
     try {
@@ -3429,18 +3453,8 @@ class VideosRepository {
         until: until,
       );
     } on Exception {
-      final api = _funnelcakeApiClient;
-      if (api == null || !api.isAvailable) rethrow;
-      // A list the fallback cannot cover in full surfaces the relay failure
-      // instead: a feed missing most of its members would pass for the
-      // complete one.
-      if (authorPubkeys.length > _membersFeedApiAuthorCap) rethrow;
-      return _videosByAuthorsFromApi(
-        api,
-        authorPubkeys,
-        limit: limit,
-        until: until,
-      );
+      if (emptyApiAnswer != null) return emptyApiAnswer;
+      rethrow;
     }
 
     final videos = <VideoEvent>[];
@@ -3450,6 +3464,72 @@ class VideosRepository {
       seenVideoKeys: <String>{},
     );
     return videos.take(limit).toList();
+  }
+
+  /// Every member's newest videos from Funnelcake: one by-authors read per
+  /// [_membersFeedApiAuthorsPerRequest] members, merged newest first.
+  ///
+  /// The reads run one after another, as [BadgeVideoPager]'s do, because each
+  /// is its own scan on the server. A group is paged until it has [limit]
+  /// videos or runs out, since one read returns at most
+  /// [_membersFeedApiPageLimit]. A failed read fails the whole feed: one
+  /// missing a group of members would pass for the complete one.
+  ///
+  /// A member that is not a 64-character hex key is left out of the request,
+  /// since Funnelcake rejects the whole read for it and no video can be
+  /// signed by it. Hex is compared lowercased, as Funnelcake stores it.
+  ///
+  /// `serverItemCount` counts the rows Funnelcake returned before this
+  /// client's filters, so the caller can tell "no member has a video" from
+  /// "every video was filtered out".
+  Future<({List<VideoEvent> videos, int serverItemCount})>
+  _videosByAuthorsFromApi(
+    FunnelcakeApiClient api,
+    List<String> authorPubkeys, {
+    required int limit,
+    int? until,
+  }) async {
+    final authors = {
+      for (final pubkey in authorPubkeys)
+        if (_hexPubkey.hasMatch(pubkey)) pubkey.toLowerCase(),
+    }.toList();
+    // Funnelcake's `before` is exclusive, and `until` is inclusive.
+    final before = until == null ? null : until + 1;
+    final videos = <VideoEvent>[];
+    final seenVideoKeys = <String>{};
+    var serverItemCount = 0;
+    for (
+      var start = 0;
+      start < authors.length;
+      start += _membersFeedApiAuthorsPerRequest
+    ) {
+      final group = authors
+          .skip(start)
+          .take(_membersFeedApiAuthorsPerRequest)
+          .toList();
+      var read = 0;
+      while (read < limit) {
+        final page = await api.getVideosByAuthors(
+          authors: group,
+          limit: min(limit - read, _membersFeedApiPageLimit),
+          offset: read,
+          before: before,
+        );
+        read += page.serverItemCount;
+        serverItemCount += page.serverItemCount;
+        _appendUniqueVideos(
+          videos,
+          _transformVideoStats(page.videos),
+          seenVideoKeys: seenVideoKeys,
+        );
+        if (page.hasMore != true || page.serverItemCount == 0) break;
+      }
+    }
+    videos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return (
+      videos: videos.take(limit).toList(),
+      serverItemCount: serverItemCount,
+    );
   }
 
   /// Every member's videos from relays: one filter per
@@ -3465,7 +3545,7 @@ class VideosRepository {
   /// without a settled answer — no relay took it, or it timed out. The relay
   /// layer reports those as an empty list, the same value a genuinely empty
   /// answer has, and a feed missing those members' videos would pass for the
-  /// complete one; raising it runs the caller's fallback instead.
+  /// complete one.
   Future<List<Event>> _videosByAuthorsFromRelays(
     List<String> authors, {
     required int limit,
@@ -3499,64 +3579,6 @@ class VideosRepository {
       events.addAll(read.events);
     }
     return events;
-  }
-
-  Future<List<VideoEvent>> _videosByAuthorsFromApi(
-    FunnelcakeApiClient api,
-    List<String> authors, {
-    required int limit,
-    int? until,
-  }) async {
-    final pages = <List<VideoStats>>[];
-    for (
-      var start = 0;
-      start < authors.length;
-      start += _membersFeedApiConcurrency
-    ) {
-      pages.addAll(
-        await Future.wait([
-          for (final author
-              in authors.skip(start).take(_membersFeedApiConcurrency))
-            _authorPageOrEmpty(api, author, limit, until),
-        ]),
-      );
-    }
-    final videos = <VideoEvent>[];
-    final seenVideoKeys = <String>{};
-    for (final page in pages) {
-      _appendUniqueVideos(
-        videos,
-        _transformVideoStats(page),
-        seenVideoKeys: seenVideoKeys,
-      );
-    }
-    videos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return videos.take(limit).toList();
-  }
-
-  /// One member's page of the API fallback.
-  ///
-  /// A member Funnelcake has never indexed answers 404. That is a member with
-  /// no videos here, not a failed feed: left to propagate it fails the whole
-  /// [Future.wait] and throws away every page that did answer. Any other
-  /// failure still propagates, since a feed missing a member who does post
-  /// would pass for the complete one.
-  Future<List<VideoStats>> _authorPageOrEmpty(
-    FunnelcakeApiClient api,
-    String author,
-    int limit,
-    int? until,
-  ) async {
-    try {
-      final page = await api.getVideosByAuthor(
-        pubkey: author,
-        limit: limit,
-        before: until,
-      );
-      return page.videos;
-    } on FunnelcakeNotFoundException {
-      return const [];
-    }
   }
 
   /// Composes a single author's video feed page (profile feed).
