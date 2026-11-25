@@ -1083,6 +1083,64 @@ void main() {
         expect(_divineIcon(DivineIconName.x), findsWidgets);
       });
 
+      testWidgets('swaps the field to the reply draft and back', (
+        tester,
+      ) async {
+        final states = StreamController<CommentComposerState>();
+        addTearDown(states.close);
+        const draft = CommentComposerState(mainInputText: 'A draft');
+        whenListen(mockComposerBloc, states.stream, initialState: draft);
+        await tester.pumpWidget(buildTestWidget());
+        final controller = tester
+            .widget<TextField>(find.byType(TextField))
+            .controller!;
+        expect(controller.text, 'A draft');
+
+        final replying = draft.copyWith(
+          activeReplyCommentId: TestCommentIds.comment1Id,
+          replyInputText: '',
+        );
+        states.add(replying);
+        await tester.pump();
+        expect(controller.text, isEmpty);
+
+        states.add(replying.clearActiveReply());
+        await tester.pump();
+        expect(controller.text, 'A draft');
+      });
+
+      testWidgets('keeps the edit draft when Reply is tapped while editing', (
+        tester,
+      ) async {
+        final states = StreamController<CommentComposerState>();
+        addTearDown(states.close);
+        const editing = CommentComposerState(
+          activeEditCommentId: TestCommentIds.comment1Id,
+          editInputText: 'Fixed typo',
+        );
+        whenListen(mockComposerBloc, states.stream, initialState: editing);
+        await tester.pumpWidget(buildTestWidget());
+        final field = find.byType(TextField);
+        await tester.showKeyboard(field);
+        const midEdit = TextEditingValue(
+          text: 'Fixed typo',
+          selection: TextSelection.collapsed(offset: 5),
+        );
+        tester.testTextInput.updateEditingValue(midEdit);
+        final controller = tester.widget<TextField>(field).controller!;
+        expect(controller.value, midEdit);
+
+        states.add(
+          editing.copyWith(
+            activeReplyCommentId: TestCommentIds.comment2Id,
+            replyInputText: '',
+          ),
+        );
+        await tester.pump();
+
+        expect(controller.value, midEdit);
+      });
+
       testWidgets('send replies when its comment is still in the list', (
         tester,
       ) async {
