@@ -1188,6 +1188,8 @@ void main() {
           awaitRecipientOk: any(named: 'awaitRecipientOk'),
           selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
           onSelfWrapDue: any(named: 'onSelfWrapDue'),
+          recipientWrap: any(named: 'recipientWrap'),
+          publishRefusal: any(named: 'publishRefusal'),
         ),
       ).thenAnswer((inv) async {
         final rumorEvent = inv.namedArguments[#rumorEvent] as Event;
@@ -28073,7 +28075,18 @@ void main() {
       );
     });
 
+    void stubRecipientAckWrite() {
+      when(
+        () => mockDirectMessagesDao.markRecipientAccepted(
+          ownerPubkey: any(named: 'ownerPubkey'),
+          rumorId: any(named: 'rumorId'),
+          environment: any(named: 'environment'),
+        ),
+      ).thenAnswer((_) async {});
+    }
+
     group('sendMessage with outgoing_dms queue wired in', () {
+      setUp(stubRecipientAckWrite);
       setUp(stubSendPolicyPermitsEveryone);
 
       late _MockOutgoingDmsDao mockOutgoingDmsDao;
@@ -28212,6 +28225,13 @@ void main() {
           ).captured;
           expect(captured, hasLength(1));
           final enqueued = captured.single as OutgoingDm;
+          verify(
+            () => mockDirectMessagesDao.markRecipientAccepted(
+              ownerPubkey: _validPubkeyA,
+              rumorId: enqueued.id,
+              environment: '',
+            ),
+          ).called(1);
           expect(enqueued.recipientPubkey, equals(_validPubkeyB));
           expect(enqueued.ownerPubkey, equals(_validPubkeyA));
           expect(enqueued.content, equals('queue-wired message'));
@@ -32240,6 +32260,7 @@ void main() {
     });
 
     group('recoverFullSend', () {
+      setUp(stubRecipientAckWrite);
       setUp(stubNoMatchingStoredMessage);
 
       late _MockOutgoingDmsDao mockOutgoingDmsDao;
@@ -33036,10 +33057,15 @@ void main() {
             'content': 'love this reel',
             'sig': '',
           });
+          // The pair's own thread: a one-to-one share is recovered on the
+          // one-to-one path, not as a group row.
+          final pairConversationId = DmRepository.computeConversationId(
+            [_validPubkeyA, _validPubkeyB]..sort(),
+          );
           when(() => mockOutgoingDmsDao.getById(_rumorEventId)).thenAnswer(
             (_) async => OutgoingDm(
               id: _rumorEventId,
-              conversationId: 'conv',
+              conversationId: pairConversationId,
               recipientPubkey: _validPubkeyB,
               content: 'love this reel',
               createdAt: 1700000000,
@@ -33073,7 +33099,7 @@ void main() {
           verify(
             () => mockDirectMessagesDao.insertMessage(
               id: _rumorEventId,
-              conversationId: 'conv',
+              conversationId: pairConversationId,
               senderPubkey: _validPubkeyA,
               content: 'love this reel',
               createdAt: any(named: 'createdAt'),

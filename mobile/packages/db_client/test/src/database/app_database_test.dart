@@ -136,6 +136,62 @@ void main() {
         final row = await database.outgoingDmsDao.getById(id);
         expect(row!.unconfirmedRecipientWrapJson, '{"id":"${'b' * 64}"}');
       });
+
+      for (final (table, column) in [
+        ('outgoing_dms', 'skip_nip04_fallback'),
+        ('outgoing_dms', 'is_video_share'),
+        ('direct_messages', 'recipient_accepted_environment'),
+      ]) {
+        test('restores $table.$column, so a share keeps its delivery flags '
+            'and its acceptance mark', () async {
+          await database.customStatement(
+            'ALTER TABLE $table DROP COLUMN $column',
+          );
+          await database.close();
+          database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+          final id = 'a' * 64;
+
+          await database.outgoingDmsDao.enqueue(
+            OutgoingDm(
+              id: id,
+              conversationId: 'c' * 64,
+              recipientPubkey: testPubkey2,
+              content: 'share',
+              createdAt: 1700000000,
+              rumorEventJson: '{"id":"$id","kind":14,"content":"share"}',
+              recipientWrapStatus: OutgoingWrapStatus.pending,
+              selfWrapStatus: OutgoingWrapStatus.pending,
+              queuedAt: DateTime.utc(2026, 11),
+              ownerPubkey: testPubkey,
+              skipNip04Fallback: true,
+              isVideoShare: true,
+            ),
+          );
+          await database.directMessagesDao.insertMessage(
+            id: id,
+            conversationId: 'c' * 64,
+            senderPubkey: testPubkey,
+            content: 'share',
+            createdAt: 1700000000,
+            giftWrapId: 'b' * 64,
+            ownerPubkey: testPubkey,
+          );
+          await database.directMessagesDao.markRecipientAccepted(
+            ownerPubkey: testPubkey,
+            rumorId: id,
+            environment: 'staging',
+          );
+
+          final queued = await database.outgoingDmsDao.getById(id);
+          expect(queued, isNotNull);
+          expect(queued!.skipNip04Fallback, isTrue);
+          expect(queued.isVideoShare, isTrue);
+          final message = await database
+              .select(database.directMessages)
+              .getSingle();
+          expect(message.recipientAcceptedEnvironment, 'staging');
+        });
+      }
     });
 
     group('conversation dismissal schema recovery', () {

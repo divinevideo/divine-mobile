@@ -1791,51 +1791,8 @@ class AppLocalizationsVi extends AppLocalizations {
   String get shareVideoLabel => 'Chia sẻ video';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'Đã chia sẻ bài đăng với $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Đã chia sẻ bài đăng với $count người',
-      one: 'Đã chia sẻ bài đăng với $count người',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'Vẫn đang thử gửi cho $recipientName';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Vẫn đang thử gửi cho $count người',
-      one: 'Vẫn đang thử gửi cho $count người',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'Không gửi được cho $recipientName';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Không gửi được cho $count người',
-      one: 'Không gửi được cho $count người',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1870,11 +1827,32 @@ class AppLocalizationsVi extends AppLocalizations {
   String get shareFindPeopleMultiline => 'Tìm\nngười';
 
   @override
+  String get shareDeliveryFailed => 'Chưa gửi được';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return 'Sẽ gửi khi có thể liên lạc với $name';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => 'Đã gửi';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return 'Đã chọn $name';
+  }
+
+  @override
+  String get shareRecipientSend => 'Gửi';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'Gửi cho $name';
   }
 
   @override

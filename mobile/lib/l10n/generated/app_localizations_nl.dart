@@ -1831,51 +1831,8 @@ class AppLocalizationsNl extends AppLocalizations {
   String get shareVideoLabel => 'Video delen';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'Post gedeeld met $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Post gedeeld met $count personen',
-      one: 'Post gedeeld met $count persoon',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'We proberen nog naar $recipientName te verzenden';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'We proberen nog naar $count personen te verzenden',
-      one: 'We proberen nog naar $count persoon te verzenden',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'Kon niet naar $recipientName worden verzonden';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Kon niet naar $count personen worden verzonden',
-      one: 'Kon niet naar $count persoon worden verzonden',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1911,11 +1868,32 @@ class AppLocalizationsNl extends AppLocalizations {
   String get shareFindPeopleMultiline => 'Mensen\nzoeken';
 
   @override
+  String get shareDeliveryFailed => 'Verzenden is nog niet gelukt';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return 'Wordt verzonden zodra $name bereikbaar is';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => 'Verzonden';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return '$name geselecteerd';
+  }
+
+  @override
+  String get shareRecipientSend => 'Verzenden';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'Versturen naar $name';
   }
 
   @override

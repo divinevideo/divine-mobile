@@ -1814,60 +1814,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get shareVideoLabel => 'مشاركة الفيديو';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'تمت مشاركة المنشور مع $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'تمت مشاركة المنشور مع $count شخص',
-      many: 'تمت مشاركة المنشور مع $count شخصًا',
-      few: 'تمت مشاركة المنشور مع $count أشخاص',
-      two: 'تمت مشاركة المنشور مع شخصين',
-      one: 'تمت مشاركة المنشور مع شخص واحد',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'ما زلنا نحاول الإرسال إلى $recipientName';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'ما زلنا نحاول الإرسال إلى $count شخص',
-      many: 'ما زلنا نحاول الإرسال إلى $count شخصًا',
-      few: 'ما زلنا نحاول الإرسال إلى $count أشخاص',
-      two: 'ما زلنا نحاول الإرسال إلى شخصين',
-      one: 'ما زلنا نحاول الإرسال إلى شخص واحد',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'تعذّر الإرسال إلى $recipientName';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'تعذّر الإرسال إلى $count شخص',
-      many: 'تعذّر الإرسال إلى $count شخصًا',
-      few: 'تعذّر الإرسال إلى $count أشخاص',
-      two: 'تعذّر الإرسال إلى شخصين',
-      one: 'تعذّر الإرسال إلى شخص واحد',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1902,11 +1850,32 @@ class AppLocalizationsAr extends AppLocalizations {
   String get shareFindPeopleMultiline => 'ابحثعن أشخاص';
 
   @override
+  String get shareDeliveryFailed => 'تعذّر الإرسال حتى الآن';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return 'سيتم الإرسال عندما يمكن الوصول إلى $name';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => 'تم الإرسال';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return 'تم تحديد $name';
+  }
+
+  @override
+  String get shareRecipientSend => 'إرسال';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'إرسال إلى $name';
   }
 
   @override

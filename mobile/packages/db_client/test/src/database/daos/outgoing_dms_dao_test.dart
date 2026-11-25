@@ -85,6 +85,29 @@ void main() {
     }
   });
 
+  group('enqueueAll', () {
+    test('duplicate rumor ids roll back the entire share', () async {
+      final row = makeDm(id: 'same-rumor');
+      await expectLater(
+        dao.enqueueAll([row, row], isCurrent: () => true),
+        throwsA(isA<SqliteException>()),
+      );
+      expect(await dao.getAllForOwner(ownerA), isEmpty);
+    });
+
+    test('an account change during insertion rolls back every row', () async {
+      var checks = 0;
+      await expectLater(
+        dao.enqueueAll(
+          [makeDm(id: 'first'), makeDm(id: 'second')],
+          isCurrent: () => ++checks <= 2,
+        ),
+        throwsStateError,
+      );
+      expect(await dao.getAllForOwner(ownerA), isEmpty);
+    });
+  });
+
   group('OutgoingDm value equality', () {
     test('rumorId reads the wire id independently of the queue handle', () {
       final row = makeDm(id: 'queue-handle', rumorId: 'wire-rumor');
@@ -1391,7 +1414,7 @@ void main() {
       // to `pending` because that would silently re-activate a row a
       // newer client (or a corrupt write) already moved to a terminal
       // state — for a retry queue, that risks double-delivery. See the
-      // doc on `_parseStatus` and the table-column doc on
+      // doc on `parseOutgoingWrapStatus` and the table-column doc on
       // `recipient_wrap_status`.
       test(
         'getById throws UnknownOutgoingWrapStatusException when a row '

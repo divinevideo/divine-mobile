@@ -920,27 +920,7 @@
   },
   "listAttributionFallback": "Senarai",
   "shareVideoLabel": "Kongsi video",
-  "sharePostSharedWith": "Siaran dikongsi dengan {recipientName}",
-  "sharePostSharedWithCount": "{count, plural, one{Siaran dikongsi dengan {count} orang} other{Siaran dikongsi dengan {count} orang}}",
-  "@sharePostSharedWithCount": {
-    "description": "Snackbar after sharing a video to two or more people at once. Only used for count >= 2.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "@sharePostSharedWith": {
-    "placeholders": {
-      "recipientName": {
-        "type": "String"
-      }
-    }
-  },
-  "shareStillTryingToSendTo": "Masih cuba menghantar kepada {recipientName}",
-  "shareStillTryingToSendToCount": "{count, plural, one{Masih cuba menghantar kepada {count} orang} other{Masih cuba menghantar kepada {count} orang}}",
   "shareCouldNotSendTo": "Tidak dapat menghantar kepada {recipientName}",
-  "shareCouldNotSendToCount": "{count, plural, one{Tidak dapat menghantar kepada {count} orang} other{Tidak dapat menghantar kepada {count} orang}}",
   "shareFailedToSend": "Gagal menghantar video",
   "shareAddedToBookmarks": "Ditambah ke penanda buku",
   "shareRemovedFromBookmarks": "Dialih keluar daripada penanda buku",
@@ -957,6 +937,9 @@
   "shareWithTitle": "Kongsi dengan",
   "shareFindPeople": "Cari orang",
   "shareFindPeopleMultiline": "Cari\norang",
+  "shareDeliveryFailed": "Belum dapat dihantar",
+  "shareDeliveryHeld": "Akan dihantar apabila {name} dapat dihubungi",
+  "shareDeliveryForRecipient": "{name} — {status}",
   "shareSent": "Dihantar",
   "shareSelectedRecipientAnnouncement": "{name} dipilih",
   "@shareSelectedRecipientAnnouncement": {
@@ -967,6 +950,8 @@
       }
     }
   },
+  "shareRecipientSend": "Hantar",
+  "shareRecipientSendTo": "Hantar kepada {name}",
   "shareMessageHint": "Tambah mesej pilihan...",
   "videoActionUnlike": "Nyahsuka video",
   "videoActionLike": "Suka video",

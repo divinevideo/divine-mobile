@@ -1862,51 +1862,8 @@ class AppLocalizationsTe extends AppLocalizations {
   String get shareVideoLabel => 'వీడియోను భాగస్వామ్యం చేయండి';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'పోస్ట్ వీరితో భాగస్వామ్యం చేయబడింది $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'పోస్ట్ వీరితో భాగస్వామ్యం చేయబడింది $countవ్యక్తులు',
-      one: 'పోస్ట్ వీరితో భాగస్వామ్యం చేయబడింది $countవ్యక్తి',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return '$recipientNameకు పంపడానికి ఇంకా ప్రయత్నిస్తున్నాం';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count వ్యక్తులకు పంపడానికి ఇంకా ప్రయత్నిస్తున్నాం',
-      one: '$count వ్యక్తికి పంపడానికి ఇంకా ప్రయత్నిస్తున్నాం',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return '$recipientNameకు పంపడం సాధ్యపడలేదు';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count వ్యక్తులకు పంపడం సాధ్యపడలేదు',
-      one: '$count వ్యక్తికి పంపడం సాధ్యపడలేదు',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1942,11 +1899,32 @@ class AppLocalizationsTe extends AppLocalizations {
   String get shareFindPeopleMultiline => '\nవ్యక్తులను కనుగొనండి';
 
   @override
+  String get shareDeliveryFailed => 'ఇంకా పంపలేకపోయాం';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return '$name అందుబాటులోకి వచ్చినప్పుడు పంపుతాం';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => 'పంపబడింది';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return 'ఎంచుకోబడింది$name';
+  }
+
+  @override
+  String get shareRecipientSend => 'పంపండి';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return '$nameకు పంపు';
   }
 
   @override

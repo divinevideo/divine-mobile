@@ -1823,51 +1823,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get shareVideoLabel => 'ویڈیو شیئر کریں';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'پوسٹ $recipientName کے ساتھ شیئر ہوئی';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'پوسٹ $count لوگوں کے ساتھ شیئر ہوئی',
-      one: 'پوسٹ $count شخص کے ساتھ شیئر ہوئی',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return '$recipientName کو بھیجنے کی کوشش ابھی جاری ہے';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count لوگوں کو بھیجنے کی کوشش ابھی جاری ہے',
-      one: '$count شخص کو بھیجنے کی کوشش ابھی جاری ہے',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return '$recipientName کو نہیں بھیجا جا سکا';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count لوگوں کو نہیں بھیجا جا سکا',
-      one: '$count شخص کو نہیں بھیجا جا سکا',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1902,11 +1859,32 @@ class AppLocalizationsUr extends AppLocalizations {
   String get shareFindPeopleMultiline => 'لوگ\nتلاش کریں';
 
   @override
+  String get shareDeliveryFailed => 'ابھی بھیجا نہیں جا سکا';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return 'جب $name سے رابطہ ممکن ہوگا تو بھیج دیا جائے گا';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => 'بھیج دیا';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return '$name منتخب ہوئے';
+  }
+
+  @override
+  String get shareRecipientSend => 'بھیجیں';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return '$name کو بھیجیں';
   }
 
   @override

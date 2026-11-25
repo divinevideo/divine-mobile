@@ -1756,48 +1756,8 @@ class AppLocalizationsId extends AppLocalizations {
   String get shareVideoLabel => 'Bagikan video';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'Postingan dibagikan dengan $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Postingan dibagikan dengan $count orang',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'Masih mencoba mengirim ke $recipientName';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Masih mencoba mengirim ke $count orang',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'Tidak dapat mengirim ke $recipientName';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Tidak dapat mengirim ke $count orang',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1832,11 +1792,32 @@ class AppLocalizationsId extends AppLocalizations {
   String get shareFindPeopleMultiline => 'Cari\norang';
 
   @override
+  String get shareDeliveryFailed => 'Belum bisa dikirim';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return 'Akan dikirim saat $name dapat dihubungi';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => 'Terkirim';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return '$name dipilih';
+  }
+
+  @override
+  String get shareRecipientSend => 'Kirim';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'Kirim ke $name';
   }
 
   @override

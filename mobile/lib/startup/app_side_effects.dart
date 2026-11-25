@@ -150,6 +150,7 @@ class AppShellSideEffects extends ConsumerWidget {
     // TODO(#4338): remove when relay management moves to a dedicated
     // cubit/service.
     ref.watch(relayStatisticsBridgeProvider);
+    ref.watch(shareRecentsWarmProvider);
 
     // Feeds ConnectionStatusService from the live relay pool, so `isOnline`
     // reflects relay reachability instead of staying permanently true (#8331).

@@ -3115,41 +3115,11 @@ abstract class AppLocalizations {
   /// **'Share video'**
   String get shareVideoLabel;
 
-  /// No description provided for @sharePostSharedWith.
-  ///
-  /// In en, this message translates to:
-  /// **'Post shared with {recipientName}'**
-  String sharePostSharedWith(String recipientName);
-
-  /// Snackbar after sharing a video to two or more people at once. Only used for count >= 2.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, one{Post shared with {count} person} other{Post shared with {count} people}}'**
-  String sharePostSharedWithCount(int count);
-
-  /// One line of the snackbar after sharing a video: the send to this person failed for now but is queued, and the app keeps retrying it in the background. Shown on its own line, possibly after a 'Post shared with' line.
-  ///
-  /// In en, this message translates to:
-  /// **'Still trying to send to {recipientName}'**
-  String shareStillTryingToSendTo(String recipientName);
-
-  /// Plural form of shareStillTryingToSendTo, for two or more people whose sends are queued and retrying in the background. Only used for count >= 2.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, one{Still trying to send to {count} person} other{Still trying to send to {count} people}}'**
-  String shareStillTryingToSendToCount(int count);
-
-  /// One line of the snackbar after sharing a video: this person will not get it, because the send was refused (for example, an account nobody reads anymore) and will not be retried. Shown on its own line, possibly after a 'Post shared with' line.
+  /// One line naming a person who will not get the shared video: the send was refused or stopped (for example, an account nobody reads anymore) and will not be retried. Shown in the share sheet or the delivery banner, possibly beside other recipients' lines.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t send to {recipientName}'**
   String shareCouldNotSendTo(String recipientName);
-
-  /// Plural form of shareCouldNotSendTo, for two or more people who will not get the shared video. Only used for count >= 2.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, one{Couldn\'t send to {count} person} other{Couldn\'t send to {count} people}}'**
-  String shareCouldNotSendToCount(int count);
 
   /// No description provided for @shareFailedToSend.
   ///
@@ -3211,6 +3181,24 @@ abstract class AppLocalizations {
   /// **'Find\npeople'**
   String get shareFindPeopleMultiline;
 
+  /// A queued shared video had a failed recipient delivery attempt and may be retried.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send yet'**
+  String get shareDeliveryFailed;
+
+  /// The default relay accepted the share but the recipient inbox could not be read.
+  ///
+  /// In en, this message translates to:
+  /// **'Will send when {name} is reachable'**
+  String shareDeliveryHeld(String name);
+
+  /// A named recipient and the delivery state of their private share.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} — {status}'**
+  String shareDeliveryForRecipient(String name, String status);
+
   /// No description provided for @shareSent.
   ///
   /// In en, this message translates to:
@@ -3222,6 +3210,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Selected {name}'**
   String shareSelectedRecipientAnnouncement(String name);
+
+  /// Button that sends a video directly to one share-sheet recipient.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get shareRecipientSend;
+
+  /// Screen reader label for the button that sends a video to this recipient.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to {name}'**
+  String shareRecipientSendTo(String name);
 
   /// No description provided for @shareMessageHint.
   ///

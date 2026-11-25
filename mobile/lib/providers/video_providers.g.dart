@@ -577,7 +577,7 @@ final class VideoSharingServiceProvider
 }
 
 String _$videoSharingServiceHash() =>
-    r'9eb7e2f0e6e9e7ff4be4814706a05d7407d2c04f';
+    r'0603ad24e3b2cb7c6b7ccba59cdd1fb72d00ec60';
 
 /// Unified resolver for fetching a [VideoEvent] by its event id, with
 /// in-memory → personal cache → relay fallback. See [VideoEventResolver].

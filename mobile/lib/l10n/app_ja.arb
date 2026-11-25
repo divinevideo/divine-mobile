@@ -709,19 +709,7 @@
   },
   "listAttributionFallback": "リスト",
   "shareVideoLabel": "動画を共有",
-  "sharePostSharedWith": "{recipientName}に投稿を共有したよ",
-  "sharePostSharedWithCount": "{count, plural, other{{count}人に投稿を共有したよ}}",
-  "@sharePostSharedWith": {
-    "placeholders": {
-      "recipientName": {
-        "type": "String"
-      }
-    }
-  },
-  "shareStillTryingToSendTo": "{recipientName}への送信をまだ試しています",
-  "shareStillTryingToSendToCount": "{count, plural, other{{count}人への送信をまだ試しています}}",
   "shareCouldNotSendTo": "{recipientName}に送信できませんでした",
-  "shareCouldNotSendToCount": "{count, plural, other{{count}人に送信できませんでした}}",
   "shareFailedToSend": "動画の送信がうまくいかなかった",
   "shareAddedToBookmarks": "ブックマークに追加したよ",
   "shareRemovedFromBookmarks": "ブックマークから外したよ",
@@ -732,6 +720,9 @@
   "shareWithTitle": "共有先",
   "shareFindPeople": "ユーザーを検索",
   "shareFindPeopleMultiline": "ユーザーを\n検索",
+  "shareDeliveryFailed": "まだ送信できませんでした",
+  "shareDeliveryHeld": "{name} に接続できるようになったら送信します",
+  "shareDeliveryForRecipient": "{name} — {status}",
   "shareSent": "送信済み",
   "shareSelectedRecipientAnnouncement": "{name}を選択しました",
   "@shareSelectedRecipientAnnouncement": {
@@ -742,6 +733,8 @@
       }
     }
   },
+  "shareRecipientSend": "送信",
+  "shareRecipientSendTo": "{name}に送信",
   "shareMessageHint": "メッセージを追加 (任意)...",
   "videoActionUnlike": "いいねを取り消す",
   "videoActionLike": "いいね",

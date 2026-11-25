@@ -694,8 +694,9 @@ class NIP17MessageService {
   /// [onSelfWrapDue] takes the self-addressed wrap over.
   ///
   /// When [awaitRecipientOk] is `true`, the recipient wrap publish requires
-  /// the relay's NIP-20 `OK true` before it counts as landed, instead of the
-  /// default frame-accept. A bare frame-accept is a false positive on a flaky
+  /// an NIP-20 `OK true` from one of [targetRelays] (any relay when none are
+  /// given) before it counts as landed, instead of the default
+  /// frame-accept. A bare frame-accept is a false positive on a flaky
   /// single relay — it reports success even though the relay never stored the
   /// event — so both reaction and message sends opt in to confirmation and
   /// lean on their durable retry queues to re-drive a soft, unconfirmed
@@ -721,7 +722,8 @@ class NIP17MessageService {
   ///
   /// [selfWrapOnSoftUnconfirmed] controls whether the self-addressed wrap is
   /// still published when the recipient publish ends soft-unconfirmed (frame
-  /// written, no OK). Reactions keep the default `true` — a lost OK may mean
+  /// written with no OK, or an OK only from a relay outside [targetRelays]).
+  /// Reactions keep the default `true` — a lost OK may mean
   /// the recipient already has the reaction, and their retry service owns
   /// the follow-up (#5977). Durable message sends pass `false`: their queue
   /// re-drives the FULL send until the recipient wrap confirms (publishing
@@ -786,6 +788,7 @@ class NIP17MessageService {
     Duration? selfWrapBuildTimeout = DmSendBudget.selfWrapBuild,
     void Function(Event? prebuiltSelfWrap)? onSelfWrapDue,
     Event? recipientWrap,
+    NIP17SendResult? Function()? publishRefusal,
   }) async {
     final recipientWrapBound = recipientWrapBuildTimeout;
     final selfWrapBound = selfWrapBuildTimeout;
@@ -896,6 +899,10 @@ class NIP17MessageService {
         category: LogCategory.system,
       );
 
+      // A local block or account change can arrive while the signer is busy.
+      final refused = publishRefusal?.call();
+      if (refused != null) return refused;
+
       // Publish the recipient's gift wrap. Route it to the recipient's
       // NIP-17 kind-10050 DM inbox relays when known (so non-diVine users
       // who only read their own inbox relays actually receive it); fall
@@ -916,13 +923,24 @@ class NIP17MessageService {
                 timeout: _recipientOkConfirmTimeout,
               );
 
-        // Classify the outcome BEFORE deciding on the self-wrap. Three cases:
+        // Classify the outcome BEFORE deciding on the self-wrap. Only an OK on
+        // the intended route is delivery: a filtered explicit target falls
+        // back to the client's pool. Otherwise:
         //  * explicit OK-false → hard rejection: the recipient definitely did
         //    not get it.
         //  * nothing reached any relay (offline) → the send definitively did
         //    not happen.
-        //  * frame written to a relay but no OK within the window →
-        //    inconclusive soft-unconfirmed; it may already be delivered.
+        //  * anything else (no OK within the window, or an OK only from a relay
+        //    outside the intended route) → inconclusive soft-unconfirmed.
+        final intended = targetRelays
+            ?.map((url) => normalizeRelayUrl(url) ?? url)
+            .toSet();
+        final recipientAccepted = outcome.acceptedBy.any(
+          (url) =>
+              intended == null ||
+              intended.isEmpty ||
+              intended.contains(normalizeRelayUrl(url) ?? url),
+        );
         final rejected = outcome.rejectedBy.isNotEmpty;
         final reachedNoRelay =
             outcome.acceptedBy.isEmpty &&
@@ -967,7 +985,7 @@ class NIP17MessageService {
         // Short-circuit `&&`: when the gate is false the self-wrap publish is
         // never awaited, so it is skipped entirely on rejected / reachedNoRelay.
         final selfWrapPublished =
-            (outcome.confirmed ||
+            (recipientAccepted ||
                 (softUnconfirmed && selfWrapOnSoftUnconfirmed)) &&
             await _publishSelfWrapUnlessDeferred(
               nostr: nostr,
@@ -978,7 +996,7 @@ class NIP17MessageService {
               onSelfWrapDue: onSelfWrapDue,
             );
 
-        if (outcome.confirmed) {
+        if (recipientAccepted) {
           Log.info(
             'Successfully published NIP-17 $rumorNoun '
             '(selfWrapPublished=$selfWrapPublished)',

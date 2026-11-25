@@ -1867,57 +1867,8 @@ class AppLocalizationsPl extends AppLocalizations {
   String get shareVideoLabel => 'Udostępnij film';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'Post udostępniony z $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Post udostępniony z $count osobami',
-      many: 'Post udostępniony z $count osobami',
-      few: 'Post udostępniony z $count osobami',
-      one: 'Post udostępniony z $count osobą',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'Nadal próbujemy wysłać do $recipientName';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Nadal próbujemy wysłać do $count osoby',
-      many: 'Nadal próbujemy wysłać do $count osób',
-      few: 'Nadal próbujemy wysłać do $count osób',
-      one: 'Nadal próbujemy wysłać do $count osoby',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'Nie udało się wysłać do $recipientName';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Nie udało się wysłać do $count osoby',
-      many: 'Nie udało się wysłać do $count osób',
-      few: 'Nie udało się wysłać do $count osób',
-      one: 'Nie udało się wysłać do $count osoby',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1952,11 +1903,32 @@ class AppLocalizationsPl extends AppLocalizations {
   String get shareFindPeopleMultiline => 'Znajdź\nludzi';
 
   @override
+  String get shareDeliveryFailed => 'Jeszcze nie udało się wysłać';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return 'Wiadomość zostanie wysłana, gdy uda się połączyć z $name';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => 'Wysłano';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return 'Wybrano $name';
+  }
+
+  @override
+  String get shareRecipientSend => 'Wyślij';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'Wyślij do $name';
   }
 
   @override

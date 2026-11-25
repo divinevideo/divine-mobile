@@ -1827,51 +1827,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareVideoLabel => 'Share video';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'Post shared with $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Post shared with $count people',
-      one: 'Post shared with $count person',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'Still trying to send to $recipientName';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Still trying to send to $count people',
-      one: 'Still trying to send to $count person',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'Couldn\'t send to $recipientName';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Couldn\'t send to $count people',
-      one: 'Couldn\'t send to $count person',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1906,11 +1863,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareFindPeopleMultiline => 'Find\npeople';
 
   @override
+  String get shareDeliveryFailed => 'Couldn\'t send yet';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return 'Will send when $name is reachable';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => 'Sent';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return 'Selected $name';
+  }
+
+  @override
+  String get shareRecipientSend => 'Send';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'Send to $name';
   }
 
   @override

@@ -99,13 +99,10 @@ ar/searchUserVideoCount/count:1/two
 ar/searchUserVideoCount/count:1/zero
 ar/settingsStorageOrphanedFilesFound/count:1/zero
 ar/settingsStorageRemoveOrphanedConfirmMessage/count:1/zero
-ar/shareCouldNotSendToCount/count:1/zero
 ar/shareMenuVideoUpdatedWithInviteFailures/count:1/few
 ar/shareMenuVideoUpdatedWithInviteFailures/count:1/many
 ar/shareMenuVideoUpdatedWithInviteFailures/count:1/two
 ar/shareMenuVideoUpdatedWithInviteFailures/count:1/zero
-ar/sharePostSharedWithCount/count:1/zero
-ar/shareStillTryingToSendToCount/count:1/zero
 ar/socialProofFollowerCount/count:1/few
 ar/socialProofFollowerCount/count:1/many
 ar/socialProofFollowerCount/count:1/two
@@ -182,10 +179,7 @@ es/settingsUnsavedDraftsMessage/count:2/many # declined: other is acceptable for
 es/settingsUnsavedDraftsMessage/count:3/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 es/settingsUploadInProgressMessage/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 es/settingsUploadInProgressMessage/count:2/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
-es/shareCouldNotSendToCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 es/shareMenuVideoUpdatedWithInviteFailures/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
-es/sharePostSharedWithCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
-es/shareStillTryingToSendToCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 es/socialProofFollowerCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 es/uploadPublishedCountMessage/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 es/videoCollaboratorCountLabel/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
@@ -249,10 +243,7 @@ fr/settingsUnsavedDraftsMessage/count:3/many # declined: other is acceptable for
 fr/settingsUnsavedDraftsMessage/count:4/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 fr/settingsUploadInProgressMessage/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 fr/settingsUploadInProgressMessage/count:2/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
-fr/shareCouldNotSendToCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 fr/shareMenuVideoUpdatedWithInviteFailures/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
-fr/sharePostSharedWithCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
-fr/shareStillTryingToSendToCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 fr/socialProofFollowerCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 fr/uploadPublishedCountMessage/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 fr/videoCollaboratorCountLabel/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
@@ -311,10 +302,7 @@ it/settingsUnsavedDraftsMessage/count:2/many # declined: other is acceptable for
 it/settingsUnsavedDraftsMessage/count:3/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 it/settingsUploadInProgressMessage/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 it/settingsUploadInProgressMessage/count:2/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
-it/shareCouldNotSendToCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 it/shareMenuVideoUpdatedWithInviteFailures/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
-it/sharePostSharedWithCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
-it/shareStillTryingToSendToCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 it/socialProofFollowerCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 it/uploadPublishedCountMessage/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 it/videoCollaboratorCountLabel/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
@@ -408,10 +396,7 @@ pt/settingsUnsavedDraftsMessage/count:2/many # declined: other is acceptable for
 pt/settingsUnsavedDraftsMessage/count:3/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 pt/settingsUploadInProgressMessage/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 pt/settingsUploadInProgressMessage/count:2/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
-pt/shareCouldNotSendToCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 pt/shareMenuVideoUpdatedWithInviteFailures/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
-pt/sharePostSharedWithCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
-pt/shareStillTryingToSendToCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 pt/socialProofFollowerCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 pt/uploadPublishedCountMessage/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 pt/videoCollaboratorCountLabel/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).

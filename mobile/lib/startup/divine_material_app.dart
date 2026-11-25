@@ -14,6 +14,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/resolve_app_ui_locale.dart';
 import 'package:openvine/providers/layer_rasterizer_provider.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/router/share_delivery_host.dart';
 import 'package:openvine/startup/database_corruption_gate.dart';
 import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart';
@@ -74,7 +75,9 @@ class DivineMaterialApp extends ConsumerWidget {
             child: AppReviewCoordinator(
               child: AdaptiveLayoutScope(
                 child: EyedropperSources(
-                  child: child ?? const SizedBox.shrink(),
+                  child: ShareDeliveryHost(
+                    child: child ?? const SizedBox.shrink(),
+                  ),
                 ),
               ),
             ),

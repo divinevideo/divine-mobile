@@ -249,14 +249,20 @@ void main() {
           recipientWrapBuildTimeout: any(named: 'recipientWrapBuildTimeout'),
           selfWrapBuildTimeout: any(named: 'selfWrapBuildTimeout'),
           onSelfWrapDue: any(named: 'onSelfWrapDue'),
+          publishRefusal: any(named: 'publishRefusal'),
         ),
-      ).thenAnswer(
-        (invocation) async => NIP17SendResult.success(
-          rumorEventId: (invocation.namedArguments[#rumorEvent] as Event).id,
-          messageEventId: _wrapId,
-          recipientPubkey: _peer,
-        ),
-      );
+      ).thenAnswer((invocation) async {
+        final publishRefusal =
+            invocation.namedArguments[#publishRefusal]
+                as NIP17SendResult? Function()?;
+        return publishRefusal?.call() ??
+            NIP17SendResult.success(
+              rumorEventId:
+                  (invocation.namedArguments[#rumorEvent] as Event).id,
+              messageEventId: _wrapId,
+              recipientPubkey: _peer,
+            );
+      });
     });
 
     tearDown(() => db.close());

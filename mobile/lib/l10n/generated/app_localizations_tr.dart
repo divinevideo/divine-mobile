@@ -1757,51 +1757,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get shareVideoLabel => 'Videoyu paylaş';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'Gönderi $recipientName ile paylaşıldı';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Gönderi $count kişiyle paylaşıldı',
-      one: 'Gönderi $count kişiyle paylaşıldı',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'Hâlâ gönderilmeye çalışılıyor: $recipientName';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Hâlâ $count kişiye gönderilmeye çalışılıyor',
-      one: 'Hâlâ $count kişiye gönderilmeye çalışılıyor',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'Gönderilemedi: $recipientName';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count kişiye gönderilemedi',
-      one: '$count kişiye gönderilemedi',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1836,11 +1793,32 @@ class AppLocalizationsTr extends AppLocalizations {
   String get shareFindPeopleMultiline => 'Kişi\nbul';
 
   @override
+  String get shareDeliveryFailed => 'Henüz gönderilemedi';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return '$name erişilebilir olduğunda gönderilecek';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
   String get shareSent => 'Gönderildi';
 
   @override
   String shareSelectedRecipientAnnouncement(String name) {
     return '$name seçildi';
+  }
+
+  @override
+  String get shareRecipientSend => 'Gönder';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return '$name adlı kişiye gönder';
   }
 
   @override

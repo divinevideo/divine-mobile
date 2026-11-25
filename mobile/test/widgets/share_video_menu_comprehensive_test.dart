@@ -7,6 +7,7 @@ import 'dart:ui' show Tristate;
 
 import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
@@ -22,6 +23,7 @@ import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/repositories/creator_delete_enforcement_repository.dart';
 import 'package:openvine/repositories/remix_consent_repository.dart';
+import 'package:openvine/router/share_delivery_host.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
@@ -31,12 +33,19 @@ import 'package:openvine/widgets/video_feed_item/actions/share_action_button.dar
 import 'package:profile_repository/profile_repository.dart';
 
 import '../helpers/test_provider_overrides.dart';
+import '../helpers/test_pubkeys.dart';
 
 class _MockBookmarksRepository extends Mock implements BookmarksRepository {}
 
+class _MockDmRepository extends Mock implements DmRepository {}
+
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
-class _MockVideoSharingService extends Mock implements VideoSharingService {}
+class _MockVideoSharingService extends Mock implements VideoSharingService {
+  // Widget fixtures supply already-resolved recents through the snapshot.
+  @override
+  Future<void> warmRecents(String owner) async {}
+}
 
 class _MockContentDeletionService extends Mock
     implements ContentDeletionService {}
@@ -84,7 +93,7 @@ VideoEvent _testVideo({
 }) {
   return VideoEvent(
     id: id,
-    pubkey: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+    pubkey: testPubkeyFromSeed(80),
     createdAt: 1757385263,
     content: 'Test video content',
     timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
@@ -908,9 +917,8 @@ void main() {
   });
 
   group('Select-then-send behavior', () {
-    const testContact = ShareableUser(
-      pubkey:
-          '1111111111111111111111111111111111111111111111111111111111111111',
+    final testContact = ShareableUser(
+      pubkey: testPubkeyFromSeed(81),
       displayName: 'Alice',
     );
     late _MockFollowRepository mockFollowRepository;
@@ -927,9 +935,21 @@ void main() {
         () => mockVideoSharingService.recentlySharedWith,
       ).thenReturn([testContact]);
 
+      final repository = _MockDmRepository();
+      when(
+        () => repository.watchDeliveryState(
+          ownerPubkey: any(named: 'ownerPubkey'),
+          rumorId: any(named: 'rumorId'),
+        ),
+      ).thenAnswer((_) => Stream.value(DmDeliveryState.queued));
       return testProviderScope(
+        mockAuthService: createMockAuthService(
+          authState: AuthState.authenticated,
+          currentPublicKeyHex: testPubkeyFromSeed(82),
+        ),
         mockFollowRepository: mockFollowRepository,
         additionalOverrides: [
+          dmRepositoryProvider.overrideWithValue(repository),
           profileRepositoryProvider.overrideWithValue(mockProfileRepository),
           profileReadRepositoryProvider.overrideWithValue(
             mockProfileRepository,
@@ -946,6 +966,7 @@ void main() {
           ).overrideWithValue(true),
         ],
         child: MaterialApp(
+          builder: (_, child) => ShareDeliveryHost(child: child!),
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(body: ShareActionButton(video: testVideo)),
@@ -966,7 +987,7 @@ void main() {
       expect(find.text('Alice'), findsOneWidget);
 
       // Tap contact — selects and reveals the message composer
-      await tester.tap(find.text('Alice'));
+      await tester.tap(find.text('Alice').first);
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.shareMessageHint), findsOneWidget);
@@ -980,7 +1001,7 @@ void main() {
       );
     });
 
-    testWidgets('explicit send delivers to the selected contact', (
+    testWidgets('explicit send queues the selected contact', (
       tester,
     ) async {
       when(
@@ -991,9 +1012,7 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => {
-          testContact.pubkey: ShareResult.createSuccess(
-            '2222222222222222222222222222222222222222222222222222222222222222',
-          ),
+          testContact.pubkey: const ShareResult.queued('rumor-a', 'chat-a'),
         },
       );
 
@@ -1001,7 +1020,7 @@ void main() {
       await tester.tap(find.byType(ShareActionButton));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Alice'));
+      await tester.tap(find.text('Alice').first);
       await tester.pumpAndSettle();
       await tester.tap(sendButton());
       await tester.pumpAndSettle();
@@ -1017,7 +1036,7 @@ void main() {
 
       // Sheet dismissed, success snackbar shown
       expect(find.text(l10n.shareWithTitle), findsNothing);
-      expect(find.text(l10n.sharePostSharedWith('Alice')), findsOneWidget);
+      expect(find.text(l10n.dmPendingVideoSending), findsOneWidget);
     });
 
     testWidgets('tapping the selected contact again deselects it', (
@@ -1027,11 +1046,11 @@ void main() {
       await tester.tap(find.byType(ShareActionButton));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Alice'));
+      await tester.tap(find.text('Alice').first);
       await tester.pumpAndSettle();
       expect(find.text(l10n.shareMessageHint), findsOneWidget);
 
-      await tester.tap(find.text('Alice'));
+      await tester.tap(find.text('Alice').first);
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.shareMessageHint), findsNothing);
@@ -1054,7 +1073,9 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => {
-          testContact.pubkey: ShareResult.failure('Network timeout'),
+          testContact.pubkey: const ShareResult.failure(
+            ShareRefusal.unavailable,
+          ),
         },
       );
 
@@ -1062,7 +1083,7 @@ void main() {
       await tester.tap(find.byType(ShareActionButton));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Alice'));
+      await tester.tap(find.text('Alice').first);
       await tester.pumpAndSettle();
       await tester.tap(sendButton());
       await tester.pumpAndSettle();
@@ -1071,8 +1092,7 @@ void main() {
       // snackbar names who will not get the video.
       expect(find.text(l10n.shareCouldNotSendTo('Alice')), findsOneWidget);
       expect(find.text(l10n.shareFailedToSend), findsNothing);
-      // The sheet still dismisses: nothing is kept open for a manual retry.
-      expect(find.text(l10n.shareWithTitle), findsNothing);
+      expect(find.text(l10n.shareWithTitle), findsOneWidget);
     });
   });
 }

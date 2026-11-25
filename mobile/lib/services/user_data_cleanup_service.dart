@@ -48,6 +48,7 @@ import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
+import 'package:openvine/services/share_recents_store.dart';
 import 'package:openvine/services/sound_library_service.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/services/subtitle_language_preference_service.dart';
@@ -66,11 +67,13 @@ class UserDataCleanupService {
   UserDataCleanupService(
     this._prefs, {
     this.onAccountStateWritesStop,
+    this.shareRecents,
     CuratedListDraftArchive? listDraftArchive,
   }) : _listDraftArchive = listDraftArchive,
        _listSessions = CuratedListSessionCoordinator.forPreferences(_prefs);
 
   final SharedPreferences _prefs;
+  final ShareRecentsStore? shareRecents;
   final CuratedListDraftArchive? _listDraftArchive;
   final CuratedListSessionCoordinator _listSessions;
 
@@ -147,7 +150,8 @@ class UserDataCleanupService {
     if (onConversationSweep == null &&
         onDirectMessageSweep == null &&
         onQueuedViewSweep == null &&
-        onKeptDmVideoSweep == null) {
+        onKeptDmVideoSweep == null &&
+        shareRecents == null) {
       return;
     }
     final Set<String> keep;
@@ -169,6 +173,11 @@ class UserDataCleanupService {
       );
       return;
     }
+    await _sweepUnknownOwners(
+      shareRecents?.sweepUnknown,
+      keep,
+      'share recents',
+    );
     await _sweepUnknownOwners(onConversationSweep, keep, 'conversations');
     await _sweepUnknownOwners(onDirectMessageSweep, keep, 'kept DM rows');
     await _sweepUnknownOwners(onQueuedViewSweep, keep, 'queued view events');
@@ -393,8 +402,10 @@ class UserDataCleanupService {
   /// [preserveActiveSession] is false when no other account session needs
   /// device-wide state preserved.
   ///
-  /// Throws [StateError] when a preference cannot be removed and propagates
-  /// database cleanup failures so callers can retry the incomplete deletion.
+  /// Throws [StateError] when a preference cannot be removed, and
+  /// [ShareRecentsStorageException] when the account's share recents cannot,
+  /// and propagates database cleanup failures so callers can retry the
+  /// incomplete deletion.
   /// Unattributable retained recovery bytes keep deletion incomplete.
   Future<int> deleteAccountData(
     String userPubkey, {
@@ -451,6 +462,7 @@ class UserDataCleanupService {
       throw const CuratedListRecoveryException();
     }
     await onAccountStateWritesStop?.call(userPubkey);
+    await shareRecents?.clearFor(userPubkey);
     // Intent readback can discard optimistic values from native writes that
     // were still pending. Inspect committed owner data only after their drain.
     await _prefs.reload();
@@ -757,6 +769,7 @@ class UserDataCleanupService {
     var databaseCleanupFailed = false;
     if ((deleteUserData || forgetAccount) && userPubkey != null) {
       await onAccountStateWritesStop?.call(userPubkey);
+      await shareRecents?.clearFor(userPubkey);
       // The intent's readback may have preceded a held native projection.
       // Refresh after it settles before enumerating keys or checking ownership.
       await _prefs.reload();

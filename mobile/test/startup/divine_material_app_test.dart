@@ -19,6 +19,7 @@ import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/router/share_delivery_host.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/startup/divine_material_app.dart';
 
@@ -198,6 +199,53 @@ void main() {
       expect(
         tester.getRect(find.byKey(pageKey)),
         equals(const Rect.fromLTRB(0, 0, 867, 669)),
+      );
+    });
+
+    testWidgets('hosts share delivery feedback above every route', (
+      tester,
+    ) async {
+      final router = GoRouter(
+        initialLocation: '/page',
+        routes: [GoRoute(path: '/page', builder: (_, _) => const SizedBox())],
+      );
+      addTearDown(router.dispose);
+      final localeCubit = _MockLocaleCubit();
+      when(() => localeCubit.state).thenReturn(const LocaleState());
+      final appearanceCubit = _MockAppearanceCubit();
+      when(() => appearanceCubit.state).thenReturn(AppearanceMode.dark);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            goRouterProvider.overrideWithValue(router),
+            crashReportingServiceProvider.overrideWithValue(
+              _RecordingCrashReportingService(),
+            ),
+            currentAuthStateProvider.overrideWithValue(
+              AuthState.unauthenticated,
+            ),
+            isFeatureEnabledProvider(
+              FeatureFlag.largeScreenLayout,
+            ).overrideWithValue(false),
+          ],
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<LocaleCubit>.value(value: localeCubit),
+              BlocProvider<AppearanceCubit>.value(value: appearanceCubit),
+            ],
+            child: const DivineMaterialApp(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.ancestor(
+          of: find.byType(Navigator),
+          matching: find.byType(ShareDeliveryHost),
+        ),
+        findsOneWidget,
       );
     });
   });

@@ -709,19 +709,7 @@
   },
   "listAttributionFallback": "Lijst",
   "shareVideoLabel": "Video delen",
-  "sharePostSharedWith": "Post gedeeld met {recipientName}",
-  "sharePostSharedWithCount": "{count, plural, one{Post gedeeld met {count} persoon} other{Post gedeeld met {count} personen}}",
-  "@sharePostSharedWith": {
-    "placeholders": {
-      "recipientName": {
-        "type": "String"
-      }
-    }
-  },
-  "shareStillTryingToSendTo": "We proberen nog naar {recipientName} te verzenden",
-  "shareStillTryingToSendToCount": "{count, plural, one{We proberen nog naar {count} persoon te verzenden} other{We proberen nog naar {count} personen te verzenden}}",
   "shareCouldNotSendTo": "Kon niet naar {recipientName} worden verzonden",
-  "shareCouldNotSendToCount": "{count, plural, one{Kon niet naar {count} persoon worden verzonden} other{Kon niet naar {count} personen worden verzonden}}",
   "shareFailedToSend": "Video versturen mislukt",
   "shareAddedToBookmarks": "Toegevoegd aan bladwijzers",
   "shareRemovedFromBookmarks": "Verwijderd uit bladwijzers",
@@ -732,6 +720,9 @@
   "shareWithTitle": "Delen met",
   "shareFindPeople": "Mensen zoeken",
   "shareFindPeopleMultiline": "Mensen\nzoeken",
+  "shareDeliveryFailed": "Verzenden is nog niet gelukt",
+  "shareDeliveryHeld": "Wordt verzonden zodra {name} bereikbaar is",
+  "shareDeliveryForRecipient": "{name} — {status}",
   "shareSent": "Verzonden",
   "shareSelectedRecipientAnnouncement": "{name} geselecteerd",
   "@shareSelectedRecipientAnnouncement": {
@@ -742,6 +733,8 @@
       }
     }
   },
+  "shareRecipientSend": "Verzenden",
+  "shareRecipientSendTo": "Versturen naar {name}",
   "shareMessageHint": "Voeg optioneel een bericht toe...",
   "videoActionUnlike": "Like verwijderen",
   "videoActionLike": "Video liken",

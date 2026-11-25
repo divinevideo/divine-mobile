@@ -920,27 +920,7 @@
   },
   "listAttributionFallback": "Danh sách",
   "shareVideoLabel": "Chia sẻ video",
-  "sharePostSharedWith": "Đã chia sẻ bài đăng với {recipientName}",
-  "sharePostSharedWithCount": "{count, plural, one{Đã chia sẻ bài đăng với {count} người} other{Đã chia sẻ bài đăng với {count} người}}",
-  "@sharePostSharedWithCount": {
-    "description": "Snackbar after sharing a video to two or more people at once. Only used for count >= 2.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "@sharePostSharedWith": {
-    "placeholders": {
-      "recipientName": {
-        "type": "String"
-      }
-    }
-  },
-  "shareStillTryingToSendTo": "Vẫn đang thử gửi cho {recipientName}",
-  "shareStillTryingToSendToCount": "{count, plural, one{Vẫn đang thử gửi cho {count} người} other{Vẫn đang thử gửi cho {count} người}}",
   "shareCouldNotSendTo": "Không gửi được cho {recipientName}",
-  "shareCouldNotSendToCount": "{count, plural, one{Không gửi được cho {count} người} other{Không gửi được cho {count} người}}",
   "shareFailedToSend": "Không gửi được video",
   "shareAddedToBookmarks": "Đã thêm vào dấu trang",
   "shareRemovedFromBookmarks": "Đã xóa khỏi dấu trang",
@@ -957,6 +937,9 @@
   "shareWithTitle": "Chia sẻ với",
   "shareFindPeople": "Tìm người",
   "shareFindPeopleMultiline": "Tìm\nngười",
+  "shareDeliveryFailed": "Chưa gửi được",
+  "shareDeliveryHeld": "Sẽ gửi khi có thể liên lạc với {name}",
+  "shareDeliveryForRecipient": "{name} — {status}",
   "shareSent": "Đã gửi",
   "shareSelectedRecipientAnnouncement": "Đã chọn {name}",
   "@shareSelectedRecipientAnnouncement": {
@@ -967,6 +950,8 @@
       }
     }
   },
+  "shareRecipientSend": "Gửi",
+  "shareRecipientSendTo": "Gửi cho {name}",
   "shareMessageHint": "Thêm tin nhắn (không bắt buộc)...",
   "videoActionUnlike": "Bỏ thích video",
   "videoActionLike": "Thích video",
