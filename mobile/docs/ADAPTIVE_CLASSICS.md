@@ -65,7 +65,9 @@ next language. The player checks a fresh `audible.json` before enabling
 sound. The first rendered frame triggers preparation of the next clip.
 Transport errors, expired manifests and withdrawals preserve the existing
 welcome flow. Backgrounding releases the player, and resuming requires a
-fresh manifest. The mobile session keeps its recently seen set in memory.
+fresh manifest. The welcome screen keeps its recently seen set in memory
+only while it stays on top; opening another screen from it, such as age
+authorization, starts a fresh set on return.
 
 For local QA, override `guestClassicsObserverProvider` to observe a native
 first rendered frame and a page change. This build has no guest behavioral
