@@ -1,11 +1,11 @@
 // ABOUTME: Result of reading the newest revision at a video address before
-// ABOUTME: replacing it: found, absent, or unknown when a relay never settled.
+// ABOUTME: replacing it: found, absent, or unknown when no read completed.
 
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
-/// What the relays hold at a video address, read so the caller can replace
-/// it. See `VideosRepository.fetchLatestVideoRevision`.
+/// What Divine's REST API or the relays hold at a video address, read so
+/// the caller can replace it. See `VideosRepository.fetchLatestVideoRevision`.
 sealed class LatestVideoRevision {
   /// Base constructor for the three outcomes.
   const LatestVideoRevision();
@@ -19,7 +19,7 @@ sealed class LatestVideoRevision {
       };
 }
 
-/// The read settled, and [event] is the newest signed revision it returned.
+/// [event] is the newest signed revision the read returned.
 final class LatestVideoRevisionFound extends LatestVideoRevision {
   /// The newest revision is [event].
   const LatestVideoRevisionFound(this.event);
@@ -28,15 +28,16 @@ final class LatestVideoRevisionFound extends LatestVideoRevision {
   final Event event;
 }
 
-/// The read settled without a signed revision at the address.
+/// The REST API held no revision at the address, and the relay read
+/// completed without one.
 final class LatestVideoRevisionAbsent extends LatestVideoRevision {
   /// No signed revision was returned for the address.
   const LatestVideoRevisionAbsent();
 }
 
-/// A relay did not answer in full, so a newer revision may exist that this
-/// read did not see. Replacing the address now could delete it.
+/// Neither the REST API nor a relay returned a revision, and the relay read
+/// did not complete, so a revision may exist that this read did not see.
 final class LatestVideoRevisionUnknown extends LatestVideoRevision {
-  /// The read did not settle.
+  /// The read returned nothing and did not complete.
   const LatestVideoRevisionUnknown();
 }
