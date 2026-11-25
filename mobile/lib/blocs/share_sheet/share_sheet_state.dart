@@ -108,6 +108,7 @@ class ShareSheetState extends Equatable {
     this.refusedRecipients = const [],
     this.sendFailed = false,
     this.ownerExpired = false,
+    this.readyThumbnailPath,
     this.actionResult,
   }) : attemptedRecipients = selectedRecipients;
 
@@ -153,6 +154,10 @@ class ShareSheetState extends Equatable {
   /// set, and the sheet refuses every further load, selection and send.
   final bool ownerExpired;
 
+  /// A local image-cache file for the video's thumbnail, once the lookup that
+  /// starts with the sheet finds one. Share via attaches it when it is set.
+  final String? readyThumbnailPath;
+
   /// One-shot action result for BlocListener consumption.
   /// Cleared on next state emission.
   final ShareSheetActionResult? actionResult;
@@ -173,6 +178,7 @@ class ShareSheetState extends Equatable {
     bool? isSending,
     List<ShareDeliveryRecipient>? refusedRecipients,
     bool? sendFailed,
+    String? readyThumbnailPath,
     ShareSheetActionResult? actionResult,
     bool clearActionResult = false,
   }) {
@@ -186,6 +192,7 @@ class ShareSheetState extends Equatable {
       refusedRecipients: refusedRecipients ?? this.refusedRecipients,
       sendFailed: sendFailed ?? this.sendFailed,
       ownerExpired: ownerExpired,
+      readyThumbnailPath: readyThumbnailPath ?? this.readyThumbnailPath,
       actionResult: clearActionResult
           ? null
           : (actionResult ?? this.actionResult),
@@ -203,6 +210,7 @@ class ShareSheetState extends Equatable {
     refusedRecipients,
     sendFailed,
     ownerExpired,
+    readyThumbnailPath,
     actionResult,
   ];
 }

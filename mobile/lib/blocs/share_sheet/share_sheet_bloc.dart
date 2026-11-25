@@ -82,10 +82,9 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     _eligibility = eligibilityChanges?.listen((_) {
       addIfOpen(const ShareSheetEligibilityChanged());
     });
-    final thumbnail = video.effectiveThumbnailUrl;
-    if (!kIsWeb && cacheManager != null && thumbnail != null) {
-      unawaited(_prepareCachedThumbnail(cacheManager, thumbnail));
-    }
+    on<ShareSheetThumbnailPrepared>(
+      (event, emit) => emit(state.copyWith(readyThumbnailPath: event.path)),
+    );
     on<ShareSheetContactsLoadRequested>(_onContactsLoadRequested);
     on<ShareSheetRecipientToggled>(_onRecipientToggled);
     on<ShareSheetSendRequested>(_onSendRequested, transformer: droppable());
@@ -97,6 +96,10 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       _onShareViaRequested,
       transformer: droppable(),
     );
+    final thumbnail = video.effectiveThumbnailUrl;
+    if (!kIsWeb && cacheManager != null && thumbnail != null) {
+      unawaited(_prepareCachedThumbnail(cacheManager, thumbnail));
+    }
   }
 
   StreamSubscription<void>? _eligibility;
@@ -143,8 +146,6 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
   final String _currentUserPubkey;
   final bool Function() _isOwnerCurrent;
   final void Function(ShareSheetEnqueueResult)? onQueued;
-  String? _readyThumbnailPath;
-
   // A local lookup may still be pending when Share via is tapped. In that
   // case the platform receives the link alone. Never fetch remote media here.
   Future<void> _prepareCachedThumbnail(
@@ -160,7 +161,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
           ).hasMatch(file.path)) {
         return;
       }
-      if (!isClosed) _readyThumbnailPath = file.path;
+      addIfOpen(ShareSheetThumbnailPrepared(file.path));
     } catch (_) {
       // Cache cleanup or a failed file lookup leaves the attachment optional.
     }
@@ -663,7 +664,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         state.copyWith(
           actionResult: ShareSheetShareViaTriggered(
             shareUrl: shareUrl,
-            thumbnailPath: _readyThumbnailPath,
+            thumbnailPath: state.readyThumbnailPath,
             title: title,
             subject: title,
           ),

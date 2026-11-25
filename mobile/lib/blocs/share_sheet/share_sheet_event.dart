@@ -57,6 +57,17 @@ class ShareSheetShareViaRequested extends ShareSheetEvent {
   const ShareSheetShareViaRequested();
 }
 
+/// The local thumbnail lookup that starts with the sheet found a file.
+class ShareSheetThumbnailPrepared extends ShareSheetEvent {
+  const ShareSheetThumbnailPrepared(this.path);
+
+  /// Path of the image-cache file holding the video's thumbnail.
+  final String path;
+
+  @override
+  List<Object?> get props => [path];
+}
+
 /// Local block or mute policy changed while the sheet was visible.
 class ShareSheetEligibilityChanged extends ShareSheetEvent {
   const ShareSheetEligibilityChanged();

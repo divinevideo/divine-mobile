@@ -8,6 +8,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:dm_repository/dm_repository.dart'
     show ShareSessionEndedException;
 import 'package:file/file.dart';
+import 'package:file/local.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -33,8 +34,6 @@ class _MockRankingSignalsLoader extends Mock
     implements UserRankingSignalsLoader {}
 
 class _MockCacheManager extends Mock implements BaseCacheManager {}
-
-class _MockFile extends Mock implements File {}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
 
@@ -2521,6 +2520,42 @@ void main() {
         );
       });
 
+      // A real image-cache file, so the share sees what the disk holds.
+      File stubCachedThumbnail() {
+        final dir = const LocalFileSystem().systemTempDirectory.createTempSync(
+          'share_sheet_thumb',
+        );
+        addTearDown(() => dir.deleteSync(recursive: true));
+        final file = dir.childFile('thumb.jpg')..writeAsBytesSync([0xff]);
+        when(() => mockCacheManager.getFileFromCache(any())).thenAnswer(
+          (_) async => FileInfo(
+            file,
+            FileSource.Cache,
+            DateTime(2030),
+            'https://example.com/thumb.jpg',
+          ),
+        );
+        return file;
+      }
+
+      late File cachedThumbnail;
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'keeps the prepared local thumbnail in state',
+        setUp: () => cachedThumbnail = stubCachedThumbnail(),
+        build: () => createBloc(cacheManager: mockCacheManager),
+        act: (_) => pumpEventQueue(),
+        expect: () => [
+          isA<ShareSheetState>()
+              .having(
+                (s) => s.readyThumbnailPath,
+                'readyThumbnailPath',
+                cachedThumbnail.path,
+              )
+              .having((s) => s.actionResult, 'actionResult', isNull),
+        ],
+      );
+
       blocTest<ShareSheetBloc, ShareSheetState>(
         'emits $ShareSheetShareViaTriggered with shareUrl and thumbnailPath',
         setUp: () {
@@ -2529,24 +2564,20 @@ void main() {
             title: 'Test Video',
             thumbnailUrl: 'https://example.com/thumb.jpg',
           ));
-          final mockFile = _MockFile();
-          when(() => mockFile.path).thenReturn('/tmp/cached_thumb.jpg');
-          when(() => mockCacheManager.getFileFromCache(any())).thenAnswer(
-            (_) async => FileInfo(
-              mockFile,
-              FileSource.Cache,
-              DateTime(2030),
-              'https://example.com/thumb.jpg',
-            ),
-          );
+          cachedThumbnail = stubCachedThumbnail();
         },
         build: () => createBloc(cacheManager: mockCacheManager),
         act: (bloc) async {
           // Let the optional local preparation finish before this tap.
-          await pumpEventQueue(times: 1);
+          await pumpEventQueue();
           bloc.add(const ShareSheetShareViaRequested());
         },
         expect: () => [
+          isA<ShareSheetState>().having(
+            (s) => s.readyThumbnailPath,
+            'readyThumbnailPath',
+            cachedThumbnail.path,
+          ),
           isA<ShareSheetState>().having(
             (s) => s.actionResult,
             'actionResult',
@@ -2559,7 +2590,7 @@ void main() {
                 .having(
                   (r) => r.thumbnailPath,
                   'thumbnailPath',
-                  '/tmp/cached_thumb.jpg',
+                  cachedThumbnail.path,
                 )
                 .having((r) => r.title, 'title', 'Test Video')
                 .having((r) => r.subject, 'subject', 'Test Video'),
