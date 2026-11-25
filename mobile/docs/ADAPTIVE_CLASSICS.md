@@ -67,6 +67,14 @@ Transport errors, expired manifests and withdrawals preserve the existing
 welcome flow. Backgrounding releases the player, and resuming requires a
 fresh manifest. The mobile session keeps its recently seen set in memory.
 
+When the approved manifest includes discovery tags, swipes update the unseen
+order from early skips, completions and time spent in a second loop. Two
+distinct completed clips with the same tag are required before boosting that
+tag. The reached and prepared clips keep their positions. Buffering and
+unpresented frames do not count. Outcomes stay in memory for the current
+manifest and are discarded on close, replacement or backgrounding. Omitted
+tags retain the original catalog ordering.
+
 For local QA, override `guestClassicsObserverProvider` to observe a native
 first rendered frame and a page change. This build has no guest behavioral
 upload or experiment enrollment. Validate first-frame latency, audio behavior

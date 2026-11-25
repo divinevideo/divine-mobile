@@ -114,5 +114,22 @@ void main() {
         }
       },
     );
+
+    test('old manifests and invalid optional tags still play', () {
+      for (final (tags, expected) in [
+        (null, <String>[]),
+        (['format:sketch', 'topic:music'], ['format:sketch', 'topic:music']),
+        (['format:sketch', 'moderation:adult'], <String>[]),
+        (['format:sketch', 'format:sketch'], <String>[]),
+      ]) {
+        final parsed = GuestClassicsManifest.parse({
+          ...manifest(),
+          'items': [
+            {...item, 'discovery_tags': ?tags},
+          ],
+        }, now: now);
+        expect(parsed?.clips.single.discoveryTags, expected);
+      }
+    });
   });
 }
