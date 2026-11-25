@@ -48,16 +48,20 @@ class _AuthRequiredPublishRetry {
   bool resent = false;
 }
 
-/// The one-shot queries and COUNT requests a relay object still owed an
-/// answer to when it left the pool.
+/// The one-shot queries, COUNT requests and awaited publishes a relay object
+/// still owed an answer to when it left the pool.
 class _OrphanedRequests {
-  _OrphanedRequests(this.queries, this.counts);
+  _OrphanedRequests(this.queries, this.counts, this.publishes);
 
   final List<Subscription> queries;
   final List<
     ({String id, Completer<CountResponse> completer, List<dynamic>? request})
   >
   counts;
+
+  /// Awaited publishes written to the removed object that it never answered,
+  /// by event id (#11446).
+  final Map<String, SavedPublish> publishes;
 }
 
 class RelayPool {
@@ -796,6 +800,40 @@ class RelayPool {
     relay.recordSentFrame(message);
   }
 
+  /// Keeps a just-written awaited EVENT on [relay] until the relay answers it
+  /// or the publish settles, so it is sent again if the socket it went out on
+  /// is replaced or reconnects before the `OK` arrives (#11446).
+  ///
+  /// Only a publish with a [PublishTracker] still waiting for [relay] is kept:
+  /// a fire-and-forget frame has nobody to report an answer to.
+  void _retainUntilAnswered(
+    Relay relay,
+    List<dynamic> message,
+    DateTime? deadline,
+  ) {
+    if (deadline == null || message.length < 2 || message[0] != 'EVENT') {
+      return;
+    }
+    final event = message[1];
+    if (event is! Map) return;
+    final eventId = event['id'];
+    if (eventId is! String) return;
+    if (!(_pendingPublishes[eventId]?.isAwaiting(relay.url) ?? false)) return;
+    relay.savePublish(eventId, message, deadline);
+  }
+
+  /// Stops every relay object holding the publish of [eventId], once it has
+  /// settled and nothing waits for another answer.
+  void _forgetSavedPublish(String eventId) {
+    for (final relay in [
+      ..._relaysSnapshot(),
+      ..._cacheRelaysSnapshot(),
+      ..._tempRelaysSnapshot(),
+    ]) {
+      relay.forgetPublish(eventId);
+    }
+  }
+
   Future<bool> add(
     Relay relay, {
     bool autoSubscribe = false,
@@ -858,14 +896,21 @@ class RelayPool {
   /// A one-shot query is saved on [relay], which re-issues saved requests on
   /// a fresh socket, and the query's outcome judges [relay] on its own answer
   /// in place of the object it replaces. A COUNT is queued to go out the same
-  /// way. Until the dial ends, [relay] counts as able to answer them and is
-  /// not judged silent.
+  /// way, and so is an awaited publish the old socket never answered
+  /// (#11446). Until the dial ends, [relay] counts as able to answer them and
+  /// is not judged silent.
   _OrphanedRequests? _takeOverOrphanedRequests(Relay relay) {
     final orphans = _orphanedRequests.remove(relay.url);
     if (orphans == null) return null;
     for (final query in orphans.queries) {
       relay.saveQuery(query);
       _queryOutcomes[query.id]?.recordTakeover(relay);
+    }
+    for (final MapEntry(key: eventId, value: publish)
+        in orphans.publishes.entries) {
+      if (_pendingPublishes[eventId]?.isAwaiting(relay.url) ?? false) {
+        relay.adoptPublish(eventId, publish);
+      }
     }
     for (final count in orphans.counts) {
       final request = count.request;
@@ -902,6 +947,11 @@ class RelayPool {
     for (final query in takenOver.queries) {
       if (relay.discardQuery(query.id)) {
         _fireQueryCompleteIfSettled(query.id, afterRelayLost: true);
+      }
+    }
+    for (final eventId in takenOver.publishes.keys) {
+      if (relay.forgetPublish(eventId)) {
+        _pendingPublishes[eventId]?.onRelayLost(relay.url);
       }
     }
   }
@@ -1128,11 +1178,13 @@ class RelayPool {
   void _orphanRequestsOf(Relay relay) {
     final queries = relay.getQueries();
     final counts = relay.takePendingCountQueries();
-    if (queries.isEmpty && counts.isEmpty) return;
+    final publishes = relay.takeSavedPublishes();
+    if (queries.isEmpty && counts.isEmpty && publishes.isEmpty) return;
     final earlier = _orphanedRequests[relay.url];
     _orphanedRequests[relay.url] = _OrphanedRequests(
       [...?earlier?.queries, ...queries],
       [...?earlier?.counts, ...counts],
+      {...?earlier?.publishes, ...publishes},
     );
   }
 
@@ -1146,6 +1198,9 @@ class RelayPool {
     }
     for (final query in orphans.queries) {
       _fireQueryCompleteIfSettled(query.id, afterRelayLost: true);
+    }
+    for (final eventId in orphans.publishes.keys) {
+      _pendingPublishes[eventId]?.onRelayLost(url);
     }
   }
 
@@ -2939,6 +2994,9 @@ class RelayPool {
           )) {
         relay.takeSentFrame(eventId);
       }
+      // This socket has answered, so a reconnect has nothing to send again;
+      // an `auth-required` refusal is re-sent by the NIP-42 retry instead.
+      relay.forgetPublish(eventId);
 
       // Check if this OK is for a publish we are awaiting.
       //
@@ -4005,6 +4063,7 @@ class RelayPool {
               attemptedRelayUrls.add(relay.url);
             }
             if (result) {
+              _retainUntilAnswered(relay, message, deadline);
               sentTo.add(relay.url);
             }
           } else {
@@ -4046,6 +4105,7 @@ class RelayPool {
               );
           if (result) {
             _retainForAuthRetry(relay, message, deadline);
+            _retainUntilAnswered(relay, message, deadline);
           }
           if (result ||
               timedOut ||
@@ -4117,6 +4177,7 @@ class RelayPool {
         }
         if (result) {
           _retainForAuthRetry(tempRelay, message, deadline);
+          _retainUntilAnswered(tempRelay, message, deadline);
           sentTo.add(tempRelay.url);
         }
       }
@@ -4295,6 +4356,7 @@ class RelayPool {
           .whenComplete(() {
             _pendingPublishes.remove(eventId);
             _authRequiredPublishRetries.remove(eventId);
+            _forgetSavedPublish(eventId);
           }),
     );
     return tracker.future;
@@ -4355,8 +4417,9 @@ class RelayPool {
   }
 
   /// Force-cycles [relay]'s socket. [Relay.onConnected] re-issues the saved
-  /// subscriptions and pending one-shot queries on the fresh connection, so an
-  /// in-flight REQ that the closed socket swallowed still runs.
+  /// subscriptions, pending one-shot queries and unanswered publishes on the
+  /// fresh connection, so an in-flight REQ or EVENT that the closed socket
+  /// swallowed still runs.
   ///
   /// The closed-check is belt and braces, not a second line of defence that
   /// can be reached on its own: [_repairSilentRelays] is the only caller and

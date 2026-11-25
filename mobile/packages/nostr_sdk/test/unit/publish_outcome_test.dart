@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:test/test.dart';
 
@@ -410,6 +411,76 @@ void main() {
           );
         },
       );
+    });
+
+    group('onRelayLost', () {
+      test('stops waiting for the only target and reports it unanswered', () {
+        fakeAsync((async) {
+          final tracker = trackerFor({'wss://gone.example'});
+          PublishOutcome? outcome;
+          unawaited(tracker.future.then((value) => outcome = value));
+          tracker
+            ..setReachable(['wss://gone.example'])
+            ..onRelayLost('wss://gone.example');
+          async.flushMicrotasks();
+
+          expect(outcome, isNotNull);
+          expect(outcome!.noResponseFrom, equals(['wss://gone.example']));
+          expect(outcome!.rejectedBy, isEmpty);
+          expectPartitions(outcome!, {'wss://gone.example'});
+        });
+      });
+
+      test('keeps waiting for the relays that are still there, without '
+          'counting the lost one as an answer', () {
+        fakeAsync((async) {
+          final tracker = trackerFor({
+            'wss://gone.example',
+            'wss://slow.example',
+          });
+          PublishOutcome? outcome;
+          unawaited(tracker.future.then((value) => outcome = value));
+          tracker
+            ..setReachable(['wss://gone.example', 'wss://slow.example'])
+            ..onRelayLost('wss://gone.example');
+          async.elapse(const Duration(seconds: 5));
+          expect(
+            outcome,
+            isNull,
+            reason: 'wss://slow.example may still answer',
+          );
+
+          tracker.onAccepted('wss://slow.example');
+          async.flushMicrotasks();
+
+          expect(outcome!.acceptedBy, equals(['wss://slow.example']));
+          expect(outcome!.noResponseFrom, equals(['wss://gone.example']));
+          expectPartitions(outcome!, {
+            'wss://gone.example',
+            'wss://slow.example',
+          });
+        });
+      });
+
+      test('leaves a relay that already answered as it was', () {
+        fakeAsync((async) {
+          final tracker = trackerFor({'wss://a.example', 'wss://b.example'});
+          PublishOutcome? outcome;
+          unawaited(tracker.future.then((value) => outcome = value));
+          tracker
+            ..setReachable(['wss://a.example', 'wss://b.example'])
+            ..onAccepted('wss://a.example')
+            ..onRelayLost('wss://a.example')
+            ..onAccepted('wss://b.example');
+          async.flushMicrotasks();
+
+          expect(
+            outcome!.acceptedBy,
+            unorderedEquals(['wss://a.example', 'wss://b.example']),
+          );
+          expect(outcome!.noResponseFrom, isEmpty);
+        });
+      });
     });
 
     group('cancel', () {

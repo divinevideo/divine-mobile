@@ -4,6 +4,8 @@
 import 'dart:async';
 import 'dart:developer';
 
+import 'package:meta/meta.dart';
+
 import '../count_response.dart';
 import '../subscription.dart';
 import 'client_connected.dart';
@@ -11,6 +13,10 @@ import 'relay_diagnostics.dart';
 import 'relay_info.dart';
 import 'relay_info_util.dart';
 import 'relay_status.dart';
+
+/// An awaited publish a relay holds until it answers: the EVENT frame as it
+/// was sent, and the publish's deadline. See [Relay.savePublish].
+typedef SavedPublish = ({List<dynamic> message, DateTime deadline});
 
 enum WriteAccess { readOnly, writeOnly, readWrite, nothing }
 
@@ -86,6 +92,7 @@ abstract class Relay {
       relayStatus.authed = false;
       var result = await doConnect();
       if (result) {
+        if (connectionIsFresh) markSocketOpened();
         try {
           final replay = onConnected(
             source: 'connect()',
@@ -145,8 +152,9 @@ abstract class Relay {
   /// The medhod called after relay connect success.
   ///
   /// Flushes whatever was queued while the socket was down, then — when the
-  /// connection is actually new — re-issues every saved subscription and
-  /// pending one-shot query. The re-issue is what makes a reconnect
+  /// connection is actually new — sends again every publish still waiting for
+  /// its `OK`, and re-issues every saved subscription and pending one-shot
+  /// query. The re-issue is what makes a reconnect
   /// recoverable: a REQ written to a socket that later died is gone, and the
   /// relay keeps no record of it, so without this a live subscription goes
   /// permanently silent after any reconnect and its caller can only fall back
@@ -167,7 +175,57 @@ abstract class Relay {
     await _flushPendingMessages(source, {
       for (final s in saved) s.id,
     }, dropQueuedCloses: isFresh);
+    if (isFresh) await _resendSavedPublishes(source);
     await _reissueSavedRequests(source, saved, onReplayFailure);
+  }
+
+  /// Sends every publish this relay is still holding (see [savePublish]) on
+  /// the fresh socket.
+  ///
+  /// The `OK` for an EVENT written to the previous socket can only arrive on
+  /// that socket, so without this an awaited publish waits out its deadline
+  /// after any reconnect even when the relay stored the event (#11446). The
+  /// same signed event is sent: its id does not change, and a relay that
+  /// already holds it answers `OK true` without keeping a second copy. A
+  /// publish written to this socket while it was opening is left alone, and
+  /// one whose deadline has passed is dropped.
+  Future<void> _resendSavedPublishes(String? source) async {
+    final now = DateTime.now();
+    _publishes.removeWhere((_, saved) => !now.isBefore(saved.publish.deadline));
+    final stranded = [
+      for (final MapEntry(:key, :value) in _publishes.entries)
+        if (value.writtenAt < _socketOpenedAt)
+          (eventId: key, publish: value.publish),
+    ];
+    if (stranded.isEmpty) return;
+    diagnose(
+      RelayDiagnosticSite.requestSettlement,
+      RelayDiagnosticLevel.info,
+      'Re-sending ${stranded.length} publishes still waiting for OK '
+      '(source=${source ?? "unknown"})',
+    );
+    for (final (:eventId, :publish) in stranded) {
+      if (!_publishes.containsKey(eventId)) continue;
+      try {
+        final sent = await send(
+          publish.message,
+          queueIfFailed: false,
+          skipReconnect: true,
+          deadline: publish.deadline,
+        );
+        if (sent && _publishes.containsKey(eventId)) {
+          savePublish(eventId, publish.message, publish.deadline);
+        }
+      } catch (e, stackTrace) {
+        diagnose(
+          RelayDiagnosticSite.requestSettlement,
+          RelayDiagnosticLevel.error,
+          'Publish $eventId threw while being re-sent',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
+    }
   }
 
   /// Sends the frames that failed while the socket was down.
@@ -397,6 +455,57 @@ abstract class Relay {
 
   void saveQuery(Subscription subscription) {
     _queries[subscription.id] = subscription;
+  }
+
+  /// Awaited publishes this relay has not answered, by event id, each with
+  /// the [_lastSocketMark] of its last write (0: never written by this
+  /// object).
+  final Map<String, ({SavedPublish publish, int writtenAt})> _publishes = {};
+
+  /// Orders socket openings and publish writes across every relay object.
+  static int _lastSocketMark = 0;
+
+  /// The [_lastSocketMark] taken when the current socket opened.
+  int _socketOpenedAt = 0;
+
+  /// Records that a new socket has just opened, before [onConnected] runs.
+  ///
+  /// [onConnected] sends a saved publish again only if it was written before
+  /// this mark. An EVENT written while the socket was opening already went
+  /// out on it, and sending it again would only make the relay answer twice.
+  @protected
+  void markSocketOpened() => _socketOpenedAt = ++_lastSocketMark;
+
+  /// Keeps the EVENT [message] for [eventId], just written to this relay,
+  /// until the relay answers it, so [onConnected] sends it again on a later
+  /// socket before [deadline].
+  void savePublish(String eventId, List<dynamic> message, DateTime deadline) {
+    _publishes[eventId] = (
+      publish: (message: message, deadline: deadline),
+      writtenAt: ++_lastSocketMark,
+    );
+  }
+
+  /// Takes over a publish another relay object for this url was holding, to
+  /// be sent on this object's next socket.
+  void adoptPublish(String eventId, SavedPublish publish) {
+    _publishes[eventId] = (publish: publish, writtenAt: 0);
+  }
+
+  /// Stops holding the publish of [eventId]; returns whether it was held.
+  bool forgetPublish(String eventId) => _publishes.remove(eventId) != null;
+
+  /// Removes and returns every publish this relay is holding.
+  ///
+  /// For a relay object leaving the pool: the object that replaces it under
+  /// the same url sends them on its own socket.
+  Map<String, SavedPublish> takeSavedPublishes() {
+    final saved = {
+      for (final MapEntry(:key, :value) in _publishes.entries)
+        key: value.publish,
+    };
+    _publishes.clear();
+    return saved;
   }
 
   /// The one-shot queries still awaiting EOSE on this relay.

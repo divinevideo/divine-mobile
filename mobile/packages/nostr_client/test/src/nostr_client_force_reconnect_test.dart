@@ -1,5 +1,6 @@
-// ABOUTME: A read or COUNT still waiting for its answer when the relays are
-// ABOUTME: force-reconnected is asked again on the new connection (#11343).
+// ABOUTME: A read, COUNT or awaited publish still waiting for its answer when
+// ABOUTME: the relays are force-reconnected is sent again on the new
+// ABOUTME: connection (#11343, #11446).
 
 import 'dart:async';
 
@@ -43,9 +44,9 @@ Event _note(String url) => Event(
 )..sign(_key);
 
 /// The relay's side of one relay object: it answers every REQ with [stored]
-/// and EOSE, and every COUNT with 7, [_answerDelay] later, on the socket the
-/// request arrived on. A socket the client closed meanwhile never delivers
-/// that answer.
+/// and EOSE, every COUNT with 7, and every EVENT with `OK true`, [_answerDelay]
+/// later, on the socket the request arrived on. A socket the client closed
+/// meanwhile never delivers that answer.
 class _Socket extends Relay {
   _Socket(String url, {required this.stored, this.connects = true})
     : super(url, RelayStatus(url));
@@ -55,6 +56,9 @@ class _Socket extends Relay {
 
   /// Every REQ id this object wrote to a socket, in order.
   final List<String> reqs = [];
+
+  /// Every EVENT id this object wrote to a socket, in order.
+  final List<String> events = [];
 
   bool _open = false;
   bool _disposed = false;
@@ -103,10 +107,18 @@ class _Socket extends Relay {
     DateTime? deadline,
   }) async {
     if (!_open) return false;
-    final subId = message.length > 1 ? message[1] : null;
-    if (subId is! String) return true;
     final socket = _socket;
     bool stillOpen() => _open && !_disposed && socket == _socket;
+    if (message.first == 'EVENT') {
+      final id = (message[1] as Map<String, dynamic>)['id'] as String;
+      events.add(id);
+      Timer(_answerDelay, () {
+        if (stillOpen()) _deliver(['OK', id, true, '']);
+      });
+      return true;
+    }
+    final subId = message.length > 1 ? message[1] : null;
+    if (subId is! String) return true;
     if (message.first == 'COUNT') {
       Timer(_answerDelay, () {
         if (stillOpen()) {
@@ -230,8 +242,28 @@ _Read _startRead(
   return read;
 }
 
+/// One awaited publish of a note, with how long it took to settle.
+class _Publish {
+  PublishOutcome? outcome;
+  Duration? tookFor;
+}
+
+_Publish _startPublish(FakeAsync async, _Harness h) {
+  final started = clock.now();
+  final publish = _Publish();
+  unawaited(
+    h.client.publishEventAwaitOk(_note('published.example')).then((outcome) {
+      publish
+        ..outcome = outcome
+        ..tookFor = clock.now().difference(started);
+    }),
+  );
+  async.flushMicrotasks();
+  return publish;
+}
+
 void main() {
-  group('$NostrClient forceReconnectAll (#11343)', () {
+  group('$NostrClient forceReconnectAll (#11343, #11446)', () {
     group('a read still waiting for its answer', () {
       test('is answered when nothing reconnects, as a control', () {
         fakeAsync((async) {
@@ -326,6 +358,46 @@ void main() {
 
           expect(result?.count, 7);
           expect(tookFor, _reconnectAt + _answerDelay);
+        });
+      });
+    });
+
+    group('an awaited publish still waiting for its OK', () {
+      test('is answered when nothing reconnects, as a control', () {
+        fakeAsync((async) {
+          final h = _Harness.start(async);
+          final publish = _startPublish(async, h);
+          async.elapse(_timeout);
+
+          expect(publish.outcome!.acceptedBy, [_poolUrl]);
+          expect(publish.tookFor, _answerDelay);
+        });
+      });
+
+      test('is sent again on the new connection, which answers it', () {
+        fakeAsync((async) {
+          final h = _Harness.start(async);
+          final publish = _startPublish(async, h);
+          h.reconnectMidway(async);
+
+          expect(h.dialled[_poolUrl], hasLength(2));
+          expect(h.dialled[_poolUrl]!.first.events, hasLength(1));
+          expect(h.latest(_poolUrl).events, h.dialled[_poolUrl]!.first.events);
+          expect(publish.outcome!.acceptedBy, [_poolUrl]);
+          expect(publish.outcome!.noResponseFrom, isEmpty);
+          expect(publish.tookFor, _reconnectAt + _answerDelay);
+        });
+      });
+
+      test('ends at once, unanswered, when the redial fails', () {
+        fakeAsync((async) {
+          final h = _Harness.start(async, failRedial: {_poolUrl});
+          final publish = _startPublish(async, h);
+          h.reconnectMidway(async);
+
+          expect(publish.outcome!.acceptedBy, isEmpty);
+          expect(publish.outcome!.noResponseFrom, [_poolUrl]);
+          expect(publish.tookFor, _reconnectAt);
         });
       });
     });
