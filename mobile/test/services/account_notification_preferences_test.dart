@@ -263,6 +263,7 @@ void main() {
               kind: any(named: 'kind'),
               content: any(named: 'content'),
               tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
             ),
           ).thenAnswer((call) async {
             if (signed++ == 0 && heldStage == 'signing') {
@@ -274,7 +275,8 @@ void main() {
               call.namedArguments[#kind] as int,
               call.namedArguments[#tags] as List<List<String>>,
               call.namedArguments[#content] as String,
-              createdAt: timestamp++,
+              createdAt:
+                  (call.namedArguments[#createdAt] as int?) ?? timestamp++,
             );
           });
           when(
