@@ -1513,6 +1513,48 @@ void main() {
         },
       );
 
+      testWidgets(
+        'triggers onNearEnd after a full list replacement that remains near '
+        'end',
+        (tester) async {
+          var nearEndCalls = 0;
+          final key = GlobalKey<InfiniteVideoFeedState>();
+
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: List.generate(3, (i) => _makeVideo('v$i')),
+                cache: cache,
+                onNearEnd: () => nearEndCalls++,
+                preloadGracePeriod: Duration.zero,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          expect(nearEndCalls, equals(0));
+
+          // A replacement that changes the current video (a refreshed feed or
+          // a source switch) tears down and restarts at the initial index.
+          // A short replacement still leaves the viewer near the end, so the
+          // next page is requested without waiting for a swipe.
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: List.generate(6, (i) => _makeVideo('w$i')),
+                cache: cache,
+                onNearEnd: () => nearEndCalls++,
+                preloadGracePeriod: Duration.zero,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          await tester.pump();
+          expect(nearEndCalls, equals(1));
+        },
+      );
+
       testWidgets('calls onActiveVideoChanged on page change', (tester) async {
         final activeChanges = <int>[];
         final key = GlobalKey<InfiniteVideoFeedState>();
