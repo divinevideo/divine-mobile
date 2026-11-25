@@ -687,7 +687,7 @@ final class VideoMetadataUpdateServiceProvider
 }
 
 String _$videoMetadataUpdateServiceHash() =>
-    r'27eb6dec7a201e323e0bf6e1d12483a4ce84005f';
+    r'45c5260531cbdd5411c6757cc622f2f87c40df5e';
 
 /// Broken video tracker service for filtering non-functional videos.
 ///

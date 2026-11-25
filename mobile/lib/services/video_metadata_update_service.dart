@@ -13,9 +13,7 @@ import 'package:models/models.dart'
         VideoEvent,
         clipSourceCreditTagMarker,
         withSoundCreditLines;
-import 'package:nostr_client/nostr_client.dart'
-    show Nip89ClientTag, NostrClient;
-import 'package:nostr_sdk/aid.dart';
+import 'package:nostr_client/nostr_client.dart' show Nip89ClientTag;
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/nip92/imeta_tag.dart';
 import 'package:openvine/constants/nip71_migration.dart';
@@ -36,7 +34,7 @@ import 'package:openvine/utils/nostr_replacement_timestamp.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart'
-    show LatestVideoRevision, LatestVideoRevisionUnknown;
+    show LatestVideoRevision;
 
 /// Result returned by [VideoMetadataUpdateService.updateVideo].
 sealed class VideoUpdateResult {
@@ -78,9 +76,8 @@ class _VideoUpdateException implements Exception {
   String toString() => 'VideoUpdateException(${reason.name}): $message';
 }
 
-/// The relays could not say what the newest revision of the video is: one
-/// did not answer in full, or none holds it. Replacing it now could delete a
-/// newer revision, so nothing was published.
+/// No revision of the video could be built from, so nothing was published.
+/// See `newestVideoRevision` for when.
 class VideoUpdateOriginalUnavailable extends VideoUpdateResult {
   const VideoUpdateOriginalUnavailable();
 }
@@ -274,14 +271,15 @@ class VideoMetadataUpdateService {
     required SignedEventRelayPublisher relayPublisher,
     required PersonalEventCacheService personalEventCache,
     required VideoEventService videoEventService,
-    required NostrClient nostrClient,
+    required Future<LatestVideoRevision> Function(String addressableId)
+    readLatestRevision,
     required CollaboratorInviteService collaboratorInviteService,
   }) : _authService = authService,
        _blossomService = blossomService,
        _relayPublisher = relayPublisher,
        _personalEventCache = personalEventCache,
        _videoEventService = videoEventService,
-       _nostrClient = nostrClient,
+       _readLatestRevision = readLatestRevision,
        _collaboratorInviteService = collaboratorInviteService;
 
   final AuthService _authService;
@@ -289,18 +287,26 @@ class VideoMetadataUpdateService {
   final SignedEventRelayPublisher _relayPublisher;
   final PersonalEventCacheService _personalEventCache;
   final VideoEventService _videoEventService;
-  final NostrClient _nostrClient;
+
+  /// Reads the newest revision at a video address, as
+  /// `VideosRepository.fetchLatestVideoRevision` does.
+  final Future<LatestVideoRevision> Function(String addressableId)
+  _readLatestRevision;
   final CollaboratorInviteService _collaboratorInviteService;
 
   /// Re-publishes [originalVideo] with the metadata from [editorState].
   ///
-  /// The replacement is built from the newest revision the relays hold, not
-  /// from [originalVideo], which is the one the editor opened: another device
-  /// may have replaced it since. A field the editor left as it was seeded
-  /// takes the newest revision's value. Pass [editorBaseline] when the screen
-  /// has seen a newer revision since it seeded the form. When the relays cannot say
-  /// what is newest, nothing is published and the result is
-  /// [VideoUpdateOriginalUnavailable] (#11250).
+  /// The replacement is built from the revision Divine's REST API returns,
+  /// or the newest a relay returns when the API has none, not from
+  /// [originalVideo], which is the one the editor
+  /// opened: another device may have replaced it since. A field the editor
+  /// left as it was seeded takes the newest revision's value. Pass
+  /// [editorBaseline] when the screen has seen a newer revision since it
+  /// seeded the form. When the read returns an older revision, or none and
+  /// did not complete, the signed copy of the opened revision held in the
+  /// personal event cache is used; after a thumbnail upload, the revision
+  /// read before it is. Without one, or when the read finds the video gone,
+  /// nothing is published and the result is [VideoUpdateOriginalUnavailable].
   ///
   /// If [newThumbnailFile] is non-null, it is uploaded to Blossom before
   /// the event is signed; on upload failure the original thumbnail URL is
@@ -329,6 +335,7 @@ class VideoMetadataUpdateService {
         _readLatestRevision,
         originalVideo,
         logName: 'VideoMetadataUpdateService',
+        cachedEvent: _personalEventCache.getEventById,
       );
       if (latest == null) return const VideoUpdateOriginalUnavailable();
       if (!ownsEdit()) {
@@ -358,11 +365,17 @@ class VideoMetadataUpdateService {
         }
 
         // A subtitle or sound may have been published while Blossom was
-        // uploading. Use the last revision we saw as the floor for this read.
+        // uploading. Use the last revision we saw as the floor for this read,
+        // and as the copy to build from when this read returns an older
+        // revision, or none and did not complete.
+        final seen = latest;
         latest = await newestVideoRevision(
           _readLatestRevision,
-          beforeUpload.copyWith(eventCreatedAt: latest.createdAt),
+          beforeUpload.copyWith(eventCreatedAt: seen.createdAt),
           logName: 'VideoMetadataUpdateService',
+          // The video passed is always the revision seen, so that is the
+          // only copy this read can fall back to.
+          cachedEvent: (_) => seen,
         );
         if (latest == null) return const VideoUpdateOriginalUnavailable();
       }
@@ -735,17 +748,6 @@ class VideoMetadataUpdateService {
   static bool _isHttpUrl(String? url) {
     if (url == null || url.isEmpty) return false;
     return url.startsWith('http://') || url.startsWith('https://');
-  }
-
-  Future<LatestVideoRevision> _readLatestRevision(String addressableId) async {
-    final address = AId.fromString(addressableId);
-    if (address == null) return const LatestVideoRevisionUnknown();
-    final read = await _nostrClient.readCurrentVersion(
-      kind: address.kind,
-      pubkey: address.pubkey,
-      dTag: address.dTag,
-    );
-    return LatestVideoRevision.fromCurrentVersion(read);
   }
 
   /// Replaces the stale copies of a video whose edit was refused with

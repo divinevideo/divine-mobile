@@ -1,42 +1,38 @@
 // ABOUTME: Result of reading the newest revision at a video address before
-// ABOUTME: replacing it: found, absent, or unknown when a relay never settled.
+// ABOUTME: replacing it: found, absent, or unknown when nothing settled it.
 
-import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
-/// What the relays hold at a video address, read so the caller can replace
-/// it. See `VideosRepository.fetchLatestVideoRevision`.
+/// What reading a video address returned, for a caller about to replace it:
+/// Divine's REST API first, then the relays. See
+/// `VideosRepository.fetchLatestVideoRevision`.
 sealed class LatestVideoRevision {
   /// Base constructor for the three outcomes.
   const LatestVideoRevision();
-
-  /// Adapts the canonical settled read without treating failure as absence.
-  factory LatestVideoRevision.fromCurrentVersion(CurrentVersionRead read) =>
-      switch (read) {
-        CurrentVersionFound(:final event) => LatestVideoRevisionFound(event),
-        CurrentVersionAbsent() => const LatestVideoRevisionAbsent(),
-        CurrentVersionFailed() => const LatestVideoRevisionUnknown(),
-      };
 }
 
-/// The read settled, and [event] is the newest signed revision it returned.
+/// [event] is the newest signed revision the read returned.
 final class LatestVideoRevisionFound extends LatestVideoRevision {
-  /// The newest revision is [event].
+  /// The read returned [event] as the newest revision.
   const LatestVideoRevisionFound(this.event);
 
   /// The raw, signature-checked event, unfiltered by viewer preferences.
   final Event event;
 }
 
-/// The read settled without a signed revision at the address.
+/// No relay returned a revision at the address, and either the relay read
+/// completed or the REST API answered that it holds none there. The REST
+/// API hides deleted videos, so a deletion reads as absent.
 final class LatestVideoRevisionAbsent extends LatestVideoRevision {
   /// No signed revision was returned for the address.
   const LatestVideoRevisionAbsent();
 }
 
-/// A relay did not answer in full, so a newer revision may exist that this
-/// read did not see. Replacing the address now could delete it.
+/// Neither the REST API nor a relay returned a revision, the relay read did
+/// not complete, and the REST API did not answer that it holds none (it
+/// failed or was not asked), so a revision may exist that this read did not
+/// see.
 final class LatestVideoRevisionUnknown extends LatestVideoRevision {
-  /// The read did not settle.
+  /// The read returned nothing and did not complete.
   const LatestVideoRevisionUnknown();
 }

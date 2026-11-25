@@ -2141,13 +2141,22 @@ class VideosRepository {
     );
   }
 
-  /// The newest revision the relays hold at the video [addressableId]
-  /// (`kind:pubkey:d-tag`), for a caller about to replace it.
+  /// The revision of the video [addressableId] (`kind:pubkey:d-tag`) that
+  /// Divine's REST API returns, or the newest a relay returns when the API
+  /// has none, for a caller about to replace it. A Funnelcake answer is
+  /// returned without asking any relay, so a newer revision it has not
+  /// indexed, or never stored, is not seen.
   ///
-  /// Reads from every configured relay without the local cache, as required
-  /// before replacing an event (#11250). An incomplete read is retried on
-  /// fresh connections. A refusal or any other missing answer on that retry
-  /// leaves the revision [LatestVideoRevisionUnknown].
+  /// Asks Funnelcake first, since it answers faster than the relays. Its
+  /// d-tag lookup is not scoped by author, so its event counts only when it
+  /// is at the exact address and validly signed. Without such an answer, or
+  /// when the request fails, it reads the relays without the local cache and
+  /// takes the newest valid revision any of them returned. A slow or silent
+  /// relay does not block the answer: the relay read is a fallback, not a
+  /// gate that needs every relay. [LatestVideoRevisionAbsent] means no relay
+  /// returned a revision and either that read completed or Funnelcake
+  /// answered that it holds none, which is also how it reports a deleted
+  /// video; [LatestVideoRevisionUnknown] means neither held.
   ///
   /// Throws [ArgumentError] when [addressableId] is not a Kind 34235 or
   /// 34236 address.
@@ -2163,13 +2172,114 @@ class VideosRepository {
         'is not a video address',
       );
     }
-    final read = await _nostrClient.readCurrentVersion(
-      kind: address.kind,
-      pubkey: address.pubkey,
-      dTag: address.dTag,
+    final (:revision, :saysMissing) = await _latestVideoRevisionFromFunnelcake(
+      address,
     );
-    return LatestVideoRevision.fromCurrentVersion(read);
+    if (revision != null) return LatestVideoRevisionFound(revision);
+
+    final read = await _nostrClient.readEvents([
+      Filter(
+        kinds: [address.kind],
+        authors: [address.pubkey],
+        d: [address.dTag],
+      ),
+    ], useCache: false);
+    Event? newest;
+    for (final event in read.events) {
+      if (!_isSignedRevisionAt(event, address)) continue;
+      if (newest == null ||
+          event.createdAt > newest.createdAt ||
+          (event.createdAt == newest.createdAt &&
+              event.id.compareTo(newest.id) < 0)) {
+        newest = event;
+      }
+    }
+    if (newest != null) {
+      Log.info(
+        'Newest revision of ${address.toAString()} from the relays: '
+        '${newest.id} (read ${read.endedBy.name})',
+        name: 'VideosRepository',
+        category: LogCategory.video,
+      );
+      return LatestVideoRevisionFound(newest);
+    }
+    // Funnelcake's lookup hides deleted videos, so its 404 is how a deletion
+    // reads. With no relay revision either, a held copy must not be built on
+    // just because one relay did not finish: that would bring it back.
+    return read.isComplete || saysMissing
+        ? const LatestVideoRevisionAbsent()
+        : const LatestVideoRevisionUnknown();
   }
+
+  /// What Funnelcake answers at [address]: its signed `revision` there, or
+  /// `saysMissing` when it answered that it holds none (a 404). Neither when
+  /// it is not configured, fails, or returns an event that is not a signed
+  /// revision at exactly [address].
+  Future<({Event? revision, bool saysMissing})>
+  _latestVideoRevisionFromFunnelcake(AId address) async {
+    final client = _funnelcakeApiClient;
+    if (client == null || !client.isAvailable) {
+      return (revision: null, saysMissing: false);
+    }
+    try {
+      final event = await client.getVideoEvent(address.dTag);
+      if (event == null) return (revision: null, saysMissing: true);
+      if (_isSignedRevisionAt(event, address)) {
+        Log.info(
+          'Newest revision of ${address.toAString()} from Funnelcake: '
+          '${event.id}',
+          name: 'VideosRepository',
+          category: LogCategory.video,
+        );
+        return (revision: event, saysMissing: false);
+      }
+      // The d-tag lookup is not scoped by author, so another author's video
+      // is expected; a revision at this address that fails the id or
+      // signature check points at Funnelcake itself.
+      final atAddress =
+          event.kind == address.kind &&
+          event.pubkey == address.pubkey &&
+          event.dTagValue == address.dTag;
+      final message =
+          'Funnelcake answered ${address.toAString()} with ${event.id} by '
+          '${pubkeyForLogs(event.pubkey)}, which is not a signed revision '
+          'there; asking the relays';
+      if (atAddress) {
+        Log.warning(
+          message,
+          name: 'VideosRepository',
+          category: LogCategory.video,
+        );
+      } else {
+        Log.info(
+          message,
+          name: 'VideosRepository',
+          category: LogCategory.video,
+        );
+      }
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'Funnelcake could not answer the newest revision of '
+        '${address.toAString()}; asking the relays',
+        name: 'VideosRepository',
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+    return (revision: null, saysMissing: false);
+  }
+
+  /// Whether [event] is a revision at exactly [address] with a valid id and
+  /// a signature by its author, as `NostrClient.readCurrentVersion` counts
+  /// one. A d-tag lookup can match another author's video, and a relay
+  /// admits an event whose any `d` tag matches.
+  static bool _isSignedRevisionAt(Event event, AId address) =>
+      event.kind == address.kind &&
+      event.pubkey == address.pubkey &&
+      event.dTagValue == address.dTag &&
+      event.isValid &&
+      (event.hasVerifiedSignature || event.isSigned);
 
   /// The video addresses among [addressableIds], in their order: Kind 34236
   /// and the Kind 34235 addressable normal videos other clients publish.

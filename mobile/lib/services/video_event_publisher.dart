@@ -1062,10 +1062,14 @@ class VideoEventPublisher {
   );
 
   /// Replaces only audio-sharing tags on a signed, addressable owner video,
-  /// rebuilt from the newest revision the relays hold (#11250).
+  /// rebuilt from the revision Divine's REST API returns, or the newest a
+  /// relay returns when the API has none (#11250). The signed opened copy in
+  /// the personal event cache is used instead when the read returns an older
+  /// revision, or none and did not complete.
   ///
-  /// Throws [SoundReusePublicationException] if the newest revision cannot be
-  /// read, or signing or publication fails.
+  /// Throws [SoundReusePublicationException] if no revision can be built
+  /// from (the read finds the video gone, or falls short and no signed copy
+  /// of the opened revision is held), or signing or publication fails.
   Future<VideoEvent> republishWithAudioReuse({
     required VideoEvent existingEvent,
     required String audioEventId,
@@ -1088,6 +1092,7 @@ class VideoEventPublisher {
       _videosRepositoryGetter?.call().fetchLatestVideoRevision,
       existingEvent,
       logName: _logName,
+      cachedEvent: _personalEventCache?.getEventById,
     );
     if (latest == null) {
       throw const SoundReusePublicationException(
@@ -1155,15 +1160,24 @@ class VideoEventPublisher {
 
   /// Republish a video event with added text-track tags for subtitles.
   ///
-  /// Rebuilds from the newest revision the relays hold, not [existingEvent]
-  /// (#11250). Its caption tracks in [textTrackLang], and any that name no
+  /// Rebuilds from the revision Divine's REST API returns, or the newest a
+  /// relay returns when the API has none, not from [existingEvent] itself
+  /// (#11250). The signed copy of [existingEvent] in the personal event
+  /// cache, or [readBeforeUpload], is used instead when the read returns an
+  /// older revision, or none and did not complete. Its caption tracks in [textTrackLang], and any that name no
   /// language, are replaced by one tag per ref ([textTrackRef] followed by
   /// each entry in [extraTextTrackRefs]) for read-time redundancy; tracks in
   /// other languages and other kinds of track stay, unless they point at one
   /// of those refs. Returns the updated
   /// video event after relay acceptance, or `null` if [existingEvent] is not
-  /// the signed-in account's, the newest revision cannot be read, or
+  /// the signed-in account's, no revision can be built from (the read finds
+  /// the video gone, or falls short with no signed copy in hand), or
   /// publishing failed.
+  ///
+  /// Pass [readBeforeUpload] when [existingEvent] is the floor of a revision
+  /// the caller already read and signed off on, such as one read before an
+  /// upload: when the read here falls short, the republish builds on it
+  /// instead of failing because this device never cached it.
   ///
   /// Throws [AccountRestrictedPublishException] when the configured Divine
   /// relay reports that the account is suspended or banned.
@@ -1172,6 +1186,7 @@ class VideoEventPublisher {
     required String textTrackRef,
     List<String> extraTextTrackRefs = const [],
     String textTrackLang = 'en',
+    Event? readBeforeUpload,
   }) async {
     bool ownsVideo() =>
         _authService?.currentPublicKeyHex == existingEvent.pubkey;
@@ -1188,6 +1203,9 @@ class VideoEventPublisher {
             _videosRepositoryGetter?.call().fetchLatestVideoRevision,
             existingEvent,
             logName: _logName,
+            cachedEvent: (id) => id == readBeforeUpload?.id
+                ? readBeforeUpload
+                : _personalEventCache?.getEventById(id),
           )
         : null;
     final editedRefs = [textTrackRef, ...extraTextTrackRefs];
