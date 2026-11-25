@@ -321,6 +321,7 @@ void main() {
       DmReplyContext? dmReplyContext,
       String? initialVideoKey,
       bool loadMoreOnEndSwipe = false,
+      bool fromMessage = false,
       VoidCallback? onBack,
     }) {
       return MultiBlocProvider(
@@ -340,6 +341,7 @@ void main() {
           dmReplyContext: dmReplyContext,
           initialVideoKey: initialVideoKey,
           loadMoreOnEndSwipe: loadMoreOnEndSwipe,
+          fromMessage: fromMessage,
           onBack: onBack,
         ),
       );
@@ -360,6 +362,7 @@ void main() {
       DmReplyContext? dmReplyContext,
       String? initialVideoKey,
       bool loadMoreOnEndSwipe = false,
+      bool fromMessage = false,
       VoidCallback? onBack,
     }) {
       final effectiveState = state ?? FullscreenFeedState();
@@ -374,6 +377,7 @@ void main() {
         dmReplyContext: dmReplyContext,
         initialVideoKey: initialVideoKey,
         loadMoreOnEndSwipe: loadMoreOnEndSwipe,
+        fromMessage: fromMessage,
         onBack: onBack,
       );
       Widget subject = content;
@@ -1149,6 +1153,101 @@ void main() {
             videos.first.id: ViewTrafficSource.share,
             videos.last.id: ViewTrafficSource.discoveryForYou,
           },
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
+
+    testWidgets(
+      'a clip opened from a message stays private while discovery clips '
+      'after it keep reporting',
+      (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final analytics = _SessionedConsumptionAnalytics();
+        addTearDown(analytics.dispose);
+        final videos = createTestVideos(count: 2);
+        final initial = FullscreenFeedState(
+          status: FullscreenFeedStatus.ready,
+          videos: videos,
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            state: initial,
+            trafficSource: ViewTrafficSource.share,
+            initialVideoKey: videos.first.feedDedupKey,
+            loadMoreOnEndSwipe: true,
+            fromMessage: true,
+            additionalOverrides: [
+              pendingActionServiceProvider.overrideWithValue(null),
+              consumptionAnalyticsTrackerProvider.overrideWithValue(
+                ConsumptionAnalyticsTracker(analytics: () => analytics),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        final trackers = tester.widgetList<DivineVideoMetricsTracker>(
+          find.byType(DivineVideoMetricsTracker, skipOffstage: false),
+        );
+        expect(
+          {
+            for (final tracker in trackers)
+              tracker.video.id: tracker.fromMessage,
+          },
+          {videos.first.id: true, videos.last.id: false},
+        );
+
+        nativeFeed(tester).onActiveVideoChanged?.call(videos.last, 1);
+        final swiped = initial.copyWith(currentIndex: 1);
+        when(() => mockBloc.state).thenReturn(swiped);
+        stateController.add(swiped);
+        await tester.pump();
+        // A new analytics session reseeds the seen set with the discovery
+        // clip, so returning to the message clip would count it again.
+        analytics.sessionId = 'second';
+        nativeFeed(tester).onActiveVideoChanged?.call(videos.first, 0);
+        await tester.pump();
+        expect(
+          analytics.events
+              .where((event) => event.name == 'feed_depth_recorded')
+              .map((event) => event.parameters['feed_type']),
+          ['for_you'],
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
+
+    testWidgets(
+      'a public open of a shared clip keeps every clip reporting',
+      (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final videos = createTestVideos(count: 2);
+        await tester.pumpWidget(
+          buildSubject(
+            state: FullscreenFeedState(
+              status: FullscreenFeedStatus.ready,
+              videos: videos,
+            ),
+            trafficSource: ViewTrafficSource.share,
+            initialVideoKey: videos.first.feedDedupKey,
+            loadMoreOnEndSwipe: true,
+            additionalOverrides: [
+              pendingActionServiceProvider.overrideWithValue(null),
+            ],
+          ),
+        );
+        await tester.pump();
+        final trackers = tester.widgetList<DivineVideoMetricsTracker>(
+          find.byType(DivineVideoMetricsTracker, skipOffstage: false),
+        );
+        expect(trackers, hasLength(2));
+        expect(
+          trackers.map((tracker) => tracker.fromMessage),
+          everyElement(isFalse),
         );
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
@@ -3128,4 +3227,12 @@ void main() {
       );
     });
   });
+}
+
+/// Lets a test start a new analytics session mid-feed.
+class _SessionedConsumptionAnalytics extends RecordingConsumptionAnalytics {
+  String sessionId = 'first';
+
+  @override
+  String get productAnalyticsSessionId => sessionId;
 }
