@@ -295,11 +295,24 @@ void main() {
         ).called(1);
       });
 
-      testWidgets('refreshes a video reply hidden while comments are open', (
-        tester,
-      ) async {
+      testWidgets('keeps the remaining previews while applying a hide from '
+          'comments', (tester) async {
         final events = LatestAddressableEvents();
         addTearDown(events.dispose);
+        final secondRead = Completer<VideoResponses>();
+        final reply = _reply(2)
+            .copyWith(authorAvatar: 'https://cdn.example/2.jpg');
+        var reads = 0;
+        when(
+          () => repository.fetchReplies(
+            videoId: _video.id,
+            videoAddress: _video.addressableId,
+            limit: StickerResponsesCubit.feedLimit,
+          ),
+        ).thenAnswer((_) async {
+          if (reads++ > 0) return secondRead.future;
+          return VideoResponses(total: 2, videos: [_reply(1), reply]);
+        });
         final active = await pump(tester, replies, latestEvents: events);
         await tester.pumpAndSettle();
         final strings = l10n(tester);
@@ -313,10 +326,8 @@ void main() {
           Event(
             _creator,
             RepliesCuration.kind,
-            [
-              ['d', RepliesCuration.dTagFor(_video.addressableId!)],
-              ['e', _reply(1).id, '', 'hidden'],
-            ],
+            RepliesCuration(hiddenIds: {_reply(1).id})
+                .toTags(_video.addressableId!),
             '',
           ),
         );
@@ -324,6 +335,142 @@ void main() {
 
         expect(find.text(strings.videoStickerRepliesCount(1)), findsOneWidget);
         expect(find.text(strings.videoStickerRepliesCount(2)), findsNothing);
+        final latest = tester
+            .widget<InteractiveStickerCopy>(find.byType(InteractiveStickerCopy))
+            .responses!
+            .latest;
+        expect(latest.single.avatarUrl, 'https://cdn.example/2.jpg');
+        expect(reads, 1);
+      });
+
+      testWidgets('applies newer hides while an older pin is still being '
+          'read', (tester) async {
+        final events = LatestAddressableEvents();
+        addTearDown(events.dispose);
+        final pin = Completer<VideoEvent?>();
+        final pinned = _reply(9)
+            .copyWith(authorAvatar: 'https://cdn.example/9.jpg');
+        when(
+          () => repository.fetchReplies(
+            videoId: _video.id,
+            videoAddress: _video.addressableId,
+            limit: StickerResponsesCubit.feedLimit,
+          ),
+        ).thenAnswer(
+          (_) async => VideoResponses(total: 3, videos: [_reply(1), _reply(2)]),
+        );
+        when(
+          () => repository.fetchReply(
+            pinned.id,
+            videoId: _video.id,
+            videoAddress: _video.addressableId,
+          ),
+        ).thenAnswer((_) => pin.future);
+        await pump(tester, replies, latestEvents: events);
+        await tester.pumpAndSettle();
+        final strings = l10n(tester);
+        expect(find.text(strings.videoStickerRepliesCount(3)), findsOneWidget);
+
+        void remember(RepliesCuration curation, int revision) =>
+            events.remember(
+              Event(
+                _creator,
+                RepliesCuration.kind,
+                curation.toTags(_video.addressableId!),
+                '',
+                createdAt: revision,
+              ),
+            );
+
+        remember(
+          RepliesCuration(pinnedId: pinned.id, hiddenIds: {_reply(1).id}),
+          1,
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(strings.videoStickerRepliesCount(2)), findsOneWidget);
+
+        remember(RepliesCuration(hiddenIds: {_reply(1).id, _reply(2).id}), 2);
+        await tester.pumpAndSettle();
+        expect(find.text(strings.videoStickerRepliesCount(1)), findsOneWidget);
+        expect(find.text(strings.videoStickerRepliesCount(2)), findsNothing);
+
+        pin.complete(pinned);
+        await tester.pumpAndSettle();
+        expect(find.text(strings.videoStickerRepliesCount(1)), findsOneWidget);
+        final latest = tester
+            .widget<InteractiveStickerCopy>(find.byType(InteractiveStickerCopy))
+            .responses!
+            .latest;
+        expect(latest, isEmpty);
+
+        // Pinning the same older reply again can reuse the completed read.
+        remember(
+          RepliesCuration(
+            pinnedId: pinned.id,
+            hiddenIds: {_reply(1).id, _reply(2).id},
+          ),
+          3,
+        );
+        await tester.pumpAndSettle();
+        final repinned = tester
+            .widget<InteractiveStickerCopy>(find.byType(InteractiveStickerCopy))
+            .responses!
+            .latest;
+        expect(repinned.single.avatarUrl, 'https://cdn.example/9.jpg');
+        verify(
+          () => repository.fetchReply(
+            pinned.id,
+            videoId: _video.id,
+            videoAddress: _video.addressableId,
+          ),
+        ).called(1);
+      });
+
+      testWidgets('uses the latest hides when they change during the initial '
+          'pin read', (tester) async {
+        final events = LatestAddressableEvents();
+        addTearDown(events.dispose);
+        final pin = Completer<VideoEvent?>();
+        final pinned = _reply(9)
+            .copyWith(authorAvatar: 'https://cdn.example/9.jpg');
+        when(
+          () => repository.fetchCuration(
+            creatorPubkey: _creator,
+            videoAddress: _video.addressableId!,
+          ),
+        ).thenAnswer((_) async => RepliesCuration(pinnedId: pinned.id));
+        when(
+          () => repository.fetchReply(
+            pinned.id,
+            videoId: _video.id,
+            videoAddress: _video.addressableId,
+          ),
+        ).thenAnswer((_) => pin.future);
+        await pump(tester, replies, latestEvents: events);
+        await tester.pumpAndSettle();
+        verify(
+          () => repository.fetchReply(
+            pinned.id,
+            videoId: _video.id,
+            videoAddress: _video.addressableId,
+          ),
+        ).called(1);
+        final strings = l10n(tester);
+        events.remember(
+          Event(
+            _creator,
+            RepliesCuration.kind,
+            RepliesCuration(hiddenIds: {_reply(1).id})
+                .toTags(_video.addressableId!),
+            '',
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(strings.videoStickerRepliesCount(1)), findsOneWidget);
+
+        pin.completeError(StateError('The old pin could not be read'));
+        await tester.pumpAndSettle();
+        expect(find.text(strings.videoStickerRepliesCount(1)), findsOneWidget);
       });
 
       testWidgets('shows how many replied once that is read', (tester) async {

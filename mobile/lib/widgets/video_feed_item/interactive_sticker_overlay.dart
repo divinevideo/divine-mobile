@@ -190,28 +190,19 @@ class _ResponsesSticker extends ConsumerWidget {
     final state = cubit.state;
     final address = video.addressableId;
     if (region.kind == VideoStickerKind.replies && address != null) {
-      final provider = videoRepliesCurationProvider((
-        pubkey: video.pubkey,
-        address: address,
-      ));
-      final curation = ref.watch(provider).value;
-      if (state.status == StickerResponsesStatus.loaded &&
-          curation != null &&
-          curation != state.curation) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!context.mounted || cubit.isClosed || cubit.state != state) {
-            return;
-          }
-          final latest = ref.read(provider).value;
-          if (latest == null || latest == state.curation) return;
+      ref.listen(
+        videoRepliesCurationProvider((pubkey: video.pubkey, address: address)),
+        (_, next) {
+          final curation = next.value;
+          if (curation == null) return;
           runDetached(
-            cubit.load(knownCuration: latest),
-            'refresh replies after a curation edit',
+            cubit.applyCuration(curation),
+            'apply changes to replies curation',
             logName: 'InteractiveStickerOverlay',
             category: LogCategory.ui,
           );
-        });
-      }
+        },
+      );
     }
     if ((data.isLeftOutOfFrames || state.audience.isRestricted) &&
         !state.isShown) {
