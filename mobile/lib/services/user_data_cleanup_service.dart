@@ -402,8 +402,10 @@ class UserDataCleanupService {
   /// [preserveActiveSession] is false when no other account session needs
   /// device-wide state preserved.
   ///
-  /// Throws [StateError] when a preference cannot be removed and propagates
-  /// database cleanup failures so callers can retry the incomplete deletion.
+  /// Throws [StateError] when a preference cannot be removed, and
+  /// [ShareRecentsStorageException] when the account's share recents cannot,
+  /// and propagates database cleanup failures so callers can retry the
+  /// incomplete deletion.
   /// Unattributable retained recovery bytes keep deletion incomplete.
   Future<int> deleteAccountData(
     String userPubkey, {

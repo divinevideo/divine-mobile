@@ -5,33 +5,47 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/share_recents_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/test_pubkeys.dart';
+
+class _MockSharedPreferences extends Mock implements SharedPreferences {}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  final owner = 'f' * 64;
-  final other = 'e' * 64;
-  final keys = List.generate(8, (i) => i.toRadixString(16).padLeft(64, '0'));
-  late SharedPreferences prefs;
-  UserProfile profile(String key) => UserProfile(
-    pubkey: key,
-    rawData: const {},
-    createdAt: DateTime.utc(2026),
-    eventId: 'a' * 64,
-    displayName: 'Test recipient',
-  );
-  ShareRecentsStore newStore() => ShareRecentsStore(
-    prefs,
-    loadProfiles: (keys) async => keys.map(profile).toList(),
-  );
-  setUp(() async {
-    SharedPreferences.setMockInitialValues({});
-    prefs = await SharedPreferences.getInstance();
-  });
 
-  group('ShareRecentsStore', () {
+  group(ShareRecentsStore, () {
+    final owner = testPubkeyFromSeed(100);
+    final other = testPubkeyFromSeed(101);
+    final keys = List.generate(8, (i) => testPubkeyFromSeed(i + 1));
+    late SharedPreferences prefs;
+
+    UserProfile profile(String key) => UserProfile(
+      pubkey: key,
+      rawData: const {},
+      createdAt: DateTime.utc(2026),
+      eventId: 'a' * 64,
+      displayName: 'Test recipient',
+    );
+
+    ShareRecentsStore newStore() => ShareRecentsStore(
+      prefs,
+      loadProfiles: (keys) async => keys.map(profile).toList(),
+    );
+
+    List<String>? stored(String owner) {
+      final raw = prefs.getString(ShareRecentsStore.storageKey(owner));
+      return raw == null ? null : List<String>.from(jsonDecode(raw) as List);
+    }
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      prefs = await SharedPreferences.getInstance();
+    });
+
     test(
       'warm and concurrent shares preserve six unique keys per owner',
       () async {
@@ -43,18 +57,21 @@ void main() {
           store.recordQueued(other, [keys.first]),
         ]);
         final expected = [keys[2], ...keys.skip(4), keys.first];
-        expect(
-          jsonDecode(prefs.getString(ShareRecentsStore.storageKey(owner))!),
-          expected,
-        );
+        expect(stored(owner), expected);
+        expect(stored(other), [keys.first]);
         expect(store.snapshot(owner).map((u) => u.pubkey), expected);
         expect(store.snapshot(other).single.pubkey, keys.first);
+
         final reopened = newStore();
         expect(reopened.snapshot(owner), isEmpty);
         await reopened.warm(owner);
         expect(reopened.snapshot(owner).first.displayName, 'Test recipient');
         expect(reopened.snapshot(owner).map((u) => u.pubkey), expected);
+        // Warming one owner loads only that owner's row.
         expect(reopened.snapshot(other), isEmpty);
+        await reopened.warm(other);
+        expect(reopened.snapshot(other).map((u) => u.pubkey), [keys.first]);
+        expect(reopened.snapshot(owner).map((u) => u.pubkey), expected);
       },
     );
 
@@ -77,24 +94,80 @@ void main() {
           ShareRecentsStore.storageKey(owner),
           jsonEncode([keys.first]),
         );
+        await prefs.setString(
+          ShareRecentsStore.storageKey(other),
+          jsonEncode([keys[2]]),
+        );
         final entered = Completer<void>();
         final profiles = Completer<List<UserProfile>>();
         final store = ShareRecentsStore(
           prefs,
-          loadProfiles: (_) {
-            entered.complete();
-            return profiles.future;
+          loadProfiles: (keys) {
+            if (!entered.isCompleted) {
+              entered.complete();
+              return profiles.future;
+            }
+            return Future.value(keys.map(profile).toList());
           },
         );
         final warm = store.warm(owner);
         await entered.future;
         final write = store.recordQueued(owner, [keys[1]]);
+        final otherWrite = store.recordQueued(other, [keys[3]]);
         final clear = store.clearFor(owner);
         profiles.complete([profile(keys.first)]);
-        await Future.wait([warm, write, clear]);
+        await Future.wait([warm, write, otherWrite, clear]);
+
         expect(store.snapshot(owner), isEmpty);
         expect(prefs.containsKey(ShareRecentsStore.storageKey(owner)), isFalse);
+        expect(stored(other), [keys[3], keys[2]]);
+        expect(store.snapshot(other).map((u) => u.pubkey), [keys[3], keys[2]]);
       },
     );
+
+    group('storage refusals', () {
+      late _MockSharedPreferences refusingPrefs;
+
+      setUp(() {
+        refusingPrefs = _MockSharedPreferences();
+        when(() => refusingPrefs.get(any())).thenReturn(null);
+        when(() => refusingPrefs.containsKey(any())).thenReturn(true);
+        when(
+          () => refusingPrefs.setString(any(), any()),
+        ).thenAnswer((_) async => false);
+        when(() => refusingPrefs.remove(any())).thenAnswer((_) async => false);
+      });
+
+      ShareRecentsStore refusingStore() => ShareRecentsStore(
+        refusingPrefs,
+        loadProfiles: (keys) async => keys.map(profile).toList(),
+      );
+
+      test('a refused write throws a storage exception, not an Error', () {
+        expect(
+          refusingStore().recordQueued(owner, [keys.first]),
+          throwsA(
+            isA<ShareRecentsStorageException>().having(
+              (e) => e.operation,
+              'operation',
+              'persist',
+            ),
+          ),
+        );
+      });
+
+      test('a refused removal throws a storage exception, not an Error', () {
+        expect(
+          refusingStore().clearFor(owner),
+          throwsA(
+            isA<ShareRecentsStorageException>().having(
+              (e) => e.operation,
+              'operation',
+              'remove',
+            ),
+          ),
+        );
+      });
+    });
   });
 }
