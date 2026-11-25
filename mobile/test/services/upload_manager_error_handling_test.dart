@@ -773,6 +773,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(File(''));
+      registerFallbackValue(Uint8List(0));
     });
 
     setUp(() async {
@@ -825,8 +826,8 @@ void main() {
     }) {
       when(() => mock.isBlossomEnabled()).thenAnswer((_) async => false);
       when(
-        () => mock.uploadImage(
-          imageFile: any(named: 'imageFile'),
+        () => mock.uploadImageBytes(
+          bytes: any(named: 'bytes'),
           nostrPubkey: any(named: 'nostrPubkey'),
           maxAttempts: any(named: 'maxAttempts'),
           onProgress: any(named: 'onProgress'),
@@ -1012,8 +1013,8 @@ void main() {
           () => retryMockBlossom.isBlossomEnabled(),
         ).thenAnswer((_) async => false);
         when(
-          () => retryMockBlossom.uploadImage(
-            imageFile: any(named: 'imageFile'),
+          () => retryMockBlossom.uploadImageBytes(
+            bytes: any(named: 'bytes'),
             nostrPubkey: any(named: 'nostrPubkey'),
             maxAttempts: any(named: 'maxAttempts'),
             onProgress: any(named: 'onProgress'),

@@ -17,8 +17,11 @@ enum UploadConnectivity { wifi, mobile, ethernet, vpn, none }
 /// Returns the current network class without coupling to a platform plugin.
 typedef UploadConnectivityProvider = Future<UploadConnectivity> Function();
 
-/// Result of extracting a thumbnail into a local file.
-typedef ThumbnailExtraction = ({String path});
+/// A thumbnail frame extracted from the video, as encoded image bytes.
+///
+/// Kept in memory on purpose: the upload never needs the frame on disk, and
+/// writing it there first was a step that could fail on its own.
+typedef ThumbnailExtraction = ({Uint8List bytes});
 
 /// Extracts a thumbnail without exposing the app's thumbnail service type.
 typedef ThumbnailExtractor =

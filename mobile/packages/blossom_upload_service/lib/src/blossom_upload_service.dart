@@ -2788,11 +2788,16 @@ class BlossomUploadService {
   ///
   /// Native callers that already hold a real filesystem `File` should
   /// prefer [uploadImage] so they get the hardware-accelerated platform
-  /// stripper.
+  /// stripper. Bytes that never touched the disk, such as a frame decoded
+  /// for a video thumbnail, belong here: writing them out first only adds a
+  /// file write that can fail.
   ///
   /// [filename] is used to pick the EXIF strategy (JPEG-direct vs PNG
   /// re-encode vs generic decode→JPEG) and is sent to the resumable
   /// init endpoint. Defaults to `upload.jpg` for unnamed payloads.
+  ///
+  /// [allowResumable] works as on [uploadImage]: false sends one PUT instead
+  /// of the resumable handshake.
   Future<BlossomUploadResult> uploadImageBytes({
     required Uint8List bytes,
     required String nostrPubkey,
@@ -2800,6 +2805,7 @@ class BlossomUploadService {
     String mimeType = 'image/jpeg',
     void Function(double)? onProgress,
     int maxAttempts = _defaultUploadImageMaxAttempts,
+    bool allowResumable = true,
   }) async {
     assert(maxAttempts >= 1, 'maxAttempts must be at least 1');
     try {
@@ -2841,6 +2847,7 @@ class BlossomUploadService {
         fileSize: fileSize,
         contentType: mimeType,
         maxAttempts: maxAttempts,
+        allowResumable: allowResumable,
         onProgress: onProgress,
       );
     } on Object catch (e) {
