@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/hashtag_feed/hashtag_feed_cubit.dart';
@@ -110,6 +111,44 @@ void main() {
       expect(cubit.state.videos, [refreshed]);
       expect(cubit.state.nextCursor, 'o:80');
       expect(cubit.state.isLoading, isFalse);
+    });
+
+    group('loadMore', () {
+      final first = _video('first');
+
+      blocTest<HashtagFeedCubit, HashtagFeedState>(
+        'reports an error thrown while loading a page and keeps the cursor',
+        build: () => HashtagFeedCubit(
+          fetchPage: (cursor) async => cursor == null
+              ? HashtagFeedVideosResult.success([first], nextCursor: 'o:50')
+              : throw StateError('malformed page'),
+          filterVideos: (videos) => videos,
+        ),
+        act: (cubit) async {
+          await cubit.refresh();
+          await cubit.loadMore();
+        },
+        errors: () => [isA<StateError>()],
+        verify: (cubit) {
+          expect(cubit.state.videos, [first]);
+          expect(cubit.state.nextCursor, 'o:50');
+          expect(cubit.state.failed, isTrue);
+          expect(cubit.state.isLoading, isFalse);
+        },
+      );
+
+      test('completes normally when a page throws', () async {
+        final cubit = HashtagFeedCubit(
+          fetchPage: (cursor) async => cursor == null
+              ? HashtagFeedVideosResult.success([first], nextCursor: 'o:50')
+              : throw StateError('malformed page'),
+          filterVideos: (videos) => videos,
+        );
+        addTearDown(cubit.close);
+        await cubit.refresh();
+
+        await expectLater(cubit.loadMore(), completes);
+      });
     });
 
     group('watchPlaybackVideos', () {

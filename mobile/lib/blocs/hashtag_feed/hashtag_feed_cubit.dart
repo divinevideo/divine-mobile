@@ -4,7 +4,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 typedef HashtagFeedState = ({
@@ -123,13 +122,7 @@ class HashtagFeedCubit extends Cubit<HashtagFeedState> {
     } catch (error, stackTrace) {
       failed = true;
       if (replace) rethrow;
-      Log.error(
-        'Failed to load more hashtag videos',
-        name: 'HashtagFeedCubit',
-        category: LogCategory.video,
-        error: error,
-        stackTrace: stackTrace,
-      );
+      addError(error, stackTrace);
     } finally {
       if (!isClosed && request == _request) {
         emit((
