@@ -149,6 +149,136 @@ void main() {
 
         await expectLater(cubit.loadMore(), completes);
       });
+
+      test('follows the cursor past a page whose videos are hidden', () async {
+        final fetches = <String?>[];
+        final hidden = _video('hidden');
+        final visible = _video('visible');
+        final cubit = HashtagFeedCubit(
+          fetchPage: (cursor) async {
+            fetches.add(cursor);
+            return switch (cursor) {
+              null => HashtagFeedVideosResult.success([
+                first,
+              ], nextCursor: 'o:50'),
+              'o:50' => HashtagFeedVideosResult.success([
+                hidden,
+              ], nextCursor: 'o:100'),
+              _ => HashtagFeedVideosResult.success([visible]),
+            };
+          },
+          filterVideos: (videos) => [
+            for (final video in videos)
+              if (video.id != 'hidden') video,
+          ],
+        );
+        addTearDown(cubit.close);
+        await cubit.refresh();
+
+        await cubit.loadMore();
+
+        expect(fetches, [null, 'o:50', 'o:100']);
+        expect(cubit.state.videos, [first, hidden, visible]);
+      });
+
+      test('stops after three pages that add nothing new', () async {
+        final fetches = <String?>[];
+        final cubit = HashtagFeedCubit(
+          fetchPage: (cursor) async {
+            fetches.add(cursor);
+            return HashtagFeedVideosResult.success([
+              first,
+            ], nextCursor: 'o:${fetches.length}');
+          },
+          filterVideos: (videos) => videos,
+        );
+        addTearDown(cubit.close);
+        await cubit.refresh();
+
+        await cubit.loadMore();
+
+        expect(fetches, [null, 'o:1', 'o:2', 'o:3']);
+        expect(cubit.state.nextCursor, 'o:4');
+      });
+
+      test('ends paging when the server repeats a cursor', () async {
+        final fetches = <String?>[];
+        final cubit = HashtagFeedCubit(
+          fetchPage: (cursor) async {
+            fetches.add(cursor);
+            return HashtagFeedVideosResult.success([
+              first,
+            ], nextCursor: 'o:50');
+          },
+          filterVideos: (videos) => videos,
+        );
+        addTearDown(cubit.close);
+        await cubit.refresh();
+
+        await cubit.loadMore();
+
+        expect(fetches, [null, 'o:50']);
+        expect(cubit.state.nextCursor, isNull);
+      });
+
+      test('ignores loadMore while a page is already loading', () async {
+        final fetches = <String?>[];
+        final pending = Completer<HashtagFeedVideosResult>();
+        final next = _video('next');
+        final cubit = HashtagFeedCubit(
+          fetchPage: (cursor) {
+            fetches.add(cursor);
+            return cursor == null
+                ? Future.value(
+                    HashtagFeedVideosResult.success([
+                      first,
+                    ], nextCursor: 'o:50'),
+                  )
+                : pending.future;
+          },
+          filterVideos: (videos) => videos,
+        );
+        addTearDown(cubit.close);
+        await cubit.refresh();
+        final loading = cubit.loadMore();
+        final ignored = cubit.loadMore();
+
+        pending.complete(HashtagFeedVideosResult.success([next]));
+        await Future.wait([loading, ignored]);
+
+        expect(fetches, [null, 'o:50']);
+        expect(cubit.state.videos, [first, next]);
+      });
+
+      test('drops a page that lands after the cubit closes', () async {
+        final fetches = <String?>[];
+        final pending = Completer<HashtagFeedVideosResult>();
+        final cubit = HashtagFeedCubit(
+          fetchPage: (cursor) {
+            fetches.add(cursor);
+            return switch (cursor) {
+              null => Future.value(
+                HashtagFeedVideosResult.success([first], nextCursor: 'o:50'),
+              ),
+              'o:50' => pending.future,
+              _ => Future.value(
+                HashtagFeedVideosResult.success([_video('late')]),
+              ),
+            };
+          },
+          filterVideos: (videos) => videos,
+        );
+        await cubit.refresh();
+        final loading = cubit.loadMore();
+
+        await cubit.close();
+        pending.complete(
+          HashtagFeedVideosResult.success([first], nextCursor: 'o:100'),
+        );
+
+        await expectLater(loading, completes);
+        expect(fetches, [null, 'o:50']);
+      });
     });
 
     group('watchPlaybackVideos', () {
