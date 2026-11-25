@@ -286,37 +286,48 @@ void main() {
         expect(captured[1], isFalse);
       });
 
-      test('returns the newest revision any relay returned', () async {
-        final older = revision(content: 'older');
-        final newer = revision(createdAt: 2000, content: 'newer');
-        stubRelays([older, newer], endedBy: QueryEnd.deadline);
+      // Relays answer in arrival order, so each rule is checked with the
+      // winner arriving first and last.
+      for (final winnerFirst in [true, false]) {
+        final order = winnerFirst ? 'first' : 'last';
 
-        expect(
-          await fetch(),
-          isA<LatestVideoRevisionFound>().having(
-            (r) => r.event,
-            'event',
-            same(newer),
-          ),
-        );
-      });
+        test('returns the newest revision any relay returned, arriving '
+            '$order', () async {
+          final older = revision(content: 'older');
+          final newer = revision(createdAt: 2000, content: 'newer');
+          stubRelays(
+            winnerFirst ? [newer, older] : [older, newer],
+            endedBy: QueryEnd.deadline,
+          );
 
-      test('breaks a created_at tie by the lowest id', () async {
-        final first = revision(content: 'first');
-        final second = revision(content: 'second');
-        final lowest = first.id.compareTo(second.id) < 0 ? first : second;
-        final highest = identical(lowest, first) ? second : first;
-        stubRelays([highest, lowest]);
+          expect(
+            await fetch(),
+            isA<LatestVideoRevisionFound>().having(
+              (r) => r.event,
+              'event',
+              same(newer),
+            ),
+          );
+        });
 
-        expect(
-          await fetch(),
-          isA<LatestVideoRevisionFound>().having(
-            (r) => r.event,
-            'event',
-            same(lowest),
-          ),
-        );
-      });
+        test('breaks a created_at tie by the lowest id, arriving '
+            '$order', () async {
+          final first = revision(content: 'first');
+          final second = revision(content: 'second');
+          final lowest = first.id.compareTo(second.id) < 0 ? first : second;
+          final highest = identical(lowest, first) ? second : first;
+          stubRelays(winnerFirst ? [lowest, highest] : [highest, lowest]);
+
+          expect(
+            await fetch(),
+            isA<LatestVideoRevisionFound>().having(
+              (r) => r.event,
+              'event',
+              same(lowest),
+            ),
+          );
+        });
+      }
 
       test('ignores revisions at other addresses or without a valid '
           'signature', () async {
