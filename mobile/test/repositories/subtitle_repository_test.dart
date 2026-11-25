@@ -98,7 +98,12 @@ void main() {
         pollDelay: (_) async {},
       );
       when(() => auth.currentPublicKeyHex).thenReturn('pk1');
-      when(() => videos.fetchLatestVideoRevision(any())).thenAnswer(
+      when(
+        () => videos.fetchLatestVideoRevision(
+          any(),
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
+      ).thenAnswer(
         (_) async => LatestVideoRevisionFound(
           // Event needs a hex key; the read matches the address, not this.
           Event('a' * 64, 34236, [
@@ -278,7 +283,12 @@ void main() {
     test('keeps the region in the selected caption language when the copy '
         'in hand has no raw tags', () async {
       // A copy restored from a cache keeps only the base language.
-      when(() => videos.fetchLatestVideoRevision(any())).thenAnswer(
+      when(
+        () => videos.fetchLatestVideoRevision(
+          any(),
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
+      ).thenAnswer(
         (_) async => LatestVideoRevisionFound(
           Event('a' * 64, 34236, [
             ['d', 'my-vine-id'],
@@ -368,7 +378,12 @@ void main() {
         String? loadedRef,
       }) async {
         when(() => auth.currentPublicKeyHex).thenReturn(video.pubkey);
-        when(() => videos.fetchLatestVideoRevision(any())).thenAnswer(
+        when(
+          () => videos.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
+        ).thenAnswer(
           (_) async => LatestVideoRevisionFound(
             Event(
               syntheticTestPubkey,
@@ -666,7 +681,10 @@ void main() {
           Event newest,
         ) async {
           when(
-            () => videos.fetchLatestVideoRevision(any()),
+            () => videos.fetchLatestVideoRevision(
+              any(),
+              notOlderThan: any(named: 'notOlderThan'),
+            ),
           ).thenAnswer((_) async => LatestVideoRevisionFound(newest));
           when(
             () => publisher.republishWithSubtitles(
@@ -775,7 +793,10 @@ void main() {
         )..sign(privateKey);
         when(() => auth.currentPublicKeyHex).thenReturn(owner);
         when(
-          () => videos.fetchLatestVideoRevision(any()),
+          () => videos.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
         ).thenAnswer((_) async => const LatestVideoRevisionUnknown());
         when(() => personalEventCache.getEventById(held.id)).thenReturn(held);
         when(
@@ -875,7 +896,10 @@ void main() {
       ]) {
         test('when $reason', () async {
           when(
-            () => videos.fetchLatestVideoRevision(any()),
+            () => videos.fetchLatestVideoRevision(
+              any(),
+              notOlderThan: any(named: 'notOlderThan'),
+            ),
           ).thenAnswer((_) async => revision);
 
           await expectLater(
@@ -884,7 +908,10 @@ void main() {
           );
 
           verify(
-            () => videos.fetchLatestVideoRevision('34236:pk1:my-vine-id'),
+            () => videos.fetchLatestVideoRevision(
+              '34236:pk1:my-vine-id',
+              notOlderThan: any(named: 'notOlderThan'),
+            ),
           ).called(1);
           verifyNever(
             () => blossom.uploadSubtitleVtt(bytes: any(named: 'bytes')),
@@ -913,7 +940,12 @@ void main() {
           throwsA(isA<SubtitleEditException>()),
         );
 
-        verifyNever(() => videos.fetchLatestVideoRevision(any()));
+        verifyNever(
+          () => videos.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
+        );
         verifyNever(
           () => blossom.uploadSubtitleVtt(bytes: any(named: 'bytes')),
         );
@@ -927,7 +959,12 @@ void main() {
           throwsA(isA<SubtitleEditException>()),
         );
 
-        verifyNever(() => videos.fetchLatestVideoRevision(any()));
+        verifyNever(
+          () => videos.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
+        );
         verifyNever(
           () => blossom.uploadSubtitleVtt(bytes: any(named: 'bytes')),
         );

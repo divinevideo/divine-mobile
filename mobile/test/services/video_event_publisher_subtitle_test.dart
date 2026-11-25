@@ -131,7 +131,10 @@ void main() {
 
     void relaysAnswer(LatestVideoRevision revision) {
       when(
-        () => mockVideosRepository.fetchLatestVideoRevision(any()),
+        () => mockVideosRepository.fetchLatestVideoRevision(
+          any(),
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
       ).thenAnswer((_) async => revision);
     }
 
@@ -680,6 +683,7 @@ void main() {
         verify(
           () => mockVideosRepository.fetchLatestVideoRevision(
             '34236:$testPubkey:test-vine-id',
+            notOlderThan: any(named: 'notOlderThan'),
           ),
         ).called(1);
       });
@@ -866,6 +870,7 @@ void main() {
         verify(
           () => mockVideosRepository.fetchLatestVideoRevision(
             '34235:$testPubkey:test-vine-id',
+            notOlderThan: any(named: 'notOlderThan'),
           ),
         ).called(1);
         expect(capturedKind, 34235);
@@ -1044,7 +1049,10 @@ void main() {
           () => mockAuthService.currentPublicKeyHex,
         ).thenAnswer((_) => signedIn);
         when(
-          () => mockVideosRepository.fetchLatestVideoRevision(any()),
+          () => mockVideosRepository.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
         ).thenAnswer((_) async {
           signedIn = syntheticOtherTestPubkey;
           return LatestVideoRevisionFound(newest());
@@ -1088,7 +1096,10 @@ void main() {
 
         expect(result, isNull);
         verifyNever(
-          () => mockVideosRepository.fetchLatestVideoRevision(any()),
+          () => mockVideosRepository.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
         );
         verifyNever(
           () => mockAuthService.createAndSignEvent(

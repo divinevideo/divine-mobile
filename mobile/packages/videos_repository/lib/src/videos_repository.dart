@@ -2155,27 +2155,30 @@ class VideosRepository {
 
   /// The revision of the video [addressableId] (`kind:pubkey:d-tag`) that
   /// Divine's REST API returns, or the newest a relay returns when the API
-  /// has none, for a caller about to replace it. A Funnelcake answer is
+  /// has none, for a caller about to replace it. A Funnelcake answer that is
+  /// not older than [notOlderThan], the revision the caller opened, is
   /// returned without asking any relay, so a newer revision it has not
   /// indexed, or never stored, is not seen.
   ///
   /// Asks Funnelcake first, since it answers faster than the relays, and
   /// waits for it for at most three seconds. Its d-tag lookup is not scoped
   /// by author, so its event counts only when it is at the exact address and
-  /// validly signed. Without such an answer, or when the request fails or
-  /// times out, it reads the relays without the local cache and
-  /// takes the newest valid revision any of them returned. A slow or silent
-  /// relay does not block the answer: the relay read is a fallback, not a
-  /// gate that needs every relay. [LatestVideoRevisionAbsent] means no relay
-  /// returned a revision and either that read completed or Funnelcake
+  /// validly signed. Without such an answer, when the request fails or times
+  /// out, or when its revision predates [notOlderThan], it reads the relays
+  /// without the local cache and takes the newest valid revision any of them
+  /// returned, or Funnelcake's older one when none is newer. A slow or
+  /// silent relay does not block the answer: the relay read is a fallback,
+  /// not a gate that needs every relay. [LatestVideoRevisionAbsent] means no
+  /// relay returned a revision and either that read completed or Funnelcake
   /// answered that it holds none, which is also how it reports a deleted
   /// video; [LatestVideoRevisionUnknown] means neither held.
   ///
   /// Throws [ArgumentError] when [addressableId] is not a Kind 34235 or
   /// 34236 address.
   Future<LatestVideoRevision> fetchLatestVideoRevision(
-    String addressableId,
-  ) async {
+    String addressableId, {
+    VideoRevisionFloor? notOlderThan,
+  }) async {
     final address = AId.fromString(addressableId);
     if (address == null ||
         !NIP71VideoKinds.isAddressableVideoKind(address.kind)) {
@@ -2188,7 +2191,23 @@ class VideosRepository {
     final (:revision, :saysMissing) = await _latestVideoRevisionFromFunnelcake(
       address,
     );
-    if (revision != null) return LatestVideoRevisionFound(revision);
+    if (revision != null) {
+      if (notOlderThan == null || !_predates(revision, notOlderThan)) {
+        Log.info(
+          'Newest revision of ${address.toAString()} from Funnelcake: '
+          '${revision.id}',
+          name: 'VideosRepository',
+          category: LogCategory.video,
+        );
+        return LatestVideoRevisionFound(revision);
+      }
+      Log.info(
+        'Funnelcake answered ${address.toAString()} with ${revision.id}, '
+        'which predates ${notOlderThan.id}; asking the relays',
+        name: 'VideosRepository',
+        category: LogCategory.video,
+      );
+    }
 
     final read = await _nostrClient.readEvents([
       Filter(
@@ -2197,7 +2216,9 @@ class VideosRepository {
         d: [address.dTag],
       ),
     ], useCache: false);
-    Event? newest;
+    // A Funnelcake revision older than the floor still competes: when no
+    // relay returns a newer one, the caller compares it with what it opened.
+    var newest = revision;
     for (final event in read.events) {
       if (!_isSignedRevisionAt(event, address)) continue;
       if (newest == null ||
@@ -2209,8 +2230,12 @@ class VideosRepository {
     }
     if (newest != null) {
       Log.info(
-        'Newest revision of ${address.toAString()} from the relays: '
-        '${newest.id} (read ${read.endedBy.name})',
+        identical(newest, revision)
+            ? 'Newest revision of ${address.toAString()} is still '
+                  "Funnelcake's ${newest.id}: no relay returned a newer one "
+                  '(read ${read.endedBy.name})'
+            : 'Newest revision of ${address.toAString()} from the relays: '
+                  '${newest.id} (read ${read.endedBy.name})',
         name: 'VideosRepository',
         category: LogCategory.video,
       );
@@ -2241,12 +2266,6 @@ class VideosRepository {
           .timeout(_latestRevisionFunnelcakeTimeout);
       if (event == null) return (revision: null, saysMissing: true);
       if (_isSignedRevisionAt(event, address)) {
-        Log.info(
-          'Newest revision of ${address.toAString()} from Funnelcake: '
-          '${event.id}',
-          name: 'VideosRepository',
-          category: LogCategory.video,
-        );
         return (revision: event, saysMissing: false);
       }
       // The d-tag lookup is not scoped by author, so another author's video
@@ -2285,6 +2304,12 @@ class VideosRepository {
     }
     return (revision: null, saysMissing: false);
   }
+
+  /// Whether [event] is older than [floor] under NIP-01 ordering: an earlier
+  /// `created_at`, or the same one and a higher id.
+  static bool _predates(Event event, VideoRevisionFloor floor) =>
+      event.createdAt < floor.createdAt ||
+      (event.createdAt == floor.createdAt && event.id.compareTo(floor.id) > 0);
 
   /// Whether [event] is a revision at exactly [address] with a valid id and
   /// a signature by its author, as `NostrClient.readCurrentVersion` counts

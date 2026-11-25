@@ -245,6 +245,119 @@ void main() {
         });
       });
 
+      group('given the revision the caller opened as a floor', () {
+        late Event opened;
+
+        setUp(() {
+          opened = revision(content: 'opened');
+        });
+
+        Future<LatestVideoRevision> fetch({VideoRevisionFloor? floor}) =>
+            withFunnelcake().fetchLatestVideoRevision(
+              '34236:$pubkey:$_dTag',
+              notOlderThan:
+                  floor ?? (createdAt: opened.createdAt, id: opened.id),
+            );
+
+        Matcher found(Event event) => isA<LatestVideoRevisionFound>().having(
+          (r) => r.event,
+          'event',
+          same(event),
+        );
+
+        test('returns its revision without asking the relays when it is the '
+            'opened one', () async {
+          stubFunnelcake(() async => opened);
+
+          expect(await fetch(), found(opened));
+          verifyZeroInteractions(nostr);
+        });
+
+        test('returns its revision without asking the relays when it is '
+            'newer', () async {
+          final newer = revision(content: 'newer', createdAt: 1001);
+          stubFunnelcake(() async => newer);
+
+          expect(await fetch(), found(newer));
+          verifyZeroInteractions(nostr);
+        });
+
+        group('asks the relays when its revision predates the floor', () {
+          late Event stale;
+
+          setUp(() {
+            stale = revision(content: 'stale', createdAt: 999);
+            stubFunnelcake(() async => stale);
+          });
+
+          test('and returns the opened revision a relay holds', () async {
+            stubRelays([opened]);
+
+            expect(await fetch(), found(opened));
+            verify(readRelays).called(1);
+          });
+
+          test('and returns a newer revision a relay holds', () async {
+            final newer = revision(content: 'newer', createdAt: 1002);
+            stubRelays([opened, newer]);
+
+            expect(await fetch(), found(newer));
+          });
+
+          // The caller compares it with the floor and falls back to the copy
+          // it holds; reporting absent would read as a deletion.
+          for (final endedBy in [QueryEnd.complete, QueryEnd.settledEarly]) {
+            test('and returns its revision when no relay returns one, the '
+                'read ending by ${endedBy.name}', () async {
+              stubRelays([], endedBy: endedBy);
+
+              expect(await fetch(), found(stale));
+            });
+          }
+
+          test('and returns its revision over an older relay one', () async {
+            stubRelays([revision(content: 'oldest', createdAt: 998)]);
+
+            expect(await fetch(), found(stale));
+          });
+
+          test('by the lowest id at an equal created_at', () async {
+            final newer = revision(content: 'newer', createdAt: 1001);
+            stubRelays([newer]);
+            final tied = revision(content: 'tied');
+            stubFunnelcake(() async => tied);
+            // An id below every hex id puts the tied revision after it.
+            final floorId = '0' * 64;
+
+            expect(
+              await fetch(floor: (createdAt: 1000, id: floorId)),
+              found(newer),
+            );
+            verify(readRelays).called(1);
+          });
+        });
+
+        test('logs that its revision predates the floor', () async {
+          final stale = revision(content: 'stale for log', createdAt: 999);
+          stubFunnelcake(() async => stale);
+          stubRelays([]);
+
+          await fetch();
+
+          final messages = LogCaptureService()
+              .getRecentLogs()
+              .map((entry) => entry.message)
+              .where((message) => message.contains(stale.id));
+          expect(
+            messages,
+            allOf(
+              contains(contains('predates ${opened.id}')),
+              contains(contains('no relay returned a newer one')),
+            ),
+          );
+        });
+      });
+
       test(
         'lets a programming error surface instead of asking the relays',
         () async {

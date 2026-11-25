@@ -106,7 +106,10 @@ void main() {
       () async {
         final firstRepository = _MockVideosRepository();
         when(
-          () => firstRepository.fetchLatestVideoRevision(any()),
+          () => firstRepository.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
         ).thenAnswer((_) async => const LatestVideoRevisionAbsent());
         final authService = _MockAuthService();
         when(() => authService.currentPublicKeyHex).thenReturn(_ownerPubkey);
@@ -149,7 +152,10 @@ void main() {
           completion(isNull),
         );
         verify(
-          () => firstRepository.fetchLatestVideoRevision(any()),
+          () => firstRepository.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
         ).called(1);
       },
     );

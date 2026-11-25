@@ -3,6 +3,12 @@
 
 import 'package:nostr_sdk/nostr_sdk.dart';
 
+/// The revision a caller about to replace a video opened: its Nostr
+/// `created_at` and event id. A read given it does not settle on a Divine
+/// REST answer older than this under NIP-01 ordering. See
+/// `VideosRepository.fetchLatestVideoRevision`.
+typedef VideoRevisionFloor = ({int createdAt, String id});
+
 /// What reading a video address returned, for a caller about to replace it:
 /// Divine's REST API first, then the relays. See
 /// `VideosRepository.fetchLatestVideoRevision`.

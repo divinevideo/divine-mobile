@@ -9,17 +9,21 @@ import 'package:videos_repository/videos_repository.dart'
         LatestVideoRevision,
         LatestVideoRevisionAbsent,
         LatestVideoRevisionFound,
-        LatestVideoRevisionUnknown;
+        LatestVideoRevisionUnknown,
+        VideoRevisionFloor;
 
 /// The newest signed revision of [video] to build a republish from, or null
 /// when there is none to trust. The reason is logged under [logName].
 ///
 /// Returns what [readRevision] reads at [video]'s address unless it predates
-/// the opened revision under NIP-01 ordering, for example when the REST API
-/// has not yet indexed this device's own latest publish, or unless the read
-/// returned nothing and did not complete. In both cases the signed copy of
-/// the opened revision that [cachedEvent] holds is used instead, when it is
-/// at the same address and validly signed. Returns null when the video has
+/// the opened revision under NIP-01 ordering, or unless the read returned
+/// nothing and did not complete. The opened revision is passed as the read's
+/// floor when its timestamp is known, so a REST answer older than it, for
+/// example when the API has not yet indexed this device's own latest
+/// publish, sends the read on to the relays. When the revision read still
+/// predates the opened one, or nothing was read, the signed copy of the
+/// opened revision that [cachedEvent] holds is used instead, when it is at
+/// the same address and validly signed. Returns null when the video has
 /// no unambiguous address, the reader is unavailable, the read found the
 /// address empty, the revision read has conflicting `d` tags, or neither
 /// revision can be used.
@@ -27,7 +31,11 @@ import 'package:videos_repository/videos_repository.dart'
 /// A video's copy in hand can be older than the newest revision, and a
 /// replacement built from it deletes whatever only the newer one carried.
 Future<Event?> newestVideoRevision(
-  Future<LatestVideoRevision> Function(String addressableId)? readRevision,
+  Future<LatestVideoRevision> Function(
+    String addressableId, {
+    VideoRevisionFloor? notOlderThan,
+  })?
+  readRevision,
   VideoEvent video, {
   required String logName,
   Event? Function(String eventId)? cachedEvent,
@@ -49,7 +57,13 @@ Future<Event?> newestVideoRevision(
     );
     return null;
   }
-  switch (await readRevision(address)) {
+  // Compare only a known Nostr timestamp, since createdAt may be the video's
+  // display date on an older cache row.
+  final openedCreatedAt = video.eventCreatedAt;
+  final floor = openedCreatedAt == null
+      ? null
+      : (createdAt: openedCreatedAt, id: video.id);
+  switch (await readRevision(address, notOlderThan: floor)) {
     case LatestVideoRevisionFound(:final event):
       if (_hasConflictingIdentifiers(event.tags)) {
         Log.warning(
@@ -62,11 +76,8 @@ Future<Event?> newestVideoRevision(
       }
 
       // The revision read can still be older than the opened one, for
-      // example when Funnelcake has not yet indexed this device's own latest
-      // publish, or a relay has not received it yet.
-      // Compare only a known Nostr timestamp, since createdAt may be the
-      // video's display date on an older cache row.
-      final openedCreatedAt = video.eventCreatedAt;
+      // example when neither Funnelcake nor any relay that answered has this
+      // device's own latest publish yet.
       if (openedCreatedAt == null ||
           event.createdAt > openedCreatedAt ||
           (event.createdAt == openedCreatedAt &&

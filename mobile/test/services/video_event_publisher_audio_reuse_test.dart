@@ -109,7 +109,10 @@ void main() {
           );
           final videos = _Videos();
           when(
-            () => videos.fetchLatestVideoRevision('34236:$owner:clip:one'),
+            () => videos.fetchLatestVideoRevision(
+              '34236:$owner:clip:one',
+              notOlderThan: any(named: 'notOlderThan'),
+            ),
           ).thenAnswer((_) async => LatestVideoRevisionFound(original));
           final publisher = VideoEventPublisher(
             uploadManager: _Uploads(),
@@ -228,7 +231,10 @@ void main() {
 
     VideoEventPublisher publisherWith(LatestVideoRevision answer) {
       when(
-        () => videos.fetchLatestVideoRevision(any()),
+        () => videos.fetchLatestVideoRevision(
+          any(),
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
       ).thenAnswer((_) async => answer);
       return VideoEventPublisher(
         uploadManager: _Uploads(),
@@ -299,7 +305,12 @@ void main() {
     test('refuses when the account changes during the newest read', () async {
       var account = owner;
       when(() => auth.currentPublicKeyHex).thenAnswer((_) => account);
-      when(() => videos.fetchLatestVideoRevision(any())).thenAnswer((_) async {
+      when(
+        () => videos.fetchLatestVideoRevision(
+          any(),
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
+      ).thenAnswer((_) async {
         account = syntheticOtherTestPubkey;
         return LatestVideoRevisionFound(
           revision(id: 'd' * 64, createdAt: 4102444800, content: 'Newer'),
@@ -325,7 +336,12 @@ void main() {
 
     test('refuses when the approval ends during the newest read', () async {
       var current = true;
-      when(() => videos.fetchLatestVideoRevision(any())).thenAnswer((_) async {
+      when(
+        () => videos.fetchLatestVideoRevision(
+          any(),
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
+      ).thenAnswer((_) async {
         current = false;
         return LatestVideoRevisionFound(
           revision(id: 'd' * 64, createdAt: 4102444800, content: 'Newer'),
@@ -406,7 +422,10 @@ void main() {
       final personalEvents = _PersonalEvents();
       when(() => personalEvents.getEventById(held.id)).thenReturn(held);
       when(
-        () => videos.fetchLatestVideoRevision(any()),
+        () => videos.fetchLatestVideoRevision(
+          any(),
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
       ).thenAnswer((_) async => const LatestVideoRevisionUnknown());
       final publisher = VideoEventPublisher(
         uploadManager: _Uploads(),
