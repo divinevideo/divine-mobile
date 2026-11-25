@@ -80,6 +80,20 @@ class VineCachedImage extends StatefulWidget {
   /// fallback can display an image without exposing its decoded pixels.
   final ImageDimensionsResolved? onImageDimensionsResolved;
 
+  /// Loads [imageUrl] at its full size into the cache a [VineCachedImage] of
+  /// it without `memCacheWidth` or `memCacheHeight` reads, so that one shows
+  /// it in its first frame; completes with whether it could be loaded.
+  static Future<bool> precache(BuildContext context, String imageUrl) async {
+    if (!isUsableNetworkImageUrl(imageUrl)) return false;
+    var loaded = true;
+    await precacheImage(
+      MediaCacheImageProvider(imageUrl, cacheManager: _activeImageCache),
+      context,
+      onError: (_, _) => loaded = false,
+    );
+    return loaded;
+  }
+
   @override
   State<VineCachedImage> createState() => _VineCachedImageState();
 }

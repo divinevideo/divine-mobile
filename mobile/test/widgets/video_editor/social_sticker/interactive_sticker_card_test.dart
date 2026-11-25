@@ -1,13 +1,23 @@
 // ABOUTME: Tests the question, Add yours and replies cards: what the frames show,
 // ABOUTME: who joined or replied in the player's copy, and the buttons on them.
 
+import 'dart:async';
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:divine_ui/divine_ui.dart';
+import 'package:file/local.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph;
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/interactive_sticker_card.dart';
+import 'package:openvine/widgets/vine_cached_image.dart';
+
+import '../../../helpers/test_provider_overrides.dart';
 
 void main() {
   group(InteractiveStickerCard, () {
@@ -437,5 +447,229 @@ void main() {
         expect(opened, equals(1));
       });
     });
+    group('the thumbnails of a replies sticker', () {
+      // Only this file asks for them: a load left pending stays cached.
+      const a = 'https://example.com/replies-sticker-thumbnail-a.jpg';
+      const b = 'https://example.com/replies-sticker-thumbnail-b.jpg';
+      late Set<String> loadable;
+      late Map<String, Completer<FileInfo?>> held;
+      late String picture;
+      late ValueNotifier<List<StickerResponsePreview>> latest;
+
+      setUp(() {
+        loadable = {a, b};
+        held = {};
+        latest = ValueNotifier(const [
+          StickerResponsePreview(thumbnailUrl: a),
+          StickerResponsePreview(thumbnailUrl: b),
+        ]);
+      });
+
+      tearDown(() {
+        latest.dispose();
+        debugImageCacheOverride = null;
+        PaintingBinding.instance.imageCache
+          ..clear()
+          ..clearLiveImages();
+      });
+
+      Finder thumbnail(String url) => find.byWidgetPredicate(
+        (widget) => widget is VineCachedImage && widget.imageUrl == url,
+      );
+
+      FileInfo served(String url) => FileInfo(
+        const LocalFileSystem().file(picture),
+        FileSource.Cache,
+        DateTime(2100),
+        url,
+      );
+
+      /// Pumps a replies sticker with [latest], its thumbnails in [loadable]
+      /// served from a picture on disk and the others [held] loading.
+      Future<void> pumpThumbnails(
+        WidgetTester tester, {
+        bool reduceMotion = false,
+      }) async {
+        picture = (await tester.runAsync(_writePng))!;
+        final cache = createMockMediaCacheManager();
+        when(() => cache.getFileFromCache(any())).thenAnswer((invocation) {
+          final url = invocation.positionalArguments.first as String;
+          if (!loadable.contains(url)) {
+            return (held[url] ??= Completer<FileInfo?>()).future;
+          }
+          return Future.value(served(url));
+        });
+        debugImageCacheOverride = cache;
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(disableAnimations: reduceMotion),
+                child: Center(
+                  child: SizedBox(
+                    width: 360,
+                    height: 300,
+                    child: ValueListenableBuilder(
+                      valueListenable: latest,
+                      builder: (_, latest, _) => InteractiveStickerCopy(
+                        data: replies,
+                        responses: StickerResponses(
+                          count: latest.length,
+                          latest: latest,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      /// Lets the pictures of [urls] load, which takes the real event loop,
+      /// and the thumbnail they make shown fade in.
+      Future<void> load(WidgetTester tester, List<String> urls) async {
+        final context = tester.element(find.byType(InteractiveStickerCopy));
+        await tester.runAsync(() async {
+          var loaded = false;
+          unawaited(
+            Future.wait([
+              for (final url in urls) VineCachedImage.precache(context, url),
+            ]).then((_) => loaded = true),
+          );
+          // The sticker asked for them first, so their loads move on as
+          // the test's clock is pumped.
+          final waited = Stopwatch()..start();
+          while (!loaded && waited.elapsed < const Duration(seconds: 10)) {
+            await pumpEventQueue();
+            await tester.pump();
+          }
+          expect(loaded, isTrue);
+        });
+        await tester.pumpAndSettle();
+      }
+
+      double opacityOf(WidgetTester tester, String url) => tester
+          .widget<FadeTransition>(
+            find
+                .ancestor(
+                  of: thumbnail(url),
+                  matching: find.byType(FadeTransition),
+                )
+                .first,
+          )
+          .opacity
+          .value;
+
+      testWidgets('fades the next one in over the one before, in turn', (
+        tester,
+      ) async {
+        await pumpThumbnails(tester);
+        await load(tester, [a, b]);
+
+        expect(thumbnail(a), findsOneWidget);
+        expect(thumbnail(b), findsNothing);
+
+        await tester.pump(repliesThumbnailInterval);
+
+        // The one before stays drawn under the one fading in.
+        expect(thumbnail(a), findsOneWidget);
+        expect(thumbnail(b), findsOneWidget);
+        expect(opacityOf(tester, b), lessThan(1));
+
+        await tester.pumpAndSettle();
+
+        expect(thumbnail(a), findsNothing);
+        expect(thumbnail(b), findsOneWidget);
+      });
+
+      testWidgets('shows the next one only once its picture is loaded', (
+        tester,
+      ) async {
+        loadable = {a};
+        await pumpThumbnails(tester);
+        await load(tester, [a]);
+
+        await tester.pump(repliesThumbnailInterval);
+        await tester.pump(repliesThumbnailInterval);
+
+        expect(thumbnail(a), findsOneWidget);
+        expect(thumbnail(b), findsNothing);
+      });
+
+      testWidgets('starts with the newest, also when an older one loads '
+          'first', (tester) async {
+        loadable = {b};
+        await pumpThumbnails(tester);
+        await load(tester, [b]);
+
+        expect(thumbnail(a), findsNothing);
+        expect(thumbnail(b), findsNothing);
+
+        held[a]!.complete(served(a));
+        await load(tester, [a]);
+
+        expect(thumbnail(a), findsOneWidget);
+        expect(thumbnail(b), findsNothing);
+      });
+
+      testWidgets('keeps the one it shows when the card is built again with '
+          'the avatars of the same replies', (tester) async {
+        await pumpThumbnails(tester);
+        await load(tester, [a, b]);
+        await tester.pump(repliesThumbnailInterval);
+        await tester.pumpAndSettle();
+
+        latest.value = const [
+          StickerResponsePreview(
+            thumbnailUrl: a,
+            avatarUrl: 'https://example.com/replies-sticker-avatar-a.jpg',
+          ),
+          StickerResponsePreview(
+            thumbnailUrl: b,
+            avatarUrl: 'https://example.com/replies-sticker-avatar-b.jpg',
+          ),
+        ];
+        await tester.pump();
+
+        expect(thumbnail(a), findsNothing);
+        expect(thumbnail(b), findsOneWidget);
+      });
+
+      testWidgets('holds the newest still when the viewer asked for less '
+          'motion', (tester) async {
+        await pumpThumbnails(tester, reduceMotion: true);
+        await load(tester, [a, b]);
+
+        await tester.pump(repliesThumbnailInterval);
+        await tester.pump(repliesThumbnailInterval);
+
+        expect(thumbnail(a), findsOneWidget);
+        expect(thumbnail(b), findsNothing);
+      });
+    });
   });
+}
+
+/// Writes a small picture to disk, removed after the test, and returns its
+/// path.
+Future<String> _writePng() async {
+  final recorder = ui.PictureRecorder();
+  ui.Canvas(recorder).drawRect(
+    const Rect.fromLTWH(0, 0, 9, 16),
+    ui.Paint()..color = const Color(0xFF27C58B),
+  );
+  final image = await recorder.endRecording().toImage(9, 16);
+  final png = await image.toByteData(format: ui.ImageByteFormat.png);
+  image.dispose();
+  final dir = Directory.systemTemp.createTempSync('replies_thumbnails_');
+  addTearDown(() => dir.deleteSync(recursive: true));
+  final file = File('${dir.path}/thumbnail.png')
+    ..writeAsBytesSync(png!.buffer.asUint8List());
+  return file.path;
 }

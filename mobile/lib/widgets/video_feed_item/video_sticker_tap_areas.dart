@@ -154,9 +154,11 @@ Rect videoFrameRect(
 ///
 /// A poll, quiz or slider takes votes on its answers, and a question, Add
 /// yours or replies sticker opens what its buttons open; their buttons keep
-/// the pointer from the player. Each reads its poll, or who joined or
-/// replied, only once the video [isActive]. [onVoteStarted] tells the feed a
-/// viewer started to vote or tapped one.
+/// the pointer from the player. A poll is read only once the video
+/// [isActive]; who joined or replied is read as soon as the feed builds the
+/// video, to be in when the viewer swipes to it, and their buttons take taps
+/// only while it is active. [onVoteStarted] tells the feed a viewer started
+/// to vote or tapped one.
 class VideoStickerTapAreas extends StatefulWidget {
   const VideoStickerTapAreas({
     required this.video,
@@ -183,7 +185,8 @@ class VideoStickerTapAreas extends StatefulWidget {
   /// without, a countdown is drawn with its time left and is no button.
   final bool canSetReminders;
 
-  /// Whether the video is the one the feed plays, whose polls are read.
+  /// Whether the video is the one the feed plays, whose polls are read and
+  /// whose cards take taps.
   final bool isActive;
 
   /// Whether the feed is the series an Add yours collects, opened from its

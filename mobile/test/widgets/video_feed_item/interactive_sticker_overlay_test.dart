@@ -124,7 +124,9 @@ void main() {
       );
     });
 
-    Future<void> pump(
+    /// Pumps the sticker, and returns whether its video is the one playing,
+    /// which a test may change afterwards.
+    Future<ValueNotifier<bool>> pump(
       WidgetTester tester,
       VideoStickerRegion region, {
       bool isActive = true,
@@ -132,6 +134,8 @@ void main() {
       VideoEvent? on,
     }) async {
       final pubkey = viewer == 'viewer' ? _viewer : viewer;
+      final active = ValueNotifier(isActive);
+      addTearDown(active.dispose);
       final router = GoRouter(
         routes: [
           GoRoute(
@@ -141,12 +145,15 @@ void main() {
                 child: SizedBox(
                   width: 300,
                   height: 240,
-                  child: InteractiveStickerOverlay(
-                    region: region,
-                    video: on ?? _video,
-                    data: SocialStickerData.ofRegion(region)!,
-                    isActive: isActive,
-                    onInteraction: () => interactions++,
+                  child: ValueListenableBuilder(
+                    valueListenable: active,
+                    builder: (_, isActive, _) => InteractiveStickerOverlay(
+                      region: region,
+                      video: on ?? _video,
+                      data: SocialStickerData.ofRegion(region)!,
+                      isActive: isActive,
+                      onInteraction: () => interactions++,
+                    ),
                   ),
                 ),
               ),
@@ -208,6 +215,7 @@ void main() {
         ),
       );
       await tester.pump();
+      return active;
     }
 
     final question = _region(VideoStickerKind.question, 'Ask me anything');
@@ -221,22 +229,47 @@ void main() {
         AppLocalizations.of(tester.element(find.byType(Scaffold).first));
 
     group('renders', () {
-      testWidgets('draws a sticker of a video the feed only loads ahead, '
-          'without reading who replied', (tester) async {
+      testWidgets('reads who replied on a video the feed only loads ahead, '
+          'so they are in when the viewer swipes to it', (tester) async {
         await pump(tester, replies, isActive: false);
+        await tester.pump();
 
         expect(find.text('Reply with a video'), findsOneWidget);
         expect(
           find.text(l10n(tester).videoStickerRepliesCount(2)),
-          findsNothing,
+          findsOneWidget,
         );
-        verifyNever(
+      });
+
+      testWidgets('keeps who replied, without reading them again, while the '
+          'video is not the one playing, as under the comments', (
+        tester,
+      ) async {
+        final active = await pump(tester, replies);
+        await tester.pump();
+
+        active.value = false;
+        await tester.pump();
+
+        expect(
+          find.text(l10n(tester).videoStickerRepliesCount(2)),
+          findsOneWidget,
+        );
+
+        active.value = true;
+        await tester.pump();
+
+        expect(
+          find.text(l10n(tester).videoStickerRepliesCount(2)),
+          findsOneWidget,
+        );
+        verify(
           () => repository.fetchReplies(
             videoId: any(named: 'videoId'),
             videoAddress: any(named: 'videoAddress'),
             limit: any(named: 'limit'),
           ),
-        );
+        ).called(1);
       });
 
       testWidgets('shows how many replied once that is read', (tester) async {
@@ -435,6 +468,18 @@ void main() {
         await tester.tap(
           find.text(l10n(tester).videoStickerQuestionAnswerHint),
         );
+        await tester.pumpAndSettle();
+
+        expect(pushed, isEmpty);
+        expect(interactions, isZero);
+      });
+
+      testWidgets('takes no tap on the replies while the video is not the '
+          'one playing', (tester) async {
+        await pump(tester, replies, isActive: false);
+        await tester.pump();
+
+        await tester.tap(find.text('Reply with a video'), warnIfMissed: false);
         await tester.pumpAndSettle();
 
         expect(pushed, isEmpty);
@@ -640,12 +685,13 @@ void main() {
                   FollowingSnapshot(pubkeys: pubkeys, count: pubkeys.length),
             );
 
-        testWidgets('draws nothing on a video the feed only loads ahead', (
-          tester,
-        ) async {
+        testWidgets('shows it on a video the feed only loads ahead once it is '
+            'read that the viewer may answer', (tester) async {
+          creatorFollows([_viewer]);
           await pump(tester, restricted(replies), isActive: false);
+          await tester.pump();
 
-          expect(find.text('Reply with a video'), findsNothing);
+          expect(find.text('Reply with a video'), findsOneWidget);
         });
 
         testWidgets('hides it from someone the creator does not follow while '
