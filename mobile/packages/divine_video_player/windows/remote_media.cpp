@@ -77,8 +77,10 @@ constexpr int32_t kTimeoutHresult =
     static_cast<int32_t>(0x800705B4);  // ERROR_TIMEOUT
 constexpr int32_t kCancelledHresult =
     static_cast<int32_t>(0x800704C7);  // ERROR_CANCELLED
-constexpr int32_t kInvalidResponseHresult =
-    static_cast<int32_t>(0x80072F78);  // ERROR_HTTP_INVALID_SERVER_RESPONSE
+// This reader's own refusal of a 206 that does not match the range it asked
+// for. The customer bit keeps it apart from every error Windows raises, such
+// as ERROR_HTTP_INVALID_SERVER_RESPONSE, which may succeed when tried again.
+constexpr int32_t kRangeRefusedHresult = static_cast<int32_t>(0xA0040001);
 constexpr wchar_t kDefaultContentType[] = L"video/mp4";
 
 using Chunk = std::shared_ptr<const std::vector<uint8_t>>;
@@ -238,7 +240,7 @@ auto WithTimeout(Operation operation)
 // 416 is final, and so are an answer this reader cannot use and a
 // cancellation.
 bool IsRetryable(int32_t hresult) {
-  return hresult != E_OUTOFMEMORY && hresult != kInvalidResponseHresult &&
+  return hresult != E_OUTOFMEMORY && hresult != kRangeRefusedHresult &&
          hresult != kCancelledHresult && HttpStatusFromHresult(hresult) != 416;
 }
 
@@ -300,7 +302,7 @@ IAsyncAction DownloadAsync(std::shared_ptr<const RequestContext> context,
     const auto too_much = [&response, status]() {
       response.Close();
       return status == 206
-                 ? winrt::hresult_error(kInvalidResponseHresult,
+                 ? winrt::hresult_error(kRangeRefusedHresult,
                                         L"Server sent more than the range")
                  : winrt::hresult_error(E_OUTOFMEMORY,
                                         L"Server sent the whole file, too large");
@@ -318,7 +320,7 @@ IAsyncAction DownloadAsync(std::shared_ptr<const RequestContext> context,
         const uint64_t last = std::wcstoull(text.c_str() + dash + 1, nullptr, 10);
         if (first != start || last > end) {
           response.Close();
-          throw winrt::hresult_error(kInvalidResponseHresult,
+          throw winrt::hresult_error(kRangeRefusedHresult,
                                      L"Server sent a different range");
         }
       }
