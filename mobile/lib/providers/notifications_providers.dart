@@ -2,12 +2,16 @@
 // ABOUTME: FCM messaging, push registration, in-app prefs sync, dirty-state retry
 
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:dm_repository/dm_repository.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/notification_preferences.dart';
+import 'package:openvine/notifications/routing/dm_message_visibility.dart';
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_version_provider.dart';
@@ -16,9 +20,12 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/official_accounts_providers.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/services/app_badge_service.dart';
 import 'package:openvine/services/notification_background_preloader.dart';
 import 'package:openvine/services/notification_content_preloader.dart';
@@ -352,6 +359,11 @@ PushNotificationSessionCoordinator? pushNotificationSync(Ref ref) {
   final onMessageSubscription = ref.read(firebaseOnMessageProvider).listen((
     message,
   ) {
+    if (message.data[NotificationPayloadKeys.wireType] ==
+        NotificationWireValues.directMessage) {
+      unawaited(_handleForegroundDm(ref, message));
+      return;
+    }
     unawaited(
       ref.read(notificationContentPreloaderProvider).preload(message.data),
     );
@@ -383,4 +395,69 @@ PushNotificationSessionCoordinator? pushNotificationSync(Ref ref) {
   });
 
   return coordinator;
+}
+
+Future<void> _handleForegroundDm(Ref ref, RemoteMessage message) async {
+  final data = fcmPayloadWithMessageId(message.data, message.messageId);
+  final parsed = parseFcmPayload(data);
+  final owner = parsed?.receiverPubkey?.toLowerCase();
+  final wrap = parsed?.eventId?.toLowerCase();
+  final hex = RegExp(r'^[0-9a-f]{64}$');
+  if (owner == null ||
+      wrap == null ||
+      !hex.hasMatch(owner) ||
+      !hex.hasMatch(wrap)) {
+    return;
+  }
+  bool current() =>
+      ref.mounted &&
+      ref.read(authServiceProvider).currentPublicKeyHex == owner &&
+      ref.read(accountPreferenceStoreProvider).boundPubkey == owner &&
+      ref.read(nostrSessionProvider).pubkey == owner;
+  if (!current()) return;
+  try {
+    final service = ref.read(notificationServiceProvider);
+    final prefs = ref.read(notificationPreferencesServiceProvider);
+    if (!service.hasPermissions ||
+        !(await prefs.loadPreferences()).directMessagesEnabled ||
+        !current()) {
+      return;
+    }
+    final lookup = await ref
+        .read(dmRepositoryProvider)
+        .watchWrapLookup(ownerPubkey: owner, giftWrapId: wrap)
+        .where((result) => result is! DmWrapPending)
+        .timeout(
+          const Duration(seconds: 10),
+          onTimeout: (sink) {
+            sink.add(const DmWrapPending());
+            sink.close();
+          },
+        )
+        .first;
+    if (!current() || !service.hasPermissions) return;
+    if (!shouldDisplayDmAlert(
+      lookup,
+      owner: owner,
+      restricted: ref.read(isDmRestrictedProvider),
+      allowedPeer: ref
+          .read(officialAccountsServiceProvider)
+          .isReadableByProtectedMinor,
+    )) {
+      return;
+    }
+    if (!(await prefs.loadPreferences()).directMessagesEnabled || !current()) {
+      return;
+    }
+    final context = NavigatorKeys.root.currentContext;
+    if (context == null || !context.mounted) return;
+    await service.sendLocal(
+      title: 'Divine',
+      body: context.l10n.newMessageTitle,
+      payload: jsonEncode(localNotificationTapPayload(data)),
+    );
+  } on Object {
+    // A retired account scope or unavailable private state cannot authorize an alert.
+    return;
+  }
 }

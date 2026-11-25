@@ -4,6 +4,27 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/notification_helpers.dart';
 
 void main() {
+  test(
+    'FCM, local and cold launch keep the receiver even on malformed DM taps',
+    () {
+      final owner = 'a' * 64;
+      final wrap = 'b' * 64;
+      final data = {
+        'type': 'directMessage',
+        'eventId': wrap,
+        'receiverPubkey': owner,
+      };
+      expect(parseFcmPayload(data)?.receiverPubkey, owner);
+      final local = localNotificationTapPayload(data);
+      expect(parseFcmPayload(local)?.receiverPubkey, owner);
+      expect(parseFcmPayload(local)?.eventId, wrap);
+      expect(
+        parseFcmPayload({'type': 'directMessage'})?.notificationType,
+        'directMessage',
+      );
+    },
+  );
+
   group('parseAddressableId', () {
     test('parses valid addressable ID into components', () {
       final result = parseAddressableId('34236:abc123pubkey:my-video-id');

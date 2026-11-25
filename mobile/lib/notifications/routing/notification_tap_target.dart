@@ -92,6 +92,25 @@ class OpenInboxTarget extends NotificationTapTarget {
   List<Object?> get props => const [];
 }
 
+/// Generic Messages entry for an invalid or no longer available DM target.
+class OpenMessagesTarget extends OpenInboxTarget {
+  const OpenMessagesTarget();
+}
+
+/// An outer wrap address. Only verified, local DM ingest resolves the message.
+class OpenDirectMessageTarget extends OpenMessagesTarget {
+  const OpenDirectMessageTarget({
+    required this.receiverPubkey,
+    required this.giftWrapId,
+  });
+
+  final String receiverPubkey;
+  final String giftWrapId;
+
+  @override
+  List<Object?> get props => [receiverPubkey, giftWrapId];
+}
+
 /// Whether a tap of [kind] should open the video with its comments expanded.
 ///
 /// Single source of truth for the auto-open-comments policy across every

@@ -50,6 +50,7 @@ abstract class NotificationPayloadKeys {
 
   /// Hex pubkey of the actor — used to route follows and unresolved taps.
   static const String senderPubkey = 'senderPubkey';
+  static const String receiverPubkey = 'receiverPubkey';
 
   /// Campaign destination type, one of
   /// [NotificationWireValues.campaignTargetTypes].
@@ -75,6 +76,7 @@ abstract class NotificationWireValues {
   /// `type` value for a campaign push, which carries an in-app destination
   /// instead of a Nostr event.
   static const String campaign = 'campaign';
+  static const String directMessage = 'directMessage';
 
   /// Campaign `tapTargetType` value for an absolute in-app route.
   static const String appRoute = 'app_route';
@@ -131,7 +133,8 @@ bool isRoutableNotificationPayload({
     referencedAddress != null ||
     eventId != null ||
     senderPubkey != null ||
-    notificationType == NotificationWireValues.campaign;
+    notificationType == NotificationWireValues.campaign ||
+    notificationType == NotificationWireValues.directMessage;
 
 /// Normalises a raw push-notification payload map into the fields the tap
 /// router needs.
@@ -158,6 +161,7 @@ bool isRoutableNotificationPayload({
   String? eventId,
   String? notificationType,
   String? senderPubkey,
+  String? receiverPubkey,
   String? tapTargetType,
   String? tapTargetValue,
   String? campaignRevisionId,
@@ -190,6 +194,7 @@ parseFcmPayload(Map<String, dynamic> data) {
 
   return (
     messageId: nonEmpty(NotificationPayloadKeys.messageId),
+    receiverPubkey: nonEmpty(NotificationPayloadKeys.receiverPubkey),
     referencedEventId: referencedEventId,
     referencedAddress: referencedAddress,
     eventId: eventId,
@@ -222,6 +227,7 @@ Map<String, dynamic> localNotificationTapPayload(Map<String, dynamic> data) {
     NotificationPayloadKeys.eventId: parsed?.eventId,
     NotificationPayloadKeys.notificationType: parsed?.notificationType,
     NotificationPayloadKeys.senderPubkey: parsed?.senderPubkey,
+    NotificationPayloadKeys.receiverPubkey: ?parsed?.receiverPubkey,
     NotificationPayloadKeys.tapTargetType: ?parsed?.tapTargetType,
     NotificationPayloadKeys.tapTargetValue: ?parsed?.tapTargetValue,
     NotificationPayloadKeys.campaignRevisionId: ?parsed?.campaignRevisionId,

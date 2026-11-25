@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/profile_feed/profile_tab_retap_cubit.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart' show FeedMode;
+import 'package:openvine/notifications/routing/dm_push_navigation.dart';
 import 'package:openvine/notifications/view/notifications_page.dart';
 import 'package:openvine/router/app_shell.dart';
 import 'package:openvine/router/go_router_page_name.dart';
@@ -317,11 +318,21 @@ class NotificationsRouteData extends GoRouteData with $NotificationsRouteData {
 
 /// The inbox.
 class InboxRouteData extends GoRouteData with $InboxRouteData {
-  const InboxRouteData();
+  const InboxRouteData({this.messages = false, this.$extra});
+  final Object? $extra;
+  final bool messages;
 
   @override
-  Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      branchPage(state, const InboxPage());
+  Page<void> buildPage(BuildContext context, GoRouterState state) => branchPage(
+    state,
+    messages && $extra is DmPushIntent
+        ? DmPushListener(
+            key: ObjectKey($extra),
+            intent: $extra! as DmPushIntent,
+            child: const InboxPage(initialMessages: true),
+          )
+        : InboxPage(initialMessages: messages),
+  );
 }
 
 /// The owner's recovery page for pinned videos that no longer resolve; the
