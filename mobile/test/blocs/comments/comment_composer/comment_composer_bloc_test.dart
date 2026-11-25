@@ -546,6 +546,30 @@ void main() {
         ],
       );
 
+      // Neither mode id changes here, so only the revision can tell the
+      // composer to drop the half-made edit in its field.
+      blocTest<CommentComposerBloc, CommentComposerState>(
+        'reopening Edit on the comment being edited replaces its draft',
+        build: createBloc,
+        seed: () => CommentComposerState(
+          activeEditCommentId: validId('e1'),
+          editInputText: 'my changes',
+          draftRevision: 1,
+        ),
+        act: (b) => b.add(
+          CommentEditModeEntered(
+            commentId: validId('e1'),
+            originalContent: 'original',
+            originalComment: makeComment(validId('e1'), content: 'original'),
+          ),
+        ),
+        expect: () => [
+          isA<CommentComposerState>()
+              .having((s) => s.editInputText, 'editText', 'original')
+              .having((s) => s.draftRevision, 'draft revision', 2),
+        ],
+      );
+
       blocTest<CommentComposerBloc, CommentComposerState>(
         'CommentEditModeCancelled clears edit state',
         build: createBloc,
