@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show DmMessage, NIP17SendResult;
 import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
 class _Client extends Mock implements NostrClient {}
@@ -43,8 +44,10 @@ class _Queue extends OutgoingDmsDao {
 
 void main() {
   final owner = 'aa' * 32;
+  // Derived from private keys, so each is a point on the curve and a send
+  // that is not refused gets as far as building its gift wrap.
   final peers = [
-    for (final byte in ['bb', 'cc', 'dd']) byte * 32,
+    for (final byte in ['02', '03', '04']) getPublicKey(byte * 32),
   ];
   final signer = LocalNostrSigner('01' * 32);
   late AppDatabase db;
