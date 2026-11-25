@@ -873,9 +873,10 @@ class RelayManager {
       // a stale relay object stays in the pool and no events flow through.
       _relayPool.remove(url);
 
-      // Add to pool and connect – autoSubscribe ensures any active
-      // subscriptions are resent to the newly connected relay so that
-      // queries (e.g. follower counts) don't silently miss data.
+      // Add to pool and connect – autoSubscribe resends the live
+      // subscriptions, and the pool hands the new relay the one-shot reads
+      // and COUNTs the old one was still answering, so its socket asks for
+      // them again instead of leaving them to their callers' timeouts.
       final success = await _relayPool.add(relay, autoSubscribe: true);
       _log(
         'Connect ${success ? 'succeeded' : 'failed'}',

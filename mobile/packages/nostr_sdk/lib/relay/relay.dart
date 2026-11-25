@@ -48,6 +48,10 @@ abstract class Relay {
   // NIP-45 COUNT queries
   final Map<String, Completer<CountResponse>> _countQueries = {};
 
+  /// The `COUNT` frame each entry of [_countQueries] was sent as, when its
+  /// sender gave one, so a replacement relay object can send it again.
+  final Map<String, List<dynamic>> _countRequests = {};
+
   // Observed COUNT support on the current socket.
   bool? _supportsCount;
 
@@ -398,9 +402,9 @@ abstract class Relay {
   /// The one-shot queries still awaiting EOSE on this relay.
   ///
   /// Unlike [getSubscriptions], these are closed when their EOSE arrives.
-  /// The pool replays them after a forced reconnect so the REQ is re-issued
-  /// on the fresh socket and the query can still EOSE instead of only
-  /// resolving via the caller's timeout.
+  /// [onConnected] re-issues them on a fresh socket, and `RelayPool` hands
+  /// them to the object that replaces this one for its url, so the query can
+  /// still EOSE instead of only resolving via the caller's timeout.
   List<Subscription> getQueries() {
     return _queries.values.toList();
   }
@@ -462,10 +466,54 @@ abstract class Relay {
   // NIP-45 COUNT query methods
 
   /// Register a COUNT query and return a future that completes with the response
-  Future<CountResponse> registerCountQuery(String id) {
+  ///
+  /// [request] is the `COUNT` frame that was sent. Only a query registered
+  /// with it can be sent again by a relay object that replaces this one.
+  Future<CountResponse> registerCountQuery(
+    String id, {
+    List<dynamic>? request,
+  }) {
     final completer = Completer<CountResponse>();
     _countQueries[id] = completer;
+    if (request != null) _countRequests[id] = request;
     return completer.future;
+  }
+
+  /// Removes and returns every COUNT query still waiting for its answer, with
+  /// the frame each was sent as, when known.
+  ///
+  /// For a relay object leaving the pool: whatever it still owes can only be
+  /// answered on another socket now.
+  List<
+    ({String id, Completer<CountResponse> completer, List<dynamic>? request})
+  >
+  takePendingCountQueries() {
+    final pending = [
+      for (final entry in _countQueries.entries)
+        (
+          id: entry.key,
+          completer: entry.value,
+          request: _countRequests[entry.key],
+        ),
+    ];
+    _countQueries.clear();
+    _countRequests.clear();
+    return pending;
+  }
+
+  /// Waits for COUNT [id] on this relay's next socket, completing
+  /// [completer], with [request] queued to be sent once it connects.
+  ///
+  /// For a COUNT another relay object for this url was waiting on when it
+  /// left the pool.
+  void adoptCountQuery(
+    String id,
+    Completer<CountResponse> completer,
+    List<dynamic> request,
+  ) {
+    _countQueries[id] = completer;
+    _countRequests[id] = request;
+    pendingMessages.add(request);
   }
 
   /// Check if a COUNT query exists for this ID
@@ -476,14 +524,24 @@ abstract class Relay {
   /// Complete a COUNT query with the response
   void completeCountQuery(String id, CountResponse response) {
     final completer = _countQueries.remove(id);
+    _countRequests.remove(id);
     if (completer == null) return;
     _supportsCount = true;
     completer.complete(response);
   }
 
   /// Complete a COUNT query with an error (e.g., CLOSED response)
+  ///
+  /// A frame for it still queued for the next socket is dropped: nobody is
+  /// waiting for its answer any more.
   void failCountQuery(String id, String reason) {
     final completer = _countQueries.remove(id);
+    if (_countRequests.remove(id) != null) {
+      pendingMessages.removeWhere(
+        (message) =>
+            message.length > 1 && message[0] == 'COUNT' && message[1] == id,
+      );
+    }
     completer?.completeError(CountNotSupportedException(reason));
   }
 
@@ -509,6 +567,7 @@ abstract class Relay {
     _supportsCount = false;
     final pending = _countQueries.values.toList();
     _countQueries.clear();
+    _countRequests.clear();
     for (final completer in pending) {
       completer.completeError(CountNotSupportedException(reason));
     }
