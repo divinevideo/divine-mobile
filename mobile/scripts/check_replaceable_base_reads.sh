@@ -25,7 +25,8 @@
 #
 # Entries are a worklist, not exemptions: each carries a trailing reason
 # (`fixed site`, `open: #NNNN` or `review: ...`). Clear one by reading the
-# kind through readCurrentVersion in the publishing file, then lock the win:
+# kind through readCurrentVersion (or, for a video republish,
+# newestVideoRevision) in the publishing file, then lock the win:
 #   UPDATE_BASELINE=1 bash mobile/scripts/check_replaceable_base_reads.sh
 # Inspect the sites with:
 #   cd mobile && dart run scripts/lib/replaceable_publish_detector.dart lib packages/*/lib --detail
@@ -44,10 +45,10 @@ BASE_REF="${REPLACEABLE_BASE_READS_BASE_REF:-origin/main}"
 ALLOW_NO_BASE="${REPLACEABLE_BASE_READS_ALLOW_NO_BASE:-0}"
 ALLOW_NO_BASE_VAR="REPLACEABLE_BASE_READS_ALLOW_NO_BASE"
 NEW_HINT="This file publishes a replaceable kind without reading it through NostrClient.readCurrentVersion. Build the replacement only on CurrentVersionFound or CurrentVersionAbsent, and publish nothing on CurrentVersionFailed (#11317). A video republish reads its base through newestVideoRevision instead."
-STALE_HINT="A publisher now reads its kind through readCurrentVersion, or stopped publishing it."
+STALE_HINT="A publisher now reads its kind through readCurrentVersion or newestVideoRevision, or stopped publishing it."
 FOOTER="Replaceable publishers without a settled base read are frozen and may only
-decrease. Read the kind through NostrClient.readCurrentVersion in the file that
-publishes it. Inspect sites with:
+decrease. Read the kind through NostrClient.readCurrentVersion (or, for a video
+republish, newestVideoRevision) in the file that publishes it. Inspect sites with:
   cd mobile && dart run scripts/lib/replaceable_publish_detector.dart lib packages/*/lib --detail"
 
 emit_current() {

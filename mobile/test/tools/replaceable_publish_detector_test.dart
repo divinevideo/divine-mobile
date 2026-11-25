@@ -396,6 +396,27 @@ Future<void> republish(Signer signer, VideoEvent video) async {
         expect(violations, isEmpty);
       });
 
+      // `?` is keyed by file, so the call also clears an unrelated unresolved
+      // publish there. AGENTS.md says to review such a publish by hand.
+      test('clears every unresolved publish in its file', () {
+        final violations = findReplaceablePublishViolations({
+          'lib/video_edit.dart':
+              '''
+$republishOwnKind
+Future<void> publishList(Signer signer, int kind) async {
+  await signer.createAndSignEvent(kind: kind, content: '', tags: const []);
+}
+''',
+          'lib/list_only.dart': '''
+Future<void> publishList(Signer signer, int kind) async {
+  await signer.createAndSignEvent(kind: kind, content: '', tags: const []);
+}
+''',
+        });
+
+        expect(_keys(violations), ['lib/list_only.dart\t?']);
+      });
+
       test('reports the same publishes without the call', () {
         final violations = findReplaceablePublishViolations({
           'lib/video_edit.dart': '''

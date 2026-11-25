@@ -69,18 +69,15 @@ const publishingMethods = <String, int>{
 };
 
 /// Calls other than `readCurrentVersion` that read the base of a replaceable
-/// publish, with the kinds a call clears in its file, as printed.
+/// publish, with the kinds each clears in its file, as printed.
 ///
-/// The maintainer ruled (2026-11-25) that a video republish reads its base
-/// Funnelcake-first through `VideosRepository.fetchLatestVideoRevision` and
-/// `newestVideoRevision`, falling back to a relay read that no single relay
-/// gates and to this device's signed copy of the opened revision, and accepts
-/// that near-simultaneous edits from two devices resolve last-writer-wins.
-/// Requiring every relay to settle stalled and failed the user's own edits.
-/// A republish keeps the opened event's own kind, which resolves to
-/// [unresolvedKind], so that clears too, alongside Kinds 34235 and 34236.
-const baseReadingCalls = <String, List<String>>{
-  'newestVideoRevision': ['34235', '34236', unresolvedKind],
+/// `newestVideoRevision` reads a video republish's base by maintainer ruling
+/// (#11466; see AGENTS.md). A republish keeps the opened event's kind, which
+/// the detector cannot resolve, so the call clears [unresolvedKind] too. That
+/// covers every unresolved publish in the file, as an unresolved
+/// `readCurrentVersion` does: review a new data-driven publish there by hand.
+const baseReadingCalls = <String, Set<String>>{
+  'newestVideoRevision': {'34235', '34236', unresolvedKind},
 };
 
 /// One file that publishes a replaceable [kind] and never reads that kind
