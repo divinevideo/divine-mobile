@@ -1,6 +1,7 @@
 // ABOUTME: Tests for VideoEditorClipLibrarySaveService - flattening one clip
 // ABOUTME: into a standalone library clip via the render pipeline.
 
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui';
@@ -851,6 +852,66 @@ void main() {
           ]);
         },
       );
+
+      test("keeps the render's proof on the clip", () async {
+        // Offline: proved but not signed. The proof's hash is what lets the
+        // clip be signed later, as a flattened clip is.
+        final proof = jsonEncode(
+          const NativeProofData(videoHash: 'rendered').toJson(),
+        );
+        VideoEditorRenderService.renderVideoToClipOverride =
+            ({
+              required clips,
+              required editorStateHistory,
+              parameters,
+              taskId,
+            }) async => (
+              _createClip(id: 'clip-rendered').copyWith(
+                video: EditorVideo.file('/documents/rendered.mp4'),
+              ),
+              proof,
+            );
+
+        final result =
+            await VideoEditorClipLibrarySaveService.renderDraftForLibrary(
+              draft: draft(clips: [_createClip()]),
+              renderParameters: DraftRenderParametersService(
+                rasterizer: rasterizer,
+              ),
+              renderId: 'convert-1',
+            );
+
+        expect(result.proofManifestJson, proof);
+      });
+
+      test('keeps the credits of every clip in the draft', () async {
+        const sender = model.ClipSourceCredit(authorPubkey: 'sender-pubkey');
+        const published = model.ClipSourceCredit(
+          authorPubkey: 'source-author-pubkey',
+          addressableId: '34236:source-author-pubkey:source-d-tag',
+        );
+
+        final result =
+            await VideoEditorClipLibrarySaveService.renderDraftForLibrary(
+              draft: draft(
+                clips: [
+                  _createClip().copyWith(sourceCredits: const [sender]),
+                  _createClip(
+                    id: 'b',
+                  ).copyWith(sourceCredits: const [published]),
+                ],
+              ),
+              renderParameters: DraftRenderParametersService(
+                rasterizer: rasterizer,
+              ),
+              renderId: 'convert-1',
+            );
+
+        expect(
+          result.sourceCredits,
+          unorderedEquals(const [sender, published]),
+        );
+      });
     });
 
     group('withExtractedSound', () {

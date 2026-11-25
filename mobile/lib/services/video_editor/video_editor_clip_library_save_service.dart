@@ -203,6 +203,9 @@ class VideoEditorClipLibrarySaveService {
       id: 'clip_library_${DateTime.now().microsecondsSinceEpoch}',
       lensMetadata: draft.clips.first.lensMetadata,
       sourceCredits: DivineVideoClip.combinedSourceCredits(draft.clips),
+      // Its hash lets an offline conversion be signed later, as a flattened
+      // clip is.
+      proofManifestJson: proofJson,
       // Left unsigned, for example offline, an edit of it is signed against
       // the media the draft was made from, as with a flattened clip.
       derivedFrom: proof?.c2paManifestId == null
