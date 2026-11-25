@@ -1241,10 +1241,9 @@ Map<String, int> _userTableRowCounts(Database db) {
 /// migrates the legacy file on first run after upgrade.
 Future<String> getSharedDatabasePath() async {
   final appSupportDir = await getApplicationSupportDirectory();
-  final newPath = buildSharedDatabasePath(
-    appSupportDir.path,
-    isMacOS: Platform.isMacOS,
-  );
+  final newPath = Platform.isMacOS
+      ? resolveMacOsSharedDatabasePath(appSupportDir.path)
+      : buildSharedDatabasePath(appSupportDir.path);
 
   // Check cache version and wipe stale database if needed.
   applyDbCacheVersionReset(newPath);
@@ -1548,17 +1547,16 @@ class _LocalOnlyDataQuery {
 /// Builds the shared database path from a platform-specific writable base.
 ///
 /// Application Support is preferred for sandboxed app data on macOS/iOS.
+@visibleForTesting
+String buildSharedDatabasePath(String basePath) =>
+    p.join(basePath, 'openvine', 'database', 'divine_db.db');
+
 /// On a native Mac App Store upgrade, the iPad app's database directory can
 /// already exist in the app's sandbox. Keep using it in place so the SQLite
 /// sidecars, interrupted swaps, and backups stay beside the database.
 @visibleForTesting
-String buildSharedDatabasePath(String basePath, {bool isMacOS = false}) {
-  final relativePath = p.join('openvine', 'database', 'divine_db.db');
-  final nativePath = p.join(basePath, relativePath);
-  if (!isMacOS || Directory(p.dirname(nativePath)).existsSync()) {
-    return nativePath;
-  }
-
+String resolveMacOsSharedDatabasePath(String basePath) {
+  final nativePath = buildSharedDatabasePath(basePath);
   // path_provider appends the bundle ID on native macOS. Only look above
   // that suffix inside the app's own sandbox. Outside it, Application
   // Support is shared by other apps.
@@ -1576,10 +1574,24 @@ String buildSharedDatabasePath(String basePath, {bool isMacOS = false}) {
     return nativePath;
   }
 
-  final inheritedPath = p.join(supportPath, relativePath);
-  return Directory(p.dirname(inheritedPath)).existsSync()
-      ? inheritedPath
-      : nativePath;
+  final inheritedPath = buildSharedDatabasePath(supportPath);
+  for (final databasePath in [nativePath, inheritedPath]) {
+    final locationMarker = File('$databasePath.location');
+    if (locationMarker.existsSync()) return databasePath;
+
+    // An early launch can leave a version file or an empty SQLite file. Pin
+    // the path once it contains data or a recovery file, so a deliberate
+    // reset keeps using the same path.
+    final database = File(databasePath);
+    if ((database.existsSync() && database.lengthSync() > 0) ||
+        File('$databasePath$_migratingSuffix').existsSync() ||
+        File('$databasePath$_salvageSuffix').existsSync() ||
+        hasUnfinishedHotJournalDatabaseRestore(databasePath)) {
+      locationMarker.createSync();
+      return databasePath;
+    }
+  }
+  return nativePath;
 }
 
 /// Ensures the database parent directory exists before SQLite opens the file.

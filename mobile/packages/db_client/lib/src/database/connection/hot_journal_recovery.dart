@@ -184,6 +184,11 @@ Directory _snapshotDirectory(String databasePath) =>
 Directory _restoreDirectory(String databasePath) =>
     Directory('$databasePath$_restoreDirectorySuffix');
 
+/// Whether an unfinished restore holds the database at [databasePath].
+bool hasUnfinishedHotJournalDatabaseRestore(String databasePath) => File(
+  p.join(_restoreDirectory(databasePath).path, _snapshotDatabaseName),
+).existsSync();
+
 /// Puts back whatever is left in the restore directory of [databasePath],
 /// then removes the directory. Returns whether anything was left in it.
 ///

@@ -94,7 +94,7 @@ void main() {
           ..writeAsBytesSync([1]);
         final wal = File('$iPadDatabase-wal')..writeAsBytesSync([2]);
 
-        final selected = buildSharedDatabasePath(macSupport, isMacOS: true);
+        final selected = resolveMacOsSharedDatabasePath(macSupport);
 
         expect(selected, iPadDatabase);
         expect(database.readAsBytesSync(), [1]);
@@ -107,7 +107,7 @@ void main() {
           ..writeAsBytesSync([1]);
 
         expect(
-          buildSharedDatabasePath(macSupport, isMacOS: true),
+          resolveMacOsSharedDatabasePath(macSupport),
           iPadDatabase,
         );
         expect(staging.readAsBytesSync(), [1]);
@@ -117,13 +117,72 @@ void main() {
         prepareDatabaseFile(iPadDatabase).writeAsBytesSync([1]);
         prepareDatabaseFile(macDatabase).writeAsBytesSync([2]);
 
-        expect(buildSharedDatabasePath(macSupport, isMacOS: true), macDatabase);
+        expect(resolveMacOsSharedDatabasePath(macSupport), macDatabase);
         expect(File(iPadDatabase).readAsBytesSync(), [1]);
         expect(File(macDatabase).readAsBytesSync(), [2]);
       });
 
+      test(
+        'uses the iPad database when native wrote only a version file',
+        () {
+          prepareDatabaseFile(iPadDatabase).writeAsBytesSync([1]);
+          writeDbCacheVersion(p.dirname(macDatabase), dbCacheVersion);
+
+          expect(
+            resolveMacOsSharedDatabasePath(macSupport),
+            iPadDatabase,
+          );
+          expect(File(macDatabase).existsSync(), isFalse);
+        },
+      );
+
+      test('uses the iPad database when the native file is empty', () {
+        prepareDatabaseFile(iPadDatabase).writeAsBytesSync([1]);
+        final nativeFile = prepareDatabaseFile(macDatabase)..createSync();
+
+        expect(resolveMacOsSharedDatabasePath(macSupport), iPadDatabase);
+        expect(nativeFile.lengthSync(), isZero);
+      });
+
+      test(
+        'keeps a recoverable native database ahead of the iPad database',
+        () {
+          prepareDatabaseFile(iPadDatabase).writeAsBytesSync([1]);
+          final staging = prepareDatabaseFile('$macDatabase.corruption_salvage')
+            ..writeAsBytesSync([2]);
+
+          expect(
+            resolveMacOsSharedDatabasePath(macSupport),
+            macDatabase,
+          );
+          expect(staging.readAsBytesSync(), [2]);
+        },
+      );
+
+      test('keeps a native database with an unfinished journal restore', () {
+        prepareDatabaseFile(iPadDatabase).writeAsBytesSync([1]);
+        final restore = prepareDatabaseFile(
+          p.join('$macDatabase.hot_journal_restore', 'database'),
+        )..writeAsBytesSync([2]);
+
+        expect(resolveMacOsSharedDatabasePath(macSupport), macDatabase);
+        expect(restore.readAsBytesSync(), [2]);
+      });
+
+      test('keeps the selected database path after a deliberate reset', () {
+        prepareDatabaseFile(iPadDatabase).writeAsBytesSync([1]);
+        final nativeFile = prepareDatabaseFile(macDatabase)
+          ..writeAsBytesSync([2]);
+        expect(resolveMacOsSharedDatabasePath(macSupport), macDatabase);
+
+        nativeFile.deleteSync();
+
+        expect(resolveMacOsSharedDatabasePath(macSupport), macDatabase);
+        expect(File(iPadDatabase).readAsBytesSync(), [1]);
+      });
+
       test('uses the native path on a fresh install', () {
-        expect(buildSharedDatabasePath(macSupport, isMacOS: true), macDatabase);
+        expect(resolveMacOsSharedDatabasePath(macSupport), macDatabase);
       });
 
       test('does not look outside the native directory without a sandbox', () {
@@ -138,7 +197,7 @@ void main() {
         ).writeAsBytesSync([1]);
 
         expect(
-          buildSharedDatabasePath(directSupport, isMacOS: true),
+          resolveMacOsSharedDatabasePath(directSupport),
           buildSharedDatabasePath(directSupport),
         );
       });
