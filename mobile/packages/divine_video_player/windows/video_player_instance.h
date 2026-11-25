@@ -27,8 +27,9 @@ namespace divine_video_player {
 //
 // Plays the clips of a timeline through a Windows MediaPlayer in
 // frame-server mode, hands its frames to a Flutter texture and reports its
-// state in the same shape as the Android and Apple players. Everything
-// except the frame copy runs on the platform thread.
+// state in the same shape as the Android and Apple players. Its methods run
+// on the platform thread; the frame copy and the audio effect run on Media
+// Foundation threads, and source loading posts its result back to it.
 class VideoPlayerInstance
     : public std::enable_shared_from_this<VideoPlayerInstance> {
  public:

@@ -225,8 +225,7 @@ std::vector<AudioTrackSpec> ParseTracks(const EncodableList& list) {
   return tracks;
 }
 
-// Opens every clip's source off the platform thread, then hands the result
-// back to the player that asked for it.
+// HLS has no container to read track ends from.
 bool WantsCommonTrackEnd(const ClipSpec& clip) {
   return clip.trim_to_common_track_end && !IsHlsUri(clip.uri);
 }
@@ -250,8 +249,8 @@ std::vector<ClipTrim> CommonTrackEndTrims(const std::vector<ClipSpec>& clips) {
 }
 
 // Reads the track ends on a thread of its own, alongside source creation, so
-// the extra reads do not delay the first frame. The future never blocks in
-// its destructor, unlike std::async's.
+// the extra reads overlap it rather than follow it. The future never blocks
+// in its destructor, unlike std::async's.
 std::future<std::vector<ClipTrim>> StartCommonTrackEndTrims(
     std::vector<ClipSpec> clips) {
   auto promise = std::make_shared<std::promise<std::vector<ClipTrim>>>();
@@ -269,6 +268,8 @@ std::future<std::vector<ClipTrim>> StartCommonTrackEndTrims(
   return trims;
 }
 
+// Opens every clip's source off the platform thread, then hands the result
+// back to the player that asked for it.
 winrt::fire_and_forget LoadSources(
     std::weak_ptr<VideoPlayerInstance> weak, std::vector<ClipSpec> clips,
     std::shared_ptr<const PlaybackTelemetry> telemetry,

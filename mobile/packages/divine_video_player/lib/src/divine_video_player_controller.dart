@@ -281,11 +281,11 @@ class DivineVideoPlayerController {
   /// AVPlayer instances and their timers survive unless explicitly
   /// released.
   ///
-  /// Scope differs by platform. On iOS and macOS this releases only the
-  /// players belonging to the engine that made the call, so a second live
-  /// FlutterEngine (the notification isolate) keeps its own. On Android
-  /// and Windows the sweep is process-wide. Either is correct for the
-  /// startup caller, whose zombies belong to its own engine.
+  /// Scope differs by platform. On iOS, macOS and Windows this releases only
+  /// the players belonging to the engine that made the call, so a second live
+  /// FlutterEngine (the notification isolate) keeps its own. On Android the
+  /// sweep is process-wide. Either is correct for the startup caller, whose
+  /// zombies belong to its own engine.
   ///
   /// No-op on web and Linux, where no native channel is registered.
   static Future<void> disposeAll() {

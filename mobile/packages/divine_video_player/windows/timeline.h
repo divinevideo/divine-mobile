@@ -18,7 +18,7 @@ struct ClipSpec {
   int64_t start_ms = 0;
   std::optional<int64_t> end_ms;
   double volume = 1.0;
-  // Already clamped to kMinPlaybackSpeed.
+  // Clamped to kMinPlaybackSpeed by Timeline::SetClips.
   double speed = 1.0;
   std::map<std::string, std::string> http_headers;
   // Empty plays the clip unequalized.

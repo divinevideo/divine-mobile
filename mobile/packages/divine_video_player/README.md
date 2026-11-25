@@ -225,9 +225,9 @@ DivineVideoPlayerController(
   player's picture, such as a chroma-key backdrop.
 - `setClips(clips, startPosition: ...)` starts at a point on the combined
   timeline without a separate seek. `setClipVolumes` changes each clip's
-  volume cheaply enough to follow a slider, and `setFrameEffects` draws
-  effects the app registered natively over a window of the timeline (both
-  Android, iOS and macOS).
+  volume cheaply enough to follow a slider (Android, iOS, macOS and Windows),
+  and `setFrameEffects` draws effects the app registered natively over a
+  window of the timeline (Android, iOS and macOS).
 - On Android, iOS, macOS and Windows, errors arrive in
   `DivineVideoPlayerState.errorCode` as a `NativePlayerErrorCode`, with
   `shouldFailover` and `isTransient` to decide whether to try another

@@ -183,9 +183,10 @@ class VideoClip {
   /// The equalizer this clip's audio plays through, ahead of its [volume];
   /// `null` plays it unchanged.
   ///
-  /// Only players created with [VideoBufferProfile.full] apply it, on Android,
-  /// iOS, macOS and Windows. Windows also needs the app manifest to register
-  /// the plugin's audio effect (see the package README).
+  /// Android and Windows apply it only on players created with
+  /// [VideoBufferProfile.full]; iOS and macOS apply it on any profile. Windows
+  /// also needs the app manifest to register the plugin's audio effect (see
+  /// the package README).
   final AudioEqualizer? equalizer;
 
   /// Serializes this clip for platform channel transport.

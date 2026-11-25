@@ -118,8 +118,8 @@ void DivineVideoPlayerPlugin::HandleMethodCall(
     if (const auto label = ReadString(args, "debugLabel")) {
       log_target += " (" + *label + ")";
     }
-    // Clip equalizers need the full profile, as on Android and Apple
-    // platforms; the feed profile is Dart's default.
+    // Clip equalizers need the full profile, as on Android; Apple platforms
+    // apply them on any profile.
     const bool full_profile =
         ReadString(args, "bufferProfile").value_or("") == "full";
     auto player = std::make_shared<VideoPlayerInstance>(

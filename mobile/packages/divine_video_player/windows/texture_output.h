@@ -19,7 +19,8 @@ namespace divine_video_player {
 //
 // Frames are copied into three shared D3D11 textures in turn, and Flutter
 // opens the most recently completed one through its DXGI shared handle, so
-// the engine never samples a texture that is being written.
+// a copy normally lands on a texture the engine is not sampling; nothing
+// synchronizes the two if the engine is still reading an older one.
 class TextureOutput {
  public:
   explicit TextureOutput(flutter::TextureRegistrar* registrar);
