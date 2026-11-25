@@ -34,6 +34,7 @@ part 'video_feed_state.dart';
 
 /// Default interval between auto-refreshes of the home feed.
 const _defaultAutoRefreshMinInterval = Duration(minutes: 10);
+const _maxForYouPagesPerLoad = 3;
 
 /// Enriches REST-sourced videos with their full Nostr tag set.
 ///
@@ -1200,9 +1201,39 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         }
       }
 
-      final validNewVideos = _withoutRemovedVideos(
-        result.videos,
-      ).where((v) => v.videoUrl != null).toList();
+      List<VideoEvent> playablePage(HomeFeedResult page) =>
+          _withoutRemovedVideos(
+            page.videos,
+          ).where((video) => video.videoUrl != null).toList();
+
+      var validNewVideos = playablePage(result);
+      if (source.type == VideoFeedSourceType.forYou) {
+        final knownKeys = state.videos.map((v) => v.feedDedupKey).toSet();
+        final requestedCursors = {state.paginationCursor};
+        for (var page = 1; page < _maxForYouPagesPerLoad; page++) {
+          final cursor = result.paginationCursor;
+          if (cursor == null ||
+              result.hasMore != true ||
+              validNewVideos.any((v) => !knownKeys.contains(v.feedDedupKey)) ||
+              !requestedCursors.add(cursor)) {
+            break;
+          }
+
+          // A page that added nothing cannot trigger the near-end check.
+          // Advance here, retaining the next cursor if the request fails.
+          emit(state.copyWith(paginationCursor: cursor));
+          result = await _fetchVideosForSource(
+            source,
+            paginationCursor: cursor,
+            paginationGeneration: paginationGeneration,
+          );
+          if (!_canEmitForSource(source, emit) ||
+              paginationGeneration != _paginationGeneration) {
+            return;
+          }
+          validNewVideos = playablePage(result);
+        }
+      }
 
       // Deduplicate by logical video identity. Addressable videos can be
       // republished with fresh event IDs, and bare d-tags can collide across

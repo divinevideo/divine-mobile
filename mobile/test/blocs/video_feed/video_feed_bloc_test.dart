@@ -4563,6 +4563,66 @@ void main() {
       );
 
       feedBlocTest(
+        'continues For You pagination past a duplicate-only recovery page',
+        setUp: () {
+          when(
+            () => mockVideosRepository.getRecommendedVideos(
+              userPubkey: any(named: 'userPubkey'),
+              cursor: 'fallback-cursor',
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: [createTestVideo('already-queued')],
+              paginationCursor: 'next-recommendations',
+              hasMore: true,
+            ),
+          );
+          when(
+            () => mockVideosRepository.getRecommendedVideos(
+              userPubkey: any(named: 'userPubkey'),
+              cursor: 'next-recommendations',
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: [createTestVideo('discovered')],
+              paginationCursor: 'later-recommendations',
+              hasMore: true,
+            ),
+          );
+        },
+        build: createBloc,
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [createTestVideo('already-queued')],
+          paginationCursor: 'fallback-cursor',
+        ),
+        act: (bloc) => bloc.add(const VideoFeedLoadMoreRequested()),
+        skip: 1,
+        expect: () => [
+          isA<VideoFeedBlocState>()
+              .having((s) => s.isLoadingMore, 'isLoadingMore', true)
+              .having(
+                (s) => s.paginationCursor,
+                'paginationCursor',
+                'next-recommendations',
+              ),
+          isA<VideoFeedBlocState>()
+              .having((s) => s.isLoadingMore, 'isLoadingMore', false)
+              .having((s) => s.videos.map((v) => v.id), 'video IDs', [
+                'already-queued',
+                'discovered',
+              ])
+              .having(
+                (s) => s.paginationCursor,
+                'paginationCursor',
+                'later-recommendations',
+              ),
+        ],
+      );
+
+      feedBlocTest(
         'preserves forYou recommendation order when next page has newer '
         'createdAt timestamps',
         setUp: () {
