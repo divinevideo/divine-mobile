@@ -180,10 +180,23 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
         eventId: widget.video.id,
       );
     }
-    final owner = _owner = ref.read(authServiceProvider).currentPublicKeyHex;
+    final auth = ref.read(authServiceProvider);
+    final owner = _owner = auth.currentPublicKeyHex;
+    final delivery = context.read<ShareDeliveryCubit?>();
     _shareSheetBloc = ShareSheetBloc(
-      isOwnerCurrent: () =>
-          mounted && owner == ref.read(authServiceProvider).currentPublicKeyHex,
+      isOwnerCurrent: () => owner == auth.currentPublicKeyHex,
+      onQueued: (outcome) {
+        _runShareDetached(
+          Future<void>.sync(
+            () => delivery?.track(
+              ownerPubkey: outcome.ownerPubkey,
+              recipients: outcome.recipients,
+            ),
+          ),
+          'track queued share',
+        );
+        _runShareDetached(HapticFeedback.lightImpact(), 'confirm queued share');
+      },
       video: widget.video,
       videoSharingService: widget.videoSharingService,
       profileRepository: widget.profileRepository,
@@ -344,6 +357,13 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     if (route != null && !route.isCurrent) {
       // An owner switch retires both the share sheet and its open picker.
       // Late copy/send results must never pop the route on top.
+      if (result is ShareSheetEnqueueResult &&
+          result.recipients.any(
+            (r) => r.outcome.delivery == ShareDelivery.queued,
+          )) {
+        route.navigator!.removeRoute(route);
+        return;
+      }
       if (result is! ShareSheetAccountChanged || !_findingPeople) return;
       Navigator.of(context).popUntil((candidate) => candidate == route);
     }
@@ -351,7 +371,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     final messenger = ScaffoldMessenger.of(context);
 
     switch (result) {
-      case ShareSheetEnqueueResult(:final ownerPubkey, :final recipients):
+      case ShareSheetEnqueueResult(:final recipients):
         if (recipients.every(
           (r) => r.outcome.delivery == ShareDelivery.notSent,
         )) {
@@ -363,11 +383,6 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
           );
           return;
         }
-        context.read<ShareDeliveryCubit>().track(
-          ownerPubkey: ownerPubkey,
-          recipients: recipients,
-        );
-        _runShareDetached(HapticFeedback.lightImpact(), 'confirm queued share');
         dismissSheet(context);
       case ShareSheetAccountChanged():
         // Pop the same navigator that owns the share route, including when
@@ -575,7 +590,7 @@ class _UnifiedShareSheetView extends StatelessWidget {
                         .join('\n'),
                   _ => null,
                 };
-                return Column(
+                final content = Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -591,8 +606,9 @@ class _UnifiedShareSheetView extends StatelessWidget {
                       onSend:
                           state.attemptedRecipients.isEmpty &&
                               messageController.text.isEmpty
-                          ? (user) =>
-                                bloc.add(ShareSheetSendRequested(only: user))
+                          ? (user) => bloc.add(
+                              ShareSheetSendRequested(only: user),
+                            )
                           : null,
                       selectedPubkeys: {
                         for (final r in state.selectedRecipients) r.pubkey,
@@ -693,6 +709,13 @@ class _UnifiedShareSheetView extends StatelessWidget {
                     ],
                     const SizedBox(height: 8),
                   ],
+                );
+                return ExcludeFocus(
+                  excluding: state.isSending,
+                  child: IgnorePointer(
+                    ignoring: state.isSending,
+                    child: content,
+                  ),
                 );
               },
             ),

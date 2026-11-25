@@ -2098,6 +2098,50 @@ void main() {
             },
           );
 
+          for (final dismissBeforeCommit in [false, true]) {
+            testWidgets('keeps the committed delivery watch when the sheet is '
+                '${dismissBeforeCommit ? 'dismissed' : 'covered'}', (
+              tester,
+            ) async {
+              final commit = Completer<Map<String, ShareResult>>();
+              when(
+                () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                  video: any(named: 'video'),
+                  recipientPubkeys: any(named: 'recipientPubkeys'),
+                  personalMessage: any(named: 'personalMessage'),
+                ),
+              ).thenAnswer((_) => commit.future);
+              await pumpOpenSheet(tester);
+              await tester.tap(find.text(l10n.shareRecipientSend).first);
+              await tester.pump();
+              final sheetContext = tester.element(
+                find.text(l10n.shareWithTitle),
+              );
+              final sheetRoute = ModalRoute.of(sheetContext)!;
+              final navigator = sheetRoute.navigator!;
+              if (dismissBeforeCommit) navigator.pop();
+              final covering = MaterialPageRoute<void>(
+                builder: (_) => const Scaffold(body: Text('Covering route')),
+              );
+              navigator.push(covering);
+              await tester.pump();
+              await tester.pump(const Duration(milliseconds: 400));
+              commit.complete({
+                alice.pubkey: const ShareResult.queued('rumor-a', 'chat-a'),
+              });
+              await tester.pump();
+              await tester.pump(const Duration(milliseconds: 400));
+              expect(covering.isCurrent, isTrue);
+              expect(sheetRoute.isActive, isFalse);
+              expect(delivery, contains('rumor-a'));
+              delivery['rumor-a']!.add(DmDeliveryState.accepted);
+              navigator.pop();
+              await tester.pumpAndSettle();
+              expect(find.text(l10n.shareSent), findsOneWidget);
+              expect(find.text(l10n.shareWithTitle), findsNothing);
+            });
+          }
+
           testWidgets(
             'a durable send dismisses the sheet with Sending and View chat until ACK',
             (tester) async {

@@ -310,21 +310,13 @@ class _ContactItem extends ConsumerWidget {
           SizedBox(
             width: _ShareWithSection._itemWidth,
             height: 48,
-            child: Semantics(
-              label: context.l10n.shareRecipientSendTo(displayName),
-              child: TextButton(
-                onPressed: enabled ? () => send(resolved) : null,
-                child: isSending
-                    ? const SizedBox.square(
-                        dimension: 16,
-                        child: DivineCircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(
-                        context.l10n.shareRecipientSend,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-              ),
+            child: DivineButton(
+              label: context.l10n.shareRecipientSend,
+              semanticLabel: context.l10n.shareRecipientSendTo(displayName),
+              size: DivineButtonSize.small,
+              type: DivineButtonType.secondary,
+              isLoading: isSending,
+              onPressed: enabled ? () => send(resolved) : null,
             ),
           ),
       ],

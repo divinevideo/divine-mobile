@@ -47,6 +47,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     required UserRankingSignalsLoader rankingSignalsLoader,
     required String currentUserPubkey,
     this.isOwnerCurrent,
+    this.onQueued,
     Stream<void>? eligibilityChanges,
     BaseCacheManager? cacheManager,
   }) : _video = video,
@@ -120,6 +121,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
   final UserRankingSignalsLoader _rankingSignalsLoader;
   final String _currentUserPubkey;
   final bool Function()? isOwnerCurrent;
+  final void Function(ShareSheetEnqueueResult)? onQueued;
   final BaseCacheManager? _cacheManager;
 
   void _addUnexpectedError(
@@ -483,15 +485,15 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
               personalMessage: message?.isEmpty == true ? null : message,
             );
 
-      if (isClosed) return;
-
       if (_ownerExpired || isOwnerCurrent?.call() == false) {
-        emit(
-          state.copyWith(
-            isSending: false,
-            actionResult: ShareSheetAccountChanged(),
-          ),
-        );
+        if (!isClosed && !emit.isDone) {
+          emit(
+            state.copyWith(
+              isSending: false,
+              actionResult: ShareSheetAccountChanged(),
+            ),
+          );
+        }
         return;
       }
       final attempted = [
@@ -507,11 +509,16 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       final queued = attempted.any(
         (r) => r.outcome.delivery == ShareDelivery.queued,
       );
+      final outcome = ShareSheetEnqueueResult(_currentUserPubkey, attempted);
+      // The durable commit can outlive this sheet. Hand it to the account's
+      // app-shell tracker even if its route and emitter have already closed.
+      if (queued) onQueued?.call(outcome);
+      if (isClosed || emit.isDone) return;
       emit(
         state.copyWith(
           isSending: false,
           selectedRecipients: queued ? const [] : recipients,
-          actionResult: ShareSheetEnqueueResult(_currentUserPubkey, attempted),
+          actionResult: outcome,
         ),
       );
     } catch (e, stackTrace) {
