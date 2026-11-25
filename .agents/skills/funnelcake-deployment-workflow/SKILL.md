@@ -29,9 +29,9 @@ Use these sources if an older doc refers back here for a manual Job template.
 
 - **Production ClickHouse is self-hosted.** Production moved from ClickHouse Cloud to a
   self-hosted `Replicated` ClickHouse cluster on Kubernetes on 2026-11-24.
-- **Migrations use `funnelcake-migrate` over HTTP (port 8123).** Schema migrations run as
-  an ArgoCD sync hook using `funnelcake-migrate` with HTTP(S) `CLICKHOUSE_URL` (port 8123)
-  and `FUNNELCAKE_MIGRATIONS_TARGET=replicated`.
+- **Production migrations use `funnelcake-migrate` over HTTP(S).** The ArgoCD sync hook
+  uses the environment's configured `CLICKHOUSE_URL` and
+  `FUNNELCAKE_MIGRATIONS_TARGET=replicated`.
 - **Single-statement `RENAME TABLE` still required.** Self-hosted `Replicated` databases in
   production also reject multi-table renames in a single query (Code 48). Use one
   rename per statement and review the non-atomic interval for serving tables.
