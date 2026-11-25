@@ -2651,9 +2651,8 @@ void main() {
     });
 
     group('getVideosByHashtagPage', () {
-      const validResponseBody =
+      const validRow =
           '''
-[
   {
     "id": "hash123",
     "pubkey": "$testPubkey",
@@ -2669,8 +2668,8 @@ void main() {
     "reposts": 2,
     "engagement_score": 57
   }
-]
 ''';
+      const validResponseBody = '[$validRow]';
 
       test(
         'passes the v2 cursor through even when no rows are usable',
@@ -2705,6 +2704,46 @@ void main() {
           expect(uri.queryParameters, containsPair('sort', 'trending'));
           expect(uri.queryParameters, containsPair('cursor', 'o:50'));
           expect(uri.queryParameters, containsPair('limit', '50'));
+        },
+      );
+
+      test(
+        'returns no next cursor when has_more is false despite a next_cursor',
+        () async {
+          when(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          ).thenAnswer(
+            (_) async => http.Response(
+              '{"data":[$validRow],"pagination":'
+              '{"has_more":false,"next_cursor":"o:100"}}',
+              200,
+            ),
+          );
+
+          final page = await client.getVideosByHashtagPage(hashtag: 'flutter');
+
+          expect(page.videos, hasLength(1));
+          expect(page.nextCursor, isNull);
+        },
+      );
+
+      test(
+        'returns no next cursor when has_more is false despite a next_offset',
+        () async {
+          when(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          ).thenAnswer(
+            (_) async => http.Response(
+              '{"data":[$validRow],"pagination":'
+              '{"has_more":false,"next_offset":100}}',
+              200,
+            ),
+          );
+
+          final page = await client.getVideosByHashtagPage(hashtag: 'flutter');
+
+          expect(page.videos, hasLength(1));
+          expect(page.nextCursor, isNull);
         },
       );
 
