@@ -1762,6 +1762,7 @@ void main() {
         () => storage.write(
           key: any(named: 'key'),
           value: any(named: 'value'),
+          mOptions: any(named: 'mOptions'),
         ),
       );
     });

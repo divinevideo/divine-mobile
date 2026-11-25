@@ -1241,7 +1241,10 @@ Map<String, int> _userTableRowCounts(Database db) {
 /// migrates the legacy file on first run after upgrade.
 Future<String> getSharedDatabasePath() async {
   final appSupportDir = await getApplicationSupportDirectory();
-  final newPath = buildSharedDatabasePath(appSupportDir.path);
+  final newPath = buildSharedDatabasePath(
+    appSupportDir.path,
+    isMacOS: Platform.isMacOS,
+  );
 
   // Check cache version and wipe stale database if needed.
   applyDbCacheVersionReset(newPath);
@@ -1545,9 +1548,38 @@ class _LocalOnlyDataQuery {
 /// Builds the shared database path from a platform-specific writable base.
 ///
 /// Application Support is preferred for sandboxed app data on macOS/iOS.
+/// On a native Mac App Store upgrade, the iPad app's database directory can
+/// already exist in the app's sandbox. Keep using it in place so the SQLite
+/// sidecars, interrupted swaps, and backups stay beside the database.
 @visibleForTesting
-String buildSharedDatabasePath(String basePath) {
-  return p.join(basePath, 'openvine', 'database', 'divine_db.db');
+String buildSharedDatabasePath(String basePath, {bool isMacOS = false}) {
+  final relativePath = p.join('openvine', 'database', 'divine_db.db');
+  final nativePath = p.join(basePath, relativePath);
+  if (!isMacOS || Directory(p.dirname(nativePath)).existsSync()) {
+    return nativePath;
+  }
+
+  // path_provider appends the bundle ID on native macOS. Only look above
+  // that suffix inside the app's own sandbox. Outside it, Application
+  // Support is shared by other apps.
+  final supportPath = p.dirname(basePath);
+  final containerPath = p.dirname(p.dirname(p.dirname(supportPath)));
+  final sandboxedBase = p.join(
+    containerPath,
+    'Data',
+    'Library',
+    'Application Support',
+    p.basename(containerPath),
+  );
+  if (basePath != sandboxedBase ||
+      p.basename(p.dirname(containerPath)) != 'Containers') {
+    return nativePath;
+  }
+
+  final inheritedPath = p.join(supportPath, relativePath);
+  return Directory(p.dirname(inheritedPath)).existsSync()
+      ? inheritedPath
+      : nativePath;
 }
 
 /// Ensures the database parent directory exists before SQLite opens the file.

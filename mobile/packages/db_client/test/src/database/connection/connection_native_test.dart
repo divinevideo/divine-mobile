@@ -62,6 +62,87 @@ void main() {
 
       expect(path, equals('/tmp/app-support/openvine/database/divine_db.db'));
     });
+
+    group('native Mac App Store upgrade', () {
+      const bundleId = 'co.openvine.app';
+      late Directory tempRoot;
+      late String iPadSupport;
+      late String macSupport;
+      late String iPadDatabase;
+      late String macDatabase;
+
+      setUp(() {
+        tempRoot = Directory.systemTemp.createTempSync('db_mac_upgrade_test_');
+        iPadSupport = p.join(
+          tempRoot.path,
+          'Library',
+          'Containers',
+          bundleId,
+          'Data',
+          'Library',
+          'Application Support',
+        );
+        macSupport = p.join(iPadSupport, bundleId);
+        iPadDatabase = buildSharedDatabasePath(iPadSupport);
+        macDatabase = buildSharedDatabasePath(macSupport);
+      });
+
+      tearDown(() => tempRoot.deleteSync(recursive: true));
+
+      test('uses the inherited database and its WAL in place', () {
+        final database = prepareDatabaseFile(iPadDatabase)
+          ..writeAsBytesSync([1]);
+        final wal = File('$iPadDatabase-wal')..writeAsBytesSync([2]);
+
+        final selected = buildSharedDatabasePath(macSupport, isMacOS: true);
+
+        expect(selected, iPadDatabase);
+        expect(database.readAsBytesSync(), [1]);
+        expect(wal.readAsBytesSync(), [2]);
+        expect(File(macDatabase).existsSync(), isFalse);
+      });
+
+      test('keeps the inherited path during an interrupted file swap', () {
+        final staging = prepareDatabaseFile('$iPadDatabase.sqlcipher_migrating')
+          ..writeAsBytesSync([1]);
+
+        expect(
+          buildSharedDatabasePath(macSupport, isMacOS: true),
+          iPadDatabase,
+        );
+        expect(staging.readAsBytesSync(), [1]);
+      });
+
+      test('preserves an existing native database when both paths exist', () {
+        prepareDatabaseFile(iPadDatabase).writeAsBytesSync([1]);
+        prepareDatabaseFile(macDatabase).writeAsBytesSync([2]);
+
+        expect(buildSharedDatabasePath(macSupport, isMacOS: true), macDatabase);
+        expect(File(iPadDatabase).readAsBytesSync(), [1]);
+        expect(File(macDatabase).readAsBytesSync(), [2]);
+      });
+
+      test('uses the native path on a fresh install', () {
+        expect(buildSharedDatabasePath(macSupport, isMacOS: true), macDatabase);
+      });
+
+      test('does not look outside the native directory without a sandbox', () {
+        final sharedSupport = p.join(
+          tempRoot.path,
+          'Library',
+          'Application Support',
+        );
+        final directSupport = p.join(sharedSupport, bundleId);
+        prepareDatabaseFile(
+          buildSharedDatabasePath(sharedSupport),
+        ).writeAsBytesSync([1]);
+
+        expect(
+          buildSharedDatabasePath(directSupport, isMacOS: true),
+          buildSharedDatabasePath(directSupport),
+        );
+      });
+    });
   });
 
   group('applyDbCacheVersionReset', () {
