@@ -1,6 +1,8 @@
 // ABOUTME: Account-scoped handoff of an already validated wrap tap to Messages.
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:clock/clock.dart' as clock_pkg;
 import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -21,14 +23,27 @@ import 'package:openvine/providers/swap_account.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/router/routes/shell.dart';
+import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 
+final String _tapPrefix = _randomTapPrefix();
+var _nextTapId = 0;
+
+String _randomTapPrefix() {
+  final random = math.Random();
+  // 0x7fffffff rather than a shift: `1 << 32` is 0 on the web.
+  return '${random.nextInt(0x7fffffff).toRadixString(16)}'
+      '${random.nextInt(0x7fffffff).toRadixString(16)}';
+}
+
 /// Held in memory for coalescing OS callbacks. A route never carries the wrap
-/// or recipient in its URL. The 10 second deadline includes DM initialization.
+/// or recipient in its URL; [token] is an opaque process-local identifier.
+/// The 10 second deadline includes DM initialization and review-status checks.
 class DmPushIntent {
-  DmPushIntent(this.target);
+  DmPushIntent(this.target) : _elapsed = clock_pkg.clock.stopwatch()..start();
   final OpenDirectMessageTarget target;
-  final clock = Stopwatch()..start();
+  final String token = '$_tapPrefix-${_nextTapId++}';
+  final Stopwatch _elapsed;
   String? destination;
   bool finished = false;
   bool superseded = false;
@@ -39,10 +54,34 @@ class DmPushIntent {
     _onCancel?.call();
   }
 
-  Duration get remaining => const Duration(seconds: 10) - clock.elapsed;
+  Duration get remaining {
+    final left = const Duration(seconds: 10) - _elapsed.elapsed;
+    return left.isNegative ? Duration.zero : left;
+  }
 }
 
 final _lastTap = Expando<DmPushIntent>('DM notification tap');
+
+/// Returns the active tap intent from [extra] or the matching process-local
+/// [token] after a redirect that stripped route extras.
+DmPushIntent? activeDmPushIntent(
+  ProviderContainer container, {
+  Object? extra,
+  String? token,
+}) {
+  if (extra is DmPushIntent && !extra.finished && !extra.superseded) {
+    return extra;
+  }
+  if (token == null || token.isEmpty) return null;
+  final active = _lastTap[container];
+  if (active == null ||
+      active.finished ||
+      active.superseded ||
+      active.token != token) {
+    return null;
+  }
+  return active;
+}
 
 /// Returns the newly mounted account container only after normal activation.
 final dmPushAccountSwitchProvider =
@@ -66,38 +105,72 @@ void cancelPendingDmPush(ProviderContainer container) {
   _lastTap[container] = null;
 }
 
+bool _isWaitingOnIntent(Uri currentUri, DmPushIntent previous) {
+  if (previous.finished || previous.superseded) return false;
+  if (currentUri.path == const InboxRouteData().location &&
+      currentUri.queryParameters['dmTap'] == previous.token) {
+    return true;
+  }
+  if (currentUri.path == MinorAccountReviewScreen.path &&
+      currentUri.queryParameters['dmTap'] == previous.token) {
+    return true;
+  }
+  if (currentUri.path == MinorAccountReviewLoadingScreen.path) {
+    final from = currentUri.queryParameters['from'];
+    final fromUri = (from == null || from.isEmpty) ? null : Uri.tryParse(from);
+    if (fromUri != null &&
+        fromUri.path == const InboxRouteData().location &&
+        fromUri.queryParameters['dmTap'] == previous.token) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /// A closed conversation can be opened again by tapping the notification.
 void openDmPush(ProviderContainer container, OpenMessagesTarget target) {
   final router = container.read(goRouterProvider);
-  final inbox = const InboxRouteData(messages: true).location;
   if (target is! OpenDirectMessageTarget) {
     cancelPendingDmPush(container);
-    router.go(inbox);
+    router.go(const InboxRouteData(messages: true).location);
     return;
   }
   final previous = _lastTap[container];
   final matches = router.routerDelegate.currentConfiguration;
   final top = matches.isEmpty ? null : matches.last;
-  final current = top is ImperativeRouteMatch
-      ? top.matches.uri.toString()
-      : router.routeInformationProvider.value.uri.toString();
+  final currentUri = top is ImperativeRouteMatch
+      ? top.matches.uri
+      : router.routeInformationProvider.value.uri;
+  final current = currentUri.toString();
   if (previous?.target == target &&
       (current == previous?.destination ||
-          (current == inbox && !(previous?.finished ?? true)))) {
+          _isWaitingOnIntent(currentUri, previous!))) {
     return;
   }
   cancelPendingDmPush(container);
   final intent = DmPushIntent(target);
   _lastTap[container] = intent;
-  router.go(inbox, extra: intent);
+  router.go(
+    InboxRouteData(messages: true, dmTap: intent.token).location,
+    extra: intent,
+  );
 }
 
-/// Mounted inside the existing Messages entry. Its children and the normal
-/// protected-minor gates remain usable while ingest catches up.
+/// Mounted inside the existing Messages entry (or the restricted-account review
+/// screen for moderation taps). Its children and the normal protected-minor
+/// gates remain usable while ingest catches up.
 class DmPushListener extends ConsumerStatefulWidget {
-  const DmPushListener({required this.intent, required this.child, super.key});
+  const DmPushListener({
+    required this.intent,
+    required this.child,
+    this.hostPath,
+    this.moderationOnly = false,
+    super.key,
+  });
   final DmPushIntent intent;
   final Widget child;
+  final String? hostPath;
+  final bool moderationOnly;
 
   @override
   ConsumerState<DmPushListener> createState() => _DmPushListenerState();
@@ -113,9 +186,9 @@ class _DmPushListenerState extends ConsumerState<DmPushListener> {
 
   bool get _active =>
       mounted && !widget.intent.finished && !widget.intent.superseded;
-  bool get _atInbox =>
-      _router.routeInformationProvider.value.uri.path ==
-      const InboxRouteData().location;
+  String get _hostPath => widget.hostPath ?? const InboxRouteData().location;
+  bool get _atHost =>
+      _router.routeInformationProvider.value.uri.path == _hostPath;
   String get _owner => widget.intent.target.receiverPubkey;
 
   @override
@@ -125,12 +198,12 @@ class _DmPushListenerState extends ConsumerState<DmPushListener> {
     _router = ref.read(goRouterProvider);
     _router.routeInformationProvider.addListener(_onLocation);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_active && _atInbox) unawaited(_begin());
+      if (_active && _atHost) unawaited(_begin());
     });
   }
 
   void _onLocation() {
-    if (!_atInbox && !_confirmingSwitch) _finish();
+    if (!_atHost && !_confirmingSwitch) _finish();
   }
 
   void _finish({bool unavailable = false}) {
@@ -139,7 +212,7 @@ class _DmPushListenerState extends ConsumerState<DmPushListener> {
     _timeout?.cancel();
     _session?.close();
     unawaited(_lookup?.cancel());
-    if (unavailable && mounted && _atInbox) {
+    if (unavailable && mounted && _atHost) {
       ScaffoldMessenger.of(context).showSnackBar(
         DivineSnackbarContainer.snackBar(
           context.l10n.dmNotificationMessageUnavailable,
@@ -157,10 +230,12 @@ class _DmPushListenerState extends ConsumerState<DmPushListener> {
         await _offerSwitch();
         return;
       }
-      _timeout = Timer(
-        widget.intent.remaining,
-        () => _finish(unavailable: true),
-      );
+      final remaining = widget.intent.remaining;
+      if (remaining <= Duration.zero) {
+        _finish(unavailable: true);
+        return;
+      }
+      _timeout = Timer(remaining, () => _finish(unavailable: true));
       _session = ref.listenManual(nostrSessionProvider, (_, state) {
         if (!_active) return;
         if (state.phase == NostrSessionPhase.tearingDown ||
@@ -201,7 +276,7 @@ class _DmPushListenerState extends ConsumerState<DmPushListener> {
 
   void _onLookup(DmWrapLookup result) {
     if (!_active ||
-        !_atInbox ||
+        !_atHost ||
         ref.read(authServiceProvider).currentPublicKeyHex != _owner) {
       return;
     }
@@ -211,6 +286,22 @@ class _DmPushListenerState extends ConsumerState<DmPushListener> {
       return;
     }
     final participants = List<String>.unmodifiable(result.participants);
+    final reviewStatus = ref
+        .read(currentMinorAccountReviewStatusProvider)
+        .value;
+    final restrictedToModeration =
+        widget.moderationOnly || (reviewStatus?.isRestricted ?? false);
+    if (restrictedToModeration) {
+      final allowedModerationId = moderationConversationIdFor(
+        currentPubkey: _owner,
+        reviewCase: reviewStatus?.currentCase,
+      );
+      if (allowedModerationId == null ||
+          result.conversationId != allowedModerationId) {
+        _finish(unavailable: true);
+        return;
+      }
+    }
     // Observe all eligibility changes until the last synchronous navigation
     // decision. The destination applies its live protected-minor gate as well.
     if (ref.read(isDmRestrictedProvider) &&
@@ -221,7 +312,7 @@ class _DmPushListenerState extends ConsumerState<DmPushListener> {
       _finish(unavailable: true);
       return;
     }
-    final location = result.isRequest
+    final location = !restrictedToModeration && result.isRequest
         ? RequestPreviewRouteData(id: result.conversationId).location
         : ConversationRouteData(
             id: result.conversationId,
@@ -237,7 +328,7 @@ class _DmPushListenerState extends ConsumerState<DmPushListener> {
     final accounts = await auth.getKnownAccounts();
     if (!mounted ||
         !_active ||
-        !_atInbox ||
+        !_atHost ||
         auth.currentPublicKeyHex != _observedOwner) {
       return;
     }
@@ -292,7 +383,7 @@ class _DmPushListenerState extends ConsumerState<DmPushListener> {
     );
     if (!mounted ||
         !_active ||
-        !_atInbox ||
+        !_atHost ||
         auth.currentPublicKeyHex != _observedOwner) {
       return;
     }
@@ -306,7 +397,7 @@ class _DmPushListenerState extends ConsumerState<DmPushListener> {
     await publish.parkInFlight();
     if (!mounted ||
         !_active ||
-        !_atInbox ||
+        !_atHost ||
         auth.currentPublicKeyHex != _observedOwner) {
       return;
     }

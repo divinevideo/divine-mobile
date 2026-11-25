@@ -318,24 +318,38 @@ class NotificationsRouteData extends GoRouteData with $NotificationsRouteData {
 
 /// The inbox.
 class InboxRouteData extends GoRouteData with $InboxRouteData {
-  const InboxRouteData({this.messages = false, this.$extra});
+  const InboxRouteData({
+    this.messages = false,
+    @TypedQueryParameter(name: 'dmTap') this.dmTap,
+    this.$extra,
+  });
   final Object? $extra;
   final bool messages;
+  final String? dmTap;
 
   @override
-  Page<void> buildPage(BuildContext context, GoRouterState state) => branchPage(
-    state,
-    messages && $extra is DmPushIntent
-        ? DmPushListener(
-            key: ObjectKey($extra),
-            intent: $extra! as DmPushIntent,
-            child: InboxPage(
-              initialMessages: true,
-              onLeaveMessages: ($extra! as DmPushIntent).cancel,
-            ),
+  Page<void> buildPage(BuildContext context, GoRouterState state) {
+    final intent = messages && ($extra is DmPushIntent || dmTap != null)
+        ? activeDmPushIntent(
+            ProviderScope.containerOf(context, listen: false),
+            extra: $extra,
+            token: dmTap,
           )
-        : InboxPage(initialMessages: messages),
-  );
+        : null;
+    return branchPage(
+      state,
+      intent != null
+          ? DmPushListener(
+              key: ObjectKey(intent),
+              intent: intent,
+              child: InboxPage(
+                initialMessages: true,
+                onLeaveMessages: intent.cancel,
+              ),
+            )
+          : InboxPage(initialMessages: messages),
+    );
+  }
 }
 
 /// The owner's recovery page for pinned videos that no longer resolve; the

@@ -259,6 +259,7 @@ mixin $InboxRouteData on GoRouteData {
           _$boolConverter,
         ) ??
         false,
+    dmTap: state.uri.queryParameters['dmTap'],
     $extra: state.extra as Object?,
   );
 
@@ -269,6 +270,7 @@ mixin $InboxRouteData on GoRouteData {
     '/inbox',
     queryParams: {
       if (_self.messages != false) 'messages': _self.messages.toString(),
+      if (_self.dmTap != null) 'dmTap': _self.dmTap,
     },
   );
 

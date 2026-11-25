@@ -2,7 +2,9 @@
 // ABOUTME: Typed with go_router_builder; conventions in .claude/rules/routing.md.
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:openvine/notifications/routing/dm_push_navigation.dart';
 import 'package:openvine/router/go_router_page_name.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
@@ -44,14 +46,34 @@ class MinorAccountReviewWelcomeRouteData extends GoRouteData
 )
 class MinorAccountReviewRouteData extends GoRouteData
     with $MinorAccountReviewRouteData {
-  const MinorAccountReviewRouteData();
+  const MinorAccountReviewRouteData({
+    @TypedQueryParameter(name: 'dmTap') this.dmTap,
+  });
+
+  final String? dmTap;
 
   static final GlobalKey<NavigatorState> $parentNavigatorKey =
       NavigatorKeys.root;
 
   @override
-  Widget build(BuildContext context, GoRouterState state) =>
-      const MinorAccountReviewScreen();
+  Widget build(BuildContext context, GoRouterState state) {
+    final intent = dmTap == null
+        ? null
+        : activeDmPushIntent(
+            ProviderScope.containerOf(context, listen: false),
+            token: dmTap,
+          );
+    const screen = MinorAccountReviewScreen();
+    return intent == null
+        ? screen
+        : DmPushListener(
+            key: ObjectKey(intent),
+            intent: intent,
+            hostPath: MinorAccountReviewScreen.path,
+            moderationOnly: true,
+            child: screen,
+          );
+  }
 }
 
 /// The wait while the review status loads, entered only through the gate's
