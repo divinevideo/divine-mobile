@@ -19,6 +19,7 @@ import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/sticker_responses_filter_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/video_replies_curation_provider.dart';
 import 'package:openvine/router/routes/interactive_sticker_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
@@ -185,7 +186,32 @@ class _ResponsesSticker extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = context.watch<StickerResponsesCubit>().state;
+    final cubit = context.watch<StickerResponsesCubit>();
+    final state = cubit.state;
+    final address = video.addressableId;
+    if (region.kind == VideoStickerKind.replies && address != null) {
+      final provider = videoRepliesCurationProvider((
+        pubkey: video.pubkey,
+        address: address,
+      ));
+      final curation = ref.watch(provider).value;
+      if (state.status == StickerResponsesStatus.loaded &&
+          curation != null &&
+          curation != state.curation) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!context.mounted || cubit.isClosed || cubit.state != state)
+            return;
+          final latest = ref.read(provider).value;
+          if (latest == null || latest == state.curation) return;
+          runDetached(
+            cubit.load(knownCuration: latest),
+            'refresh replies after a curation edit',
+            logName: 'InteractiveStickerOverlay',
+            category: LogCategory.ui,
+          );
+        });
+      }
+    }
     if ((data.isLeftOutOfFrames || state.audience.isRestricted) &&
         !state.isShown) {
       return const SizedBox.shrink();

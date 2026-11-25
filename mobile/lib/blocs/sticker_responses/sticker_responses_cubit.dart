@@ -72,8 +72,9 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
   /// The most responses read, enough for the feed a tap opens.
   static const int feedLimit = 50;
 
-  /// Reads the responses.
-  Future<void> load() async {
+  /// Reads the responses. [knownCuration] can supply a newly observed
+  /// curation without asking the relays for the same event again.
+  Future<void> load({RepliesCuration? knownCuration}) async {
     emit(state.copyWith(status: StickerResponsesStatus.loading));
     try {
       final address = _video.addressableId;
@@ -92,10 +93,12 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
             limit: feedLimit,
           ),
           if (address != null)
-            _repository.fetchCuration(
-              creatorPubkey: _video.pubkey,
-              videoAddress: address,
-            ),
+            knownCuration == null
+                ? _repository.fetchCuration(
+                    creatorPubkey: _video.pubkey,
+                    videoAddress: address,
+                  )
+                : Future.value(knownCuration),
         ]);
         final replies = results.first as VideoResponses;
         if (results.length > 1) curation = results[1] as RepliesCuration;

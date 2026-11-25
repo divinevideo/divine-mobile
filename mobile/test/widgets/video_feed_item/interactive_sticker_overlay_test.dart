@@ -1,6 +1,8 @@
 // ABOUTME: Tests a question, Add yours or replies sticker on a playing video:
 // ABOUTME: it reads only on the active video and opens what its buttons open.
 
+import 'dart:async';
+
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +11,8 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart' show LatestAddressableEvents;
+import 'package:nostr_sdk/nostr_sdk.dart' show Event;
 import 'package:openvine/blocs/sticker_responses/sticker_responses_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/add_yours_context.dart';
@@ -22,6 +26,7 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/sticker_responses_filter_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/screens/video_replies/video_replies_screen.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/interactive_sticker_card.dart';
 import 'package:openvine/widgets/video_feed_item/interactive_sticker_overlay.dart';
 import 'package:video_responses_repository/video_responses_repository.dart';
@@ -76,6 +81,8 @@ VideoEvent _reply(int n) => VideoEvent(
 );
 
 void main() {
+  setUpAll(() => registerFallbackValue(const RepliesCuration()));
+
   group(InteractiveStickerOverlay, () {
     late _MockVideoResponsesRepository repository;
     late _MockFollowRepository followRepository;
@@ -132,6 +139,8 @@ void main() {
       bool isActive = true,
       String? viewer = 'viewer',
       VideoEvent? on,
+      bool manageReplies = false,
+      LatestAddressableEvents? latestEvents,
     }) async {
       final pubkey = viewer == 'viewer' ? _viewer : viewer;
       final active = ValueNotifier(isActive);
@@ -159,6 +168,14 @@ void main() {
               ),
             ),
             routes: [
+              if (manageReplies)
+                GoRoute(
+                  path: 'video-replies/:videoId',
+                  builder: (_, state) => VideoRepliesScreen(
+                    videoId: state.pathParameters['videoId']!,
+                    videoAddress: state.uri.queryParameters['address']!,
+                  ),
+                ),
               GoRoute(
                 path: ':first',
                 builder: (_, state) => _Pushed(
@@ -188,6 +205,12 @@ void main() {
         ProviderScope(
           overrides: [
             videoResponsesRepositoryProvider.overrideWithValue(repository),
+            if (latestEvents != null)
+              latestAddressableEventsProvider.overrideWithValue(latestEvents),
+            if (manageReplies) ...[
+              repliesWarningsProvider.overrideWithValue((videos) => videos),
+              repliesHiddenBySettingsProvider.overrideWithValue((_) => false),
+            ],
             followRepositoryProvider.overrideWithValue(followRepository),
             stickerResponsesFilterProvider.overrideWithValue(
               (videos) => filter(videos),
@@ -270,6 +293,37 @@ void main() {
             limit: any(named: 'limit'),
           ),
         ).called(1);
+      });
+
+      testWidgets('refreshes a video reply hidden while comments are open', (
+        tester,
+      ) async {
+        final events = LatestAddressableEvents();
+        addTearDown(events.dispose);
+        final active = await pump(tester, replies, latestEvents: events);
+        await tester.pumpAndSettle();
+        final strings = l10n(tester);
+        expect(find.text(strings.videoStickerRepliesCount(2)), findsOneWidget);
+
+        active.value = false;
+        await tester.pump();
+
+        // The comments writer records an accepted edit in the shared store.
+        events.remember(
+          Event(
+            _creator,
+            RepliesCuration.kind,
+            [
+              ['d', RepliesCuration.dTagFor(_video.addressableId!)],
+              ['e', _reply(1).id, '', 'hidden'],
+            ],
+            '',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(strings.videoStickerRepliesCount(1)), findsOneWidget);
+        expect(find.text(strings.videoStickerRepliesCount(2)), findsNothing);
       });
 
       testWidgets('shows how many replied once that is read', (tester) async {
@@ -553,6 +607,63 @@ void main() {
         final uri = Uri.parse(pushed.single);
         expect(uri.path, equals('/video-replies/${_video.id}'));
         expect(uri.queryParameters['address'], equals(_video.addressableId));
+      });
+
+      testWidgets('updates the sticker when a hide finishes after leaving '
+          'Manage Replies', (tester) async {
+        final events = LatestAddressableEvents();
+        addTearDown(events.dispose);
+        final hide = Completer<void>();
+        when(
+          () => repository.saveCuration(
+            any(),
+            videoAddress: _video.addressableId!,
+            previous: any(named: 'previous'),
+            takenBackRestores: any(named: 'takenBackRestores'),
+          ),
+        ).thenAnswer((invocation) async {
+          await hide.future;
+          final curation =
+              invocation.positionalArguments.single as RepliesCuration;
+          events.remember(
+            Event(
+              _creator,
+              RepliesCuration.kind,
+              curation.toTags(_video.addressableId!),
+              '',
+            ),
+          );
+          return curation;
+        });
+        final active = await pump(
+          tester,
+          replies,
+          viewer: _creator,
+          manageReplies: true,
+          latestEvents: events,
+        );
+        await tester.pump();
+        final strings = l10n(tester);
+        expect(find.text(strings.videoStickerRepliesCount(2)), findsOneWidget);
+
+        await tester.tap(find.text('Reply with a video'));
+        await tester.pumpAndSettle();
+        active.value = false;
+        await tester.pump();
+
+        await tester.tap(find.text(strings.videoStickerRepliesHide).first);
+        await tester.pump();
+        final manager = tester.element(find.byType(VideoRepliesScreen));
+        GoRouter.of(manager).pop();
+        await tester.pumpAndSettle();
+        active.value = true;
+        await tester.pump();
+        expect(find.text(strings.videoStickerRepliesCount(2)), findsOneWidget);
+
+        hide.complete();
+        await tester.pumpAndSettle();
+        expect(find.text(strings.videoStickerRepliesCount(1)), findsOneWidget);
+        expect(find.text(strings.videoStickerRepliesCount(2)), findsNothing);
       });
 
       testWidgets('opens the camera to add yours, joining its chain', (
