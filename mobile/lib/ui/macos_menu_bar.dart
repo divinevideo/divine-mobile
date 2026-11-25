@@ -17,8 +17,8 @@ import 'package:openvine/ui/feed_keyboard_shortcuts.dart';
 /// View, Window and Help menus are rebuilt here. The app, View and Window
 /// items are the system's own. The Edit and Video items run the same intent
 /// their key does where the keyboard focus is, so the Edit items reach the
-/// focused text field and the Video items reach the feed with focus, and do
-/// nothing anywhere else.
+/// focused text field and the Video items reach the feed with focus. Anywhere
+/// else they do nothing, except Back, which goes back from wherever focus is.
 ///
 /// On every other platform this returns [child] unchanged.
 class MacosMenuBar extends StatelessWidget {

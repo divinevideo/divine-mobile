@@ -29,8 +29,9 @@ class PointerScrollPager {
   ///
   /// [timeStamp] is the event's time stamp. [threshold] is how far one gesture
   /// has to scroll before it steps; `0` steps on any movement. Pass
-  /// [canStep] `false` while the page view is still moving, so a gesture that
-  /// arrives during a page animation is ignored rather than stacked onto it.
+  /// [canStep] `false` while the page view is still moving, so scroll events
+  /// during a page animation are dropped rather than stacked onto it; a gesture
+  /// that has not stepped yet can still step once the page has settled.
   int add(
     double delta, {
     required Duration timeStamp,

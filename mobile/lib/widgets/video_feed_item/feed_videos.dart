@@ -1582,8 +1582,10 @@ class __OverlayState extends ConsumerState<_Overlay> {
                             child: _SpaceTogglesPlayback(
                               playbackToggles: widget.playbackToggles,
                               index: widget.index,
-                              // Space does what a tap on the video does, so
-                              // only while a tap plays or pauses.
+                              // Space plays or pauses only while a tap on the
+                              // video would. Unlike a tap, it does so also
+                              // while the chrome is pinned: a keyboard user
+                              // has no tap to restore the chrome first.
                               enabled: interactiveReady,
                               onToggle: _togglePlayback,
                               child: _PinAwareGestureSurface(
@@ -1700,9 +1702,6 @@ class __OverlayState extends ConsumerState<_Overlay> {
   }
 }
 
-/// [PlayerGestureSurface] that offers the restore tap only while the chrome is
-/// pinned. It watches the pin itself, so a pin rebuilds this surface alone
-/// rather than the whole item.
 /// The play/pause of each feed item whose video a tap would play or pause, by
 /// feed index, so the Space key can do the same for the video on screen.
 ///
@@ -1776,6 +1775,9 @@ class _SpaceTogglesPlaybackState extends State<_SpaceTogglesPlayback> {
   Widget build(BuildContext context) => widget.child;
 }
 
+/// [PlayerGestureSurface] that offers the restore tap only while the chrome is
+/// pinned. It watches the pin itself, so a pin rebuilds this surface alone
+/// rather than the whole item.
 class _PinAwareGestureSurface extends StatelessWidget {
   const _PinAwareGestureSurface({
     required this.interactiveReady,

@@ -57,10 +57,10 @@ abstract final class FeedShortcutKeys {
 /// the previous and next video, Space plays or pauses, and M mutes.
 ///
 /// The commands work while the feed itself holds keyboard focus. It takes
-/// focus when it becomes the active feed and when it is clicked with a mouse
-/// or trackpad, but never from a text field someone is typing in. While a
-/// control inside the feed has focus, the keys keep their usual meaning, such
-/// as Space pressing a focused button.
+/// focus when it becomes the active feed, unless a text field has focus, and
+/// whenever it is clicked with a mouse or trackpad. While a control inside the
+/// feed has focus, the keys keep their usual meaning, such as Space pressing a
+/// focused button.
 class FeedKeyboardShortcuts extends StatefulWidget {
   const FeedKeyboardShortcuts({
     required this.isActive,

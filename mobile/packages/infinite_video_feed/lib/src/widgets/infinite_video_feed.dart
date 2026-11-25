@@ -375,8 +375,8 @@ class InfiniteVideoFeed extends StatefulWidget {
 /// [previousPage] and [currentIndex] for owning widgets that need to drive the
 /// feed imperatively.
 ///
-/// A mouse wheel notch, or a short trackpad swipe a browser reports as wheel
-/// events, moves exactly one video (see [PointerScrollPager]).
+/// A mouse wheel notch, or a trackpad swipe a browser reports as wheel events,
+/// moves exactly one video (see [PointerScrollPager]).
 class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   static const _logName = 'InfiniteVideoFeed';
   static const _loopEndThreshold = Duration(seconds: 1);
@@ -385,7 +385,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   static const Cubic _pageJumpCurve = Curves.easeInOut;
 
   /// How far a trackpad swipe reported as wheel events has to scroll before it
-  /// moves a video, so resting fingers on the trackpad do not.
+  /// moves a video, so a small, accidental trackpad movement does not.
   ///
   /// A mouse wheel notch moves a video however small its delta: a slow notch
   /// in a browser on macOS reports only about 4 pixels.

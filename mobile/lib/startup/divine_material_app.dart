@@ -78,7 +78,8 @@ class DivineMaterialApp extends ConsumerWidget {
         // The macOS menu bar sits above the corruption gate: taking it out of
         // the tree empties the native menu bar, Quit included.
         //
-        // Escape closes the screen on top from anywhere above the navigator.
+        // BackOnEscape sits just above the navigator, so Escape closes the
+        // screen on top wherever the focus is.
         builder: (context, child) => MacosMenuBar(
           onOpenSupportCenter: () => runDetached(
             ref.read(goRouterProvider).push<void>(RoutePaths.supportCenter),
