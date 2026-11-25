@@ -7,6 +7,7 @@
 library;
 
 import 'dart:async';
+import 'dart:ui' show PointerDeviceKind;
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -500,6 +501,40 @@ void main() {
           await tester.pump();
         },
       );
+    }
+
+    for (final useWheel in [false, true]) {
+      final input = useWheel ? 'mouse wheel' : 'Next action';
+      testWidgets('the $input retries an anchor-only discovery feed', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            state: FullscreenFeedState(
+              status: FullscreenFeedStatus.ready,
+              videos: createTestVideos(count: 1),
+              canLoadMore: true,
+            ),
+            loadMoreOnEndSwipe: true,
+          ),
+        );
+        await tester.pump();
+
+        final feed = find.byType(InfiniteVideoFeed);
+        if (useWheel) {
+          final pointer = TestPointer(1, PointerDeviceKind.mouse)
+            ..hover(tester.getCenter(feed));
+          await tester.sendEventToBinding(pointer.scroll(const Offset(0, 80)));
+        } else {
+          await tester.state<InfiniteVideoFeedState>(feed).nextPage();
+        }
+        await tester.pump();
+
+        verify(() => mockBloc.add(const FullscreenFeedLoadMoreRequested()))
+            .called(1);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      });
     }
 
     for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {

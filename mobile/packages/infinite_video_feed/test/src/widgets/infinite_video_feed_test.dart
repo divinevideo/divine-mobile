@@ -4766,6 +4766,7 @@ void main() {
         WidgetTester tester, {
         int initialIndex = 0,
         ScrollPhysics? scrollPhysics,
+        VoidCallback? onForwardBoundary,
       }) async {
         key = GlobalKey<InfiniteVideoFeedState>();
         otherHandlerGotScroll = false;
@@ -4784,6 +4785,7 @@ void main() {
                 prefetchCount: 0,
                 initialIndex: initialIndex,
                 scrollPhysics: scrollPhysics,
+                onForwardBoundary: onForwardBoundary,
               ),
             ),
           ),
@@ -4938,6 +4940,24 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(otherHandlerGotScroll, isTrue);
+        expect(key.currentState!.currentIndex, equals(2));
+      });
+
+      testWidgets('a forward boundary scroll can request the next page', (
+        tester,
+      ) async {
+        var requests = 0;
+        await pumpFeedInsideOtherScrollHandler(
+          tester,
+          initialIndex: 2,
+          onForwardBoundary: () => requests++,
+        );
+
+        await scroll(tester, const Offset(0, 40));
+        await tester.pumpAndSettle();
+
+        expect(requests, equals(1));
+        expect(otherHandlerGotScroll, isFalse);
         expect(key.currentState!.currentIndex, equals(2));
       });
 

@@ -80,6 +80,7 @@ class InfiniteVideoFeed extends StatefulWidget {
     this.maxPlaybackDuration,
     this.onActiveVideoChanged,
     this.onNearEnd,
+    this.onForwardBoundary,
     this.nearEndThreshold = 15,
     this.prefetchOnMount = false,
     this.onVideoLoopCompleted,
@@ -286,6 +287,12 @@ class InfiniteVideoFeed extends StatefulWidget {
 
   /// Called when the user is near the end of the list.
   final VoidCallback? onNearEnd;
+
+  /// Handles a wheel scroll or next-page action past the last video.
+  ///
+  /// Supply this while more videos can be requested. With no handler, a
+  /// forward wheel scroll at the boundary is left to the enclosing scrollable.
+  final VoidCallback? onForwardBoundary;
 
   /// How many videos from the end should trigger [onNearEnd].
   final int nearEndThreshold;
@@ -592,7 +599,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     );
   }
 
-  /// Animates to the next video. Does nothing on the last one.
+  /// Animates to the next video, or calls [InfiniteVideoFeed.onForwardBoundary]
+  /// when already on the last one.
   Future<void> nextPage() => _stepPage(1);
 
   /// Animates to the previous video. Does nothing on the first one.
@@ -601,7 +609,12 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   Future<void> _stepPage(int step) async {
     final from = _stepTargetIndex ?? _currentIndex;
     final target = _clampIndex(from + step);
-    if (target == from) return;
+    if (target == from) {
+      if (step > 0 && from == _currentIndex && widget.videos.isNotEmpty) {
+        widget.onForwardBoundary?.call();
+      }
+      return;
+    }
     _stepTargetIndex = target;
     try {
       await animateToPage(target);
@@ -615,8 +628,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   /// The feed bids before the page view's own scrollable (see
   /// [PriorityPointerSignalListener]), which would otherwise move the page by
   /// the delta and snap it back, and would cut short a page animation still
-  /// under way. A scroll the feed cannot follow, at either end or with paging
-  /// switched off, is left to whatever else wants it.
+  /// under way. A scroll the feed cannot follow or use to request another
+  /// page is left to whatever else wants it.
   void _onPointerSignal(PointerSignalEvent event) {
     if (event is! PointerScrollEvent) return;
     final delta = _pageAxisDelta(event);
@@ -626,7 +639,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final atEnd = delta < 0
         ? position.pixels <= position.minScrollExtent
         : position.pixels >= position.maxScrollExtent;
-    if (atEnd) return;
+    if (atEnd && (delta < 0 || widget.onForwardBoundary == null)) return;
     GestureBinding.instance.pointerSignalResolver.register(
       event,
       _onPointerScroll,

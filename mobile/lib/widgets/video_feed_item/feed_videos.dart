@@ -94,6 +94,7 @@ class FeedVideos extends ConsumerStatefulWidget {
   const FeedVideos({
     required this.videos,
     required this.onNearEnd,
+    this.onForwardBoundary,
     this.contextTitle,
     this.currentIndex = 0,
     this.scrollPhysics,
@@ -116,6 +117,9 @@ class FeedVideos extends ConsumerStatefulWidget {
 
   final List<VideoEvent> videos;
   final VoidCallback onNearEnd;
+
+  /// Requests more videos when desktop paging reaches the last loaded item.
+  final VoidCallback? onForwardBoundary;
   final int currentIndex;
   final ScrollPhysics? scrollPhysics;
 
@@ -601,6 +605,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
               ? const AlwaysScrollableScrollPhysics()
               : widget.scrollPhysics,
           onNearEnd: widget.onNearEnd,
+          onForwardBoundary: widget.onForwardBoundary,
           prefetchOnMount: widget.prefetchOnMount,
           initialVolume: context.read<VideoVolumeCubit>().state.volume,
           onVolumeChanged: context
