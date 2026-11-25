@@ -13,22 +13,26 @@ import 'package:openvine/l10n/l10n.dart';
 
 final _now = DateTime.utc(2026, 11, 25);
 
-GuestClassicsManifest manifest(List<int> ids, {int validFor = 20}) =>
-    GuestClassicsManifest.parse({
-      'schema_version': 1,
-      'revision': 'qa1',
-      'expires_at': _now.add(Duration(seconds: validFor)).toIso8601String(),
-      'items': [
-        for (final id in ids)
-          {
-            'event_id': id.toRadixString(16).padLeft(64, '0'),
-            'sha256': (id + 100).toRadixString(16).padLeft(64, '0'),
-            'attribution': 'Creator $id',
-            'video_url': 'https://media.divine.video/$id.mp4',
-            'original_loops': 1000 - id,
-          },
-      ],
-    }, now: _now)!;
+GuestClassicsManifest manifest(
+  List<int> ids, {
+  int validFor = 20,
+  Set<int> tagged = const {},
+}) => GuestClassicsManifest.parse({
+  'schema_version': 1,
+  'revision': 'qa1',
+  'expires_at': _now.add(Duration(seconds: validFor)).toIso8601String(),
+  'items': [
+    for (final id in ids)
+      {
+        'event_id': id.toRadixString(16).padLeft(64, '0'),
+        'sha256': (id + 100).toRadixString(16).padLeft(64, '0'),
+        'attribution': 'Creator $id',
+        'video_url': 'https://media.divine.video/$id.mp4',
+        'original_loops': 1000 - id,
+        if (tagged.contains(id)) 'discovery_tags': ['format:sketch'],
+      },
+  ],
+}, now: _now)!;
 
 class _NativePlayback {
   _NativePlayback(this.tester, {this.holdSource}) {
@@ -72,14 +76,16 @@ class _NativePlayback {
   final calls = <String>[];
   final volumes = <double>[];
   late String _events;
-  Future<void> firstFrame() async {
+  Future<void> firstFrame() => report({
+    'isFirstFrameRendered': true,
+    'videoWidth': 1280,
+    'videoHeight': 720,
+  });
+
+  Future<void> report(Map<String, Object> state) async {
     await messenger.handlePlatformMessage(
       _events,
-      const StandardMethodCodec().encodeSuccessEnvelope({
-        'isFirstFrameRendered': true,
-        'videoWidth': 1280,
-        'videoHeight': 720,
-      }),
+      const StandardMethodCodec().encodeSuccessEnvelope(state),
       (_) {},
     );
     await tester.pump();
@@ -511,5 +517,52 @@ void main() {
         expect(find.byType(DivineVideoPlayer), findsNothing);
       },
     );
+
+    for (final (name, firstPlay, secondPlay, expected) in [
+      ('two completions', 5800, 5800, 6),
+      ('one completion and one early swipe', 5800, 700, 4),
+    ]) {
+      testWidgets('$name rerank only the unprepared tail', (tester) async {
+        final native = _NativePlayback(tester);
+        await openGuest(
+          tester,
+          (_, {required muted}) async =>
+              manifest([1, 2, 3, 4, 5, 6], tagged: {1, 2, 6}),
+        );
+        Future<void> swipe({bool back = false}) async {
+          await tester.drag(
+            find.byType(PageView),
+            Offset(0, back ? 500 : -500),
+          );
+          await tester.pumpAndSettle();
+        }
+
+        Future<void> watch(int position) async {
+          await native.firstFrame();
+          await native.report({
+            'status': 'playing',
+            'isPictureAdvancing': true,
+            'isFirstFrameRendered': true,
+            'positionMs': position,
+            'durationMs': 6000,
+          });
+        }
+
+        expect(find.text('Creator 1'), findsOneWidget);
+        await watch(firstPlay);
+        await swipe();
+        expect(find.text('Creator 2'), findsOneWidget);
+        await watch(secondPlay);
+        await swipe(back: true);
+        expect(find.text('Creator 1'), findsOneWidget);
+        await swipe();
+        expect(find.text('Creator 2'), findsOneWidget);
+        await swipe();
+        expect(find.text('Creator 3'), findsOneWidget);
+        await native.firstFrame();
+        await swipe();
+        expect(find.text('Creator $expected'), findsOneWidget);
+      });
+    }
   });
 }

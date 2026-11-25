@@ -6,7 +6,30 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
-typedef GuestClassic = ({String id, Uri url, String attribution});
+typedef GuestClassic = ({
+  String id,
+  Uri url,
+  String attribution,
+  List<String> discoveryTags,
+});
+
+final _discoveryTag = RegExp(
+  r'^(?:activity|format|genre|style|topic):[a-z0-9]+(?:[-_][a-z0-9]+)*$',
+);
+
+List<String> _readDiscoveryTags(Object? value) {
+  if (value is! List<Object?> || value.length > 4) return const [];
+  final tags = <String>{};
+  for (final tag in value) {
+    if (tag is! String ||
+        tag.length > 48 ||
+        _discoveryTag.matchAsPrefix(tag)?.end != tag.length ||
+        !tags.add(tag)) {
+      return const [];
+    }
+  }
+  return List.unmodifiable(tags);
+}
 
 class GuestClassicsManifest {
   const GuestClassicsManifest._(this.expiresAt, this.clips);
@@ -37,13 +60,14 @@ class GuestClassicsManifest {
       final seenIds = <String>{};
       for (final item in items) {
         if (item
-            case {
-              'event_id': final String id,
-              'sha256': final String hash,
-              'video_url': final String url,
-              'attribution': final String attribution,
-              'original_loops': final int loops,
-            }
+            case final Map<Object?, Object?> fields &&
+                {
+                  'event_id': final String id,
+                  'sha256': final String hash,
+                  'video_url': final String url,
+                  'attribution': final String attribution,
+                  'original_loops': final int loops,
+                }
             when _hexId.hasMatch(id) &&
                 _hexId.hasMatch(hash) &&
                 loops > 0 &&
@@ -55,7 +79,12 @@ class GuestClassicsManifest {
               uri.userInfo.isEmpty &&
               seenHashes.add(hash) &&
               seenIds.add(id)) {
-            clips.add((id: id, url: uri, attribution: attribution));
+            clips.add((
+              id: id,
+              url: uri,
+              attribution: attribution,
+              discoveryTags: _readDiscoveryTags(fields['discovery_tags']),
+            ));
             continue;
           }
         }

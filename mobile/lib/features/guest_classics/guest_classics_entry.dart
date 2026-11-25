@@ -2,11 +2,13 @@
 // ABOUTME: Drops all in-memory playback authority on expiry or background.
 
 import 'dart:async';
+import 'dart:math';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:http/http.dart' as http;
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/features/guest_classics/guest_classics_adaptation.dart';
 import 'package:openvine/features/guest_classics/guest_classics_manifest.dart';
 import 'package:openvine/features/guest_classics/guest_classics_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -45,7 +47,20 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
   final _seen = <String>{};
   final _unplayable = <String>{};
   List<GuestClassic> _clips = const [];
+  var _adaptation = GuestClassicsAdaptation();
+  var _queueGeneration = Object();
   int _page = 0;
+  int _furthestPage = 0;
+  int _preparedThrough = 0;
+
+  void _replaceClips(List<GuestClassic> clips) {
+    _clips = clips;
+    _queueGeneration = Object();
+    _page = 0;
+    _furthestPage = 0;
+    _preparedThrough = 0;
+    _adaptation.resetPlayback();
+  }
 
   @override
   void initState() {
@@ -64,8 +79,8 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
     _expiry?.cancel();
     _expiry = null;
     _manifest = null;
-    _clips = const [];
-    _page = 0;
+    _adaptation = GuestClassicsAdaptation();
+    _replaceClips(const []);
   }
 
   void _resetToWelcome() {
@@ -114,9 +129,9 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
       if (retire) setState(_resetToWelcome);
       return;
     }
-    // When a viewer explicitly changes audio, the current clip can continue
-    // only if the new mode independently admits it. Keep the server ordering
-    // for subsequent, unseen candidates.
+    // A new manifest starts a new queue in the approved mode. On a sound change
+    // or expiry refresh, the current clip continues only if the new manifest
+    // independently admits it.
     final current = manifest.clips.where((clip) => clip.id == currentId);
     final clips = [
       ...current,
@@ -135,8 +150,8 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
     _expiry = Timer(remaining, _onExpiry);
     setState(() {
       _manifest = manifest;
-      _clips = clips;
-      _page = 0;
+      _adaptation = GuestClassicsAdaptation();
+      _replaceClips(clips);
       _muted = muted;
     });
   }
@@ -227,6 +242,7 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
       return widget.welcome(() => setState(() => _viewing = true));
     }
     final clip = _clips[_page];
+    final generation = _queueGeneration;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -238,16 +254,27 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
           fit: StackFit.expand,
           children: [
             PageView.builder(
-              key: ObjectKey(_clips),
+              key: ObjectKey(generation),
               scrollDirection: Axis.vertical,
               itemCount: _clips.length,
               onPageChanged: (page) {
                 if (_manifest != manifest ||
+                    _queueGeneration != generation ||
                     !_viewing ||
+                    page == _page ||
                     page >= _clips.length) {
                   return;
                 }
-                setState(() => _page = page);
+                setState(() {
+                  _adaptation.leave(_clips[_page]);
+                  _page = page;
+                  _furthestPage = max(_furthestPage, page);
+                  _clips = _adaptation.orderTail(
+                    _clips,
+                    starterOrder: manifest.clips,
+                    keep: max(_furthestPage, _preparedThrough) + 1,
+                  );
+                });
                 widget.onObservation?.call(GuestClassicsObservation.swipe);
               },
               itemBuilder: (_, index) {
@@ -262,10 +289,12 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
                       mounted &&
                       _viewing &&
                       _manifest == manifest &&
+                      _queueGeneration == generation &&
                       _clips.isNotEmpty &&
                       _clips[_page].id == clip.id &&
                       manifest.expiresAt.isAfter(widget.now()) &&
                       _page == index,
+                  progress: _adaptation.observe,
                   firstFrame: () {
                     if (_seen.add(clip.id)) {
                       widget.onObservation?.call(
@@ -273,6 +302,7 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
                       );
                     }
                     if (index + 1 < _clips.length) {
+                      _preparedThrough = max(_preparedThrough, index + 1);
                       unawaited(
                         DivineVideoPlayerController.preload([
                           VideoClip.network(
@@ -285,13 +315,13 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
                   failed: () {
                     if (mounted &&
                         _manifest == manifest &&
+                        _queueGeneration == generation &&
                         _page == index &&
                         _clips.isNotEmpty &&
                         _clips[index].id == clip.id) {
                       setState(() {
                         _unplayable.add(clip.id);
-                        _clips = _clips.skip(index + 1).toList();
-                        _page = 0;
+                        _replaceClips(_clips.skip(index + 1).toList());
                         if (_clips.isEmpty) _resetToWelcome();
                       });
                     }
@@ -363,6 +393,7 @@ class _GuestPlayer extends StatefulWidget {
     required this.paused,
     required this.muteRequests,
     required this.allowed,
+    required this.progress,
     required this.firstFrame,
     required this.failed,
     super.key,
@@ -372,6 +403,7 @@ class _GuestPlayer extends StatefulWidget {
   final bool paused;
   final ValueNotifier<int> muteRequests;
   final bool Function() allowed;
+  final ValueChanged<DivineVideoPlayerState> progress;
   final VoidCallback firstFrame;
   final VoidCallback failed;
   @override
@@ -443,6 +475,9 @@ class _GuestPlayerState extends State<_GuestPlayer> {
         if (state.isFirstFrameRendered) {
           _nativeFrame = true;
           _reportPresentation();
+        }
+        if (mounted && _reported && ModalRoute.isCurrentOf(context) == true) {
+          widget.progress(state);
         }
       }, onError: (Object _) => _fail());
       await _player.setSource(VideoClip.network(widget.clip.url.toString()));
