@@ -5,6 +5,8 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:dm_repository/dm_repository.dart'
+    show ShareSessionEndedException;
 import 'package:file/file.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -1873,6 +1875,40 @@ void main() {
               .having((s) => s.selectedRecipients, 'selection preserved', [
                 testRecipient,
               ])
+              .having(
+                (s) => s.actionResult,
+                'actionResult',
+                isA<ShareSheetSendFailure>(),
+              ),
+        ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'a session that ends mid-send fails without a crash report',
+        setUp: () {
+          when(
+            () => mockSharingService.shareVideoWithMultipleUsers(
+              video: any(named: 'video'),
+              recipientPubkeys: any(named: 'recipientPubkeys'),
+              personalMessage: any(named: 'personalMessage'),
+            ),
+          ).thenThrow(const ShareSessionEndedException());
+        },
+        seed: () => const ShareSheetState(
+          status: ShareSheetStatus.ready,
+          selectedRecipients: [testRecipient],
+        ),
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetSendRequested()),
+        errors: () => [isA<ShareSessionEndedException>()],
+        expect: () => [
+          isA<ShareSheetState>().having(
+            (s) => s.isSending,
+            'isSending',
+            isTrue,
+          ),
+          isA<ShareSheetState>()
+              .having((s) => s.isSending, 'isSending', isFalse)
               .having(
                 (s) => s.actionResult,
                 'actionResult',

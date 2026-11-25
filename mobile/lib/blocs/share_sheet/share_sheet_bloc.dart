@@ -6,6 +6,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_concurrency/bloc_concurrency.dart';
+import 'package:dm_repository/dm_repository.dart'
+    show ShareSessionEndedException;
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -521,6 +523,16 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
           actionResult: outcome,
         ),
       );
+    } on ShareSessionEndedException catch (e, stackTrace) {
+      // Expected when the account changes mid-send; nothing was queued.
+      addError(e, stackTrace);
+      Log.info(
+        'Share not queued: the session ended first',
+        name: 'ShareSheetBloc',
+        category: LogCategory.ui,
+      );
+      if (isClosed) return;
+      emit(state.copyWith(isSending: false, actionResult: _sendFailure()));
     } catch (e, stackTrace) {
       _addUnexpectedError(
         e,
@@ -533,16 +545,14 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         category: LogCategory.ui,
       );
       if (isClosed) return;
-      emit(
-        state.copyWith(
-          isSending: false,
-          actionResult: _ownerExpired || isOwnerCurrent?.call() == false
-              ? ShareSheetAccountChanged()
-              : ShareSheetSendFailure(),
-        ),
-      );
+      emit(state.copyWith(isSending: false, actionResult: _sendFailure()));
     }
   }
+
+  ShareSheetActionResult _sendFailure() =>
+      _ownerExpired || isOwnerCurrent?.call() == false
+      ? ShareSheetAccountChanged()
+      : ShareSheetSendFailure();
 
   // --------------------------------------------------------------------------
   // Copy / Share actions (BLoC generates data, UI handles platform calls)

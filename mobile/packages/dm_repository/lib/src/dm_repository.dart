@@ -68,6 +68,20 @@ typedef _PreparedSend = ({
 
 typedef _SendPreparation = ({NIP17SendResult? refusal, _PreparedSend? send});
 
+/// The account or its session changed while a video share was being queued.
+///
+/// Nothing was queued. This is an expected race with sign-out or an account
+/// switch, not a programming error, so callers handle it without reporting it.
+class ShareSessionEndedException implements Exception {
+  /// Creates the exception; it carries no data.
+  const ShareSessionEndedException();
+
+  @override
+  String toString() =>
+      'ShareSessionEndedException: the session ended before the share was '
+      'queued';
+}
+
 /// The durable local outcome for one recipient of a video share.
 sealed class ShareEnqueueOutcome {
   const ShareEnqueueOutcome();
@@ -8087,8 +8101,19 @@ class DmRepository {
         ),
       };
 
-  /// Queues independent one-to-one messages in one local transaction. Each
-  /// accepted recipient gets its own stable rumor id for delivery and retry.
+  /// Queues one one-to-one share per recipient in a single local transaction,
+  /// then starts background delivery for each. Never sends a kind-4 copy.
+  ///
+  /// Each accepted recipient gets its own stable rumor id for delivery and
+  /// retry. Results are keyed by trimmed, lower-cased hex pubkey, so
+  /// duplicates collapse.
+  ///
+  /// Throws:
+  ///
+  /// * [ShareSessionEndedException] if the account or session changes before
+  ///   the commit; nothing is queued.
+  /// * [StateError] if the repository is uninitialized or no outgoing queue
+  ///   is wired in.
   @useResult
   Future<Map<String, ShareEnqueueOutcome>> enqueueSharedVideoBatch({
     required List<String> recipientPubkeys,
@@ -8136,9 +8161,7 @@ class DmRepository {
         skipNip04Fallback: true,
         isVideoShare: true,
       );
-      if (!isCurrent()) {
-        throw StateError('Account changed before share was queued');
-      }
+      if (!isCurrent()) throw const ShareSessionEndedException();
       final refusal = prep.refusal;
       if (refusal != null) {
         outcomes[recipient] = switch (refusal) {
@@ -8158,9 +8181,15 @@ class DmRepository {
       );
     }
     if (prepared.isEmpty) return outcomes;
-    await dao.enqueueAll([
-      for (final send in prepared) send.row,
-    ], isCurrent: isCurrent);
+    try {
+      await dao.enqueueAll([
+        for (final send in prepared) send.row,
+      ], isCurrent: isCurrent);
+    } on Object {
+      // The DAO rolls back when the owner check fails mid-transaction.
+      if (!isCurrent()) throw const ShareSessionEndedException();
+      rethrow;
+    }
     for (final send in prepared) {
       if (!isCurrent()) break;
       try {

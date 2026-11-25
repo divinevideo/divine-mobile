@@ -254,14 +254,17 @@ void main() {
       await checking.future;
       switchAccount();
       release.complete();
-      await expectLater(pending, throwsStateError);
+      await expectLater(pending, throwsA(isA<ShareSessionEndedException>()));
       expect(queue.commits, 0);
       expect(await queue.getAllForOwner(owner), isEmpty);
     });
 
     test('session change during transaction rolls back every row', () async {
       queue.afterFirstInsert = switchAccount;
-      await expectLater(share(peers), throwsStateError);
+      await expectLater(
+        share(peers),
+        throwsA(isA<ShareSessionEndedException>()),
+      );
       expect(queue.commits, 0);
       expect(await queue.getAllForOwner(owner), isEmpty);
     });
