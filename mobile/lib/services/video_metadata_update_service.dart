@@ -373,8 +373,9 @@ class VideoMetadataUpdateService {
           _readLatestRevision,
           beforeUpload.copyWith(eventCreatedAt: seen.createdAt),
           logName: 'VideoMetadataUpdateService',
-          cachedEvent: (id) =>
-              id == seen.id ? seen : _personalEventCache.getEventById(id),
+          // The video passed is always the revision seen, so that is the
+          // only copy this read can fall back to.
+          cachedEvent: (_) => seen,
         );
         if (latest == null) return const VideoUpdateOriginalUnavailable();
       }

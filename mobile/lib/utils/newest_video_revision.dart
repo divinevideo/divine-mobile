@@ -114,15 +114,23 @@ Event? _openedRevision(
   required String why,
 }) {
   final held = cachedEvent?.call(video.id);
-  if (held == null ||
-      held.id != video.id ||
-      '${held.kind}:${held.pubkey}:${held.dTagValue}' != address ||
-      _hasConflictingIdentifiers(held.tags) ||
-      !held.isValid ||
-      !(held.hasVerifiedSignature || held.isSigned)) {
+  final refusal = switch (held) {
+    null => 'no copy of the opened revision ${video.id} is held',
+    _ when held.id != video.id =>
+      'the held copy ${held.id} is not the opened revision ${video.id}',
+    _
+        when '${held.kind}:${held.pubkey}:${held.dTagValue}' != address ||
+            _hasConflictingIdentifiers(held.tags) =>
+      'the held copy of ${video.id} is not at exactly this address',
+    _ when !held.isValid =>
+      'the held copy of ${video.id} has content its id does not cover',
+    _ when !(held.hasVerifiedSignature || held.isSigned) =>
+      'the held copy of ${video.id} is not validly signed',
+    _ => null,
+  };
+  if (held == null || refusal != null) {
     Log.warning(
-      'Not republishing $address: $why, and no signed copy of the opened '
-      'revision ${video.id} is held',
+      'Not republishing $address: $why, and ${refusal ?? 'no copy is held'}',
       name: logName,
       category: LogCategory.video,
     );
