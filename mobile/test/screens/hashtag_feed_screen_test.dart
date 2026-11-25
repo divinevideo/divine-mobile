@@ -4,7 +4,8 @@
 import 'dart:async';
 
 import 'package:flutter/rendering.dart' show RenderParagraph;
-import 'package:flutter/widgets.dart' show Locale, Offset;
+import 'package:flutter/widgets.dart'
+    show Locale, Offset, TargetPlatform, ValueListenableBuilder, ValueNotifier;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -134,47 +135,90 @@ void main() {
   });
 
   group(HashtagFeedScreen, () {
-    testWidgets('loads more from a short grid and skips a duplicate page', (
-      tester,
-    ) async {
-      final first = _video('video-1');
-      final next = _video('video-2');
-      when(() => videosRepository.getHashtagFeedVideos(hashtag: 'loops'))
-          .thenAnswer(
-            (_) async => HashtagFeedVideosResult.success(
-              [first],
-              nextCursor: 'o:50',
+    testWidgets(
+      'loads more from a short grid and skips a duplicate page',
+      (
+        tester,
+      ) async {
+        final first = _video('video-1');
+        final next = _video('video-2');
+        when(() => videosRepository.getHashtagFeedVideos(hashtag: 'loops'))
+            .thenAnswer(
+              (_) async => HashtagFeedVideosResult.success(
+                [first],
+                nextCursor: 'o:50',
+              ),
+            );
+        when(
+          () => videosRepository.getHashtagFeedVideos(
+            hashtag: 'loops',
+            cursor: 'o:50',
+          ),
+        ).thenAnswer(
+          (_) async => HashtagFeedVideosResult.success(
+            [first],
+            nextCursor: 'o:100',
+          ),
+        );
+        when(
+          () => videosRepository.getHashtagFeedVideos(
+            hashtag: 'loops',
+            cursor: 'o:100',
+          ),
+        ).thenAnswer((_) async => HashtagFeedVideosResult.success([next]));
+
+        await pumpScreen(tester, 'loops');
+        final grid = find.byType(ComposableVideoGrid);
+        expect(tester.widget<ComposableVideoGrid>(grid).videos, [first]);
+        expect(tester.widget<ComposableVideoGrid>(grid).hasMoreContent, isTrue);
+
+        await tester.drag(grid, const Offset(0, -300));
+        await tester.pumpAndSettle();
+
+        expect(tester.widget<ComposableVideoGrid>(grid).videos, [first, next]);
+        expect(
+          tester.widget<ComposableVideoGrid>(grid).hasMoreContent,
+          isFalse,
+        );
+      },
+      variant: const TargetPlatformVariant({
+        TargetPlatform.android,
+        TargetPlatform.iOS,
+      }),
+    );
+
+    testWidgets(
+      'loads the new hashtag when the screen is reused for another tag',
+      (
+        tester,
+      ) async {
+        final cats = _video('video-2');
+        when(
+          () => videosRepository.getHashtagFeedVideos(hashtag: 'cats'),
+        ).thenAnswer((_) async => HashtagFeedVideosResult.success([cats]));
+        final tag = ValueNotifier('loops');
+        addTearDown(tag.dispose);
+        await tester.pumpWidget(
+          testMaterialApp(
+            additionalOverrides: screenOverrides(),
+            home: ValueListenableBuilder<String>(
+              valueListenable: tag,
+              builder: (context, value, _) => HashtagFeedScreen(hashtag: value),
             ),
-          );
-      when(
-        () => videosRepository.getHashtagFeedVideos(
-          hashtag: 'loops',
-          cursor: 'o:50',
-        ),
-      ).thenAnswer(
-        (_) async => HashtagFeedVideosResult.success(
-          [first],
-          nextCursor: 'o:100',
-        ),
-      );
-      when(
-        () => videosRepository.getHashtagFeedVideos(
-          hashtag: 'loops',
-          cursor: 'o:100',
-        ),
-      ).thenAnswer((_) async => HashtagFeedVideosResult.success([next]));
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
 
-      await pumpScreen(tester, 'loops');
-      final grid = find.byType(ComposableVideoGrid);
-      expect(tester.widget<ComposableVideoGrid>(grid).videos, [first]);
-      expect(tester.widget<ComposableVideoGrid>(grid).hasMoreContent, isTrue);
+        tag.value = 'cats';
+        await tester.pump();
+        await tester.pump();
+        await tester.pump();
 
-      await tester.drag(grid, const Offset(0, -300));
-      await tester.pumpAndSettle();
-
-      expect(tester.widget<ComposableVideoGrid>(grid).videos, [first, next]);
-      expect(tester.widget<ComposableVideoGrid>(grid).hasMoreContent, isFalse);
-    });
+        final grid = find.byType(ComposableVideoGrid);
+        expect(tester.widget<ComposableVideoGrid>(grid).videos, [cats]);
+      },
+    );
 
     group('held pages', () {
       testWidgets('hides a video deleted after its page loaded', (
