@@ -2490,22 +2490,38 @@ void main() {
         },
       );
 
-      testWidgets('Windows native player receives a load id header', (
+      testWidgets('Windows MP4 loads expect native network samples', (
         tester,
       ) async {
         debugDefaultTargetPlatformOverride = TargetPlatform.windows;
         DivineVideoPlayerController.resetIdCounterForTesting();
         final harness = _NativePlayerHarness(tester);
-        await harness.install(playerIds: const <int>[0]);
+        await harness.install(
+          playerIds: const <int>[0],
+          firstFrameRenderedOnListen: false,
+        );
         FeedPlaybackTelemetry.configure(enabled: true);
-        addTearDown(() => FeedPlaybackTelemetry.configure(enabled: false));
+        final terminals = <Map<String, Object?>>[];
+        final subscription = FeedPlaybackTelemetry.events.listen(
+          terminals.add,
+        );
+        addTearDown(() async {
+          FeedPlaybackTelemetry.configure(enabled: false);
+          await subscription.cancel();
+        });
         try {
           await tester.pumpWidget(
             _wrapFeed(
               InfiniteVideoFeed(
-                videos: [_makeVideo('windows')],
+                videos: [
+                  _makeVideo(
+                    'windows',
+                    videoUrl: 'https://example.com/windows.mp4',
+                  ),
+                ],
                 cache: cache,
                 prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
               ),
             ),
           );
@@ -2521,6 +2537,16 @@ void main() {
               ),
             ),
           );
+          await harness.sendEvent(0, const {
+            'status': 'ready',
+            'videoWidth': 1280,
+            'videoHeight': 720,
+            'isFirstFrameRendered': true,
+          });
+          await tester.pump();
+          // No sample arrived, but the Windows player sends them for MP4s,
+          // so the gap is unknown rather than unsupported.
+          expect(terminals.single['network_coverage'], 'unknown');
         } finally {
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();
