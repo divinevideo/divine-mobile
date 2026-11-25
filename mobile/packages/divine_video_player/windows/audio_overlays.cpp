@@ -171,12 +171,16 @@ void AudioOverlays::Update(int64_t global_ms, bool video_playing,
     }
 
     const int64_t actual = ToMs(session.Position());
-    track.player.Volume(Gain(track, actual));
     const double drift =
         std::abs(static_cast<double>(expected - actual)) / spec.speed;
     // A seek takes a moment to show in Position; judging drift before then
     // would seek again and again.
-    if (drift > kMaxDriftMs && now - track.last_seek > kSeekSettleTime) {
+    const bool settling = now - track.last_seek <= kSeekSettleTime;
+    const bool seek = drift > kMaxDriftMs && !settling;
+    // Position is stale until a seek lands, so the gain follows the video
+    // then, as on activation and on Android.
+    track.player.Volume(Gain(track, seek || settling ? expected : actual));
+    if (seek) {
       session.Position(FromMs(expected));
       track.last_seek = now;
     }
