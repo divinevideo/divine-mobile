@@ -47,27 +47,48 @@ class _RecordingCrashReporter implements CrashReporter {
   Future<void> setCustomKey(String key, Object value) async {}
 }
 
-/// One `sendVideo` call the test drives by hand.
+/// One send the test drives by hand: an `uploadVideo` call and the
+/// `publishVideo` call that follows it.
 class _PendingSend {
   _PendingSend({
     required this.videoFile,
     required this.mimeType,
-    required this.extraTags,
     required this.blurhash,
     required this.onPhase,
     required this.onUploadProgress,
     required this.cancellation,
-  });
+  }) : upload = _uploadOf(videoFile.path);
 
   final DmVideoSendCancellation cancellation;
   final File videoFile;
   final String mimeType;
-  final List<List<String>> extraTags;
   final String? blurhash;
   final void Function(DmVideoSendPhase phase)? onPhase;
   final void Function(double fraction)? onUploadProgress;
+
+  /// What the upload returns, distinct for every send.
+  final DmVideoUpload upload;
+
+  /// The result of the whole send. Completing it finishes the upload too,
+  /// then answers the publication with the same result.
   final Completer<NIP17SendResult> completer = Completer<NIP17SendResult>();
+
+  /// The extra tags the publication was given, once it ran.
+  List<List<String>>? publishedTags;
 }
+
+/// A finished upload of the video at [path]. Every call returns a new
+/// instance, so a test can tell one upload from another.
+DmVideoUpload _uploadOf(String path) => DmVideoUpload(
+  fileUrl: 'https://media.example/$path',
+  fileMetadata: const DmFileMetadata(
+    fileType: 'video/mp4',
+    encryptionAlgorithm: 'aes-gcm',
+    decryptionKey: 'key',
+    decryptionNonce: 'nonce',
+    fileHash: 'hash',
+  ),
+);
 
 const _recipientPubkey =
     '1111111111111111111111111111111111111111111111111111111111111111';
@@ -134,26 +155,47 @@ void main() {
     return created;
   }
 
-  Future<NIP17SendResult> anySendVideoOn(_MockDmVideoSendService mock) =>
-      mock.sendVideo(
-        recipientPubkey: any(named: 'recipientPubkey'),
+  Future<DmVideoUpload> anyUploadVideoOn(_MockDmVideoSendService mock) =>
+      mock.uploadVideo(
         videoFile: any(named: 'videoFile'),
         mimeType: any(named: 'mimeType'),
         blurhash: any(named: 'blurhash'),
-        extraTags: any(named: 'extraTags'),
         onPhase: any(named: 'onPhase'),
         onUploadProgress: any(named: 'onUploadProgress'),
         cancellation: any(named: 'cancellation'),
       );
 
-  When<Future<NIP17SendResult>> whenSendVideo() =>
-      when(() => anySendVideoOn(service));
+  Future<NIP17SendResult> anyPublishVideoOn(_MockDmVideoSendService mock) =>
+      mock.publishVideo(
+        recipientPubkey: any(named: 'recipientPubkey'),
+        uploaded: any(named: 'uploaded'),
+        extraTags: any(named: 'extraTags'),
+        onPhase: any(named: 'onPhase'),
+        cancellation: any(named: 'cancellation'),
+      );
 
-  /// Answers every send at once: with [answer] for its path when given,
-  /// otherwise with a success. Records each path and its extra tags.
+  When<Future<DmVideoUpload>> whenUploadVideo() =>
+      when(() => anyUploadVideoOn(service));
+
+  When<Future<NIP17SendResult>> whenPublishVideo() =>
+      when(() => anyPublishVideoOn(service));
+
+  /// Answers every upload at once with a new [DmVideoUpload] of its path.
+  void stubAutoUpload() {
+    whenUploadVideo().thenAnswer(
+      (invocation) async =>
+          _uploadOf((invocation.namedArguments[#videoFile] as File).path),
+    );
+  }
+
+  /// Answers every upload and publication at once: each publication with
+  /// [answer] for its path when given, otherwise with a success. Records the
+  /// path and extra tags of each publication.
   void stubAutoSend([NIP17SendResult Function(String path)? answer]) {
-    whenSendVideo().thenAnswer((invocation) async {
-      final path = (invocation.namedArguments[#videoFile] as File).path;
+    stubAutoUpload();
+    whenPublishVideo().thenAnswer((invocation) async {
+      final uploaded = invocation.namedArguments[#uploaded] as DmVideoUpload;
+      final path = uploaded.fileUrl.replaceFirst('https://media.example/', '');
       sentPaths.add(path);
       sentTags.add(
         invocation.namedArguments[#extraTags] as List<List<String>>,
@@ -164,13 +206,12 @@ void main() {
   }
 
   void stubControlledSend() {
-    whenSendVideo().thenAnswer((invocation) {
+    whenUploadVideo().thenAnswer((invocation) {
       final send = _PendingSend(
         cancellation:
             invocation.namedArguments[#cancellation] as DmVideoSendCancellation,
         videoFile: invocation.namedArguments[#videoFile] as File,
         mimeType: invocation.namedArguments[#mimeType] as String,
-        extraTags: invocation.namedArguments[#extraTags] as List<List<String>>,
         blurhash: invocation.namedArguments[#blurhash] as String?,
         onPhase:
             invocation.namedArguments[#onPhase]
@@ -180,6 +221,13 @@ void main() {
                 as void Function(double)?,
       );
       sends.add(send);
+      return send.completer.future.then((_) => send.upload);
+    });
+    whenPublishVideo().thenAnswer((invocation) {
+      final uploaded = invocation.namedArguments[#uploaded] as DmVideoUpload;
+      final send = sends.lastWhere((send) => identical(send.upload, uploaded));
+      send.publishedTags =
+          invocation.namedArguments[#extraTags] as List<List<String>>;
       return send.completer.future;
     });
   }
@@ -223,6 +271,7 @@ void main() {
       registerFallbackValue((DmVideoSendPhase _) {});
       registerFallbackValue((double _) {});
       registerFallbackValue(DmVideoSendCancellation()..finish());
+      registerFallbackValue(_uploadOf('/tmp/fallback.mp4'));
     });
 
     setUp(() {
@@ -290,7 +339,9 @@ void main() {
       expect(entries.last.single.draftTitle, '  Beach cut  ');
       expect(sends.single.mimeType, DmFileMetadata.editableDraftMimeType);
       expect(sends.single.blurhash, 'LEHV6nWB2yk8pyo0adR*.7kCMdnj');
-      expect(sends.single.extraTags, [
+      sends.single.completer.complete(_success('draft'));
+      await pumpEventQueue();
+      expect(sends.single.publishedTags, [
         ['title', 'Beach cut'],
       ]);
     });
@@ -311,7 +362,9 @@ void main() {
       await pumpEventQueue();
 
       expect(sends.single.blurhash, isNull);
-      expect(sends.single.extraTags, isEmpty);
+      sends.single.completer.complete(_success('draft'));
+      await pumpEventQueue();
+      expect(sends.single.publishedTags, isEmpty);
     });
 
     test('stalled upload fails and releases the account queue', () {
@@ -544,23 +597,31 @@ void main() {
         );
       });
 
-      test('passes the recipient, file and MIME type to the send service', () {
-        sendVideo(path: '/v/picked.MOV');
+      test(
+        'uploads the file with its MIME type, then publishes it to the '
+        'recipient',
+        () async {
+          sendVideo(path: '/v/picked.MOV');
 
-        expect(sends, hasLength(1));
-        expect(sends.single.videoFile.path, equals('/v/picked.MOV'));
-        expect(sends.single.mimeType, equals('video/quicktime'));
-        verify(
-          () => service.sendVideo(
-            recipientPubkey: _recipientPubkey,
-            videoFile: any(named: 'videoFile'),
-            mimeType: any(named: 'mimeType'),
-            onPhase: any(named: 'onPhase'),
-            onUploadProgress: any(named: 'onUploadProgress'),
-            cancellation: any(named: 'cancellation'),
-          ),
-        ).called(1);
-      });
+          expect(sends, hasLength(1));
+          expect(sends.single.videoFile.path, equals('/v/picked.MOV'));
+          expect(sends.single.mimeType, equals('video/quicktime'));
+          verifyNever(() => anyPublishVideoOn(service));
+
+          sends.single.completer.complete(_success('r1'));
+          await pumpEventQueue();
+
+          verify(
+            () => service.publishVideo(
+              recipientPubkey: _recipientPubkey,
+              uploaded: sends.single.upload,
+              extraTags: any(named: 'extraTags'),
+              onPhase: any(named: 'onPhase'),
+              cancellation: any(named: 'cancellation'),
+            ),
+          ).called(1);
+        },
+      );
 
       test('reads the send service when each send starts', () async {
         sendVideo(path: '/v/first.mp4');
@@ -577,8 +638,9 @@ void main() {
           sends.map((send) => send.videoFile.path),
           equals(['/v/first.mp4', '/v/second.mp4']),
         );
-        verify(() => anySendVideoOn(firstService)).called(1);
-        verify(() => anySendVideoOn(service)).called(1);
+        verify(() => anyUploadVideoOn(firstService)).called(1);
+        verify(() => anyPublishVideoOn(firstService)).called(1);
+        verify(() => anyUploadVideoOn(service)).called(1);
       });
 
       test(
@@ -703,7 +765,7 @@ void main() {
       });
 
       test('maps DmVideoTooLargeException to failed(tooLarge)', () async {
-        whenSendVideo().thenThrow(const DmVideoTooLargeException(1 << 30));
+        whenUploadVideo().thenThrow(const DmVideoTooLargeException(1 << 30));
         final events = recordConversation('c1');
         final outcomes = recordOutcomes();
 
@@ -780,7 +842,7 @@ void main() {
       );
 
       test('a missing file ends failed, not thrown', () async {
-        whenSendVideo().thenAnswer(
+        whenUploadVideo().thenAnswer(
           (_) async => throw const FileSystemException(
             'Cannot open file',
             '/v/missing.mp4',
@@ -800,7 +862,7 @@ void main() {
       });
 
       test('an unexpected error ends failed, not thrown', () async {
-        whenSendVideo().thenThrow(StateError('invariant broken'));
+        whenUploadVideo().thenThrow(StateError('invariant broken'));
         final events = recordConversation('c1');
 
         sendVideo();
@@ -1025,8 +1087,11 @@ void main() {
           ]),
         );
         expect(sends.single.videoFile.path, equals(_clipPath('clip-a')));
+
+        sends.single.completer.complete(_success('rumor-a'));
+        await pumpEventQueue();
         expect(
-          sends.single.extraTags,
+          sends.first.publishedTags,
           equals([
             ['divine-clip', 'square'],
           ]),
@@ -1458,11 +1523,14 @@ void main() {
       });
 
       test('a too-large clip ends the batch as tooLarge', () async {
-        stubAutoSend(
-          (path) => path == _clipPath('clip-b')
-              ? throw const DmVideoTooLargeException(1 << 30)
-              : _success('rumor-a'),
-        );
+        stubAutoSend();
+        whenUploadVideo().thenAnswer((invocation) async {
+          final path = (invocation.namedArguments[#videoFile] as File).path;
+          if (path == _clipPath('clip-b')) {
+            throw const DmVideoTooLargeException(1 << 30);
+          }
+          return _uploadOf(path);
+        });
         outbox = createOutbox();
         final events = recordConversation('c1');
         final outcomes = recordOutcomes();
@@ -1525,7 +1593,7 @@ void main() {
           .having((report) => report.$2, 'reason', reason);
 
       test('forwards a programming error from the send service', () async {
-        whenSendVideo().thenThrow(StateError('invariant broken'));
+        whenUploadVideo().thenThrow(StateError('invariant broken'));
         outbox = createOutbox(reporter: reporter);
 
         sendVideo();
@@ -1550,7 +1618,7 @@ void main() {
       });
 
       test('does not forward an unreadable file', () async {
-        whenSendVideo().thenAnswer(
+        whenUploadVideo().thenAnswer(
           (_) async => throw const FileSystemException(
             'Cannot open file',
             '/v/missing.mp4',
@@ -1567,7 +1635,7 @@ void main() {
       });
 
       test('does not forward a video that is too large', () async {
-        whenSendVideo().thenThrow(const DmVideoTooLargeException(1 << 30));
+        whenUploadVideo().thenThrow(const DmVideoTooLargeException(1 << 30));
         outbox = createOutbox(reporter: reporter);
         final outcomes = recordOutcomes();
 
@@ -1581,7 +1649,7 @@ void main() {
       test(
         'does not forward an expected error the send service throws',
         () async {
-          whenSendVideo().thenThrow(const SocketException('offline'));
+          whenUploadVideo().thenThrow(const SocketException('offline'));
           outbox = createOutbox(reporter: reporter);
           final outcomes = recordOutcomes();
 
@@ -1869,7 +1937,7 @@ void main() {
         expect(sends, hasLength(1));
         expect(events.last.first, equals(notVerified));
 
-        whenSendVideo().thenThrow(const DmVideoTooLargeException(1 << 30));
+        whenUploadVideo().thenThrow(const DmVideoTooLargeException(1 << 30));
         sends.single.completer.complete(_success('rumor-running'));
         sendVideo(path: '/v/huge.mp4');
         await pumpEventQueue();

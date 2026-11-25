@@ -144,23 +144,29 @@ void main() {
             );
             NIP17SendResult? delivered;
             Object? failure;
+            final service = DmVideoSendService(
+              dmRepository: repository,
+              blossom: BlossomUploadService(
+                authProvider: _Auth(),
+                dio: dio,
+                defaultServerUrl: 'https://default.example',
+              ),
+              encryption: encryption,
+              readPreview: (_) async => (blurhash: null, dimensions: null),
+            );
             unawaited(
-              DmVideoSendService(
-                    dmRepository: repository,
-                    blossom: BlossomUploadService(
-                      authProvider: _Auth(),
-                      dio: dio,
-                      defaultServerUrl: 'https://default.example',
-                    ),
-                    encryption: encryption,
-                    readPreview: (_) async =>
-                        (blurhash: null, dimensions: null),
-                  )
-                  .sendVideo(
-                    recipientPubkey: '9' * 64,
+              service
+                  .uploadVideo(
                     videoFile: video,
                     mimeType: 'video/mp4',
                     cancellation: attempt,
+                  )
+                  .then(
+                    (uploaded) => service.publishVideo(
+                      recipientPubkey: '9' * 64,
+                      uploaded: uploaded,
+                      cancellation: attempt,
+                    ),
                   )
                   .then<void>(
                     (result) {

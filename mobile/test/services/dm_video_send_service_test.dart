@@ -1,6 +1,5 @@
-// ABOUTME: Unit tests for DmVideoSendService orchestration.
-// ABOUTME: Verifies encrypt -> upload -> sendFileMessage order, exact
-// ABOUTME: DmFileMetadata fields, and ciphertext temp-file cleanup.
+// ABOUTME: Unit tests for DmVideoSendService: the upload step (encrypt, upload,
+// ABOUTME: exact DmFileMetadata, ciphertext cleanup) and the publish step.
 
 import 'dart:async';
 import 'dart:io';
@@ -154,6 +153,33 @@ void main() {
     return sent;
   }
 
+  /// Uploads [videoFile], then publishes the upload to the recipient, the
+  /// way the outbox runs a send that has no kept upload.
+  Future<NIP17SendResult> uploadThenPublish(
+    DmVideoSendService service, {
+    required File videoFile,
+    String? blurhash,
+    String? dimensions,
+    List<List<String>> extraTags = const [],
+    void Function(DmVideoSendPhase phase)? onPhase,
+    void Function(double fraction)? onUploadProgress,
+  }) async {
+    final uploaded = await service.uploadVideo(
+      videoFile: videoFile,
+      mimeType: 'video/mp4',
+      blurhash: blurhash,
+      dimensions: dimensions,
+      onPhase: onPhase,
+      onUploadProgress: onUploadProgress,
+    );
+    return service.publishVideo(
+      recipientPubkey: _recipientPubkey,
+      uploaded: uploaded,
+      extraTags: extraTags,
+      onPhase: onPhase,
+    );
+  }
+
   group(DmVideoSendService, () {
     test(
       'encrypts, uploads, then sends kind 15 with exact metadata and '
@@ -196,11 +222,9 @@ void main() {
           return success;
         });
 
-        final service = createService();
-        final result = await service.sendVideo(
-          recipientPubkey: _recipientPubkey,
+        final result = await uploadThenPublish(
+          createService(),
           videoFile: videoFile,
-          mimeType: 'video/mp4',
           blurhash: 'LEHV6nWB2yk8',
           dimensions: '1080x1920',
         );
@@ -236,9 +260,8 @@ void main() {
     );
 
     test(
-      'returns the send result without waiting for the ciphertext delete, so '
-      'the persisted row and the pending bubble cannot render together at '
-      'the handoff',
+      'returns the upload without waiting for the ciphertext delete, so '
+      'publication never waits on file I/O',
       () async {
         final videoFile = File('${tempDir.path}/clip.mp4')
           ..writeAsBytesSync(const [9, 9, 9]);
@@ -268,33 +291,13 @@ void main() {
             url: _fileUrl,
           ),
         );
-        when(
-          () => dmRepository.sendFileMessage(
-            recipientPubkey: any(named: 'recipientPubkey'),
-            fileUrl: any(named: 'fileUrl'),
-            fileMetadata: any(named: 'fileMetadata'),
-            extraTags: any(named: 'extraTags'),
-          ),
-        ).thenAnswer(
-          (_) async => NIP17SendResult.success(
-            rumorEventId: 'rumor-1',
-            messageEventId: 'wrap-1',
-            recipientPubkey: _recipientPubkey,
-          ),
-        );
 
-        final result = await createService()
-            .sendVideo(
-              recipientPubkey: _recipientPubkey,
-              videoFile: videoFile,
-              mimeType: 'video/mp4',
-            )
+        final uploaded = await createService()
+            .uploadVideo(videoFile: videoFile, mimeType: 'video/mp4')
             .timeout(const Duration(seconds: 10));
 
-        expect(result.success, isTrue);
-        // The result came back while the delete is still open: `sendFileMessage`
-        // has committed the message row, and the outbox's sent flip (which
-        // drops the pending bubble) now follows without file I/O in between.
+        expect(uploaded.fileUrl, _fileUrl);
+        // The upload came back while the delete is still open.
         await deleteCalled.future;
         expect(deleteGate.isCompleted, isFalse);
 
@@ -333,10 +336,9 @@ void main() {
         ),
       );
 
-      final result = await createService().sendVideo(
-        recipientPubkey: _recipientPubkey,
+      final result = await uploadThenPublish(
+        createService(),
         videoFile: videoFile,
-        mimeType: 'video/mp4',
         extraTags: const [
           ['divine-clip', 'vertical'],
         ],
@@ -370,20 +372,18 @@ void main() {
           final sent = stubSuccessfulSend(videoFile);
           final readFrom = <String>[];
 
-          final result =
-              await createService(
-                readPreview: (file) async {
-                  readFrom.add(file.path);
-                  return (
-                    blurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH',
-                    dimensions: '1080x1920',
-                  );
-                },
-              ).sendVideo(
-                recipientPubkey: _recipientPubkey,
-                videoFile: videoFile,
-                mimeType: 'video/mp4',
-              );
+          final result = await uploadThenPublish(
+            createService(
+              readPreview: (file) async {
+                readFrom.add(file.path);
+                return (
+                  blurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH',
+                  dimensions: '1080x1920',
+                );
+              },
+            ),
+            videoFile: videoFile,
+          );
 
           expect(result.success, isTrue);
           expect(readFrom, equals([videoFile.path]));
@@ -402,17 +402,15 @@ void main() {
             onEncrypt: () => order.add('encrypt'),
           );
 
-          final result =
-              await createService(
-                readPreview: (_) async {
-                  order.add('preview');
-                  return (blurhash: null, dimensions: null);
-                },
-              ).sendVideo(
-                recipientPubkey: _recipientPubkey,
-                videoFile: videoFile,
-                mimeType: 'video/mp4',
-              );
+          final result = await uploadThenPublish(
+            createService(
+              readPreview: (_) async {
+                order.add('preview');
+                return (blurhash: null, dimensions: null);
+              },
+            ),
+            videoFile: videoFile,
+          );
 
           expect(result.success, isTrue);
           expect(sent, hasLength(1));
@@ -423,17 +421,15 @@ void main() {
       test('keeps a blurhash and size the caller already has', () async {
         final sent = stubSuccessfulSend(videoFile);
 
-        final result =
-            await createService(
-              readPreview: (_) async =>
-                  (blurhash: 'L00000fQfQfQfQfQfQfQfQfQfQfQ', dimensions: '1x1'),
-            ).sendVideo(
-              recipientPubkey: _recipientPubkey,
-              videoFile: videoFile,
-              mimeType: 'video/mp4',
-              blurhash: 'LEHV6nWB2yk8',
-              dimensions: '1080x1080',
-            );
+        final result = await uploadThenPublish(
+          createService(
+            readPreview: (_) async =>
+                (blurhash: 'L00000fQfQfQfQfQfQfQfQfQfQfQ', dimensions: '1x1'),
+          ),
+          videoFile: videoFile,
+          blurhash: 'LEHV6nWB2yk8',
+          dimensions: '1080x1080',
+        );
 
         expect(result.success, isTrue);
         expect(sent.single.blurhash, 'LEHV6nWB2yk8');
@@ -466,16 +462,14 @@ void main() {
               .setMockMethodCallHandler(channel, null);
         });
 
-        final result =
-            await DmVideoSendService(
-              dmRepository: dmRepository,
-              blossom: blossom,
-              encryption: encryption,
-            ).sendVideo(
-              recipientPubkey: _recipientPubkey,
-              videoFile: videoFile,
-              mimeType: 'video/mp4',
-            );
+        final result = await uploadThenPublish(
+          DmVideoSendService(
+            dmRepository: dmRepository,
+            blossom: blossom,
+            encryption: encryption,
+          ),
+          videoFile: videoFile,
+        );
 
         expect(result.success, isTrue);
         expect(sent.single.blurhash, isNotNull);
@@ -492,8 +486,7 @@ void main() {
             .thenAnswer((_) => encrypted.future);
         final attempt = DmVideoSendCancellation();
         addTearDown(attempt.finish);
-        final result = createService().sendVideo(
-          recipientPubkey: _recipientPubkey,
+        final result = createService().uploadVideo(
           videoFile: video,
           mimeType: 'video/mp4',
           cancellation: attempt,
@@ -514,7 +507,7 @@ void main() {
     );
 
     test(
-      'account loss after upload prevents publication and cleans ciphertext',
+      'account loss during upload ends the upload and cleans ciphertext',
       () async {
         final video = File('${tempDir.path}/switch.mp4');
         final ciphertext = ciphertextFile();
@@ -541,8 +534,7 @@ void main() {
         );
         addTearDown(attempt.finish);
         await expectLater(
-          createService().sendVideo(
-            recipientPubkey: _recipientPubkey,
+          createService().uploadVideo(
             videoFile: video,
             mimeType: 'video/mp4',
             cancellation: attempt,
@@ -578,8 +570,7 @@ void main() {
         });
         final attempt = DmVideoSendCancellation();
         addTearDown(attempt.finish);
-        final result = createService().sendVideo(
-          recipientPubkey: _recipientPubkey,
+        final result = createService().uploadVideo(
           videoFile: video,
           mimeType: 'video/mp4',
           cancellation: attempt,
@@ -614,7 +605,7 @@ void main() {
       },
     );
 
-    test('upload failure skips sendFileMessage and still cleans up', () async {
+    test('upload failure throws, publishes nothing and cleans up', () async {
       final videoFile = File('${tempDir.path}/clip.mp4')
         ..writeAsBytesSync(const [9, 9, 9]);
       final ciphertext = ciphertextFile();
@@ -631,15 +622,15 @@ void main() {
         ),
       );
 
-      final service = createService();
-      final result = await service.sendVideo(
-        recipientPubkey: _recipientPubkey,
-        videoFile: videoFile,
-        mimeType: 'video/mp4',
+      await expectLater(
+        createService().uploadVideo(
+          videoFile: videoFile,
+          mimeType: 'video/mp4',
+        ),
+        throwsA(
+          isA<DmVideoUploadFailed>().having((e) => e.reason, 'reason', 'boom'),
+        ),
       );
-
-      expect(result.success, isFalse);
-      expect(result.error, 'boom');
       verifyNever(
         () => dmRepository.sendFileMessage(
           recipientPubkey: any(named: 'recipientPubkey'),
@@ -652,7 +643,7 @@ void main() {
     });
 
     test(
-      'upload reporting success without a videoId fails before sendFileMessage',
+      'upload reporting success without a videoId fails and publishes nothing',
       () async {
         final videoFile = File('${tempDir.path}/clip.mp4')
           ..writeAsBytesSync(const [9, 9, 9]);
@@ -666,15 +657,19 @@ void main() {
           () => blossom.uploadEncryptedFile(ciphertextFile: ciphertext),
         ).thenAnswer((_) async => const BlossomUploadResult(success: true));
 
-        final service = createService();
-        final result = await service.sendVideo(
-          recipientPubkey: _recipientPubkey,
-          videoFile: videoFile,
-          mimeType: 'video/mp4',
+        await expectLater(
+          createService().uploadVideo(
+            videoFile: videoFile,
+            mimeType: 'video/mp4',
+          ),
+          throwsA(
+            isA<DmVideoUploadFailed>().having(
+              (e) => e.reason,
+              'reason',
+              'Encrypted upload failed',
+            ),
+          ),
         );
-
-        expect(result.success, isFalse);
-        expect(result.error, 'Encrypted upload failed');
         verifyNever(
           () => dmRepository.sendFileMessage(
             recipientPubkey: any(named: 'recipientPubkey'),
@@ -721,11 +716,9 @@ void main() {
           );
         });
 
-        final service = createService();
-        final result = await service.sendVideo(
-          recipientPubkey: _recipientPubkey,
+        final result = await uploadThenPublish(
+          createService(),
           videoFile: videoFile,
-          mimeType: 'video/mp4',
         );
 
         expect(result.success, isTrue);
@@ -777,10 +770,9 @@ void main() {
       );
 
       final fractions = <double>[];
-      final result = await createService().sendVideo(
-        recipientPubkey: _recipientPubkey,
+      final result = await uploadThenPublish(
+        createService(),
         videoFile: videoFile,
-        mimeType: 'video/mp4',
         onUploadProgress: fractions.add,
       );
 
@@ -788,7 +780,7 @@ void main() {
       expect(fractions, equals([0.1, 0.55, 1.0]));
     });
 
-    test('reports encrypt, upload, then send phases in order', () async {
+    test('reports encrypt and upload, then send phases in order', () async {
       final videoFile = File('${tempDir.path}/clip.mp4')
         ..writeAsBytesSync(const [9, 9, 9]);
       final ciphertext = ciphertextFile();
@@ -821,10 +813,16 @@ void main() {
 
       final phases = <DmVideoSendPhase>[];
       final service = createService();
-      final result = await service.sendVideo(
-        recipientPubkey: _recipientPubkey,
+      final uploaded = await service.uploadVideo(
         videoFile: videoFile,
         mimeType: 'video/mp4',
+        onPhase: phases.add,
+      );
+
+      expect(phases, [DmVideoSendPhase.encrypting, DmVideoSendPhase.uploading]);
+      final result = await service.publishVideo(
+        recipientPubkey: _recipientPubkey,
+        uploaded: uploaded,
         onPhase: phases.add,
       );
 
@@ -834,11 +832,12 @@ void main() {
 
     group('uploadVideo', () {
       test(
-        'uploads the ciphertext and returns its metadata without sending',
+        'returns the file URL and exact metadata without publishing',
         () async {
-          final videoFile = File('${tempDir.path}/part.mp4')
+          final videoFile = File('${tempDir.path}/clip.mp4')
             ..writeAsBytesSync(const [9, 9, 9]);
           final ciphertext = ciphertextFile();
+          final ciphertextSize = ciphertext.lengthSync();
           when(
             () => encryption.encryptFile(videoFile),
           ).thenAnswer((_) async => encryptedVideo(ciphertext));
@@ -852,106 +851,127 @@ void main() {
             ),
           );
 
-          final result = await createService(
-            readPreview: (_) async => (blurhash: 'LKO2', dimensions: '9x16'),
-          ).uploadVideo(videoFile: videoFile, mimeType: 'video/mp4');
+          final uploaded = await createService().uploadVideo(
+            videoFile: videoFile,
+            mimeType: 'video/mp4',
+            blurhash: 'LEHV6nWB2yk8',
+            dimensions: '1080x1920',
+          );
 
-          expect(result?.url, _fileUrl);
+          expect(uploaded.fileUrl, _fileUrl);
           expect(
-            result?.metadata,
-            const DmFileMetadata(
+            uploaded.fileMetadata,
+            DmFileMetadata(
               fileType: 'video/mp4',
               encryptionAlgorithm: 'aes-gcm',
               decryptionKey: _key,
               decryptionNonce: _nonce,
               fileHash: _ciphertextHash,
               originalFileHash: _plaintextHash,
-              fileSize: 4,
-              dimensions: '9x16',
-              blurhash: 'LKO2',
+              fileSize: ciphertextSize,
+              dimensions: '1080x1920',
+              blurhash: 'LEHV6nWB2yk8',
             ),
           );
-          expect(ciphertext.deleted.isCompleted, isTrue);
-          verifyNever(
-            () => dmRepository.sendFileMessage(
-              recipientPubkey: any(named: 'recipientPubkey'),
-              fileUrl: any(named: 'fileUrl'),
-              fileMetadata: any(named: 'fileMetadata'),
-            ),
-          );
-        },
-      );
-
-      test('reports how far the ciphertext upload got', () async {
-        final videoFile = File('${tempDir.path}/part.mp4')
-          ..writeAsBytesSync(const [9, 9, 9]);
-        final ciphertext = ciphertextFile();
-        when(
-          () => encryption.encryptFile(videoFile),
-        ).thenAnswer((_) async => encryptedVideo(ciphertext));
-        when(
-          () => blossom.uploadEncryptedFile(
-            ciphertextFile: ciphertext,
-            onProgress: any(named: 'onProgress'),
-          ),
-        ).thenAnswer((invocation) async {
-          (invocation.namedArguments[#onProgress] as void Function(double))(
-            0.5,
-          );
-          return const BlossomUploadResult(
-            success: true,
-            videoId: _ciphertextHash,
-            url: _fileUrl,
-          );
-        });
-        final progress = <double>[];
-
-        await createService().uploadVideo(
-          videoFile: videoFile,
-          mimeType: 'video/mp4',
-          onUploadProgress: progress.add,
-        );
-
-        expect(progress, [0.5]);
-      });
-
-      test(
-        'returns null and deletes the ciphertext when the upload fails',
-        () async {
-          final videoFile = File('${tempDir.path}/part.mp4')
-            ..writeAsBytesSync(const [9, 9, 9]);
-          final ciphertext = ciphertextFile();
-          when(
-            () => encryption.encryptFile(videoFile),
-          ).thenAnswer((_) async => encryptedVideo(ciphertext));
-          when(
-            () => blossom.uploadEncryptedFile(ciphertextFile: ciphertext),
-          ).thenAnswer(
-            (_) async => const BlossomUploadResult(success: false),
-          );
-
-          final result = await createService().uploadVideo(
-            videoFile: videoFile,
-            mimeType: 'video/mp4',
-          );
-
-          expect(result, isNull);
-          expect(ciphertext.deleted.isCompleted, isTrue);
+          verifyZeroInteractions(dmRepository);
+          await ciphertext.deleted.future;
         },
       );
     });
 
-    group('sendUploadedVideo', () {
+    group('publishVideo', () {
+      const uploaded = DmVideoUpload(
+        fileUrl: _fileUrl,
+        fileMetadata: DmFileMetadata(
+          fileType: 'video/mp4',
+          encryptionAlgorithm: 'aes-gcm',
+          decryptionKey: _key,
+          decryptionNonce: _nonce,
+          fileHash: _ciphertextHash,
+        ),
+      );
+
+      void stubPublish(NIP17SendResult result) => when(
+        () => dmRepository.sendFileMessage(
+          recipientPubkey: any(named: 'recipientPubkey'),
+          fileUrl: any(named: 'fileUrl'),
+          fileMetadata: any(named: 'fileMetadata'),
+          extraTags: any(named: 'extraTags'),
+        ),
+      ).thenAnswer((_) async => result);
+
       test(
-        'sends the uploaded video as a file message, nothing more',
+        'publishes a finished upload again without encrypting or uploading',
         () async {
-          const metadata = DmFileMetadata(
-            fileType: 'video/mp4',
-            encryptionAlgorithm: 'aes-gcm',
-            decryptionKey: _key,
-            decryptionNonce: _nonce,
-            fileHash: _ciphertextHash,
+          stubPublish(const NIP17SendResult.failure('inbox unreadable'));
+          final service = createService();
+
+          final first = await service.publishVideo(
+            recipientPubkey: _recipientPubkey,
+            uploaded: uploaded,
           );
+          final second = await service.publishVideo(
+            recipientPubkey: _recipientPubkey,
+            uploaded: uploaded,
+            extraTags: const [
+              ['divine-clip', 'square'],
+            ],
+          );
+
+          expect(first.success, isFalse);
+          expect(second.success, isFalse);
+          verify(
+            () => dmRepository.sendFileMessage(
+              recipientPubkey: _recipientPubkey,
+              fileUrl: _fileUrl,
+              fileMetadata: uploaded.fileMetadata,
+            ),
+          ).called(1);
+          verify(
+            () => dmRepository.sendFileMessage(
+              recipientPubkey: _recipientPubkey,
+              fileUrl: _fileUrl,
+              fileMetadata: uploaded.fileMetadata,
+              extraTags: const [
+                ['divine-clip', 'square'],
+              ],
+            ),
+          ).called(1);
+          verifyZeroInteractions(encryption);
+          verifyZeroInteractions(blossom);
+        },
+      );
+
+      test('publishes nothing for an attempt that was cancelled', () async {
+        stubPublish(
+          NIP17SendResult.success(
+            rumorEventId: 'rumor-1',
+            messageEventId: 'wrap-1',
+            recipientPubkey: _recipientPubkey,
+          ),
+        );
+        final attempt = DmVideoSendCancellation()..cancel('expired');
+        addTearDown(attempt.finish);
+        final phases = <DmVideoSendPhase>[];
+
+        await expectLater(
+          createService().publishVideo(
+            recipientPubkey: _recipientPubkey,
+            uploaded: uploaded,
+            onPhase: phases.add,
+            cancellation: attempt,
+          ),
+          throwsA(isA<DmVideoSendCancelled>()),
+        );
+
+        expect(phases, isEmpty);
+        verifyZeroInteractions(dmRepository);
+      });
+
+      test(
+        'starts publication, so a later cancel cannot interrupt it',
+        () async {
+          final published = Completer<NIP17SendResult>();
           when(
             () => dmRepository.sendFileMessage(
               recipientPubkey: any(named: 'recipientPubkey'),
@@ -959,36 +979,47 @@ void main() {
               fileMetadata: any(named: 'fileMetadata'),
               extraTags: any(named: 'extraTags'),
             ),
-          ).thenAnswer(
-            (_) async => NIP17SendResult.success(
+          ).thenAnswer((_) => published.future);
+          final attempt = DmVideoSendCancellation();
+          addTearDown(attempt.finish);
+
+          final result = createService().publishVideo(
+            recipientPubkey: _recipientPubkey,
+            uploaded: uploaded,
+            cancellation: attempt,
+          );
+          attempt.cancel('session ended');
+
+          expect(attempt.uploadCancelToken.isCancelled, isFalse);
+          published.complete(
+            NIP17SendResult.success(
               rumorEventId: 'rumor-1',
               messageEventId: 'wrap-1',
               recipientPubkey: _recipientPubkey,
             ),
           );
-
-          final result = await createService().sendUploadedVideo(
-            recipientPubkey: _recipientPubkey,
-            url: _fileUrl,
-            metadata: metadata,
-            extraTags: const [
-              ['collab-room', 'room', 'part', _recipientPubkey],
-            ],
-          );
-
-          expect(result.success, isTrue);
-          verify(
-            () => dmRepository.sendFileMessage(
-              recipientPubkey: _recipientPubkey,
-              fileUrl: _fileUrl,
-              fileMetadata: metadata,
-              extraTags: const [
-                ['collab-room', 'room', 'part', _recipientPubkey],
-              ],
-            ),
-          ).called(1);
+          expect((await result).success, isTrue);
         },
       );
+    });
+
+    group(DmVideoUpload, () {
+      test('leaves the decryption key and nonce out of toString', () {
+        const uploaded = DmVideoUpload(
+          fileUrl: _fileUrl,
+          fileMetadata: DmFileMetadata(
+            fileType: 'video/mp4',
+            encryptionAlgorithm: 'aes-gcm',
+            decryptionKey: _key,
+            decryptionNonce: _nonce,
+            fileHash: _ciphertextHash,
+          ),
+        );
+
+        expect(uploaded.toString(), contains(_fileUrl));
+        expect(uploaded.toString(), isNot(contains(_key)));
+        expect(uploaded.toString(), isNot(contains(_nonce)));
+      });
     });
   });
 }
