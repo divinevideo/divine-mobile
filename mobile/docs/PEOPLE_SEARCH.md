@@ -30,6 +30,9 @@ UserSearchBloc                              mobile/lib/blocs/user_search/
     match (#8578); the username owner leads
   • the loader drops accounts hidden from feeds (blocked or muted by you,
     or blocking or muting you); the viewer stays listed on the Search page
+  • clearResultsOnNewQuery (set only by the Search page): a new term clears
+    the previous term's rows and resultCount on its first loading emit, so
+    People shows the skeleton; the pickers leave it off and keep the rows
         ↓
 ProfileRepository.searchUsersProgressive    mobile/packages/profile_repository/
   Start together on subscription:
@@ -283,8 +286,10 @@ empty" (show error-with-retry).
 
 Branch order in `_PeopleContent.build`:
 
-1. `status == initial || (status == loading && results.isEmpty)` →
-   `_PeopleSkeletonLoader`
+1. `(status == initial || status == loading) && results.isEmpty` →
+   `_PeopleSkeletonRows` (three demo `SearchUserTile`s) inside
+   `_PeopleSkeletonizer`, which fades into the list when results arrive
+   (90 ms; no fade under reduced motion)
 2. `status == failure || isDegradedEmpty` →
    `SearchSectionErrorState` (retry button)
 3. `results.isEmpty && showAll` → `SearchSectionEmptyState`
