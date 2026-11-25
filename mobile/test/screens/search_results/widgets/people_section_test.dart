@@ -392,7 +392,10 @@ void main() {
             ),
             findsOneWidget,
           );
-          expect(find.bySemanticsLabel('Demo Display Name'), findsNothing);
+          expect(
+            find.bySemanticsLabel(RegExp('Demo Display Name')),
+            findsNothing,
+          );
 
           semantics.dispose();
         },
