@@ -15528,7 +15528,7 @@ void main() {
 
       test(
         'keeps For You paginated after first-page timeout and recovers '
-        'recommendations on next page',
+        'recommendations with its own seed after another feed loads',
         () async {
           final popular = _createVideoStats(
             id: 'popular-after-timeout',
@@ -15542,6 +15542,12 @@ void main() {
             pubkey: 'recommended-pubkey',
             dTag: 'recommended-dtag',
             videoUrl: 'https://example.com/recovered.mp4',
+          );
+          final discovery = _createVideoStats(
+            id: 'separate-discovery-video',
+            pubkey: 'discovery-pubkey',
+            dTag: 'discovery-dtag',
+            videoUrl: 'https://example.com/discovery.mp4',
           );
 
           var recommendationCalls = 0;
@@ -15595,6 +15601,15 @@ void main() {
           expect(fallbackPage.videos.single.id, 'popular-after-timeout');
           expect(fallbackPage.hasMore, isTrue);
           expect(fallbackPage.paginationCursor, isNotNull);
+
+          when(
+            () => mockFunnelcakeClient.getWatchingVideos(limit: 5),
+          ).thenAnswer((_) async => [discovery]);
+          final discoveryPage = await repo.getVideoDiscoveryPage(
+            userPubkey: null,
+            limit: 5,
+          );
+          expect(discoveryPage.videos.single.id, 'separate-discovery-video');
 
           final recoveredPage = await repo.getRecommendedVideos(
             userPubkey: 'user-pubkey',
@@ -15731,7 +15746,10 @@ void main() {
             cursor: 'recommended-fallback:1700000500',
           );
           expect(page.videos.single.id, 'popular-newer-than-cursor');
-          expect(page.paginationCursor, 'recommended-fallback:1700000499');
+          expect(
+            page.paginationCursor,
+            'recommended-fallback:1700000499:popular-newer-than-cursor',
+          );
           expect(page.hasMore, isTrue);
         },
       );
@@ -15914,7 +15932,10 @@ void main() {
           );
           expect(page2.videos.single.id, 'popular-page-1');
           expect(page2.hasMore, isTrue);
-          expect(page2.paginationCursor, 'recommended-fallback:1700000499');
+          expect(
+            page2.paginationCursor,
+            'recommended-fallback:1700000499:popular-page-1',
+          );
 
           final page3 = await repo.getRecommendedVideos(
             userPubkey: 'user-pubkey',
@@ -15923,7 +15944,10 @@ void main() {
           );
           expect(page3.videos.single.id, 'popular-page-2');
           expect(page3.hasMore, isTrue);
-          expect(page3.paginationCursor, 'recommended-fallback:1700000299');
+          expect(
+            page3.paginationCursor,
+            'recommended-fallback:1700000299:popular-page-2',
+          );
 
           // Each continuation still retries recommendations first, so a
           // recovered server is picked up on the next page.

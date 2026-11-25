@@ -190,14 +190,24 @@ int? _decodeClassicsOffsetCursor(String? cursor) {
 String _encodeRecommendedFallbackCursor(
   int? until, {
   bool recommendationsExhausted = false,
+  String? seedVideoId,
 }) {
   final prefix = recommendationsExhausted
       ? _recommendedPopularCursorPrefix
       : _recommendedFallbackCursorPrefix;
-  return '$prefix${until ?? ''}';
+  final timestamp = until?.toString() ?? '';
+  if (seedVideoId == null || recommendationsExhausted) {
+    return '$prefix$timestamp';
+  }
+  return '$prefix$timestamp:$seedVideoId';
 }
 
-({bool isFallback, bool recommendationsExhausted, int? until})
+({
+  bool isFallback,
+  bool recommendationsExhausted,
+  int? until,
+  String? seedVideoId,
+})
 _decodeRecommendedFallbackCursor(String? cursor) {
   final recommendationsExhausted =
       cursor?.startsWith(_recommendedPopularCursorPrefix) ?? false;
@@ -205,12 +215,19 @@ _decodeRecommendedFallbackCursor(String? cursor) {
       ? _recommendedPopularCursorPrefix
       : _recommendedFallbackCursorPrefix;
   if (cursor == null || !cursor.startsWith(prefix)) {
-    return (isFallback: false, recommendationsExhausted: false, until: null);
+    return (
+      isFallback: false,
+      recommendationsExhausted: false,
+      until: null,
+      seedVideoId: null,
+    );
   }
+  final parts = cursor.substring(prefix.length).split(':');
   return (
     isFallback: true,
     recommendationsExhausted: recommendationsExhausted,
-    until: int.tryParse(cursor.substring(prefix.length)),
+    until: int.tryParse(parts.first),
+    seedVideoId: parts.length == 2 ? parts.last : null,
   );
 }
 
@@ -316,7 +333,6 @@ class VideosRepository {
   final Random _random;
 
   String _recommendationSessionSeed = generateRecommendationSessionSeed();
-  String? _lastRecommendedSeedVideoId;
   String _classicBrowsingSeed = generateRecommendationSessionSeed();
   String? _classicBrowsingViewer;
   Object? _classicBrowsingContext;
@@ -4103,6 +4119,9 @@ class VideosRepository {
 
     final decodedFallback = _decodeRecommendedFallbackCursor(cursor);
     final isFallbackContinuation = decodedFallback.isFallback;
+    // The home and discovery feeds share this repository. Keep retry seeds
+    // with the continuation that produced them.
+    final effectiveSeedVideoId = seedVideoId ?? decodedFallback.seedVideoId;
     final effectiveUntil = isFallbackContinuation
         ? decodedFallback.until
         : until;
@@ -4126,6 +4145,7 @@ class VideosRepository {
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
         recommendationsExhausted: decodedFallback.recommendationsExhausted,
+        seedVideoId: effectiveSeedVideoId,
       );
     }
 
@@ -4137,9 +4157,6 @@ class VideosRepository {
     final recommendationCursor = isFallbackContinuation
         ? null
         : (cursor ?? until?.toString());
-    final effectiveSeedVideoId =
-        seedVideoId ??
-        (isFallbackContinuation ? _lastRecommendedSeedVideoId : null);
     late final RecommendationsResponse response;
     try {
       response = await _fetchRecommendationsPage(
@@ -4169,6 +4186,7 @@ class VideosRepository {
         revalidate: revalidate,
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
+        seedVideoId: effectiveSeedVideoId,
       );
     }
 
@@ -4192,6 +4210,7 @@ class VideosRepository {
         revalidate: revalidate,
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
+        seedVideoId: effectiveSeedVideoId,
       );
     }
 
@@ -4208,10 +4227,10 @@ class VideosRepository {
         revalidate: revalidate,
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
+        seedVideoId: effectiveSeedVideoId,
       );
     }
 
-    _lastRecommendedSeedVideoId = result.videos.last.id;
     if (isFirstPage) {
       _recommendationSessionSeed = requestSeed;
     }
@@ -4232,6 +4251,7 @@ class VideosRepository {
             paginationCursor: _encodeRecommendedFallbackCursor(
               effectiveUntil,
               recommendationsExhausted: recommendationCursor != null,
+              seedVideoId: result.videos.last.id,
             ),
             hasMore: true,
             recommendationPageCount: result.recommendationPageCount,
@@ -4258,6 +4278,7 @@ class VideosRepository {
     required List<String> preferredLanguages,
     required String? viewerCountry,
     bool recommendationsExhausted = false,
+    String? seedVideoId,
   }) async {
     Log.warning(
       'For You falling back to popular videos: $reason',
@@ -4312,10 +4333,6 @@ class VideosRepository {
       pageUntil = nextUntil;
     }
 
-    if (collected.isNotEmpty) {
-      _lastRecommendedSeedVideoId = collected.last.id;
-    }
-
     return HomeFeedResult(
       videos: collected,
       paginationCursor: nextUntil == null
@@ -4323,6 +4340,7 @@ class VideosRepository {
           : _encodeRecommendedFallbackCursor(
               nextUntil,
               recommendationsExhausted: recommendationsExhausted,
+              seedVideoId: collected.lastOrNull?.id ?? seedVideoId,
             ),
       hasMore: nextUntil != null,
     );
