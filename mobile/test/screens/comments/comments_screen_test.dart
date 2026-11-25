@@ -867,6 +867,39 @@ void main() {
         expect(controller.selection, const TextSelection.collapsed(offset: 7));
       });
 
+      testWidgets('rewriting a hidden draft leaves the field alone', (
+        tester,
+      ) async {
+        final states = StreamController<CommentComposerState>();
+        addTearDown(states.close);
+        whenListen(
+          mockComposerBloc,
+          states.stream,
+          initialState: const CommentComposerState(),
+        );
+        await tester.pumpWidget(buildTestWidget());
+        final field = find.byType(TextField);
+        await tester.enterText(field, 'Nice clip');
+        final controller = tester.widget<TextField>(field).controller!;
+        expect(controller.text, 'Nice clip');
+
+        // The bloc's copy lags the field by a keystroke on purpose.
+        states.add(const CommentComposerState(mainInputText: 'Nice cl'));
+        await tester.pump();
+        // A failed reply then rolls back its hidden draft.
+        states.add(
+          const CommentComposerState(
+            mainInputText: 'Nice cl',
+            replyInputText: 'old reply',
+            draftRevision: 1,
+          ),
+        );
+        await tester.pump();
+
+        expect(controller.text, 'Nice clip');
+        expect(controller.selection, const TextSelection.collapsed(offset: 9));
+      });
+
       testWidgets('expands sheet to max when the composer gains focus', (
         tester,
       ) async {
