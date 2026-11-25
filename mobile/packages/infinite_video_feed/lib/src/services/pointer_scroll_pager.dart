@@ -22,6 +22,19 @@ class PointerScrollPager {
   Duration? _lastEventTime;
   bool _steppedThisGesture = false;
 
+  /// Records a scroll the feed does not claim, without counting its delta.
+  ///
+  /// A gesture keeps its place while the feed is at a boundary, even if more
+  /// videos arrive before the gesture ends.
+  void observe(Duration timeStamp) {
+    final lastEventTime = _lastEventTime;
+    _lastEventTime = timeStamp;
+    if (lastEventTime == null || timeStamp - lastEventTime >= gestureGap) {
+      _accumulated = 0;
+      _steppedThisGesture = false;
+    }
+  }
+
   /// Adds one scroll event's [delta] along the page axis.
   ///
   /// Returns `1` to move to the next page, `-1` to move to the previous one,
@@ -38,12 +51,7 @@ class PointerScrollPager {
     required double threshold,
     required bool canStep,
   }) {
-    final lastEventTime = _lastEventTime;
-    _lastEventTime = timeStamp;
-    if (lastEventTime == null || timeStamp - lastEventTime >= gestureGap) {
-      _accumulated = 0;
-      _steppedThisGesture = false;
-    }
+    observe(timeStamp);
     if (_steppedThisGesture || !canStep || delta == 0) return 0;
 
     // A gesture that turns around starts counting again from its new

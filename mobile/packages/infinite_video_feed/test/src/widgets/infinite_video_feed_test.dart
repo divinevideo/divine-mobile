@@ -4765,10 +4765,12 @@ void main() {
       Future<void> pumpFeedInsideOtherScrollHandler(
         WidgetTester tester, {
         int initialIndex = 0,
+        GlobalKey<InfiniteVideoFeedState>? feedKey,
+        int videoCount = 3,
         ScrollPhysics? scrollPhysics,
         VoidCallback? onForwardBoundary,
       }) async {
-        key = GlobalKey<InfiniteVideoFeedState>();
+        key = feedKey ?? GlobalKey<InfiniteVideoFeedState>();
         otherHandlerGotScroll = false;
         await tester.pumpWidget(
           Listener(
@@ -4780,7 +4782,7 @@ void main() {
             child: _wrapFeed(
               InfiniteVideoFeed(
                 key: key,
-                videos: List.generate(3, (i) => _makeVideo('v$i')),
+                videos: List.generate(videoCount, (i) => _makeVideo('v$i')),
                 cache: cache,
                 prefetchCount: 0,
                 initialIndex: initialIndex,
@@ -4959,6 +4961,41 @@ void main() {
         expect(requests, equals(1));
         expect(otherHandlerGotScroll, isFalse);
         expect(key.currentState!.currentIndex, equals(2));
+      });
+
+      testWidgets('momentum that reached the end cannot page again when '
+          'videos arrive during the same gesture', (tester) async {
+        await pumpFeedInsideOtherScrollHandler(tester, initialIndex: 1);
+
+        Future<void> scrollTrackpad(int atMs) => scroll(
+          tester,
+          const Offset(0, 40),
+          atMs: atMs,
+          kind: PointerDeviceKind.trackpad,
+        );
+
+        // The burst reaches the last loaded video, then continues while the
+        // feed has no forward boundary handler because it is loading.
+        for (var atMs = 0; atMs <= 800; atMs += 100) {
+          await scrollTrackpad(atMs);
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        expect(key.currentState!.currentIndex, 2);
+        expect(otherHandlerGotScroll, isTrue);
+
+        await pumpFeedInsideOtherScrollHandler(
+          tester,
+          initialIndex: 1,
+          feedKey: key,
+          videoCount: 4,
+        );
+        await scrollTrackpad(900);
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, 2);
+
+        await scrollTrackpad(1100);
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, 3);
       });
 
       testWidgets('a scroll the feed takes is not passed on', (tester) async {

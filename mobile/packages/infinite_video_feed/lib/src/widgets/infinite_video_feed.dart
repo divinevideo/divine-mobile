@@ -635,11 +635,15 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final delta = _pageAxisDelta(event);
     if (delta == 0) return;
     final position = _pageController.position;
-    if (!position.physics.shouldAcceptUserOffset(position)) return;
     final atEnd = delta < 0
         ? position.pixels <= position.minScrollExtent
         : position.pixels >= position.maxScrollExtent;
-    if (atEnd && (delta < 0 || widget.onForwardBoundary == null)) return;
+    if (!position.physics.shouldAcceptUserOffset(position) ||
+        (atEnd && (delta < 0 || widget.onForwardBoundary == null))) {
+      // Keep tracking momentum, but let the enclosing scrollable take it.
+      _pointerScrollPager.observe(event.timeStamp);
+      return;
+    }
     GestureBinding.instance.pointerSignalResolver.register(
       event,
       _onPointerScroll,
