@@ -3,9 +3,11 @@ package co.openvine.app
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.StatFs
@@ -94,6 +96,14 @@ class MainActivity : FlutterFragmentActivity() {
         private const val DEVICE_MEMORY_CHANNEL = "divine/device_memory"
         private const val DEVICE_STORAGE_CHANNEL = "divine/device_storage"
         private const val LARGE_SCREEN_LAYOUT_CHANNEL = "divine/large_screen_layout"
+
+        // AdaptiveBreakpoints.large in lib/ui/adaptive_layout.dart.
+        private const val LARGE_SCREEN_MIN_SMALLEST_WIDTH_DP = 600
+
+        // Where shared_preferences keeps FeatureFlagService's override of
+        // FeatureFlag.largeScreenLayout ('ff_largeScreenLayout').
+        private const val FLUTTER_PREFERENCES = "FlutterSharedPreferences"
+        private const val LARGE_SCREEN_LAYOUT_PREFERENCE = "flutter.ff_largeScreenLayout"
     }
 
     private var navigationChannel: MethodChannel? = null
@@ -112,6 +122,30 @@ class MainActivity : FlutterFragmentActivity() {
 
     // Nostr bridge per-frame origin attestation plugin (#4105)
     private var nostrBridgeAttestationPlugin: NostrBridgeAttestationPlugin? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        allowRotationForLargeScreenLayout()
+        super.onCreate(savedInstanceState)
+    }
+
+    /**
+     * Lets a large screen rotate from the first frame while the large-screen
+     * layouts are on, as they are by default (#11472).
+     *
+     * The manifest keeps the activity in portrait, which phones need. Left to
+     * Dart, a tablet held in landscape started in portrait and turned once
+     * AdaptiveLayoutScope allowed rotation. Only someone who turned the
+     * layouts off keeps the manifest's portrait here; a build that turns them
+     * off by default turns to portrait once Dart applies it.
+     */
+    private fun allowRotationForLargeScreenLayout() {
+        if (resources.configuration.smallestScreenWidthDp < LARGE_SCREEN_MIN_SMALLEST_WIDTH_DP) {
+            return
+        }
+        val preferences = getSharedPreferences(FLUTTER_PREFERENCES, Context.MODE_PRIVATE)
+        if (!preferences.getBoolean(LARGE_SCREEN_LAYOUT_PREFERENCE, true)) return
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_USER
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

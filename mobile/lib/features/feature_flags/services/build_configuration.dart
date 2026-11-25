@@ -89,7 +89,15 @@ class BuildConfiguration {
         return consentDeliveryVerified &&
             const bool.fromEnvironment('FF_MINOR_CONSENT_IN_APP_RECORDING');
       case FeatureFlag.largeScreenLayout:
-        return const bool.fromEnvironment('FF_LARGE_SCREEN_LAYOUT');
+        // On by default (#11472): in a window at least 600 pt across the phone
+        // layout only stretches, and phones lay out the same either way. The
+        // flag stays as the way to turn the layouts off. The iOS app delegate
+        // and the Android activity assume this default until Dart reports the
+        // resolved value, so a build that changes it may turn once at launch.
+        return const bool.fromEnvironment(
+          'FF_LARGE_SCREEN_LAYOUT',
+          defaultValue: true,
+        );
     }
   }
 

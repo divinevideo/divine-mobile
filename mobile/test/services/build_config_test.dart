@@ -134,6 +134,19 @@ void main() {
       );
     });
 
+    test(
+      'largeScreenLayout is on by default and maps to FF_LARGE_SCREEN_LAYOUT',
+      () {
+        const config = BuildConfiguration();
+
+        expect(config.getDefault(FeatureFlag.largeScreenLayout), isTrue);
+        expect(
+          config.getEnvironmentKey(FeatureFlag.largeScreenLayout),
+          equals('FF_LARGE_SCREEN_LAYOUT'),
+        );
+      },
+    );
+
     test('concordChat derives its default from the configured community', () {
       const config = BuildConfiguration();
 

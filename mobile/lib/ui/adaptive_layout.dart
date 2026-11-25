@@ -153,9 +153,14 @@ class _AdaptiveLayoutScopeState extends ConsumerState<AdaptiveLayoutScope> {
   bool _rotationWanted = false;
   bool? _rotationApplied;
 
+  /// Whether the Android activity may already let this window rotate: it
+  /// allows rotation on a large screen from launch unless the layouts were
+  /// turned off (`MainActivity.kt`).
+  bool _activityMayRotate = false;
+
   /// The flag as last reported to the iOS app delegate, which starts out
-  /// believing it off.
-  bool _reportedToSystem = false;
+  /// believing it on, the build default.
+  bool _reportedToSystem = true;
 
   /// Tells the iOS app delegate whether the flag is on as the app resolves
   /// it, override or build default: its orientation mask allows rotation on
@@ -187,11 +192,16 @@ class _AdaptiveLayoutScopeState extends ConsumerState<AdaptiveLayoutScope> {
     if (!_controlsOrientation) return;
     final allowRotation = _rotationWanted && _portraitLocks == 0;
     if (allowRotation == _rotationApplied) return;
-    // Portrait is what startup already applied: nothing to ask for until
-    // rotation was allowed once, so a camera opened with the flag off (or on
-    // an Android phone) makes no orientation call, exactly as before the
-    // flag.
-    if (_rotationApplied == null && !allowRotation) return;
+    // Portrait is what the platform already holds (the iPhone's supported
+    // orientations, the Android activity's screenOrientation, the app
+    // delegate's mask with the flag off): nothing to ask for until rotation
+    // was allowed once, so a camera opened with the flag off (or on an
+    // Android phone) makes no orientation call, exactly as before the flag.
+    // The exception is a large Android window, which the activity may have
+    // let rotate at launch: with the layouts off there, ask for portrait.
+    if (_rotationApplied == null && !allowRotation && !_activityMayRotate) {
+      return;
+    }
     _rotationApplied = allowRotation;
     runDetached(
       SystemChrome.setPreferredOrientations(
@@ -215,13 +225,13 @@ class _AdaptiveLayoutScopeState extends ConsumerState<AdaptiveLayoutScope> {
     // Before any orientation request, so the delegate's mask already allows
     // what Dart asks for.
     _reportToSystem(flagEnabled);
+    final largeWindow =
+        MediaQuery.sizeOf(context).shortestSide >= AdaptiveBreakpoints.large;
     // The display fallback only changes layout. The system can still honor
     // portrait lock when its aspect-ratio settings override the default.
     _rotationWanted =
-        flagEnabled &&
-        (_systemKeepsSmallScreensPortrait ||
-            MediaQuery.sizeOf(context).shortestSide >=
-                AdaptiveBreakpoints.large);
+        flagEnabled && (_systemKeepsSmallScreensPortrait || largeWindow);
+    _activityMayRotate = _activityRotatesLargeScreens && largeWindow;
     _applyOrientations();
     return _AdaptiveLayoutInherited(
       enabled: enabled,
@@ -232,7 +242,7 @@ class _AdaptiveLayoutScopeState extends ConsumerState<AdaptiveLayoutScope> {
   }
 }
 
-/// The orientation startup locks the app to (see `app_bootstrap.dart`).
+/// The orientation the platform keeps phones in, and the camera asks for.
 const List<DeviceOrientation> _portraitOnly = [DeviceOrientation.portraitUp];
 
 /// Whether this context's display is at least [AdaptiveBreakpoints.large]
@@ -300,8 +310,13 @@ Future<bool> resolveIgnoresOrientationLockOnLargeScreens() async {
 bool get _systemKeepsSmallScreensPortrait =>
     !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
-/// Whether this platform takes orientation preferences at all. Mirrors the
-/// startup lock, which skips the web and desktop.
+/// Whether the Android activity lets large screens rotate from launch while
+/// the layouts are on (`MainActivity.kt`), before Dart has resolved the flag.
+bool get _activityRotatesLargeScreens =>
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+/// Whether this platform takes orientation preferences at all: the web and
+/// desktop do not.
 bool get _controlsOrientation =>
     !kIsWeb &&
     (defaultTargetPlatform == TargetPlatform.iOS ||

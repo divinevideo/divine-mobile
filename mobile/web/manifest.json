@@ -7,7 +7,7 @@
     "background_color": "#000000",
     "theme_color": "#27C58B",
     "description": "Watch and share 6-second looping videos on the decentralized Nostr network.",
-    "orientation": "portrait-primary",
+    "orientation": "any",
     "prefer_related_applications": false,
     "lang": "en-US",
     "dir": "ltr",

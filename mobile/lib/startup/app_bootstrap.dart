@@ -10,7 +10,6 @@ import 'package:divine_video_player/divine_video_player.dart'
 import 'package:dm_repository/dm_repository.dart' show DmSyncState;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -218,15 +217,14 @@ Future<void> startOpenVineApp({
   // so the UI/native concern stays in app startup instead of AuthService.
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  // Lock app to portrait mode only (portrait up and portrait down)
-  // Skip on desktop platforms where orientation lock doesn't apply
-  if (!kIsWeb &&
-      defaultTargetPlatform != TargetPlatform.macOS &&
-      defaultTargetPlatform != TargetPlatform.windows &&
-      defaultTargetPlatform != TargetPlatform.linux) {
-    // CRITICAL: Lock to portraitUp ONLY for proper camera orientation
-    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  }
+  // No orientation request here: the platforms keep phones in portrait
+  // (UISupportedInterfaceOrientations on the iPhone, the activity's
+  // screenOrientation on Android), and on a large screen the native side
+  // already allows what the large-screen layouts want before the first frame
+  // (AppDelegate.swift, MainActivity.kt). A portrait request here made a
+  // tablet held in landscape turn to portrait and back at every launch
+  // (#11472). AdaptiveLayoutScope narrows it from there, and the camera asks
+  // for portrait through PortraitOrientationLock.
 
   // Initialize startup performance monitoring FIRST
   await startupPerformance.initialize();

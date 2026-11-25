@@ -381,13 +381,39 @@ void main() {
     });
 
     group('orientation', () {
-      testWidgets('leaves startup portrait lock alone with the flag off', (
-        tester,
-      ) async {
-        await pumpScope(tester, enabled: false, size: _duoInnerPortrait);
+      testWidgets(
+        'asks for portrait on a large Android window with the flag off',
+        (tester) async {
+          // The activity lets a large screen rotate from launch while the
+          // layouts are on by default, so turning them off has to take it
+          // back.
+          await pumpScope(tester, enabled: false, size: _duoInnerPortrait);
 
-        expect(orientationCalls, isEmpty);
-      });
+          expect(orientationCalls, [
+            ['DeviceOrientation.portraitUp'],
+          ]);
+        },
+      );
+
+      testWidgets(
+        "leaves a phone in the activity's portrait with the flag off",
+        (tester) async {
+          await pumpScope(tester, enabled: false, size: _phone);
+
+          expect(orientationCalls, isEmpty);
+        },
+      );
+
+      testWidgets(
+        "leaves a large iPad window to the app delegate's mask with the flag "
+        'off',
+        (tester) async {
+          await pumpScope(tester, enabled: false, size: _duoInnerPortrait);
+
+          expect(orientationCalls, isEmpty);
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+      );
 
       testWidgets('does not request rotation when only the layout is forced', (
         tester,
@@ -425,10 +451,10 @@ void main() {
         await pumpScope(
           tester,
           enabled: false,
-          size: _duoInnerPortrait,
+          size: _phone,
           child: const PortraitOrientationLock(child: SizedBox.shrink()),
         );
-        await pumpScope(tester, enabled: false, size: _duoInnerPortrait);
+        await pumpScope(tester, enabled: false, size: _phone);
 
         expect(orientationCalls, isEmpty);
       });
@@ -473,19 +499,20 @@ void main() {
       testWidgets(
         'reports the flag to the app delegate on iOS',
         (tester) async {
-          await pumpScope(tester, enabled: true, size: _duoOuter);
-          await pumpScope(tester, enabled: true, size: _duoInnerLandscape);
+          await pumpScope(tester, enabled: false, size: _duoOuter);
           await pumpScope(tester, enabled: false, size: _duoInnerLandscape);
+          await pumpScope(tester, enabled: true, size: _duoInnerLandscape);
 
-          expect(reportedFlags, [true, false]);
+          expect(reportedFlags, [false, true]);
         },
         variant: TargetPlatformVariant.only(TargetPlatform.iOS),
       );
 
       testWidgets(
-        'reports nothing to the app delegate with the flag off',
+        'reports nothing to the app delegate with the flag on, which it '
+        'assumes',
         (tester) async {
-          await pumpScope(tester, enabled: false, size: _duoInnerLandscape);
+          await pumpScope(tester, enabled: true, size: _duoInnerLandscape);
 
           expect(reportedFlags, isEmpty);
         },
@@ -493,7 +520,7 @@ void main() {
       );
 
       testWidgets(
-        'reports a build that turns the flag on by default, with no '
+        'reports a build that turns the flag off by default, with no '
         'override stored',
         (tester) async {
           SharedPreferences.setMockInitialValues({});
@@ -508,7 +535,7 @@ void main() {
               overrides: [
                 sharedPreferencesProvider.overrideWithValue(prefs),
                 buildConfigurationProvider.overrideWithValue(
-                  const _LargeScreenLayoutByDefault(),
+                  const _LargeScreenLayoutOffByDefault(),
                 ),
               ],
               child: const MediaQuery(
@@ -519,7 +546,7 @@ void main() {
           );
 
           expect(prefs.containsKey('ff_largeScreenLayout'), isFalse);
-          expect(reportedFlags, [true]);
+          expect(reportedFlags, [false]);
         },
         variant: TargetPlatformVariant.only(TargetPlatform.iOS),
       );
@@ -1082,12 +1109,12 @@ class _CounterState extends State<_Counter> {
   );
 }
 
-/// A build that turns the large-screen layouts on by default, as
-/// `FF_LARGE_SCREEN_LAYOUT=true` does.
-class _LargeScreenLayoutByDefault extends BuildConfiguration {
-  const _LargeScreenLayoutByDefault();
+/// A build that turns the large-screen layouts off by default, as
+/// `FF_LARGE_SCREEN_LAYOUT=false` does.
+class _LargeScreenLayoutOffByDefault extends BuildConfiguration {
+  const _LargeScreenLayoutOffByDefault();
 
   @override
   bool getDefault(FeatureFlag flag) =>
-      flag == FeatureFlag.largeScreenLayout || super.getDefault(flag);
+      flag != FeatureFlag.largeScreenLayout && super.getDefault(flag);
 }
