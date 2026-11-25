@@ -1,10 +1,11 @@
 // ABOUTME: Result of reading the newest revision at a video address before
-// ABOUTME: replacing it: found, absent, or unknown when no read completed.
+// ABOUTME: replacing it: found, absent, or unknown when nothing settled it.
 
 import 'package:nostr_sdk/nostr_sdk.dart';
 
-/// What Divine's REST API or the relays hold at a video address, read so
-/// the caller can replace it. See `VideosRepository.fetchLatestVideoRevision`.
+/// What reading a video address returned, for a caller about to replace it:
+/// Divine's REST API first, then the relays. See
+/// `VideosRepository.fetchLatestVideoRevision`.
 sealed class LatestVideoRevision {
   /// Base constructor for the three outcomes.
   const LatestVideoRevision();
@@ -12,7 +13,7 @@ sealed class LatestVideoRevision {
 
 /// [event] is the newest signed revision the read returned.
 final class LatestVideoRevisionFound extends LatestVideoRevision {
-  /// The newest revision is [event].
+  /// The read returned [event] as the newest revision.
   const LatestVideoRevisionFound(this.event);
 
   /// The raw, signature-checked event, unfiltered by viewer preferences.

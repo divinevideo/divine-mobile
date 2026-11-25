@@ -2141,9 +2141,11 @@ class VideosRepository {
     );
   }
 
-  /// The newest revision of the video [addressableId] (`kind:pubkey:d-tag`)
-  /// that Divine's REST API or the relays hold, for a caller about to
-  /// replace it.
+  /// The revision of the video [addressableId] (`kind:pubkey:d-tag`) that
+  /// Divine's REST API returns, or the newest a relay returns when the API
+  /// has none, for a caller about to replace it. A Funnelcake answer is
+  /// returned without asking any relay, so a newer revision it has not
+  /// indexed, or never stored, is not seen.
   ///
   /// Asks Funnelcake first, since it answers faster than the relays. Its
   /// d-tag lookup is not scoped by author, so its event counts only when it

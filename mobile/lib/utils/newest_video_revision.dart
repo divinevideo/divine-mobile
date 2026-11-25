@@ -21,7 +21,8 @@ import 'package:videos_repository/videos_repository.dart'
 /// the opened revision that [cachedEvent] holds is used instead, when it is
 /// at the same address and validly signed. Returns null when the video has
 /// no unambiguous address, the reader is unavailable, the read found the
-/// address empty, or neither revision can be used.
+/// address empty, the revision read has conflicting `d` tags, or neither
+/// revision can be used.
 ///
 /// A video's copy in hand can be older than the newest revision, and a
 /// replacement built from it deletes whatever only the newer one carried.

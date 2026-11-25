@@ -76,10 +76,8 @@ class _VideoUpdateException implements Exception {
   String toString() => 'VideoUpdateException(${reason.name}): $message';
 }
 
-/// No revision of the video could be built from: neither Divine's REST API
-/// nor a relay returned a usable one and no signed copy of the opened
-/// revision is held, or none holds the video any more. Nothing was
-/// published.
+/// No revision of the video could be built from, so nothing was published.
+/// See `newestVideoRevision` for when.
 class VideoUpdateOriginalUnavailable extends VideoUpdateResult {
   const VideoUpdateOriginalUnavailable();
 }
@@ -298,15 +296,17 @@ class VideoMetadataUpdateService {
 
   /// Re-publishes [originalVideo] with the metadata from [editorState].
   ///
-  /// The replacement is built from the newest revision Divine's REST API or
-  /// the relays hold, not from [originalVideo], which is the one the editor
+  /// The replacement is built from the revision Divine's REST API returns,
+  /// or the newest a relay returns when the API has none, not from
+  /// [originalVideo], which is the one the editor
   /// opened: another device may have replaced it since. A field the editor
   /// left as it was seeded takes the newest revision's value. Pass
   /// [editorBaseline] when the screen has seen a newer revision since it
-  /// seeded the form. When no newer revision can be read, the signed copy of
-  /// the opened revision held in the personal event cache is used. Without
-  /// either, or when the video is gone, nothing is published and the result
-  /// is [VideoUpdateOriginalUnavailable].
+  /// seeded the form. When the read returns an older revision, or none and
+  /// did not complete, the signed copy of the opened revision held in the
+  /// personal event cache is used; after a thumbnail upload, the revision
+  /// read before it is. Without one, or when the read finds the video gone,
+  /// nothing is published and the result is [VideoUpdateOriginalUnavailable].
   ///
   /// If [newThumbnailFile] is non-null, it is uploaded to Blossom before
   /// the event is signed; on upload failure the original thumbnail URL is
@@ -366,7 +366,8 @@ class VideoMetadataUpdateService {
 
         // A subtitle or sound may have been published while Blossom was
         // uploading. Use the last revision we saw as the floor for this read,
-        // and as the copy to build from when no newer one can be read.
+        // and as the copy to build from when this read returns an older
+        // revision, or none and did not complete.
         final seen = latest;
         latest = await newestVideoRevision(
           _readLatestRevision,

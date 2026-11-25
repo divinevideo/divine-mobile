@@ -120,8 +120,9 @@ class SubtitleRepository {
   /// * [SubtitleEditException] when [video] is not a short video (kind
   ///   34236). Its 39307 address names no kind, so an edit of a normal video
   ///   would replace the captions a short video at the same `d` tag serves.
-  /// * [SubtitleEditException] when the newest revision of [video] cannot be
-  ///   read.
+  /// * [SubtitleEditException] when no revision of [video] can be built
+  ///   from: the read finds it gone, or falls short and no signed copy of
+  ///   the opened revision is held.
   /// * [SubtitleEditException] when the Blossom upload fails.
   /// * [SubtitleEditException] when the video republish fails.
   /// * [SubtitleEditException] when the subtitle event publish returns no
