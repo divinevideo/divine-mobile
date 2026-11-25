@@ -158,7 +158,11 @@ void main() {
         final first = makeRouter();
         addTearDown(first.dispose);
         await tester.pumpWidget(
-          MaterialApp.router(routerConfig: restorationSafeRouterConfig(first)),
+          MaterialApp.router(
+            routerConfig: restorationSafeRouterConfig(first),
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
         );
         await tester.pumpAndSettle();
         unawaited(first.push<void>(scenario.path, extra: scenario.extra));
@@ -170,7 +174,12 @@ void main() {
         addTearDown(fresh.dispose);
         final config = restorationSafeRouterConfig(fresh);
         await tester.pumpWidget(
-          MaterialApp.router(key: UniqueKey(), routerConfig: config),
+          MaterialApp.router(
+            key: UniqueKey(),
+            routerConfig: config,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
         );
         await tester.pumpAndSettle();
         final context = tester.element(find.byType(Navigator).first);
