@@ -179,9 +179,7 @@ class DivineVideoPlayerController {
 
   static const _globalChannel = MethodChannel('divine_video_player');
 
-  /// Factory for the media_kit backend used on Linux and Windows.
-  ///
-  /// Keeps its original Linux name for compatibility with existing callers.
+  /// Factory for the media_kit backend used on Linux.
   @visibleForTesting
   static LinuxVideoPlayerBackendFactory linuxBackendFactory =
       MediaKitLinuxVideoPlayerBackend.new;
@@ -286,14 +284,12 @@ class DivineVideoPlayerController {
   /// Scope differs by platform. On iOS and macOS this releases only the
   /// players belonging to the engine that made the call, so a second live
   /// FlutterEngine (the notification isolate) keeps its own. On Android
-  /// the sweep is still process-wide. Either is correct for the startup
-  /// caller, whose zombies belong to its own engine.
+  /// and Windows the sweep is process-wide. Either is correct for the
+  /// startup caller, whose zombies belong to its own engine.
   ///
-  /// No-op on web, Linux and Windows where no native channel is registered.
+  /// No-op on web and Linux, where no native channel is registered.
   static Future<void> disposeAll() {
-    if (kIsWeb ||
-        defaultTargetPlatform == TargetPlatform.linux ||
-        defaultTargetPlatform == TargetPlatform.windows) {
+    if (kIsWeb || defaultTargetPlatform == TargetPlatform.linux) {
       return Future.value();
     }
     return _globalChannel.invokeMethod<void>('disposeAll');
@@ -309,7 +305,8 @@ class DivineVideoPlayerController {
   ///
   /// A no-op everywhere else. AVFoundation loads media through its own
   /// stack and never reads `URLCache`, so there is nothing to configure on
-  /// iOS or macOS; web and Linux have no native plugin.
+  /// iOS or macOS; Windows keeps what it fetched in a bounded in-memory cache
+  /// instead of on disk; web and Linux have no native plugin.
   ///
   /// [maxSizeBytes] is the maximum cache size on disk. Defaults to
   /// [kDefaultCacheMaxSizeBytes] (500 MB). Least-recently-used entries
@@ -340,7 +337,9 @@ class DivineVideoPlayerController {
   /// that playback starts instantly when the user reaches them.
   /// No controller needs to be alive — the work happens on the native
   /// side. On iOS and macOS this only makes a best-effort metadata request;
-  /// nothing is retained by this plugin or written to disk there.
+  /// nothing is retained by this plugin or written to disk there. On
+  /// Windows the first MiB of an HTTP(S) file without app headers is kept in
+  /// memory, where a player opening the same URL starts from it.
   ///
   /// ```dart
   /// await DivineVideoPlayerController.preload([
@@ -378,12 +377,11 @@ class DivineVideoPlayerController {
   /// The texture ID for use with the [Texture] widget.
   ///
   /// Only non-null after [initialize] completes when [useTexture] is
-  /// `true`.
+  /// `true`, or on Windows, which has no platform views and renders every
+  /// player into a texture.
   int? get textureId => _textureId;
 
-  /// Whether this instance uses the media_kit backend on Linux or Windows.
-  ///
-  /// The name is retained for compatibility with the original Linux backend.
+  /// Whether this instance uses the media_kit backend on Linux.
   bool get usesLinuxBackend => _isLinuxBackend;
 
   /// Whether this controller instance is backed by the web HTML backend.
@@ -403,9 +401,10 @@ class DivineVideoPlayerController {
   /// Resets each time [setClips] or [setSource] loads new media.
   /// Safe to await multiple times — a completed future stays completed
   /// until the next source change.
-  /// On desktop, follows the accepted output while a replacement validates,
+  /// On Linux, follows the accepted output while a replacement validates,
   /// and completes false if that output fails, stops or retires before
-  /// rendering.
+  /// rendering. On Windows it completes false when the loaded media fails
+  /// or is stopped before rendering.
   Future<bool> get firstFrameRendered => switch (_linuxBackend) {
     final DesktopVideoFrameReadiness backend => backend.firstFrameRendered,
     _ => _firstFrameCompleter.future,
@@ -475,7 +474,7 @@ class DivineVideoPlayerController {
       }
       _supportsPlaybackTelemetry =
           result?['playbackTelemetrySupported'] == true;
-      if (useTexture && result != null) {
+      if ((useTexture || _isWindows) && result != null) {
         _textureId = result['textureId'] as int?;
       }
 
@@ -617,6 +616,7 @@ class DivineVideoPlayerController {
     if (_isWebBackend) return _webBackend!.stop();
     if (_isLinuxBackend) return _linuxBackend!.stop();
     await _methodChannel.invokeMethod<void>('stop');
+    _settleDesktopFirstFrame();
   }
 
   /// Seeks to [position] on the global timeline.
@@ -635,7 +635,9 @@ class DivineVideoPlayerController {
   ///
   /// Cheap enough to follow a volume control while it is dragged; ignored
   /// when [volumes] does not have one entry per loaded clip. Native only: the
-  /// web and Linux backends keep the volumes [setClips] gave them.
+  /// web and Linux backends keep the volumes [setClips] gave them. Windows
+  /// amplifies above 1.0 only when the app manifest registers the plugin's
+  /// audio effect (see the package README), and plays at 1.0 otherwise.
   Future<void> setClipVolumes(List<double> volumes) async {
     _ensureInitialized();
     if (_isWebBackend || _isLinuxBackend) return;
@@ -655,7 +657,9 @@ class DivineVideoPlayerController {
   /// the equalizer has rested for about half a second, so the new curve is
   /// heard then rather than during the drag. Ignored when [equalizers] does
   /// not have one entry per loaded clip. Native only, and only on players
-  /// created with [VideoBufferProfile.full].
+  /// created with [VideoBufferProfile.full]; Windows also needs the app
+  /// manifest to register the plugin's audio effect (see the package
+  /// README).
   Future<void> setClipEqualizers(List<AudioEqualizer?> equalizers) async {
     _ensureInitialized();
     if (_isWebBackend || _isLinuxBackend) return;
@@ -750,7 +754,8 @@ class DivineVideoPlayerController {
   }
 
   /// Sets the volume of the overlay audio track at [index]
-  /// (0.0 silent, 1.0 original, above 1.0 amplified).
+  /// (0.0 silent, 1.0 original, above 1.0 amplified; Windows amplifies only
+  /// when the app manifest registers the plugin's audio effect).
   ///
   /// Has no effect if [index] is out of range.
   Future<void> setAudioTrackVolume(int index, double volume) async {
@@ -768,7 +773,8 @@ class DivineVideoPlayerController {
   /// Sets the equalizer of the overlay audio track at [index]; `null` plays it
   /// unchanged. Heard without reloading the track.
   ///
-  /// Has no effect if [index] is out of range. Native only.
+  /// Has no effect if [index] is out of range. Native only; Windows also
+  /// needs the app manifest to register the plugin's audio effect.
   Future<void> setAudioTrackEqualizer(
     int index,
     AudioEqualizer? equalizer,
@@ -889,8 +895,20 @@ class DivineVideoPlayerController {
     if (_state.isFirstFrameRendered && !_firstFrameCompleter.isCompleted) {
       _firstFrameCompleter.complete(true);
     }
+    if (_state.hasError) _settleDesktopFirstFrame();
     if (!_stateController.isClosed) {
       _stateController.add(_state);
+    }
+  }
+
+  /// Completes [firstFrameRendered] with false on Windows once the loaded
+  /// media can no longer render, matching the media_kit backend on Linux.
+  ///
+  /// Android and Apple platforms leave the future pending until the next
+  /// load instead.
+  void _settleDesktopFirstFrame() {
+    if (_isWindows && !_firstFrameCompleter.isCompleted) {
+      _firstFrameCompleter.complete(false);
     }
   }
 
@@ -922,11 +940,14 @@ class DivineVideoPlayerController {
   }
 
   bool get _usesLinuxBackend =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.linux ||
-          defaultTargetPlatform == TargetPlatform.windows);
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
 
-  /// Builds the media_kit video surface on Linux or Windows.
+  /// Windows plays through the plugin's native Media Foundation player,
+  /// which renders into a texture because Windows has no platform views.
+  static bool get _isWindows =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+
+  /// Builds the media_kit video surface on Linux.
   @internal
   Widget buildLinuxView() {
     if (!_isLinuxBackend || _linuxBackend == null) {

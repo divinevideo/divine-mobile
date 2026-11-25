@@ -91,17 +91,10 @@ jobs:
           else
             flutter build "${{ matrix.platform }}" --release --no-pub
           fi
-      - name: Locate the bundled Windows media runtime
-        if: matrix.platform == 'windows'
-        env:
-          DESKTOP_BUNDLE: ${{ matrix.bundle }}
-        run: |
-          NATIVE_LIBMPV=$(find "$DESKTOP_BUNDLE" -maxdepth 1 -iname '*mpv*.dll' -print -quit)
-          test -n "$NATIVE_LIBMPV"
-          cygpath -aw "$(dirname "$NATIVE_LIBMPV")" >> "$GITHUB_PATH"
-          echo "DIVINE_NATIVE_LIBMPV=$(cygpath -aw "$NATIVE_LIBMPV")" >> "$GITHUB_ENV"
-      - name: Verify desktop media against native libmpv
-        if: matrix.platform != 'macos'
+      # Windows plays through Media Foundation, not libmpv; its native player
+      # is compiled by the release build above.
+      - name: Verify Linux media against native libmpv
+        if: matrix.platform == 'linux'
         working-directory: mobile/packages/divine_video_player
         env:
           DIVINE_LINUX_NO_VIDEO_OUTPUT: "1"

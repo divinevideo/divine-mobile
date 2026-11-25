@@ -65,12 +65,14 @@ class DivineVideoPlayer extends StatelessWidget {
       surface = ctrl.buildWebView();
     } else if (ctrl.usesLinuxBackend) {
       surface = _DesktopPlayerView(controller: ctrl);
-    } else if (ctrl.useTexture && ctrl.textureId != null) {
-      // SurfaceProducer does not forward ExoPlayer's GL transform matrix
-      // (NATIVE_WINDOW_TRANSFORM_HINT) to Flutter, unlike the legacy
-      // SurfaceTextureEntry which encoded rotation and crop implicitly. The
-      // native side sends both explicitly so Dart can apply them. Listen to
-      // stateStream because they arrive after the first build.
+    } else if (ctrl.textureId != null) {
+      // Set when the controller asked for a texture, and always on Windows,
+      // which has no platform views. SurfaceProducer does not forward
+      // ExoPlayer's GL transform matrix (NATIVE_WINDOW_TRANSFORM_HINT) to
+      // Flutter, unlike the legacy SurfaceTextureEntry which encoded rotation
+      // and crop implicitly. The native side sends both explicitly so Dart
+      // can apply them. Listen to stateStream because they arrive after the
+      // first build.
       surface = _PlayerTexture(controller: ctrl);
     } else {
       final creationParams = <String, dynamic>{'playerId': ctrl.playerId};

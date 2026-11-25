@@ -220,9 +220,26 @@ void main() {
       },
     );
 
-    testWidgets('renders the desktop video surface on Windows', (tester) async {
+    testWidgets('renders the native texture on Windows', (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.windows;
       try {
+        final nextId = DivineVideoPlayerController.nextId;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+              const MethodChannel('divine_video_player'),
+              (call) async {
+                if (call.method != 'create') return null;
+                TestDefaultBinaryMessengerBinding
+                    .instance
+                    .defaultBinaryMessenger
+                    .setMockStreamHandler(
+                      EventChannel('divine_video_player/player_$nextId/events'),
+                      _FirstFrameStreamHandler(),
+                    );
+                return <Object?, Object?>{'textureId': 7};
+              },
+            );
+        // Windows renders into a texture even when none was asked for.
         final windowsController = DivineVideoPlayerController();
         await windowsController.initialize();
         addTearDown(windowsController.dispose);
@@ -234,7 +251,8 @@ void main() {
           ),
         );
 
-        expect(find.text('Linux player view'), findsOneWidget);
+        expect(find.byType(Texture), findsOneWidget);
+        expect(find.text('Linux player view'), findsNothing);
         expect(find.text('Platform not supported'), findsNothing);
       } finally {
         debugDefaultTargetPlatformOverride = null;
@@ -269,20 +287,6 @@ void main() {
 
     testWidgets('renders Text for unsupported fuchsia', (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
-
-      await tester.pumpWidget(
-        Directionality(
-          textDirection: TextDirection.ltr,
-          child: DivineVideoPlayer(controller: controller),
-        ),
-      );
-
-      expect(find.text('Platform not supported'), findsOneWidget);
-      debugDefaultTargetPlatformOverride = null;
-    });
-
-    testWidgets('renders Text for unsupported windows', (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
 
       await tester.pumpWidget(
         Directionality(
