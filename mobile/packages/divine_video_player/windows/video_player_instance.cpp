@@ -404,6 +404,9 @@ void VideoPlayerInstance::Dispose() {
   ResolveSetClips();
   ResolveSeek();
   overlays_.RemoveAll();
+  // First, so a frame still being copied cannot reach the registrar after
+  // the plugin is gone, even if that frame outlives this player.
+  if (output_) output_->Shutdown();
   ReleasePlayer();
   output_.reset();
 

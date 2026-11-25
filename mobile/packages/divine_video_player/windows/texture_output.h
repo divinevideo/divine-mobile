@@ -44,6 +44,12 @@ class TextureOutput {
   // Stops showing a frame, so a stopped player leaves no stale picture.
   void Clear();
 
+  // Unregisters the texture, after which no frame reaches the registrar.
+  // Call on the platform thread while the plugin is alive: a frame callback
+  // still running on a Media Foundation thread can hold the last reference
+  // to this output and must not touch the registrar once it is gone.
+  void Shutdown();
+
  private:
   struct Buffer {
     Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
@@ -75,6 +81,9 @@ class TextureOutput {
   flutter::TextureRegistrar* registrar_;
   const std::string log_target_;
   std::atomic<bool> failure_reported_{false};
+  // Held by every registrar call, so Shutdown waits for one in flight.
+  std::mutex registrar_mutex_;
+  bool shut_down_ = false;
   std::shared_ptr<Shared> shared_;
   std::unique_ptr<flutter::TextureVariant> variant_;
   int64_t texture_id_ = -1;

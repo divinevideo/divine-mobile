@@ -91,7 +91,12 @@ TextureOutput::TextureOutput(flutter::TextureRegistrar* registrar,
   }
 }
 
-TextureOutput::~TextureOutput() {
+TextureOutput::~TextureOutput() { Shutdown(); }
+
+void TextureOutput::Shutdown() {
+  std::lock_guard<std::mutex> lock(registrar_mutex_);
+  if (shut_down_) return;
+  shut_down_ = true;
   if (texture_id_ < 0) return;
   // The engine may still call the descriptor callback until it confirms the
   // texture is gone, so the variant and its shared state live until then.
@@ -132,11 +137,18 @@ bool TextureOutput::RenderFrame(
     shared_->front = target;
     shared_->next = (target + 1) % static_cast<int>(shared_->buffers.size());
   }
+  std::lock_guard<std::mutex> lock(registrar_mutex_);
+  if (shut_down_) return false;
   registrar_->MarkTextureFrameAvailable(texture_id_);
   return true;
 }
 
 void TextureOutput::ReportFailure(const char* step, HRESULT hr) {
+  {
+    // A frame that fails while its player is disposed is not worth a warning.
+    std::lock_guard<std::mutex> lock(registrar_mutex_);
+    if (shut_down_) return;
+  }
   if (failure_reported_.exchange(true)) return;
   char code[16];
   std::snprintf(code, sizeof(code), "0x%08X", static_cast<uint32_t>(hr));
@@ -150,7 +162,8 @@ void TextureOutput::Clear() {
     std::lock_guard<std::mutex> lock(shared_->mutex);
     shared_->front = -1;
   }
-  registrar_->MarkTextureFrameAvailable(texture_id_);
+  std::lock_guard<std::mutex> lock(registrar_mutex_);
+  if (!shut_down_) registrar_->MarkTextureFrameAvailable(texture_id_);
 }
 
 const FlutterDesktopGpuSurfaceDescriptor* TextureOutput::Shared::Obtain() {
