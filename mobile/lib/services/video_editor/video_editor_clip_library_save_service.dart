@@ -21,6 +21,12 @@ import 'package:pro_image_editor/pro_image_editor.dart' show CompleteParameters;
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 import 'package:unified_logger/unified_logger.dart';
 
+/// A newly rendered draft clip and the source thumbnail it might borrow.
+typedef DraftLibraryRender = ({
+  DivineVideoClip clip,
+  String? sourceThumbnailPath,
+});
+
 /// Service for saving a single timeline clip to the persistent clip library.
 class VideoEditorClipLibrarySaveService {
   /// Renders [clip]'s trim window into a standalone file and returns it as a
@@ -156,8 +162,9 @@ class VideoEditorClipLibrarySaveService {
   /// * [VideoRenderFailedException] when the render produced no video.
   ///
   /// The returned clip's file lives in the persistent documents dir; when it
-  /// does not reach the library, pass it to [cleanupFlattenedClip].
-  static Future<DivineVideoClip> renderDraftForLibrary({
+  /// does not reach the library, pass it to [cleanupFlattenedClip] with
+  /// the result's `sourceThumbnailPath` as the thumbnail to keep.
+  static Future<DraftLibraryRender> renderDraftForLibrary({
     required DivineVideoDraft draft,
     required DraftRenderParametersService renderParameters,
     required String renderId,
@@ -199,7 +206,7 @@ class VideoEditorClipLibrarySaveService {
             jsonDecode(proofJson) as Map<String, dynamic>,
           );
 
-    return rendered.copyWith(
+    final clip = rendered.copyWith(
       id: 'clip_library_${DateTime.now().microsecondsSinceEpoch}',
       lensMetadata: draft.clips.first.lensMetadata,
       sourceCredits: DivineVideoClip.combinedSourceCredits(draft.clips),
@@ -215,6 +222,9 @@ class VideoEditorClipLibrarySaveService {
             )
           : null,
     );
+    // The bake can give the source clip a new thumbnail before rendering.
+    // The rendered clip can borrow that thumbnail when extraction fails.
+    return (clip: clip, sourceThumbnailPath: clips.first.thumbnailPath);
   }
 
   /// [parameters] without the flashing effects (see [isFlashingVideoEffect]

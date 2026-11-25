@@ -7,6 +7,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/video_editor/draft_render_parameters_service.dart';
+import 'package:openvine/services/video_editor/video_editor_clip_library_save_service.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -67,13 +68,13 @@ class DraftClipConversionCubit extends Cubit<DraftClipConversionStatus>
   DraftClipConversionCubit({
     required DraftClipConversions conversions,
     required Future<DivineVideoDraft?> Function(String draftId) loadDraft,
-    required Future<DivineVideoClip> Function(DivineVideoDraft draft)
+    required Future<DraftLibraryRender> Function(DivineVideoDraft draft)
     renderDraft,
     required Future<void> Function(DivineVideoClip clip) saveClip,
     required Future<void> Function(
-      DivineVideoClip clip,
-      DivineVideoDraft draft,
-    )
+      DivineVideoClip clip, {
+      String? keepThumbnailPath,
+    })
     discardClip,
   }) : _conversions = conversions,
        _loadDraft = loadDraft,
@@ -97,12 +98,16 @@ class DraftClipConversionCubit extends Cubit<DraftClipConversionStatus>
 
   final DraftClipConversions _conversions;
   final Future<DivineVideoDraft?> Function(String draftId) _loadDraft;
-  final Future<DivineVideoClip> Function(DivineVideoDraft draft) _renderDraft;
+  final Future<DraftLibraryRender> Function(DivineVideoDraft draft)
+  _renderDraft;
   final Future<void> Function(DivineVideoClip clip) _saveClip;
 
   /// Deletes the files of a clip rendered from the draft that never reached
-  /// the library, sparing the files the draft still uses.
-  final Future<void> Function(DivineVideoClip clip, DivineVideoDraft draft)
+  /// the library, sparing the thumbnail it may have borrowed.
+  final Future<void> Function(
+    DivineVideoClip clip, {
+    String? keepThumbnailPath,
+  })
   _discardClip;
 
   static const _logName = 'DraftClipConversionCubit';
@@ -121,10 +126,9 @@ class DraftClipConversionCubit extends Cubit<DraftClipConversionStatus>
   Future<DraftClipConversionStatus> _convert(String draftId) async {
     // The render writes into the persistent documents dir, so a clip that
     // does not reach the library must be deleted here.
-    DivineVideoClip? unsaved;
-    DivineVideoDraft? draft;
+    DraftLibraryRender? unsaved;
     try {
-      draft = await _loadDraft(draftId);
+      final draft = await _loadDraft(draftId);
       // Deleted or emptied of media since the list loaded.
       if (draft == null || !draft.canPost) {
         Log.warning(
@@ -136,9 +140,9 @@ class DraftClipConversionCubit extends Cubit<DraftClipConversionStatus>
       }
 
       unsaved = await _renderDraft(draft);
-      await _saveClip(unsaved);
+      await _saveClip(unsaved.clip);
       Log.info(
-        '✅ Converted draft $draftId into library clip ${unsaved.id}',
+        '✅ Converted draft $draftId into library clip ${unsaved.clip.id}',
         name: _logName,
         category: LogCategory.video,
       );
@@ -171,7 +175,12 @@ class DraftClipConversionCubit extends Cubit<DraftClipConversionStatus>
       );
       return DraftClipConversionStatus.failed;
     } finally {
-      if (unsaved != null && draft != null) await _discardClip(unsaved, draft);
+      if (unsaved != null) {
+        await _discardClip(
+          unsaved.clip,
+          keepThumbnailPath: unsaved.sourceThumbnailPath,
+        );
+      }
     }
   }
 }

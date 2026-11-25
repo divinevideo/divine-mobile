@@ -319,13 +319,8 @@ class LibraryScreen extends ConsumerWidget {
                     bakeCapturedChromaKey: bakeCapturedChromaKey,
                   ),
               saveClip: clipLibraryService.saveClip,
-              // A render whose cover extraction failed reuses the draft's own
-              // thumbnail, which the draft still needs.
-              discardClip: (clip, draft) =>
-                  VideoEditorClipLibrarySaveService.cleanupFlattenedClip(
-                    clip,
-                    keepThumbnailPath: draft.clips.first.thumbnailPath,
-                  ),
+              discardClip:
+                  VideoEditorClipLibrarySaveService.cleanupFlattenedClip,
             );
           },
         ),

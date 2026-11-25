@@ -16,6 +16,7 @@ import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
@@ -825,6 +826,58 @@ void main() {
         ]);
       });
 
+      test('discarding a conversion keeps the baked take thumbnail', () async {
+        final directory = await Directory.systemTemp.createTemp('draft_cover');
+        addTearDown(() => directory.delete(recursive: true));
+        final raw = await File(p.join(directory.path, 'raw.jpg')).create();
+        final keyed = await File(p.join(directory.path, 'keyed.jpg')).create();
+        final video = await File(p.join(directory.path, 'rendered.mp4'))
+            .create();
+        const recordedKey = ClipChromaKey(
+          key: ChromaKey.greenScreen(backgroundColor: Color(0xFF203040)),
+        );
+        final source = draft(
+          clips: [
+            _createClip(thumbnailPath: raw.path).copyWith(
+              captureChromaKey: recordedKey,
+            ),
+          ],
+        );
+        VideoEditorRenderService.renderVideoToClipOverride =
+            ({
+              required clips,
+              required editorStateHistory,
+              parameters,
+              taskId,
+            }) async => (
+              _createClip(thumbnailPath: clips.first.thumbnailPath).copyWith(
+                video: EditorVideo.file(video.path),
+              ),
+              null,
+            );
+
+        final result =
+            await VideoEditorClipLibrarySaveService.renderDraftForLibrary(
+              draft: source,
+              renderParameters: DraftRenderParametersService(
+                rasterizer: rasterizer,
+              ),
+              renderId: 'convert-1',
+              bakeCapturedChromaKey: (clip) async => clip.copyWith(
+                thumbnailPath: keyed.path,
+              ),
+            );
+        expect(result.clip.thumbnailPath, keyed.path);
+        await VideoEditorClipLibrarySaveService.cleanupFlattenedClip(
+          result.clip,
+          keepThumbnailPath: result.sourceThumbnailPath,
+        );
+
+        expect(video.existsSync(), isFalse);
+        expect(raw.existsSync(), isTrue);
+        expect(keyed.existsSync(), isTrue);
+      });
+
       test(
         "returns a new library clip that keeps the draft's sources",
         () async {
@@ -842,11 +895,11 @@ void main() {
                 renderId: 'convert-1',
               );
 
-          expect(result.id, startsWith('clip_library_'));
-          expect(result.video?.file?.path, '/documents/rendered.mp4');
+          expect(result.clip.id, startsWith('clip_library_'));
+          expect(result.clip.video?.file?.path, '/documents/rendered.mp4');
           // Rendered unsigned, a later edit is signed against the clips the
           // draft was made from.
-          expect(result.derivedFrom, const [
+          expect(result.clip.derivedFrom, const [
             C2paEditSource(path: '/path/a.mp4'),
             C2paEditSource(path: '/path/b.mp4'),
           ]);
@@ -881,7 +934,7 @@ void main() {
               renderId: 'convert-1',
             );
 
-        expect(result.proofManifestJson, proof);
+        expect(result.clip.proofManifestJson, proof);
       });
 
       test('keeps the credits of every clip in the draft', () async {
@@ -908,7 +961,7 @@ void main() {
             );
 
         expect(
-          result.sourceCredits,
+          result.clip.sourceCredits,
           unorderedEquals(const [sender, published]),
         );
       });

@@ -40,7 +40,7 @@ void main() {
     late Future<DivineVideoClip> Function(DivineVideoDraft) render;
     late Future<void> Function(DivineVideoClip) save;
     late List<DivineVideoClip> saved;
-    late List<(DivineVideoClip, DivineVideoDraft)> discarded;
+    late List<(DivineVideoClip, String?)> discarded;
     late DraftClipConversions conversions;
     final rendered = _clip('clip_library_1');
 
@@ -56,9 +56,13 @@ void main() {
     DraftClipConversionCubit build() => DraftClipConversionCubit(
       conversions: conversions,
       loadDraft: (_) async => stored,
-      renderDraft: (draft) => render(draft),
+      renderDraft: (draft) async => (
+        clip: await render(draft),
+        sourceThumbnailPath: '/documents/keyed.jpg',
+      ),
       saveClip: (clip) => save(clip),
-      discardClip: (clip, draft) async => discarded.add((clip, draft)),
+      discardClip: (clip, {keepThumbnailPath}) async =>
+          discarded.add((clip, keepThumbnailPath)),
     );
 
     group('convert', () {
@@ -134,7 +138,7 @@ void main() {
         verify: (_) {
           expect(discarded, hasLength(1));
           expect(discarded.single.$1, rendered);
-          expect(discarded.single.$2.id, _draftId);
+          expect(discarded.single.$2, '/documents/keyed.jpg');
         },
       );
 
