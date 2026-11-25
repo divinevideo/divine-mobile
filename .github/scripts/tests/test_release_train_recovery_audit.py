@@ -19,7 +19,7 @@ def rejected_snapshot(version="1.0.30", item_state="REJECTED"):
     s["ios"]["review_submissions"] = [
         {
             "id": "review",
-            "attributes": {"state": "UNRESOLVED_ISSUES", "submittedDate": NOW - 90000},
+            "attributes": {"state": "UNRESOLVED_ISSUES", "submittedDate": NOW - 190000},
             "items": [{"id": "item", "version_id": "v", "state": item_state}],
         }
     ]
@@ -314,12 +314,30 @@ class DraftRecoveryAuditTest(unittest.TestCase):
 
 class ActionableRejectionSummaryTest(unittest.TestCase):
     def test_rejection_summary_names_exact_acknowledgement_items(self):
+        for status in ["REJECTED", "METADATA_REJECTED"]:
+            with self.subTest(status=status):
+                s = rejected_snapshot()
+                s["ios"]["versions"][0]["state"] = status
+                result = plan_tick(s, soaked_state(), {"ios": "app-store"})
+                reason = next(line for line in result["reasons"] if "ios-version:v" in line)
+                self.assertIn("APPLE_REVIEW_RESPONSE.md#replying-to-a-rejection", reason)
+                self.assertIn("reply to App Review before acknowledging ios-version:v", reason)
+                self.assertFalse(any(a["kind"] == "app-store" for a in result["actions"]))
+
         s = rejected_snapshot()
-        result = plan_tick(s, soaked_state(), {"ios": "app-store", "android": "off"})
-        self.assertTrue(any("ios-version:v" in reason for reason in result["reasons"]))
         s["ios"]["builds"] = [build() | {"external": "BETA_REJECTED"}]
         result = plan_tick(s, {}, {"ios": "testflight", "android": "off"})
         self.assertTrue(any("ios-build:10" in reason for reason in result["reasons"]))
+
+    def test_holds_without_an_app_review_rejection_keep_recovery_instructions(self):
+        for status in ["INVALID_BINARY", "DEVELOPER_REJECTED"]:
+            with self.subTest(status=status):
+                s = rejected_snapshot()
+                s["ios"]["versions"][0]["state"] = status
+                result = plan_tick(s, soaked_state(), {"ios": "app-store"})
+                reason = next(line for line in result["reasons"] if "ios-version:v" in line)
+                self.assertIn("resolve the issue", reason)
+                self.assertNotIn("reply to App Review", reason)
 
 
 class RecoveryIntegrationAuditTest(unittest.TestCase):
@@ -385,8 +403,8 @@ class ManualPromotionRecoveryAuditTest(unittest.TestCase):
 
 
 class ResumptionGateAuditTest(unittest.TestCase):
-    def test_resumption_keeps_review_daily_ci_and_kill_switch_gates(self):
-        for gate in ["waiting", "daily", "ci", "kill-switch"]:
+    def test_resumption_keeps_review_cadence_ci_and_kill_switch_gates(self):
+        for gate in ["waiting", "cadence", "ci", "kill-switch"]:
             with self.subTest(gate=gate):
                 s = rejected_snapshot(version="1.0.31", item_state="READY_FOR_REVIEW")
                 state = soaked_state()
@@ -407,7 +425,7 @@ class ResumptionGateAuditTest(unittest.TestCase):
                     s["ios"]["review_submissions"][0]["attributes"]["state"] = (
                         "WAITING_FOR_REVIEW"
                     )
-                if gate == "daily":
+                if gate == "cadence":
                     s["ios"]["review_submissions"][0]["attributes"]["submittedDate"] = (
                         NOW - 1
                     )
@@ -445,11 +463,11 @@ class RejectionEpisodeAuditTest(unittest.TestCase):
         s = rejected_snapshot(version="1.0.31")
         s["ios"]["builds"][0]["version"] = "1.0.32"
         state = soaked_state()
-        s["now"] = NOW - 100000
-        s["ios"]["review_submissions"][0]["attributes"]["submittedDate"] = NOW - 110000
+        s["now"] = NOW - 200000
+        s["ios"]["review_submissions"][0]["attributes"]["submittedDate"] = NOW - 210000
         runner.acknowledge(state, "ios-version:v", s)
         s["now"] = NOW
-        s["ios"]["review_submissions"][0]["attributes"]["submittedDate"] = NOW - 90000
+        s["ios"]["review_submissions"][0]["attributes"]["submittedDate"] = NOW - 190000
         self.assertFalse(
             plan_tick(s, state, {"ios": "app-store", "android": "off"})["actions"]
         )
@@ -540,8 +558,8 @@ class AmbiguousAcknowledgementTimeAuditTest(unittest.TestCase):
         s = rejected_snapshot(version="1.0.31")
         s["ios"]["builds"][0]["version"] = "1.0.32"
         state = soaked_state()
-        s["now"] = NOW - 90000
-        s["ios"]["review_submissions"][0]["attributes"]["submittedDate"] = NOW - 90000
+        s["now"] = NOW - 190000
+        s["ios"]["review_submissions"][0]["attributes"]["submittedDate"] = NOW - 190000
         runner.acknowledge(state, "ios-version:v", s)
         s["now"] = NOW
         self.assertFalse(

@@ -5,6 +5,42 @@ Validated against: current settings/support flows, `mobile/ios/Runner/Info.plist
 
 This document captures the current reviewer-response posture for Divine. It is not a transcript to paste blindly into App Store Connect; it is the maintained source used to prepare reviewer notes and follow-up responses.
 
+## Replying to a rejection
+
+1. In App Store Connect, open **App Review → Resolve** for the rejected
+   submission and read every finding. Note the guideline, the behavior Apple
+   observed, and any information the reviewer requested.
+2. Verify each fix against the exact build or metadata the reviewer will see.
+   Capture the shortest steps to confirm it, including any demo account
+   prerequisites. Attach a screenshot or short recording when it helps the
+   reviewer find or verify the change. Keep review correspondence and
+   attachments in App Store Connect.
+3. Use **Reply to App Review** to prepare the message below. Repeat the
+   guideline paragraph for each finding. Ask a specific question if a
+   finding still needs clarification.
+4. Send the reviewed reply in App Store Connect. If the fixes require
+   resubmission, reply before acknowledging the release-train hold. An
+   acknowledgement can let the controller resubmit on the same run.
+
+[Apple’s guide to replying to App Review](https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/reply-to-app-review-messages/)
+
+### Reply template
+
+> Hello App Review team,
+>
+> Thank you for flagging [specific behavior or missing information]. We
+> reviewed your feedback for Divine [version] and addressed it in
+> [build number or updated App Store information].
+>
+> **Guideline [number]**. You reported [what the reviewer saw]. We changed
+> [specific behavior, screen, metadata, or configuration]. You can verify
+> it by [short steps]. You should now see [expected result]. [Mention a
+> supporting attachment or provide the information Apple requested, if relevant.]
+>
+> Thank you for taking another look.
+>
+> The Divine team
+
 ## App Identity
 
 - App name: `Divine`

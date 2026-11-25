@@ -11,6 +11,9 @@ from release_train.versions import parse_version
 
 HOUR = 3600
 DAY = 24 * HOUR
+TESTFLIGHT_INTERVAL = 12 * HOUR
+TESTFLIGHT_DAILY_LIMIT = 2
+PRODUCTION_INTERVAL = 2 * DAY
 PLAY_PUBLICATION_VERSION = 1
 ACTIVE = {
     "initializing",
@@ -181,6 +184,39 @@ def observe(snapshot, previous):
     return state
 
 
+def last_operation_started(state, kind):
+    """Accepted writes may precede provider visibility or a saved success clock."""
+    return max(
+        (
+            o.get("started_at", 0)
+            for o in state.get("operations", {}).values()
+            if o["action"]["kind"] == kind
+        ),
+        default=0,
+    )
+
+
+def is_public_beta_release(action):
+    return action["kind"] == "public-beta" or (
+        action["kind"] == "attach-beta-groups"
+        and not action["build"].get("public")
+    )
+
+
+def last_public_beta_release(state):
+    """Completion or recovery observation bounds the actual public attachment."""
+    return max(
+        (
+            max(
+                o.get("cadence_at", 0),
+                o.get("started_at", 0) if is_public_beta_release(o["action"]) else 0,
+            )
+            for o in state.get("operations", {}).values()
+        ),
+        default=0,
+    )
+
+
 def plan_tick(snapshot, state, levels):
     actions = []
     reasons = []
@@ -234,7 +270,7 @@ def plan_tick(snapshot, state, levels):
         )
         candidate = snapshot.get("candidate")
         attempt = state.get("attempts", {}).get(platform, {}).get(candidate, {})
-        interval = 6 * HOUR if platform == "ios" else 4 * HOUR
+        interval = TESTFLIGHT_INTERVAL if platform == "ios" else 4 * HOUR
         can_replace = not (platform == "android" and data.get("internal_pending"))
         if not can_replace:
             reasons.append(
@@ -275,23 +311,48 @@ def plan_tick(snapshot, state, levels):
                 f"{platform}: no new build (CI/change/retry/active-build/cadence/exposure checks)"
             )
         if platform == "ios" and level in {"testflight", "app-store"}:
-            for b in data.get("builds", []):
-                known_operation = any(
-                    o["action"]["kind"] == "public-beta"
-                    and o["action"].get("build", {}).get("id") == b["id"]
-                    for o in state.get("operations", {}).values()
+            builds = data.get("builds", [])
+            dates = data.get("submissions", [])
+            budget = (
+                len([d for d in dates if now - d < DAY]) < TESTFLIGHT_DAILY_LIMIT
+                and now
+                - max(
+                    max(dates, default=0),
+                    last_public_beta_release(state),
                 )
+                >= TESTFLIGHT_INTERVAL
+            )
+            if not budget:
+                reasons.append(
+                    "ios public: wait twelve hours; at most two releases per rolling day"
+                )
+            operations = state.get("operations", {}).values()
+            known_beta_ids = {
+                o["action"]["build"]["id"]
+                for o in operations
+                if o["action"]["kind"] == "public-beta"
+            }
+            completed_attachment_ids = {
+                o["action"]["build"]["id"]
+                for o in operations
+                if o["action"]["kind"] == "attach-beta-groups" and o["status"] == "done"
+            }
+            for b in builds:
                 if (
                     b.get("ci_verified")
                     and not b.get("public_complete", b.get("public"))
-                    and (b.get("groups") or known_operation)
+                    and b["id"] not in completed_attachment_ids
+                    and (b.get("groups") or b["id"] in known_beta_ids)
                     and b.get("external")
                     in BETA_WAITING
                     | {"BETA_APPROVED", "READY_FOR_BETA_TESTING", "IN_BETA_TESTING"}
                 ):
-                    action("attach-beta-groups", "ios", build=b)
-            builds = data.get("builds", [])
-            dates = data.get("submissions", [])
+                    # Completing an already-public build's missing audiences is
+                    # resumable; its first public attachment consumes a release.
+                    if b.get("public") or budget:
+                        action("attach-beta-groups", "ios", build=b)
+                        if not b.get("public"):
+                            budget = False
             for b in builds:
                 if (
                     b.get("external") in BETA_REJECTED
@@ -306,10 +367,6 @@ def plan_tick(snapshot, state, levels):
                 for b in builds
             )
             waiting = any(b.get("external") in BETA_WAITING for b in builds)
-            budget = (
-                len([d for d in dates if now - d < DAY]) < 6
-                and now - max(dates, default=0) >= 4 * HOUR
-            )
             newest_public = max(
                 (b["number"] for b in builds if b.get("public")), default=0
             )
@@ -319,6 +376,7 @@ def plan_tick(snapshot, state, levels):
                 if b.get("valid")
                 and b.get("ci_verified")
                 and not b.get("public")
+                and b["id"] not in completed_attachment_ids
                 and b["number"] > newest_public
                 and b.get("external")
                 in {
@@ -350,12 +408,16 @@ def plan_tick(snapshot, state, levels):
                         version["state"] in STORE_REJECTED
                         and version_ack_key(version) not in ack
                     ):
-                        reasons.append(
-                            "ios app-store: rejection hold for "
-                            + version["version"]
-                            + "; resolve the issue then acknowledge ios-version:"
-                            + version["id"]
-                        )
+                        hold = f"ios app-store: rejection hold for {version['version']}"
+                        item = f"ios-version:{version['id']}"
+                        if version["state"] in {"REJECTED", "METADATA_REJECTED"}:
+                            reasons.append(
+                                f"{hold}. Verify the fix and reply to App Review before "
+                                f"acknowledging {item}. "
+                                "[App Review reply template](https://github.com/divinevideo/divine-mobile/blob/main/mobile/docs/APPLE_REVIEW_RESPONSE.md#replying-to-a-rejection)"
+                            )
+                        else:
+                            reasons.append(f"{hold}; resolve the issue then acknowledge {item}")
                 reviews = data.get("review_submissions", [])
                 blocked = blocked or any(
                     r["attributes"]["state"]
@@ -392,6 +454,7 @@ def plan_tick(snapshot, state, levels):
                     v["submitted_at"] for v in versions if v.get("submitted_at")
                 ]
                 submitted += state.get("app_store_submissions", [])
+                submitted.append(last_operation_started(state, "app-store"))
                 highest = max(
                     (
                         parse_version(v["version"])
@@ -415,7 +478,12 @@ def plan_tick(snapshot, state, levels):
                 ]
                 if resumable:
                     eligible = [b for b in eligible if b["number"] in resumable]
-                if not blocked and eligible and now - max(submitted, default=0) >= DAY:
+                store_budget = now - max(submitted, default=0) >= PRODUCTION_INTERVAL
+                if not store_budget:
+                    reasons.append(
+                        "ios app-store: wait 48 hours after the last submission"
+                    )
+                if not blocked and eligible and store_budget:
                     action(
                         "app-store",
                         platform,
@@ -441,7 +509,19 @@ def plan_tick(snapshot, state, levels):
                 and periods.get(str(b["number"]), {}).get("completed")
                 and parse_version(b["version"]) > highest
             ]
-            if eligible and now - state.get("last_play_promotion", 0) >= DAY:
+            play_budget = (
+                now
+                - max(
+                    state.get("last_play_promotion", 0),
+                    last_operation_started(state, "play-production"),
+                )
+                >= PRODUCTION_INTERVAL
+            )
+            if not play_budget:
+                reasons.append(
+                    "android production: wait 48 hours after the last promotion or observed publication"
+                )
+            if eligible and play_budget:
                 action(
                     "play-production",
                     platform,
