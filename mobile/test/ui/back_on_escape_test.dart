@@ -108,6 +108,39 @@ void main() {
       expect(find.text('Profile'), findsOneWidget);
     });
 
+    testWidgets('leaves a dialog open that the user cannot dismiss', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+      await open(tester, const Text('Profile'));
+      unawaited(
+        showDialog<void>(
+          context: navigatorKey.currentContext!,
+          barrierDismissible: false,
+          builder: (_) => const AlertDialog(content: Text('Pick one')),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await pressEscape(tester);
+
+      expect(find.text('Pick one'), findsOneWidget);
+      expect(find.text('Profile'), findsOneWidget);
+    });
+
+    testWidgets('closes only a screen that went back on Escape by itself', (
+      tester,
+    ) async {
+      await pumpApp(tester);
+      await open(tester, const Text('Recorder'));
+      await open(tester, const _ClosesItselfOnEscape());
+
+      await pressEscape(tester);
+
+      expect(find.text('Editor'), findsNothing);
+      expect(find.text('Recorder'), findsOneWidget);
+    });
+
     testWidgets('lets a screen that guards going back decide', (tester) async {
       var attempts = 0;
       await pumpApp(tester);
@@ -144,4 +177,39 @@ void main() {
       expect(find.text('Feed'), findsOneWidget);
     });
   });
+}
+
+/// Pops its own route on Escape from a keyboard handler, which runs before
+/// any shortcut, the way the image editor closes.
+class _ClosesItselfOnEscape extends StatefulWidget {
+  const _ClosesItselfOnEscape();
+
+  @override
+  State<_ClosesItselfOnEscape> createState() => _ClosesItselfOnEscapeState();
+}
+
+class _ClosesItselfOnEscapeState extends State<_ClosesItselfOnEscape> {
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_onKey);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    super.dispose();
+  }
+
+  bool _onKey(KeyEvent event) {
+    if (event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.escape) {
+      Navigator.pop(context);
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      const Focus(autofocus: true, child: Text('Editor'));
 }

@@ -16,19 +16,25 @@ class GoBackIntent extends Intent {
 /// Lets Escape close a screen opened over another, such as a profile or a
 /// fullscreen feed opened from the home feed.
 ///
-/// The app maps Escape to [DismissIntent], which dialogs, sheets and menus
-/// handle. Every full screen route answers that intent too, with an action
-/// that stays disabled, and the nearest action is the only one asked, so a
-/// fallback further up never hears it. Escape is mapped to [GoBackIntent]
-/// here instead, which in turn:
+/// Flutter's default shortcuts map Escape to [DismissIntent], which dialogs,
+/// sheets and menus handle. Every full screen route answers that intent too,
+/// with an action that stays disabled, and the nearest action is the only one
+/// asked, so a fallback further up never hears it. Escape is mapped to
+/// [GoBackIntent] here instead, which in turn:
 ///
-/// * dismisses a dialog, sheet or menu that takes [DismissIntent], as before,
-///   also from a text field inside it;
+/// * in a dialog or sheet route, does only what [DismissIntent] did before, so
+///   one shown with `barrierDismissible: false` stays open;
+/// * otherwise dismisses a menu that takes [DismissIntent], as before;
 /// * otherwise gives up the focus of a text field, so a half-written comment
 ///   is not closed with its screen;
 /// * otherwise pops the innermost navigator that can pop, the way the system
 ///   back button does, so a screen that guards its back navigation still
 ///   gets to ask first.
+///
+/// It acts only from the route on top. A screen that handles Escape itself,
+/// such as the image editor, which closes on Escape through a keyboard
+/// handler that runs before any shortcut, has left the top by then, so the
+/// screen under it stays.
 ///
 /// With nothing to close, the key passes on unhandled.
 class BackOnEscape extends StatefulWidget {
@@ -59,21 +65,21 @@ class _GoBackAction extends ContextAction<GoBackIntent> {
   /// Goes back one step from [context] and answers whether it did anything.
   @override
   bool invoke(GoBackIntent intent, [BuildContext? context]) {
-    if (context == null) return false;
+    if (context == null || !_isOnTop(context)) return false;
+    // A dialog or sheet decides itself whether Escape may close it, through
+    // its barrierDismissible.
+    if (ModalRoute.of(context) is PopupRoute) return _dismissModal(context);
     final textFieldFocus = context
         .findAncestorWidgetOfExactType<EditableText>()
         ?.focusNode;
     // A text field answers DismissIntent itself and passes it on to whatever
-    // is around it, so the answer cannot tell a closed dialog from nothing
+    // is around it, so the answer cannot tell a closed menu from nothing
     // done. On a full screen it only gives up the focus instead.
-    final inPopup = ModalRoute.of(context) is PopupRoute;
-    if ((textFieldFocus == null || inPopup) && _dismissModal(context)) {
-      return true;
-    }
     if (textFieldFocus != null) {
       textFieldFocus.unfocus();
       return true;
     }
+    if (_dismissModal(context)) return true;
     final navigator = _poppableNavigator(context);
     if (navigator == null) return false;
     runDetached(
@@ -100,6 +106,19 @@ class _GoBackAction extends ContextAction<GoBackIntent> {
       context,
     ).invokeActionIfEnabled(action, intent, context);
     return enabled;
+  }
+
+  /// Whether the route around [context], and each route around its
+  /// navigator, is the top one. A route already popped or covered is not.
+  static bool _isOnTop(BuildContext context) {
+    var route = ModalRoute.of(context);
+    while (route != null) {
+      if (!route.isCurrent) return false;
+      final navigatorContext = route.navigator?.context;
+      if (navigatorContext == null) return true;
+      route = ModalRoute.of(navigatorContext);
+    }
+    return true;
   }
 
   /// The innermost navigator above [context] with a route to pop.
