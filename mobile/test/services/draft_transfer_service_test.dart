@@ -296,6 +296,49 @@ void main() {
         expect(imported.inspiredByVideo, inspiration);
       });
 
+      test('drops a credit whose coordinate is not a whole video address', () async {
+        const artist =
+            'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+        // Each names the credited account, but none is a video an `a` tag
+        // can point at: no d tag, a non-video kind, or no kind at all.
+        const noDTag = ClipSourceCredit(
+          authorPubkey: artist,
+          addressableId: '34236:$artist:',
+        );
+        const notAVideo = ClipSourceCredit(
+          authorPubkey: artist,
+          addressableId: '30023:$artist:article',
+        );
+        const noKind = ClipSourceCredit(
+          authorPubkey: artist,
+          addressableId: ':$artist:video',
+        );
+        final draft = makeDraft();
+        final credited = draft.copyWith(
+          clips: [
+            draft.clips.first.copyWith(
+              sourceCredits: const [noDTag, notAVideo, noKind],
+            ),
+          ],
+        );
+        final package = await transfer.exportDraft(
+          credited,
+          temporaryDirectory: outbox,
+        );
+
+        final imported = await transfer.importDraft(
+          messageId: 'malformed-coordinate-message',
+          senderPubkey: _sender,
+          storage: recipientStorage,
+          download: package.readAsBytes,
+          stillWanted: () => true,
+        );
+
+        expect(imported.clips.single.sourceCredits, const [
+          ClipSourceCredit(authorPubkey: _sender),
+        ]);
+      });
+
       test('keeps only credits whose coordinate names the author', () async {
         const artist =
             'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
@@ -574,6 +617,14 @@ void main() {
         test('a layer that points at a file URL', () async {
           final (:manifest, :media) = await exported();
           firstClip(manifest)['layer'] = {'fileUrl': 'file:///etc/hosts'};
+          await expectRejected(pack(manifest, media));
+        });
+
+        test('a sticker that loads from the network', () async {
+          final (:manifest, :media) = await exported();
+          firstClip(manifest)['layer'] = {
+            'meta': {'networkUrl': 'https://tracker.example/p.png'},
+          };
           await expectRejected(pack(manifest, media));
         });
 

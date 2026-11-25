@@ -414,10 +414,12 @@ class DraftTransferService {
     String? senderPubkey,
   }) =>
       rewriteJsonMaps(project, (map) {
-            // Divine exports widget layers by ID or captures their pixels.
-            // A direct file URL has no draft-owned lifetime on another device.
-            if (map['fileUrl'] != null) {
-              throw const FormatException('Unsupported file-backed layer');
+            // Divine exports widget layers by ID or captures their pixels,
+            // and its stickers are bundled assets. A file URL has no
+            // draft-owned lifetime on another device, and a network URL would
+            // have the recipient's device fetch from a host the sender chose.
+            if (map['fileUrl'] != null || map['networkUrl'] != null) {
+              throw const FormatException('Unsupported external layer');
             }
             final result = Map<String, dynamic>.from(map)
               ..remove('proofManifestJson')
