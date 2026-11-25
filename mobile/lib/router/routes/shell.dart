@@ -329,7 +329,10 @@ class InboxRouteData extends GoRouteData with $InboxRouteData {
         ? DmPushListener(
             key: ObjectKey($extra),
             intent: $extra! as DmPushIntent,
-            child: const InboxPage(initialMessages: true),
+            child: InboxPage(
+              initialMessages: true,
+              onLeaveMessages: ($extra! as DmPushIntent).cancel,
+            ),
           )
         : InboxPage(initialMessages: messages),
   );

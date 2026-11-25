@@ -1,6 +1,7 @@
 // ABOUTME: Exercises the real Messages route handoff over account and DB changes.
 import 'dart:async';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -139,7 +140,7 @@ void main() {
           value: publish,
           child: MaterialApp.router(
             routerConfig: router,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
           ),
         ),
@@ -154,196 +155,235 @@ void main() {
     router.dispose();
   });
 
-  test(
-    'generic foreground alerts honor exact visibility, request and minor rules',
-    () {
-      final found = DmWrapFound(
-        conversationId: 'room',
-        messageId: 'rumor',
-        participants: {other},
-        isRequest: false,
-      );
-      bool show(
-        DmWrapLookup result, {
-        bool restricted = false,
-        String? viewing,
-      }) => shouldDisplayDmAlert(
-        result,
-        owner: owner,
-        restricted: restricted,
-        allowedPeer: (_) => false,
-        visible: (o, c, m) => o == owner && c == 'room' && m == viewing,
-      );
-      expect(show(found), isTrue);
-      expect(show(found, viewing: 'another'), isTrue);
-      expect(show(found, viewing: 'rumor'), isFalse);
-      expect(show(found, restricted: true), isFalse);
-      expect(show(const DmWrapSuppressed()), isFalse);
-      expect(show(const DmWrapDeleted()), isFalse);
-      expect(show(const DmWrapPending(), restricted: true), isFalse);
-      expect(
-        show(
-          DmWrapFound(
-            conversationId: 'room',
-            messageId: 'rumor',
-            participants: {other},
-            isRequest: true,
-          ),
-        ),
-        isFalse,
-      );
-    },
-  );
-
-  for (final cold in [false, true]) {
-    for (final isRequest in [false, true]) {
-      testWidgets(
-        'cold=$cold request=$isRequest opens once after verification',
-        (t) async {
-          await mount(t, cold: cold);
-          openDmPush(container, target);
-          await t.pumpAndSettle();
-          openDmPush(container, target);
-          if (cold) container.read(nostrSessionProvider.notifier).update(ready);
-          await t.pump();
-          messages.add(const DmWrapPending());
-          await t.pump();
-          expect(find.text('Messages'), findsOneWidget);
-          messages.add(
+  group('DM push navigation', () {
+    test(
+      'generic foreground alerts honor exact visibility, request and minor rules',
+      () {
+        final found = DmWrapFound(
+          conversationId: 'room',
+          messageId: 'rumor',
+          participants: {other},
+          isRequest: false,
+        );
+        bool show(
+          DmWrapLookup result, {
+          bool restricted = false,
+          String? viewing,
+        }) => shouldDisplayDmAlert(
+          result,
+          owner: owner,
+          restricted: restricted,
+          allowedPeer: (_) => false,
+          visible: (o, c, m) => o == owner && c == 'room' && m == viewing,
+        );
+        expect(show(found), isTrue);
+        expect(show(found, viewing: 'another'), isTrue);
+        expect(show(found, viewing: 'rumor'), isFalse);
+        expect(show(found, restricted: true), isFalse);
+        expect(show(const DmWrapSuppressed()), isFalse);
+        expect(show(const DmWrapDeleted()), isFalse);
+        expect(show(const DmWrapPending(), restricted: true), isFalse);
+        expect(
+          show(
             DmWrapFound(
               conversationId: 'room',
               messageId: 'rumor',
-              participants: const {'peer'},
-              isRequest: isRequest,
+              participants: {other},
+              isRequest: true,
+            ),
+          ),
+          isFalse,
+        );
+      },
+    );
+
+    for (final cold in [false, true]) {
+      for (final isRequest in [false, true]) {
+        testWidgets(
+          'cold=$cold request=$isRequest opens once after verification',
+          (t) async {
+            await mount(t, cold: cold);
+            openDmPush(container, target);
+            await t.pumpAndSettle();
+            openDmPush(container, target);
+            if (cold) {
+              container.read(nostrSessionProvider.notifier).update(ready);
+            }
+            await t.pump();
+            messages.add(const DmWrapPending());
+            await t.pump();
+            expect(find.text('Messages'), findsOneWidget);
+            messages.add(
+              DmWrapFound(
+                conversationId: 'room',
+                messageId: 'rumor',
+                participants: const {'peer'},
+                isRequest: isRequest,
+              ),
+            );
+            await t.pumpAndSettle();
+            final path = isRequest
+                ? '/inbox/message-requests/room'
+                : '/inbox/conversation/room?messageId=rumor';
+            expect(find.text(path), findsOneWidget);
+            openDmPush(container, target);
+            await t.pumpAndSettle();
+            expect(find.text(path), findsOneWidget);
+            verify(
+              () => dm.watchWrapLookup(ownerPubkey: owner, giftWrapId: wrap),
+            ).called(1);
+          },
+        );
+      }
+    }
+    for (final accept in [true, false]) {
+      testWidgets(
+        'a known other account needs explicit confirmation: $accept',
+        (
+          t,
+        ) async {
+          when(auth.getKnownAccounts).thenAnswer(
+            (_) async => [
+              KnownAccount(
+                pubkeyHex: other,
+                authSource: AuthenticationSource.importedKeys,
+                addedAt: DateTime.utc(2026),
+                lastUsedAt: DateTime.utc(2026),
+              ),
+            ],
+          );
+          when(() => dm.watchWrapLookup(ownerPubkey: other, giftWrapId: wrap))
+              .thenAnswer((_) => messages.stream);
+          await mount(t);
+          openDmPush(
+            container,
+            OpenDirectMessageTarget(receiverPubkey: other, giftWrapId: wrap),
+          );
+          await t.pumpAndSettle();
+          expect(find.byType(VineBottomSheet), findsOneWidget);
+          expect(messages.hasListener, isFalse);
+          await t.tap(
+            find.widgetWithText(
+              DivineButton,
+              accept ? 'Switch account' : 'Cancel',
             ),
           );
           await t.pumpAndSettle();
-          final path = isRequest
-              ? '/inbox/message-requests/room'
-              : '/inbox/conversation/room?messageId=rumor';
-          expect(find.text(path), findsOneWidget);
-          openDmPush(container, target);
-          await t.pumpAndSettle();
-          expect(find.text(path), findsOneWidget);
-          verify(() => dm.watchWrapLookup(ownerPubkey: owner, giftWrapId: wrap))
-              .called(1);
+          expect(switches, accept ? 1 : 0);
+          expect(messages.hasListener, accept);
+          verifyNever(
+            () => dm.watchWrapLookup(ownerPubkey: owner, giftWrapId: wrap),
+          );
         },
       );
     }
-  }
-  for (final accept in [true, false]) {
-    testWidgets('a known other account needs explicit confirmation: $accept', (
-      t,
-    ) async {
-      when(auth.getKnownAccounts).thenAnswer(
-        (_) async => [
-          KnownAccount(
-            pubkeyHex: other,
-            authSource: AuthenticationSource.importedKeys,
-            addedAt: DateTime.utc(2026),
-            lastUsedAt: DateTime.utc(2026),
-          ),
-        ],
-      );
-      when(() => dm.watchWrapLookup(ownerPubkey: other, giftWrapId: wrap))
-          .thenAnswer((_) => messages.stream);
+
+    testWidgets('unknown account never queries the current account', (t) async {
       await mount(t);
       openDmPush(
         container,
         OpenDirectMessageTarget(receiverPubkey: other, giftWrapId: wrap),
       );
       await t.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsOneWidget);
-      expect(messages.hasListener, isFalse);
-      await t.tap(
-        find.widgetWithText(TextButton, accept ? 'Switch account' : 'Cancel'),
-      );
-      await t.pumpAndSettle();
-      expect(switches, accept ? 1 : 0);
-      expect(messages.hasListener, accept);
+      expect(find.text('Messages'), findsOneWidget);
       verifyNever(
-        () => dm.watchWrapLookup(ownerPubkey: owner, giftWrapId: wrap),
+        () => dm.watchWrapLookup(
+          ownerPubkey: any(named: 'ownerPubkey'),
+          giftWrapId: any(named: 'giftWrapId'),
+        ),
       );
     });
-  }
+    testWidgets(
+      'a superseding tap cancels the earlier wrap, then deletion settles',
+      (t) async {
+        final secondWrap = 'd' * 64;
+        final second = StreamController<DmWrapLookup>.broadcast();
+        addTearDown(second.close);
+        when(
+          () => dm.watchWrapLookup(ownerPubkey: owner, giftWrapId: secondWrap),
+        ).thenAnswer((_) => second.stream);
+        await mount(t);
+        openDmPush(container, target);
+        await t.pumpAndSettle();
+        openDmPush(
+          container,
+          OpenDirectMessageTarget(
+            receiverPubkey: owner,
+            giftWrapId: secondWrap,
+          ),
+        );
+        await t.pumpAndSettle();
+        expect(messages.hasListener, isFalse);
+        expect(second.hasListener, isTrue);
+        second.add(const DmWrapDeleted());
+        await t.pump();
+        expect(second.hasListener, isFalse);
+        expect(find.text('Messages'), findsOneWidget);
+      },
+    );
 
-  testWidgets('unknown account never queries the current account', (t) async {
-    await mount(t);
-    openDmPush(
-      container,
-      OpenDirectMessageTarget(receiverPubkey: other, giftWrapId: wrap),
-    );
-    await t.pumpAndSettle();
-    expect(find.text('Messages'), findsOneWidget);
-    verifyNever(
-      () => dm.watchWrapLookup(
-        ownerPubkey: any(named: 'ownerPubkey'),
-        giftWrapId: any(named: 'giftWrapId'),
-      ),
-    );
-  });
-  testWidgets(
-    'a superseding tap cancels the earlier wrap, then deletion settles',
-    (t) async {
-      final secondWrap = 'd' * 64;
-      final second = StreamController<DmWrapLookup>.broadcast();
-      addTearDown(second.close);
-      when(() => dm.watchWrapLookup(ownerPubkey: owner, giftWrapId: secondWrap))
-          .thenAnswer((_) => second.stream);
+    testWidgets('a sign-out while waiting cannot route the previous owner', (
+      t,
+    ) async {
       await mount(t);
       openDmPush(container, target);
       await t.pumpAndSettle();
-      openDmPush(
-        container,
-        OpenDirectMessageTarget(receiverPubkey: owner, giftWrapId: secondWrap),
-      );
+      container
+          .read(nostrSessionProvider.notifier)
+          .update(const NostrSessionReadiness.signedOut());
+      await t.pump();
+      expect(messages.hasListener, isFalse);
+      expect(find.text('Messages'), findsOneWidget);
+    });
+
+    testWidgets(
+      'leaving the Messages pane rejects a late verification on the same route',
+      (t) async {
+        await mount(t);
+        openDmPush(container, target);
+        await t.pumpAndSettle();
+        final intent = t
+            .widget<DmPushListener>(find.byType(DmPushListener))
+            .intent;
+        intent.cancel();
+        expect(messages.hasListener, isFalse);
+        messages.add(
+          DmWrapFound(
+            conversationId: 'room',
+            messageId: 'rumor',
+            participants: {other},
+            isRequest: false,
+          ),
+        );
+        await t.pumpAndSettle();
+        expect(find.text('Messages'), findsOneWidget);
+        expect(router.routeInformationProvider.value.uri.path, '/inbox');
+      },
+    );
+    testWidgets('leaving Messages cancels the lookup', (t) async {
+      await mount(t);
+      openDmPush(container, target);
+      await t.pumpAndSettle();
+      expect(messages.hasListener, isTrue);
+      router.go('/');
       await t.pumpAndSettle();
       expect(messages.hasListener, isFalse);
-      expect(second.hasListener, isTrue);
-      second.add(const DmWrapDeleted());
+      messages.add(const DmWrapDeleted());
+      await t.pumpAndSettle();
+      expect(find.text('Home'), findsOneWidget);
+    });
+    testWidgets('DM initialization consumes the same ten second budget', (
+      t,
+    ) async {
+      await mount(t, cold: true);
+      openDmPush(container, target);
+      await t.pumpAndSettle();
+      await t.pump(const Duration(seconds: 10));
+      await t.pumpAndSettle();
+      container.read(nostrSessionProvider.notifier).update(ready);
       await t.pump();
-      expect(second.hasListener, isFalse);
+      expect(messages.hasListener, isFalse);
       expect(find.text('Messages'), findsOneWidget);
-    },
-  );
-
-  testWidgets('a sign-out while waiting cannot route the previous owner', (
-    t,
-  ) async {
-    await mount(t);
-    openDmPush(container, target);
-    await t.pumpAndSettle();
-    container
-        .read(nostrSessionProvider.notifier)
-        .update(const NostrSessionReadiness.signedOut());
-    await t.pump();
-    expect(messages.hasListener, isFalse);
-    expect(find.text('Messages'), findsOneWidget);
-  });
-
-  testWidgets('leaving Messages cancels the lookup', (t) async {
-    await mount(t);
-    openDmPush(container, target);
-    await t.pumpAndSettle();
-    expect(messages.hasListener, isTrue);
-    router.go('/');
-    await t.pumpAndSettle();
-    expect(messages.hasListener, isFalse);
-    messages.add(const DmWrapDeleted());
-    await t.pumpAndSettle();
-    expect(find.text('Home'), findsOneWidget);
-  });
-  testWidgets('DM initialization consumes the same ten second budget', (
-    t,
-  ) async {
-    await mount(t, cold: true);
-    openDmPush(container, target);
-    await t.pumpAndSettle();
-    await t.pump(const Duration(seconds: 10));
-    await t.pumpAndSettle();
-    container.read(nostrSessionProvider.notifier).update(ready);
-    await t.pump();
-    expect(messages.hasListener, isFalse);
-    expect(find.text('Messages'), findsOneWidget);
+    });
   });
 }

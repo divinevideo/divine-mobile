@@ -1,7 +1,7 @@
 // ABOUTME: Reverse lazy timeline with an optional exact-message scroll origin.
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:openvine/notifications/routing/dm_message_visibility.dart';
 
 /// Splits the existing lazy delegate at the requested row. Flutter lays out the

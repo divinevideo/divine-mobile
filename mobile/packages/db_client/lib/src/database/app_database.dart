@@ -1843,24 +1843,16 @@ class AppDatabase extends _$AppDatabase {
       ON pending_gift_wraps (owner_pubkey, attempts)
     ''');
 
-    // Check if processed_gift_wraps table exists, create if missing.
-    // Added for #5452 (dedup ledger so DM reaction/deletion gift wraps are not
-    // re-decrypted on every launch). No index: the only access is a primary-key
-    // lookup on gift_wrap_id.
-    final processedGiftWrapsResult = await customSelect(
-      "SELECT name FROM sqlite_master WHERE type='table' "
-      "AND name='processed_gift_wraps'",
-    ).get();
-
-    if (processedGiftWrapsResult.isEmpty) {
-      await customStatement('''
-        CREATE TABLE processed_gift_wraps (
-          gift_wrap_id TEXT NOT NULL,
-          processed_at INTEGER NOT NULL,
-          owner_pubkey TEXT NOT NULL DEFAULT '',
-          PRIMARY KEY (gift_wrap_id, owner_pubkey)
-        )
-      ''');
+    // Recreate a missing ledger from the current Drift schema. Older rows
+    // without a verified alias remain terminal dedup evidence.
+    if (!await _tableExists('processed_gift_wraps')) {
+      await Migrator(this).createTable(processedGiftWraps);
+    } else {
+      await _addColumnIfMissing(
+        'processed_gift_wraps',
+        'verified_message_id',
+        'TEXT',
+      );
     }
 
     // Check if identity_events table exists, create if missing.

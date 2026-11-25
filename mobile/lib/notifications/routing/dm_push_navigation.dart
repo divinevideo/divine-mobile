@@ -31,6 +31,13 @@ class DmPushIntent {
   String? destination;
   bool finished = false;
   bool superseded = false;
+  VoidCallback? _onCancel;
+
+  void cancel() {
+    superseded = true;
+    _onCancel?.call();
+  }
+
   Duration get remaining => const Duration(seconds: 10) - clock.elapsed;
 }
 
@@ -54,7 +61,7 @@ final dmPushAccountSwitchProvider =
 
 void cancelPendingDmPush(ProviderContainer container) {
   final previous = _lastTap[container];
-  if (previous != null) previous.superseded = true;
+  previous?.cancel();
   _lastTap[container] = null;
 }
 
@@ -113,6 +120,7 @@ class _DmPushListenerState extends ConsumerState<DmPushListener> {
   @override
   void initState() {
     super.initState();
+    widget.intent._onCancel = _finish;
     _router = ref.read(goRouterProvider);
     _router.routeInformationProvider.addListener(_onLocation);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -241,30 +249,43 @@ class _DmPushListenerState extends ConsumerState<DmPushListener> {
     final inFlight = publish.state.uploads
         .where((upload) => upload.result == null)
         .length;
-    final agree = await showDialog<bool>(
+    final l10n = context.l10n;
+    final message = [
+      l10n.dmNotificationSwitchAccountPrompt(NostrKeyUtils.npubOrHex(_owner)),
+      if (inFlight > 0) l10n.settingsUploadInProgressMessage(inFlight),
+    ].join('\n\n');
+    final agree = await VineBottomSheet.show<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.settingsSwitchAccount),
-        content: Text(
-          [
-            context.l10n.dmNotificationSwitchAccountPrompt(
-              NostrKeyUtils.npubOrHex(_owner),
-            ),
-            if (inFlight > 0)
-              context.l10n.settingsUploadInProgressMessage(inFlight),
-          ].join('\n\n'),
+      scrollable: false,
+      contentTitle: l10n.settingsSwitchAccount,
+      closeSemanticLabel: l10n.commonClose,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: Text(message),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(context.l10n.commonCancel),
+        Builder(
+          builder: (sheetContext) => Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              spacing: 8,
+              children: [
+                DivineButton(
+                  label: l10n.settingsSwitchAccount,
+                  expanded: true,
+                  onPressed: () => Navigator.of(sheetContext).pop(true),
+                ),
+                DivineButton(
+                  label: l10n.commonCancel,
+                  type: DivineButtonType.secondary,
+                  expanded: true,
+                  onPressed: () => Navigator.of(sheetContext).pop(false),
+                ),
+              ],
+            ),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(context.l10n.settingsSwitchAccount),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
     if (!mounted ||
         !_active ||
@@ -299,6 +320,7 @@ class _DmPushListenerState extends ConsumerState<DmPushListener> {
 
   @override
   void dispose() {
+    widget.intent._onCancel = null;
     _router.routeInformationProvider.removeListener(_onLocation);
     _timeout?.cancel();
     _session?.close();

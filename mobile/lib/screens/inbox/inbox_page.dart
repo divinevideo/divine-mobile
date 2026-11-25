@@ -28,8 +28,13 @@ import 'package:openvine/screens/inbox/inbox_view.dart';
 /// powers DM ingestion is owned by `dmRepositoryProvider` for the entire
 /// authenticated session — this screen does NOT start or stop it (#2931).
 class InboxPage extends ConsumerWidget {
-  const InboxPage({this.initialMessages = false, super.key});
+  const InboxPage({
+    this.initialMessages = false,
+    this.onLeaveMessages,
+    super.key,
+  });
   final bool initialMessages;
+  final VoidCallback? onLeaveMessages;
 
   /// Route name for this screen.
   static const routeName = 'inbox';
@@ -136,7 +141,10 @@ class InboxPage extends ConsumerWidget {
         ),
       ],
       child: _InboxRepositorySync(
-        child: InboxView(initialMessages: initialMessages),
+        child: InboxView(
+          initialMessages: initialMessages,
+          onLeaveMessages: onLeaveMessages,
+        ),
       ),
     );
   }

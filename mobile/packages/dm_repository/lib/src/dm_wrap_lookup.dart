@@ -57,14 +57,18 @@ sealed class DmWrapLookup {
     }
     final isSupport =
         peers.length == 1 && peers.single == audience.supportPubkey;
+    final isRequest =
+        !row.hasSent && !isSupport && !peers.every(audience.followed.contains);
+    // An unaccepted request is hidden when any counterparty is muted or
+    // blocked. A visible sender in an accepted group remains reachable.
+    if (isRequest && peers.any(audience.hidden.contains)) {
+      return const DmWrapSuppressed();
+    }
     return DmWrapFound(
       conversationId: row.conversationId!,
       messageId: id,
       participants: Set.unmodifiable(peers),
-      isRequest:
-          !row.hasSent &&
-          !isSupport &&
-          !peers.every(audience.followed.contains),
+      isRequest: isRequest,
     );
   }
 }

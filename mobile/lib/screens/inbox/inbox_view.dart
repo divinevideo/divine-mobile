@@ -49,8 +49,13 @@ import 'package:unified_logger/unified_logger.dart';
 /// Main inbox view containing the Messages/Notifications segmented toggle
 /// and the corresponding content for each tab.
 class InboxView extends ConsumerStatefulWidget {
-  const InboxView({this.initialMessages = false, super.key});
+  const InboxView({
+    this.initialMessages = false,
+    this.onLeaveMessages,
+    super.key,
+  });
   final bool initialMessages;
+  final VoidCallback? onLeaveMessages;
 
   @override
   ConsumerState<InboxView> createState() => _InboxViewState();
@@ -112,6 +117,9 @@ class _InboxViewState extends ConsumerState<InboxView>
   }
 
   void _onTabSelected(InboxTab tab) {
+    if (_selectedTab == InboxTab.messages && tab == InboxTab.notifications) {
+      widget.onLeaveMessages?.call();
+    }
     if (tab == _selectedTab) return;
     setState(() {
       _selectedTab = tab;

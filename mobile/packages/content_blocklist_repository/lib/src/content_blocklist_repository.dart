@@ -258,8 +258,8 @@ class ContentBlocklistRepository {
     pubkeysMutingUs: Set.unmodifiable(_mutualMuteBlocklist),
   );
 
-  void _notifyChanged() {
-    _onChanged?.call();
+  void _notifyChanged({bool listsChanged = true}) {
+    if (listsChanged) _onChanged?.call();
     if (!_stateController.isClosed) {
       _stateController.add(_buildCurrentState());
     }
@@ -341,7 +341,6 @@ class ContentBlocklistRepository {
       _loadMutedUsers();
       _loadSeveredFollowers();
       _loadPendingUnblocks();
-      _notifyChanged();
       Log.info(
         'Adopted new identity; blocklist state reset and reloaded '
         '(${_runtimeBlocklist.length} persisted blocks)',
@@ -349,6 +348,9 @@ class ContentBlocklistRepository {
         category: LogCategory.system,
       );
     }
+    // A first identity also makes previously unbound DM audience reads ready,
+    // even when no mute-list event follows the subscription.
+    _notifyChanged(listsChanged: isSwitch || storedAccountDiffers);
   }
 
   /// Persists which account the per-account sets belong to.
