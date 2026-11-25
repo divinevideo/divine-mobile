@@ -4214,21 +4214,6 @@ class VideosRepository {
 
     final isTerminalPage =
         result.hasMore != true || result.paginationCursor == null;
-    // A retry that comes back terminal is the page the viewer already saw, so
-    // replaying it would loop; advance into popular from the cursor instead.
-    if (isFallbackContinuation && isTerminalPage) {
-      return _popularVideosInsteadOfRecommendations(
-        reason: 'recommendations retry returned a terminal page',
-        limit: limit,
-        until: effectiveUntil,
-        skipCache: true,
-        revalidate: revalidate,
-        preferredLanguages: preferredLanguages,
-        viewerCountry: viewerCountry,
-        seedVideoId: effectiveSeedVideoId,
-      );
-    }
-
     if (isFirstPage) {
       _recommendationSessionSeed = requestSeed;
     }
@@ -4244,12 +4229,11 @@ class VideosRepository {
             listOnlyVideoIds: result.listOnlyVideoIds,
             consumedItemCount: result.consumedItemCount,
             nextCursor: result.nextCursor,
-            // Reopening an exhausted cursor chain would replay its first
-            // page, which can still advertise more recommendations.
+            // Keep the last recommendation batch and continue the popular
+            // stream at its saved position. Restarting would replay page one.
             paginationCursor: _encodeRecommendedFallbackCursor(
               effectiveUntil,
-              recommendationsExhausted: recommendationCursor != null,
-              seedVideoId: result.videos.last.id,
+              recommendationsExhausted: true,
             ),
             hasMore: true,
             recommendationPageCount: result.recommendationPageCount,

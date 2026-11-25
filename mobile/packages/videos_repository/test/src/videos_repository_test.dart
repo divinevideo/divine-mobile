@@ -15932,10 +15932,7 @@ void main() {
           );
           expect(page2.videos.single.id, 'popular-page-1');
           expect(page2.hasMore, isTrue);
-          expect(
-            page2.paginationCursor,
-            'recommended-fallback:1700000499:popular-page-1',
-          );
+          expect(page2.paginationCursor, 'recommended-popular:1700000499');
 
           final page3 = await repo.getRecommendedVideos(
             userPubkey: 'user-pubkey',
@@ -15944,18 +15941,75 @@ void main() {
           );
           expect(page3.videos.single.id, 'popular-page-2');
           expect(page3.hasMore, isTrue);
-          expect(
-            page3.paginationCursor,
-            'recommended-fallback:1700000299:popular-page-2',
-          );
+          expect(page3.paginationCursor, 'recommended-popular:1700000299');
 
-          // Each continuation still retries recommendations first, so a
-          // recovered server is picked up on the next page.
-          expect(recommendationCalls, equals(3));
+          expect(recommendationCalls, equals(1));
           verify(
             () => mockFunnelcakeClient.getWatchingVideos(
               limit: 10,
               before: 1700000499,
+            ),
+          ).called(1);
+        },
+      );
+
+      test(
+        'serves a recovered terminal recommendation before resuming popular',
+        () async {
+          const fallbackCursor = 'recommended-fallback:1700000499';
+          final recovered = _createVideoStats(
+            id: 'terminal-recovery',
+            pubkey: 'rec-author',
+            dTag: 'recovered',
+            videoUrl: 'https://example.com/recovered.mp4',
+          );
+          final popular = _createVideoStats(
+            id: 'older-popular',
+            pubkey: 'popular-author',
+            dTag: 'popular',
+            videoUrl: 'https://example.com/popular.mp4',
+            createdAt: 1700000300,
+          );
+          when(
+            () => mockFunnelcakeClient.getRecommendations(
+              pubkey: 'user-pubkey',
+              limit: 25,
+              seed: any(named: 'seed'),
+            ),
+          ).thenAnswer(
+            (_) async => RecommendationsResponse(
+              videos: [recovered],
+              source: 'personalized',
+            ),
+          );
+          when(
+            () => mockFunnelcakeClient.getWatchingVideos(
+              limit: 25,
+              before: 1700000499,
+            ),
+          ).thenAnswer((_) async => [popular]);
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          final resumed = await repo.getRecommendedVideos(
+            userPubkey: 'user-pubkey',
+            cursor: fallbackCursor,
+          );
+          final afterRecovery = await repo.getRecommendedVideos(
+            userPubkey: 'user-pubkey',
+            cursor: resumed.paginationCursor,
+          );
+
+          expect(resumed.videos.single.id, 'terminal-recovery');
+          expect(resumed.hasMore, isTrue);
+          expect(afterRecovery.videos.single.id, 'older-popular');
+          verify(
+            () => mockFunnelcakeClient.getRecommendations(
+              pubkey: 'user-pubkey',
+              limit: 25,
+              seed: any(named: 'seed'),
             ),
           ).called(1);
         },
