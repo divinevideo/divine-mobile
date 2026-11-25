@@ -2262,6 +2262,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Concept dupliceren mislukt",
   "libraryDraftInProgressBadge": "Bezig",
   "libraryDraftActionDuplicate": "Dupliceren",
+  "libraryDraftActionConvertToClip": "Omzetten naar clip",
+  "libraryDraftConvertingToClip": "Omzetten naar clip...",
+  "libraryDraftConvertedToClipSnackbar": "Concept omgezet naar clip",
+  "libraryDraftConvertToClipFailedSnackbar": "Concept omzetten mislukt",
+  "libraryDraftConvertOverlaysUnavailable": "De tekst en stickers van dit concept konden niet worden voorbereid. Open het in de editor en probeer het opnieuw.",
   "libraryDraftCopyTitle": "{title} (kopie {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {

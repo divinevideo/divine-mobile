@@ -2262,6 +2262,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Nie udało się zduplikować wersji roboczej",
   "libraryDraftInProgressBadge": "W toku",
   "libraryDraftActionDuplicate": "Duplikuj",
+  "libraryDraftActionConvertToClip": "Zamień w klip",
+  "libraryDraftConvertingToClip": "Zamienianie w klip...",
+  "libraryDraftConvertedToClipSnackbar": "Zamieniono wersję roboczą w klip",
+  "libraryDraftConvertToClipFailedSnackbar": "Nie udało się zamienić wersji roboczej",
+  "libraryDraftConvertOverlaysUnavailable": "Nie udało się przygotować tekstu i naklejek z tej wersji roboczej. Otwórz ją w edytorze i spróbuj ponownie.",
   "libraryDraftCopyTitle": "{title} (kopia {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {

@@ -5187,6 +5187,26 @@
   "libraryDraftActionPost": "Post",
   "libraryDraftActionEdit": "Edit",
   "libraryDraftActionDuplicate": "Duplicate",
+  "libraryDraftActionConvertToClip": "Convert to clip",
+  "@libraryDraftActionConvertToClip": {
+    "description": "Draft options menu action that renders the draft into one clip in the Clips library. The draft itself is kept."
+  },
+  "libraryDraftConvertingToClip": "Converting to clip...",
+  "@libraryDraftConvertingToClip": {
+    "description": "Shown over the library while a draft is rendered into a clip."
+  },
+  "libraryDraftConvertedToClipSnackbar": "Draft converted to a clip",
+  "@libraryDraftConvertedToClipSnackbar": {
+    "description": "Snackbar after a draft was rendered into a new clip in the Clips library."
+  },
+  "libraryDraftConvertToClipFailedSnackbar": "Failed to convert draft",
+  "@libraryDraftConvertToClipFailedSnackbar": {
+    "description": "Snackbar when rendering a draft into a clip failed."
+  },
+  "libraryDraftConvertOverlaysUnavailable": "The text and stickers on this draft couldn’t be prepared. Open it in the editor, then try again.",
+  "@libraryDraftConvertOverlaysUnavailable": {
+    "description": "Snackbar when a draft's text and stickers could not be prepared for the clip render."
+  },
   "libraryDraftActionShare": "Share draft",
   "libraryDraftShareConfirm": "Send an editable draft to {name}?",
   "libraryDraftShareNotice": "You’re sharing the original clips and edit history. They can see what you cut, edit their copy, post it, or send it back.",

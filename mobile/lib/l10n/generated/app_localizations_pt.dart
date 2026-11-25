@@ -7209,6 +7209,24 @@ class AppLocalizationsPt extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplicar';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Converter em clipe';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Convertendo em clipe...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Rascunho convertido em clipe';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Falha ao converter rascunho';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Não foi possível preparar o texto e os stickers deste rascunho. Abra no editor e tente de novo.';
+
+  @override
   String get libraryDraftActionShare => 'Compartilhar rascunho';
 
   @override

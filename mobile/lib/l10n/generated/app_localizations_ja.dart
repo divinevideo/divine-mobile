@@ -6774,6 +6774,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String get libraryDraftActionDuplicate => '複製';
 
   @override
+  String get libraryDraftActionConvertToClip => 'クリップに変換';
+
+  @override
+  String get libraryDraftConvertingToClip => 'クリップに変換しています…';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => '下書きをクリップに変換しました';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar => '下書きを変換できませんでした';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'この下書きのテキストとステッカーを準備できなかったよ。エディタで開いてから、もう一回試してみて。';
+
+  @override
   String get libraryDraftActionShare => '下書きを共有';
 
   @override

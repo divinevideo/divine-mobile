@@ -2262,6 +2262,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Entwurf konnte nicht dupliziert werden",
   "libraryDraftInProgressBadge": "In Arbeit",
   "libraryDraftActionDuplicate": "Duplizieren",
+  "libraryDraftActionConvertToClip": "In Clip umwandeln",
+  "libraryDraftConvertingToClip": "Wird in einen Clip umgewandelt …",
+  "libraryDraftConvertedToClipSnackbar": "Entwurf in Clip umgewandelt",
+  "libraryDraftConvertToClipFailedSnackbar": "Entwurf konnte nicht umgewandelt werden",
+  "libraryDraftConvertOverlaysUnavailable": "Text und Sticker dieses Entwurfs konnten nicht vorbereitet werden. Öffne ihn im Editor und versuche es dann erneut.",
   "libraryDraftCopyTitle": "{title} (Kopie {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {

@@ -2262,6 +2262,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Det gick inte att duplicera utkastet",
   "libraryDraftInProgressBadge": "Pågår",
   "libraryDraftActionDuplicate": "Duplicera",
+  "libraryDraftActionConvertToClip": "Gör om till klipp",
+  "libraryDraftConvertingToClip": "Gör om till klipp...",
+  "libraryDraftConvertedToClipSnackbar": "Utkastet har gjorts om till ett klipp",
+  "libraryDraftConvertToClipFailedSnackbar": "Det gick inte att göra om utkastet",
+  "libraryDraftConvertOverlaysUnavailable": "Texten och dekalerna i det här utkastet kunde inte förberedas. Öppna det i redigeraren och försök igen.",
   "libraryDraftCopyTitle": "{title} (kopia {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {

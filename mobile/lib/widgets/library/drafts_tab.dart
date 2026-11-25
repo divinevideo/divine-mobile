@@ -1,5 +1,5 @@
 // ABOUTME: Drafts tab widget for the clip library screen
-// ABOUTME: Lists saved video drafts with options to post, edit, duplicate, delete
+// ABOUTME: Lists saved video drafts with options to post, edit, duplicate, convert, delete
 
 import 'dart:async';
 
@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/drafts_library/draft_clip_conversion_cubit.dart';
 import 'package:openvine/blocs/drafts_library/drafts_library_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
@@ -17,6 +18,7 @@ import 'package:openvine/models/draft_summary.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/draft_copy_naming.dart';
 import 'package:openvine/widgets/library/draft_dm_share_sheet.dart';
 import 'package:openvine/widgets/library/draft_status_badge.dart';
@@ -211,6 +213,12 @@ class _DraftsList extends ConsumerWidget {
           label: context.l10n.libraryDraftActionDuplicate,
           onTap: () => _duplicateDraft(context, draft),
         ),
+        if (draft.canPost)
+          VineBottomSheetActionData(
+            iconPath: DivineIconName.filmSlate.assetPath,
+            label: context.l10n.libraryDraftActionConvertToClip,
+            onTap: () => _convertDraftToClip(context, draft),
+          ),
         VineBottomSheetActionData(
           iconPath: DivineIconName.trash.assetPath,
           label: context.l10n.libraryDraftActionDelete,
@@ -244,6 +252,20 @@ class _DraftsList extends ConsumerWidget {
           );
     context.read<DraftsLibraryBloc>().add(
       DraftsLibraryDuplicateRequested(draft.id, newTitle: newTitle),
+    );
+  }
+
+  void _convertDraftToClip(BuildContext context, DraftSummary draft) {
+    Log.info(
+      '📚 Convert draft to clip: ${draft.id}',
+      name: 'DraftsTab',
+      category: LogCategory.video,
+    );
+    runDetached(
+      context.read<DraftClipConversionCubit>().convert(draft.id),
+      'convert draft to a library clip',
+      logName: 'DraftsTab',
+      category: LogCategory.video,
     );
   }
 

@@ -1766,6 +1766,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Hindi na-duplicate ang draft",
   "libraryDraftInProgressBadge": "Ginagawa pa",
   "libraryDraftActionDuplicate": "I-duplicate",
+  "libraryDraftActionConvertToClip": "Gawing clip",
+  "libraryDraftConvertingToClip": "Ginagawang clip...",
+  "libraryDraftConvertedToClipSnackbar": "Naging clip na ang draft",
+  "libraryDraftConvertToClipFailedSnackbar": "Hindi na-convert ang draft",
+  "libraryDraftConvertOverlaysUnavailable": "Hindi na-prepare ang text at stickers sa draft na ito. Buksan mo sa editor, tapos subukan ulit.",
   "libraryDraftCopyTitle": "{title} (kopya {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {

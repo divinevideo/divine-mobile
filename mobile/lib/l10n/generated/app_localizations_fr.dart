@@ -7252,6 +7252,24 @@ class AppLocalizationsFr extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Dupliquer';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Convertir en clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Conversion en clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Brouillon converti en clip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Échec de la conversion du brouillon';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Le texte et les stickers de ce brouillon n’ont pas pu être préparés. Ouvre-le dans l’éditeur, puis réessaie.';
+
+  @override
   String get libraryDraftActionShare => 'Partager le brouillon';
 
   @override

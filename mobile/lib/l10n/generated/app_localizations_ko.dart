@@ -6800,6 +6800,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get libraryDraftActionDuplicate => '복제';
 
   @override
+  String get libraryDraftActionConvertToClip => '클립으로 변환';
+
+  @override
+  String get libraryDraftConvertingToClip => '클립으로 변환 중...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => '임시 저장을 클립으로 변환했어요';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar => '임시 저장을 변환하지 못했어요';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      '이 초안의 텍스트와 스티커를 준비하지 못했어요. 편집기에서 연 다음 다시 시도해주세요.';
+
+  @override
   String get libraryDraftActionShare => '초안 공유';
 
   @override

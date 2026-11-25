@@ -7357,6 +7357,24 @@ class AppLocalizationsTe extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'నకిలీ';
 
   @override
+  String get libraryDraftActionConvertToClip => 'క్లిప్‌గా మార్చు';
+
+  @override
+  String get libraryDraftConvertingToClip => 'క్లిప్‌గా మారుస్తోంది...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'డ్రాఫ్ట్ క్లిప్‌గా మార్చబడింది';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'డ్రాఫ్ట్‌ను మార్చడంలో విఫలమైంది';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'ఈ డ్రాఫ్ట్‌లోని టెక్స్ట్ మరియు స్టిక్కర్‌లను సిద్ధం చేయడం సాధ్యపడలేదు. దాన్ని ఎడిటర్‌లో తెరిచి, ఆపై మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get libraryDraftActionShare => 'డ్రాఫ్ట్ షేర్ చేయి';
 
   @override

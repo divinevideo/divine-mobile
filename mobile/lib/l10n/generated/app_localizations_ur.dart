@@ -7150,6 +7150,24 @@ class AppLocalizationsUr extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'نقل کریں';
 
   @override
+  String get libraryDraftActionConvertToClip => 'کلپ میں تبدیل کریں';
+
+  @override
+  String get libraryDraftConvertingToClip => 'کلپ میں تبدیل ہو رہا ہے...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'مسودہ کلپ میں تبدیل ہو گیا';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'مسودہ تبدیل نہیں ہو سکا';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'اس مسودے کا ٹیکسٹ اور اسٹیکرز تیار نہیں ہو سکے۔ اسے ایڈیٹر میں کھولیں، پھر دوبارہ کوشش کریں۔';
+
+  @override
   String get libraryDraftActionShare => 'مسودہ شیئر کریں';
 
   @override

@@ -2753,6 +2753,11 @@
   "libraryDraftDuplicateFailedSnackbar": "ረቂቅን ማባዛት አልተሳካም።",
   "libraryDraftInProgressBadge": "በሂደት ላይ",
   "libraryDraftActionDuplicate": "አባዛ",
+  "libraryDraftActionConvertToClip": "ወደ ክሊፕ ቀይር",
+  "libraryDraftConvertingToClip": "ወደ ክሊፕ በመቀየር ላይ...",
+  "libraryDraftConvertedToClipSnackbar": "ረቂቅ ወደ ክሊፕ ተቀይሯል።",
+  "libraryDraftConvertToClipFailedSnackbar": "ረቂቅን መቀየር አልተሳካም።",
+  "libraryDraftConvertOverlaysUnavailable": "የዚህ ረቂቅ ጽሑፍና ተለጣፊዎች ሊዘጋጁ አልቻሉም። በአራሚው ውስጥ ይክፈቱት፣ ከዚያ እንደገና ይሞክሩ።",
   "libraryDraftCopyTitle": "{title} (ቅጂ {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {

@@ -7146,6 +7146,22 @@ class AppLocalizationsMs extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplikasi';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Tukar kepada klip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Menukar kepada klip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'Draf ditukar kepada klip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar => 'Gagal menukar draf';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Teks dan pelekat pada draf ini tidak dapat disediakan. Buka ia dalam penyunting, kemudian cuba lagi.';
+
+  @override
   String get libraryDraftActionShare => 'Kongsi draf';
 
   @override

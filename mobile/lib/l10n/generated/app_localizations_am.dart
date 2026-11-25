@@ -6980,6 +6980,22 @@ class AppLocalizationsAm extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'አባዛ';
 
   @override
+  String get libraryDraftActionConvertToClip => 'ወደ ክሊፕ ቀይር';
+
+  @override
+  String get libraryDraftConvertingToClip => 'ወደ ክሊፕ በመቀየር ላይ...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'ረቂቅ ወደ ክሊፕ ተቀይሯል።';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar => 'ረቂቅን መቀየር አልተሳካም።';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'የዚህ ረቂቅ ጽሑፍና ተለጣፊዎች ሊዘጋጁ አልቻሉም። በአራሚው ውስጥ ይክፈቱት፣ ከዚያ እንደገና ይሞክሩ።';
+
+  @override
   String get libraryDraftActionShare => 'ረቂቅ አጋራ';
 
   @override

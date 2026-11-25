@@ -10,13 +10,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio, ClipSourceCredit;
 import 'package:models/models.dart'
     show AudioEvent, EqualizerSettings, NativeProofData;
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
+import 'package:openvine/services/video_editor/draft_render_parameters_service.dart';
 import 'package:openvine/services/video_editor/video_editor_clip_library_save_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/utils/path_resolver.dart';
@@ -27,6 +30,7 @@ import 'package:pro_image_editor/pro_image_editor.dart'
         ExportedLayer,
         FilterState,
         Layer,
+        LayerRasterizer,
         WidgetLayer,
         WidgetLayerExportConfigs;
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -728,6 +732,124 @@ void main() {
       expect(
         result.sourceCredits[1].relayUrl,
         equals('wss://relay-b.divine.video'),
+      );
+    });
+
+    group('renderDraftForLibrary', () {
+      late LayerRasterizer rasterizer;
+      late List<DivineVideoClip> renderedClips;
+      late CompleteParameters? renderedParameters;
+
+      setUp(() {
+        rasterizer = LayerRasterizer();
+        renderedClips = [];
+        renderedParameters = null;
+        VideoEditorRenderService.renderVideoToClipOverride =
+            ({
+              required clips,
+              required editorStateHistory,
+              parameters,
+              taskId,
+            }) async {
+              renderedClips = clips;
+              renderedParameters = parameters;
+              return (
+                _createClip(id: 'clip-rendered').copyWith(
+                  video: EditorVideo.file('/documents/rendered.mp4'),
+                ),
+                null,
+              );
+            };
+      });
+
+      tearDown(() {
+        rasterizer.dispose();
+        VideoEditorRenderService.renderVideoToClipOverride = null;
+      });
+
+      DivineVideoDraft draft({
+        required List<DivineVideoClip> clips,
+        List<EditorVideoEffect> effects = const [],
+      }) => DivineVideoDraft(
+        id: 'draft-1',
+        clips: clips,
+        title: '',
+        description: '',
+        hashtags: const {},
+        selectedApproach: 'default',
+        createdAt: DateTime(2026),
+        lastModified: DateTime(2026),
+        publishStatus: PublishStatus.draft,
+        publishAttempts: 0,
+        editorEditingParameters: {
+          'meta': {
+            VideoEditorConstants.effectsStateHistoryKey: [
+              for (final effect in effects) effect.toMap(),
+            ],
+          },
+        },
+      );
+
+      test('renders the whole draft without its flashes', () async {
+        await VideoEditorClipLibrarySaveService.renderDraftForLibrary(
+          draft: draft(
+            clips: [
+              _createClip().copyWith(
+                transition: const ClipTransition(
+                  type: ClipTransitionType.flash,
+                ),
+              ),
+              _createClip(id: 'b'),
+            ],
+            effects: const [
+              EditorVideoEffect(id: 'vhs', effect: VideoEffect.vhs()),
+              EditorVideoEffect(id: 'strobe', effect: VideoEffect.strobe()),
+            ],
+          ),
+          renderParameters: DraftRenderParametersService(
+            rasterizer: rasterizer,
+          ),
+          renderId: 'convert-1',
+        );
+
+        // The library clip keeps no record of either, so every video reusing
+        // it would escape the Flashing Lights warning.
+        expect(renderedClips.map((c) => c.id), ['a', 'b']);
+        expect(
+          renderedClips.first.transition?.type,
+          ClipTransitionType.dissolve,
+        );
+        expect(renderedParameters?.videoEffectsFromCompleteMeta, const [
+          VideoEffect.vhs(),
+        ]);
+      });
+
+      test(
+        "returns a new library clip that keeps the draft's sources",
+        () async {
+          final result =
+              await VideoEditorClipLibrarySaveService.renderDraftForLibrary(
+                draft: draft(
+                  clips: [
+                    _createClip(),
+                    _createClip(id: 'b'),
+                  ],
+                ),
+                renderParameters: DraftRenderParametersService(
+                  rasterizer: rasterizer,
+                ),
+                renderId: 'convert-1',
+              );
+
+          expect(result.id, startsWith('clip_library_'));
+          expect(result.video?.file?.path, '/documents/rendered.mp4');
+          // Rendered unsigned, a later edit is signed against the clips the
+          // draft was made from.
+          expect(result.derivedFrom, const [
+            C2paEditSource(path: '/path/a.mp4'),
+            C2paEditSource(path: '/path/b.mp4'),
+          ]);
+        },
       );
     });
 

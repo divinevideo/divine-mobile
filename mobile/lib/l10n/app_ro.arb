@@ -2262,6 +2262,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Nu s-a putut duplica ciorna",
   "libraryDraftInProgressBadge": "În lucru",
   "libraryDraftActionDuplicate": "Duplică",
+  "libraryDraftActionConvertToClip": "Transformă în clip",
+  "libraryDraftConvertingToClip": "Se transformă în clip...",
+  "libraryDraftConvertedToClipSnackbar": "Ciorna a fost transformată în clip",
+  "libraryDraftConvertToClipFailedSnackbar": "Nu s-a putut transforma ciorna",
+  "libraryDraftConvertOverlaysUnavailable": "Textul și stickerele din această ciornă nu au putut fi pregătite. Deschide-o în editor, apoi încearcă din nou.",
   "libraryDraftCopyTitle": "{title} (copie {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {

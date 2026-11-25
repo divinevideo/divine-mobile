@@ -7217,6 +7217,24 @@ class AppLocalizationsBg extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Дублирай';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Превърни в клип';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Превръща се в клип...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Черновата е превърната в клип';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Не успяхме да превърнем черновата';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Текстът и стикерите в тази чернова не можаха да се подготвят. Отвори я в редактора и опитай пак.';
+
+  @override
   String get libraryDraftActionShare => 'Сподели чернова';
 
   @override
