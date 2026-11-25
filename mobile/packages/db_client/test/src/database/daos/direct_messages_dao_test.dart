@@ -39,6 +39,56 @@ void main() {
   });
 
   group(DirectMessagesDao, () {
+    group('watchWrapTarget', () {
+      Future<DmWrapRecord> lookup(String wrap, {String owner = 'owner'}) =>
+          dao.watchWrapTarget(ownerPubkey: owner, giftWrapId: wrap).first;
+
+      test('only verified owner evidence can resolve a message', () async {
+        await dao.insertMessage(
+          id: 'rumor',
+          giftWrapId: 'original',
+          ownerPubkey: 'owner',
+          conversationId: conversationId1,
+          senderPubkey: 'peer',
+          content: 'video',
+          createdAt: 1,
+        );
+        await database.conversationsDao.upsertConversation(
+          id: conversationId1,
+          ownerPubkey: 'owner',
+          participantPubkeys: '["owner","peer"]',
+          isGroup: false,
+          createdAt: 1,
+        );
+        expect((await lookup('original')).messageId, 'rumor');
+        expect((await lookup('original', owner: 'second')).messageId, isNull);
+        await database.processedGiftWrapsDao.record(
+          giftWrapId: 'alias',
+          ownerPubkey: 'owner',
+          verifiedDuplicate: (
+            messageId: 'rumor',
+            sender: 'peer',
+            conversationId: conversationId1,
+          ),
+        );
+        expect((await lookup('alias')).messageId, 'rumor');
+        expect((await lookup('alias', owner: 'second')).hasLedger, isFalse);
+        await database.processedGiftWrapsDao.record(
+          giftWrapId: 'reaction',
+          ownerPubkey: 'owner',
+        );
+        expect((await lookup('reaction')).hasLedger, isTrue);
+        expect((await lookup('reaction')).messageId, isNull);
+        await database.customStatement(
+          'INSERT INTO processed_gift_wraps(gift_wrap_id, processed_at) '
+          "VALUES ('legacy', 1)",
+        );
+        expect((await lookup('legacy')).hasLedger, isTrue);
+        expect((await lookup('legacy')).messageId, isNull);
+        expect((await lookup('unknown')).hasLedger, isFalse);
+      });
+    });
+
     group('insertMessage', () {
       test('inserts new text message (kind 14)', () async {
         await dao.insertMessage(

@@ -52,6 +52,19 @@ enum DmDeliveryState {
   cancelled,
 }
 
+/// Minimal routing evidence read atomically for a single account and wrap.
+typedef DmWrapRecord = ({
+  bool hasLedger,
+  bool hasAlias,
+  String? messageId,
+  String? conversationId,
+  String? sender,
+  String? participantsJson,
+  bool isDeleted,
+  bool isHidden,
+  bool hasSent,
+});
+
 @DriftAccessor(tables: [DirectMessages])
 class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
     with _$DirectMessagesDaoMixin {
@@ -136,6 +149,69 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
         OutgoingWrapStatus.failed => DmDeliveryState.failed,
       };
     }).distinct();
+  }
+
+  /// Reads the message, verified alias, and room eligibility in one snapshot.
+  /// A legacy ledger row settles the wait but never resolves a target.
+  Stream<DmWrapRecord> watchWrapTarget({
+    required String ownerPubkey,
+    required String giftWrapId,
+  }) {
+    if (ownerPubkey.isEmpty) {
+      throw ArgumentError.value(ownerPubkey, 'ownerPubkey');
+    }
+    final db = attachedDatabase;
+    return customSelect(
+          '''
+      WITH ledger AS (
+        SELECT verified_message_id FROM processed_gift_wraps
+        WHERE owner_pubkey = ?1 AND gift_wrap_id = ?2
+      ), target AS (
+        SELECT id FROM direct_messages WHERE owner_pubkey = ?1 AND gift_wrap_id = ?2
+        UNION ALL SELECT verified_message_id FROM ledger
+      )
+      SELECT EXISTS(SELECT 1 FROM processed_gift_wraps WHERE owner_pubkey IN (?1, '')
+                    AND gift_wrap_id = ?2) AS has_ledger,
+             EXISTS(SELECT 1 FROM ledger WHERE verified_message_id IS NOT NULL) AS has_alias,
+             m.id, m.conversation_id, m.sender_pubkey, m.is_deleted,
+             c.participant_pubkeys, c.current_user_has_sent,
+             (c.id IS NULL OR c.is_dismissed OR m.id = m.gift_wrap_id OR m.message_kind NOT IN (14, 15)
+              OR r.removed_at >= m.created_at OR (c.is_group AND r.removed_at IS NOT NULL
+                AND (r.rejoined_at IS NULL OR r.rejoined_at > m.created_at))
+              OR EXISTS(SELECT 1 FROM removed_message_ids WHERE owner_pubkey = ?1 AND rumor_id = m.id)
+             ) AS hidden
+      FROM (SELECT 1)
+      LEFT JOIN direct_messages m ON m.owner_pubkey = ?1 AND m.id = (SELECT id FROM target LIMIT 1)
+      LEFT JOIN conversations c ON c.owner_pubkey = ?1 AND c.id = m.conversation_id
+      LEFT JOIN removed_conversations r ON r.owner_pubkey = ?1 AND r.conversation_id = m.conversation_id
+      ''',
+          variables: [
+            Variable.withString(ownerPubkey),
+            Variable.withString(giftWrapId),
+          ],
+          readsFrom: {
+            directMessages,
+            db.conversations,
+            db.processedGiftWraps,
+            db.removedMessageIds,
+            db.removedConversations,
+          },
+        )
+        .watchSingle()
+        .map(
+          (row) => (
+            hasLedger: row.read<bool>('has_ledger'),
+            hasAlias: row.read<bool>('has_alias'),
+            messageId: row.readNullable<String>('id'),
+            conversationId: row.readNullable<String>('conversation_id'),
+            sender: row.readNullable<String>('sender_pubkey'),
+            participantsJson: row.readNullable<String>('participant_pubkeys'),
+            isDeleted: row.readNullable<bool>('is_deleted') ?? false,
+            isHidden: row.readNullable<bool>('hidden') ?? false,
+            hasSent: row.readNullable<bool>('current_user_has_sent') ?? false,
+          ),
+        )
+        .distinct();
   }
 
   /// Soft-deleted locally; the kind-5 wrap still needs a confirmed delivery.

@@ -180,7 +180,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 38;
+  int get schemaVersion => 39;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -451,6 +451,14 @@ class AppDatabase extends _$AppDatabase {
           'ON event (created_at DESC) WHERE signature_verified = 1',
         );
       }
+      if (from < 39 && to >= 39) {
+        await _addColumnIfMissing(
+          'processed_gift_wraps',
+          'verified_message_id',
+          'TEXT NULL',
+        );
+      }
+      await _withholdV39Columns(to);
       await _withholdV31Columns(to);
       await _withholdV34Columns(to);
       await _migrateShareDelivery(to);
@@ -502,6 +510,7 @@ class AppDatabase extends _$AppDatabase {
         await _withholdV31Columns(details.versionNow);
         await _withholdV34Columns(details.versionNow);
         await _migrateShareDelivery(details.versionNow);
+        await _withholdV39Columns(details.versionNow);
       }
 
       // Run cleanup of expired data on every app startup
@@ -810,7 +819,17 @@ class AppDatabase extends _$AppDatabase {
       "UPDATE processed_gift_wraps SET owner_pubkey = '' "
       'WHERE owner_pubkey IS NULL',
     );
-    await m.alterTable(TableMigration(processedGiftWraps));
+    await m.alterTable(
+      TableMigration(
+        processedGiftWraps,
+        newColumns: [
+          if (!(await _columnNames(
+            'processed_gift_wraps',
+          )).contains('verified_message_id'))
+            processedGiftWraps.verifiedMessageId,
+        ],
+      ),
+    );
   }
 
   /// Drops the v31 columns again from a database opened at an earlier
@@ -862,6 +881,18 @@ class AppDatabase extends _$AppDatabase {
         // Rebuilds use today's table definitions on historical upgrades.
         await customStatement('ALTER TABLE $table DROP COLUMN $column');
       }
+    }
+  }
+
+  // Older targets can create this table from its current Drift definition.
+  Future<void> _withholdV39Columns(int version) async {
+    if (version < 39 &&
+        (await _columnNames(
+          'processed_gift_wraps',
+        )).contains('verified_message_id')) {
+      await customStatement(
+        'ALTER TABLE processed_gift_wraps DROP COLUMN verified_message_id',
+      );
     }
   }
 

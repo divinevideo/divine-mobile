@@ -7,6 +7,13 @@ import 'package:drift/drift.dart';
 
 part 'processed_gift_wraps_dao.g.dart';
 
+/// Identity verified during ordinary NIP-17 ingest, before duplicate insertion.
+typedef DmVerifiedDuplicate = ({
+  String messageId,
+  String sender,
+  String conversationId,
+});
+
 @DriftAccessor(tables: [ProcessedGiftWraps])
 class ProcessedGiftWrapsDao extends DatabaseAccessor<AppDatabase>
     with _$ProcessedGiftWrapsDaoMixin {
@@ -78,6 +85,7 @@ class ProcessedGiftWrapsDao extends DatabaseAccessor<AppDatabase>
   Future<void> record({
     required String giftWrapId,
     required String ownerPubkey,
+    DmVerifiedDuplicate? verifiedDuplicate,
   }) async {
     if (ownerPubkey.isEmpty) {
       throw ArgumentError.value(
@@ -87,6 +95,33 @@ class ProcessedGiftWrapsDao extends DatabaseAccessor<AppDatabase>
       );
     }
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    if (verifiedDuplicate != null) {
+      // A fuzzy cross-protocol match must never route a tap. Only the identical
+      // inbound NIP-17 rumor in this account and room can become an alias.
+      await customInsert(
+        '''
+        INSERT OR IGNORE INTO processed_gift_wraps
+          (gift_wrap_id, owner_pubkey, processed_at, verified_message_id)
+        VALUES (?, ?, ?, (
+          SELECT id FROM direct_messages WHERE owner_pubkey = ? AND id = ?
+            AND conversation_id = ? AND sender_pubkey = ? COLLATE NOCASE
+            AND sender_pubkey != owner_pubkey COLLATE NOCASE
+            AND id != gift_wrap_id AND message_kind IN (14, 15)
+        ))
+        ''',
+        variables: [
+          Variable.withString(giftWrapId),
+          Variable.withString(ownerPubkey),
+          Variable.withInt(now),
+          Variable.withString(ownerPubkey),
+          Variable.withString(verifiedDuplicate.messageId),
+          Variable.withString(verifiedDuplicate.conversationId),
+          Variable.withString(verifiedDuplicate.sender),
+        ],
+        updates: {processedGiftWraps},
+      );
+      return;
+    }
     await into(processedGiftWraps).insert(
       ProcessedGiftWrapsCompanion.insert(
         giftWrapId: giftWrapId,

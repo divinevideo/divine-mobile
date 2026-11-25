@@ -20,9 +20,14 @@ List<RouteBase> messagingRoutes() => $appRoutes;
   name: ConversationPage.routeName,
 )
 class ConversationRouteData extends GoRouteData with $ConversationRouteData {
-  const ConversationRouteData({required this.id, this.$extra});
+  const ConversationRouteData({
+    required this.id,
+    @TypedQueryParameter(name: 'messageId') this.messageId,
+    this.$extra,
+  });
 
   final String id;
+  final String? messageId;
 
   /// The participant hint read by [dmRouteExtra]; absent after a deep link.
   final Object? $extra;
@@ -35,6 +40,7 @@ class ConversationRouteData extends GoRouteData with $ConversationRouteData {
     final extra = dmRouteExtra($extra);
     return ConversationPage(
       conversationId: id,
+      messageId: messageId,
       participantPubkeys: extra.participantPubkeys,
       subject: extra.subject,
     );

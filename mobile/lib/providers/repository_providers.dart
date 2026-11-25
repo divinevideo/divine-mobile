@@ -78,6 +78,7 @@ import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:poll_repository/poll_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:video_responses_repository/video_responses_repository.dart';
 
@@ -1157,6 +1158,23 @@ DmRepository dmRepository(Ref ref) {
     outgoingDmsDao: db.outgoingDmsDao,
     pendingGiftWrapsDao: db.pendingGiftWrapsDao,
     processedGiftWrapsDao: db.processedGiftWrapsDao,
+    watchWrapAudience: (owner) {
+      final blocks = ref.read(contentBlocklistRepositoryProvider);
+      final follows = ref.read(followRepositoryProvider);
+      return Rx.combineLatest2(
+        blocks.stateStream.startWith(blocks.currentState),
+        follows.followingStream.startWith(follows.followingPubkeys),
+        (_, following) {
+          final hidden = blocks.dmHiddenPubkeysForAccount(owner);
+          if (hidden == null || nostrService.publicKey != owner) return null;
+          return (
+            hidden: hidden.map((key) => key.toLowerCase()).toSet(),
+            followed: following.map((key) => key.toLowerCase()).toSet(),
+            supportPubkey: kModerationPubkeyHex,
+          );
+        },
+      );
+    },
     removedConversationsDao: db.removedConversationsDao,
     removedMessageIdsDao: db.removedMessageIdsDao,
     syncState: DmSyncState(prefs),

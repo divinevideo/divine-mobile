@@ -1191,6 +1191,12 @@ class ContentBlocklistRepository {
     for (final bucket in _viewerHideBuckets) ...bucket,
   };
 
+  /// Null while the active identity's persisted block/mute lists are unavailable.
+  Set<String>? dmHiddenPubkeysForAccount(String ownerPubkey) =>
+      ownerPubkey.isNotEmpty && ownerPubkey == _activeAccountPubkey
+      ? dmHiddenPubkeys
+      : null;
+
   /// Whether [pubkey] is in [dmHiddenPubkeys] and so should be filtered from
   /// DM surfaces.
   ///

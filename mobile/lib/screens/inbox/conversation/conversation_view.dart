@@ -54,6 +54,7 @@ import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/inbox/conversation/dm_clip_picker.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
+import 'package:openvine/screens/inbox/conversation/widgets/conversation_focus_list.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/editable_draft_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/sound_request_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
@@ -86,12 +87,14 @@ class ConversationView extends ConsumerStatefulWidget {
   const ConversationView({
     required this.participantPubkeys,
     this.subject,
+    this.messageId,
     super.key,
   });
 
   /// Pubkeys of the other participants (excludes current user).
   final List<String> participantPubkeys;
   final String? subject;
+  final String? messageId;
 
   @override
   ConsumerState<ConversationView> createState() => _ConversationViewState();
@@ -686,6 +689,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                               child: ColoredBox(
                                 color: context.vineColors.surfaceContainerHigh,
                                 child: _ConversationContent(
+                                  messageId: widget.messageId,
                                   currentPubkey: currentPubkey,
                                   otherPubkey: otherPubkey,
                                   participantPubkeys: widget.participantPubkeys,
@@ -1493,7 +1497,9 @@ class _ComposerSlotNotice extends StatelessWidget {
 /// Selects status, messages and pending video sends from the bloc and
 /// switches between loading, error, empty, and message-list states.
 class _ConversationContent extends StatelessWidget {
+  final String? messageId;
   const _ConversationContent({
+    required this.messageId,
     required this.currentPubkey,
     required this.otherPubkey,
     required this.participantPubkeys,
@@ -1596,7 +1602,9 @@ class _ConversationContent extends StatelessWidget {
             ),
           ),
           ConversationStatus.loaded =>
-            selected.messages.isEmpty && selected.videoSends.entries.isEmpty
+            messageId == null &&
+                    selected.messages.isEmpty &&
+                    selected.videoSends.entries.isEmpty
                 ? (isUnresolved
                       ? const SizedBox.shrink()
                       : EmptyConversation(
@@ -1616,6 +1624,7 @@ class _ConversationContent extends StatelessWidget {
                               ),
                         ))
                 : _MessageList(
+                    messageId: messageId,
                     messages: selected.messages,
                     pendingVideoSends: selected.videoSends.entries,
                     currentPubkey: currentPubkey,
@@ -1684,7 +1693,9 @@ String _pendingVideoKey(OutgoingVideoDm entry) => 'pending-video-${entry.id}';
 final String _doubleTapLikeEmoji = kDefaultDmReactionEmojis.first;
 
 class _MessageList extends StatelessWidget {
+  final String? messageId;
   const _MessageList({
+    required this.messageId,
     required this.messages,
     required this.pendingVideoSends,
     required this.currentPubkey,
@@ -2120,12 +2131,14 @@ class _MessageList extends StatelessWidget {
       for (final pubkey in mutedPubkeys) pubkey.toLowerCase(),
     };
 
-    return ListView.builder(
-      reverse: true,
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      // bottom: 8 stacks with the newest bubble's own 8 px bottom padding
-      // for a 16 px gap to the scroll-view edge.
-      padding: const EdgeInsets.only(top: 8, bottom: 8),
+    return ConversationFocusList(
+      owner: currentPubkey,
+      conversation: messages.firstOrNull?.conversationId,
+      messageId: messageId,
+      highlightColor: context.vineColors.primaryContainer,
+      onUnavailable: () => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.dmNotificationMessageUnavailable)),
+      ),
       itemCount: pendingCount + messages.length,
       findChildIndexCallback: (key) {
         if (key is! ValueKey<String>) return null;
