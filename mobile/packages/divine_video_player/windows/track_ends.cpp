@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -32,6 +33,9 @@ constexpr uint64_t kMaxMoovBytes = 32ull * 1024 * 1024;
 // Top-level boxes read before giving up on finding moov.
 constexpr int kMaxTopLevelBoxes = 16;
 constexpr size_t kCacheLimit = 256;
+// A request that has not finished by then counts as failed, as a stalled
+// chunk download does in remote_media.cpp.
+constexpr auto kRequestTimeout = std::chrono::seconds(8);
 
 uint32_t ReadU32(const uint8_t* p) {
   return (uint32_t{p[0]} << 24) | (uint32_t{p[1]} << 16) |
@@ -201,6 +205,18 @@ std::optional<TrackEnds> ReadLocal(const std::wstring& path) {
   });
 }
 
+// Blocks until `operation` completes and returns its result, cancelling it
+// if it has not completed within kRequestTimeout.
+template <typename Operation>
+auto GetWithin(const Operation& operation) {
+  if (operation.wait_for(kRequestTimeout) ==
+      winrt::Windows::Foundation::AsyncStatus::Started) {
+    operation.Cancel();
+    throw TrackEndsUnavailable("request timed out");
+  }
+  return operation.GetResults();
+}
+
 std::optional<TrackEnds> ReadRemote(
     const std::string& uri, const std::map<std::string, std::string>& headers) {
   using winrt::Windows::Web::Http::HttpClient;
@@ -224,12 +240,9 @@ std::optional<TrackEnds> ReadRemote(
                       winrt::to_hstring(offset + size - 1));
     // Headers first: a server that ignores Range answers 200 with the whole
     // file, which is not worth downloading for its boxes.
-    auto response =
-        client
-            .SendRequestAsync(
-                request,
-                winrt::Windows::Web::Http::HttpCompletionOption::ResponseHeadersRead)
-            .get();
+    auto response = GetWithin(client.SendRequestAsync(
+        request,
+        winrt::Windows::Web::Http::HttpCompletionOption::ResponseHeadersRead));
     const int32_t status = static_cast<int32_t>(response.StatusCode());
     if (status != 206) {
       response.Close();
@@ -238,7 +251,12 @@ std::optional<TrackEnds> ReadRemote(
       if (status == 200 || status == 416) return std::vector<uint8_t>();
       throw TrackEndsUnavailable("HTTP " + std::to_string(status));
     }
-    const auto buffer = response.Content().ReadAsBufferAsync().get();
+    const auto length = response.Content().Headers().ContentLength();
+    if (length && length.Value() > size) {
+      response.Close();
+      throw TrackEndsUnavailable("server sent more than the range");
+    }
+    const auto buffer = GetWithin(response.Content().ReadAsBufferAsync());
     std::vector<uint8_t> bytes(buffer.Length());
     if (!bytes.empty()) {
       std::memcpy(bytes.data(), buffer.data(), bytes.size());
