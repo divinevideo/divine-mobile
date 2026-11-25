@@ -24,6 +24,7 @@ import 'package:openvine/models/video_publish/video_publish_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/draft_clip_conversions_provider.dart';
 import 'package:openvine/providers/layer_rasterizer_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -308,6 +309,7 @@ class LibraryScreen extends ConsumerWidget {
                 .read(clipManagerProvider.notifier)
                 .bakeCapturedChromaKey;
             return DraftClipConversionCubit(
+              conversions: ref.read(draftClipConversionsProvider),
               loadDraft: draftStorageService.getValidatedDraftById,
               renderDraft: (draft) =>
                   VideoEditorClipLibrarySaveService.renderDraftForLibrary(

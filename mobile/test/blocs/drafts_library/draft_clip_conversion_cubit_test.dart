@@ -41,9 +41,11 @@ void main() {
     late Future<void> Function(DivineVideoClip) save;
     late List<DivineVideoClip> saved;
     late List<(DivineVideoClip, DivineVideoDraft)> discarded;
+    late DraftClipConversions conversions;
     final rendered = _clip('clip_library_1');
 
     setUp(() {
+      conversions = DraftClipConversions();
       stored = _draft();
       render = (_) async => rendered;
       saved = [];
@@ -52,6 +54,7 @@ void main() {
     });
 
     DraftClipConversionCubit build() => DraftClipConversionCubit(
+      conversions: conversions,
       loadDraft: (_) async => stored,
       renderDraft: (draft) => render(draft),
       saveClip: (clip) => save(clip),
@@ -167,6 +170,75 @@ void main() {
             expect(saved, [rendered]);
           },
         );
+
+        test(
+          'a library reopened mid-render follows the running conversion',
+          () async {
+            final left = build();
+            final started = left.convert(_draftId);
+            await pumpEventQueue();
+            await left.close();
+
+            final reopened = build();
+            addTearDown(reopened.close);
+            expect(reopened.state, DraftClipConversionStatus.converting);
+
+            await reopened.convert(_draftId);
+            pending.complete(rendered);
+            await started;
+            await pumpEventQueue();
+
+            expect(reopened.state, DraftClipConversionStatus.converted);
+            expect(renders, 1);
+            expect(saved, [rendered]);
+          },
+        );
+
+        test('a library opened afterwards can convert again', () async {
+          final first = build();
+          addTearDown(first.close);
+          final started = first.convert(_draftId);
+          await pumpEventQueue();
+          pending.complete(rendered);
+          await started;
+
+          final later = build();
+          addTearDown(later.close);
+          expect(later.state, DraftClipConversionStatus.idle);
+
+          render = (_) async {
+            renders++;
+            return rendered;
+          };
+          await later.convert(_draftId);
+
+          expect(later.state, DraftClipConversionStatus.converted);
+          expect(renders, 2);
+        });
+      });
+    });
+  });
+
+  group(DraftClipConversions, () {
+    group('run', () {
+      test('returns the running outcome instead of starting another', () async {
+        final conversions = DraftClipConversions();
+        final pending = Completer<DraftClipConversionStatus>();
+        var starts = 0;
+        Future<DraftClipConversionStatus> conversion() {
+          starts++;
+          return pending.future;
+        }
+
+        final first = conversions.run(conversion);
+        final second = conversions.run(conversion);
+        expect(conversions.running, isNotNull);
+        pending.complete(DraftClipConversionStatus.converted);
+
+        expect(await first, DraftClipConversionStatus.converted);
+        expect(await second, DraftClipConversionStatus.converted);
+        expect(starts, 1);
+        expect(conversions.running, isNull);
       });
     });
   });

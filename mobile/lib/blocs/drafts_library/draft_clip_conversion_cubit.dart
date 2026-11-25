@@ -8,6 +8,7 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/video_editor/draft_render_parameters_service.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Where converting a draft into a library clip stands.
@@ -31,13 +32,40 @@ enum DraftClipConversionStatus {
   lowStorage,
 }
 
-/// Turns a saved draft into one clip in the clip library.
+/// The draft conversion running in the app, if any.
 ///
-/// Only one conversion runs at a time: a render holds the device's encoder,
-/// and a second one would only slow the first down.
+/// The render outlives the library screen that started it, and every screen
+/// creates its own [DraftClipConversionCubit]. Sharing this between them lets
+/// a library opened mid-render follow that conversion instead of rendering
+/// the draft a second time.
+class DraftClipConversions {
+  Future<DraftClipConversionStatus>? _running;
+
+  /// The outcome of the conversion in flight, or null when none runs.
+  Future<DraftClipConversionStatus>? get running => _running;
+
+  /// Starts [conversion], or returns the outcome of the one already running.
+  ///
+  /// Only one runs at a time: a render holds the device's encoder, and a
+  /// second one would only slow the first down.
+  Future<DraftClipConversionStatus> run(
+    Future<DraftClipConversionStatus> Function() conversion,
+  ) {
+    if (_running case final running?) return running;
+    final started = conversion();
+    _running = started;
+    return started.whenComplete(() => _running = null);
+  }
+}
+
+/// Turns a saved draft into one clip in the clip library.
 class DraftClipConversionCubit extends Cubit<DraftClipConversionStatus>
     with CloseGuardedEmit<DraftClipConversionStatus> {
+  /// Starts out converting when [conversions] already has a conversion
+  /// running, and reports its outcome: the screen that started it may be
+  /// gone.
   DraftClipConversionCubit({
+    required DraftClipConversions conversions,
     required Future<DivineVideoDraft?> Function(String draftId) loadDraft,
     required Future<DivineVideoClip> Function(DivineVideoDraft draft)
     renderDraft,
@@ -47,12 +75,27 @@ class DraftClipConversionCubit extends Cubit<DraftClipConversionStatus>
       DivineVideoDraft draft,
     )
     discardClip,
-  }) : _loadDraft = loadDraft,
+  }) : _conversions = conversions,
+       _loadDraft = loadDraft,
        _renderDraft = renderDraft,
        _saveClip = saveClip,
        _discardClip = discardClip,
-       super(DraftClipConversionStatus.idle);
+       super(
+         conversions.running == null
+             ? DraftClipConversionStatus.idle
+             : DraftClipConversionStatus.converting,
+       ) {
+    if (conversions.running case final running?) {
+      runDetached(
+        running.then(emitIfOpen),
+        'follow a running draft conversion',
+        logName: _logName,
+        category: LogCategory.video,
+      );
+    }
+  }
 
+  final DraftClipConversions _conversions;
   final Future<DivineVideoDraft?> Function(String draftId) _loadDraft;
   final Future<DivineVideoClip> Function(DivineVideoDraft draft) _renderDraft;
   final Future<void> Function(DivineVideoClip clip) _saveClip;
@@ -67,11 +110,15 @@ class DraftClipConversionCubit extends Cubit<DraftClipConversionStatus>
   /// Renders the draft [draftId] and saves the result as a library clip.
   ///
   /// The conversion goes on when this cubit closes, so the clip still lands
-  /// in the library after the user leaves the screen.
+  /// in the library after the user leaves the screen. While another
+  /// conversion runs, this reports that one's outcome instead.
   Future<void> convert(String draftId) async {
     if (state == DraftClipConversionStatus.converting) return;
     emit(DraftClipConversionStatus.converting);
+    emitIfOpen(await _conversions.run(() => _convert(draftId)));
+  }
 
+  Future<DraftClipConversionStatus> _convert(String draftId) async {
     // The render writes into the persistent documents dir, so a clip that
     // does not reach the library must be deleted here.
     DivineVideoClip? unsaved;
@@ -85,8 +132,7 @@ class DraftClipConversionCubit extends Cubit<DraftClipConversionStatus>
           name: _logName,
           category: LogCategory.video,
         );
-        emitIfOpen(DraftClipConversionStatus.failed);
-        return;
+        return DraftClipConversionStatus.failed;
       }
 
       unsaved = await _renderDraft(draft);
@@ -97,17 +143,15 @@ class DraftClipConversionCubit extends Cubit<DraftClipConversionStatus>
         category: LogCategory.video,
       );
       unsaved = null;
-      emitIfOpen(DraftClipConversionStatus.converted);
+      return DraftClipConversionStatus.converted;
     } on DraftOverlayRestoreException catch (error, stackTrace) {
       addError(error, stackTrace);
-      emitIfOpen(DraftClipConversionStatus.overlaysUnavailable);
+      return DraftClipConversionStatus.overlaysUnavailable;
     } on VideoRenderFailedException catch (error, stackTrace) {
       addError(error, stackTrace);
-      emitIfOpen(
-        error.reason == VideoRenderFailureReason.insufficientStorage
-            ? DraftClipConversionStatus.lowStorage
-            : DraftClipConversionStatus.failed,
-      );
+      return error.reason == VideoRenderFailureReason.insufficientStorage
+          ? DraftClipConversionStatus.lowStorage
+          : DraftClipConversionStatus.failed;
     } on Object catch (error, stackTrace) {
       Log.error(
         '❌ Failed to convert draft $draftId into a clip: $error',
@@ -125,7 +169,7 @@ class DraftClipConversionCubit extends Cubit<DraftClipConversionStatus>
         },
         stackTrace,
       );
-      emitIfOpen(DraftClipConversionStatus.failed);
+      return DraftClipConversionStatus.failed;
     } finally {
       if (unsaved != null && draft != null) await _discardClip(unsaved, draft);
     }
