@@ -16,9 +16,22 @@ import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
+/// Shows the latest video share's delivery feedback above the root navigator.
+///
+/// Provides a [ShareDeliveryCubit] to [child]. The banner is a persistent
+/// [SnackBar] built here around [DivineSnackbarContainer], rather than
+/// [DivineSnackbarContainer.snackBar], because its content watches the cubit:
+/// the text keeps following delivery after the banner is shown, and it
+/// dismisses itself [dismissAfter] once no recipient is still pending.
 class ShareDeliveryHost extends ConsumerStatefulWidget {
   const ShareDeliveryHost({required this.child, super.key});
+
+  /// How long a banner with nothing left pending stays on screen.
+  static const dismissAfter = Duration(seconds: 5);
+
   final Widget child;
 
   @override
@@ -100,7 +113,10 @@ class _ShareDeliveryHostState extends ConsumerState<ShareDeliveryHost> {
                     ref.read(authServiceProvider).currentPublicKeyHex) {
               return const SizedBox.shrink();
             }
-            return _content(context, current);
+            return _ShareDeliveryBanner(
+              feedback: current,
+              onViewChat: (chat) => _openChat(current.owner, chat),
+            );
           },
         ),
       ),
@@ -125,9 +141,10 @@ class _ShareDeliveryHostState extends ConsumerState<ShareDeliveryHost> {
         feedback.states.values.any(
           (s) => s == DmDeliveryState.queued || s == DmDeliveryState.held,
         );
-    if (unresolved) return; // The cubit publishes again at the 20-second limit.
+    // The cubit publishes again once ShareDeliveryCubit.overdueAfter passes.
+    if (unresolved) return;
     _expiry = Timer(
-      feedback == null ? Duration.zero : const Duration(seconds: 5),
+      feedback == null ? Duration.zero : ShareDeliveryHost.dismissAfter,
       () {
         if (mounted && _visible) messenger.removeCurrentSnackBar();
       },
@@ -142,82 +159,100 @@ class _ShareDeliveryHostState extends ConsumerState<ShareDeliveryHost> {
         feedback.owner != ref.read(authServiceProvider).currentPublicKeyHex) {
       return;
     }
-    final text = _text(context, feedback);
+    final text = _describe(context.l10n, feedback);
     if (text.incomplete) {
-      unawaited(
+      _runDetached(
         SemanticsService.sendAnnouncement(
           View.of(context),
           text.message,
           Directionality.of(context),
         ),
+        'announce incomplete share delivery',
       );
     }
   }
 
-  ({String message, bool incomplete}) _text(
-    BuildContext context,
-    ShareDeliveryFeedback feedback,
-  ) {
-    final l10n = context.l10n;
-    final lines = <String>[];
-    final single = feedback.recipients.length == 1;
-    for (final recipient in feedback.recipients) {
-      final status = feedback.states[recipient.outcome.rumorId];
-      final label = switch (status) {
-        DmDeliveryState.accepted => l10n.shareSent,
-        DmDeliveryState.failed => l10n.shareDeliveryFailed,
-        DmDeliveryState.held when feedback.overdue => l10n.shareDeliveryHeld(
-          recipient.name,
-        ),
-        DmDeliveryState.queued when feedback.overdue =>
-          l10n.crosspostStatusQueued,
-        DmDeliveryState.held ||
-        DmDeliveryState.queued => l10n.dmPendingVideoSending,
-        DmDeliveryState.cancelled ||
-        null => l10n.shareCouldNotSendTo(recipient.name),
-      };
-      lines.add(
-        single ||
-                status == null ||
-                status == DmDeliveryState.cancelled ||
-                (status == DmDeliveryState.held && feedback.overdue)
-            ? label
-            : l10n.shareDeliveryForRecipient(recipient.name, label),
-      );
+  void _openChat(String owner, ShareDeliveryRecipient chat) {
+    final host = NavigatorKeys.root.currentContext;
+    if (!mounted ||
+        host == null ||
+        ref.read(authServiceProvider).currentPublicKeyHex != owner ||
+        ref.read(isDmRestrictedProvider)) {
+      return;
     }
-    final incomplete =
-        feedback.recipients.any((r) => r.outcome.rumorId == null) ||
-        feedback.states.values.any(
-          (s) => s == DmDeliveryState.cancelled || s == DmDeliveryState.failed,
-        );
-    return (message: lines.join('\n'), incomplete: incomplete);
+    _runDetached(
+      ConversationRouteData(
+        id: chat.outcome.conversationId!,
+        $extra: [chat.pubkey],
+      ).push<void>(host),
+      'open shared video chat',
+    );
   }
+}
 
-  Widget _content(BuildContext context, ShareDeliveryFeedback feedback) {
-    final text = _text(context, feedback);
+void _runDetached(Future<void> operation, String description) => runDetached(
+  operation,
+  description,
+  logName: 'ShareDeliveryHost',
+  category: LogCategory.ui,
+);
+
+({String message, bool incomplete}) _describe(
+  AppLocalizations l10n,
+  ShareDeliveryFeedback feedback,
+) {
+  final lines = <String>[];
+  final single = feedback.recipients.length == 1;
+  for (final recipient in feedback.recipients) {
+    final status = feedback.states[recipient.outcome.rumorId];
+    final label = switch (status) {
+      DmDeliveryState.accepted => l10n.shareSent,
+      DmDeliveryState.failed => l10n.shareDeliveryFailed,
+      DmDeliveryState.held when feedback.overdue => l10n.shareDeliveryHeld(
+        recipient.name,
+      ),
+      DmDeliveryState.queued when feedback.overdue =>
+        l10n.crosspostStatusQueued,
+      DmDeliveryState.held ||
+      DmDeliveryState.queued => l10n.dmPendingVideoSending,
+      DmDeliveryState.cancelled ||
+      null => l10n.shareCouldNotSendTo(recipient.name),
+    };
+    lines.add(
+      single ||
+              status == null ||
+              status == DmDeliveryState.cancelled ||
+              (status == DmDeliveryState.held && feedback.overdue)
+          ? label
+          : l10n.shareDeliveryForRecipient(recipient.name, label),
+    );
+  }
+  final incomplete =
+      feedback.recipients.any((r) => r.outcome.rumorId == null) ||
+      feedback.states.values.any(
+        (s) => s == DmDeliveryState.cancelled || s == DmDeliveryState.failed,
+      );
+  return (message: lines.join('\n'), incomplete: incomplete);
+}
+
+class _ShareDeliveryBanner extends StatelessWidget {
+  const _ShareDeliveryBanner({
+    required this.feedback,
+    required this.onViewChat,
+  });
+
+  final ShareDeliveryFeedback feedback;
+  final ValueChanged<ShareDeliveryRecipient> onViewChat;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = _describe(context.l10n, feedback);
     final chat = feedback.chat;
     return DivineSnackbarContainer(
       label: text.message,
       error: text.incomplete,
       actionLabel: chat == null ? null : context.l10n.dmReelReplyViewChat,
-      onActionPressed: chat == null
-          ? null
-          : () {
-              final host = NavigatorKeys.root.currentContext;
-              if (!mounted ||
-                  host == null ||
-                  ref.read(authServiceProvider).currentPublicKeyHex !=
-                      feedback.owner ||
-                  ref.read(isDmRestrictedProvider)) {
-                return;
-              }
-              unawaited(
-                ConversationRouteData(
-                  id: chat.outcome.conversationId!,
-                  $extra: [chat.pubkey],
-                ).push<void>(host),
-              );
-            },
+      onActionPressed: chat == null ? null : () => onViewChat(chat),
     );
   }
 }
