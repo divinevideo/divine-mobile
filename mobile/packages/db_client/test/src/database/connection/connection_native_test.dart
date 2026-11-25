@@ -64,6 +64,182 @@ void main() {
     });
   });
 
+  group('resolveMacOsSharedDatabasePath', () {
+    group('native Mac App Store upgrade', () {
+      const bundleId = 'co.openvine.app';
+      late Directory tempRoot;
+      late String iPadSupport;
+      late String macSupport;
+      late String iPadDatabase;
+      late String macDatabase;
+
+      setUp(() {
+        tempRoot = Directory.systemTemp.createTempSync('db_mac_upgrade_test_');
+        iPadSupport = p.join(
+          tempRoot.path,
+          'Library',
+          'Containers',
+          bundleId,
+          'Data',
+          'Library',
+          'Application Support',
+        );
+        macSupport = p.join(iPadSupport, bundleId);
+        iPadDatabase = buildSharedDatabasePath(iPadSupport);
+        macDatabase = buildSharedDatabasePath(macSupport);
+      });
+
+      tearDown(() => tempRoot.deleteSync(recursive: true));
+
+      test('uses the inherited database and its WAL in place', () {
+        final database = prepareDatabaseFile(iPadDatabase)
+          ..writeAsBytesSync([1]);
+        final wal = File('$iPadDatabase-wal')..writeAsBytesSync([2]);
+
+        final selected = resolveMacOsSharedDatabasePath(macSupport);
+
+        expect(selected, iPadDatabase);
+        expect(database.readAsBytesSync(), [1]);
+        expect(wal.readAsBytesSync(), [2]);
+        expect(File(macDatabase).existsSync(), isFalse);
+      });
+
+      test('keeps the inherited path during an interrupted file swap', () {
+        final staging = prepareDatabaseFile('$iPadDatabase.sqlcipher_migrating')
+          ..writeAsBytesSync([1]);
+
+        expect(
+          resolveMacOsSharedDatabasePath(macSupport),
+          iPadDatabase,
+        );
+        expect(staging.readAsBytesSync(), [1]);
+      });
+
+      test('preserves an existing native database when both paths exist', () {
+        prepareDatabaseFile(iPadDatabase).writeAsBytesSync([1]);
+        prepareDatabaseFile(macDatabase).writeAsBytesSync([2]);
+
+        expect(resolveMacOsSharedDatabasePath(macSupport), macDatabase);
+        expect(File(iPadDatabase).readAsBytesSync(), [1]);
+        expect(File(macDatabase).readAsBytesSync(), [2]);
+      });
+
+      test(
+        'honors an inherited location marker ahead of a new native file',
+        () {
+          prepareDatabaseFile(iPadDatabase).writeAsBytesSync([1]);
+          expect(resolveMacOsSharedDatabasePath(macSupport), iPadDatabase);
+          expect(File('$iPadDatabase.location').existsSync(), isTrue);
+
+          prepareDatabaseFile(macDatabase).writeAsBytesSync([2]);
+
+          expect(resolveMacOsSharedDatabasePath(macSupport), iPadDatabase);
+          expect(File('$macDatabase.location').existsSync(), isFalse);
+        },
+      );
+
+      test(
+        'uses the iPad database when native wrote only a version file',
+        () {
+          prepareDatabaseFile(iPadDatabase).writeAsBytesSync([1]);
+          writeDbCacheVersion(p.dirname(macDatabase), dbCacheVersion);
+
+          expect(
+            resolveMacOsSharedDatabasePath(macSupport),
+            iPadDatabase,
+          );
+          expect(File(macDatabase).existsSync(), isFalse);
+        },
+      );
+
+      test('uses the iPad database when the native file is empty', () {
+        prepareDatabaseFile(iPadDatabase).writeAsBytesSync([1]);
+        final nativeFile = prepareDatabaseFile(macDatabase)..createSync();
+
+        expect(resolveMacOsSharedDatabasePath(macSupport), iPadDatabase);
+        expect(nativeFile.lengthSync(), isZero);
+      });
+
+      test(
+        'keeps a recoverable native database ahead of the iPad database',
+        () {
+          prepareDatabaseFile(iPadDatabase).writeAsBytesSync([1]);
+          final staging = prepareDatabaseFile('$macDatabase.corruption_salvage')
+            ..writeAsBytesSync([2]);
+
+          expect(
+            resolveMacOsSharedDatabasePath(macSupport),
+            macDatabase,
+          );
+          expect(staging.readAsBytesSync(), [2]);
+        },
+      );
+
+      test('keeps a native database with an unfinished journal restore', () {
+        prepareDatabaseFile(iPadDatabase).writeAsBytesSync([1]);
+        final restore = prepareDatabaseFile(
+          p.join('$macDatabase.hot_journal_restore', 'database'),
+        )..writeAsBytesSync([2]);
+
+        expect(resolveMacOsSharedDatabasePath(macSupport), macDatabase);
+        expect(restore.readAsBytesSync(), [2]);
+      });
+
+      test('keeps the selected database path after a deliberate reset', () {
+        prepareDatabaseFile(iPadDatabase).writeAsBytesSync([1]);
+        prepareDatabaseFile(macDatabase).writeAsBytesSync([2]);
+        expect(resolveMacOsSharedDatabasePath(macSupport), macDatabase);
+
+        deleteDatabaseAndSidecars(macDatabase);
+
+        expect(resolveMacOsSharedDatabasePath(macSupport), macDatabase);
+        expect(File(iPadDatabase).readAsBytesSync(), [1]);
+      });
+
+      test('uses the native path on a fresh install', () {
+        expect(resolveMacOsSharedDatabasePath(macSupport), macDatabase);
+      });
+
+      test('does not look outside the native directory without a sandbox', () {
+        final sharedSupport = p.join(
+          tempRoot.path,
+          'Library',
+          'Application Support',
+        );
+        final directSupport = p.join(sharedSupport, bundleId);
+        prepareDatabaseFile(
+          buildSharedDatabasePath(sharedSupport),
+        ).writeAsBytesSync([1]);
+
+        expect(
+          resolveMacOsSharedDatabasePath(directSupport),
+          buildSharedDatabasePath(directSupport),
+        );
+      });
+
+      test('does not look above a lookalike outside Containers', () {
+        final lookalikeSupport = p.join(
+          tempRoot.path,
+          'Library',
+          'NotContainers',
+          bundleId,
+          'Data',
+          'Library',
+          'Application Support',
+        );
+        final lookalikeBase = p.join(lookalikeSupport, bundleId);
+        prepareDatabaseFile(
+          buildSharedDatabasePath(lookalikeSupport),
+        ).writeAsBytesSync([1]);
+
+        expect(
+          resolveMacOsSharedDatabasePath(lookalikeBase),
+          buildSharedDatabasePath(lookalikeBase),
+        );
+      });
+    });
+  });
+
   group('applyDbCacheVersionReset', () {
     late Directory tempRoot;
     late String dbPath;

@@ -37,6 +37,9 @@ Future<bool> salvageCorruptEncryptedDatabase({
   throw UnsupportedError('No database implementation found for this platform');
 }
 
+/// The native Mac app is the only platform with alternate database paths.
+Future<bool> hasAlternateMacOsSharedDatabase() async => false;
+
 /// Stub implementation - will be replaced by conditional imports
 Future<bool> encryptedDatabaseKeyDecrypts({
   required String rawKeyHex,
