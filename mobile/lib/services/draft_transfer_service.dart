@@ -12,6 +12,8 @@ import 'package:nostr_sdk/aid.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/utils/draft_audio_path_resolver.dart';
@@ -428,6 +430,13 @@ class DraftTransferService {
               ..remove('recordingSha256')
               ..remove('galleryBackup')
               ..remove('assetRecoveryAttempts');
+            // A reply sticker loads its picture from a URL when the editor
+            // shows it and again when the video renders. A sender could point
+            // it at any host, so the copy keeps the sticker and shows its
+            // initial instead.
+            if (map[infoStickerLayerKindKey] == socialStickerLayerKind) {
+              result.remove('replyImageUrl');
+            }
             final clip = _isClipJson(map);
             if (clip) result['importedSource'] = true;
             if (senderPubkey != null) {

@@ -743,6 +743,50 @@ void main() {
         },
       );
 
+      test(
+        "drops a reply sticker's picture URL from the imported copy",
+        () async {
+          final package = await transfer.exportDraft(
+            makeDraft(),
+            temporaryDirectory: outbox,
+          );
+          final bytes = package.readAsBytesSync();
+          final end = 8 + ByteData.sublistView(bytes, 0, 8).getUint32(4);
+          final manifest = jsonDecode(
+            utf8.decode(bytes.sublist(8, end)),
+          ) as Map<String, dynamic>;
+          final history =
+              (manifest['project'] as Map)['editorStateHistory'] as Map;
+          (((history['history'] as List).first as Map)['layers'] as List).add({
+            'id': 'reply-sticker',
+            'meta': {
+              'kind': 'divine.socialSticker',
+              'socialKind': 'reply',
+              'name': 'Ada',
+              'replyImageUrl': 'https://tracker.example/reply.png',
+            },
+          });
+          final json = utf8.encode(jsonEncode(manifest));
+          final header = ByteData(8)
+            ..setUint32(0, 0x44564431)
+            ..setUint32(4, json.length);
+          final imported = await transfer.importDraft(
+            messageId: '6' * 64,
+            senderPubkey: _sender,
+            storage: recipientStorage,
+            download: () async => Uint8List.fromList([
+              ...header.buffer.asUint8List(),
+              ...json,
+              ...bytes.sublist(end),
+            ]),
+            stillWanted: () => true,
+          );
+          final restored = jsonEncode(imported.toJson());
+          expect(restored, contains('reply-sticker'));
+          expect(restored, isNot(contains('tracker.example')));
+        },
+      );
+
       test('drops a forged single credit on a clip', () async {
         const stranger =
             '2222222222222222222222222222222222222222222222222222222222222222';
