@@ -9150,12 +9150,20 @@ class DmRepository {
           }
         }
       } on Object catch (e, stackTrace) {
-        Log.error(
-          'Failed to persist recovered send locally for $rumorId: $e',
-          category: LogCategory.system,
-          error: e,
-          stackTrace: stackTrace,
-        );
+        if (isCurrent()) {
+          Log.error(
+            'Failed to persist recovered send locally for $rumorId: $e',
+            category: LogCategory.system,
+            error: e,
+            stackTrace: stackTrace,
+          );
+        } else {
+          Log.info(
+            'Recovered send for $rumorId was rolled back: the account changed '
+            'before it was recorded; the row stays queued for that account',
+            category: LogCategory.system,
+          );
+        }
         // The publish landed but the local persist failed. The transaction
         // rolled the queue transition back with the message, so the row
         // keeps its status and the retry sweep re-drives it; receivers drop
