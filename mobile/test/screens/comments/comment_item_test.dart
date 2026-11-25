@@ -859,8 +859,8 @@ void main() {
       );
       expect(player.borderRadius, BorderRadius.circular(12));
 
-      // Drain VisibilityDetector's 500ms debounce and the identity skeleton's
-      // 7s fallthrough so no pending timers leak into the next test.
+      // Fire the identity skeleton's 7s fallthrough so no pending timer leaks
+      // into the next test.
       await tester.pump(const Duration(seconds: 8));
       await tester.pumpAndSettle();
     });
@@ -903,8 +903,8 @@ void main() {
       await tester.pump();
     }
 
-    // Drains VisibilityDetector's debounce and the identity skeleton's 7s
-    // fallthrough so no pending timers leak into the next test.
+    // Fires the identity skeleton's 7s fallthrough so no pending timer leaks
+    // into the next test.
     Future<void> drainTimers(WidgetTester tester) async {
       await tester.pump(const Duration(seconds: 8));
       await tester.pumpAndSettle();
