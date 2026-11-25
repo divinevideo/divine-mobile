@@ -5,6 +5,7 @@
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
+import 'package:db_client/src/database/daos/outgoing_wrap_status_parser.dart';
 import 'package:drift/drift.dart';
 import 'package:meta/meta.dart';
 
@@ -24,6 +25,10 @@ String? _rumorIdFromJson(String rumorEventJson) {
 }
 
 /// A retryable outbox failure caused by this device having no relay route.
+///
+/// [DirectMessagesDao.watchDeliveryState] reads a failed recipient wrap that
+/// stores exactly this text as still queued, so changing it turns every
+/// stored offline failure into a failed delivery.
 const outgoingDmOfflineError = 'Message not sent: device offline';
 
 /// Status of one of the two NIP-17 gift-wrap publishes for an outgoing DM.
@@ -161,8 +166,13 @@ class OutgoingDm {
   /// hearing its `OK`; see `OutgoingDms.unconfirmedRecipientWrapJson`.
   final String? unconfirmedRecipientWrapJson;
 
-  /// Prevents a legacy kind-4 copy when replaying this gift wrap.
+  /// Suppresses the legacy kind-4 copy on every attempt, including a replay
+  /// after restart.
   final bool skipNip04Fallback;
+
+  /// Whether the share sheet queued this send. Every attempt, including a
+  /// replay after restart, rechecks that the share sheet would still offer
+  /// the recipient.
   final bool isVideoShare;
 
   /// The kind-14/15 wire rumor id, stable across retries and recipients.
@@ -352,8 +362,8 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
       rumorEventJson: row.rumorEventJson,
       messageKind: row.messageKind,
       replyToId: row.replyToId,
-      recipientWrapStatus: _parseStatus(row.recipientWrapStatus),
-      selfWrapStatus: _parseStatus(row.selfWrapStatus),
+      recipientWrapStatus: parseOutgoingWrapStatus(row.recipientWrapStatus),
+      selfWrapStatus: parseOutgoingWrapStatus(row.selfWrapStatus),
       recipientWrapEventId: row.recipientWrapEventId,
       selfWrapEventId: row.selfWrapEventId,
       retryCount: row.retryCount,
@@ -368,20 +378,6 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
       isVideoShare: row.isVideoShare,
       unconfirmedRecipientWrapJson: row.unconfirmedRecipientWrapJson,
     );
-  }
-
-  /// Parse a persisted wrap-status string back to [OutgoingWrapStatus].
-  ///
-  /// Throws [UnknownOutgoingWrapStatusException] when [raw] does not
-  /// match any known case. Coercing unknown values to
-  /// [OutgoingWrapStatus.pending] would put corrupt or future-schema
-  /// rows back into the retry service's active set — for a retry queue
-  /// that risks double-delivery, so we fail loudly instead.
-  OutgoingWrapStatus _parseStatus(String raw) {
-    for (final status in OutgoingWrapStatus.values) {
-      if (status.name == raw) return status;
-    }
-    throw UnknownOutgoingWrapStatusException(raw);
   }
 
   // ---------------------------------------------------------------------
@@ -404,6 +400,14 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
 
   /// Inserts freshly minted intents as one unit. A key collision or an owner
   /// change (including during the last insert) must undo every write.
+  ///
+  /// Throws:
+  ///
+  /// * [StateError] when [isCurrent] turns false, before or after any insert.
+  /// * `SqliteException` on a key collision, with a stored row or another row
+  ///   in [rows].
+  ///
+  /// Either one rolls back every row.
   Future<void> enqueueAll(
     List<OutgoingDm> rows, {
     required bool Function() isCurrent,

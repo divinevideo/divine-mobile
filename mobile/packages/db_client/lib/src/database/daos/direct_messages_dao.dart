@@ -5,6 +5,7 @@
 
 import 'package:db_client/db_client.dart';
 import 'package:db_client/src/database/daos/held_pool_wraps.dart';
+import 'package:db_client/src/database/daos/outgoing_wrap_status_parser.dart';
 import 'package:drift/drift.dart';
 
 part 'direct_messages_dao.g.dart';
@@ -33,14 +34,33 @@ enum DmDedupCounterpart {
 }
 
 /// What the local outbox and verified recipient acknowledgment establish.
-enum DmDeliveryState { queued, held, accepted, failed, cancelled }
+enum DmDeliveryState {
+  /// Queued or retrying, including after a failure caused by being offline.
+  queued,
+
+  /// A fallback-pool relay holds the wrap while the recipient's inbox is
+  /// unreadable.
+  held,
+
+  /// The recipient's route accepted the wrap in this environment.
+  accepted,
+
+  /// The last attempt failed and may be retried.
+  failed,
+
+  /// Stopped, blocked, or neither a live outbox row nor an acceptance mark.
+  cancelled,
+}
 
 @DriftAccessor(tables: [DirectMessages])
 class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
     with _$DirectMessagesDaoMixin {
   DirectMessagesDao(super.attachedDatabase);
 
-  /// Also marks a sender self-copy inserted by sync before our publish settled.
+  /// Records that the recipient's route accepted [rumorId] in [environment].
+  ///
+  /// Marks the sender's own row for the rumor, including a self-copy that
+  /// history sync inserted before this device's publish settled.
   Future<void> markRecipientAccepted({
     required String ownerPubkey,
     required String rumorId,
@@ -59,8 +79,15 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
         );
   }
 
-  /// Read both tables in one SQLite snapshot, including the transition that
-  /// removes a completed 1:1 outbox row and marks its local message.
+  /// Emits the [DmDeliveryState] of [rumorId] for [ownerPubkey] in
+  /// [environment], and again each time it changes.
+  ///
+  /// Reads both tables in one SQLite snapshot, so the transition that removes
+  /// a completed 1:1 outbox row and marks its local message is seen at once.
+  ///
+  /// Emits an [UnknownOutgoingWrapStatusException] error when the outbox row
+  /// carries a recipient status this build does not know, rather than
+  /// guessing a state for it.
   Stream<DmDeliveryState> watchDeliveryState({
     required String ownerPubkey,
     required String rumorId,
@@ -85,24 +112,28 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
       readsFrom: {directMessages, attachedDatabase.outgoingDms},
     );
     return query.watchSingle().map((row) {
-      final status = row.readNullable<String>('status');
-      if (status == 'blocked' || status == 'cancelled') {
-        return DmDeliveryState.cancelled;
-      }
-      if (status == 'sent' || row.read<bool>('accepted')) {
-        return DmDeliveryState.accepted;
-      }
-      if ((status == 'pending' || status == 'failed') &&
-          row.readNullable<String>('held') != null) {
-        return DmDeliveryState.held;
-      }
+      final rawStatus = row.readNullable<String>('status');
+      final status = rawStatus == null
+          ? null
+          : parseOutgoingWrapStatus(rawStatus);
+      final accepted = row.read<bool>('accepted');
+      final held = row.readNullable<String>('held') != null;
       return switch (status) {
-        'pending' => DmDeliveryState.queued,
-        'failed'
+        null => accepted ? DmDeliveryState.accepted : DmDeliveryState.cancelled,
+        OutgoingWrapStatus.blocked ||
+        OutgoingWrapStatus.cancelled => DmDeliveryState.cancelled,
+        OutgoingWrapStatus.sent => DmDeliveryState.accepted,
+        OutgoingWrapStatus.pending ||
+        OutgoingWrapStatus.failed when accepted => DmDeliveryState.accepted,
+        OutgoingWrapStatus.pending ||
+        OutgoingWrapStatus.failed when held => DmDeliveryState.held,
+        OutgoingWrapStatus.pending => DmDeliveryState.queued,
+        // Matches the exact stored text of `outgoingDmOfflineError`: that
+        // failure is still queued, waiting for a relay route.
+        OutgoingWrapStatus.failed
             when row.readNullable<String>('error') == outgoingDmOfflineError =>
           DmDeliveryState.queued,
-        'failed' => DmDeliveryState.failed,
-        _ => DmDeliveryState.cancelled,
+        OutgoingWrapStatus.failed => DmDeliveryState.failed,
       };
     }).distinct();
   }

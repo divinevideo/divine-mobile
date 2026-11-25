@@ -1414,7 +1414,7 @@ void main() {
       // to `pending` because that would silently re-activate a row a
       // newer client (or a corrupt write) already moved to a terminal
       // state — for a retry queue, that risks double-delivery. See the
-      // doc on `_parseStatus` and the table-column doc on
+      // doc on `parseOutgoingWrapStatus` and the table-column doc on
       // `recipient_wrap_status`.
       test(
         'getById throws UnknownOutgoingWrapStatusException when a row '
