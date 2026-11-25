@@ -633,10 +633,22 @@ artifacts rather than permanent Drift schema entities.
 
 ## Version 37: private share delivery evidence
 
-A local recipient acknowledgment records its environment on the sender's message.
-Existing and synced messages have no acknowledgment marker. Outbox rows also
-retain an explicit request to suppress the kind-4 fallback on recovery.
+Version 37 adds two columns:
 
-## Version 38 — Share recipient eligibility
+- `direct_messages.recipient_accepted_environment` (nullable text): the
+  environment in which this device saw the recipient's route accept the
+  sender's message, `''` when no environment was set. It is NULL for every
+  upgraded row and for every row history sync writes, including the sender's
+  own gift wrap, so no existing or synced message carries an acknowledgment.
+- `outgoing_dms.skip_nip04_fallback` (boolean, default 0): suppresses the
+  legacy kind-4 copy on every attempt, including a replay after restart. Rows
+  queued before v37 get 0, so recovery keeps deciding their kind-4 copy with
+  the plain-text rumor check.
 
-Outgoing rows carry a local video-share flag so retries recheck the current block and mute policy for shares. Recovery also recognizes structured video citations on older queued messages.
+## Version 38: share recipient eligibility
+
+Version 38 adds `outgoing_dms.is_video_share` (boolean, default 0): whether the
+share sheet queued the send, so every attempt rechecks the current block and
+mute policy for its recipient. Rows queued before v38 get 0; recovery
+recognizes the share sheet's structured video citation on those older queued
+messages instead.

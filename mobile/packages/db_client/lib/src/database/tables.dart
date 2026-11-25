@@ -924,15 +924,16 @@ class DirectMessages extends Table {
   TextColumn get heldDeletionWraps =>
       text().nullable().named('held_deletion_wraps')();
 
+  /// Environment where this installation observed recipient-route acceptance.
+  /// History sync never sets this, even for the sender's own gift wrap.
+  /// `''` means accepted while no environment was set.
+  TextColumn get recipientAcceptedEnvironment => text().nullable()();
+
   /// Owner-scoped so the same immutable rumor id can be represented once per
   /// local account. NIP-17 seals one rumor per group message and NIP-59 wraps
   /// it separately for each recipient, so on a device holding two accounts in
   /// the same room both wraps decrypt to one id — which a global key could
   /// only store once, dropping the second account's copy (#6645).
-  /// Environment where this installation observed recipient-route acceptance.
-  /// History sync never sets this, even for the sender's own gift wrap.
-  TextColumn get recipientAcceptedEnvironment => text().nullable()();
-
   @override
   Set<Column> get primaryKey => {id, ownerPubkey};
 
@@ -1516,12 +1517,15 @@ class OutgoingDms extends Table {
   TextColumn get unconfirmedRecipientWrapJson =>
       text().nullable().named('unconfirmed_recipient_wrap_json')();
 
-  /// Keep explicitly private sends off the legacy kind-4 route on replay.
+  /// Suppresses the legacy kind-4 copy on every attempt, including a replay
+  /// after restart.
   BoolColumn get skipNip04Fallback => boolean()
       .named('skip_nip04_fallback')
       .withDefault(const Constant(false))();
 
-  /// Apply the share sheet's live recipient eligibility on every replay.
+  /// Whether the share sheet queued this send. Every attempt, including a
+  /// replay after restart, rechecks that the share sheet would still offer
+  /// the recipient.
   BoolColumn get isVideoShare =>
       boolean().named('is_video_share').withDefault(const Constant(false))();
 

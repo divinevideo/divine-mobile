@@ -10122,13 +10122,9 @@ class DirectMessageRow extends DataClass
   /// like the rumor, by a blocked one.
   final String? heldDeletionWraps;
 
-  /// Owner-scoped so the same immutable rumor id can be represented once per
-  /// local account. NIP-17 seals one rumor per group message and NIP-59 wraps
-  /// it separately for each recipient, so on a device holding two accounts in
-  /// the same room both wraps decrypt to one id — which a global key could
-  /// only store once, dropping the second account's copy (#6645).
   /// Environment where this installation observed recipient-route acceptance.
   /// History sync never sets this, even for the sender's own gift wrap.
+  /// `''` means accepted while no environment was set.
   final String? recipientAcceptedEnvironment;
   const DirectMessageRow({
     required this.id,
@@ -14151,10 +14147,13 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
   /// pool did accept while the recipient's inbox was unreadable (#10012).
   final String? unconfirmedRecipientWrapJson;
 
-  /// Keep explicitly private sends off the legacy kind-4 route on replay.
+  /// Suppresses the legacy kind-4 copy on every attempt, including a replay
+  /// after restart.
   final bool skipNip04Fallback;
 
-  /// Apply the share sheet's live recipient eligibility on every replay.
+  /// Whether the share sheet queued this send. Every attempt, including a
+  /// replay after restart, rechecks that the share sheet would still offer
+  /// the recipient.
   final bool isVideoShare;
   const OutgoingDmRow({
     required this.id,

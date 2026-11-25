@@ -836,6 +836,9 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
+  /// Adds the v37/v38 columns, or drops them again from a database opened at
+  /// an earlier [version] (only a migration test does); see
+  /// [_withholdV31Columns].
   Future<void> _migrateShareDelivery(int version) async {
     const columns = [
       (37, 'direct_messages', 'recipient_accepted_environment', 'TEXT NULL'),
