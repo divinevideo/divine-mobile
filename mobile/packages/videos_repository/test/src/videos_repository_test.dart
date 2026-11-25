@@ -5555,6 +5555,323 @@ void main() {
         expect(result, hasLength(1));
         expect(result.first.id, equals('found-video'));
       });
+
+      group('from Funnelcake', () {
+        String videoIdFor(int index) =>
+            (1000 + index).toRadixString(16).padLeft(64, '0');
+        String authorFor(int index) => index.toRadixString(16).padLeft(64, '0');
+
+        VideoStats statsFor(int index) => _createVideoStats(
+          id: videoIdFor(index),
+          pubkey: authorFor(index),
+          dTag: 'd-$index',
+          videoUrl: 'https://example.com/$index.mp4',
+        );
+
+        Event relayVideo(int index) => _createVideoEvent(
+          id: videoIdFor(index),
+          pubkey: authorFor(index),
+          videoUrl: 'https://example.com/relay-$index.mp4',
+          createdAt: 1704067200,
+        );
+
+        MockFunnelcakeApiClient availableApi() {
+          final api = MockFunnelcakeApiClient();
+          when(() => api.isAvailable).thenReturn(true);
+          return api;
+        }
+
+        void answerApi(
+          MockFunnelcakeApiClient api,
+          Future<List<VideoStats>> Function(List<String> ids) answer,
+        ) {
+          when(() => api.getVideosByIds(any())).thenAnswer(
+            (invocation) =>
+                answer(invocation.positionalArguments.first as List<String>),
+          );
+        }
+
+        VideosRepository repositoryWith(
+          MockFunnelcakeApiClient api, {
+          BlockedVideoFilter? blockFilter,
+          VideoContentFilter? feedShapeFilter,
+        }) => VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: api,
+          blockFilter: blockFilter,
+          feedShapeFilter: feedShapeFilter,
+        );
+
+        test('answers event ids in list order and skips the relays', () async {
+          final api = availableApi();
+          answerApi(api, (_) async => [statsFor(1), statsFor(2)]);
+
+          final result = await repositoryWith(api).getVideosForList([
+            videoIdFor(2),
+            videoIdFor(1),
+          ]);
+
+          expect(
+            result.map((video) => video.id),
+            equals([videoIdFor(2), videoIdFor(1)]),
+          );
+          verifyNever(() => mockNostrClient.queryEvents(any()));
+        });
+
+        test('keeps the engagement counts Funnelcake sends', () async {
+          final api = availableApi();
+          answerApi(
+            api,
+            (_) async => [
+              _createVideoStats(
+                id: videoIdFor(1),
+                pubkey: authorFor(1),
+                dTag: 'd-1',
+                videoUrl: 'https://example.com/1.mp4',
+                reactions: 6,
+                comments: 2,
+                reposts: 1,
+              ),
+            ],
+          );
+
+          final videos = await repositoryWith(
+            api,
+          ).getVideosForList([videoIdFor(1)]);
+
+          expect(videos.single.nostrLikeCount, 6);
+          expect(videos.single.nostrCommentCount, 2);
+          expect(videos.single.nostrRepostCount, 1);
+          verifyNever(() => api.getBulkVideoStats(any()));
+        });
+
+        test('asks for a hundred ids per request', () async {
+          final api = availableApi();
+          answerApi(api, (_) async => const []);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+
+          await repositoryWith(api).getVideosForList([
+            for (var i = 0; i < 150; i++) videoIdFor(i),
+          ]);
+
+          final requests = verify(
+            () => api.getVideosByIds(captureAny()),
+          ).captured.cast<List<String>>();
+          expect(
+            requests,
+            equals([
+              [for (var i = 0; i < 100; i++) videoIdFor(i)],
+              [for (var i = 100; i < 150; i++) videoIdFor(i)],
+            ]),
+          );
+        });
+
+        test(
+          'reads the relays only for ids Funnelcake did not return',
+          () async {
+            final api = availableApi();
+            answerApi(api, (_) async => [statsFor(1)]);
+            when(
+              () => mockNostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [relayVideo(2)]);
+
+            final result = await repositoryWith(api).getVideosForList([
+              videoIdFor(2),
+              videoIdFor(1),
+            ]);
+
+            expect(
+              result.map((video) => video.id),
+              equals([videoIdFor(2), videoIdFor(1)]),
+            );
+            final filters =
+                verify(
+                      () => mockNostrClient.queryEvents(captureAny()),
+                    ).captured.single
+                    as List<Filter>;
+            expect(filters.single.ids, equals([videoIdFor(2)]));
+          },
+        );
+
+        test('reads the relays for the ids of a request that failed', () async {
+          final api = availableApi();
+          answerApi(api, (ids) async {
+            if (ids.length == 100) return [statsFor(0)];
+            throw const FunnelcakeTimeoutException('bulk');
+          });
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => [relayVideo(100)]);
+
+          final result = await repositoryWith(api).getVideosForList([
+            for (var i = 0; i < 101; i++) videoIdFor(i),
+          ]);
+
+          expect(
+            result.map((video) => video.id),
+            equals([videoIdFor(0), videoIdFor(100)]),
+          );
+          final filters =
+              verify(
+                    () => mockNostrClient.queryEvents(captureAny()),
+                  ).captured.single
+                  as List<Filter>;
+          expect(filters.single.ids, contains(videoIdFor(100)));
+          expect(filters.single.ids, isNot(contains(videoIdFor(0))));
+        });
+
+        test(
+          'trusts an answer whose videos the viewer filters all out',
+          () async {
+            final api = availableApi();
+            answerApi(api, (_) async => [statsFor(1)]);
+
+            final result = await repositoryWith(
+              api,
+              blockFilter: (pubkey) => pubkey == authorFor(1),
+            ).getVideosForList([videoIdFor(1)]);
+
+            expect(result, isEmpty);
+            verifyNever(() => mockNostrClient.queryEvents(any()));
+          },
+        );
+
+        test('asks for event ids in lowercase, and nothing else', () async {
+          final api = availableApi();
+          answerApi(api, (_) async => [statsFor(1)]);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+
+          final result = await repositoryWith(api).getVideosForList([
+            'not-an-event-id',
+            videoIdFor(1).toUpperCase(),
+          ]);
+
+          expect(
+            result.map((video) => video.id),
+            equals([videoIdFor(1)]),
+          );
+          verify(() => api.getVideosByIds([videoIdFor(1)])).called(1);
+        });
+
+        test('reads coordinates from the relays', () async {
+          final api = availableApi();
+          answerApi(api, (_) async => [statsFor(1)]);
+          final author = authorFor(9);
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [
+              _createVideoEventWithDTag(
+                id: videoIdFor(9),
+                pubkey: author,
+                dTag: 'vine-9',
+                videoUrl: 'https://example.com/9.mp4',
+                createdAt: 1704067200,
+              ),
+            ],
+          );
+
+          final result = await repositoryWith(api).getVideosForList([
+            '34236:$author:vine-9',
+            videoIdFor(1),
+          ]);
+
+          expect(
+            result.map((video) => video.id),
+            equals([videoIdFor(9), videoIdFor(1)]),
+          );
+          verify(() => api.getVideosByIds([videoIdFor(1)])).called(1);
+        });
+
+        test('skips the feed-shape filter only when asked', () async {
+          final api = availableApi();
+          answerApi(api, (_) async => [statsFor(1)]);
+          final repo = repositoryWith(api, feedShapeFilter: (_) => true);
+
+          final filtered = await repo.getVideosForList([videoIdFor(1)]);
+          final kept = await repo.getVideosForList(
+            [videoIdFor(1)],
+            includeFeedShape: false,
+          );
+
+          expect(filtered, isEmpty);
+          expect(kept.map((video) => video.id), equals([videoIdFor(1)]));
+        });
+
+        group('watchVideosForList', () {
+          test('emits Funnelcake videos before the relays answer', () async {
+            final api = availableApi();
+            answerApi(api, (_) async => [statsFor(1)]);
+            final relays = Completer<List<Event>>();
+            when(
+              () => mockNostrClient.queryEvents(any()),
+            ).thenAnswer((_) => relays.future);
+
+            final emissions = <List<String>>[];
+            final done = repositoryWith(api)
+                .watchVideosForList([videoIdFor(1), videoIdFor(2)])
+                .forEach(
+                  (videos) => emissions.add([
+                    for (final video in videos) video.id,
+                  ]),
+                );
+            await pumpEventQueue();
+
+            expect(
+              emissions,
+              equals([
+                [videoIdFor(1)],
+              ]),
+            );
+
+            relays.complete([relayVideo(2)]);
+            await done;
+
+            expect(
+              emissions,
+              equals([
+                [videoIdFor(1)],
+                [videoIdFor(1), videoIdFor(2)],
+              ]),
+            );
+          });
+
+          test('emits once when Funnelcake answers every ref', () async {
+            final api = availableApi();
+            answerApi(api, (_) async => [statsFor(1)]);
+
+            final emissions = await repositoryWith(
+              api,
+            ).watchVideosForList([videoIdFor(1)]).toList();
+
+            expect(emissions, hasLength(1));
+            expect(
+              emissions.single.map((video) => video.id),
+              equals([videoIdFor(1)]),
+            );
+          });
+
+          test('waits for the relays when Funnelcake returns none', () async {
+            final api = availableApi();
+            answerApi(api, (_) async => const []);
+            when(
+              () => mockNostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [relayVideo(1)]);
+
+            final emissions = await repositoryWith(
+              api,
+            ).watchVideosForList([videoIdFor(1)]).toList();
+
+            expect(emissions, hasLength(1));
+            expect(
+              emissions.single.map((video) => video.id),
+              equals([videoIdFor(1)]),
+            );
+          });
+        });
+      });
     });
     group('getProfileVideos', () {
       test('returns empty list when no events found', () async {

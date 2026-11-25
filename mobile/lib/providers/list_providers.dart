@@ -7,9 +7,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart' show Provider;
 import 'package:models/models.dart';
-import 'package:nostr_client/nostr_client.dart'
-    show NostrClient, RelaySubscriptionRefusedException;
-import 'package:nostr_sdk/aid.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -21,8 +18,6 @@ import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/video_event_service.dart'
     show VideoEventService;
 import 'package:openvine/utils/curated_lists_snapshot.dart';
-import 'package:openvine/utils/list_video_order.dart';
-import 'package:openvine/utils/list_video_relay_query.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -84,8 +79,8 @@ class _LiveDeps {
   VideoEventService? get videoEventService =>
       _torndown ? null : _ref.read(videoEventServiceProvider);
 
-  NostrClient? get nostrClient =>
-      _torndown ? null : _ref.read(nostrServiceProvider);
+  VideosRepository? get videosRepository =>
+      _torndown ? null : _ref.read(videosRepositoryProvider);
 }
 
 /// Riverpod's default retries a failed provider ten times with backoff, and
@@ -269,14 +264,14 @@ Future<UserList?> publicPeopleList(
   return repository.fetchPublicList(ownerPubkey: ownerPubkey, listId: listId);
 }
 
-/// Provider that fetches actual VideoEvent objects for a curated list
-/// Streams videos as they are fetched from cache or relays
+/// The videos of a curated list held in local storage (the viewer's own lists
+/// and the ones they follow), as [_listVideos] reads them.
 ///
 /// `Ref` is either read synchronously in `build` or guarded by [_LiveDeps] —
 /// this provider is the one that matters most, because
 /// `curated_list_feed_screen` calls
 /// `ref.invalidate(curatedListVideoEventsProvider(listId))` on pull-to-refresh,
-/// which disposes the previous build while it is still awaiting relays.
+/// which disposes the previous build while it is still awaiting its reads.
 @riverpod
 Stream<List<VideoEvent>> curatedListVideoEvents(Ref ref, String listId) {
   // Re-run (and therefore re-filter) when the blocklist changes. Broad changes
@@ -305,19 +300,15 @@ Stream<List<VideoEvent>> _curatedListVideoEvents({
     name: 'CuratedListVideoEvents',
     category: LogCategory.video,
   );
-
-  // Get the video IDs from the curated list
-  final videoIds = await videoIdsFuture;
-
-  yield* _resolveListVideos(
-    videoIds: videoIds,
+  yield* _listVideos(
+    videoRefs: await videoIdsFuture,
     live: live,
     logName: 'CuratedListVideoEvents',
   );
 }
 
-/// Provider that fetches VideoEvent objects directly from a list of video IDs
-/// Use this for discovered lists that aren't in local storage
+/// The videos a list names, for a discovered list that is not in local
+/// storage, as [_listVideos] reads them.
 ///
 /// The body is a plain function, and the reads it needs after an `await` go
 /// through [_LiveDeps] — see there for why an `async*` body cannot touch `Ref`.
@@ -327,111 +318,77 @@ Stream<List<VideoEvent>> videoEventsByIds(Ref ref, List<String> videoIds) {
   // bump this version but emit no granular removed-id signal (#5104).
   ref.watch(blocklistVersionProvider);
 
-  return _resolveListVideos(
-    videoIds: videoIds,
+  return _listVideos(
+    videoRefs: videoIds,
     live: _LiveDeps(ref),
     logName: 'VideoEventsByIds',
   );
 }
 
-Stream<List<VideoEvent>> _resolveListVideos({
-  required List<String> videoIds,
+/// The videos [videoRefs] names (64-hex event ids and `kind:pubkey:d-tag`
+/// coordinates), those the feed pool already holds first.
+///
+/// Pooled videos show at once. The rest come from
+/// [VideosRepository.watchVideosForList]: Funnelcake first, the relays for
+/// what it does not hold. They are appended as they arrive, so a tile already
+/// on screen keeps its place, and are added to the pool. The viewer's
+/// feed-shape preference does not apply, because the list's author chose
+/// these videos; videos [VideoEventService.shouldHideVideo] hides are left
+/// out. A reference of any other shape is skipped.
+///
+/// A read that fails with an [Exception] after pooled videos showed keeps
+/// them; one that fails with nothing to show surfaces the error. An [Error]
+/// is a bug and always surfaces.
+Stream<List<VideoEvent>> _listVideos({
+  required List<String> videoRefs,
   required _LiveDeps live,
   required String logName,
 }) async* {
-  if (videoIds.isEmpty) {
-    yield [];
+  if (videoRefs.isEmpty) {
+    yield const [];
     return;
   }
 
-  // Cache hits come first and relay results in arrival order, so every
-  // emission is put back into the list's order (#8105).
-  final order = ListVideoOrder(videoIds);
-
-  // Separate video event IDs from addressable coordinates
-  final eventIds = <String>[];
-  final addressableCoords = <AId>[];
-
-  // Simple hex validation for 64-character Nostr event IDs
-  final hexRegex = RegExp(r'^[a-fA-F0-9]{64}$');
-
-  for (final id in videoIds) {
-    if (hexRegex.hasMatch(id)) {
-      eventIds.add(id.toLowerCase());
-    } else if (ListVideoOrder.parseAddress(id) case final address?) {
-      addressableCoords.add(address);
-    }
-  }
-
-  Log.info(
-    '📋 IDs breakdown: ${eventIds.length} event IDs, '
-    '${addressableCoords.length} addressable coords',
-    name: logName,
-    category: LogCategory.video,
-  );
-
-  // First check cache via video event service. Null means the provider was
-  // disposed while this body was suspended — abandon the fetch instead of
-  // reading a dead Ref (#7294).
+  // Null means the provider was disposed while this body was suspended —
+  // abandon the fetch instead of reading a dead Ref (#7294).
   final videoEventService = live.videoEventService;
   if (videoEventService == null) return;
 
   final foundVideos = <VideoEvent>[];
-  final seenIds = <String>{};
-  final missingIds = <String>[];
-  final missingCoords = <String>[];
+  final missingRefs = <String>[];
 
-  void addCachedVideo(VideoEvent video) {
-    if (!videoEventService.shouldHideVideo(video) &&
-        seenIds.add(video.id.toLowerCase())) {
-      foundVideos.add(video);
-    }
-  }
-
-  // Check cache for regular event IDs. Skip blocked authors here too — a
-  // plain-event-ID cache hit would otherwise pass an unfiltered blocked author
-  // through, unlike the addressable-coord and relay branches below (#5104).
-  for (final eventId in eventIds) {
-    final cached = videoEventService.getVideoById(eventId);
-    if (cached == null) {
-      missingIds.add(eventId);
-    } else {
-      addCachedVideo(cached);
-    }
-  }
-
-  final cachedAddresses = <AId, VideoEvent>{};
-  for (final video in [
+  // Every subscription's pool, for the coordinates (kind:pubkey:d-tag).
+  final pooledVideos = <VideoEvent>{
     ...videoEventService.discoveryVideos,
     ...videoEventService.homeFeedVideos,
     ...videoEventService.profileVideos,
-  ]) {
-    if (ListVideoOrder.addressOf(video) case final address?) {
-      cachedAddresses.putIfAbsent(address, () => video);
-    }
-  }
+  };
 
-  final legacyCacheHits = <AId, VideoEvent>{};
-  for (final address in addressableCoords) {
-    final cached = cachedAddresses[address];
-    if (cached != null) {
-      addCachedVideo(cached);
+  // Hidden videos are skipped on a pool hit too, or a blocked author would
+  // pass through unfiltered (#5104).
+  for (final ref in videoRefs) {
+    final VideoEvent? pooled;
+    if (ref.contains(':')) {
+      final parts = ref.split(':');
+      if (parts.length < 3) continue;
+      final pubkey = parts[1];
+      final dTag = parts[2];
+      pooled = pooledVideos
+          .where(
+            (video) =>
+                video.pubkey == pubkey &&
+                (video.rawTags['d'] ?? video.vineId ?? video.id) == dTag,
+          )
+          .firstOrNull;
+    } else if (_hexEventId.hasMatch(ref)) {
+      pooled = videoEventService.getVideoById(ref);
+    } else {
       continue;
     }
-
-    missingCoords.add(address.toAString());
-    // Older Divine lists used 34236 for regular-length addressable videos.
-    // Show those cache hits while looking for the exact address.
-    if (address.kind == NIP71VideoKinds.addressableShortVideo) {
-      final legacy =
-          cachedAddresses[AId(
-            kind: NIP71VideoKinds.addressableNormalVideo,
-            pubkey: address.pubkey,
-            dTag: address.dTag,
-          )];
-      if (legacy != null && !videoEventService.shouldHideVideo(legacy)) {
-        legacyCacheHits[address] = legacy;
-      }
+    if (pooled == null) {
+      missingRefs.add(ref);
+    } else if (!videoEventService.shouldHideVideo(pooled)) {
+      foundVideos.add(pooled);
     }
   }
 
@@ -442,109 +399,48 @@ Stream<List<VideoEvent>> _resolveListVideos({
   ], legacyMatches: legacyCacheHits);
 
   Log.info(
-    '📋 Found ${foundVideos.length} videos in cache '
-    '(${missingIds.length} missing IDs, ${missingCoords.length} missing coords)',
+    '📋 Found ${foundVideos.length} of ${videoRefs.length} videos in the '
+    'pool; reading ${missingRefs.length}',
     name: logName,
     category: LogCategory.video,
   );
 
-  // Only yield cached videos if we have some - don't yield empty yet
-  // (empty yield would show "No videos" instead of loading state)
-  if (foundVideos.isNotEmpty || legacyCacheHits.isNotEmpty) {
-    yield orderedVideos();
-  }
+  // An empty yield would show "No videos" instead of the loading state.
+  if (foundVideos.isNotEmpty) yield List.of(foundVideos);
 
-  // Fetch missing videos from relays
-  if (missingIds.isNotEmpty || missingCoords.isNotEmpty) {
-    Log.info(
-      '📋 Fetching ${missingIds.length} missing event IDs + '
-      '${missingCoords.length} missing addressable coords from relays',
-      name: logName,
-      category: LogCategory.video,
-    );
+  if (missingRefs.isNotEmpty) {
+    // Null once the provider is disposed — see the pool lookup above.
+    final repository = live.videosRepository;
+    if (repository == null) return;
 
-    final query = ListVideoRelayQuery(
-      eventIds: missingIds,
-      coordinates: missingCoords,
-    );
-    final filters = query.filters;
-
-    // Null once the provider is disposed — see the cache lookup above.
-    final nostrClient = live.nostrClient;
-    if (nostrClient == null) return;
-
-    if (filters.isNotEmpty) {
-      // A refusal from every relay closes the read early. Log it and keep the
-      // videos already resolved rather than failing the whole provider.
-      final eventStream = nostrClient
-          .subscribe(filters, closeOnEose: true)
-          .handleError(
-            (Object error) => Log.warning(
-              '📋 Relay refused video fetch: $error',
-              name: logName,
-              category: LogCategory.video,
-            ),
-            test: (error) => error is RelaySubscriptionRefusedException,
-          );
-      await for (final event in eventStream) {
-        if (!query.asked(event)) continue;
-        final address = AId(
-          kind: event.kind,
-          pubkey: event.pubkey,
-          dTag: event.dTagValue,
-        );
-        final eventId = event.id.toLowerCase();
-        if (seenIds.contains(eventId)) {
-          if (legacyCacheHits.remove(address) != null) yield orderedVideos();
-          continue;
-        }
-
-        try {
-          // Use permissive mode to accept all NIP-71 video kinds from external sources
-          final video = VideoEvent.fromNostrEvent(event, permissive: true);
-          // A relay reply without media cannot replace a playable cache hit.
-          if (video.videoUrl?.trim().isNotEmpty != true &&
-              legacyCacheHits.containsKey(address)) {
-            continue;
-          }
-          final replacedLegacy = legacyCacheHits.remove(address) != null;
-          if (videoEventService.shouldHideVideo(video)) {
-            if (replacedLegacy) yield orderedVideos();
-            continue;
-          }
+    final seenIds = {for (final video in foundVideos) video.id.toLowerCase()};
+    try {
+      await for (final videos in repository.watchVideosForList(
+        missingRefs,
+        includeFeedShape: false,
+      )) {
+        final shownBefore = foundVideos.length;
+        for (final video in videos) {
+          if (!seenIds.add(video.id.toLowerCase())) continue;
+          if (videoEventService.shouldHideVideo(video)) continue;
           foundVideos.add(video);
-          seenIds.add(eventId);
-
-          // Also add to the video event service cache
           videoEventService.addVideoEvent(video);
-
-          Log.info(
-            '📋 Fetched video (kind ${event.kind}): ${video.title ?? video.id}',
-            name: logName,
-            category: LogCategory.video,
-          );
-
-          // Yield updated list with new video
-          yield orderedVideos();
-        } catch (e) {
-          // Log the actual event kind to help diagnose issues
-          Log.warning(
-            '📋 Failed to parse event ${event.id} (kind ${event.kind}): $e',
-            name: logName,
-            category: LogCategory.video,
-          );
         }
+        if (foundVideos.length > shownBefore) yield List.of(foundVideos);
       }
+    } on Exception catch (error, stackTrace) {
+      if (foundVideos.isEmpty) rethrow;
+      Log.warning(
+        "📋 Reading the list's other videos failed; keeping the pooled ones",
+        name: logName,
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
     }
   }
 
-  final ordered = orderedVideos();
-  Log.info(
-    '📋 Finished fetching. Total videos: ${ordered.length}',
-    name: logName,
-    category: LogCategory.video,
-  );
-
-  // Yield final result
-  yield ordered;
+  yield foundVideos;
 }
+
+final _hexEventId = RegExp(r'^[a-fA-F0-9]{64}$');

@@ -481,26 +481,26 @@ final class PublicPeopleListFamily extends $Family
   String toString() => r'publicPeopleListProvider';
 }
 
-/// Provider that fetches actual VideoEvent objects for a curated list
-/// Streams videos as they are fetched from cache or relays
+/// The videos of a curated list held in local storage (the viewer's own lists
+/// and the ones they follow), as [_listVideos] reads them.
 ///
 /// `Ref` is either read synchronously in `build` or guarded by [_LiveDeps] —
 /// this provider is the one that matters most, because
 /// `curated_list_feed_screen` calls
 /// `ref.invalidate(curatedListVideoEventsProvider(listId))` on pull-to-refresh,
-/// which disposes the previous build while it is still awaiting relays.
+/// which disposes the previous build while it is still awaiting its reads.
 
 @ProviderFor(curatedListVideoEvents)
 final curatedListVideoEventsProvider = CuratedListVideoEventsFamily._();
 
-/// Provider that fetches actual VideoEvent objects for a curated list
-/// Streams videos as they are fetched from cache or relays
+/// The videos of a curated list held in local storage (the viewer's own lists
+/// and the ones they follow), as [_listVideos] reads them.
 ///
 /// `Ref` is either read synchronously in `build` or guarded by [_LiveDeps] —
 /// this provider is the one that matters most, because
 /// `curated_list_feed_screen` calls
 /// `ref.invalidate(curatedListVideoEventsProvider(listId))` on pull-to-refresh,
-/// which disposes the previous build while it is still awaiting relays.
+/// which disposes the previous build while it is still awaiting its reads.
 
 final class CuratedListVideoEventsProvider
     extends
@@ -510,14 +510,14 @@ final class CuratedListVideoEventsProvider
           Stream<List<VideoEvent>>
         >
     with $FutureModifier<List<VideoEvent>>, $StreamProvider<List<VideoEvent>> {
-  /// Provider that fetches actual VideoEvent objects for a curated list
-  /// Streams videos as they are fetched from cache or relays
+  /// The videos of a curated list held in local storage (the viewer's own lists
+  /// and the ones they follow), as [_listVideos] reads them.
   ///
   /// `Ref` is either read synchronously in `build` or guarded by [_LiveDeps] —
   /// this provider is the one that matters most, because
   /// `curated_list_feed_screen` calls
   /// `ref.invalidate(curatedListVideoEventsProvider(listId))` on pull-to-refresh,
-  /// which disposes the previous build while it is still awaiting relays.
+  /// which disposes the previous build while it is still awaiting its reads.
   CuratedListVideoEventsProvider._({
     required CuratedListVideoEventsFamily super.from,
     required String super.argument,
@@ -566,14 +566,14 @@ final class CuratedListVideoEventsProvider
 String _$curatedListVideoEventsHash() =>
     r'9f195da0426a9a6a75e2dfd097b6b9ec1410010b';
 
-/// Provider that fetches actual VideoEvent objects for a curated list
-/// Streams videos as they are fetched from cache or relays
+/// The videos of a curated list held in local storage (the viewer's own lists
+/// and the ones they follow), as [_listVideos] reads them.
 ///
 /// `Ref` is either read synchronously in `build` or guarded by [_LiveDeps] —
 /// this provider is the one that matters most, because
 /// `curated_list_feed_screen` calls
 /// `ref.invalidate(curatedListVideoEventsProvider(listId))` on pull-to-refresh,
-/// which disposes the previous build while it is still awaiting relays.
+/// which disposes the previous build while it is still awaiting its reads.
 
 final class CuratedListVideoEventsFamily extends $Family
     with $FunctionalFamilyOverride<Stream<List<VideoEvent>>, String> {
@@ -586,14 +586,14 @@ final class CuratedListVideoEventsFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Provider that fetches actual VideoEvent objects for a curated list
-  /// Streams videos as they are fetched from cache or relays
+  /// The videos of a curated list held in local storage (the viewer's own lists
+  /// and the ones they follow), as [_listVideos] reads them.
   ///
   /// `Ref` is either read synchronously in `build` or guarded by [_LiveDeps] —
   /// this provider is the one that matters most, because
   /// `curated_list_feed_screen` calls
   /// `ref.invalidate(curatedListVideoEventsProvider(listId))` on pull-to-refresh,
-  /// which disposes the previous build while it is still awaiting relays.
+  /// which disposes the previous build while it is still awaiting its reads.
 
   CuratedListVideoEventsProvider call(String listId) =>
       CuratedListVideoEventsProvider._(argument: listId, from: this);
@@ -602,8 +602,8 @@ final class CuratedListVideoEventsFamily extends $Family
   String toString() => r'curatedListVideoEventsProvider';
 }
 
-/// Provider that fetches VideoEvent objects directly from a list of video IDs
-/// Use this for discovered lists that aren't in local storage
+/// The videos a list names, for a discovered list that is not in local
+/// storage, as [_listVideos] reads them.
 ///
 /// The body is a plain function, and the reads it needs after an `await` go
 /// through [_LiveDeps] — see there for why an `async*` body cannot touch `Ref`.
@@ -611,8 +611,8 @@ final class CuratedListVideoEventsFamily extends $Family
 @ProviderFor(videoEventsByIds)
 final videoEventsByIdsProvider = VideoEventsByIdsFamily._();
 
-/// Provider that fetches VideoEvent objects directly from a list of video IDs
-/// Use this for discovered lists that aren't in local storage
+/// The videos a list names, for a discovered list that is not in local
+/// storage, as [_listVideos] reads them.
 ///
 /// The body is a plain function, and the reads it needs after an `await` go
 /// through [_LiveDeps] — see there for why an `async*` body cannot touch `Ref`.
@@ -625,8 +625,8 @@ final class VideoEventsByIdsProvider
           Stream<List<VideoEvent>>
         >
     with $FutureModifier<List<VideoEvent>>, $StreamProvider<List<VideoEvent>> {
-  /// Provider that fetches VideoEvent objects directly from a list of video IDs
-  /// Use this for discovered lists that aren't in local storage
+  /// The videos a list names, for a discovered list that is not in local
+  /// storage, as [_listVideos] reads them.
   ///
   /// The body is a plain function, and the reads it needs after an `await` go
   /// through [_LiveDeps] — see there for why an `async*` body cannot touch `Ref`.
@@ -674,10 +674,10 @@ final class VideoEventsByIdsProvider
   }
 }
 
-String _$videoEventsByIdsHash() => r'9720f5d144dd7bb0e3af9f05ab191710525a433c';
+String _$videoEventsByIdsHash() => r'8b4540161a11e0f874b8b8b05e280d7e30e19fab';
 
-/// Provider that fetches VideoEvent objects directly from a list of video IDs
-/// Use this for discovered lists that aren't in local storage
+/// The videos a list names, for a discovered list that is not in local
+/// storage, as [_listVideos] reads them.
 ///
 /// The body is a plain function, and the reads it needs after an `await` go
 /// through [_LiveDeps] — see there for why an `async*` body cannot touch `Ref`.
@@ -693,8 +693,8 @@ final class VideoEventsByIdsFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Provider that fetches VideoEvent objects directly from a list of video IDs
-  /// Use this for discovered lists that aren't in local storage
+  /// The videos a list names, for a discovered list that is not in local
+  /// storage, as [_listVideos] reads them.
   ///
   /// The body is a plain function, and the reads it needs after an `await` go
   /// through [_LiveDeps] — see there for why an `async*` body cannot touch `Ref`.

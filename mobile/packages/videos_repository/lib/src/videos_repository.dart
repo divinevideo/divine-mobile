@@ -408,7 +408,7 @@ class VideosRepository {
         if (AId.fromString(id) case final address?
             when (address.kind == EventKind.videoVertical ||
                     address.kind == EventKind.videoHorizontal) &&
-                _hexPubkey.hasMatch(address.pubkey) &&
+                _hex64.hasMatch(address.pubkey) &&
                 address.dTag.isNotEmpty)
           id: address,
     };
@@ -420,7 +420,8 @@ class VideosRepository {
     return Map.fromIterables(addresses.keys, policies);
   }
 
-  static final _hexPubkey = RegExp(r'^[0-9a-fA-F]{64}$');
+  /// 64 hex characters: the shape of a pubkey and of an event id.
+  static final _hex64 = RegExp(r'^[0-9a-fA-F]{64}$');
 
   /// Clears the in-memory feed cache.
   ///
@@ -971,20 +972,38 @@ class VideosRepository {
     );
   }
 
-  /// Fetches videos for a specific curated list.
-  ///
-  /// Separates [videoRefs] into event IDs and addressable coordinates,
-  /// fetches both, and returns videos in the ref order (preserving
-  /// the list's ordering).
-  ///
-  /// Returns an empty list if [videoRefs] is empty or no videos are found.
-  Future<List<VideoEvent>> getVideosForList(List<String> videoRefs) async {
-    if (videoRefs.isEmpty) return [];
+  /// The videos a curated list names, in [videoRefs]' order: the last value
+  /// of [watchVideosForList].
+  Future<List<VideoEvent>> getVideosForList(
+    List<String> videoRefs, {
+    bool includeFeedShape = true,
+  }) => watchVideosForList(
+    videoRefs,
+    includeFeedShape: includeFeedShape,
+  ).last;
 
-    // Separate refs by type
+  /// The videos a curated list names, in [videoRefs]' order, each time more
+  /// of them resolve.
+  ///
+  /// Event ids are read from Funnelcake first, a hundred per request, all
+  /// requests at once. The ids it does not return, and every id when it is
+  /// not configured or a request fails, are read as [getVideosByIds] reads
+  /// them. Funnelcake leaves out deleted videos and the older revisions of
+  /// edited ones, and the relays still hold some of those. Coordinates
+  /// (`kind:pubkey:d-tag`) are read as [getVideosByAddressableIds] reads
+  /// them, once Funnelcake has answered.
+  ///
+  /// Funnelcake's videos are emitted as soon as they arrive, when there are
+  /// any and something is left to read. The last value is every video that
+  /// resolved, and it is always emitted, empty when none did. A reference
+  /// that resolves to no video, or to one this viewer's filters hide, is left
+  /// out. [includeFeedShape] works as for [getVideosByIds].
+  Stream<List<VideoEvent>> watchVideosForList(
+    List<String> videoRefs, {
+    bool includeFeedShape = true,
+  }) async* {
     final eventIds = <String>[];
     final addressableIds = <String>[];
-
     for (final ref in videoRefs) {
       if (ref.contains(':')) {
         addressableIds.add(ref);
@@ -993,30 +1012,104 @@ class VideosRepository {
       }
     }
 
-    // Fetch both types in parallel
-    final results = await Future.wait([
-      if (eventIds.isNotEmpty) getVideosByIds(eventIds),
-      if (addressableIds.isNotEmpty) getVideosByAddressableIds(addressableIds),
-    ]);
-
-    // Build lookup map: ref → video
     final refToVideo = <String, VideoEvent>{};
-    var resultIndex = 0;
-
-    if (eventIds.isNotEmpty) {
-      for (final video in results[resultIndex]) {
-        refToVideo[video.id] = video;
-      }
-      resultIndex++;
-    }
-    if (addressableIds.isNotEmpty) {
-      _indexListCoordinates(refToVideo, results[resultIndex]);
-    }
-
-    // Return in ref order, omitting unresolved refs
-    return deduplicateVideosPreservingOrder([
-      for (final ref in videoRefs) ?refToVideo[ref],
+    List<VideoEvent> inListOrder() => deduplicateVideosPreservingOrder([
+      for (final ref in videoRefs)
+        ?refToVideo[ref.contains(':') ? ref : ref.toLowerCase()],
     ]);
+
+    final fromApi = await _listVideosFromApi(
+      eventIds,
+      includeFeedShape: includeFeedShape,
+    );
+    for (final video in fromApi.videos) {
+      refToVideo[video.id.toLowerCase()] = video;
+    }
+    final unanswered = [
+      for (final id in eventIds)
+        if (!fromApi.answeredIds.contains(id.toLowerCase())) id,
+    ];
+    if (unanswered.isEmpty && addressableIds.isEmpty) {
+      yield inListOrder();
+      return;
+    }
+    if (fromApi.videos.isNotEmpty) yield inListOrder();
+
+    final results = await Future.wait([
+      if (unanswered.isEmpty)
+        Future.value(const <VideoEvent>[])
+      else
+        getVideosByIds(unanswered, includeFeedShape: includeFeedShape),
+      if (addressableIds.isEmpty)
+        Future.value(const <VideoEvent>[])
+      else
+        getVideosByAddressableIds(
+          addressableIds,
+          includeFeedShape: includeFeedShape,
+        ),
+    ]);
+    for (final video in results.first) {
+      refToVideo[video.id.toLowerCase()] = video;
+    }
+    _indexListCoordinates(refToVideo, results.last);
+    yield inListOrder();
+  }
+
+  /// The videos Funnelcake holds for [eventIds], and the lowercased ids it
+  /// answered for, including those whose videos this viewer's filters hide.
+  ///
+  /// A request that fails answers for none of its ids, so the caller reads
+  /// them elsewhere. Ids that are not 64 hex characters are not asked for.
+  Future<({List<VideoEvent> videos, Set<String> answeredIds})>
+  _listVideosFromApi(
+    List<String> eventIds, {
+    required bool includeFeedShape,
+  }) async {
+    final api = _funnelcakeApiClient;
+    final ids = <String>{
+      for (final id in eventIds)
+        if (_hex64.hasMatch(id)) id.toLowerCase(),
+    }.toList();
+    if (ids.isEmpty || api == null || !api.isAvailable) {
+      return (videos: const <VideoEvent>[], answeredIds: const <String>{});
+    }
+
+    const perRequest = FunnelcakeApiClient.maxVideosPerBulkRequest;
+    final answers = await Future.wait([
+      for (var start = 0; start < ids.length; start += perRequest)
+        _bulkVideosOrNull(
+          api,
+          ids.sublist(start, min(start + perRequest, ids.length)),
+        ),
+    ]);
+    final stats = [for (final answer in answers) ...?answer];
+    return (
+      videos: _transformVideoStats(
+        stats,
+        sortByCreatedAt: false,
+        includeFeedShape: includeFeedShape,
+      ),
+      answeredIds: {for (final video in stats) video.id.toLowerCase()},
+    );
+  }
+
+  /// Funnelcake's videos for [eventIds], or `null` when the request fails.
+  Future<List<VideoStats>?> _bulkVideosOrNull(
+    FunnelcakeApiClient api,
+    List<String> eventIds,
+  ) async {
+    try {
+      return await api.getVideosByIds(eventIds);
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'List videos API read failed; reading relays instead',
+        name: 'VideosRepository',
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
   }
 
   /// Keeps the coordinate a list saved before #10776 as well as the video's
@@ -2542,9 +2635,11 @@ class VideosRepository {
   ///
   /// By default, sorts by creation time (newest first). Set [sortByCreatedAt]
   /// to false to preserve the API's original order (e.g., trending sort).
+  /// [includeFeedShape] works as for [getVideosByIds].
   List<VideoEvent> _transformVideoStats(
     List<VideoStats> videoStatsList, {
     bool sortByCreatedAt = true,
+    bool includeFeedShape = true,
   }) {
     final videos = <VideoEvent>[];
 
@@ -2566,7 +2661,10 @@ class VideosRepository {
       // Skip expired videos (NIP-40)
       if (video.isExpired) continue;
 
-      final processed = _applyContentPreferences(video);
+      final processed = _applyContentPreferences(
+        video,
+        includeFeedShape: includeFeedShape,
+      );
       if (processed != null) {
         videos.add(processed);
       }
@@ -3491,7 +3589,7 @@ class VideosRepository {
   }) async {
     final authors = {
       for (final pubkey in authorPubkeys)
-        if (_hexPubkey.hasMatch(pubkey)) pubkey.toLowerCase(),
+        if (_hex64.hasMatch(pubkey)) pubkey.toLowerCase(),
     }.toList();
     // Funnelcake's `before` is exclusive, and `until` is inclusive.
     final before = until == null ? null : until + 1;
