@@ -10,6 +10,7 @@
 #include <cstring>
 #include <fstream>
 #include <functional>
+#include <limits>
 #include <mutex>
 #include <vector>
 
@@ -176,6 +177,10 @@ std::optional<TrackEnds> FindMoov(const ReadAt& read) {
           read(offset, static_cast<uint32_t>(box_size));
       return ParseMoov(moov.data(), moov.size());
     }
+    // A 64-bit box size comes from the file and can wrap the offset.
+    if (box_size > std::numeric_limits<uint64_t>::max() - offset) {
+      return std::nullopt;
+    }
     offset += box_size;
   }
   return std::nullopt;
@@ -236,7 +241,8 @@ std::optional<TrackEnds> ReadRemote(
   };
   return FindMoov([&](uint64_t offset, uint32_t size) {
     if (head.empty()) head = fetch(0, kFirstRead);
-    if (offset + size <= head.size()) {
+    // Compared without adding, so a huge offset cannot wrap past the check.
+    if (offset <= head.size() && size <= head.size() - offset) {
       return std::vector<uint8_t>(head.begin() + offset,
                                   head.begin() + offset + size);
     }
