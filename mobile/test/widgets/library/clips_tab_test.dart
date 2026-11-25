@@ -749,6 +749,12 @@ void main() {
     });
 
     group('interactions', () {
+      setUpAll(
+        () => registerFallbackValue(
+          const ClipsLibraryGridColumnsChanged(3),
+        ),
+      );
+
       testWidgets('toggles selection when clip is tapped', (tester) async {
         when(() => mockBloc.state).thenReturn(
           ClipsLibraryState(
@@ -848,6 +854,65 @@ void main() {
           () => mockBloc.add(const ClipsLibraryGridColumnsChanged(5)),
         ).called(1);
       });
+
+      for (final echoBeforeResize in [false, true]) {
+        testWidgets(
+          'resizes during pinch settle with the persistence echo '
+          '${echoBeforeResize ? 'before' : 'after'} the resize',
+          (tester) async {
+            final initialState = ClipsLibraryState(
+              status: ClipsLibraryStatus.loaded,
+              clips: [clip1, clip2],
+              sortedClips: [clip1, clip2],
+            );
+            final updates = StreamController<ClipsLibraryState>();
+            addTearDown(updates.close);
+            whenListen(mockBloc, updates.stream, initialState: initialState);
+            setTestWindowSize(tester, 550);
+            await tester.pumpWidget(wideWidget(largeScreenLayout: true));
+
+            final tile = find.byType(VideoClipThumbnailCard).first;
+            expect(tester.getSize(tile).width, closeTo((550 - 8) / 3, 0.5));
+
+            final centre = tester.getCenter(find.byType(ClipsTab));
+            final first = await tester.startGesture(
+              centre - const Offset(80, 0),
+            );
+            final second = await tester.startGesture(
+              centre + const Offset(80, 0),
+            );
+            await tester.pump();
+            await first.moveTo(centre - const Offset(60, 0));
+            await second.moveTo(centre + const Offset(60, 0));
+            await tester.pump();
+            await first.up();
+            await second.up();
+            verify(
+              () => mockBloc.add(const ClipsLibraryGridColumnsChanged(4)),
+            ).called(1);
+
+            final persistedState = initialState.copyWith(gridColumnCount: 4);
+            if (echoBeforeResize) {
+              updates.add(persistedState);
+              await tester.pump();
+            }
+            tester.view.physicalSize = const Size(650, 900);
+            await tester.pumpAndSettle();
+            expect(tester.getSize(tile).width, closeTo((650 - 16) / 5, 0.5));
+
+            if (!echoBeforeResize) {
+              updates.add(persistedState);
+              await tester.pumpAndSettle();
+              expect(tester.getSize(tile).width, closeTo((650 - 16) / 5, 0.5));
+            }
+            verifyNever(
+              () => mockBloc.add(
+                any(that: isA<ClipsLibraryGridColumnsChanged>()),
+              ),
+            );
+          },
+        );
+      }
 
       testWidgets('the grid still pinches after a filter switch', (
         tester,
