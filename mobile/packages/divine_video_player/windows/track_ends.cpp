@@ -9,7 +9,6 @@
 #include <cctype>
 #include <chrono>
 #include <cstdio>
-#include <cstring>
 #include <fstream>
 #include <functional>
 #include <limits>
@@ -205,12 +204,16 @@ std::optional<TrackEnds> ReadLocal(const std::wstring& path) {
   });
 }
 
-// Blocks until `operation` completes and returns its result, cancelling it
-// if it has not completed within kRequestTimeout.
+// Blocks until `operation` completes, sharing the request's deadline across
+// headers and every body read.
 template <typename Operation>
-auto GetWithin(const Operation& operation) {
-  if (operation.wait_for(kRequestTimeout) ==
-      winrt::Windows::Foundation::AsyncStatus::Started) {
+auto GetBefore(const Operation& operation,
+               std::chrono::steady_clock::time_point deadline) {
+  const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+      deadline - std::chrono::steady_clock::now());
+  if (remaining <= std::chrono::milliseconds::zero() ||
+      operation.wait_for(remaining) ==
+          winrt::Windows::Foundation::AsyncStatus::Started) {
     operation.Cancel();
     throw TrackEndsUnavailable("request timed out");
   }
@@ -240,9 +243,12 @@ std::optional<TrackEnds> ReadRemote(
                       winrt::to_hstring(offset + size - 1));
     // Headers first: a server that ignores Range answers 200 with the whole
     // file, which is not worth downloading for its boxes.
-    auto response = GetWithin(client.SendRequestAsync(
-        request,
-        winrt::Windows::Web::Http::HttpCompletionOption::ResponseHeadersRead));
+    const auto deadline = std::chrono::steady_clock::now() + kRequestTimeout;
+    auto response = GetBefore(
+        client.SendRequestAsync(
+            request,
+            winrt::Windows::Web::Http::HttpCompletionOption::ResponseHeadersRead),
+        deadline);
     const int32_t status = static_cast<int32_t>(response.StatusCode());
     if (status != 206) {
       response.Close();
@@ -256,10 +262,26 @@ std::optional<TrackEnds> ReadRemote(
       response.Close();
       throw TrackEndsUnavailable("server sent more than the range");
     }
-    const auto buffer = GetWithin(response.Content().ReadAsBufferAsync());
-    std::vector<uint8_t> bytes(buffer.Length());
-    if (!bytes.empty()) {
-      std::memcpy(bytes.data(), buffer.data(), bytes.size());
+    const auto stream =
+        GetBefore(response.Content().ReadAsInputStreamAsync(), deadline);
+    constexpr uint32_t kReadPieceBytes = 64 * 1024;
+    const winrt::Windows::Storage::Streams::Buffer piece(kReadPieceBytes);
+    std::vector<uint8_t> bytes;
+    if (length) bytes.reserve(static_cast<size_t>(length.Value()));
+    for (;;) {
+      const auto buffer = GetBefore(
+          stream.ReadAsync(
+              piece, kReadPieceBytes,
+              winrt::Windows::Storage::Streams::InputStreamOptions::Partial),
+          deadline);
+      const uint32_t count = buffer.Length();
+      if (count == 0) break;
+      if (count > size - bytes.size()) {
+        response.Close();
+        throw TrackEndsUnavailable("server sent more than the range");
+      }
+      const uint8_t* data = buffer.data();
+      bytes.insert(bytes.end(), data, data + count);
     }
     return bytes;
   };
