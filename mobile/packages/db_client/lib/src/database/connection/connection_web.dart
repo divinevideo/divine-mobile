@@ -143,8 +143,10 @@ Future<bool> encryptedDatabaseOpensWithKey({
   );
 }
 
-/// Corruption salvage is native-only; startup skips DB encryption on web.
-/// Never reached at runtime (guarded by `kIsWeb` in the app).
+/// The web app does not access native Mac database paths.
+Future<bool> hasAlternateMacOsSharedDatabase() async => false;
+
+/// Startup skips native database encryption on web.
 Future<bool> encryptedDatabaseKeyDecrypts({
   required String rawKeyHex,
   String? databasePath,

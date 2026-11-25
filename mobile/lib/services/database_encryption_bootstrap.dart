@@ -65,6 +65,7 @@ class DatabaseEncryptionBootstrap {
     Future<bool> Function(String rawKeyHex)? canOpenEncryptedDatabase,
     Future<bool> Function(String rawKeyHex)? salvageDatabase,
     Future<bool> Function(String rawKeyHex)? encryptedKeyMatches,
+    Future<bool> Function()? hasAlternateDatabase,
     Future<void> Function(Object error, StackTrace stack)? recordRecovery,
     Future<void> Function(DatabaseRecoveryOutcome outcome)?
     persistRecoveryOutcome,
@@ -102,7 +103,12 @@ class DatabaseEncryptionBootstrap {
                salvageCorruptEncryptedDatabase(rawKeyHex: rawKeyHex)),
        _encryptedKeyMatches =
            encryptedKeyMatches ??
-           ((rawKeyHex) => encryptedDatabaseKeyDecrypts(rawKeyHex: rawKeyHex));
+           ((rawKeyHex) => encryptedDatabaseKeyDecrypts(rawKeyHex: rawKeyHex)),
+       _hasAlternateDatabase =
+           hasAlternateDatabase ??
+           (() async =>
+               defaultTargetPlatform == TargetPlatform.macOS &&
+               await hasAlternateMacOsSharedDatabase());
 
   /// Reads and writes [dbCipherKeyStorageKey] under the current options — on
   /// iOS `first_unlock`, see `appDbCipherKeyIosSecureStorageOptions`.
@@ -146,6 +152,7 @@ class DatabaseEncryptionBootstrap {
   /// when salvage fails, to keep a still-valid key (so the backup stays
   /// readable) instead of rotating it. Returns `false` on genuine key loss.
   final Future<bool> Function(String rawKeyHex) _encryptedKeyMatches;
+  final Future<bool> Function() _hasAlternateDatabase;
 
   /// Whether a previous session's runtime corruption report scheduled a
   /// recovery. When it did, [resolveCipherKey] skips [_canOpenEncryptedDatabase]
@@ -617,6 +624,11 @@ class DatabaseEncryptionBootstrap {
 
   Future<void> _writeCipherKey(String key) async {
     try {
+      if (await _hasAlternateDatabase()) {
+        throw StateError(
+          'Another Mac database may still depend on the stored cipher key',
+        );
+      }
       // Do not let an obsolete recovery copy, or a key an earlier build left
       // in `.v2`, resurrect a previous key after a later interrupted
       // replacement.

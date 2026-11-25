@@ -1740,6 +1740,7 @@ void main() {
 
     DatabaseEncryptionBootstrap bootstrap({
       bool keyDecrypts = true,
+      bool hasAlternateDatabase = false,
       Future<void> Function()? deleteDatabase,
     }) => DatabaseEncryptionBootstrap(
       secureStorage: storage,
@@ -1750,6 +1751,7 @@ void main() {
           keyDecrypts && key == existingKey,
       salvageDatabase: (_) async => false,
       encryptedKeyMatches: (_) async => false,
+      hasAlternateDatabase: () async => hasAlternateDatabase,
       deleteDatabase: deleteDatabase ?? () async => fail('Database was reset'),
     );
 
@@ -1811,6 +1813,29 @@ void main() {
         expect(replacement, isNot(existingKey));
         expect(items, {dbCipherKeyStorageKey: ('first_unlock', replacement)});
         expect(reset, isTrue);
+      },
+    );
+
+    test(
+      'preserves a key that could still open the other Mac database',
+      () async {
+        items[dbCipherKeyStorageKey] = ('first_unlock', existingKey);
+
+        await expectLater(
+          bootstrap(
+            keyDecrypts: false,
+            hasAlternateDatabase: true,
+          ).resolveCipherKey(),
+          throwsA(isA<DatabaseCipherStorageUnavailableException>()),
+        );
+        expect(items, {dbCipherKeyStorageKey: ('first_unlock', existingKey)});
+        verifyNever(
+          () => storage.write(
+            key: any(named: 'key'),
+            value: any(named: 'value'),
+            mOptions: any(named: 'mOptions'),
+          ),
+        );
       },
     );
 

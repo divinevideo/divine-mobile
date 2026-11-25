@@ -123,6 +123,20 @@ void main() {
       });
 
       test(
+        'honors an inherited location marker ahead of a new native file',
+        () {
+          prepareDatabaseFile(iPadDatabase).writeAsBytesSync([1]);
+          expect(resolveMacOsSharedDatabasePath(macSupport), iPadDatabase);
+          expect(File('$iPadDatabase.location').existsSync(), isTrue);
+
+          prepareDatabaseFile(macDatabase).writeAsBytesSync([2]);
+
+          expect(resolveMacOsSharedDatabasePath(macSupport), iPadDatabase);
+          expect(File('$macDatabase.location').existsSync(), isFalse);
+        },
+      );
+
+      test(
         'uses the iPad database when native wrote only a version file',
         () {
           prepareDatabaseFile(iPadDatabase).writeAsBytesSync([1]);

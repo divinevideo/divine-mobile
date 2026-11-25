@@ -1557,6 +1557,37 @@ String buildSharedDatabasePath(String basePath) =>
 @visibleForTesting
 String resolveMacOsSharedDatabasePath(String basePath) {
   final nativePath = buildSharedDatabasePath(basePath);
+  final inheritedPath = _inheritedMacOsDatabasePath(basePath);
+  if (inheritedPath == null) return nativePath;
+
+  final candidates = [nativePath, inheritedPath];
+  for (final path in candidates) {
+    if (File('$path.location').existsSync()) return path;
+  }
+  for (final path in candidates) {
+    if (_macOsDatabaseContainsData(path)) {
+      File('$path.location').createSync();
+      return path;
+    }
+  }
+  return nativePath;
+}
+
+/// Whether another database in the same Mac sandbox could use the shared key.
+Future<bool> hasAlternateMacOsSharedDatabase() async {
+  if (!Platform.isMacOS) return false;
+  final supportDir = await getApplicationSupportDirectory();
+  final inheritedPath = _inheritedMacOsDatabasePath(supportDir.path);
+  if (inheritedPath == null) return false;
+
+  final selected = resolveMacOsSharedDatabasePath(supportDir.path);
+  final alternate = selected == inheritedPath
+      ? buildSharedDatabasePath(supportDir.path)
+      : inheritedPath;
+  return _macOsDatabaseContainsData(alternate);
+}
+
+String? _inheritedMacOsDatabasePath(String basePath) {
   // path_provider appends the bundle ID on native macOS. Only look above
   // that suffix inside the app's own sandbox. Outside it, Application
   // Support is shared by other apps.
@@ -1571,27 +1602,19 @@ String resolveMacOsSharedDatabasePath(String basePath) {
   );
   if (basePath != sandboxedBase ||
       p.basename(p.dirname(containerPath)) != 'Containers') {
-    return nativePath;
+    return null;
   }
 
-  final inheritedPath = buildSharedDatabasePath(supportPath);
-  for (final databasePath in [nativePath, inheritedPath]) {
-    final locationMarker = File('$databasePath.location');
-    if (locationMarker.existsSync()) return databasePath;
+  return buildSharedDatabasePath(supportPath);
+}
 
-    // An early launch can leave a version file or an empty SQLite file. Pin
-    // the path once it contains data or a recovery file, so a deliberate
-    // reset keeps using the same path.
-    final database = File(databasePath);
-    if ((database.existsSync() && database.lengthSync() > 0) ||
-        File('$databasePath$_migratingSuffix').existsSync() ||
-        File('$databasePath$_salvageSuffix').existsSync() ||
-        hasUnfinishedHotJournalDatabaseRestore(databasePath)) {
-      locationMarker.createSync();
-      return databasePath;
-    }
-  }
-  return nativePath;
+bool _macOsDatabaseContainsData(String path) {
+  // A version file or empty SQLite file can be left by an early launch.
+  final database = File(path);
+  return (database.existsSync() && database.lengthSync() > 0) ||
+      File('$path$_migratingSuffix').existsSync() ||
+      File('$path$_salvageSuffix').existsSync() ||
+      hasUnfinishedHotJournalDatabaseRestore(path);
 }
 
 /// Ensures the database parent directory exists before SQLite opens the file.
