@@ -139,11 +139,19 @@ class _ConversationFocusListState extends State<ConversationFocusList> {
               top: index == widget.itemCount - 1 ? 8 : 0,
               bottom: index == 0 ? 8 : 0,
             ),
-            child: index == target && !_settled
-                ? ColoredBox(
-                    key: ConversationFocusList.highlightKey,
-                    color: widget.highlightColor,
-                    child: row,
+            child: index == target
+                ? Stack(
+                    fit: StackFit.passthrough,
+                    children: [
+                      if (!_settled)
+                        Positioned.fill(
+                          child: ColoredBox(
+                            key: ConversationFocusList.highlightKey,
+                            color: widget.highlightColor,
+                          ),
+                        ),
+                      row,
+                    ],
                   )
                 : row,
           );

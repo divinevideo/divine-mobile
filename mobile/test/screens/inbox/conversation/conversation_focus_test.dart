@@ -4,9 +4,51 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/routing/dm_message_visibility.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/conversation_focus_list.dart';
+import 'package:openvine/screens/inbox/conversation/widgets/message_bubble.dart';
+import 'package:openvine/screens/inbox/dm_display_text.dart';
 
 void main() {
   group('conversation focus', () {
+    testWidgets('a message stays expanded when its focus highlight ends', (
+      tester,
+    ) async {
+      const id = 'target';
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: ConversationFocusList(
+              messageId: id,
+              itemCount: 1,
+              findChildIndexCallback: (_) => 0,
+              onUnavailable: () {},
+              highlightColor: Colors.amber,
+              itemBuilder: (_, _) => MessageBubble(
+                key: const ValueKey(id),
+                message: '${'a' * dmInitialDisplayCodeUnits}hidden suffix',
+                timestamp: '2:30 PM',
+                isSent: false,
+              ),
+            ),
+          ),
+        ),
+      );
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(MessageBubble)),
+      );
+      await tester.ensureVisible(find.text(l10n.profileShowMore));
+      await tester.tap(find.text(l10n.profileShowMore));
+      await tester.pump();
+      expect(find.textContaining('hidden suffix'), findsOneWidget);
+      expect(find.byKey(ConversationFocusList.highlightKey), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 2));
+
+      expect(find.byKey(ConversationFocusList.highlightKey), findsNothing);
+      expect(find.textContaining('hidden suffix'), findsOneWidget);
+    });
+
     testWidgets('opens a distant mixed-height row and holds it on insertion', (
       tester,
     ) async {
