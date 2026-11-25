@@ -18,17 +18,12 @@ date: 2026-11-25
 `divine-mobile` does not maintain a copy of Funnelcake's deployment or migration procedure.
 Read the authoritative documentation in the `divine-funnelcake` repository before acting:
 
-- `docs/DEPLOYMENT.md` — CI image build pipeline, staging/POC delivery, and the
-  production promotion workflow (`.github/workflows/deploy-production.yml` mirrors
-  CI-built images from staging to production and opens a GitOps PR in
-  `divine-iac-coreconfig`). Manual local `docker buildx` pushes and direct overlay edits
-  are not supported and cause image drift.
-- `docs/runbooks/production-deploy.md` — current production deploy runbook, ArgoCD
-  sync ordering (schema before application services), and post-deploy verification.
-- `database/README.md` — first-party `funnelcake-migrate` usage, environment variables,
-  and migration ledger (`nostr.funnelcake_schema_migrations`).
-- `docs/migration-best-practices.md` — multi-replica ClickHouse migration patterns
-  (including why per-statement `SETTINGS` clauses are required instead of standalone `SET`).
+- [Deployment pipeline](https://github.com/divinevideo/divine-funnelcake/blob/main/docs/DEPLOYMENT.md) covers staging delivery and production promotion. [CI image-push gating](https://github.com/divinevideo/divine-funnelcake/blob/main/docs/operations/ci-push-gating.md) covers opt-in POC images.
+- [Production deploy runbook](https://github.com/divinevideo/divine-funnelcake/blob/main/docs/runbooks/production-deploy.md) covers schema-first ArgoCD sync and post-deploy verification.
+- [Migrator reference](https://github.com/divinevideo/divine-funnelcake/blob/main/database/README.md) documents supported `funnelcake-migrate` invocations, configuration, and the active migration ledger.
+- [Migration best practices](https://github.com/divinevideo/divine-funnelcake/blob/main/docs/migration-best-practices.md) covers multi-replica migrations and per-statement `SETTINGS`.
+
+Use these sources if an older doc refers back here for a manual Job template.
 
 ## Key Current Facts (as of 2026-11-24)
 
@@ -38,10 +33,11 @@ Read the authoritative documentation in the `divine-funnelcake` repository befor
   an ArgoCD sync hook using `funnelcake-migrate` with HTTP(S) `CLICKHOUSE_URL` (port 8123)
   and `FUNNELCAKE_MIGRATIONS_TARGET=replicated`.
 - **Single-statement `RENAME TABLE` still required.** Self-hosted `Replicated` databases in
-  production also reject multi-table renames in a single query (Code 48); split each rename
-  into its own statement (see `docs/migration-best-practices.md` for `replicated` mode rules).
+  production also reject multi-table renames in a single query (Code 48). Use one
+  rename per statement and review the non-atomic interval for serving tables.
+- **Active migration ledger.** Check `nostr.funnelcake_schema_migrations` for migration
+  progress. The migrator uses the legacy `schema_migrations` table only for bootstrap.
 - **Retired paths (do not use):**
   - Manual `kubectl apply` of `golang-migrate` / `database/entrypoint.sh` migration Jobs.
-  - ClickHouse Cloud native-TLS mode (`CLICKHOUSE_URL` forcing port 9440) and the legacy
-    `schema_migrations` table.
+  - ClickHouse Cloud native-TLS mode (`CLICKHOUSE_URL` forcing port 9440).
   - Manual local `docker buildx` builds or `sed` edits directly against deployment overlays.
