@@ -29,6 +29,7 @@ using flutter::EncodableValue;
 using winrt::Windows::Foundation::IReference;
 using winrt::Windows::Foundation::TimeSpan;
 using winrt::Windows::Media::Core::MediaSource;
+using winrt::Windows::Media::Playback::IMediaPlaybackSource;
 using winrt::Windows::Media::Playback::MediaPlaybackItem;
 using winrt::Windows::Media::Playback::MediaPlaybackItemErrorCode;
 using winrt::Windows::Media::Playback::MediaPlaybackList;
@@ -526,35 +527,49 @@ void VideoPlayerInstance::EnsurePlayer() {
         }
       });
 
+  // The player's own events carry no generation of their own, and one
+  // raised for a source SetClips or Stop has replaced would otherwise pass
+  // the generation check. Each one also names its source, read when it is
+  // raised, and is dropped unless that is still the current list.
   opened_revoker_ = player.MediaOpened(
-      winrt::auto_revoke, [weak, frames](const MediaPlayer&, auto&&) {
+      winrt::auto_revoke, [weak, frames](const MediaPlayer& sender, auto&&) {
         const uint64_t generation = frames->generation.load();
-        PlatformThread::Post([weak, generation]() {
-          if (auto self = weak.lock()) self->OnMediaOpened(generation);
+        const IMediaPlaybackSource source = sender.Source();
+        PlatformThread::Post([weak, generation, source]() {
+          auto self = weak.lock();
+          if (!self || !self->IsCurrentSource(source)) return;
+          self->OnMediaOpened(generation);
         });
       });
 
   failed_revoker_ = player.MediaFailed(
       winrt::auto_revoke,
-      [weak, frames](const MediaPlayer&,
+      [weak, frames](const MediaPlayer& sender,
                      const winrt::Windows::Media::Playback::
                          MediaPlayerFailedEventArgs& args) {
         const uint64_t generation = frames->generation.load();
+        const IMediaPlaybackSource source = sender.Source();
         const int32_t code = args.ExtendedErrorCode();
         const int kind = KindOf(args.Error());
         std::string message = winrt::to_string(args.ErrorMessage());
-        PlatformThread::Post([weak, generation, code, kind, message]() {
+        PlatformThread::Post([weak, generation, source, code, kind, message]() {
           auto self = weak.lock();
-          if (!self || self->generation_ != generation) return;
+          if (!self || self->generation_ != generation ||
+              !self->IsCurrentSource(source)) {
+            return;
+          }
           self->Fail(code, kind, message);
         });
       });
 
   ended_revoker_ = player.MediaEnded(
-      winrt::auto_revoke, [weak, frames](const MediaPlayer&, auto&&) {
+      winrt::auto_revoke, [weak, frames](const MediaPlayer& sender, auto&&) {
         const uint64_t generation = frames->generation.load();
-        PlatformThread::Post([weak, generation]() {
-          if (auto self = weak.lock()) self->OnMediaEnded(generation);
+        const IMediaPlaybackSource source = sender.Source();
+        PlatformThread::Post([weak, generation, source]() {
+          auto self = weak.lock();
+          if (!self || !self->IsCurrentSource(source)) return;
+          self->OnMediaEnded(generation);
         });
       });
 
@@ -1097,6 +1112,11 @@ void VideoPlayerInstance::StartOneShotTimer(
     action(*self);
   });
   one_shot_timers_.push_back(*timer_id);
+}
+
+bool VideoPlayerInstance::IsCurrentSource(
+    const IMediaPlaybackSource& source) const {
+  return list_ && source && source == list_;
 }
 
 bool VideoPlayerInstance::IsPlaying() const {

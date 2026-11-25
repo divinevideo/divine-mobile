@@ -120,6 +120,11 @@ class VideoPlayerInstance
   void StartOneShotTimer(uint32_t interval_ms,
                          std::function<void(VideoPlayerInstance&)> action);
 
+  // Whether `source` is the list the player plays now, so an event raised
+  // for a source that has since been replaced is dropped.
+  bool IsCurrentSource(
+      const winrt::Windows::Media::Playback::IMediaPlaybackSource& source)
+      const;
   bool IsPlaying() const;
   std::string Status() const;
   int64_t CurrentSourceMs() const;
