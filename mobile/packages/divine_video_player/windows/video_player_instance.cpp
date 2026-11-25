@@ -972,9 +972,12 @@ void VideoPlayerInstance::SeekTo(int64_t global_ms, Result result) {
     return;
   }
   pending_seek_result_ = std::move(result);
+  // A timeout resolves only its own seek, never one sent after it.
+  const uint64_t seek_token = ++seek_token_;
   if (pending_seek_result_) {
-    StartOneShotTimer(kSeekTimeoutMs,
-                      [](VideoPlayerInstance& self) { self.ResolveSeek(); });
+    StartOneShotTimer(kSeekTimeoutMs, [seek_token](VideoPlayerInstance& self) {
+      if (self.seek_token_ == seek_token) self.ResolveSeek();
+    });
   }
 
   const bool was_completed = completed_;

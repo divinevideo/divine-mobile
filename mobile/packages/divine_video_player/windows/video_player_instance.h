@@ -207,6 +207,8 @@ class VideoPlayerInstance
 
   Result pending_set_clips_;
   Result pending_seek_result_;
+  // Bumped by every seekTo, so a seek's timeout cannot resolve a later one.
+  uint64_t seek_token_ = 0;
   uint32_t tick_timer_ = 0;
   uint32_t tick_count_ = 0;
   std::vector<uint32_t> one_shot_timers_;
