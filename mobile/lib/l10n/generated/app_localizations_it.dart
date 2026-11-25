@@ -1852,51 +1852,8 @@ class AppLocalizationsIt extends AppLocalizations {
   String get shareVideoLabel => 'Condividi video';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'Post condiviso con $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Post condiviso con $count persone',
-      one: 'Post condiviso con $count persona',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'Stiamo ancora provando a inviare a $recipientName';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Stiamo ancora provando a inviare a $count persone',
-      one: 'Stiamo ancora provando a inviare a $count persona',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'Impossibile inviare a $recipientName';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Impossibile inviare a $count persone',
-      one: 'Impossibile inviare a $count persona',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1930,6 +1887,19 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get shareFindPeopleMultiline => 'Trova\npersone';
+
+  @override
+  String get shareDeliveryFailed => 'Invio non ancora riuscito';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return 'Verrà inviato quando $name sarà raggiungibile';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
 
   @override
   String get shareSent => 'Inviato';

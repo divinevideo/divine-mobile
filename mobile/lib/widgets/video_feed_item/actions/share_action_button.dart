@@ -13,6 +13,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
+import 'package:openvine/blocs/share_delivery/share_delivery_cubit.dart';
 import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
 import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
@@ -29,7 +30,6 @@ import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
-import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -177,7 +177,10 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
         eventId: widget.video.id,
       );
     }
+    final owner = ref.read(authServiceProvider).currentPublicKeyHex;
     _shareSheetBloc = ShareSheetBloc(
+      isOwnerCurrent: () =>
+          mounted && owner == ref.read(authServiceProvider).currentPublicKeyHex,
       video: widget.video,
       videoSharingService: widget.videoSharingService,
       profileRepository: widget.profileRepository,
@@ -185,8 +188,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       rankingSignalsLoader: ref.read(userRankingSignalsLoaderProvider),
       // Empty when signed out: no viewer to exclude, and an empty
       // string never matches a real pubkey (#8351).
-      currentUserPubkey:
-          ref.read(authServiceProvider).currentPublicKeyHex ?? '',
+      currentUserPubkey: owner ?? '',
       cacheManager: openVineImageCache,
     )..add(const ShareSheetContactsLoadRequested());
   }
@@ -313,6 +315,17 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     );
   }
 
+  void _announceFailure(BuildContext context, String text) {
+    _runShareDetached(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        text,
+        Directionality.of(context),
+      ),
+      'announce share failure',
+    );
+  }
+
   void _handleActionResult(BuildContext context, ShareSheetState state) {
     if (!context.mounted || ModalRoute.of(context)?.isCurrent == false) return;
     final result = state.actionResult;
@@ -321,90 +334,28 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     final messenger = ScaffoldMessenger.of(context);
 
     switch (result) {
-      case ShareSheetSendSuccess(
-        :final recipientNames,
-        :final recipientPubkey,
-        :final conversationId,
-      ):
-        final sharedWithText = recipientNames.length == 1
-            ? context.l10n.sharePostSharedWith(recipientNames.single)
-            : context.l10n.sharePostSharedWithCount(recipientNames.length);
-        final viewChatLabel = context.l10n.dmReelReplyViewChat;
-        // "View chat" only when there is a single thread to open.
-        final showViewChat = conversationId != null && recipientPubkey != null;
-        // The snackbar action outlives the sheet, so capture a context that
-        // survives the pop for the conversation push.
-        final hostContext = Navigator.of(context, rootNavigator: true).context;
-        dismissSheet(context);
-        messenger.showSnackBar(
-          DivineSnackbarContainer.snackBar(
-            sharedWithText,
-            actionLabel: showViewChat ? viewChatLabel : null,
-            onActionPressed: showViewChat
-                ? () {
-                    if (!hostContext.mounted) return;
-                    _runShareDetached(
-                      ConversationRouteData(
-                        id: conversationId,
-                        $extra: [recipientPubkey],
-                      ).push<void>(hostContext),
-                      'open shared conversation',
-                    );
-                  }
-                : null,
-          ),
-        );
-      case ShareSheetSendIncomplete(
-        :final sentNames,
-        :final retryingNames,
-        :final notSentNames,
-      ):
-        final l10n = context.l10n;
-        // One line per outcome, so a refused recipient is never folded into
-        // a success (#8672) and a queued one is never called a failure.
-        final message = [
-          if (sentNames.length == 1)
-            l10n.sharePostSharedWith(sentNames.single)
-          else if (sentNames.isNotEmpty)
-            l10n.sharePostSharedWithCount(sentNames.length),
-          if (retryingNames.length == 1)
-            l10n.shareStillTryingToSendTo(retryingNames.single)
-          else if (retryingNames.isNotEmpty)
-            l10n.shareStillTryingToSendToCount(retryingNames.length),
-          if (notSentNames.length == 1)
-            l10n.shareCouldNotSendTo(notSentNames.single)
-          else if (notSentNames.isNotEmpty)
-            l10n.shareCouldNotSendToCount(notSentNames.length),
-        ].join('\n');
-        // Read before the pop deactivates this context.
-        final view = View.of(context);
-        final textDirection = Directionality.of(context);
-        dismissSheet(context);
-        messenger
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            DivineSnackbarContainer.snackBar(
-              message,
-              error: notSentNames.isNotEmpty,
-            ),
+      case ShareSheetEnqueueResult(:final ownerPubkey, :final recipients):
+        if (recipients.every(
+          (r) => r.outcome.delivery == ShareDelivery.notSent,
+        )) {
+          _announceFailure(
+            context,
+            recipients
+                .map((r) => context.l10n.shareCouldNotSendTo(r.name))
+                .join('\n'),
           );
-        _runShareDetached(
-          SemanticsService.sendAnnouncement(view, message, textDirection),
-          'announce incomplete share',
+          return;
+        }
+        context.read<ShareDeliveryCubit>().track(
+          ownerPubkey: ownerPubkey,
+          recipients: recipients,
         );
+        _runShareDetached(HapticFeedback.lightImpact(), 'confirm queued share');
+        dismissSheet(context);
+      case ShareSheetAccountChanged():
+        dismissSheet(context);
       case ShareSheetSendFailure():
-        // The whole send threw, so no recipient's outcome is known. Nothing
-        // is kept open: a retry from here could deliver a second copy of
-        // anything that did go out.
-        dismissSheet(context);
-        messenger
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            DivineSnackbarContainer.snackBar(
-              context.l10n.shareFailedToSend,
-              error: true,
-            ),
-          );
+        _announceFailure(context, context.l10n.shareFailedToSend);
       case ShareSheetCopiedToClipboard(:final kind, :final text):
         final snackText = switch (kind) {
           ShareSheetCopiedKind.postLink => context.l10n.shareCopiedPostLink,
@@ -592,6 +543,17 @@ class _UnifiedShareSheetView extends StatelessWidget {
               builder: (context, state) {
                 final bloc = context.read<ShareSheetBloc>();
 
+                final error = switch (state.actionResult) {
+                  ShareSheetSendFailure() => context.l10n.shareFailedToSend,
+                  ShareSheetEnqueueResult(:final recipients)
+                      when recipients.every(
+                        (r) => r.outcome.delivery == ShareDelivery.notSent,
+                      ) =>
+                    recipients
+                        .map((r) => context.l10n.shareCouldNotSendTo(r.name))
+                        .join('\n'),
+                  _ => null,
+                };
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -619,6 +581,25 @@ class _UnifiedShareSheetView extends StatelessWidget {
                         bloc.add(ShareSheetRecipientToggled(user));
                       },
                     ),
+                    if (error != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: ColoredBox(
+                          color: context.vineColors.errorContainer,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Semantics(
+                              liveRegion: true,
+                              child: Text(
+                                error,
+                                style: TextStyle(
+                                  color: context.vineColors.onErrorContainer,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     if (state.selectedRecipients.isNotEmpty)
                       _MessageInput(
                         controller: messageController,

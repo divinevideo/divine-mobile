@@ -85,6 +85,29 @@ void main() {
     }
   });
 
+  group('enqueueAll', () {
+    test('duplicate rumor ids roll back the entire share', () async {
+      final row = makeDm(id: 'same-rumor');
+      await expectLater(
+        dao.enqueueAll([row, row], isCurrent: () => true),
+        throwsA(isA<SqliteException>()),
+      );
+      expect(await dao.getAllForOwner(ownerA), isEmpty);
+    });
+
+    test('an account change during insertion rolls back every row', () async {
+      var checks = 0;
+      await expectLater(
+        dao.enqueueAll(
+          [makeDm(id: 'first'), makeDm(id: 'second')],
+          isCurrent: () => ++checks <= 2,
+        ),
+        throwsStateError,
+      );
+      expect(await dao.getAllForOwner(ownerA), isEmpty);
+    });
+  });
+
   group('OutgoingDm value equality', () {
     test('rumorId reads the wire id independently of the queue handle', () {
       final row = makeDm(id: 'queue-handle', rumorId: 'wire-rumor');

@@ -941,6 +941,13 @@ void main() {
       mockNostrClient = _MockNostrClient();
       mockMessageService = _MockNIP17MessageService();
       mockDirectMessagesDao = _MockDirectMessagesDao();
+      when(
+        () => mockDirectMessagesDao.markRecipientAccepted(
+          ownerPubkey: any(named: 'ownerPubkey'),
+          rumorId: any(named: 'rumorId'),
+          environment: any(named: 'environment'),
+        ),
+      ).thenAnswer((_) async {});
       mockConversationsDao = _MockConversationsDao();
       mockReactionsRepository = _MockDmReactionsRepository();
       reporterCalls = <_ReporterCall>[];
@@ -28212,6 +28219,13 @@ void main() {
           ).captured;
           expect(captured, hasLength(1));
           final enqueued = captured.single as OutgoingDm;
+          verify(
+            () => mockDirectMessagesDao.markRecipientAccepted(
+              ownerPubkey: _validPubkeyA,
+              rumorId: enqueued.id,
+              environment: '',
+            ),
+          ).called(1);
           expect(enqueued.recipientPubkey, equals(_validPubkeyB));
           expect(enqueued.ownerPubkey, equals(_validPubkeyA));
           expect(enqueued.content, equals('queue-wired message'));

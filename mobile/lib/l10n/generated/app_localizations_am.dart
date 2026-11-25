@@ -1778,51 +1778,8 @@ class AppLocalizationsAm extends AppLocalizations {
   String get shareVideoLabel => 'ቪዲዮ አጋራ';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'ልጥፍ ለ$recipientName ተጋርቷል።';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'ልጥፍ ለ$count ሰዎች ተጋርቷል።',
-      one: 'ልጥፍ ለ$count ሰው ተጋርቷል።',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'ለ$recipientName ለመላክ አሁንም እየሞከርን ነው';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'ለ$count ሰዎች ለመላክ አሁንም እየሞከርን ነው',
-      one: 'ለ$count ሰው ለመላክ አሁንም እየሞከርን ነው',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'ለ$recipientName መላክ አልተቻለም';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'ለ$count ሰዎች መላክ አልተቻለም',
-      one: 'ለ$count ሰው መላክ አልተቻለም',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1855,6 +1812,19 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get shareFindPeopleMultiline => 'አግኝ\nሰዎች';
+
+  @override
+  String get shareDeliveryFailed => 'መላክ ገና አልተቻለም';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return '$name ሊደረስበት ሲችል ይላካል';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
 
   @override
   String get shareSent => 'ተልኳል።';

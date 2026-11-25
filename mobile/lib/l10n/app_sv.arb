@@ -709,19 +709,7 @@
   },
   "listAttributionFallback": "Lista",
   "shareVideoLabel": "Dela video",
-  "sharePostSharedWith": "Inlägg delat med {recipientName}",
-  "sharePostSharedWithCount": "{count, plural, one{Inlägg delat med {count} person} other{Inlägg delat med {count} personer}}",
-  "@sharePostSharedWith": {
-    "placeholders": {
-      "recipientName": {
-        "type": "String"
-      }
-    }
-  },
-  "shareStillTryingToSendTo": "Vi försöker fortfarande skicka till {recipientName}",
-  "shareStillTryingToSendToCount": "{count, plural, one{Vi försöker fortfarande skicka till {count} person} other{Vi försöker fortfarande skicka till {count} personer}}",
   "shareCouldNotSendTo": "Det gick inte att skicka till {recipientName}",
-  "shareCouldNotSendToCount": "{count, plural, one{Det gick inte att skicka till {count} person} other{Det gick inte att skicka till {count} personer}}",
   "shareFailedToSend": "Kunde inte skicka video",
   "shareAddedToBookmarks": "Tillagd i bokmärken",
   "shareRemovedFromBookmarks": "Borttagen från bokmärken",
@@ -732,6 +720,9 @@
   "shareWithTitle": "Dela med",
   "shareFindPeople": "Hitta personer",
   "shareFindPeopleMultiline": "Hitta\npersoner",
+  "shareDeliveryFailed": "Det gick inte att skicka ännu",
+  "shareDeliveryHeld": "Skickas när {name} går att nå",
+  "shareDeliveryForRecipient": "{name} — {status}",
   "shareSent": "Skickat",
   "shareSelectedRecipientAnnouncement": "{name} vald",
   "@shareSelectedRecipientAnnouncement": {

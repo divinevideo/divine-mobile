@@ -929,6 +929,10 @@ class DirectMessages extends Table {
   /// it separately for each recipient, so on a device holding two accounts in
   /// the same room both wraps decrypt to one id — which a global key could
   /// only store once, dropping the second account's copy (#6645).
+  /// Environment where this installation observed recipient-route acceptance.
+  /// History sync never sets this, even for the sender's own gift wrap.
+  TextColumn get recipientAcceptedEnvironment => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id, ownerPubkey};
 
@@ -1511,6 +1515,11 @@ class OutgoingDms extends Table {
   /// pool did accept while the recipient's inbox was unreadable (#10012).
   TextColumn get unconfirmedRecipientWrapJson =>
       text().nullable().named('unconfirmed_recipient_wrap_json')();
+
+  /// Keep explicitly private sends off the legacy kind-4 route on replay.
+  BoolColumn get skipNip04Fallback => boolean()
+      .named('skip_nip04_fallback')
+      .withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};

@@ -349,8 +349,23 @@ void main() {
       },
     );
 
-    test('current schema version is 36', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 36);
+    test('v36 history has no recipient acknowledgment after migration', () async {
+      final schema = await verifier.schemaAt(36);
+      schema.rawDatabase.execute(
+        'INSERT INTO direct_messages (id, conversation_id, sender_pubkey, content, '
+        'created_at, gift_wrap_id, owner_pubkey) VALUES (?,?,?,?,?,?,?)',
+        ['rumor', 'thread', 'owner', 'hello', 1, 'self-wrap', 'owner'],
+      );
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+      await verifier.migrateAndValidate(db, 37);
+      final row = await db.select(db.directMessages).getSingle();
+      expect(row.recipientAcceptedEnvironment, isNull);
+      expect(row.giftWrapId, 'self-wrap');
+    });
+
+    test('current schema version is 37', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 37);
     });
 
     test('v34 gives a queued DM a place for an unconfirmed recipient wrap, '
@@ -382,7 +397,12 @@ void main() {
 
       await verifier.migrateAndValidate(db, 34);
 
-      final row = await db.outgoingDmsDao.getById(rumorId);
+      // Reopen at the current schema before using the current outbox mapper.
+      await db.close();
+      final current = AppDatabase(schema.newConnection());
+      addTearDown(current.close);
+      await verifier.migrateAndValidate(current, current.schemaVersion);
+      final row = await current.outgoingDmsDao.getById(rumorId);
       expect(row!.content, 'queued before the upgrade');
       expect(row.retryCount, 1);
       expect(row.unconfirmedRecipientWrapJson, isNull);
@@ -1133,7 +1153,12 @@ void main() {
           ),
           'sealed outbox',
         );
-        final retryable = await db.outgoingDmsDao.getRetryableForOwner(
+        // Reopen at the current schema before using the current outbox mapper.
+        await db.close();
+        final current = AppDatabase(schema.newConnection());
+        addTearDown(current.close);
+        await verifier.migrateAndValidate(current, current.schemaVersion);
+        final retryable = await current.outgoingDmsDao.getRetryableForOwner(
           ownerPubkey: 'a' * 64,
           maxRetries: 3,
           environment: 'staging',
@@ -1756,7 +1781,12 @@ void main() {
         final db = AppDatabase(schema.newConnection());
         await verifier.migrateAndValidate(db, 25);
 
-        final retryable = await db.outgoingDmsDao.getRetryableForOwner(
+        // Reopen at the current schema before using the current outbox mapper.
+        await db.close();
+        final current = AppDatabase(schema.newConnection());
+        addTearDown(current.close);
+        await verifier.migrateAndValidate(current, current.schemaVersion);
+        final retryable = await current.outgoingDmsDao.getRetryableForOwner(
           ownerPubkey: ownerPubkey,
           maxRetries: 3,
           environment: 'staging',

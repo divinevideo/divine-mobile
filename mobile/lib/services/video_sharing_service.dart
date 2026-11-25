@@ -8,7 +8,6 @@ import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 // `auth_service` exports an unrelated `UserProfile`; hide it so the models
 // one (used by [ShareableUser.fromProfile]) resolves unambiguously.
-import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/short_link_client.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -107,59 +106,23 @@ class ShareableUser {
 /// Contains all the information needed to build a rich [ShareParams].
 typedef ShareData = ({String shareUrl, String? title, String? thumbnailUrl});
 
-/// What a share did for one recipient.
-///
-/// A failed share means one of two opposite things, and the share sheet has
-/// to tell them apart (#8672): a send the durable queue will keep retrying,
-/// and a send nothing will ever retry.
-enum ShareDelivery {
-  /// Published, or durably queued for background delivery — reported as
-  /// sent, the same way the DM composer reports it.
-  sent,
+/// Local enqueue outcome. Recipient-route acceptance is observed separately.
+enum ShareDelivery { queued, notSent }
 
-  /// Not published, but a queue row exists and the retry sweep will keep
-  /// sending it. Sharing again would deliver a second copy.
-  retrying,
-
-  /// Will never arrive unless the user acts: refused by the send policy, or
-  /// failed before any queue row existed.
-  notSent,
-}
-
-/// Result of sharing operation
-/// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class ShareResult {
-  const ShareResult({
-    required this.delivery,
-    this.error,
-    this.messageEventId,
-    this.conversationId,
-  });
+  const ShareResult.queued(String this.rumorId, String this.conversationId)
+    : delivery = ShareDelivery.queued,
+      error = null;
 
-  /// What this share did for the recipient.
+  const ShareResult.failure(String this.error)
+    : delivery = ShareDelivery.notSent,
+      rumorId = null,
+      conversationId = null;
+
   final ShareDelivery delivery;
   final String? error;
-  final String? messageEventId;
-
-  /// The DM conversation ID (NIP-17), used for "View Chat" navigation.
+  final String? rumorId;
   final String? conversationId;
-
-  factory ShareResult.createSuccess(
-    String messageEventId, {
-    String? conversationId,
-  }) => ShareResult(
-    delivery: ShareDelivery.sent,
-    messageEventId: messageEventId,
-    conversationId: conversationId,
-  );
-
-  /// A share that will never arrive unless the user sends it again.
-  factory ShareResult.failure(String error) =>
-      ShareResult(delivery: ShareDelivery.notSent, error: error);
-
-  /// A share the durable queue will keep retrying.
-  factory ShareResult.retrying(String error) =>
-      ShareResult(delivery: ShareDelivery.retrying, error: error);
 }
 
 /// Service for sharing videos with other users
@@ -186,163 +149,68 @@ class VideoSharingService {
   List<ShareableUser> get recentlySharedWith =>
       List.unmodifiable(_recentlySharedWith);
 
-  /// Share a video with a specific user via Nostr DM.
-  ///
-  /// Sends it as a gift-wrapped NIP-17 message (kinds 14/13/1059) through the
-  /// [DmRepository], asking it to skip the kind-4 copy.
   Future<ShareResult> shareVideoWithUser({
     required VideoEvent video,
     required String recipientPubkey,
     String? personalMessage,
   }) async {
-    try {
-      Log.debug(
-        'Sharing video with user: ${pubkeyForLogs(recipientPubkey)}',
-        name: 'VideoSharingService',
-        category: LogCategory.video,
-      );
-
-      if (!_authService.isAuthenticated) {
-        return ShareResult.failure('User not authenticated');
-      }
-
-      // Explicit publish-readiness gate. This service used to inherit one by
-      // accident: it was built from the relay-gated profile repository, so a
-      // not-yet-ready session made the whole service — and therefore the
-      // share sheet — null. That turned Share into a silent dead tap for the
-      // entire cold-start window. The sheet now opens on the read-only
-      // handle, so the send path has to state the requirement itself (#6423).
-      if (!_authService.canPublishNostrWritesNow) {
-        return ShareResult.failure('Signing is not available yet');
-      }
-
-      final dmContent = _createShareMessage(video, personalMessage);
-
-      // `await` (not a bare `return`) so an async throw from the send is
-      // caught here and mapped to a ShareResult.failure instead of escaping
-      // to the fan-out loop and aborting the remaining recipients.
-      return await _shareViaNip17(
-        video: video,
-        recipientPubkey: recipientPubkey,
-        content: dmContent,
-      );
-    } catch (e) {
-      Log.error(
-        'Error sharing video: $e',
-        name: 'VideoSharingService',
-        category: LogCategory.video,
-      );
-      return ShareResult.failure('Error sharing video: $e');
-    }
+    final outcomes = await shareVideoWithMultipleUsers(
+      video: video,
+      recipientPubkeys: [recipientPubkey],
+      personalMessage: personalMessage,
+    );
+    return outcomes[recipientPubkey.trim().toLowerCase()]!;
   }
 
-  Future<ShareResult> _shareViaNip17({
-    required VideoEvent video,
-    required String recipientPubkey,
-    required String content,
-  }) async {
-    final identity = divineVideoShareIdentity(video);
-    final result = await _dmRepository.sendSharedVideo(
-      backgroundDelivery: true,
-      recipientPubkey: recipientPubkey,
-      baseContent: content,
-      videoKind: identity.kind,
-      videoAuthorPubkey: video.pubkey,
-      videoDTag: identity.dTag,
-      videoEventId: video.id,
-      relayHint: video.sourceRelay,
-      // A shared video is a NIP-17-native action. Skip the plaintext kind-4
-      // fallback so we don't publish the sender↔recipient link and real
-      // timestamp in the clear on the (unauthenticated) relay — which would
-      // defeat NIP-17's metadata protection for exactly this message — and so
-      // NIP-17 and NIP-04 copies can't render as a duplicate on the recipient.
-      skipNip04Fallback: true,
-    );
-
-    // A durably queued send is enough to dismiss the sheet. The repository
-    // owns delivery and retries under this same rumor id; relay confirmation
-    // never blocks composing or sharing the next message.
-    final optimisticMessageId = result.success
-        ? result.messageEventId
-        : result.retryablePending
-        ? result.queuedRumorId
-        : null;
-    if (optimisticMessageId != null) {
-      _shareHistory[recipientPubkey] = DateTime.now();
-      // Fire-and-forget: this only refreshes the in-memory recents list for
-      // the next share-sheet open. Awaiting it kept the success toast waiting
-      // on a 5s-timeout profile fetch for no user-visible benefit. It
-      // self-catches its own errors. See #5391.
-      unawaited(_updateRecentlySharedWith(recipientPubkey));
-
-      final participants = [_dmRepository.userPubkey, recipientPubkey]..sort();
-      final conversationId = DmRepository.computeConversationId(participants);
-
-      Log.info(
-        'Video shared via NIP-17: $optimisticMessageId',
-        name: 'VideoSharingService',
-        category: LogCategory.video,
-      );
-
-      return ShareResult.createSuccess(
-        optimisticMessageId,
-        conversationId: conversationId,
-      );
-    }
-
-    final error = result.error ?? 'Failed to send NIP-17 message';
-
-    // Only a publish that failed after the enqueue leaves a row the retry
-    // sweep re-drives. A send-policy refusal and an oversized message are
-    // refused before the enqueue, so nothing will ever send them (#8672).
-    final queuedRumorId = result.queuedRumorId;
-    if (queuedRumorId != null) {
-      Log.warning(
-        'Share to ${pubkeyForLogs(recipientPubkey)} not published; queued '
-        'for background retry as $queuedRumorId: $error',
-        name: 'VideoSharingService',
-        category: LogCategory.video,
-      );
-      return ShareResult.retrying(error);
-    }
-
-    Log.warning(
-      'Share to ${pubkeyForLogs(recipientPubkey)} not sent and not queued: '
-      '$error',
-      name: 'VideoSharingService',
-      category: LogCategory.video,
-    );
-    return ShareResult.failure(error);
-  }
-
-  /// Share video to multiple users at once
+  /// Queue the entire eligible fan-out before exposing any successful result.
   Future<Map<String, ShareResult>> shareVideoWithMultipleUsers({
     required VideoEvent video,
     required List<String> recipientPubkeys,
     String? personalMessage,
   }) async {
+    final recipients = recipientPubkeys
+        .map((key) => key.trim().toLowerCase())
+        .toSet();
+    Map<String, ShareResult> refuseAll(String reason) => {
+      for (final key in recipients) key: ShareResult.failure(reason),
+    };
+    if (!_authService.isAuthenticated) {
+      return refuseAll('User not authenticated');
+    }
+    if (!_authService.canPublishNostrWritesNow) {
+      return refuseAll('Signing is not available yet');
+    }
+    final owner = _dmRepository.userPubkey;
+    if (_authService.currentPublicKeyHex != owner) {
+      return refuseAll('Account changed');
+    }
+    final identity = divineVideoShareIdentity(video);
+    final outcomes = await _dmRepository.enqueueSharedVideoBatch(
+      recipientPubkeys: recipients.toList(),
+      baseContent: _createShareMessage(video, personalMessage),
+      videoKind: identity.kind,
+      videoAuthorPubkey: video.pubkey,
+      videoDTag: identity.dTag,
+      videoEventId: video.id,
+      relayHint: video.sourceRelay,
+    );
     final results = <String, ShareResult>{};
-
-    // Queue each recipient locally; network delivery continues independently
-    // of this sheet. Each enqueue is guarded so one validation/storage error
-    // does not prevent sharing with the remaining recipients.
-    for (final pubkey in recipientPubkeys) {
-      try {
-        results[pubkey] = await shareVideoWithUser(
-          video: video,
-          recipientPubkey: pubkey,
-          personalMessage: personalMessage,
-        );
-      } catch (e) {
-        Log.error(
-          'Failed to share video with ${pubkeyForLogs(pubkey)}: $e',
-          name: 'VideoSharingService',
-          category: LogCategory.video,
-        );
-        results[pubkey] = ShareResult.failure('Error sharing video: $e');
+    for (final key in recipients) {
+      final outcome = outcomes[key];
+      results[key] = switch (outcome) {
+        ShareEnqueueQueued(:final rumorId, :final conversationId) =>
+          ShareResult.queued(rumorId, conversationId),
+        ShareEnqueueRefused(:final reason) => ShareResult.failure(reason),
+        ShareEnqueueBlocked() => const ShareResult.failure('Recipient blocked'),
+        ShareEnqueueTooLong() => const ShareResult.failure('Message too long'),
+        null => const ShareResult.failure('Recipient unavailable'),
+      };
+      if (outcome is ShareEnqueueQueued &&
+          _authService.currentPublicKeyHex == owner) {
+        _shareHistory[key] = DateTime.now();
+        unawaited(_updateRecentlySharedWith(owner, key));
       }
     }
-
     return results;
   }
 
@@ -439,7 +307,7 @@ class VideoSharingService {
   }
 
   /// Update recently shared with list
-  Future<void> _updateRecentlySharedWith(String pubkey) async {
+  Future<void> _updateRecentlySharedWith(String owner, String pubkey) async {
     try {
       // Remove if already in list
       _recentlySharedWith.removeWhere((user) => user.pubkey == pubkey);
@@ -449,6 +317,7 @@ class VideoSharingService {
         pubkey: pubkey,
       );
 
+      if (_authService.currentPublicKeyHex != owner) return;
       // Add to front of list
       _recentlySharedWith.insert(0, ShareableUser.fromProfile(pubkey, profile));
 

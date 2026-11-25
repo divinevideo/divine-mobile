@@ -1678,48 +1678,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get shareVideoLabel => '영상 공유';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return '$recipientName님과 게시물을 공유했어요';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count명과 게시물을 공유했어요',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return '$recipientName님에게 계속 보내는 중이에요';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count명에게 계속 보내는 중이에요',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return '$recipientName님에게 보내지 못했어요';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count명에게 보내지 못했어요',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1752,6 +1712,19 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get shareFindPeopleMultiline => '사람\n찾기';
+
+  @override
+  String get shareDeliveryFailed => '아직 보내지 못했어요';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return '$name님에게 연결되면 보낼게요';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
 
   @override
   String get shareSent => '보냄';

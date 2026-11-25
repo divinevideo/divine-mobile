@@ -1846,51 +1846,8 @@ class AppLocalizationsBg extends AppLocalizations {
   String get shareVideoLabel => 'Сподели видео';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'Публикация, споделена с $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Публикация, споделена с $count души',
-      one: 'Публикация, споделена с $count човек',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'Още опитваме да изпратим на $recipientName';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Още опитваме да изпратим на $count души',
-      one: 'Още опитваме да изпратим на $count човек',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'Не успяхме да изпратим на $recipientName';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Не успяхме да изпратим на $count души',
-      one: 'Не успяхме да изпратим на $count човек',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1923,6 +1880,19 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get shareFindPeopleMultiline => 'Намери\nхора';
+
+  @override
+  String get shareDeliveryFailed => 'Все още не е изпратено';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return 'Ще се изпрати, когато $name е на линия';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
 
   @override
   String get shareSent => 'Изпратено';

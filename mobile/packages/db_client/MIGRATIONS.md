@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 36** (see `app_database.dart`).
+**Version: 37** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -630,3 +630,9 @@ between short passes. An interrupted cleanup resumes from the remaining rows on
 the next launch. Only empty retired tables and indexes are dropped; there is no
 startup VACUUM or whole-cache DELETE. Retired tables are optional raw migration
 artifacts rather than permanent Drift schema entities.
+
+## Version 37: private share delivery evidence
+
+A local recipient acknowledgment records its environment on the sender's message.
+Existing and synced messages have no acknowledgment marker. Outbox rows also
+retain an explicit request to suppress the kind-4 fallback on recovery.

@@ -11,12 +11,10 @@ import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
-import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/short_link_client.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:profile_repository/profile_repository.dart';
-import 'package:unified_logger/unified_logger.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -43,6 +41,7 @@ void main() {
     mockAuthService = _MockAuthService();
     mockProfileRepository = _MockProfileRepository();
     mockDmRepository = _MockDmRepository();
+    when(() => mockAuthService.currentPublicKeyHex).thenReturn(_testPubkey);
     when(() => mockDmRepository.userPubkey).thenReturn(_testPubkey);
 
     service = VideoSharingService(
@@ -52,44 +51,44 @@ void main() {
     );
   });
 
-  /// Any `sendSharedVideo` call, for `when` and `verifyNever`.
-  Future<NIP17SendResult> anySharedVideoSend() =>
-      mockDmRepository.sendSharedVideo(
-        backgroundDelivery: true,
-        recipientPubkey: any(named: 'recipientPubkey'),
+  /// Any share batch, for `when` and `verifyNever`.
+  Future<Map<String, ShareEnqueueOutcome>> anySharedVideoSend() =>
+      mockDmRepository.enqueueSharedVideoBatch(
+        recipientPubkeys: any(named: 'recipientPubkeys'),
         baseContent: any(named: 'baseContent'),
         videoKind: any(named: 'videoKind'),
         videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
         videoDTag: any(named: 'videoDTag'),
         videoEventId: any(named: 'videoEventId'),
         relayHint: any(named: 'relayHint'),
-        skipNip04Fallback: any(named: 'skipNip04Fallback'),
       );
 
-  /// Makes every share publish.
   void stubSharesSucceed() {
-    when(anySharedVideoSend).thenAnswer(
-      (_) async => NIP17SendResult.success(
-        rumorEventId: 'nip17-rumor-id',
-        messageEventId: 'nip17-msg-id',
-        recipientPubkey: _recipientPubkey,
-      ),
-    );
+    when(anySharedVideoSend).thenAnswer((call) async {
+      final recipients = call.namedArguments[#recipientPubkeys] as List<String>;
+      return {
+        for (final recipient in recipients)
+          recipient: ShareEnqueueOutcome.queued(
+            'rumor-id',
+            DmRepository.computeConversationId(
+              [_testPubkey, recipient]..sort(),
+            ),
+          ),
+      };
+    });
   }
 
   /// The message body of the first share handed to the DM repository.
   String sharedMessage() {
     final captured = verify(
-      () => mockDmRepository.sendSharedVideo(
-        backgroundDelivery: true,
-        recipientPubkey: any(named: 'recipientPubkey'),
+      () => mockDmRepository.enqueueSharedVideoBatch(
+        recipientPubkeys: any(named: 'recipientPubkeys'),
         baseContent: captureAny(named: 'baseContent'),
         videoKind: any(named: 'videoKind'),
         videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
         videoDTag: any(named: 'videoDTag'),
         videoEventId: any(named: 'videoEventId'),
         relayHint: any(named: 'relayHint'),
-        skipNip04Fallback: any(named: 'skipNip04Fallback'),
       ),
     ).captured;
     return captured.first as String;
@@ -274,6 +273,35 @@ void main() {
       expect(result[0].picture, 'https://example.com/alice.jpg');
     });
 
+    test(
+      'an asynchronous profile resolved after a switch stays out of recents',
+      () async {
+        when(() => mockAuthService.isAuthenticated).thenReturn(true);
+        when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
+        stubSharesSucceed();
+        final profile = Completer<UserProfile?>();
+        when(
+          () =>
+              mockProfileRepository.fetchFreshProfile(pubkey: _recipientPubkey),
+        ).thenAnswer((_) => profile.future);
+        final result = await service.shareVideoWithUser(
+          video: VideoEvent(
+            id: _testVideoId,
+            pubkey: _testPubkey,
+            createdAt: 1,
+            timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
+            content: '',
+          ),
+          recipientPubkey: _recipientPubkey,
+        );
+        expect(result.delivery, ShareDelivery.queued);
+        when(() => mockAuthService.currentPublicKeyHex).thenReturn('c' * 64);
+        profile.complete(null);
+        await pumpEventQueue();
+        expect(service.recentlySharedWith, isEmpty);
+      },
+    );
+
     test('keeps only the ten most recent users', () async {
       // Arrange - share with multiple users
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
@@ -362,6 +390,28 @@ void main() {
       verifyNever(anySharedVideoSend);
     });
 
+    test(
+      'an account switch before enqueue refuses the batch locally',
+      () async {
+        when(() => mockAuthService.isAuthenticated).thenReturn(true);
+        when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
+        when(() => mockAuthService.currentPublicKeyHex).thenReturn('c' * 64);
+        final result = await service.shareVideoWithUser(
+          video: VideoEvent(
+            id: _testVideoId,
+            pubkey: _testPubkey,
+            createdAt: 1,
+            timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
+            content: '',
+          ),
+          recipientPubkey: _recipientPubkey,
+        );
+        expect(result.delivery, ShareDelivery.notSent);
+        expect(result.rumorId, isNull);
+        verifyNever(anySharedVideoSend);
+      },
+    );
+
     test('sends the video as a NIP-17 message, with no kind-4 copy', () async {
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
@@ -388,8 +438,8 @@ void main() {
         recipientPubkey: _recipientPubkey,
       );
 
-      expect(result.delivery, ShareDelivery.sent);
-      expect(result.messageEventId, equals('nip17-msg-id'));
+      expect(result.delivery, ShareDelivery.queued);
+      expect(result.rumorId, equals('rumor-id'));
       expect(result.conversationId, isNotNull);
 
       // The repository gets this video's own reference, which is what the
@@ -397,16 +447,14 @@ void main() {
       // off for shares (no sender↔recipient metadata leak), and the service
       // signs nothing itself.
       verify(
-        () => mockDmRepository.sendSharedVideo(
-          backgroundDelivery: true,
-          recipientPubkey: _recipientPubkey,
+        () => mockDmRepository.enqueueSharedVideoBatch(
+          recipientPubkeys: [_recipientPubkey],
           baseContent: any(named: 'baseContent'),
           videoKind: NIP71VideoKinds.addressableShortVideo,
           videoAuthorPubkey: videoAuthor,
           videoDTag: 'shared-video',
           videoEventId: _testVideoId,
           relayHint: any(named: 'relayHint'),
-          skipNip04Fallback: true,
         ),
       ).called(1);
       verifyNever(
@@ -419,43 +467,7 @@ void main() {
     });
 
     test(
-      'treats a retryable-pending NIP-17 share as optimistically sent',
-      () async {
-        when(() => mockAuthService.isAuthenticated).thenReturn(true);
-        when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-        when(anySharedVideoSend).thenAnswer(
-          (_) async => const NIP17SendResult.failure(
-            'Recipient DM inbox unreadable; published to the fallback pool',
-            retryablePending: true,
-            queuedRumorId: 'queued-rumor-id',
-          ),
-        );
-        when(
-          () => mockProfileRepository.fetchFreshProfile(
-            pubkey: any(named: 'pubkey'),
-          ),
-        ).thenAnswer((_) async => null);
-
-        final now = DateTime.now();
-        final result = await service.shareVideoWithUser(
-          video: VideoEvent(
-            id: _testVideoId,
-            pubkey: _testPubkey,
-            createdAt: now.millisecondsSinceEpoch ~/ 1000,
-            timestamp: now,
-            content: 'Test',
-          ),
-          recipientPubkey: _recipientPubkey,
-        );
-
-        expect(result.delivery, ShareDelivery.sent);
-        expect(result.messageEventId, 'queued-rumor-id');
-        expect(result.conversationId, isNotNull);
-      },
-    );
-
-    test(
-      'returns success without waiting on the recents profile fetch (#5391)',
+      'returns a durable result without waiting on the recents profile fetch (#5391)',
       () async {
         when(() => mockAuthService.isAuthenticated).thenReturn(true);
         when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
@@ -483,133 +495,36 @@ void main() {
             )
             .timeout(const Duration(seconds: 2));
 
-        expect(result.delivery, ShareDelivery.sent);
-        expect(result.messageEventId, equals('nip17-msg-id'));
+        expect(result.delivery, ShareDelivery.queued);
+        expect(result.rumorId, equals('rumor-id'));
       },
     );
 
-    test('returns failure when NIP-17 send fails', () async {
-      when(() => mockAuthService.isAuthenticated).thenReturn(true);
-      when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-      when(anySharedVideoSend).thenAnswer(
-        (_) async => const NIP17SendResult.failure('Relay rejected'),
-      );
-
-      final now = DateTime.now();
-      final result = await service.shareVideoWithUser(
-        video: VideoEvent(
-          id: _testVideoId,
-          pubkey: _testPubkey,
-          createdAt: now.millisecondsSinceEpoch ~/ 1000,
-          timestamp: now,
-          content: 'Test',
-        ),
-        recipientPubkey: _recipientPubkey,
-      );
-
-      expect(result.delivery, ShareDelivery.notSent);
-      expect(result.error, contains('Relay rejected'));
-    });
-
-    group('reports what will happen to a share that did not go out', () {
-      Future<ShareResult> shareWith(NIP17SendResult sendResult) {
+    for (final refusal in [
+      const ShareEnqueueOutcome.blocked(),
+      const ShareEnqueueOutcome.tooLong(),
+      const ShareEnqueueOutcome.refused('Recipient unavailable'),
+    ]) {
+      test('a ${refusal.runtimeType} result carries no queued rumor', () async {
         when(() => mockAuthService.isAuthenticated).thenReturn(true);
         when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-        when(anySharedVideoSend).thenAnswer((_) async => sendResult);
-
-        final now = DateTime.now();
-        return service.shareVideoWithUser(
+        when(anySharedVideoSend)
+            .thenAnswer((_) async => {_recipientPubkey: refusal});
+        final result = await service.shareVideoWithUser(
           video: VideoEvent(
             id: _testVideoId,
             pubkey: _testPubkey,
-            createdAt: now.millisecondsSinceEpoch ~/ 1000,
-            timestamp: now,
+            createdAt: 1,
+            timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
             content: 'Test',
           ),
           recipientPubkey: _recipientPubkey,
         );
-      }
-
-      test(
-        'a failed publish that left a queue row is retrying, not failed',
-        () async {
-          final result = await shareWith(
-            const NIP17SendResult.failure(
-              'Relay rejected',
-              queuedRumorId: 'queued-rumor-id',
-            ),
-          );
-
-          expect(result.delivery, ShareDelivery.retrying);
-        },
-      );
-
-      test(
-        'a send-policy refusal is not sent: it is never queued (#8672)',
-        () async {
-          final result = await shareWith(
-            const NIP17SendResult.blocked(
-              'blocked: recipient not permitted by send policy',
-            ),
-          );
-
-          expect(result.delivery, ShareDelivery.notSent);
-        },
-      );
-
-      test('an oversized message is not sent: it is never queued', () async {
-        final result = await shareWith(
-          const NIP17SendResult.tooLong('message is too large to send'),
-        );
-
         expect(result.delivery, ShareDelivery.notSent);
+        expect(result.rumorId, isNull);
+        expect(service.hasSharedWithRecently(_recipientPubkey), isFalse);
       });
-
-      group('logs', () {
-        late LogCaptureService logCapture;
-
-        setUp(() async {
-          logCapture = LogCaptureService();
-          await logCapture.clearAllLogs();
-        });
-
-        tearDown(() async {
-          await logCapture.clearAllLogs();
-        });
-
-        List<String> shareLines() => [
-          for (final entry in logCapture.getRecentLogs())
-            if (entry.message.startsWith('Share to ')) entry.message,
-        ];
-
-        test('a refused recipient by npub and hex, as never retried', () async {
-          await shareWith(
-            const NIP17SendResult.blocked(
-              'blocked: recipient not permitted by send policy',
-            ),
-          );
-
-          final line =
-              'Share to ${pubkeyForLogs(_recipientPubkey)} not sent and not '
-              'queued: blocked: recipient not permitted by send policy';
-          expect(shareLines(), [line]);
-        });
-
-        test('a queued recipient with the queue row the retry sends', () async {
-          await shareWith(
-            const NIP17SendResult.failure(
-              'Relay rejected',
-              queuedRumorId: 'queued-rumor-id',
-            ),
-          );
-
-          final line =
-              'Share to ${pubkeyForLogs(_recipientPubkey)} not published; '
-              'queued for background retry as queued-rumor-id: Relay rejected';
-          expect(shareLines(), [line]);
-        });
-      });
-    });
+    }
 
     test('includes personal message in content', () async {
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
@@ -752,7 +667,7 @@ void main() {
 
   group('shareVideoWithMultipleUsers', () {
     test(
-      'one recipient failing does not abort the rest, and each outcome is '
+      'one batch preserves recipient order, and each outcome is '
       'reported',
       () async {
         when(() => mockAuthService.isAuthenticated).thenReturn(true);
@@ -767,16 +682,13 @@ void main() {
         final bad = 'b' * 64;
         final goodC = 'c' * 64;
 
-        when(anySharedVideoSend).thenAnswer((invocation) async {
-          final pubkey = invocation.namedArguments[#recipientPubkey] as String;
-          if (pubkey == bad) throw StateError('boom');
-          return NIP17SendResult.success(
-            rumorEventId: 'rumor-$pubkey',
-            messageEventId: 'msg-$pubkey',
-            recipientPubkey: pubkey,
-          );
-        });
-
+        when(anySharedVideoSend).thenAnswer(
+          (_) async => {
+            goodA: const ShareEnqueueOutcome.queued('rumor-a', 'thread-a'),
+            bad: const ShareEnqueueOutcome.blocked(),
+            goodC: const ShareEnqueueOutcome.queued('rumor-c', 'thread-c'),
+          },
+        );
         final now = DateTime.now();
         final results = await service.shareVideoWithMultipleUsers(
           video: VideoEvent(
@@ -789,27 +701,24 @@ void main() {
           recipientPubkeys: [goodA, bad, goodC],
         );
 
-        // The middle recipient threw, but the loop still attempted all three
-        // and reports a per-recipient result for each.
-        expect(results.keys, containsAll(<String>[goodA, bad, goodC]));
-        expect(results[goodA]!.delivery, ShareDelivery.sent);
-        // A send throws only before its queue row is written, so nothing
-        // will retry this recipient.
+        expect(results.keys, [goodA, bad, goodC]);
+        expect(results[goodA]!.delivery, ShareDelivery.queued);
         expect(results[bad]!.delivery, ShareDelivery.notSent);
-        expect(results[goodC]!.delivery, ShareDelivery.sent);
-        verify(
-          () => mockDmRepository.sendSharedVideo(
-            backgroundDelivery: true,
-            recipientPubkey: goodC,
+        expect(results[goodC]!.delivery, ShareDelivery.queued);
+        final captured = verify(
+          () => mockDmRepository.enqueueSharedVideoBatch(
+            recipientPubkeys: captureAny(named: 'recipientPubkeys'),
             baseContent: any(named: 'baseContent'),
             videoKind: any(named: 'videoKind'),
             videoAuthorPubkey: any(named: 'videoAuthorPubkey'),
             videoDTag: any(named: 'videoDTag'),
             videoEventId: any(named: 'videoEventId'),
             relayHint: any(named: 'relayHint'),
-            skipNip04Fallback: any(named: 'skipNip04Fallback'),
           ),
-        ).called(1);
+        ).captured;
+        expect(captured, [
+          [goodA, bad, goodC],
+        ]);
       },
     );
   });
@@ -843,16 +752,14 @@ void main() {
             recipientPubkey: _recipientPubkey,
           );
           final captured = verify(
-            () => mockDmRepository.sendSharedVideo(
-              backgroundDelivery: true,
-              recipientPubkey: _recipientPubkey,
+            () => mockDmRepository.enqueueSharedVideoBatch(
+              recipientPubkeys: [_recipientPubkey],
               baseContent: captureAny(named: 'baseContent'),
               videoKind: 34236,
               videoAuthorPubkey: _testPubkey,
               videoDTag: captureAny(named: 'videoDTag'),
               videoEventId: _testVideoId,
               relayHint: any(named: 'relayHint'),
-              skipNip04Fallback: true,
             ),
           ).captured;
           final url = divineVideoUrlRegex
@@ -890,15 +797,13 @@ void main() {
         );
 
         verify(
-          () => mockDmRepository.sendSharedVideo(
-            backgroundDelivery: true,
-            recipientPubkey: _recipientPubkey,
+          () => mockDmRepository.enqueueSharedVideoBatch(
+            recipientPubkeys: [_recipientPubkey],
             baseContent: any(named: 'baseContent'),
             videoKind: 22,
             videoAuthorPubkey: _testPubkey,
             videoEventId: _testVideoId,
             relayHint: any(named: 'relayHint'),
-            skipNip04Fallback: true,
           ),
         ).called(1);
       },

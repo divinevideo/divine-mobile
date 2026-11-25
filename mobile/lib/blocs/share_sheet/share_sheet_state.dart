@@ -27,53 +27,13 @@ sealed class ShareSheetActionResult {
   ShareSheetActionResult();
 }
 
-class ShareSheetSendSuccess extends ShareSheetActionResult {
-  ShareSheetSendSuccess({
-    required this.recipientNames,
-    this.recipientPubkey,
-    this.conversationId,
-  });
-
-  /// Display names of everyone the video was sent to, in selection order.
-  final List<String> recipientNames;
-
-  /// Recipient pubkey, passed as the conversation participant when the
-  /// success snackbar's "View chat" action navigates to the DM thread.
-  /// Set only for a single-recipient send.
-  final String? recipientPubkey;
-
-  /// NIP-17 conversation ID for "View chat" navigation. Set only for a
-  /// single-recipient send — a multi-recipient send has no single thread to
-  /// open, so no action is shown.
-  final String? conversationId;
+class ShareSheetEnqueueResult extends ShareSheetActionResult {
+  ShareSheetEnqueueResult(this.ownerPubkey, this.recipients);
+  final String ownerPubkey;
+  final List<ShareDeliveryRecipient> recipients;
 }
 
-/// A send where at least one recipient did not get the video now.
-///
-/// Every recipient lands in exactly one list, in selection order, so the sheet
-/// can say who got it, who the retry sweep is still sending to, and who will
-/// never get it (#8672). A share to one recipient that did not go out lands
-/// here too — whether a retry is coming is exactly what it has to say.
-class ShareSheetSendIncomplete extends ShareSheetActionResult {
-  ShareSheetSendIncomplete({
-    required this.sentNames,
-    required this.retryingNames,
-    required this.notSentNames,
-  }) : assert(
-         retryingNames.isNotEmpty || notSentNames.isNotEmpty,
-         'A send with every recipient sent is a ShareSheetSendSuccess',
-       );
-
-  /// Recipients the video was sent to.
-  final List<String> sentNames;
-
-  /// Recipients whose send is queued; the retry sweep keeps sending it.
-  final List<String> retryingNames;
-
-  /// Recipients nothing will send it to: refused by the send policy, or failed
-  /// before the send was queued.
-  final List<String> notSentNames;
-}
+class ShareSheetAccountChanged extends ShareSheetActionResult {}
 
 /// The whole send threw before any recipient's outcome was known.
 class ShareSheetSendFailure extends ShareSheetActionResult {

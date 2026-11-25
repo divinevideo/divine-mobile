@@ -1196,56 +1196,12 @@
   },
   "listAttributionFallback": "List",
   "shareVideoLabel": "Share video",
-  "sharePostSharedWith": "Post shared with {recipientName}",
-  "sharePostSharedWithCount": "{count, plural, one{Post shared with {count} person} other{Post shared with {count} people}}",
-  "@sharePostSharedWithCount": {
-    "description": "Snackbar after sharing a video to two or more people at once. Only used for count >= 2.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "@sharePostSharedWith": {
-    "placeholders": {
-      "recipientName": {
-        "type": "String"
-      }
-    }
-  },
-  "shareStillTryingToSendTo": "Still trying to send to {recipientName}",
-  "@shareStillTryingToSendTo": {
-    "description": "One line of the snackbar after sharing a video: the send to this person failed for now but is queued, and the app keeps retrying it in the background. Shown on its own line, possibly after a 'Post shared with' line.",
-    "placeholders": {
-      "recipientName": {
-        "type": "String"
-      }
-    }
-  },
-  "shareStillTryingToSendToCount": "{count, plural, one{Still trying to send to {count} person} other{Still trying to send to {count} people}}",
-  "@shareStillTryingToSendToCount": {
-    "description": "Plural form of shareStillTryingToSendTo, for two or more people whose sends are queued and retrying in the background. Only used for count >= 2.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "shareCouldNotSendTo": "Couldn't send to {recipientName}",
   "@shareCouldNotSendTo": {
     "description": "One line of the snackbar after sharing a video: this person will not get it, because the send was refused (for example, an account nobody reads anymore) and will not be retried. Shown on its own line, possibly after a 'Post shared with' line.",
     "placeholders": {
       "recipientName": {
         "type": "String"
-      }
-    }
-  },
-  "shareCouldNotSendToCount": "{count, plural, one{Couldn't send to {count} person} other{Couldn't send to {count} people}}",
-  "@shareCouldNotSendToCount": {
-    "description": "Plural form of shareCouldNotSendTo, for two or more people who will not get the shared video. Only used for count >= 2.",
-    "placeholders": {
-      "count": {
-        "type": "int"
       }
     }
   },
@@ -1268,6 +1224,31 @@
   "shareWithTitle": "Share with",
   "shareFindPeople": "Find people",
   "shareFindPeopleMultiline": "Find\npeople",
+  "shareDeliveryFailed": "Couldn't send yet",
+  "shareDeliveryHeld": "Will send when {name} is reachable",
+  "shareDeliveryForRecipient": "{name} — {status}",
+  "@shareDeliveryFailed": {
+    "description": "A queued shared video had a failed recipient delivery attempt and may be retried."
+  },
+  "@shareDeliveryHeld": {
+    "description": "The default relay accepted the share but the recipient inbox could not be read.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@shareDeliveryForRecipient": {
+    "description": "A named recipient and the delivery state of their private share.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
   "shareSent": "Sent",
   "shareSelectedRecipientAnnouncement": "Selected {name}",
   "@shareSelectedRecipientAnnouncement": {

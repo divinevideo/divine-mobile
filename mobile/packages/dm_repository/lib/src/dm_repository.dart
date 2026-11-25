@@ -59,6 +59,61 @@ import 'package:unified_logger/unified_logger.dart';
 /// A stored conversation: its id and the pubkeys taking part in it.
 typedef _Conversation = ({String id, List<String> participants});
 
+typedef _PreparedSend = ({
+  OutgoingDm row,
+  Event rumor,
+  List<List<String>> rumorTags,
+  List<String> participants,
+});
+
+typedef _SendPreparation = ({NIP17SendResult? refusal, _PreparedSend? send});
+
+/// The durable local outcome for one recipient of a video share.
+sealed class ShareEnqueueOutcome {
+  const ShareEnqueueOutcome();
+  const factory ShareEnqueueOutcome.queued(
+    String rumorId,
+    String conversationId,
+  ) = ShareEnqueueQueued;
+  const factory ShareEnqueueOutcome.blocked() = ShareEnqueueBlocked;
+  const factory ShareEnqueueOutcome.tooLong() = ShareEnqueueTooLong;
+  const factory ShareEnqueueOutcome.refused(String reason) =
+      ShareEnqueueRefused;
+}
+
+/// All queue writes committed, including this recipient’s rumor.
+final class ShareEnqueueQueued extends ShareEnqueueOutcome {
+  /// Identifies the two owner-scoped records the caller can observe.
+  const ShareEnqueueQueued(this.rumorId, this.conversationId);
+
+  /// Stable rumor id reused by the outbox across retries.
+  final String rumorId;
+
+  /// One-to-one conversation that holds the outgoing message.
+  final String conversationId;
+}
+
+/// The recipient failed the current outbound policy.
+final class ShareEnqueueBlocked extends ShareEnqueueOutcome {
+  /// No row was queued for this recipient.
+  const ShareEnqueueBlocked();
+}
+
+/// The serialized rumor exceeds the NIP-17 size limit.
+final class ShareEnqueueTooLong extends ShareEnqueueOutcome {
+  /// The caller can shorten the share and send again.
+  const ShareEnqueueTooLong();
+}
+
+/// A recipient or send intent could not be queued.
+final class ShareEnqueueRefused extends ShareEnqueueOutcome {
+  /// Carries the local cause of this refusal.
+  const ShareEnqueueRefused(this.reason);
+
+  /// Diagnostic detail for the caller.
+  final String reason;
+}
+
 /// Decrypts a gift-wrapped event (kind 1059) through the NIP-17 layers
 /// (gift wrap → seal → rumor) and returns the inner rumor event.
 ///
@@ -7255,44 +7310,25 @@ class DmRepository {
     );
   }
 
-  /// The guards, rumor build, and durable enqueue shared by [sendMessage] and
-  /// [enqueueSend] — everything up to and including parking the `outgoing_dms`
-  /// row, but NOT the publish. Returns a terminal [NIP17SendResult] in
-  /// `refusal` (self-send / policy block / oversized) or the built rumor and
-  /// its derived send context. #8053.
-  Future<
-    ({
-      NIP17SendResult? refusal,
-      Event? rumor,
-      String? conversationId,
-      String? sendBatchId,
-      List<List<String>>? rumorTags,
-      List<String>? participants,
-    })
-  >
-  _prepareAndEnqueueSend({
+  /// Prepares an outgoing rumor and its durable row without writing or
+  /// publishing. Batch shares collect these before committing any of them.
+  Future<_SendPreparation> _prepareSend({
+    required String owner,
+    required int generation,
     required String recipientPubkey,
     required String content,
     String? replyToId,
     String? idempotencyKey,
     int? createdAt,
     List<List<String>> additionalTags = const [],
+    bool skipNip04Fallback = false,
   }) async {
-    _assertInitialized();
-    final owner = _userPubkey;
-    final generation = _resetGeneration;
     final messageService = _messageService!;
-    bool isCurrent() =>
-        !_disposed && _resetGeneration == generation && _userPubkey == owner;
     const abandoned = (
       refusal: NIP17SendResult.failure(
         'account changed before send was queued',
       ),
-      rumor: null,
-      conversationId: null,
-      sendBatchId: null,
-      rumorTags: null,
-      participants: null,
+      send: null,
     );
     validatePubkey(recipientPubkey);
     if (content.trim().isEmpty) {
@@ -7318,11 +7354,7 @@ class DmRepository {
         refusal: const NIP17SendResult.failure(
           'refused: a message cannot be addressed to its own sender',
         ),
-        rumor: null,
-        conversationId: null,
-        sendBatchId: null,
-        rumorTags: null,
-        participants: null,
+        send: null,
       );
     }
 
@@ -7331,17 +7363,13 @@ class DmRepository {
     // covers the drain replay); this earlier check avoids storing a queue row
     // that would only ever re-fail the gate.
     final permitted = await messageService.canSendTo(recipientPubkey);
-    if (!isCurrent()) return abandoned;
+    if (_ingestSessionEnded(owner, generation)) return abandoned;
     if (!permitted) {
       return (
         refusal: const NIP17SendResult.blocked(
           'blocked: recipient not permitted by send policy',
         ),
-        rumor: null,
-        conversationId: null,
-        sendBatchId: null,
-        rumorTags: null,
-        participants: null,
+        send: null,
       );
     }
 
@@ -7394,22 +7422,14 @@ class DmRepository {
     if (oversized != null) {
       return (
         refusal: oversized,
-        rumor: null,
-        conversationId: null,
-        sendBatchId: null,
-        rumorTags: null,
-        participants: null,
+        send: null,
       );
     }
 
-    // Enqueue before publish so an app crash mid-send leaves a
-    // recoverable trace. No-op when the queue dao isn't wired in
-    // (older test fixtures, NIP-04-only callers).
-    if (!isCurrent()) return abandoned;
-    final outgoingDao = _outgoingDmsDao;
-    if (outgoingDao != null) {
-      await outgoingDao.enqueue(
-        OutgoingDm(
+    return (
+      refusal: null,
+      send: (
+        row: OutgoingDm(
           id: rumor.id,
           conversationId: conversationId,
           recipientPubkey: recipientPubkey,
@@ -7422,24 +7442,51 @@ class DmRepository {
           selfWrapStatus: OutgoingWrapStatus.pending,
           queuedAt: DateTime.now(),
           ownerPubkey: owner,
-          // Stamped verbatim, as the group path stamps its siblings: a 1:1
-          // row has no siblings, but carrying the token makes a deleted
-          // bubble's cancellation match by exact value instead of falling
-          // back to the collision-prone `(createdAt, content)` tuple.
           sendBatchId: sendBatchId,
           environment: _environment,
+          skipNip04Fallback: skipNip04Fallback,
         ),
+        rumor: rumor,
+        rumorTags: rumorTags,
+        participants: participants,
+      ),
+    );
+  }
+
+  Future<_SendPreparation> _prepareAndEnqueueSend({
+    required String recipientPubkey,
+    required String content,
+    String? replyToId,
+    String? idempotencyKey,
+    int? createdAt,
+    List<List<String>> additionalTags = const [],
+    bool skipNip04Fallback = false,
+  }) async {
+    _assertInitialized();
+    final owner = _userPubkey;
+    final generation = _resetGeneration;
+    final prep = await _prepareSend(
+      owner: owner,
+      generation: generation,
+      recipientPubkey: recipientPubkey,
+      content: content,
+      replyToId: replyToId,
+      idempotencyKey: idempotencyKey,
+      createdAt: createdAt,
+      additionalTags: additionalTags,
+      skipNip04Fallback: skipNip04Fallback,
+    );
+    if (_ingestSessionEnded(owner, generation)) {
+      return (
+        refusal: const NIP17SendResult.failure(
+          'account changed before send was queued',
+        ),
+        send: null,
       );
     }
-
-    return (
-      refusal: null,
-      rumor: rumor,
-      conversationId: conversationId,
-      sendBatchId: sendBatchId,
-      rumorTags: rumorTags,
-      participants: participants,
-    );
+    final send = prep.send;
+    if (send != null) await _outgoingDmsDao?.enqueue(send.row);
+    return prep;
   }
 
   /// Enqueues a NIP-17 DM durably WITHOUT publishing it, returning the parked
@@ -7483,7 +7530,7 @@ class DmRepository {
       if (refusal.tooLong) return EnqueueSendResult.tooLong(message);
       return EnqueueSendResult.refused(message);
     }
-    return EnqueueSendResult.enqueued(prep.rumor!.id);
+    return EnqueueSendResult.enqueued(prep.send!.row.id);
   }
 
   /// Send a text message to a 1:1 conversation.
@@ -7532,10 +7579,24 @@ class DmRepository {
       content: content,
       replyToId: replyToId,
       additionalTags: additionalTags,
+      skipNip04Fallback: skipNip04Fallback,
     );
     final refusal = prep.refusal;
     if (refusal != null) return refusal;
-    final rumor = prep.rumor!;
+    return _deliverPreparedSend(
+      prep.send!,
+      generation: generation,
+      backgroundDelivery: backgroundDelivery,
+    );
+  }
+
+  Future<NIP17SendResult> _deliverPreparedSend(
+    _PreparedSend prep, {
+    required int generation,
+    required bool backgroundDelivery,
+  }) async {
+    final rumor = prep.rumor;
+    final row = prep.row;
 
     // Register the attempt under the per-rumor recovery key, as the group
     // send does for its publishes: a Retry or sweep recoverFullSend that
@@ -7551,10 +7612,10 @@ class DmRepository {
     // always owns the finalization.
     if (backgroundDelivery && _outgoingDmsDao != null) {
       await _ensureConversationVisibleAfterSendFailure(
-        conversationId: prep.conversationId!,
-        participants: prep.participants!,
+        conversationId: row.conversationId,
+        participants: prep.participants,
         isGroup: false,
-        content: content,
+        content: row.content,
         ownerPubkey: rumor.pubkey,
         expectedGeneration: generation,
       );
@@ -7571,14 +7632,14 @@ class DmRepository {
       try {
         return await _publishPreparedSend(
           rumor: rumor,
-          conversationId: prep.conversationId!,
-          sendBatchId: prep.sendBatchId!,
-          rumorTags: prep.rumorTags!,
-          participants: prep.participants!,
-          recipientPubkey: recipientPubkey,
-          content: content,
-          replyToId: replyToId,
-          skipNip04Fallback: skipNip04Fallback,
+          conversationId: row.conversationId,
+          sendBatchId: row.sendBatchId!,
+          rumorTags: prep.rumorTags,
+          participants: prep.participants,
+          recipientPubkey: row.recipientPubkey,
+          content: row.content,
+          replyToId: row.replyToId,
+          skipNip04Fallback: row.skipNip04Fallback,
           generation: generation,
           checkCancelledBeforePublish: backgroundDelivery,
         );
@@ -7835,6 +7896,11 @@ class DmRepository {
           );
 
           if (outgoingDao != null) {
+            await _directMessagesDao.markRecipientAccepted(
+              ownerPubkey: owner,
+              rumorId: rumor.id,
+              environment: _environment ?? '',
+            );
             await _finalizeAfterRecipientSuccess(
               outgoingDao: outgoingDao,
               rumorId: rumor.id,
@@ -7978,6 +8044,103 @@ class DmRepository {
         ),
       };
 
+  /// Queues independent one-to-one messages in one local transaction. Each
+  /// accepted recipient gets its own stable rumor id for delivery and retry.
+  @useResult
+  Future<Map<String, ShareEnqueueOutcome>> enqueueSharedVideoBatch({
+    required List<String> recipientPubkeys,
+    required String baseContent,
+    required int videoKind,
+    required String videoAuthorPubkey,
+    String? videoDTag,
+    String? videoEventId,
+    String? relayHint,
+  }) async {
+    _assertInitialized();
+    final dao = _outgoingDmsDao;
+    if (dao == null) {
+      throw StateError('Video shares require a durable outgoing queue');
+    }
+    final owner = _userPubkey;
+    final generation = _resetGeneration;
+    bool isCurrent() => !_ingestSessionEnded(owner, generation);
+    final share = _sharedVideoContent(
+      baseContent: baseContent,
+      videoKind: videoKind,
+      videoAuthorPubkey: videoAuthorPubkey,
+      videoDTag: videoDTag,
+      videoEventId: videoEventId,
+      relayHint: relayHint,
+    );
+    final outcomes = <String, ShareEnqueueOutcome>{};
+    final prepared = <_PreparedSend>[];
+    final recipients = recipientPubkeys
+        .map((key) => key.trim().toLowerCase())
+        .toSet();
+    for (final recipient in recipients) {
+      if (!NostrHexUtils.isValidPubkey(recipient)) {
+        outcomes[recipient] = const ShareEnqueueOutcome.refused(
+          'invalid recipient',
+        );
+        continue;
+      }
+      final prep = await _prepareSend(
+        owner: owner,
+        generation: generation,
+        recipientPubkey: recipient,
+        content: share.content,
+        additionalTags: share.tags,
+        skipNip04Fallback: true,
+      );
+      if (!isCurrent()) {
+        throw StateError('Account changed before share was queued');
+      }
+      final refusal = prep.refusal;
+      if (refusal != null) {
+        outcomes[recipient] = switch (refusal) {
+          NIP17SendFailure(blocked: true) =>
+            const ShareEnqueueOutcome.blocked(),
+          NIP17SendFailure(tooLong: true) =>
+            const ShareEnqueueOutcome.tooLong(),
+          _ => ShareEnqueueOutcome.refused(refusal.error ?? 'send refused'),
+        };
+        continue;
+      }
+      final send = prep.send!;
+      prepared.add(send);
+      outcomes[recipient] = ShareEnqueueOutcome.queued(
+        send.row.id,
+        send.row.conversationId,
+      );
+    }
+    if (prepared.isEmpty) return outcomes;
+    await dao.enqueueAll([
+      for (final send in prepared) send.row,
+    ], isCurrent: isCurrent);
+    for (final send in prepared) {
+      if (!isCurrent()) break;
+      try {
+        // Only awaits local visibility and registration of the recovery lock.
+        await _deliverPreparedSend(
+          send,
+          generation: generation,
+          backgroundDelivery: true,
+        );
+      } on Object catch (error, stackTrace) {
+        // The commit already owns this intent. Reporting enqueue failure here
+        // would invite a second send with a fresh rumor id.
+        Log.error(
+          'Could not start a queued share; the outbox will retry',
+          category: LogCategory.system,
+          error: error,
+          stackTrace: stackTrace,
+        );
+        if (isCurrent()) _notifyRetryableWork();
+      }
+    }
+    return outcomes;
+  }
+
   /// Shares a video into a 1:1 NIP-17 DM as a kind-14 rumor that cites the
   /// video with a NIP-18 `q` tag and a NIP-21 `nostr:` URI, in addition to the
   /// human-readable [baseContent] (which keeps the `https://divine.video` URL
@@ -8011,6 +8174,32 @@ class DmRepository {
     bool skipNip04Fallback = false,
     bool backgroundDelivery = false,
   }) async {
+    final share = _sharedVideoContent(
+      baseContent: baseContent,
+      videoKind: videoKind,
+      videoAuthorPubkey: videoAuthorPubkey,
+      videoDTag: videoDTag,
+      videoEventId: videoEventId,
+      relayHint: relayHint,
+    );
+    return sendMessage(
+      recipientPubkey: recipientPubkey,
+      content: share.content,
+      additionalTags: [...share.tags, ...additionalTags],
+      replyToId: replyToId,
+      backgroundDelivery: backgroundDelivery,
+      skipNip04Fallback: skipNip04Fallback,
+    );
+  }
+
+  ({String content, List<List<String>> tags}) _sharedVideoContent({
+    required String baseContent,
+    required int videoKind,
+    required String videoAuthorPubkey,
+    required String? videoDTag,
+    required String? videoEventId,
+    required String? relayHint,
+  }) {
     final citation = DmSharedVideoCitation.build(
       videoKind: videoKind,
       authorPubkey: videoAuthorPubkey,
@@ -8032,23 +8221,11 @@ class DmRepository {
         'message without the durable video reference.',
         category: LogCategory.system,
       );
-      return sendMessage(
-        recipientPubkey: recipientPubkey,
-        content: baseContent,
-        replyToId: replyToId,
-        additionalTags: additionalTags,
-        backgroundDelivery: backgroundDelivery,
-        skipNip04Fallback: skipNip04Fallback,
-      );
+      return (content: baseContent, tags: const []);
     }
-
-    return sendMessage(
-      recipientPubkey: recipientPubkey,
+    return (
       content: '$baseContent\n${citation.nostrUri}',
-      additionalTags: [citation.qTag, ...additionalTags],
-      replyToId: replyToId,
-      backgroundDelivery: backgroundDelivery,
-      skipNip04Fallback: skipNip04Fallback,
+      tags: [citation.qTag],
     );
   }
 
@@ -8404,9 +8581,8 @@ class DmRepository {
   ///
   /// After a full success on a one-to-one thread still latched to NIP-04, the
   /// legacy kind-4 copy goes out too, as it would have from [sendMessage]
-  /// (#8506) — but only for a plain-text rumor. The row does not record
-  /// whether its sender opted out of the copy, so any tag beyond the
-  /// recipient, a reply reference and the send token suppresses it.
+  /// (#8506) when the rumor is plain text and the sender allowed the copy.
+  /// Structured tags also suppress the fallback on older outbox rows.
   ///
   /// A one-to-one row addressed to its own sender is never republished: it is
   /// dropped and reported as blocked (#8363). [sendMessage] refuses such a
@@ -8485,7 +8661,11 @@ class DmRepository {
     required OutgoingDmsDao dao,
     required String rumorId,
   }) async {
+    final owner = _userPubkey;
+    final generation = _resetGeneration;
+    bool isCurrent() => !_ingestSessionEnded(owner, generation);
     final row = await dao.getById(rumorId);
+    if (!isCurrent()) return _queuedForDelivery(rumorId);
     if (row == null) {
       throw ArgumentError.value(
         rumorId,
@@ -8493,12 +8673,18 @@ class DmRepository {
         'no queued outgoing DM with this id',
       );
     }
-    if (row.ownerPubkey != _userPubkey) {
+    if (row.ownerPubkey != owner) {
       throw ArgumentError.value(
         rumorId,
         'rumorId',
         'queue row belongs to a different account',
       );
+    }
+
+    if (_environment != null &&
+        row.environment != null &&
+        row.environment != _environment) {
+      return _queuedForDelivery(rumorId);
     }
 
     // A one-to-one row addressed to its own sender is never republished
@@ -8553,6 +8739,8 @@ class DmRepository {
       _selfWrapTargetRelays(),
     ).wait;
 
+    if (!isCurrent()) return _queuedForDelivery(rumorId);
+
     // The sweep resolves the same inbox the send path does, so it holds the
     // same evidence and must reach the same conclusion. A thread whose only
     // traffic is a queued message the sweep drives would otherwise stay
@@ -8570,7 +8758,7 @@ class DmRepository {
     // pair id, even when no conversation row survives. A row queued after
     // Leave may have escaped its queue deletion: cancel it before sending,
     // not only before local persistence on a successful send.
-    final pairParticipants = [_userPubkey, row.recipientPubkey]..sort();
+    final pairParticipants = [owner, row.recipientPubkey]..sort();
     final isGroupRow =
         row.conversationId != computeConversationId(pairParticipants);
     if (isGroupRow && await _isLeftConversation(row.conversationId)) {
@@ -8591,6 +8779,7 @@ class DmRepository {
         (inbox.state == DmInboxResolution.unreadable ||
             inbox.state == DmInboxResolution.absent);
     final refusal = keepsOrSettles ? await _heldRetryRefusal(rumor, row) : null;
+    if (!isCurrent()) return _queuedForDelivery(rumorId);
     final NIP17SendResult result;
     if (refusal != null) {
       result = refusal;
@@ -8620,6 +8809,7 @@ class DmRepository {
         recipientWrap: _storedUnconfirmedWrap(row),
       );
 
+      if (!isCurrent()) return _queuedForDelivery(rumorId);
       // Same rule as the initial send: a default-pool `OK` is not delivery
       // when the recipient's inbox stayed unreadable. Without this the sweep
       // undoes the send path's fix — it re-resolves to null, republishes to
@@ -8637,6 +8827,7 @@ class DmRepository {
       );
     }
 
+    if (!isCurrent()) return _queuedForDelivery(rumorId);
     if (result.success) {
       // Mirror sendMessage's happy-path transaction: persist
       // direct_messages + conversation upsert + queue finalize
@@ -8657,6 +8848,7 @@ class DmRepository {
           // "give up", and for a concurrent recovery the winner has already
           // persisted the message.
           final liveRow = await dao.getById(rumorId);
+          if (!isCurrent()) return;
           if (liveRow == null) {
             Log.info(
               'Recovered publish for $rumorId landed after the queue row '
@@ -8708,14 +8900,14 @@ class DmRepository {
               (batchId != null
                   ? await _directMessagesDao.hasMessageWithSendBatchId(
                       batchId: batchId,
-                      ownerPubkey: _userPubkey,
+                      ownerPubkey: owner,
                     )
                   : await _directMessagesDao.hasMatchingMessage(
                       conversationId: row.conversationId,
-                      senderPubkey: _userPubkey,
+                      senderPubkey: owner,
                       content: row.content,
                       createdAt: row.createdAt,
-                      ownerPubkey: _userPubkey,
+                      ownerPubkey: owner,
                       // Matches our OWN persisted send, not a cross-protocol
                       // twin, so the arrival-shape filter does not apply.
                       counterpart: DmDedupCounterpart.unconstrained,
@@ -8725,7 +8917,7 @@ class DmRepository {
             await _directMessagesDao.insertMessage(
               id: result.rumorEventId!,
               conversationId: row.conversationId,
-              senderPubkey: _userPubkey,
+              senderPubkey: owner,
               content: row.content,
               // The rumor's canonical timestamp (row.createdAt mirrors it),
               // NOT recovery-time `now` — keeps the bubble from jumping.
@@ -8747,13 +8939,13 @@ class DmRepository {
               // happy-path 1:1 send which stores only its own rumorTags;
               // harmless since only the `q` tag is read back.
               tagsJson: rumor.tags.isEmpty ? null : jsonEncode(rumor.tags),
-              ownerPubkey: _userPubkey,
+              ownerPubkey: owner,
             );
           }
 
           final existing = await _conversationsDao.getConversation(
             row.conversationId,
-            ownerPubkey: _userPubkey,
+            ownerPubkey: owner,
           );
           // Preserve the existing conversation's topology — a group row
           // recovered through this path must NOT rewrite the group as a
@@ -8769,7 +8961,7 @@ class DmRepository {
             isGroup = existing.isGroup;
           } else if (isGroupRow) {
             final members = <String>{
-              _userPubkey,
+              owner,
               row.recipientPubkey,
               for (final tag in rumor.tags)
                 if (tag.length >= 2 && tag[0] == 'p') tag[1],
@@ -8793,16 +8985,24 @@ class DmRepository {
             createdAt: existing?.createdAt ?? now,
             lastMessageContent: row.content,
             lastMessageTimestamp: now,
-            lastMessageSenderPubkey: _userPubkey,
-            ownerPubkey: _userPubkey,
+            lastMessageSenderPubkey: owner,
+            ownerPubkey: owner,
             dmProtocol: nextProtocol,
           );
 
+          if (!isGroupRow) {
+            await _directMessagesDao.markRecipientAccepted(
+              ownerPubkey: row.ownerPubkey,
+              rumorId: rumorId,
+              environment: _environment ?? '',
+            );
+          }
           await _finalizeAfterRecipientSuccess(
             outgoingDao: dao,
             rumorId: rumorId,
             result: result,
           );
+          if (!isCurrent()) throw StateError('Account changed during recovery');
           persistedLocally = true;
         });
 
@@ -8819,10 +9019,12 @@ class DmRepository {
 
         // The original send fires the kind-4 copy only after its own persist,
         // which never ran for a send the sweep recovers, so without this the
-        // copy was never sent at all (#8506). Plain text only: the queue row
-        // does not record that a share or an invite opted out of the copy,
-        // and both carry tags a plain message never has.
-        if (persistedLocally && !isGroupRow && protocol != 'nip17') {
+        // copy was never sent at all (#8506). Honor the durable opt-out and
+        // keep the plain-text tag check for legacy rows and structured sends.
+        if (persistedLocally &&
+            !row.skipNip04Fallback &&
+            !isGroupRow &&
+            protocol != 'nip17') {
           if (_isPlainTextRumor(
             rumor,
             recipientPubkey: row.recipientPubkey,
@@ -8839,8 +9041,7 @@ class DmRepository {
             Log.info(
               'NIP-04 fallback: no legacy kind-4 copy for recovered message '
               '$rumorId to ${pubkeyForLogs(row.recipientPubkey)} — it is not '
-              'a plain-text message, and the queue row cannot say whether a '
-              'share or an invite opted out of the copy',
+              'a plain-text message',
               category: LogCategory.system,
             );
           }
@@ -8862,7 +9063,7 @@ class DmRepository {
         // its own, so if the database cannot record it either, the sweep
         // keeps re-driving the row. Don't rethrow: the caller still gets the
         // success result.
-        await _chargeFailedReplay(dao: dao, rumorId: rumorId);
+        if (isCurrent()) await _chargeFailedReplay(dao: dao, rumorId: rumorId);
       }
     } else if (result.blocked) {
       // A confirmed policy block is terminal, not a transient error.
@@ -8898,7 +9099,7 @@ class DmRepository {
       // An attempt that reached no relay is an outage on our side, not a
       // failed attempt, so it stays free (#8516).
       if (!result.reachedNoRelay) {
-        await _chargeFailedReplay(dao: dao, rumorId: rumorId);
+        if (isCurrent()) await _chargeFailedReplay(dao: dao, rumorId: rumorId);
       }
     }
 
@@ -9438,6 +9639,21 @@ class DmRepository {
     }
   }
 
+  /// Observe this 1:1 delivery under the same account and relay environment.
+  Stream<DmDeliveryState> watchDeliveryState({
+    required String ownerPubkey,
+    required String rumorId,
+  }) {
+    if (ownerPubkey != _userPubkey || _disposed) {
+      return Stream.value(DmDeliveryState.cancelled);
+    }
+    return _directMessagesDao.watchDeliveryState(
+      ownerPubkey: ownerPubkey,
+      rumorId: rumorId,
+      environment: _environment,
+    );
+  }
+
   /// Apply the queue-row transition for a successful per-recipient
   /// rumor publish. Shared between [sendMessage] and [sendGroupMessage]
   /// so both call sites agree on the partial-vs-full delivery
@@ -9492,7 +9708,7 @@ class DmRepository {
       await outgoingDao.markRecipientWrapStatus(
         id: rumorId,
         status: OutgoingWrapStatus.failed,
-        lastError: errorMessage,
+        lastError: reachedNoRelay ? outgoingDmOfflineError : errorMessage,
       );
       await outgoingDao.markSelfWrapStatus(
         id: rumorId,

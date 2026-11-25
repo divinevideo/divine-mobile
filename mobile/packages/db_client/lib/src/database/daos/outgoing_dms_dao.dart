@@ -23,6 +23,9 @@ String? _rumorIdFromJson(String rumorEventJson) {
   return null;
 }
 
+/// A retryable outbox failure caused by this device having no relay route.
+const outgoingDmOfflineError = 'Message not sent: device offline';
+
 /// Status of one of the two NIP-17 gift-wrap publishes for an outgoing DM.
 ///
 /// Each row in `outgoing_dms` carries two of these — one for the
@@ -107,6 +110,7 @@ class OutgoingDm {
     this.sendBatchId,
     this.environment,
     this.unconfirmedRecipientWrapJson,
+    this.skipNip04Fallback = false,
   }) : rumorId = _rumorIdFromJson(rumorEventJson) ?? id;
 
   /// Opaque durable queue-row handle.
@@ -156,6 +160,9 @@ class OutgoingDm {
   /// hearing its `OK`; see `OutgoingDms.unconfirmedRecipientWrapJson`.
   final String? unconfirmedRecipientWrapJson;
 
+  /// Prevents a legacy kind-4 copy when replaying this gift wrap.
+  final bool skipNip04Fallback;
+
   /// The kind-14/15 wire rumor id, stable across retries and recipients.
   ///
   /// Legacy and malformed fixtures fall back to [id]. Production rows always
@@ -198,6 +205,7 @@ class OutgoingDm {
     String? sendBatchId,
     String? environment,
     String? unconfirmedRecipientWrapJson,
+    bool? skipNip04Fallback,
   }) => OutgoingDm(
     id: id ?? this.id,
     conversationId: conversationId ?? this.conversationId,
@@ -220,6 +228,7 @@ class OutgoingDm {
     ownerPubkey: ownerPubkey ?? this.ownerPubkey,
     sendBatchId: sendBatchId ?? this.sendBatchId,
     environment: environment ?? this.environment,
+    skipNip04Fallback: skipNip04Fallback ?? this.skipNip04Fallback,
     unconfirmedRecipientWrapJson:
         unconfirmedRecipientWrapJson ?? this.unconfirmedRecipientWrapJson,
   );
@@ -254,6 +263,7 @@ class OutgoingDm {
           ownerPubkey == other.ownerPubkey &&
           sendBatchId == other.sendBatchId &&
           environment == other.environment &&
+          skipNip04Fallback == other.skipNip04Fallback &&
           unconfirmedRecipientWrapJson == other.unconfirmedRecipientWrapJson;
 
   @override
@@ -278,6 +288,7 @@ class OutgoingDm {
     ownerPubkey,
     sendBatchId,
     environment,
+    skipNip04Fallback,
     unconfirmedRecipientWrapJson,
   ]);
 
@@ -319,6 +330,7 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
       ownerPubkey: dm.ownerPubkey,
       sendBatchId: Value(dm.sendBatchId),
       environment: Value(dm.environment),
+      skipNip04Fallback: Value(dm.skipNip04Fallback),
       unconfirmedRecipientWrapJson: Value(dm.unconfirmedRecipientWrapJson),
     );
   }
@@ -345,6 +357,7 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
       ownerPubkey: row.ownerPubkey,
       sendBatchId: row.sendBatchId,
       environment: row.environment,
+      skipNip04Fallback: row.skipNip04Fallback,
       unconfirmedRecipientWrapJson: row.unconfirmedRecipientWrapJson,
     );
   }
@@ -380,6 +393,23 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
       outgoingDms,
     ).insert(_modelToCompanion(dm), mode: InsertMode.insertOrIgnore);
   }
+
+  /// Inserts freshly minted intents as one unit. A key collision or an owner
+  /// change (including during the last insert) must undo every write.
+  Future<void> enqueueAll(
+    List<OutgoingDm> rows, {
+    required bool Function() isCurrent,
+  }) => transaction(() async {
+    void checkOwner() {
+      if (!isCurrent()) throw StateError('Account changed during enqueue');
+    }
+
+    checkOwner();
+    for (final row in rows) {
+      await into(outgoingDms).insert(_modelToCompanion(row));
+      checkOwner();
+    }
+  });
 
   /// The row [id], unless the sender stopped that delivery.
   ///

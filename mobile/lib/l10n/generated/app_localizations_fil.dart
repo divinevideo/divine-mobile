@@ -1817,51 +1817,8 @@ class AppLocalizationsFil extends AppLocalizations {
   String get shareVideoLabel => 'I-share ang video';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'Naipadala ang post kay $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Naipadala ang post sa $count tao',
-      one: 'Naipadala ang post sa $count tao',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'Sinusubukan pa ring ipadala kay $recipientName';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Sinusubukan pa ring ipadala sa $count tao',
-      one: 'Sinusubukan pa ring ipadala sa $count tao',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'Hindi maipadala kay $recipientName';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Hindi maipadala sa $count tao',
-      one: 'Hindi maipadala sa $count tao',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1894,6 +1851,19 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get shareFindPeopleMultiline => 'Maghanap\nng tao';
+
+  @override
+  String get shareDeliveryFailed => 'Hindi pa maipadala';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return 'Ipapadala kapag maaabot na si $name';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
 
   @override
   String get shareSent => 'Naipadala';

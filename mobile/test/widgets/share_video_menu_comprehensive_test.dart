@@ -7,6 +7,7 @@ import 'dart:ui' show Tristate;
 
 import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
@@ -22,6 +23,7 @@ import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/repositories/creator_delete_enforcement_repository.dart';
 import 'package:openvine/repositories/remix_consent_repository.dart';
+import 'package:openvine/router/share_delivery_host.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
@@ -33,6 +35,8 @@ import 'package:profile_repository/profile_repository.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _MockBookmarksRepository extends Mock implements BookmarksRepository {}
+
+class _MockDmRepository extends Mock implements DmRepository {}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -927,9 +931,21 @@ void main() {
         () => mockVideoSharingService.recentlySharedWith,
       ).thenReturn([testContact]);
 
+      final repository = _MockDmRepository();
+      when(
+        () => repository.watchDeliveryState(
+          ownerPubkey: any(named: 'ownerPubkey'),
+          rumorId: any(named: 'rumorId'),
+        ),
+      ).thenAnswer((_) => Stream.value(DmDeliveryState.queued));
       return testProviderScope(
+        mockAuthService: createMockAuthService(
+          authState: AuthState.authenticated,
+          currentPublicKeyHex: '9' * 64,
+        ),
         mockFollowRepository: mockFollowRepository,
         additionalOverrides: [
+          dmRepositoryProvider.overrideWithValue(repository),
           profileRepositoryProvider.overrideWithValue(mockProfileRepository),
           profileReadRepositoryProvider.overrideWithValue(
             mockProfileRepository,
@@ -946,6 +962,7 @@ void main() {
           ).overrideWithValue(true),
         ],
         child: MaterialApp(
+          builder: (_, child) => ShareDeliveryHost(child: child!),
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(body: ShareActionButton(video: testVideo)),
@@ -980,7 +997,7 @@ void main() {
       );
     });
 
-    testWidgets('explicit send delivers to the selected contact', (
+    testWidgets('explicit send queues the selected contact', (
       tester,
     ) async {
       when(
@@ -991,9 +1008,7 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => {
-          testContact.pubkey: ShareResult.createSuccess(
-            '2222222222222222222222222222222222222222222222222222222222222222',
-          ),
+          testContact.pubkey: const ShareResult.queued('rumor-a', 'chat-a'),
         },
       );
 
@@ -1017,7 +1032,7 @@ void main() {
 
       // Sheet dismissed, success snackbar shown
       expect(find.text(l10n.shareWithTitle), findsNothing);
-      expect(find.text(l10n.sharePostSharedWith('Alice')), findsOneWidget);
+      expect(find.text(l10n.dmPendingVideoSending), findsOneWidget);
     });
 
     testWidgets('tapping the selected contact again deselects it', (
@@ -1054,7 +1069,7 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => {
-          testContact.pubkey: ShareResult.failure('Network timeout'),
+          testContact.pubkey: const ShareResult.failure('Network timeout'),
         },
       );
 
@@ -1071,8 +1086,7 @@ void main() {
       // snackbar names who will not get the video.
       expect(find.text(l10n.shareCouldNotSendTo('Alice')), findsOneWidget);
       expect(find.text(l10n.shareFailedToSend), findsNothing);
-      // The sheet still dismisses: nothing is kept open for a manual retry.
-      expect(find.text(l10n.shareWithTitle), findsNothing);
+      expect(find.text(l10n.shareWithTitle), findsOneWidget);
     });
   });
 }

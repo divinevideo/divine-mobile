@@ -1668,48 +1668,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get shareVideoLabel => '動画を共有';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return '$recipientNameに投稿を共有したよ';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count人に投稿を共有したよ',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return '$recipientNameへの送信をまだ試しています';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count人への送信をまだ試しています',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return '$recipientNameに送信できませんでした';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count人に送信できませんでした',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1742,6 +1702,19 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get shareFindPeopleMultiline => 'ユーザーを\n検索';
+
+  @override
+  String get shareDeliveryFailed => 'まだ送信できませんでした';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return '$name に接続できるようになったら送信します';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
 
   @override
   String get shareSent => '送信済み';

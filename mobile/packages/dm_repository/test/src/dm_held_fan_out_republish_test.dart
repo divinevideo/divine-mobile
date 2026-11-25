@@ -353,7 +353,7 @@ void main() {
               .cast<nostr_filter.Filter>(),
         ),
       );
-      // A recipient wrap: the pool confirms it unless a test says the OK was
+      // The targeted relays confirm unless a test says the OK was
       // lost, for every recipient or for those in okLostFor, which holds an
       // attempt for a reason other than the inbox.
       when(
@@ -376,11 +376,12 @@ void main() {
                   tag[0] == 'p' &&
                   okLostFor.contains(tag[1]),
             );
+        final attempted = recipientWrapTargets[event.id] ?? const [_poolRelay];
         return PublishOutcome(
           eventId: event.id,
-          acceptedBy: confirmed ? const [_poolRelay] : const [],
+          acceptedBy: confirmed ? attempted : const [],
           rejectedBy: const {},
-          noResponseFrom: confirmed ? const [] : const [_poolRelay],
+          noResponseFrom: confirmed ? const [] : attempted,
         );
       });
       // The sender's own copy.

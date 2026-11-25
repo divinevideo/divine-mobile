@@ -1871,54 +1871,8 @@ class AppLocalizationsRo extends AppLocalizations {
   String get shareVideoLabel => 'Partajează videoclipul';
 
   @override
-  String sharePostSharedWith(String recipientName) {
-    return 'Postare partajată cu $recipientName';
-  }
-
-  @override
-  String sharePostSharedWithCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Postare partajată cu $count de persoane',
-      few: 'Postare partajată cu $count persoane',
-      one: 'Postare partajată cu $count persoană',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String shareStillTryingToSendTo(String recipientName) {
-    return 'Încă încercăm să trimitem către $recipientName';
-  }
-
-  @override
-  String shareStillTryingToSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Încă încercăm să trimitem către $count de persoane',
-      few: 'Încă încercăm să trimitem către $count persoane',
-      one: 'Încă încercăm să trimitem către $count persoană',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String shareCouldNotSendTo(String recipientName) {
     return 'Nu am putut trimite către $recipientName';
-  }
-
-  @override
-  String shareCouldNotSendToCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Nu am putut trimite către $count de persoane',
-      few: 'Nu am putut trimite către $count persoane',
-      one: 'Nu am putut trimite către $count persoană',
-    );
-    return '$_temp0';
   }
 
   @override
@@ -1952,6 +1906,19 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get shareFindPeopleMultiline => 'Găsește\noameni';
+
+  @override
+  String get shareDeliveryFailed => 'Încă nu s-a putut trimite';
+
+  @override
+  String shareDeliveryHeld(String name) {
+    return 'Se va trimite când $name poate fi contactat';
+  }
+
+  @override
+  String shareDeliveryForRecipient(String name, String status) {
+    return '$name — $status';
+  }
 
   @override
   String get shareSent => 'Trimis';

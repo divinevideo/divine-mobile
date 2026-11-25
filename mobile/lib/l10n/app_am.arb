@@ -814,19 +814,7 @@
   },
   "listAttributionFallback": "ዝርዝር",
   "shareVideoLabel": "ቪዲዮ አጋራ",
-  "sharePostSharedWith": "ልጥፍ ለ{recipientName} ተጋርቷል።",
-  "sharePostSharedWithCount": "{count, plural, one{ልጥፍ ለ{count} ሰው ተጋርቷል።} other{ልጥፍ ለ{count} ሰዎች ተጋርቷል።}}",
-  "@sharePostSharedWith": {
-    "placeholders": {
-      "recipientName": {
-        "type": "String"
-      }
-    }
-  },
-  "shareStillTryingToSendTo": "ለ{recipientName} ለመላክ አሁንም እየሞከርን ነው",
-  "shareStillTryingToSendToCount": "{count, plural, one{ለ{count} ሰው ለመላክ አሁንም እየሞከርን ነው} other{ለ{count} ሰዎች ለመላክ አሁንም እየሞከርን ነው}}",
   "shareCouldNotSendTo": "ለ{recipientName} መላክ አልተቻለም",
-  "shareCouldNotSendToCount": "{count, plural, one{ለ{count} ሰው መላክ አልተቻለም} other{ለ{count} ሰዎች መላክ አልተቻለም}}",
   "shareFailedToSend": "ቪዲዮ መላክ አልተሳካም።",
   "shareAddedToBookmarks": "ወደ ዕልባቶች ታክሏል።",
   "shareRemovedFromBookmarks": "ከዕልባቶች ተወግዷል",
@@ -843,6 +831,9 @@
   "shareWithTitle": "ሼር በማድረግ ያካፍሉ።",
   "shareFindPeople": "ሰዎችን ያግኙ",
   "shareFindPeopleMultiline": "አግኝ\nሰዎች",
+  "shareDeliveryFailed": "መላክ ገና አልተቻለም",
+  "shareDeliveryHeld": "{name} ሊደረስበት ሲችል ይላካል",
+  "shareDeliveryForRecipient": "{name} — {status}",
   "shareSent": "ተልኳል።",
   "shareSelectedRecipientAnnouncement": "{name} ተመርጧል",
   "@shareSelectedRecipientAnnouncement": {

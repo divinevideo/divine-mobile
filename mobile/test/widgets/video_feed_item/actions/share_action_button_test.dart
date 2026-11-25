@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:analytics/analytics.dart';
 import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,6 +39,7 @@ import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/router/share_delivery_host.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
@@ -58,6 +60,8 @@ import '../../../helpers/recording_consumption_analytics.dart';
 import '../../../helpers/retired_key_custody.dart';
 import '../../../helpers/scroll.dart';
 import '../../../helpers/test_provider_overrides.dart';
+
+class _MockDmRepository extends Mock implements DmRepository {}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -1714,13 +1718,35 @@ void main() {
           });
         });
 
-        Future<void> pumpOpenSheet(WidgetTester tester) async {
-          final mockAuth = createMockAuthService();
+        final delivery = <String, StreamController<DmDeliveryState>>{};
+        setUp(delivery.clear);
 
+        Future<void> pumpOpenSheet(WidgetTester tester) async {
+          final mockAuth = createMockAuthService(
+            authState: AuthState.authenticated,
+            currentPublicKeyHex: '9' * 64,
+          );
+          final repository = _MockDmRepository();
+          when(
+            () => repository.watchDeliveryState(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              rumorId: any(named: 'rumorId'),
+            ),
+          ).thenAnswer((call) {
+            final id = call.namedArguments[#rumorId] as String;
+            return delivery
+                .putIfAbsent(id, StreamController<DmDeliveryState>.broadcast)
+                .stream;
+          });
+          addTearDown(() async {
+            for (final stream in delivery.values) {
+              await stream.close();
+            }
+          });
           await tester.pumpWidget(
-            testMaterialApp(
-              home: Scaffold(body: ShareActionButton(video: testVideo)),
+            testProviderScope(
               additionalOverrides: [
+                dmRepositoryProvider.overrideWithValue(repository),
                 userRankingSignalsLoaderProvider.overrideWithValue(
                   mockRankingSignalsLoader,
                 ),
@@ -1731,6 +1757,12 @@ void main() {
               mockAuthService: mockAuth,
               mockProfileRepository: mockProfileRepository,
               mockFollowRepository: mockFollowRepository,
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                builder: (_, child) => ShareDeliveryHost(child: child!),
+                home: Scaffold(body: ShareActionButton(video: testVideo)),
+              ),
             ),
           );
 
@@ -1867,177 +1899,53 @@ void main() {
           },
         );
 
-        testWidgets(
-          'sending to multiple recipients shows the plural snackbar with '
-          'no View chat action',
-          (tester) async {
-            when(
-              () => mockVideoSharingService.shareVideoWithMultipleUsers(
-                video: any(named: 'video'),
-                recipientPubkeys: any(named: 'recipientPubkeys'),
-                personalMessage: any(named: 'personalMessage'),
-              ),
-            ).thenAnswer(
-              (_) async => {
-                alice.pubkey: ShareResult.createSuccess('msg-1'),
-                bob.pubkey: ShareResult.createSuccess('msg-2'),
+        group('share delivery feedback', () {
+          List<String> captureAnnouncements(WidgetTester tester) {
+            final announcements = <String>[];
+            final messenger = tester.binding.defaultBinaryMessenger;
+            messenger.setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              (message) async {
+                if (message case {
+                  'type': 'announce',
+                  'data': {'message': final String text},
+                }) {
+                  announcements.add(text);
+                }
+                return null;
               },
             );
-
-            await pumpOpenSheet(tester);
-
-            await tester.tap(find.text('Alice'));
-            await tester.pumpAndSettle();
-            await tester.tap(find.text('Bob'));
-            await tester.pumpAndSettle();
-
-            await tester.tap(
-              find.byWidgetPredicate(
-                (widget) =>
-                    widget is DivineIcon &&
-                    widget.icon == DivineIconName.arrowUp,
-              ),
-            );
-            await tester.pumpAndSettle();
-
-            expect(find.text('Share with'), findsNothing);
-            expect(find.text(l10n.sharePostSharedWithCount(2)), findsOneWidget);
-            expect(find.text(l10n.dmReelReplyViewChat), findsNothing);
-          },
-        );
-
-        testWidgets(
-          'send success dismisses the sheet and shows a snackbar with a '
-          'View chat action',
-          (tester) async {
-            when(
-              () => mockVideoSharingService.shareVideoWithMultipleUsers(
-                video: any(named: 'video'),
-                recipientPubkeys: any(named: 'recipientPubkeys'),
-                personalMessage: any(named: 'personalMessage'),
-              ),
-            ).thenAnswer(
-              (_) async => {
-                alice.pubkey: ShareResult.createSuccess(
-                  'msg-event-id',
-                  conversationId: 'conversation-1',
-                ),
-              },
-            );
-
-            await pumpOpenSheet(tester);
-
-            await tester.tap(find.text('Alice'));
-            await tester.pumpAndSettle();
-
-            await tester.tap(
-              find.byWidgetPredicate(
-                (widget) =>
-                    widget is DivineIcon &&
-                    widget.icon == DivineIconName.arrowUp,
-              ),
-            );
-            await tester.pumpAndSettle();
-
-            expect(find.text('Share with'), findsNothing);
-            expect(
-              find.text(l10n.sharePostSharedWith('Alice')),
-              findsOneWidget,
-            );
-            expect(find.text(l10n.dmReelReplyViewChat), findsOneWidget);
-          },
-        );
-
-        testWidgets(
-          'send success without a conversation id shows no View chat action',
-          (tester) async {
-            when(
-              () => mockVideoSharingService.shareVideoWithMultipleUsers(
-                video: any(named: 'video'),
-                recipientPubkeys: any(named: 'recipientPubkeys'),
-                personalMessage: any(named: 'personalMessage'),
-              ),
-            ).thenAnswer(
-              (_) async => {
-                alice.pubkey: ShareResult.createSuccess('msg-event-id'),
-              },
-            );
-
-            await pumpOpenSheet(tester);
-
-            await tester.tap(find.text('Alice'));
-            await tester.pumpAndSettle();
-
-            await tester.tap(
-              find.byWidgetPredicate(
-                (widget) =>
-                    widget is DivineIcon &&
-                    widget.icon == DivineIconName.arrowUp,
-              ),
-            );
-            await tester.pumpAndSettle();
-
-            expect(
-              find.text(l10n.sharePostSharedWith('Alice')),
-              findsOneWidget,
-            );
-            expect(find.text(l10n.dmReelReplyViewChat), findsNothing);
-          },
-        );
-
-        group('when not every recipient got the video', () {
-          late List<Map<Object?, Object?>> announcements;
-
-          setUp(() {
-            announcements = [];
-          });
-
-          void captureAnnouncements(WidgetTester tester) {
-            tester.binding.defaultBinaryMessenger
-                .setMockDecodedMessageHandler<Object?>(
-                  SystemChannels.accessibility,
-                  (Object? message) async {
-                    if (message is Map) announcements.add(message);
-                    return null;
-                  },
-                );
             addTearDown(
-              () => tester.binding.defaultBinaryMessenger
-                  .setMockDecodedMessageHandler<Object?>(
-                    SystemChannels.accessibility,
-                    null,
-                  ),
+              () => messenger.setMockDecodedMessageHandler<Object?>(
+                SystemChannels.accessibility,
+                null,
+              ),
             );
+            return announcements;
           }
 
-          bool announced(String text) => announcements.any((message) {
-            final data = message['data'];
-            return message['type'] == 'announce' &&
-                data is Map &&
-                data['message'] == text;
-          });
-
-          bool snackbarIsError(WidgetTester tester) => tester
-              .widget<DivineSnackbarContainer>(
-                find.byType(DivineSnackbarContainer),
-              )
-              .error;
-
-          void stubSend(Map<String, ShareResult> results) {
+          void stubSend(Map<String, ShareResult> outcomes) {
             when(
               () => mockVideoSharingService.shareVideoWithMultipleUsers(
                 video: any(named: 'video'),
                 recipientPubkeys: any(named: 'recipientPubkeys'),
                 personalMessage: any(named: 'personalMessage'),
               ),
-            ).thenAnswer((_) async => results);
+            ).thenAnswer((_) async => outcomes);
           }
 
-          Future<void> send(WidgetTester tester, List<String> names) async {
+          Future<void> send(
+            WidgetTester tester,
+            List<String> names, {
+            String? note,
+          }) async {
             await pumpOpenSheet(tester);
             for (final name in names) {
               await tester.tap(find.text(name));
               await tester.pumpAndSettle();
+            }
+            if (note != null) {
+              await tester.enterText(find.byType(TextField), note);
             }
             await tester.tap(
               find.byWidgetPredicate(
@@ -2050,24 +1958,118 @@ void main() {
           }
 
           testWidgets(
-            'names a refused recipient in an error snackbar instead of '
-            'reporting the share as sent (#8672)',
+            'pressed send waits for commit before one haptic and dismissal',
             (tester) async {
-              captureAnnouncements(tester);
-              stubSend({
-                alice.pubkey: ShareResult.createSuccess('msg-1'),
-                bob.pubkey: ShareResult.failure(
-                  'blocked: recipient not permitted by send policy',
+              final commit = Completer<Map<String, ShareResult>>();
+              when(
+                () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                  video: any(named: 'video'),
+                  recipientPubkeys: any(named: 'recipientPubkeys'),
+                  personalMessage: any(named: 'personalMessage'),
                 ),
+              ).thenAnswer((_) => commit.future);
+              await pumpOpenSheet(tester);
+              await tester.tap(find.text('Alice'));
+              await tester.pumpAndSettle();
+              final haptics = <Object?>[];
+              final messenger = tester.binding.defaultBinaryMessenger;
+              messenger.setMockMethodCallHandler(SystemChannels.platform, (
+                call,
+              ) async {
+                if (call.method == 'HapticFeedback.vibrate') {
+                  haptics.add(call.arguments);
+                }
+                return null;
               });
+              addTearDown(
+                () => messenger.setMockMethodCallHandler(
+                  SystemChannels.platform,
+                  null,
+                ),
+              );
+              await tester.tap(
+                find.byWidgetPredicate(
+                  (widget) =>
+                      widget is DivineIcon &&
+                      widget.icon == DivineIconName.arrowUp,
+                ),
+              );
+              await tester.pump();
+              expect(find.text(l10n.shareWithTitle), findsOneWidget);
+              expect(find.text(l10n.dmPendingVideoSending), findsNothing);
+              expect(
+                haptics,
+                isNot(contains('HapticFeedbackType.lightImpact')),
+              );
+              commit.complete({
+                alice.pubkey: const ShareResult.queued('rumor-a', 'chat-a'),
+              });
+              await tester.pumpAndSettle();
+              expect(find.text(l10n.shareWithTitle), findsNothing);
+              expect(
+                haptics.where(
+                  (type) => type == 'HapticFeedbackType.lightImpact',
+                ),
+                hasLength(1),
+              );
+              delivery['rumor-a']!.add(DmDeliveryState.accepted);
+              await tester.pumpAndSettle();
+              expect(
+                haptics.where(
+                  (type) => type == 'HapticFeedbackType.lightImpact',
+                ),
+                hasLength(1),
+              );
+            },
+          );
 
+          testWidgets(
+            'a durable send dismisses the sheet with Sending and View chat until ACK',
+            (tester) async {
+              stubSend({
+                alice.pubkey: const ShareResult.queued('rumor-a', 'chat-a'),
+              });
+              await send(tester, ['Alice']);
+              expect(find.text(l10n.shareWithTitle), findsNothing);
+              expect(find.text(l10n.dmPendingVideoSending), findsOneWidget);
+              expect(find.text(l10n.shareSent), findsNothing);
+              expect(find.text(l10n.dmReelReplyViewChat), findsOneWidget);
+
+              delivery['rumor-a']!.add(DmDeliveryState.accepted);
+              await tester.pumpAndSettle();
+              expect(find.text(l10n.shareSent), findsOneWidget);
+              expect(find.text(l10n.dmPendingVideoSending), findsNothing);
+              expect(find.byType(DivineSnackbarContainer), findsOneWidget);
+            },
+          );
+
+          testWidgets(
+            'partial refusal names both people and offers the queued chat only',
+            (tester) async {
+              final announcements = captureAnnouncements(tester);
+              stubSend({
+                alice.pubkey: const ShareResult.queued('rumor-a', 'chat-a'),
+                bob.pubkey: const ShareResult.failure('blocked'),
+              });
               await send(tester, ['Alice', 'Bob']);
-
-              final message =
-                  '${l10n.sharePostSharedWith('Alice')}\n'
-                  '${l10n.shareCouldNotSendTo('Bob')}';
-              expect(find.text('Share with'), findsNothing);
-              expect(find.text(message), findsOneWidget);
+              final refused = l10n.shareCouldNotSendTo('Bob');
+              expect(find.text(l10n.shareWithTitle), findsNothing);
+              expect(find.text(l10n.dmReelReplyViewChat), findsOneWidget);
+              expect(
+                find.text(
+                  '${l10n.shareDeliveryForRecipient('Alice', l10n.dmPendingVideoSending)}\n$refused',
+                ),
+                findsOneWidget,
+              );
+              expect(announcements, contains(contains(refused)));
+              delivery['rumor-a']!.add(DmDeliveryState.accepted);
+              await tester.pumpAndSettle();
+              expect(
+                find.text(
+                  '${l10n.shareDeliveryForRecipient('Alice', l10n.shareSent)}\n$refused',
+                ),
+                findsOneWidget,
+              );
               expect(
                 tester
                     .widget<DivineSnackbarContainer>(
@@ -2076,192 +2078,62 @@ void main() {
                     .error,
                 isTrue,
               );
+            },
+          );
+
+          testWidgets(
+            'one ACK in a two-recipient batch only confirms its recipient',
+            (tester) async {
+              stubSend({
+                alice.pubkey: const ShareResult.queued('rumor-a', 'chat-a'),
+                bob.pubkey: const ShareResult.queued('rumor-b', 'chat-b'),
+              });
+              await send(tester, ['Bob', 'Alice']);
               expect(find.text(l10n.dmReelReplyViewChat), findsNothing);
-              expect(announced(message), isTrue);
-            },
-          );
-
-          testWidgets(
-            'reports a lone queued share as still sending, not as failed',
-            (tester) async {
-              captureAnnouncements(tester);
-              stubSend({
-                alice.pubkey: ShareResult.retrying('no relay reached'),
-              });
-
-              await send(tester, ['Alice']);
-
-              final message = l10n.shareStillTryingToSendTo('Alice');
-              expect(find.text(message), findsOneWidget);
-              expect(find.text(l10n.shareFailedToSend), findsNothing);
-              expect(
-                tester
-                    .widget<DivineSnackbarContainer>(
-                      find.byType(DivineSnackbarContainer),
-                    )
-                    .error,
-                isFalse,
-              );
-              expect(announced(message), isTrue);
-            },
-          );
-
-          testWidgets('counts recipients who share an outcome', (tester) async {
-            stubSend({
-              alice.pubkey: ShareResult.failure('refused'),
-              bob.pubkey: ShareResult.failure('refused'),
-            });
-
-            await send(tester, ['Alice', 'Bob']);
-
-            expect(find.text(l10n.shareCouldNotSendToCount(2)), findsOneWidget);
-          });
-
-          testWidgets(
-            'uses the error style when the only recipient was refused',
-            (tester) async {
-              captureAnnouncements(tester);
-              stubSend({
-                alice.pubkey: ShareResult.failure(
-                  'blocked: recipient not permitted by send policy',
-                ),
-              });
-
-              await send(tester, ['Alice']);
-
-              final message = l10n.shareCouldNotSendTo('Alice');
-              expect(find.text(message), findsOneWidget);
-              expect(find.text(l10n.shareFailedToSend), findsNothing);
-              expect(snackbarIsError(tester), isTrue);
-              expect(announced(message), isTrue);
-            },
-          );
-
-          testWidgets(
-            'names a sent and a still-sending recipient without the error '
-            'style',
-            (tester) async {
-              captureAnnouncements(tester);
-              stubSend({
-                alice.pubkey: ShareResult.createSuccess('msg-1'),
-                bob.pubkey: ShareResult.retrying('no relay reached'),
-              });
-
-              await send(tester, ['Alice', 'Bob']);
-
-              final message =
-                  '${l10n.sharePostSharedWith('Alice')}\n'
-                  '${l10n.shareStillTryingToSendTo('Bob')}';
-              expect(find.text(message), findsOneWidget);
-              expect(snackbarIsError(tester), isFalse);
-              expect(find.text(l10n.dmReelReplyViewChat), findsNothing);
-              expect(announced(message), isTrue);
-            },
-          );
-
-          testWidgets(
-            'uses the error style when a still-sending share sits beside a '
-            'refusal',
-            (tester) async {
-              stubSend({
-                alice.pubkey: ShareResult.retrying('no relay reached'),
-                bob.pubkey: ShareResult.failure('refused'),
-              });
-
-              await send(tester, ['Alice', 'Bob']);
-
+              delivery['rumor-a']!.add(DmDeliveryState.accepted);
+              await tester.pumpAndSettle();
               expect(
                 find.text(
-                  '${l10n.shareStillTryingToSendTo('Alice')}\n'
-                  '${l10n.shareCouldNotSendTo('Bob')}',
+                  '${l10n.shareDeliveryForRecipient('Bob', l10n.dmPendingVideoSending)}\n${l10n.shareDeliveryForRecipient('Alice', l10n.shareSent)}',
                 ),
                 findsOneWidget,
               );
-              expect(snackbarIsError(tester), isTrue);
             },
           );
 
-          group('with three recipients', () {
-            const carol = ShareableUser(
-              pubkey:
-                  '22222222222222222222222222222222'
-                  '22222222222222222222222222222222',
-              displayName: 'Carol',
-            );
-
-            setUp(() {
-              when(
-                () => mockVideoSharingService.recentlySharedWith,
-              ).thenReturn([alice, bob, carol]);
-            });
-
-            testWidgets(
-              'lists sent, still-sending and refused recipients in that order',
-              (tester) async {
-                stubSend({
-                  alice.pubkey: ShareResult.createSuccess('msg-1'),
-                  bob.pubkey: ShareResult.retrying('no relay reached'),
-                  carol.pubkey: ShareResult.failure('refused'),
-                });
-
-                // Picked in reverse, so the order can only come from the
-                // outcome.
-                await send(tester, ['Carol', 'Bob', 'Alice']);
-
-                expect(
-                  find.text(
-                    '${l10n.sharePostSharedWith('Alice')}\n'
-                    '${l10n.shareStillTryingToSendTo('Bob')}\n'
-                    '${l10n.shareCouldNotSendTo('Carol')}',
-                  ),
-                  findsOneWidget,
-                );
-                expect(snackbarIsError(tester), isTrue);
-              },
-            );
-
-            testWidgets(
-              'counts the recipients who got the video beside a refusal',
-              (tester) async {
-                stubSend({
-                  alice.pubkey: ShareResult.createSuccess('msg-1'),
-                  bob.pubkey: ShareResult.createSuccess('msg-2'),
-                  carol.pubkey: ShareResult.failure('refused'),
-                });
-
-                await send(tester, ['Alice', 'Bob', 'Carol']);
-
-                expect(
-                  find.text(
-                    '${l10n.sharePostSharedWithCount(2)}\n'
-                    '${l10n.shareCouldNotSendTo('Carol')}',
-                  ),
-                  findsOneWidget,
-                );
-              },
-            );
-
-            testWidgets(
-              'counts the recipients still being sent to beside a refusal',
-              (tester) async {
-                stubSend({
-                  alice.pubkey: ShareResult.retrying('no relay reached'),
-                  bob.pubkey: ShareResult.retrying('no relay reached'),
-                  carol.pubkey: ShareResult.failure('refused'),
-                });
-
-                await send(tester, ['Alice', 'Bob', 'Carol']);
-
-                expect(
-                  find.text(
-                    '${l10n.shareStillTryingToSendToCount(2)}\n'
-                    '${l10n.shareCouldNotSendTo('Carol')}',
-                  ),
-                  findsOneWidget,
-                );
-              },
-            );
-          });
+          testWidgets(
+            'zero queued preserves note and selection and reports both refusals',
+            (tester) async {
+              stubSend({
+                alice.pubkey: const ShareResult.failure('blocked'),
+                bob.pubkey: const ShareResult.failure('refused'),
+              });
+              await send(tester, ['Alice', 'Bob'], note: 'Keep this draft');
+              expect(find.text(l10n.shareWithTitle), findsOneWidget);
+              expect(
+                tester
+                    .widget<TextField>(find.byType(TextField))
+                    .controller!
+                    .text,
+                'Keep this draft',
+              );
+              final context = tester.element(find.text(l10n.shareWithTitle));
+              expect(context.read<ShareSheetBloc>().state.selectedRecipients, [
+                alice,
+                bob,
+              ]);
+              expect(
+                find.textContaining(l10n.shareCouldNotSendTo('Alice')),
+                findsOneWidget,
+              );
+              expect(
+                find.textContaining(l10n.shareCouldNotSendTo('Bob')),
+                findsOneWidget,
+              );
+              expect(find.text(l10n.dmReelReplyViewChat), findsNothing);
+              expect(delivery, isEmpty);
+            },
+          );
         });
       });
 

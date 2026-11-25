@@ -748,19 +748,7 @@
   },
   "listAttributionFallback": "Списък",
   "shareVideoLabel": "Сподели видео",
-  "sharePostSharedWith": "Публикация, споделена с {recipientName}",
-  "sharePostSharedWithCount": "{count, plural, one{Публикация, споделена с {count} човек} other{Публикация, споделена с {count} души}}",
-  "@sharePostSharedWith": {
-    "placeholders": {
-      "recipientName": {
-        "type": "String"
-      }
-    }
-  },
-  "shareStillTryingToSendTo": "Още опитваме да изпратим на {recipientName}",
-  "shareStillTryingToSendToCount": "{count, plural, one{Още опитваме да изпратим на {count} човек} other{Още опитваме да изпратим на {count} души}}",
   "shareCouldNotSendTo": "Не успяхме да изпратим на {recipientName}",
-  "shareCouldNotSendToCount": "{count, plural, one{Не успяхме да изпратим на {count} човек} other{Не успяхме да изпратим на {count} души}}",
   "shareFailedToSend": "Не успяхме да изпратим видеото",
   "shareAddedToBookmarks": "Добавен към отметките",
   "shareRemovedFromBookmarks": "Премахнато от отметките",
@@ -777,6 +765,9 @@
   "shareWithTitle": "Сподели с",
   "shareFindPeople": "Намери хора",
   "shareFindPeopleMultiline": "Намери\nхора",
+  "shareDeliveryFailed": "Все още не е изпратено",
+  "shareDeliveryHeld": "Ще се изпрати, когато {name} е на линия",
+  "shareDeliveryForRecipient": "{name} — {status}",
   "shareSent": "Изпратено",
   "shareSelectedRecipientAnnouncement": "Избран е {name}",
   "@shareSelectedRecipientAnnouncement": {

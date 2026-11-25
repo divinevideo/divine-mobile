@@ -60,6 +60,7 @@ void main() {
         final recipientPublishStarted = Completer<Event>();
         final releaseRecipientOk = Completer<void>();
 
+        when(() => auth.currentPublicKeyHex).thenReturn(owner);
         when(() => auth.isAuthenticated).thenReturn(true);
         when(() => auth.canPublishNostrWritesNow).thenReturn(true);
         when(() => client.connectedRelayCount).thenReturn(1);
@@ -181,7 +182,7 @@ void main() {
         await selected;
         final completed = Completer<ShareSheetState>();
         final completionSubscription = sheet.stream.listen((state) {
-          if (state.actionResult is ShareSheetSendSuccess &&
+          if (state.actionResult is ShareSheetEnqueueResult &&
               !completed.isCompleted) {
             completed.complete(state);
           }
@@ -198,6 +199,12 @@ void main() {
         expect(releaseDiscovery.isCompleted, isFalse);
         expect(recipientPublishStarted.isCompleted, isFalse);
         final row = (await outgoing.getAllForOwner(owner)).single;
+        final enqueue = result.actionResult! as ShareSheetEnqueueResult;
+        expect(enqueue.ownerPubkey, owner);
+        final queued = enqueue.recipients.single;
+        expect(queued.outcome.delivery, ShareDelivery.queued);
+        expect(queued.outcome.rumorId, row.id);
+        expect(queued.outcome.conversationId, row.conversationId);
         expect(row.content, contains('Look at this'));
         final url = divineVideoUrlRegex.firstMatch(row.content)!.group(0)!;
         final address = NIP19Tlv.decodeNaddr(Uri.parse(url).pathSegments.last)!;

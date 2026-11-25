@@ -32,10 +32,80 @@ enum DmDedupCounterpart {
   unconstrained,
 }
 
+/// What the local outbox and verified recipient acknowledgment establish.
+enum DmDeliveryState { queued, held, accepted, failed, cancelled }
+
 @DriftAccessor(tables: [DirectMessages])
 class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
     with _$DirectMessagesDaoMixin {
   DirectMessagesDao(super.attachedDatabase);
+
+  /// Also marks a sender self-copy inserted by sync before our publish settled.
+  Future<void> markRecipientAccepted({
+    required String ownerPubkey,
+    required String rumorId,
+    required String environment,
+  }) async {
+    await (update(directMessages)..where(
+          (row) =>
+              row.ownerPubkey.equals(ownerPubkey) &
+              row.senderPubkey.equals(ownerPubkey) &
+              row.id.equals(rumorId),
+        ))
+        .write(
+          DirectMessagesCompanion(
+            recipientAcceptedEnvironment: Value(environment),
+          ),
+        );
+  }
+
+  /// Read both tables in one SQLite snapshot, including the transition that
+  /// removes a completed 1:1 outbox row and marks its local message.
+  Stream<DmDeliveryState> watchDeliveryState({
+    required String ownerPubkey,
+    required String rumorId,
+    required String? environment,
+  }) {
+    final query = customSelect(
+      '''
+      SELECT o.recipient_wrap_status AS status, o.recipient_wrap_event_id AS held,
+             o.recipient_wrap_last_error AS error,
+             EXISTS (SELECT 1 FROM direct_messages m
+                      WHERE m.owner_pubkey = ?1 AND m.id = ?2 AND m.sender_pubkey = ?1
+                        AND m.is_deleted = 0 AND m.recipient_accepted_environment = ?3) AS accepted
+        FROM (SELECT 1)
+        LEFT JOIN outgoing_dms o ON o.owner_pubkey = ?1 AND o.id = ?2
+              AND (o.environment IS NULL OR o.environment = ?3)
+      ''',
+      variables: [
+        Variable.withString(ownerPubkey),
+        Variable.withString(rumorId),
+        Variable.withString(environment ?? ''),
+      ],
+      readsFrom: {directMessages, attachedDatabase.outgoingDms},
+    );
+    return query.watchSingle().map((row) {
+      final status = row.readNullable<String>('status');
+      if (status == 'blocked' || status == 'cancelled') {
+        return DmDeliveryState.cancelled;
+      }
+      if (status == 'sent' || row.read<bool>('accepted')) {
+        return DmDeliveryState.accepted;
+      }
+      if ((status == 'pending' || status == 'failed') &&
+          row.readNullable<String>('held') != null) {
+        return DmDeliveryState.held;
+      }
+      return switch (status) {
+        'pending' => DmDeliveryState.queued,
+        'failed'
+            when row.readNullable<String>('error') == outgoingDmOfflineError =>
+          DmDeliveryState.queued,
+        'failed' => DmDeliveryState.failed,
+        _ => DmDeliveryState.cancelled,
+      };
+    }).distinct();
+  }
 
   /// Soft-deleted locally; the kind-5 wrap still needs a confirmed delivery.
   static const String deletionPending = 'deletion_pending';

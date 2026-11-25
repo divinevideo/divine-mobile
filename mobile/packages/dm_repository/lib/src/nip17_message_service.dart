@@ -923,6 +923,17 @@ class NIP17MessageService {
         //    not happen.
         //  * frame written to a relay but no OK within the window →
         //    inconclusive soft-unconfirmed; it may already be delivered.
+        // A filtered explicit target can fall back to the client's pool.
+        // Only an OK for our envelope on its intended route confirms delivery.
+        final intended = targetRelays
+            ?.map((url) => normalizeRelayUrl(url) ?? url)
+            .toSet();
+        final recipientAccepted = outcome.acceptedBy.any(
+          (url) =>
+              intended == null ||
+              intended.isEmpty ||
+              intended.contains(normalizeRelayUrl(url) ?? url),
+        );
         final rejected = outcome.rejectedBy.isNotEmpty;
         final reachedNoRelay =
             outcome.acceptedBy.isEmpty &&
@@ -967,7 +978,7 @@ class NIP17MessageService {
         // Short-circuit `&&`: when the gate is false the self-wrap publish is
         // never awaited, so it is skipped entirely on rejected / reachedNoRelay.
         final selfWrapPublished =
-            (outcome.confirmed ||
+            (recipientAccepted ||
                 (softUnconfirmed && selfWrapOnSoftUnconfirmed)) &&
             await _publishSelfWrapUnlessDeferred(
               nostr: nostr,
@@ -978,7 +989,7 @@ class NIP17MessageService {
               onSelfWrapDue: onSelfWrapDue,
             );
 
-        if (outcome.confirmed) {
+        if (recipientAccepted) {
           Log.info(
             'Successfully published NIP-17 $rumorNoun '
             '(selfWrapPublished=$selfWrapPublished)',

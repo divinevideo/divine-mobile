@@ -12,6 +12,7 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/blocs/share_delivery/share_delivery_cubit.dart';
 import 'package:openvine/blocs/share_sheet/reportable_sites.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/observability/reportable_error.dart';
@@ -44,6 +45,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     required FollowRepository followRepository,
     required UserRankingSignalsLoader rankingSignalsLoader,
     required String currentUserPubkey,
+    this.isOwnerCurrent,
     BaseCacheManager? cacheManager,
   }) : _video = video,
        _videoSharingService = videoSharingService,
@@ -72,6 +74,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
   final FollowRepository _followRepository;
   final UserRankingSignalsLoader _rankingSignalsLoader;
   final String _currentUserPubkey;
+  final bool Function()? isOwnerCurrent;
   final BaseCacheManager? _cacheManager;
 
   void _addUnexpectedError(
@@ -367,6 +370,10 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     Emitter<ShareSheetState> emit,
   ) async {
     if (state.selectedRecipients.isEmpty || state.isSending) return;
+    if (isOwnerCurrent?.call() == false) {
+      emit(state.copyWith(actionResult: ShareSheetAccountChanged()));
+      return;
+    }
 
     // Wait only for local validation and durable enqueue. Relay discovery,
     // publishing and retries belong to the repository after the sheet closes.
@@ -385,70 +392,35 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
 
       if (isClosed) return;
 
-      final sent = <ShareableUser>[];
-      final retrying = <ShareableUser>[];
-      final notSent = <ShareableUser>[];
-      for (final r in recipients) {
-        switch (results[r.pubkey]?.delivery) {
-          case ShareDelivery.sent:
-            sent.add(r);
-          case ShareDelivery.retrying:
-            retrying.add(r);
-          case ShareDelivery.notSent || null:
-            notSent.add(r);
-        }
+      if (isOwnerCurrent?.call() == false) {
+        emit(
+          state.copyWith(
+            isSending: false,
+            actionResult: ShareSheetAccountChanged(),
+          ),
+        );
+        return;
       }
-
-      // Non-null for every selectable row — both pickers resolve the name
-      // through `dmPeerDisplayName` before selection. The generated fallback
-      // is the naming chain's own floor for a peer with no profile, and unlike
-      // a bare 'user' it is neither English nor a second answer to "who is
-      // this".
-      List<String> namesOf(List<ShareableUser> users) => [
-        for (final r in users)
-          r.displayName ?? UserProfile.defaultDisplayNameFor(r.pubkey),
+      final attempted = [
+        for (final r in recipients)
+          (
+            pubkey: r.pubkey,
+            name: r.displayName ?? UserProfile.defaultDisplayNameFor(r.pubkey),
+            outcome:
+                results[r.pubkey.trim().toLowerCase()] ??
+                const ShareResult.failure('Recipient unavailable'),
+          ),
       ];
-
-      // The send is dismiss-and-forget, so the selection is always cleared.
-      // A queued recipient is replayed by OutgoingDmRetryService with the
-      // SAME rumor id; re-sending from the sheet would mint a NEW one the
-      // receiver can't dedup, delivering twice. A refused recipient was never
-      // queued and a re-send is refused again. Neither is kept selected; the
-      // result names both instead (#8672).
-      if (retrying.isEmpty && notSent.isEmpty) {
-        final single = recipients.length == 1 ? sent.single : null;
-        emit(
-          state.copyWith(
-            isSending: false,
-            selectedRecipients: const [],
-            actionResult: ShareSheetSendSuccess(
-              recipientNames: namesOf(sent),
-              recipientPubkey: single?.pubkey,
-              conversationId: single == null
-                  ? null
-                  : results[single.pubkey]?.conversationId,
-            ),
-          ),
-        );
-      } else {
-        Log.warning(
-          'Share incomplete: ${sent.length} sent, ${retrying.length} queued '
-          'for background retry, ${notSent.length} not sent',
-          name: 'ShareSheetBloc',
-          category: LogCategory.ui,
-        );
-        emit(
-          state.copyWith(
-            isSending: false,
-            selectedRecipients: const [],
-            actionResult: ShareSheetSendIncomplete(
-              sentNames: namesOf(sent),
-              retryingNames: namesOf(retrying),
-              notSentNames: namesOf(notSent),
-            ),
-          ),
-        );
-      }
+      final queued = attempted.any(
+        (r) => r.outcome.delivery == ShareDelivery.queued,
+      );
+      emit(
+        state.copyWith(
+          isSending: false,
+          selectedRecipients: queued ? const [] : recipients,
+          actionResult: ShareSheetEnqueueResult(_currentUserPubkey, attempted),
+        ),
+      );
     } catch (e, stackTrace) {
       _addUnexpectedError(
         e,
@@ -464,8 +436,9 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       emit(
         state.copyWith(
           isSending: false,
-          selectedRecipients: const [],
-          actionResult: ShareSheetSendFailure(),
+          actionResult: isOwnerCurrent?.call() == false
+              ? ShareSheetAccountChanged()
+              : ShareSheetSendFailure(),
         ),
       );
     }
