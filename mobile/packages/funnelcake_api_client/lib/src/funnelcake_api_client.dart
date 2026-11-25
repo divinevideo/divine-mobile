@@ -1577,7 +1577,16 @@ class FunnelcakeApiClient {
 
   /// Fetches a ranked hashtag page with its opaque continuation cursor.
   ///
-  /// The cursor comes from Funnelcake and survives client-side row filtering.
+  /// [cursor] is the previous page's `nextCursor`; omit it for the first page.
+  /// A null `nextCursor` means there is no next page. The cursor comes from
+  /// Funnelcake and survives client-side row filtering.
+  ///
+  /// Throws:
+  /// - [FunnelcakeNotConfiguredException] if the API is not configured.
+  /// - [FunnelcakeException] if [hashtag] is empty or just `#`.
+  /// - [FunnelcakeApiException] if the server returns a non-200 status.
+  /// - [FunnelcakeTimeoutException] if the request times out.
+  /// - [FunnelcakeException] for other errors.
   Future<({List<VideoStats> videos, String? nextCursor})>
   getVideosByHashtagPage({
     required String hashtag,

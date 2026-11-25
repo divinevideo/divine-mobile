@@ -2821,9 +2821,12 @@ class VideosRepository {
   /// Fetches one ranked page, including classic videos already ranked by the
   /// endpoint. A separate classics query must not gate visible results.
   /// Results pass through the shared block, transport and content filters.
-  /// A nonempty first page is cached for one minute for immediate re-entry.
-  /// Cached reads reapply current visibility policy. Call
-  /// [clearInMemoryFeedCache] for refresh.
+  ///
+  /// Leave [cursor] null for the first page, then pass the previous result's
+  /// [HashtagFeedVideosResult.nextCursor] to fetch the next one. Only a
+  /// nonempty first page is cached, with its cursor, for one minute; later
+  /// pages always come from the API. Cached reads reapply current visibility
+  /// policy. Call [clearInMemoryFeedCache] for refresh.
   ///
   /// Returns a failed result when [hashtag] is blank, the API client is
   /// unavailable, or the fetch fails or exceeds [timeout] — the REST feed
