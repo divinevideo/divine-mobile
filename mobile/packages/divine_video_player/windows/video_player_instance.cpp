@@ -342,7 +342,7 @@ int64_t VideoPlayerInstance::texture_id() const {
 }
 
 void VideoPlayerInstance::Start() {
-  output_ = std::make_shared<TextureOutput>(textures_);
+  output_ = std::make_shared<TextureOutput>(textures_, log_target_);
   std::weak_ptr<VideoPlayerInstance> self = weak_from_this();
   telemetry_ = std::make_shared<PlaybackTelemetry>(
       [self](EncodableMap sample) {

@@ -8,9 +8,11 @@
 #include <wrl/client.h>
 
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <string>
 
 namespace divine_video_player {
 
@@ -23,7 +25,8 @@ namespace divine_video_player {
 // synchronizes the two if the engine is still reading an older one.
 class TextureOutput {
  public:
-  explicit TextureOutput(flutter::TextureRegistrar* registrar);
+  // `log_target` names the player in the warnings this output logs.
+  TextureOutput(flutter::TextureRegistrar* registrar, std::string log_target);
   ~TextureOutput();
 
   TextureOutput(const TextureOutput&) = delete;
@@ -63,10 +66,15 @@ class TextureOutput {
     FlutterDesktopGpuSurfaceDescriptor descriptor{};
 
     const FlutterDesktopGpuSurfaceDescriptor* Obtain();
-    bool EnsureBuffers(UINT new_width, UINT new_height);
+    HRESULT EnsureBuffers(UINT new_width, UINT new_height);
   };
 
+  // Logs the first failure only: every frame after it fails the same way.
+  void ReportFailure(const char* step, HRESULT hr);
+
   flutter::TextureRegistrar* registrar_;
+  const std::string log_target_;
+  std::atomic<bool> failure_reported_{false};
   std::shared_ptr<Shared> shared_;
   std::unique_ptr<flutter::TextureVariant> variant_;
   int64_t texture_id_ = -1;

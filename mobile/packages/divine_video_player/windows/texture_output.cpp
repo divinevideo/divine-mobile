@@ -5,7 +5,10 @@
 #include <windows.graphics.directx.direct3d11.interop.h>
 #include <winrt/Windows.Foundation.h>
 
+#include <cstdio>
 #include <utility>
+
+#include "native_log.h"
 
 namespace divine_video_player {
 
@@ -14,13 +17,18 @@ namespace {
 using Microsoft::WRL::ComPtr;
 using winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DSurface;
 
+constexpr char kLogName[] = "DivineVideoPlayer.Playback";
+
 // One device serves every player. Media Foundation writes into its textures
 // from its own threads, so the device is made thread-safe.
-ComPtr<ID3D11Device> SharedDevice() {
+HRESULT SharedDevice(ComPtr<ID3D11Device>* out) {
   static std::mutex mutex;
   static ComPtr<ID3D11Device> device;
   std::lock_guard<std::mutex> lock(mutex);
-  if (device) return device;
+  if (device) {
+    *out = device;
+    return S_OK;
+  }
 
   const D3D_FEATURE_LEVEL levels[] = {
       D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1,
@@ -38,33 +46,36 @@ ComPtr<ID3D11Device> SharedDevice() {
                            ARRAYSIZE(levels), D3D11_SDK_VERSION, &created,
                            nullptr, nullptr);
   }
-  if (FAILED(hr)) return nullptr;
+  if (FAILED(hr)) return hr;
 
   ComPtr<ID3D11Multithread> multithread;
   if (SUCCEEDED(created.As(&multithread))) {
     multithread->SetMultithreadProtected(TRUE);
   }
   device = created;
-  return device;
+  *out = device;
+  return S_OK;
 }
 
-IDirect3DSurface WrapSurface(ID3D11Texture2D* texture) {
+HRESULT WrapSurface(ID3D11Texture2D* texture, IDirect3DSurface* out) {
   ComPtr<IDXGISurface> dxgi_surface;
-  if (FAILED(texture->QueryInterface(IID_PPV_ARGS(&dxgi_surface)))) {
-    return nullptr;
-  }
+  HRESULT hr = texture->QueryInterface(IID_PPV_ARGS(&dxgi_surface));
+  if (FAILED(hr)) return hr;
   winrt::com_ptr<::IInspectable> inspectable;
-  if (FAILED(CreateDirect3D11SurfaceFromDXGISurface(dxgi_surface.Get(),
-                                                     inspectable.put()))) {
-    return nullptr;
-  }
-  return inspectable.as<IDirect3DSurface>();
+  hr = CreateDirect3D11SurfaceFromDXGISurface(dxgi_surface.Get(),
+                                              inspectable.put());
+  if (FAILED(hr)) return hr;
+  *out = inspectable.as<IDirect3DSurface>();
+  return S_OK;
 }
 
 }  // namespace
 
-TextureOutput::TextureOutput(flutter::TextureRegistrar* registrar)
-    : registrar_(registrar), shared_(std::make_shared<Shared>()) {
+TextureOutput::TextureOutput(flutter::TextureRegistrar* registrar,
+                             std::string log_target)
+    : registrar_(registrar),
+      log_target_(std::move(log_target)),
+      shared_(std::make_shared<Shared>()) {
   shared_->descriptor.struct_size = sizeof(FlutterDesktopGpuSurfaceDescriptor);
   std::shared_ptr<Shared> shared = shared_;
   variant_ = std::make_unique<flutter::TextureVariant>(
@@ -73,6 +84,11 @@ TextureOutput::TextureOutput(flutter::TextureRegistrar* registrar)
                                    return shared->Obtain();
                                  }));
   texture_id_ = registrar_->RegisterTexture(variant_.get());
+  if (texture_id_ < 0) {
+    NativeLog::Warning(kLogName, log_target_ +
+                                     ": video stays black, the texture could "
+                                     "not be registered");
+  }
 }
 
 TextureOutput::~TextureOutput() {
@@ -90,16 +106,24 @@ bool TextureOutput::RenderFrame(
 
   int target = 0;
   IDirect3DSurface surface{nullptr};
+  HRESULT hr = S_OK;
   {
     std::lock_guard<std::mutex> lock(shared_->mutex);
-    if (!shared_->EnsureBuffers(width, height)) return false;
-    target = shared_->next;
-    surface = shared_->buffers[target].surface;
+    hr = shared_->EnsureBuffers(width, height);
+    if (SUCCEEDED(hr)) {
+      target = shared_->next;
+      surface = shared_->buffers[target].surface;
+    }
+  }
+  if (FAILED(hr)) {
+    ReportFailure("creating the frame textures", hr);
+    return false;
   }
 
   try {
     player.CopyFrameToVideoSurface(surface);
-  } catch (const winrt::hresult_error&) {
+  } catch (const winrt::hresult_error& error) {
+    ReportFailure("copying the frame", error.code());
     return false;
   }
 
@@ -110,6 +134,14 @@ bool TextureOutput::RenderFrame(
   }
   registrar_->MarkTextureFrameAvailable(texture_id_);
   return true;
+}
+
+void TextureOutput::ReportFailure(const char* step, HRESULT hr) {
+  if (failure_reported_.exchange(true)) return;
+  char code[16];
+  std::snprintf(code, sizeof(code), "0x%08X", static_cast<uint32_t>(hr));
+  NativeLog::Warning(kLogName, log_target_ + ": video stays black, " + step +
+                                   " failed (" + code + ")");
 }
 
 void TextureOutput::Clear() {
@@ -136,12 +168,13 @@ const FlutterDesktopGpuSurfaceDescriptor* TextureOutput::Shared::Obtain() {
   return &descriptor;
 }
 
-bool TextureOutput::Shared::EnsureBuffers(UINT new_width, UINT new_height) {
+HRESULT TextureOutput::Shared::EnsureBuffers(UINT new_width, UINT new_height) {
   if (width == new_width && height == new_height && buffers[0].texture) {
-    return true;
+    return S_OK;
   }
-  ComPtr<ID3D11Device> device = SharedDevice();
-  if (!device) return false;
+  ComPtr<ID3D11Device> device;
+  HRESULT hr = SharedDevice(&device);
+  if (FAILED(hr)) return hr;
 
   D3D11_TEXTURE2D_DESC desc = {};
   desc.Width = new_width;
@@ -156,23 +189,22 @@ bool TextureOutput::Shared::EnsureBuffers(UINT new_width, UINT new_height) {
 
   std::array<Buffer, 3> created;
   for (Buffer& buffer : created) {
-    if (FAILED(device->CreateTexture2D(&desc, nullptr, &buffer.texture))) {
-      return false;
-    }
+    hr = device->CreateTexture2D(&desc, nullptr, &buffer.texture);
+    if (FAILED(hr)) return hr;
     ComPtr<IDXGIResource> resource;
-    if (FAILED(buffer.texture.As(&resource)) ||
-        FAILED(resource->GetSharedHandle(&buffer.shared_handle))) {
-      return false;
-    }
-    buffer.surface = WrapSurface(buffer.texture.Get());
-    if (!buffer.surface) return false;
+    hr = buffer.texture.As(&resource);
+    if (FAILED(hr)) return hr;
+    hr = resource->GetSharedHandle(&buffer.shared_handle);
+    if (FAILED(hr)) return hr;
+    hr = WrapSurface(buffer.texture.Get(), &buffer.surface);
+    if (FAILED(hr)) return hr;
   }
   buffers = std::move(created);
   width = new_width;
   height = new_height;
   front = -1;
   next = 0;
-  return true;
+  return S_OK;
 }
 
 }  // namespace divine_video_player
