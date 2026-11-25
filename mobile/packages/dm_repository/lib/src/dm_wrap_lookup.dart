@@ -5,9 +5,13 @@ import 'dart:convert';
 import 'package:db_client/db_client.dart';
 
 /// Social state for the same account that owns the message row.
+///
+/// A null [followed] set means the follow list has not finished its initial
+/// load yet, so unreplied non-support messages stay [DmWrapPending] instead of
+/// misclassifying a followed peer as a request.
 typedef DmWrapAudience = ({
   Set<String> hidden,
-  Set<String> followed,
+  Set<String>? followed,
   String? supportPubkey,
 });
 
@@ -57,8 +61,14 @@ sealed class DmWrapLookup {
     }
     final isSupport =
         peers.length == 1 && peers.single == audience.supportPubkey;
-    final isRequest =
-        !row.hasSent && !isSupport && !peers.every(audience.followed.contains);
+    final bool isRequest;
+    if (row.hasSent || isSupport) {
+      isRequest = false;
+    } else {
+      final followed = audience.followed;
+      if (followed == null) return const DmWrapPending();
+      isRequest = !peers.every(followed.contains);
+    }
     // An unaccepted request is hidden when any counterparty is muted or
     // blocked. A visible sender in an accepted group remains reachable.
     if (isRequest && peers.any(audience.hidden.contains)) {

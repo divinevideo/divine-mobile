@@ -9,6 +9,7 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -49,6 +50,8 @@ class _MockNostrClient extends Mock implements NostrClient {}
 class _MockAuthService extends Mock implements AuthService {}
 
 class _MockFeatureFlagService extends Mock implements FeatureFlagService {}
+
+class _MockFollowRepository extends Mock implements FollowRepository {}
 
 class _FakeFilter extends Fake implements nostr_filter.Filter {}
 
@@ -153,12 +156,15 @@ void main() {
     ProviderContainer createContainer({
       required NostrSessionReadiness readiness,
       FeatureFlagService? featureFlagService,
+      FollowRepository? followRepository,
     }) {
       return ProviderContainer(
         overrides: [
           accountDmStateProvider.overrideWithValue(null),
           if (featureFlagService != null)
             featureFlagServiceProvider.overrideWithValue(featureFlagService),
+          if (followRepository != null)
+            followRepositoryProvider.overrideWithValue(followRepository),
           nostrServiceProvider.overrideWithValue(mockNostrClient),
           authServiceProvider.overrideWithValue(mockAuthService),
           currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
@@ -485,6 +491,84 @@ void main() {
       ).captured;
       expect(closed, unorderedEquals(opened));
     });
+
+    test(
+      'waits for FollowRepository initialization before classifying a followed peer wrap as a request',
+      () async {
+        await prefs.setString('blocklist_active_pubkey', testPubkey);
+        final follows = _MockFollowRepository();
+        final followInitCompleter = Completer<void>();
+        final followingController = StreamController<List<String>>.broadcast();
+        addTearDown(followingController.close);
+
+        var initialized = false;
+        var following = const <String>[];
+        when(() => follows.isInitialized).thenAnswer((_) => initialized);
+        when(() => follows.initialized).thenAnswer(
+          (_) => followInitCompleter.future,
+        );
+        when(() => follows.initialize()).thenAnswer(
+          (_) => followInitCompleter.future,
+        );
+        when(() => follows.followingPubkeys).thenAnswer((_) => following);
+        when(() => follows.followingStream).thenAnswer(
+          (_) => followingController.stream,
+        );
+
+        await database.conversationsDao.upsertConversation(
+          id: 'follow-wait-room',
+          participantPubkeys: '["$testPubkey","$_ordinaryPeerPubkey"]',
+          isGroup: false,
+          createdAt: 100,
+          ownerPubkey: testPubkey,
+        );
+        await database.directMessagesDao.insertMessage(
+          id: 'follow-wait-rumor',
+          conversationId: 'follow-wait-room',
+          senderPubkey: _ordinaryPeerPubkey,
+          content: 'Hello from followed peer',
+          createdAt: 100,
+          giftWrapId: 'follow-wait-wrap',
+          ownerPubkey: testPubkey,
+        );
+
+        final container = createContainer(
+          readiness: NostrSessionReadiness.nostrReady(
+            pubkey: testPubkey,
+            client: mockNostrClient,
+          ),
+          followRepository: follows,
+        );
+        addTearDown(container.dispose);
+        final repository = container.read(dmRepositoryProvider);
+        addTearDown(repository.stopListening);
+
+        final emissions = <DmWrapLookup>[];
+        final subscription = repository
+            .watchWrapLookup(
+              ownerPubkey: testPubkey,
+              giftWrapId: 'follow-wait-wrap',
+            )
+            .listen(emissions.add);
+        addTearDown(subscription.cancel);
+
+        await pumpEventQueue();
+        verify(() => follows.initialize()).called(1);
+        expect(emissions, isNotEmpty);
+        expect(emissions.last, isA<DmWrapPending>());
+
+        initialized = true;
+        following = [_ordinaryPeerPubkey];
+        followInitCompleter.complete();
+        followingController.add(following);
+        await pumpEventQueue();
+
+        expect(emissions.last, isA<DmWrapFound>());
+        final found = emissions.last as DmWrapFound;
+        expect(found.isRequest, isFalse);
+        expect(found.messageId, 'follow-wait-rumor');
+      },
+    );
   });
 }
 

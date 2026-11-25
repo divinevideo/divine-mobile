@@ -1161,15 +1161,31 @@ DmRepository dmRepository(Ref ref) {
     watchWrapAudience: (owner) {
       final blocks = ref.read(contentBlocklistRepositoryProvider);
       final follows = ref.read(followRepositoryProvider);
+      final Stream<List<String>?> followingStream;
+      if (follows.isInitialized) {
+        followingStream = follows.followingStream.startWith(
+          follows.followingPubkeys,
+        );
+      } else {
+        unawaited(follows.initialize());
+        followingStream = follows.initialized
+            .asStream()
+            .switchMap<List<String>?>(
+              (_) => follows.followingStream.startWith(
+                follows.followingPubkeys,
+              ),
+            )
+            .startWith(null);
+      }
       return Rx.combineLatest2(
         blocks.stateStream.startWith(blocks.currentState),
-        follows.followingStream.startWith(follows.followingPubkeys),
+        followingStream,
         (_, following) {
           final hidden = blocks.dmHiddenPubkeysForAccount(owner);
           if (hidden == null || nostrService.publicKey != owner) return null;
           return (
             hidden: hidden.map((key) => key.toLowerCase()).toSet(),
-            followed: following.map((key) => key.toLowerCase()).toSet(),
+            followed: following?.map((key) => key.toLowerCase()).toSet(),
             supportPubkey: kModerationPubkeyHex,
           );
         },
