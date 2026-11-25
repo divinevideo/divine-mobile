@@ -2218,8 +2218,8 @@ class VideosRepository {
         d: [address.dTag],
       ),
     ], useCache: false);
-    // A Funnelcake revision older than the floor still competes: when no
-    // relay returns a newer one, the caller compares it with what it opened.
+    // A Funnelcake revision older than the floor still competes, so a live
+    // video never reads as absent, which callers treat as a deletion.
     var newest = revision;
     for (final event in read.events) {
       if (!_isSignedRevisionAt(event, address)) continue;
