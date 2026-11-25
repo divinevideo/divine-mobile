@@ -916,6 +916,78 @@ void main() {
         expect(result.textTrackRef, textTrackRef);
       });
 
+      group('rebuilds from the revision read before the upload, which this '
+          'device never cached, when the read here', () {
+        late String privateKey;
+        late Event readBefore;
+
+        setUp(() {
+          privateKey = generatePrivateKey();
+          final key = getPublicKey(privateKey);
+          readBefore = Event(
+            key,
+            34236,
+            existingTags,
+            'Read before the upload',
+            createdAt: 1700000500,
+          )..sign(privateKey);
+          when(() => mockAuthService.currentPublicKeyHex).thenReturn(key);
+          when(
+            () => mockAuthService.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+            ),
+          ).thenAnswer(
+            (invocation) async => Event(
+              key,
+              invocation.namedArguments[#kind] as int,
+              invocation.namedArguments[#tags] as List<List<String>>,
+              invocation.namedArguments[#content] as String,
+              createdAt: invocation.namedArguments[#createdAt] as int?,
+            )..sign(privateKey),
+          );
+        });
+
+        for (final (name, revision) in [
+          (
+            'returns nothing and did not complete',
+            () => const LatestVideoRevisionUnknown(),
+          ),
+          (
+            'returns an older revision',
+            () => LatestVideoRevisionFound(
+              Event(
+                getPublicKey(privateKey),
+                34236,
+                existingTags,
+                'Older',
+                createdAt: 1700000000,
+              )..sign(privateKey),
+            ),
+          ),
+        ]) {
+          test(name, () async {
+            relaysAnswer(revision());
+
+            final result = await publisher.republishWithSubtitles(
+              existingEvent: VideoEvent.fromNostrEvent(
+                readBefore,
+              ).copyWith(eventCreatedAt: readBefore.createdAt),
+              textTrackRef: textTrackRef,
+              readBeforeUpload: readBefore,
+            );
+
+            expect(result, isNotNull);
+            expect(result!.content, 'Read before the upload');
+            verifyNever(
+              () => mockPersonalEventCache.getEventById(readBefore.id),
+            );
+          });
+        }
+      });
+
       for (final (name, revision) in [
         ('cannot tell and no copy is held', const LatestVideoRevisionUnknown()),
         ('hold none', const LatestVideoRevisionAbsent()),

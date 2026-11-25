@@ -191,6 +191,7 @@ class SubtitleRepository {
         ),
       ],
       textTrackLang: trackLang,
+      readBeforeUpload: newest,
     );
     if (updatedVideo == null) {
       throw SubtitleEditException('Video republish failed');

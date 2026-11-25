@@ -201,6 +201,7 @@ void main() {
           textTrackRef: any(named: 'textTrackRef'),
           extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
           textTrackLang: any(named: 'textTrackLang'),
+          readBeforeUpload: any(named: 'readBeforeUpload'),
         ),
       ).thenAnswer((_) async {
         when(() => auth.currentPublicKeyHex).thenReturn('other-account');
@@ -246,6 +247,7 @@ void main() {
           textTrackRef: any(named: 'textTrackRef'),
           extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
           textTrackLang: any(named: 'textTrackLang'),
+          readBeforeUpload: any(named: 'readBeforeUpload'),
         ),
       ).thenAnswer((_) async => _updatedVideo);
 
@@ -263,6 +265,7 @@ void main() {
           existingEvent: any(named: 'existingEvent'),
           textTrackRef: 'https://media.divine.video/hash',
           extraTextTrackRefs: const ['39307:pk1:subtitles:my-vine-id'],
+          readBeforeUpload: any(named: 'readBeforeUpload'),
         ),
         () => publisher.publishSubtitleEvent(
           video: _updatedVideo,
@@ -312,6 +315,7 @@ void main() {
           textTrackRef: any(named: 'textTrackRef'),
           extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
           textTrackLang: any(named: 'textTrackLang'),
+          readBeforeUpload: any(named: 'readBeforeUpload'),
         ),
       ).thenAnswer((_) async => _updatedVideo);
 
@@ -337,6 +341,7 @@ void main() {
           textTrackRef: any(named: 'textTrackRef'),
           extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
           textTrackLang: 'pt-BR',
+          readBeforeUpload: any(named: 'readBeforeUpload'),
         ),
       ).called(1);
     });
@@ -392,6 +397,7 @@ void main() {
             textTrackRef: any(named: 'textTrackRef'),
             extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
             textTrackLang: any(named: 'textTrackLang'),
+            readBeforeUpload: any(named: 'readBeforeUpload'),
           ),
         ).thenAnswer((_) async => _updatedVideo);
         when(
@@ -415,6 +421,7 @@ void main() {
                 textTrackRef: any(named: 'textTrackRef'),
                 extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
                 textTrackLang: captureAny(named: 'textTrackLang'),
+                readBeforeUpload: any(named: 'readBeforeUpload'),
               ),
             ).captured.single
             as String?;
@@ -631,6 +638,7 @@ void main() {
             textTrackRef: any(named: 'textTrackRef'),
             extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
             textTrackLang: any(named: 'textTrackLang'),
+            readBeforeUpload: any(named: 'readBeforeUpload'),
           ),
         ).thenAnswer((_) async => null);
 
@@ -651,8 +659,9 @@ void main() {
 
       group('the republish reads the relays again', () {
         /// Saves from [video] while the relays hold [newest], and returns the
-        /// video the republish was told to read no older than.
-        Future<VideoEvent> floorOfSecondRead(
+        /// video the republish was told to read no older than, and the signed
+        /// revision it was handed to fall back to.
+        Future<({VideoEvent floor, Object? handed})> floorOfSecondRead(
           VideoEvent video,
           Event newest,
         ) async {
@@ -665,6 +674,7 @@ void main() {
               textTrackRef: any(named: 'textTrackRef'),
               extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
               textTrackLang: any(named: 'textTrackLang'),
+              readBeforeUpload: any(named: 'readBeforeUpload'),
             ),
           ).thenAnswer((_) async => _updatedVideo);
           when(
@@ -678,15 +688,16 @@ void main() {
 
           await repo.publishEditedSubtitles(video: video, cues: _cues);
 
-          return verify(
-                () => publisher.republishWithSubtitles(
-                  existingEvent: captureAny(named: 'existingEvent'),
-                  textTrackRef: any(named: 'textTrackRef'),
-                  extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
-                  textTrackLang: any(named: 'textTrackLang'),
-                ),
-              ).captured.single
-              as VideoEvent;
+          final captured = verify(
+            () => publisher.republishWithSubtitles(
+              existingEvent: captureAny(named: 'existingEvent'),
+              textTrackRef: any(named: 'textTrackRef'),
+              extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
+              textTrackLang: any(named: 'textTrackLang'),
+              readBeforeUpload: captureAny(named: 'readBeforeUpload'),
+            ),
+          ).captured;
+          return (floor: captured[0] as VideoEvent, handed: captured[1]);
         }
 
         test('no older than the revision this save was built on', () async {
@@ -700,10 +711,27 @@ void main() {
             createdAt: 1700000500,
           );
 
-          final floor = await floorOfSecondRead(_video, newer);
+          final (:floor, handed: _) = await floorOfSecondRead(_video, newer);
 
           expect(floor.id, newer.id);
           expect(floor.eventCreatedAt, newer.createdAt);
+        });
+
+        test('hands it the revision this save was built on, so the read '
+            'after the upload can fall back to it', () async {
+          final newer = Event(
+            'a' * 64,
+            34236,
+            [
+              ['d', 'my-vine-id'],
+            ],
+            'revision from another device',
+            createdAt: 1700000500,
+          );
+
+          final (floor: _, :handed) = await floorOfSecondRead(_video, newer);
+
+          expect(handed, same(newer));
         });
 
         test('no older than the opened event when its copy has no Nostr '
@@ -721,7 +749,10 @@ void main() {
           final opened = _video.copyWith(id: relayCopy.id);
           expect(opened.eventCreatedAt, isNull);
 
-          final floor = await floorOfSecondRead(opened, relayCopy);
+          final (:floor, handed: _) = await floorOfSecondRead(
+            opened,
+            relayCopy,
+          );
 
           expect(floor.id, relayCopy.id);
           expect(floor.eventCreatedAt, relayCopy.createdAt);
@@ -753,6 +784,7 @@ void main() {
             textTrackRef: any(named: 'textTrackRef'),
             extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
             textTrackLang: any(named: 'textTrackLang'),
+            readBeforeUpload: any(named: 'readBeforeUpload'),
           ),
         ).thenAnswer((_) async => _updatedVideo);
         when(
@@ -776,6 +808,7 @@ void main() {
                     textTrackRef: any(named: 'textTrackRef'),
                     extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
                     textTrackLang: any(named: 'textTrackLang'),
+                    readBeforeUpload: any(named: 'readBeforeUpload'),
                   ),
                 ).captured.single
                 as VideoEvent;
@@ -793,6 +826,7 @@ void main() {
               textTrackRef: any(named: 'textTrackRef'),
               extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
               textTrackLang: any(named: 'textTrackLang'),
+              readBeforeUpload: any(named: 'readBeforeUpload'),
             ),
           ).thenAnswer((_) async => _updatedVideo);
         });

@@ -1170,6 +1170,11 @@ class VideoEventPublisher {
   /// the signed-in account's, the newest revision cannot be read, or
   /// publishing failed.
   ///
+  /// Pass [readBeforeUpload] when [existingEvent] is the floor of a revision
+  /// the caller already read and signed off on, such as one read before an
+  /// upload: when the read here falls short, the republish builds on it
+  /// instead of failing because this device never cached it.
+  ///
   /// Throws [AccountRestrictedPublishException] when the configured Divine
   /// relay reports that the account is suspended or banned.
   Future<VideoEvent?> republishWithSubtitles({
@@ -1177,6 +1182,7 @@ class VideoEventPublisher {
     required String textTrackRef,
     List<String> extraTextTrackRefs = const [],
     String textTrackLang = 'en',
+    Event? readBeforeUpload,
   }) async {
     bool ownsVideo() =>
         _authService?.currentPublicKeyHex == existingEvent.pubkey;
@@ -1193,7 +1199,9 @@ class VideoEventPublisher {
             _videosRepositoryGetter?.call().fetchLatestVideoRevision,
             existingEvent,
             logName: _logName,
-            cachedEvent: _personalEventCache?.getEventById,
+            cachedEvent: (id) => id == readBeforeUpload?.id
+                ? readBeforeUpload
+                : _personalEventCache?.getEventById(id),
           )
         : null;
     final editedRefs = [textTrackRef, ...extraTextTrackRefs];
