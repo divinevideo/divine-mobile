@@ -53,13 +53,13 @@ void main() {
 
   void answer(Future<_Read> Function() read) {
     when(
-      () => client.queryEventsDetailed(
-        any(),
-        useCache: false,
-        requireAllRelaysSettled: true,
+      () => client.readCurrentVersion(
+        kind: 30005,
+        pubkey: any(named: 'pubkey'),
+        dTag: any(named: 'dTag'),
         timeout: const Duration(seconds: 10),
       ),
-    ).thenAnswer((_) => read());
+    ).thenAnswer((i) async => currentVersionFromRelays(await read(), i));
   }
 
   List<String> publishedVideos() => published.single.tags

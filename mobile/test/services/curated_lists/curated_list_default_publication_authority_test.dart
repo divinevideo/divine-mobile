@@ -26,6 +26,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 import '../../helpers/completed_owned_list_snapshot.dart';
+import '../../helpers/curated_list_publish_stubs.dart';
 import '../../helpers/signed_curated_list.dart';
 
 class _Client extends Mock implements NostrClient {}
@@ -89,16 +90,22 @@ class _Harness {
     when(() => client.signer).thenReturn(signer);
     registerFallbackValue(Duration.zero);
     when(
-      () => client.queryEventsDetailed(
-        any(),
-        useCache: false,
-        requireAllRelaysSettled: true,
+      () => client.readCurrentVersion(
+        kind: any(named: 'kind'),
+        pubkey: any(named: 'pubkey'),
+        dTag: any(named: 'dTag'),
         timeout: any(named: 'timeout'),
       ),
     ).thenAnswer((invocation) async {
       var completed = false;
       final events = <Event>[];
-      final filters = invocation.positionalArguments.single as List<Filter>;
+      final filters = [
+        Filter(
+          kinds: [invocation.namedArguments[#kind] as int],
+          authors: [invocation.namedArguments[#pubkey] as String],
+          d: [invocation.namedArguments[#dTag] as String],
+        ),
+      ];
       try {
         await for (final event
             in relay(
@@ -121,7 +128,11 @@ class _Harness {
       } on Object {
         completed = false;
       }
-      return (events: events, timedOut: !completed, noRelays: false);
+      return currentVersionFromRelays((
+        events: events,
+        timedOut: !completed,
+        noRelays: false,
+      ), invocation);
     });
     when(
       () => client.subscribe(
