@@ -40,13 +40,15 @@ void main() {
     late _MockPeopleListsRepository peopleListsRepository;
 
     final now = DateTime(2024, 6, 15);
-    final testCuratedList = CuratedList(
-      id: 'cl1',
-      name: 'Top Videos',
-      pubkey: _authorOne,
-      videoEventIds: const ['vid1'],
-      createdAt: now,
-      updatedAt: now,
+    final testCuratedList = CuratedListSearchResult(
+      CuratedList(
+        id: 'cl1',
+        name: 'Top Videos',
+        pubkey: _authorOne,
+        videoEventIds: const ['vid1'],
+        createdAt: now,
+        updatedAt: now,
+      ),
     );
 
     final testUserList = UserList(
@@ -444,13 +446,15 @@ void main() {
       blocTest<ListSearchBloc, ListSearchState>(
         'yields progressive video results as relay stream emits',
         setUp: () {
-          final list2 = CuratedList(
-            id: 'cl2',
-            name: 'More Videos',
-            pubkey: _ownerB,
-            videoEventIds: const ['vid2'],
-            createdAt: now,
-            updatedAt: now,
+          final list2 = CuratedListSearchResult(
+            CuratedList(
+              id: 'cl2',
+              name: 'More Videos',
+              pubkey: _ownerB,
+              videoEventIds: const ['vid2'],
+              createdAt: now,
+              updatedAt: now,
+            ),
           );
           when(() => curatedListRepository.searchAllLists('vid')).thenAnswer(
             (_) => Stream.fromIterable([
@@ -569,7 +573,7 @@ void main() {
       for (final peopleFailsFirst in [true, false]) {
         test('keeps video results when people fails '
             '${peopleFailsFirst ? "before" : "after"} video results', () async {
-          final videos = StreamController<List<CuratedList>>();
+          final videos = StreamController<List<CuratedListSearchResult>>();
           final people = StreamController<List<PeopleListSearchResult>>();
           when(() => curatedListRepository.searchAllLists('mixed'))
               .thenAnswer((_) => videos.stream);
@@ -766,7 +770,7 @@ void main() {
       test('closing cancels both active repository subscriptions', () async {
         var videoCancelled = false;
         var peopleCancelled = false;
-        final videos = StreamController<List<CuratedList>>(
+        final videos = StreamController<List<CuratedListSearchResult>>(
           onCancel: () => videoCancelled = true,
         );
         final people = StreamController<List<PeopleListSearchResult>>(
@@ -796,7 +800,7 @@ void main() {
         'duplicate query preserves the active source subscription',
         () async {
           var canceled = false;
-          final videos = StreamController<List<CuratedList>>(
+          final videos = StreamController<List<CuratedListSearchResult>>(
             onCancel: () => canceled = true,
           );
           when(() => curatedListRepository.searchAllLists('active'))
@@ -860,7 +864,7 @@ void main() {
           () async {
             final videoCanceled = Completer<void>();
             final peopleCanceled = Completer<void>();
-            final videos = StreamController<List<CuratedList>>(
+            final videos = StreamController<List<CuratedListSearchResult>>(
               onCancel: videoCanceled.complete,
             );
             final people = StreamController<List<PeopleListSearchResult>>(

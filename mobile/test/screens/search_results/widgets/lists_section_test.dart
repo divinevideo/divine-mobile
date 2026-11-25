@@ -1,4 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -42,6 +43,7 @@ void main() {
       createdAt: now,
       updatedAt: now,
     );
+    final testResult = CuratedListSearchResult(testList);
 
     setUp(() {
       mockBloc = _MockListSearchBloc();
@@ -78,7 +80,7 @@ void main() {
             ListSearchState(
               status: ListSearchStatus.success,
               query: 'test',
-              videoResults: [testList],
+              videoResults: [testResult],
               videoStatus: ListSearchSourceStatus.success,
               peopleStatus: ListSearchSourceStatus.failure,
             ),
@@ -146,7 +148,7 @@ void main() {
           ListSearchState(
             status: ListSearchStatus.success,
             query: 'test',
-            videoResults: [testList],
+            videoResults: [testResult],
           ),
         );
 
@@ -171,6 +173,67 @@ void main() {
         expect(find.byType(SearchSectionErrorState), findsOneWidget);
       });
     });
+
+    testWidgets(
+      'counts every video and member of a search index result, not only '
+      'the ones it previews',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        when(() => mockBloc.state).thenReturn(
+          ListSearchState(
+            status: ListSearchStatus.success,
+            query: 'test',
+            videoResults: [
+              CuratedListSearchResult.summary(
+                list: testList.copyWith(videoEventIds: const []),
+                itemCount: 12,
+              ),
+            ],
+            peopleResults: [
+              PeopleListSearchResult(
+                ownerPubkey: _authorOne,
+                list: UserList(
+                  id: 'pl1',
+                  name: 'Crew',
+                  pubkeys: const [_authorOne],
+                  createdAt: now,
+                  updatedAt: now,
+                ),
+                memberCount: 32,
+              ),
+            ],
+          ),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: getStandardTestOverrides(),
+            child: buildSubject(showAll: true),
+          ),
+        );
+
+        expect(
+          find.bySemanticsLabel(
+            l10n.listCardSemanticLabel(
+              'Top Videos',
+              'public',
+              l10n.listVideoCount(12),
+            ),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(
+            l10n.listCardSemanticLabel(
+              'Crew',
+              'public',
+              l10n.listMemberCount(32),
+            ),
+          ),
+          findsOneWidget,
+        );
+      },
+    );
 
     group('showAll: true (dedicated tab)', () {
       testWidgets(
@@ -219,7 +282,7 @@ void main() {
         ListSearchState(
           status: ListSearchStatus.success,
           query: 'test',
-          videoResults: [testList],
+          videoResults: [testResult],
         ),
       );
 
@@ -341,7 +404,7 @@ void main() {
             ListSearchState(
               status: ListSearchStatus.success,
               query: 'test',
-              videoResults: [testList],
+              videoResults: [testResult],
               peopleResults: [
                 PeopleListSearchResult(
                   ownerPubkey: _authorOne,
@@ -458,7 +521,7 @@ void main() {
               ListSearchState(
                 status: ListSearchStatus.success,
                 query: 'test',
-                videoResults: [testList],
+                videoResults: [testResult],
               ),
             );
             await tester.pumpWidget(buildRoutedSubject(showAll: showAll));
@@ -501,7 +564,7 @@ void main() {
               ListSearchState(
                 status: ListSearchStatus.success,
                 query: 'test',
-                videoResults: [unattributed],
+                videoResults: [CuratedListSearchResult(unattributed)],
               ),
             );
             await tester.pumpWidget(buildRoutedSubject(showAll: showAll));
@@ -524,6 +587,44 @@ void main() {
               isA<CuratedListRouteExtra>()
                   .having((extra) => extra.listName, 'listName', 'Legacy List')
                   .having((extra) => extra.list, 'list', unattributed),
+            );
+          },
+        );
+
+        testWidgets(
+          'lets the list screen load a search index summary instead of '
+          'warming it with no videos (showAll: $showAll)',
+          (tester) async {
+            when(() => mockBloc.state).thenReturn(
+              ListSearchState(
+                status: ListSearchStatus.success,
+                query: 'test',
+                videoResults: [
+                  CuratedListSearchResult.summary(
+                    list: testList.copyWith(videoEventIds: const []),
+                    itemCount: 12,
+                  ),
+                ],
+              ),
+            );
+            await tester.pumpWidget(buildRoutedSubject(showAll: showAll));
+            await tester.pump();
+
+            await tester.tap(find.text('Top Videos'));
+
+            final captured = verify(
+              () => goRouter.push<void>(
+                captureAny(),
+                extra: captureAny(named: 'extra'),
+              ),
+            ).captured;
+            expect(captured.first, equals('/list/$_authorOne/cl1'));
+            expect(
+              captured.last,
+              isA<CuratedListRouteExtra>()
+                  .having((extra) => extra.list, 'list', isNull)
+                  .having((extra) => extra.videoIds, 'videoIds', isNull)
+                  .having((extra) => extra.listName, 'listName', 'Top Videos'),
             );
           },
         );

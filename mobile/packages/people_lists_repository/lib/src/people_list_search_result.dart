@@ -16,16 +16,29 @@ import 'package:people_lists_repository/src/nip51_people_list_codec.dart';
 class PeopleListSearchResult extends Equatable {
   /// Creates a search result wrapping a decoded [list] published by
   /// [ownerPubkey].
+  ///
+  /// [memberCount] is for a [list] that holds a preview of its members, as a
+  /// list found in FunnelCake's list index does; it defaults to the members
+  /// [list] holds.
   const PeopleListSearchResult({
     required this.ownerPubkey,
     required this.list,
-  });
+    int? memberCount,
+  }) : _memberCount = memberCount;
 
   /// Full 64-char hex pubkey of the list owner. Never truncated.
   final String ownerPubkey;
 
   /// Decoded people list as produced by [Nip51PeopleListCodec.decode].
+  ///
+  /// A list found in FunnelCake's list index holds at most five of its
+  /// members; [memberCount] counts them all.
   final UserList list;
+
+  final int? _memberCount;
+
+  /// How many members the list has.
+  int get memberCount => _memberCount ?? list.pubkeys.length;
 
   /// Addressable coordinate (`kind:ownerPubkey:d-tag`) that uniquely
   /// identifies this list across all owners.
@@ -33,5 +46,5 @@ class PeopleListSearchResult extends Equatable {
       '${Nip51PeopleListCodec.kind}:$ownerPubkey:${list.id}';
 
   @override
-  List<Object?> get props => [ownerPubkey, list];
+  List<Object?> get props => [ownerPubkey, list, memberCount];
 }

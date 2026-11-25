@@ -31,6 +31,13 @@ const String _logName = 'people_lists_repository.impl';
 /// Read budget for public people-list discovery, search and coordinate reads.
 const kPublicPeopleListsRelayReadTimeout = Duration(seconds: 12);
 
+/// How long a people-list search waits for FunnelCake's list index before the
+/// relay search stands in.
+///
+/// Shorter than the API client's own budget, which also spans its retries, so
+/// a stalled backend falls back within seconds.
+const kPeopleListSearchIndexTimeout = Duration(seconds: 5);
+
 /// How many authors one bulk-profile call answers for.
 const _bulkProfilesPageSize = 100;
 
@@ -609,6 +616,13 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     required int limit,
     required String? viewerPubkey,
   }) async {
+    final indexed = await _searchListIndex(
+      trimmed,
+      limit: limit,
+      viewerPubkey: viewerPubkey,
+    );
+    if (indexed != null) return indexed;
+
     final lowerQuery = trimmed.toLowerCase();
     final results = await _queryPublicLists(
       limit: limit > 500 ? limit : 500,
@@ -624,6 +638,76 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     // Keep main's deterministic revision/coordinate order before that cut.
     results.sort(_newestFirst);
     return List.unmodifiable(results.take(limit));
+  }
+
+  /// Searches FunnelCake's list index for people lists matching [trimmed].
+  ///
+  /// Returns `null` when the index is unconfigured, fails or takes longer
+  /// than [kPeopleListSearchIndexTimeout], so the relay search stands in.
+  /// Otherwise the lists come in the server's order, filtered as relay search
+  /// results are: no empty, reserved or machinery sets, no blocked owners,
+  /// only authors who have posted on Divine ([_keepDivineAuthors]). Each
+  /// result's list holds the index's preview of at most five members, and
+  /// [PeopleListSearchResult.memberCount] counts them all.
+  Future<List<PeopleListSearchResult>?> _searchListIndex(
+    String trimmed, {
+    required int limit,
+    required String? viewerPubkey,
+  }) async {
+    final api = _funnelcakeApiClient;
+    if (api == null || !api.isAvailable) return null;
+    final ListSearchResponse page;
+    try {
+      page = await api
+          .searchLists(
+            query: trimmed,
+            kind: PublicListKind.people,
+            limit: limit < FunnelcakeApiClient.maxListSearchLimit
+                ? limit
+                : FunnelcakeApiClient.maxListSearchLimit,
+          )
+          .timeout(kPeopleListSearchIndexTimeout);
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'FunnelCake list search for "$trimmed" failed; searching relays',
+        name: _logName,
+        category: LogCategory.api,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
+
+    final results = <String, PeopleListSearchResult>{};
+    for (final card in page.cards) {
+      if (card.kind != Nip51PeopleListCodec.kind || card.memberCount <= 0) {
+        continue;
+      }
+      if (_isProtectedListId(card.dTag) ||
+          _additionalExcludedPublicDTags.contains(card.dTag)) {
+        continue;
+      }
+      final blockFilter = _blockFilter;
+      if (blockFilter != null && blockFilter(card.pubkey)) continue;
+      final result = PeopleListSearchResult(
+        ownerPubkey: card.pubkey,
+        list: UserList(
+          id: card.dTag,
+          name: card.title.isNotEmpty ? card.title : card.dTag,
+          description: card.description.isNotEmpty ? card.description : null,
+          pubkeys: card.members,
+          createdAt: card.updatedAt,
+          updatedAt: card.updatedAt,
+        ),
+        memberCount: card.memberCount,
+      );
+      results.putIfAbsent(result.addressableId, () => result);
+    }
+    final kept = await _keepDivineAuthors(
+      results.values.toList(),
+      keepAuthor: viewerPubkey,
+    );
+    return List.unmodifiable(kept);
   }
 
   @override

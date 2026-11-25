@@ -2932,6 +2932,82 @@ class FunnelcakeApiClient {
     SoundKind.effect => 'sfx',
   };
 
+  /// Most lists one [searchLists] page holds, the server's limit.
+  static const maxListSearchLimit = 100;
+
+  /// Searches public NIP-51 lists by [query] against their title and
+  /// description, from the server's list index.
+  ///
+  /// Every word of [query] must match. Cards come best match first: exact
+  /// titles, then title prefixes, then other title matches, then by loops and
+  /// members. Deleted lists, moderation sets and the empty default video list
+  /// are left out; the index refreshes every 30 minutes, so a list published
+  /// since may be missing. [kind] narrows the search to one list kind; `null`
+  /// searches both. [cursor] is the [ListSearchResponse.nextCursor] of the
+  /// page before.
+  ///
+  /// Throws:
+  /// - [ArgumentError] if [limit] is not between 1 and [maxListSearchLimit].
+  /// - [FunnelcakeNotConfiguredException] if the API is not configured.
+  /// - [FunnelcakeException] if [query] is blank.
+  /// - [FunnelcakeApiException] if the request fails.
+  /// - [FunnelcakeTimeoutException] if the request times out.
+  /// - [FunnelcakeException] for other errors, a malformed answer included.
+  Future<ListSearchResponse> searchLists({
+    required String query,
+    PublicListKind? kind,
+    int limit = 25,
+    String? cursor,
+  }) async {
+    if (limit < 1 || limit > maxListSearchLimit) {
+      throw ArgumentError.value(
+        limit,
+        'limit',
+        'Must be between 1 and $maxListSearchLimit',
+      );
+    }
+    if (!isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      throw const FunnelcakeException('Search query cannot be empty');
+    }
+
+    final uri = Uri.parse('$_baseUrl/api/v2/search/lists').replace(
+      queryParameters: {
+        'q': trimmed,
+        if (kind != null) 'kind': kind.value.toString(),
+        'limit': limit.toString(),
+        if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+      },
+    );
+
+    try {
+      final response = await _get(uri);
+      if (response.statusCode != 200) {
+        throw FunnelcakeApiException(
+          message: 'Failed to search lists',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+
+      final data = jsonDecode(response.body);
+      if (data is! Map<String, dynamic>) {
+        throw const FormatException('Malformed list search response');
+      }
+      return ListSearchResponse.fromJson(data);
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (e) {
+      throw FunnelcakeException('Failed to search lists: $e', cause: e);
+    }
+  }
+
   /// Fetches a paginated list of followers for a user.
   ///
   /// [pubkey] is the user's public key (hex format).
