@@ -65,6 +65,21 @@ class RecorderMirrorTest {
         assertTrue(mirror.isAwaitingHello)
     }
 
+    // The phone lookup for an earlier hello can finish after the one for a
+    // later hello, whose timeout must then still run.
+    @Test
+    fun aHelloLookedUpAfterALaterOne_isNotSent() {
+        val mirror = RecorderMirror()
+        mirror.helloStarted(1)
+        mirror.helloStarted(2)
+
+        assertTrue(mirror.helloSent(2, setOf(phone)))
+        assertFalse(mirror.helloSent(1, setOf(phone)))
+
+        assertTrue(mirror.helloUnanswered(2))
+        assertFalse(mirror.isPhoneReachable)
+    }
+
     @Test
     fun aTap_namesTheStateItWasMadeOn() {
         val mirror = RecorderMirror()

@@ -203,7 +203,11 @@ internal class PhoneRecorderLink(context: Context) {
                     sync()
                     return@addOnSuccessListener
                 }
-                mirror.helloSent(id, info.nodes.map { it.id }.toSet())
+                // A later hello owns the timeout; scheduling this one's would
+                // cancel it and leave that hello waiting for ever.
+                if (!mirror.helloSent(id, info.nodes.map { it.id }.toSet())) {
+                    return@addOnSuccessListener
+                }
                 val payload = DataMap().apply { putLong(RemoteProtocol.HELLO_ID, id) }.toByteArray()
                 info.nodes.forEach { node ->
                     messageClient.sendMessage(node.id, RemoteProtocol.HELLO_PATH, payload)

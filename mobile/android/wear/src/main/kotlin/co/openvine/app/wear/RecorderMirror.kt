@@ -67,9 +67,15 @@ internal class RecorderMirror {
         hello = HelloRound(id, emptySet())
     }
 
-    /** Hello [id] went out to [nodes]; only their answers count. */
-    fun helloSent(id: Long, nodes: Set<String>) {
-        if (hello?.id == id) hello = HelloRound(id, nodes)
+    /**
+     * Hello [id] goes out to [nodes]; only their answers count. Returns
+     * `false` when a later hello replaced it while the phones were looked
+     * up, and then it is not sent and has no timeout to wait for.
+     */
+    fun helloSent(id: Long, nodes: Set<String>): Boolean {
+        if (hello?.id != id) return false
+        hello = HelloRound(id, nodes)
+        return true
     }
 
     /**
