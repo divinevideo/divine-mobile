@@ -66,6 +66,7 @@ class HiveNotificationPreferencesStore implements NotificationPreferencesStore {
   static const _prefsKey = 'push_preferences';
   static const _dirtyPrefix = 'push_preferences_dirty_';
   static const _schemaVersionPrefix = 'push_preferences_schema_';
+  static const _createdAtPrefix = 'push_preferences_created_at_';
 
   Future<NotificationPreferences?> loadExplicitPreferences() async {
     final box = await _openBox();
@@ -245,6 +246,35 @@ class HiveNotificationPreferencesStore implements NotificationPreferencesStore {
     }
   }
 
+  /// Highest kind-3083 `created_at` previously signed and handed to a relay
+  /// for [pubkey], or `null` when none has been recorded yet.
+  Future<int?> loadLastPublishedCreatedAt(String pubkey) async {
+    try {
+      final box = await _openDirtyBox();
+      return box.get(_createdAtKey(pubkey)) as int?;
+    } on Object catch (error) {
+      Log.warning(
+        'Failed to load published preferences timestamp: $error',
+        name: 'NotificationPreferencesService',
+        category: LogCategory.system,
+      );
+      return null;
+    }
+  }
+
+  Future<void> saveLastPublishedCreatedAt(String pubkey, int createdAt) async {
+    try {
+      final box = await _openDirtyBox();
+      await box.put(_createdAtKey(pubkey), createdAt);
+    } on Object catch (error) {
+      Log.warning(
+        'Failed to persist published preferences timestamp: $error',
+        name: 'NotificationPreferencesService',
+        category: LogCategory.system,
+      );
+    }
+  }
+
   static Future<Box<dynamic>> openBox() =>
       HiveBoxOpener.open<dynamic>(_boxName);
   static Future<Box<dynamic>> openDirtyBox() =>
@@ -254,6 +284,8 @@ class HiveNotificationPreferencesStore implements NotificationPreferencesStore {
 
   static String _schemaVersionKey(String pubkey) =>
       '$_schemaVersionPrefix$pubkey';
+
+  static String _createdAtKey(String pubkey) => '$_createdAtPrefix$pubkey';
 }
 
 enum NotificationPreferencesSyncOutcome {

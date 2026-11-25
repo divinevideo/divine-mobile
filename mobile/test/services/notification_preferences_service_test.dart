@@ -328,6 +328,38 @@ void main() {
       expect(await store.loadDirty(pubkey), prefs);
       expect(notificationStorage, isEmpty);
     });
+
+    test(
+      'persists and reloads last published preferences created_at per pubkey',
+      () async {
+        const pubkeyA =
+            '1111111111111111111111111111111111111111111111111111111111111111';
+        const pubkeyB =
+            '2222222222222222222222222222222222222222222222222222222222222222';
+        final notificationBox = _MockHiveBox();
+        final dirtyBox = _MockHiveBox();
+        final dirtyStorage = <dynamic, dynamic>{};
+        final store = HiveNotificationPreferencesStore(
+          openBox: () async => notificationBox,
+          openDirtyBox: () async => dirtyBox,
+        );
+        when(() => dirtyBox.put(any(), any())).thenAnswer((invocation) {
+          dirtyStorage[invocation.positionalArguments[0]] =
+              invocation.positionalArguments[1];
+          return Future<void>.value();
+        });
+        when(() => dirtyBox.get(any())).thenAnswer(
+          (invocation) => dirtyStorage[invocation.positionalArguments[0]],
+        );
+
+        expect(await store.loadLastPublishedCreatedAt(pubkeyA), isNull);
+        await store.saveLastPublishedCreatedAt(pubkeyA, 1700000100);
+        await store.saveLastPublishedCreatedAt(pubkeyB, 1700000200);
+
+        expect(await store.loadLastPublishedCreatedAt(pubkeyA), 1700000100);
+        expect(await store.loadLastPublishedCreatedAt(pubkeyB), 1700000200);
+      },
+    );
   });
 
   group('syncDirtyPreferencesForPubkey', () {

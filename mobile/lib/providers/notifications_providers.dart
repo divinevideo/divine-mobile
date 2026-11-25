@@ -111,6 +111,11 @@ final pushNotificationServiceProvider = Provider<PushNotificationService?>((
   final notificationService = ref.watch(notificationServiceProvider);
   final envConfig = ref.watch(currentEnvironmentProvider);
   final firebaseMessaging = ref.watch(firebaseMessagingProvider);
+  final preferencesStore = ref.watch(notificationPreferencesStoreProvider);
+  final hivePreferencesStore =
+      preferencesStore is HiveNotificationPreferencesStore
+      ? preferencesStore
+      : null;
 
   final pushService = PushNotificationService(
     authService: authService,
@@ -123,6 +128,10 @@ final pushNotificationServiceProvider = Provider<PushNotificationService?>((
       source: ref.watch(installSourceProvider),
       appVersion: ref.watch(appVersionProvider),
     ),
+    readLastPreferencesCreatedAt:
+        hivePreferencesStore?.loadLastPublishedCreatedAt,
+    writeLastPreferencesCreatedAt:
+        hivePreferencesStore?.saveLastPublishedCreatedAt,
     isCurrent: () {
       final currentReadiness = ref.read(nostrSessionProvider);
       return currentReadiness.isReadyForActiveClient &&
