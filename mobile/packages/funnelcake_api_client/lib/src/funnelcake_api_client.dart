@@ -1575,34 +1575,6 @@ class FunnelcakeApiClient {
     }
   }
 
-  /// Fetches videos by hashtag, sorted by trending score.
-  ///
-  /// [hashtag] is the hashtag to filter by (without `#` prefix).
-  /// [limit] is the maximum number of videos to return (defaults to 50).
-  /// [before] is an optional Unix timestamp cursor for pagination.
-  ///
-  /// Returns a list of [VideoStats] objects sorted by trending score.
-  ///
-  /// Throws:
-  /// - [FunnelcakeNotConfiguredException] if the API is not configured.
-  /// - [FunnelcakeException] if the hashtag is empty.
-  /// - [FunnelcakeApiException] if the request fails.
-  /// - [FunnelcakeTimeoutException] if the request times out.
-  /// - [FunnelcakeException] for other errors.
-  Future<List<VideoStats>> getVideosByHashtag({
-    required String hashtag,
-    int limit = 50,
-    int? before,
-  }) async {
-    final page = await _getVideosByHashtag(
-      path: '/api/videos',
-      hashtag: hashtag,
-      limit: limit,
-      before: before,
-    );
-    return page.videos;
-  }
-
   /// Fetches a ranked hashtag page with its opaque continuation cursor.
   ///
   /// The cursor comes from Funnelcake and survives client-side row filtering.
@@ -1611,19 +1583,6 @@ class FunnelcakeApiClient {
     required String hashtag,
     int limit = 50,
     String? cursor,
-  }) => _getVideosByHashtag(
-    path: '/api/v2/videos',
-    hashtag: hashtag,
-    limit: limit,
-    cursor: cursor,
-  );
-
-  Future<({List<VideoStats> videos, String? nextCursor})> _getVideosByHashtag({
-    required String path,
-    required String hashtag,
-    required int limit,
-    String? cursor,
-    int? before,
   }) async {
     if (!isAvailable) {
       throw const FunnelcakeNotConfiguredException();
@@ -1640,12 +1599,9 @@ class FunnelcakeApiClient {
       'limit': limit.toString(),
       'cursor': ?cursor,
     });
-    if (before != null) {
-      queryParams['before'] = before.toString();
-    }
 
     final uri = Uri.parse(
-      '$_baseUrl$path',
+      '$_baseUrl/api/v2/videos',
     ).replace(queryParameters: queryParams);
 
     try {

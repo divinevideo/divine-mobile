@@ -3050,27 +3050,6 @@ class VideosRepository {
     return _transformVideoStats(stats, sortByCreatedAt: false);
   }
 
-  /// Fetches videos for a specific hashtag.
-  ///
-  /// Returns empty list if Funnelcake API is unavailable.
-  ///
-  /// Throws [FunnelcakeException] subtypes on API errors.
-  Future<List<VideoEvent>> getVideosByHashtag({
-    required String hashtag,
-    int limit = 20,
-    int? before,
-  }) async {
-    if (_funnelcakeApiClient == null || !_funnelcakeApiClient.isAvailable) {
-      return [];
-    }
-    final stats = await _funnelcakeApiClient.getVideosByHashtag(
-      hashtag: hashtag,
-      limit: limit,
-      before: before,
-    );
-    return _transformVideoStats(stats, sortByCreatedAt: false);
-  }
-
   /// Fetches classic videos (pre-Nostr) for a specific hashtag.
   ///
   /// Returns empty list if Funnelcake API is unavailable.
