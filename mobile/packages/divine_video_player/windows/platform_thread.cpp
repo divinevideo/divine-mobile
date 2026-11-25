@@ -25,32 +25,34 @@ void PlatformThread::Initialize() {
   window_class.lpszClassName = kWindowClassName;
   // A second engine registers the class again; the existing one is reused.
   RegisterClassW(&window_class);
-  window_ = CreateWindowExW(0, kWindowClassName, L"", 0, 0, 0, 0, 0,
-                            HWND_MESSAGE, nullptr, window_class.hInstance,
-                            nullptr);
+  const HWND window = CreateWindowExW(
+      0, kWindowClassName, L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr,
+      window_class.hInstance, nullptr);
+  std::lock_guard<std::mutex> lock(mutex_);
+  window_ = window;
 }
 
 void PlatformThread::Shutdown() {
-  if (window_ == nullptr) return;
+  HWND window = nullptr;
+  std::vector<std::function<void()>> dropped;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    window = std::exchange(window_, nullptr);
+    dropped.swap(pending_);
+  }
+  if (window == nullptr) return;
   for (const auto& [timer_id, tick] : timers_) {
-    KillTimer(window_, timer_id);
+    KillTimer(window, timer_id);
   }
   timers_.clear();
-  DestroyWindow(window_);
-  window_ = nullptr;
-  std::lock_guard<std::mutex> lock(mutex_);
-  pending_.clear();
+  DestroyWindow(window);
 }
 
 void PlatformThread::Post(std::function<void()> task) {
-  HWND window = nullptr;
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (window_ == nullptr) return;
-    pending_.push_back(std::move(task));
-    window = window_;
-  }
-  PostMessageW(window, kRunTasksMessage, 0, 0);
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (window_ == nullptr) return;
+  pending_.push_back(std::move(task));
+  PostMessageW(window_, kRunTasksMessage, 0, 0);
 }
 
 uint32_t PlatformThread::StartTimer(uint32_t interval_ms,

@@ -22,7 +22,7 @@ class PlatformThread {
   // Creates the message window. Must be called on the platform thread.
   static void Initialize();
 
-  // Destroys the message window and drops pending work.
+  // Destroys the message window and drops pending work on the platform thread.
   static void Shutdown();
 
   // Queues `task` to run on the platform thread. Safe from any thread.
