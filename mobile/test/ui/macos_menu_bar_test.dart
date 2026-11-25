@@ -140,7 +140,11 @@ void main() {
       select(video, strings.menuBarNextVideo);
       select(video, strings.menuBarPlayPause);
       select(video, strings.menuBarMute);
-      select(video, strings.commonBack);
+      final back = items(video).singleWhere(
+        (item) => item.label == strings.commonBack,
+      );
+      expect(back.shortcut, isNull);
+      back.onSelected!();
 
       expect(
         invoked.map((intent) => intent.runtimeType),

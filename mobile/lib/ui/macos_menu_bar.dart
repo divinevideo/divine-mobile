@@ -191,9 +191,10 @@ class MacosMenuBar extends StatelessWidget {
             ),
             PlatformMenuItemGroup(
               members: [
+                // Native menu shortcuts carry no repeat policy. Back stays
+                // clickable here and BackOnEscape handles the Escape key.
                 _intentItem(
                   label: l10n.commonBack,
-                  shortcut: const SingleActivator(LogicalKeyboardKey.escape),
                   intent: const GoBackIntent(),
                 ),
               ],
@@ -244,8 +245,8 @@ class MacosMenuBar extends StatelessWidget {
 /// has focus.
 PlatformMenuItem _intentItem({
   required String label,
-  required MenuSerializableShortcut shortcut,
   required Intent intent,
+  MenuSerializableShortcut? shortcut,
 }) => PlatformMenuItem(
   label: label,
   shortcut: shortcut,

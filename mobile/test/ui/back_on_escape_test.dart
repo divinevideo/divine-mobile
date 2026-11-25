@@ -58,17 +58,23 @@ void main() {
       expect(find.text('Feed'), findsOneWidget);
     });
 
-    testWidgets('only gives up the focus of a text field before closing', (
-      tester,
-    ) async {
+    testWidgets('holding Escape unfocuses a text field without closing '
+        'its screen', (tester) async {
       await pumpApp(tester);
       await open(tester, const TextField(autofocus: true));
       final field = tester.widget<EditableText>(find.byType(EditableText));
       expect(field.focusNode.hasFocus, isTrue);
 
-      await pressEscape(tester);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
 
       expect(field.focusNode.hasFocus, isFalse);
+      expect(find.byType(TextField), findsOneWidget);
+
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.escape);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
       expect(find.byType(TextField), findsOneWidget);
 
       await pressEscape(tester);
@@ -91,6 +97,30 @@ void main() {
 
       expect(find.text('Report'), findsNothing);
       expect(find.text('Profile'), findsOneWidget);
+    });
+
+    testWidgets('holding Escape closes only the top dialog', (tester) async {
+      await pumpApp(tester);
+      for (final title in ['Report', 'Confirm report']) {
+        unawaited(
+          showDialog<void>(
+            context: navigatorKey.currentContext!,
+            builder: (_) => AlertDialog(content: Text(title)),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.text('Confirm report'), findsNothing);
+      expect(find.text('Report'), findsOneWidget);
+
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.escape);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Report'), findsOneWidget);
     });
 
     testWidgets('closes a dialog from a text field inside it', (tester) async {

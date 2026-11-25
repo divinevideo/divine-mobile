@@ -36,7 +36,8 @@ class GoBackIntent extends Intent {
 /// handler that runs before any shortcut, has left the top by then, so the
 /// screen under it stays.
 ///
-/// With nothing to close, the key passes on unhandled.
+/// Holding Escape does one step. With nothing to close, the initial press
+/// passes on unhandled.
 class BackOnEscape extends StatefulWidget {
   const BackOnEscape({required this.child, super.key});
 
@@ -51,10 +52,35 @@ class _BackOnEscapeState extends State<BackOnEscape> {
   final _actions = <Type, Action<Intent>>{GoBackIntent: _GoBackAction()};
 
   @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addEarlyKeyEventHandler(_consumeEscapeRepeat);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeEarlyKeyEventHandler(_consumeEscapeRepeat);
+    super.dispose();
+  }
+
+  // Both local menus and the app's default shortcuts can translate a repeat
+  // into DismissIntent, even when our own shortcut only accepts key-down.
+  static KeyEventResult _consumeEscapeRepeat(KeyEvent event) {
+    if (event is KeyRepeatEvent &&
+        event.logicalKey == LogicalKeyboardKey.escape) {
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Shortcuts(
       shortcuts: const <ShortcutActivator, Intent>{
-        SingleActivator(LogicalKeyboardKey.escape): GoBackIntent(),
+        SingleActivator(
+          LogicalKeyboardKey.escape,
+          includeRepeats: false,
+        ): GoBackIntent(),
       },
       child: Actions(actions: _actions, child: widget.child),
     );
