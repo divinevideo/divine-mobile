@@ -105,10 +105,10 @@ class _PeopleContent extends StatelessWidget {
         (status == .initial || status == .loading) && results.isEmpty;
 
     if (!isLoading) {
-      // Degraded-empty: every source we consulted reported failure (or
-      // outer-timeout promoted them all to failure) AND we have nothing
-      // to show. Surface the retry affordance instead of a misleading
-      // "No results found for X" — this is the #3791 fix.
+      // Degraded-empty: nothing to show and at least one source failed (the
+      // outer timeout marks sources still pending as failed). Surface the
+      // retry affordance instead of a misleading "No results found for X" —
+      // this is the #3791 fix.
       if (status == .failure || isDegradedEmpty) {
         return SearchSectionErrorState(
           onRetry: () => context.read<UserSearchBloc>().add(
