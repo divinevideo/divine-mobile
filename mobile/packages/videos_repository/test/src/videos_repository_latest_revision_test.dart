@@ -208,6 +208,53 @@ void main() {
         );
         verifyNever(() => funnelcake.getVideoEvent(any()));
       });
+
+      group('when no relay returns a revision and the relay read did not '
+          'complete', () {
+        Future<LatestVideoRevision> fetch() =>
+            withFunnelcake().fetchLatestVideoRevision('34236:$pubkey:$_dTag');
+
+        // Funnelcake hides deleted videos, so its 404 is how a deletion
+        // reads. Building on a held copy then would bring the video back.
+        for (final endedBy in [
+          QueryEnd.settledEarly,
+          QueryEnd.deadline,
+          QueryEnd.relayClosed,
+          QueryEnd.socketDropped,
+          QueryEnd.noRelay,
+        ]) {
+          test('reports absent after a 404 when the read ended by '
+              '${endedBy.name}', () async {
+            stubFunnelcake(() async => null);
+            stubRelays([], endedBy: endedBy);
+
+            expect(await fetch(), isA<LatestVideoRevisionAbsent>());
+          });
+        }
+
+        test('reports unknown when Funnelcake failed', () async {
+          stubFunnelcake(
+            () async => throw const FunnelcakeException('unavailable'),
+          );
+          stubRelays([], endedBy: QueryEnd.settledEarly);
+
+          expect(await fetch(), isA<LatestVideoRevisionUnknown>());
+        });
+
+        test('reports unknown when Funnelcake returned no revision at the '
+            'address', () async {
+          final otherKey = generatePrivateKey();
+          stubFunnelcake(
+            () async => revision(
+              author: getPublicKey(otherKey),
+              signingKey: otherKey,
+            ),
+          );
+          stubRelays([], endedBy: QueryEnd.settledEarly);
+
+          expect(await fetch(), isA<LatestVideoRevisionUnknown>());
+        });
+      });
     });
 
     group('from the relays', () {

@@ -19,15 +19,18 @@ final class LatestVideoRevisionFound extends LatestVideoRevision {
   final Event event;
 }
 
-/// The REST API held no revision at the address, and the relay read
-/// completed without one.
+/// No relay returned a revision at the address, and either the relay read
+/// completed or the REST API answered that it holds none there. The REST
+/// API hides deleted videos, so a deletion reads as absent.
 final class LatestVideoRevisionAbsent extends LatestVideoRevision {
   /// No signed revision was returned for the address.
   const LatestVideoRevisionAbsent();
 }
 
-/// Neither the REST API nor a relay returned a revision, and the relay read
-/// did not complete, so a revision may exist that this read did not see.
+/// Neither the REST API nor a relay returned a revision, the relay read did
+/// not complete, and the REST API did not answer that it holds none (it
+/// failed or was not asked), so a revision may exist that this read did not
+/// see.
 final class LatestVideoRevisionUnknown extends LatestVideoRevision {
   /// The read returned nothing and did not complete.
   const LatestVideoRevisionUnknown();

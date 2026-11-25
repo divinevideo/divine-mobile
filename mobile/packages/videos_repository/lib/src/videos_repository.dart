@@ -2151,9 +2151,10 @@ class VideosRepository {
   /// when the request fails, it reads the relays without the local cache and
   /// takes the newest valid revision any of them returned. A slow or silent
   /// relay does not block the answer: the relay read is a fallback, not a
-  /// gate that needs every relay. [LatestVideoRevisionAbsent] means that
-  /// read completed without a revision; [LatestVideoRevisionUnknown] means
-  /// it did not complete and returned none.
+  /// gate that needs every relay. [LatestVideoRevisionAbsent] means no relay
+  /// returned a revision and either that read completed or Funnelcake
+  /// answered that it holds none, which is also how it reports a deleted
+  /// video; [LatestVideoRevisionUnknown] means neither held.
   ///
   /// Throws [ArgumentError] when [addressableId] is not a Kind 34235 or
   /// 34236 address.
@@ -2169,8 +2170,10 @@ class VideosRepository {
         'is not a video address',
       );
     }
-    final fromApi = await _latestVideoRevisionFromFunnelcake(address);
-    if (fromApi != null) return LatestVideoRevisionFound(fromApi);
+    final (:revision, :saysMissing) = await _latestVideoRevisionFromFunnelcake(
+      address,
+    );
+    if (revision != null) return LatestVideoRevisionFound(revision);
 
     final read = await _nostrClient.readEvents([
       Filter(
@@ -2190,19 +2193,30 @@ class VideosRepository {
       }
     }
     if (newest != null) return LatestVideoRevisionFound(newest);
-    return read.isComplete
+    // Funnelcake's lookup hides deleted videos, so its 404 is how a deletion
+    // reads. With no relay revision either, a held copy must not be built on
+    // just because one relay did not finish: that would bring it back.
+    return read.isComplete || saysMissing
         ? const LatestVideoRevisionAbsent()
         : const LatestVideoRevisionUnknown();
   }
 
-  /// The revision Funnelcake holds at [address], or null when it is not
-  /// configured, holds none there, or cannot answer.
-  Future<Event?> _latestVideoRevisionFromFunnelcake(AId address) async {
+  /// What Funnelcake answers at [address]: its signed `revision` there, or
+  /// `saysMissing` when it answered that it holds none (a 404). Neither when
+  /// it is not configured, fails, or returns an event that is not a signed
+  /// revision at exactly [address].
+  Future<({Event? revision, bool saysMissing})>
+  _latestVideoRevisionFromFunnelcake(AId address) async {
     final client = _funnelcakeApiClient;
-    if (client == null || !client.isAvailable) return null;
+    if (client == null || !client.isAvailable) {
+      return (revision: null, saysMissing: false);
+    }
     try {
       final event = await client.getVideoEvent(address.dTag);
-      if (event != null && _isSignedRevisionAt(event, address)) return event;
+      if (event == null) return (revision: null, saysMissing: true);
+      if (_isSignedRevisionAt(event, address)) {
+        return (revision: event, saysMissing: false);
+      }
     } on Exception catch (error) {
       Log.warning(
         'Funnelcake could not answer the newest revision of '
@@ -2211,7 +2225,7 @@ class VideosRepository {
         category: LogCategory.video,
       );
     }
-    return null;
+    return (revision: null, saysMissing: false);
   }
 
   /// Whether [event] is a revision at exactly [address] with a valid id and
