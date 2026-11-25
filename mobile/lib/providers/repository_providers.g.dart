@@ -1377,7 +1377,7 @@ final class DmRepositoryProvider
   }
 }
 
-String _$dmRepositoryHash() => r'c9f72c33ad80cb54cfb02d97e316e25abae2f48d';
+String _$dmRepositoryHash() => r'a7c0ae601c0cb6dedd09798d30bebb538e3abecc';
 
 /// Provider for CommentsRepository instance
 ///
