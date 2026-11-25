@@ -185,11 +185,10 @@ void main() {
 
       test('keeps the selected database path after a deliberate reset', () {
         prepareDatabaseFile(iPadDatabase).writeAsBytesSync([1]);
-        final nativeFile = prepareDatabaseFile(macDatabase)
-          ..writeAsBytesSync([2]);
+        prepareDatabaseFile(macDatabase).writeAsBytesSync([2]);
         expect(resolveMacOsSharedDatabasePath(macSupport), macDatabase);
 
-        nativeFile.deleteSync();
+        deleteDatabaseAndSidecars(macDatabase);
 
         expect(resolveMacOsSharedDatabasePath(macSupport), macDatabase);
         expect(File(iPadDatabase).readAsBytesSync(), [1]);
