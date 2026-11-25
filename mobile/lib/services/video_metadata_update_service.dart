@@ -304,9 +304,10 @@ class VideoMetadataUpdateService {
   ///
   /// The replacement is built from the revision Divine's REST API returns,
   /// or the newest a relay returns when the API has none as new as
-  /// [originalVideo], not from [originalVideo], which is the one the editor
-  /// opened: another device may have replaced it since. A field the editor
-  /// left as it was seeded takes the newest revision's value. Pass
+  /// [originalVideo] and its Nostr timestamp is known, not from
+  /// [originalVideo], which is the one the editor opened: another device may
+  /// have replaced it since. A field the editor left as it was seeded takes
+  /// the newest revision's value. Pass
   /// [editorBaseline] when the screen has seen a newer revision since it
   /// seeded the form. When the read returns an older revision, or none and
   /// did not complete, the signed copy of the opened revision held in the
