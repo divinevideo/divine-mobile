@@ -397,6 +397,18 @@ void main() {
           expect(await read(opened, cachedEvent: (_) => other), isNull);
         });
 
+        // The signature covers the id, so only the id check sees a body
+        // changed after signing.
+        test('has content its id does not cover', () async {
+          final altered = Event.fromJson({
+            ...held.toJson(),
+            'content': 'changed after signing',
+          });
+          expect(altered.id, held.id);
+
+          expect(await read(opened, cachedEvent: (_) => altered), isNull);
+        });
+
         test('has a signature by another key', () async {
           final forged = Event(
             held.pubkey,
