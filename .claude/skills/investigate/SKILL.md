@@ -21,7 +21,7 @@ and the project's instructions disagree, follow the project.
 
 ## 1. Establish where the symptom was seen
 
-Three facts decide what counts as the cause:
+Collect the facts that distinguish the reported failure from a similar symptom:
 
 1. **Who first saw the symptom**: the person you are talking to, end users, a
    tester, a monitor, CI.
@@ -29,40 +29,19 @@ Three facts decide what counts as the cause:
    device or simulator, operating system.
 3. **Whether anyone sees it outside this machine.**
 
-Only the user, the issue or the ticket can settle them. A reproduction on this
-machine does not: it shows that the symptom can happen here, and that can be a
-different failure that looks the same.
+Use the report, build metadata, CI artifacts, logs, and other available
+evidence. A local reproduction establishes what happens in that environment.
+Use matching evidence from the reported failure before attributing it to the
+same cause. An empty issue search leaves reports from other sources unknown.
 
-**If any of the three is missing, ask the user, and wait for the answer before
-you report a cause.** Read enough first to make the questions specific. Then:
+Ask the user for a missing fact when the answer would materially change the
+diagnosis and the evidence cannot settle it. If the user is unavailable or
+the answer is pending, continue the independent work and share the evidence
+you have with its scope and open questions.
 
-- With a question tool, call it. Four questions at most.
-- Without one, end your turn with the questions.
-- Before the questions, give at most three lines on what you have found so
-  far, labelled as what happens on this machine.
-- Send no report and name no root cause until the answer comes back.
-
-These do not replace the question:
-
-| Instead of asking | Why it does not count |
-|---|---|
-| "No issue in the tracker reports it" | Reports also arrive through support, chat and conversation. An empty search answers nothing. |
-| "Outside this machine: unknown" in the report | A note is not a question. The user reads it under a cause you have already named. |
-| "If users see it too, tell me" at the end | The same. It sits below a conclusion they may act on. |
-| "They showed it to me on their own device" | That is where they are looking now, not who first saw it. |
-
-If you are about to write "if anyone sees it on a real device" or "if users
-report it", stop. That sentence is the question you have not asked. Ask it and
-wait.
-
-If you cannot reach the user (they said they are away, or you are running as a
-subagent or a scheduled job), write the report, head its cause section "On
-this machine", and make the open questions its first line.
-
-A fault in the local environment blocks reproduction of the reported failure.
-Say so and keep looking for the reported failure. That covers the machine's
-network, VPN, proxy, simulator, caches, local configuration and unreleased
-commits.
+When a local fault prevents exercising the reported path, document that
+limitation and keep investigating the original report. Label any diagnosis
+that applies only to the local environment "On this machine".
 
 ## 2. Look for work that already exists
 
@@ -107,13 +86,15 @@ check first.
 
 ## 4. Report
 
-Write this report only when step 1 is settled. If its first line would say
-"unknown" or "not checked", stop and ask the question instead.
+Start with the facts from step 1 and mark any unknowns. Use "Root cause" for
+a cause supported by evidence from the reported failure. Use "On this
+machine" for a cause verified only locally, or "Current evidence" when the
+cause is unconfirmed. Say what would distinguish the remaining hypotheses.
 
 ```markdown
 ## Investigation: <title> (#<issue>)
 
-**Seen by**: <who> · **Build**: <version and build, mode, platform> · **Outside this machine**: <yes / no>
+**Seen by**: <who or unknown> · **Build**: <version, mode, platform or unknown> · **Outside this machine**: <yes / no / unknown>
 **Type**: Bug | Regression | Crash | Performance | Build failure · **Severity**: S1 to S4
 **Confidence**: <0.0 to 1.0>
 
@@ -124,9 +105,9 @@ Write this report only when step 1 is settled. If its first line would say
 | # | Title | State | Relation |
 |---|-------|-------|----------|
 
-### Root cause
+### <Root cause / On this machine / Current evidence>
 <the chain of whys, each with its evidence: file and line, log line, commit>
-<the first build that has the cause and, if a fix exists, the first build that has the fix>
+<the first affected build and first fixed build, when known>
 
 ### Fix
 <files to change, the change, the regression risk, the test that would have caught it>
