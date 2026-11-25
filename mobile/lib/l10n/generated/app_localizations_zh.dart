@@ -6729,6 +6729,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryDraftActionDuplicate => '创建副本';
 
   @override
+  String get libraryDraftActionConvertToClip => '转换为片段';
+
+  @override
+  String get libraryDraftConvertingToClip => '正在转换为片段...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => '草稿已转换为片段';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar => '转换草稿失败';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      '这份草稿上的文字和贴纸没能准备好。到编辑器里打开，然后再试一次。';
+
+  @override
   String get libraryDraftActionShare => '分享草稿';
 
   @override

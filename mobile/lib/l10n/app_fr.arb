@@ -2262,6 +2262,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Échec de la duplication du brouillon",
   "libraryDraftInProgressBadge": "En cours",
   "libraryDraftActionDuplicate": "Dupliquer",
+  "libraryDraftActionConvertToClip": "Convertir en clip",
+  "libraryDraftConvertingToClip": "Conversion en clip...",
+  "libraryDraftConvertedToClipSnackbar": "Brouillon converti en clip",
+  "libraryDraftConvertToClipFailedSnackbar": "Échec de la conversion du brouillon",
+  "libraryDraftConvertOverlaysUnavailable": "Le texte et les stickers de ce brouillon n’ont pas pu être préparés. Ouvre-le dans l’éditeur, puis réessaie.",
   "libraryDraftCopyTitle": "{title} (copie {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {

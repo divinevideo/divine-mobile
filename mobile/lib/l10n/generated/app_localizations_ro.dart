@@ -7324,6 +7324,24 @@ class AppLocalizationsRo extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplică';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Transformă în clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Se transformă în clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Ciorna a fost transformată în clip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Nu s-a putut transforma ciorna';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Textul și stickerele din această ciornă nu au putut fi pregătite. Deschide-o în editor, apoi încearcă din nou.';
+
+  @override
   String get libraryDraftActionShare => 'Distribuie ciorna';
 
   @override

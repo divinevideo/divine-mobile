@@ -7230,6 +7230,23 @@ class AppLocalizationsIt extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplica';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Converti in clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Conversione in clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'Bozza convertita in clip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Conversione bozza non riuscita';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Non è stato possibile preparare testo e sticker di questa bozza. Aprila nell’editor e riprova.';
+
+  @override
   String get libraryDraftActionShare => 'Condividi bozza';
 
   @override

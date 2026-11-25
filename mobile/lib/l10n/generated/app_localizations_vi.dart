@@ -7103,6 +7103,24 @@ class AppLocalizationsVi extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Nhân bản';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Chuyển thành clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Đang chuyển thành clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Đã chuyển bản nháp thành clip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Không chuyển được bản nháp';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Không chuẩn bị được chữ và nhãn dán trên bản nháp này. Mở nó trong trình chỉnh sửa rồi thử lại.';
+
+  @override
   String get libraryDraftActionShare => 'Chia sẻ bản nháp';
 
   @override

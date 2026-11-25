@@ -7333,6 +7333,24 @@ class AppLocalizationsPl extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplikuj';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Zamień w klip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Zamienianie w klip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Zamieniono wersję roboczą w klip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Nie udało się zamienić wersji roboczej';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Nie udało się przygotować tekstu i naklejek z tej wersji roboczej. Otwórz ją w edytorze i spróbuj ponownie.';
+
+  @override
   String get libraryDraftActionShare => 'Udostępnij szkic';
 
   @override

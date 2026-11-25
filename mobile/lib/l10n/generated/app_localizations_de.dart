@@ -7242,6 +7242,24 @@ class AppLocalizationsDe extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplizieren';
 
   @override
+  String get libraryDraftActionConvertToClip => 'In Clip umwandeln';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Wird in einen Clip umgewandelt …';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Entwurf in Clip umgewandelt';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Entwurf konnte nicht umgewandelt werden';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Text und Sticker dieses Entwurfs konnten nicht vorbereitet werden. Öffne ihn im Editor und versuche es dann erneut.';
+
+  @override
   String get libraryDraftActionShare => 'Entwurf teilen';
 
   @override

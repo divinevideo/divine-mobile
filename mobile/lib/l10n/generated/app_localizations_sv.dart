@@ -7140,6 +7140,24 @@ class AppLocalizationsSv extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplicera';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Gör om till klipp';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Gör om till klipp...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Utkastet har gjorts om till ett klipp';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Det gick inte att göra om utkastet';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Texten och dekalerna i det här utkastet kunde inte förberedas. Öppna det i redigeraren och försök igen.';
+
+  @override
   String get libraryDraftActionShare => 'Dela utkast';
 
   @override

@@ -7065,6 +7065,22 @@ class AppLocalizationsId extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplikat';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Ubah jadi klip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Mengubah jadi klip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'Draf diubah jadi klip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar => 'Gagal mengubah draf';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Teks dan stiker di draf ini tidak bisa disiapkan. Buka di editor, lalu coba lagi.';
+
+  @override
   String get libraryDraftActionShare => 'Bagikan draf';
 
   @override

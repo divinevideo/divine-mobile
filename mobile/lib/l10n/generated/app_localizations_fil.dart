@@ -7191,6 +7191,23 @@ class AppLocalizationsFil extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'I-duplicate';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Gawing clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Ginagawang clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'Naging clip na ang draft';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Hindi na-convert ang draft';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Hindi na-prepare ang text at stickers sa draft na ito. Buksan mo sa editor, tapos subukan ulit.';
+
+  @override
   String get libraryDraftActionShare => 'I-share ang draft';
 
   @override

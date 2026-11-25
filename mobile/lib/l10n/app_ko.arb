@@ -1805,6 +1805,11 @@
   "libraryDraftDuplicateFailedSnackbar": "임시 저장을 복제하지 못했어요",
   "libraryDraftInProgressBadge": "진행 중",
   "libraryDraftActionDuplicate": "복제",
+  "libraryDraftActionConvertToClip": "클립으로 변환",
+  "libraryDraftConvertingToClip": "클립으로 변환 중...",
+  "libraryDraftConvertedToClipSnackbar": "임시 저장을 클립으로 변환했어요",
+  "libraryDraftConvertToClipFailedSnackbar": "임시 저장을 변환하지 못했어요",
+  "libraryDraftConvertOverlaysUnavailable": "이 초안의 텍스트와 스티커를 준비하지 못했어요. 편집기에서 연 다음 다시 시도해주세요.",
   "libraryDraftCopyTitle": "{title} (사본 {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {

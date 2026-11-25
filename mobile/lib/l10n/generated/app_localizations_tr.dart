@@ -7073,6 +7073,23 @@ class AppLocalizationsTr extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Çoğalt';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Klibe dönüştür';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Klibe dönüştürülüyor...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'Taslak klibe dönüştürüldü';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Taslak dönüştürülemedi';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Bu taslaktaki yazı ve çıkartmalar hazırlanamadı. Düzenleyicide aç ve tekrar dene.';
+
+  @override
   String get libraryDraftActionShare => 'Taslağı paylaş';
 
   @override

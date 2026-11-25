@@ -2259,6 +2259,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Gagal menduplikat draf",
   "libraryDraftInProgressBadge": "Sedang berjalan",
   "libraryDraftActionDuplicate": "Duplikat",
+  "libraryDraftActionConvertToClip": "Ubah jadi klip",
+  "libraryDraftConvertingToClip": "Mengubah jadi klip...",
+  "libraryDraftConvertedToClipSnackbar": "Draf diubah jadi klip",
+  "libraryDraftConvertToClipFailedSnackbar": "Gagal mengubah draf",
+  "libraryDraftConvertOverlaysUnavailable": "Teks dan stiker di draf ini tidak bisa disiapkan. Buka di editor, lalu coba lagi.",
   "libraryDraftCopyTitle": "{title} (salinan {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {

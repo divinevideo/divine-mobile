@@ -7232,6 +7232,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplicate';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Convert to clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Converting to clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'Draft converted to a clip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Failed to convert draft';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'The text and stickers on this draft couldn’t be prepared. Open it in the editor, then try again.';
+
+  @override
   String get libraryDraftActionShare => 'Share draft';
 
   @override

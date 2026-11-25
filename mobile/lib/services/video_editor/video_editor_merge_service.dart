@@ -10,6 +10,28 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// Service for flattening several timeline clips into a single new clip.
 class VideoEditorMergeService {
+  /// [clips] with every flash transition turned into a dissolve of the same
+  /// duration, for a render whose output keeps no record of its transitions.
+  ///
+  /// Baked pixels carry no editable flash timing, so a later edit could
+  /// neither space nor beat-limit the flash against its own.
+  static List<DivineVideoClip> withoutFlashTransitions(
+    List<DivineVideoClip> clips,
+  ) {
+    if (!clips.any((clip) => clip.transition?.type.flashes ?? false)) {
+      return clips;
+    }
+    return [
+      for (final clip in clips)
+        if (clip.transition case final transition? when transition.type.flashes)
+          clip.copyWith(
+            transition: transition.copyWith(type: ClipTransitionType.dissolve),
+          )
+        else
+          clip,
+    ];
+  }
+
   /// Concatenates [clips] (already in timeline order) into one rendered file
   /// and returns it as a fresh [DivineVideoClip].
   ///
@@ -43,23 +65,8 @@ class VideoEditorMergeService {
     // Match library-save's rule for flashing effects: never bake a flash
     // whose timing the next edit cannot see. This also prevents subset-only
     // clamping from restoring a flash suppressed by the surrounding timeline.
-    final renderClips =
-        clips.any((clip) => clip.transition?.type.flashes ?? false)
-        ? [
-            for (final clip in clips)
-              if (clip.transition case final transition?
-                  when transition.type.flashes)
-                clip.copyWith(
-                  transition: transition.copyWith(
-                    type: ClipTransitionType.dissolve,
-                  ),
-                )
-              else
-                clip,
-          ]
-        : clips;
     final outputPath = await VideoEditorRenderService.renderVideo(
-      clips: renderClips,
+      clips: withoutFlashTransitions(clips),
       usePersistentStorage: true,
       taskId: renderId,
       maxOutputDuration: null,

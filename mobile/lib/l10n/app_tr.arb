@@ -2259,6 +2259,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Taslak çoğaltılamadı",
   "libraryDraftInProgressBadge": "Devam ediyor",
   "libraryDraftActionDuplicate": "Çoğalt",
+  "libraryDraftActionConvertToClip": "Klibe dönüştür",
+  "libraryDraftConvertingToClip": "Klibe dönüştürülüyor...",
+  "libraryDraftConvertedToClipSnackbar": "Taslak klibe dönüştürüldü",
+  "libraryDraftConvertToClipFailedSnackbar": "Taslak dönüştürülemedi",
+  "libraryDraftConvertOverlaysUnavailable": "Bu taslaktaki yazı ve çıkartmalar hazırlanamadı. Düzenleyicide aç ve tekrar dene.",
   "libraryDraftCopyTitle": "{title} (kopya {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {

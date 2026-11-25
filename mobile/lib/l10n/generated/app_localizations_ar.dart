@@ -7149,6 +7149,22 @@ class AppLocalizationsAr extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'تكرار';
 
   @override
+  String get libraryDraftActionConvertToClip => 'تحويل إلى مقطع';
+
+  @override
+  String get libraryDraftConvertingToClip => 'جاري التحويل إلى مقطع...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'تم تحويل المسودة إلى مقطع';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar => 'تعذّر تحويل المسودة';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'تعذّر تجهيز النص والملصقات في هذه المسودة. افتحها في المحرّر ثم حاول مرّة أخرى.';
+
+  @override
   String get libraryDraftActionShare => 'مشاركة المسودة';
 
   @override

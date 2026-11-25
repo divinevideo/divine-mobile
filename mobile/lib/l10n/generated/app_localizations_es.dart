@@ -7218,6 +7218,24 @@ class AppLocalizationsEs extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplicar';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Convertir en clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Convirtiendo en clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Borrador convertido en clip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'No se pudo convertir el borrador';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'No se pudieron preparar el texto y los stickers de este borrador. Abrilo en el editor y probá de nuevo.';
+
+  @override
   String get libraryDraftActionShare => 'Compartir borrador';
 
   @override

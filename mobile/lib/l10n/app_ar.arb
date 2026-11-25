@@ -2252,6 +2252,11 @@
   "libraryDraftDuplicateFailedSnackbar": "تعذّر تكرار المسودة",
   "libraryDraftInProgressBadge": "قيد التنفيذ",
   "libraryDraftActionDuplicate": "تكرار",
+  "libraryDraftActionConvertToClip": "تحويل إلى مقطع",
+  "libraryDraftConvertingToClip": "جاري التحويل إلى مقطع...",
+  "libraryDraftConvertedToClipSnackbar": "تم تحويل المسودة إلى مقطع",
+  "libraryDraftConvertToClipFailedSnackbar": "تعذّر تحويل المسودة",
+  "libraryDraftConvertOverlaysUnavailable": "تعذّر تجهيز النص والملصقات في هذه المسودة. افتحها في المحرّر ثم حاول مرّة أخرى.",
   "libraryDraftCopyTitle": "{title} (نسخة {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {

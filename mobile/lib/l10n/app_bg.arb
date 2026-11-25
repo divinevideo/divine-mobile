@@ -2501,6 +2501,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Не успяхме да дублираме черновата",
   "libraryDraftInProgressBadge": "В процес",
   "libraryDraftActionDuplicate": "Дублирай",
+  "libraryDraftActionConvertToClip": "Превърни в клип",
+  "libraryDraftConvertingToClip": "Превръща се в клип...",
+  "libraryDraftConvertedToClipSnackbar": "Черновата е превърната в клип",
+  "libraryDraftConvertToClipFailedSnackbar": "Не успяхме да превърнем черновата",
+  "libraryDraftConvertOverlaysUnavailable": "Текстът и стикерите в тази чернова не можаха да се подготвят. Отвори я в редактора и опитай пак.",
   "libraryDraftCopyTitle": "{title} (копие {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {

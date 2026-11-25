@@ -2262,6 +2262,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Falha ao duplicar rascunho",
   "libraryDraftInProgressBadge": "Em andamento",
   "libraryDraftActionDuplicate": "Duplicar",
+  "libraryDraftActionConvertToClip": "Converter em clipe",
+  "libraryDraftConvertingToClip": "Convertendo em clipe...",
+  "libraryDraftConvertedToClipSnackbar": "Rascunho convertido em clipe",
+  "libraryDraftConvertToClipFailedSnackbar": "Falha ao converter rascunho",
+  "libraryDraftConvertOverlaysUnavailable": "Não foi possível preparar o texto e os stickers deste rascunho. Abra no editor e tente de novo.",
   "libraryDraftCopyTitle": "{title} (cópia {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {

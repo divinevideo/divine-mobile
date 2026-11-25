@@ -12055,6 +12055,36 @@ abstract class AppLocalizations {
   /// **'Duplicate'**
   String get libraryDraftActionDuplicate;
 
+  /// Draft options menu action that renders the draft into one clip in the Clips library. The draft itself is kept.
+  ///
+  /// In en, this message translates to:
+  /// **'Convert to clip'**
+  String get libraryDraftActionConvertToClip;
+
+  /// Shown over the library while a draft is rendered into a clip.
+  ///
+  /// In en, this message translates to:
+  /// **'Converting to clip...'**
+  String get libraryDraftConvertingToClip;
+
+  /// Snackbar after a draft was rendered into a new clip in the Clips library.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft converted to a clip'**
+  String get libraryDraftConvertedToClipSnackbar;
+
+  /// Snackbar when rendering a draft into a clip failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to convert draft'**
+  String get libraryDraftConvertToClipFailedSnackbar;
+
+  /// Snackbar when a draft's text and stickers could not be prepared for the clip render.
+  ///
+  /// In en, this message translates to:
+  /// **'The text and stickers on this draft couldn’t be prepared. Open it in the editor, then try again.'**
+  String get libraryDraftConvertOverlaysUnavailable;
+
   /// No description provided for @libraryDraftActionShare.
   ///
   /// In en, this message translates to:

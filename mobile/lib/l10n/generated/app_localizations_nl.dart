@@ -7181,6 +7181,23 @@ class AppLocalizationsNl extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Dupliceren';
 
   @override
+  String get libraryDraftActionConvertToClip => 'Omzetten naar clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Omzetten naar clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'Concept omgezet naar clip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Concept omzetten mislukt';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'De tekst en stickers van dit concept konden niet worden voorbereid. Open het in de editor en probeer het opnieuw.';
+
+  @override
   String get libraryDraftActionShare => 'Concept delen';
 
   @override

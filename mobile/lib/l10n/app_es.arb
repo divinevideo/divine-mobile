@@ -2270,6 +2270,11 @@
   "libraryDraftDuplicateFailedSnackbar": "No se pudo duplicar el borrador",
   "libraryDraftInProgressBadge": "En curso",
   "libraryDraftActionDuplicate": "Duplicar",
+  "libraryDraftActionConvertToClip": "Convertir en clip",
+  "libraryDraftConvertingToClip": "Convirtiendo en clip...",
+  "libraryDraftConvertedToClipSnackbar": "Borrador convertido en clip",
+  "libraryDraftConvertToClipFailedSnackbar": "No se pudo convertir el borrador",
+  "libraryDraftConvertOverlaysUnavailable": "No se pudieron preparar el texto y los stickers de este borrador. Abrilo en el editor y probá de nuevo.",
   "libraryDraftCopyTitle": "{title} (copia {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {

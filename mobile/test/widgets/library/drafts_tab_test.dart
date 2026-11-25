@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show UserProfile;
+import 'package:openvine/blocs/drafts_library/draft_clip_conversion_cubit.dart';
 import 'package:openvine/blocs/drafts_library/drafts_library_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
@@ -31,6 +32,9 @@ import '../../helpers/test_provider_overrides.dart';
 class _MockDraftsLibraryBloc
     extends MockBloc<DraftsLibraryEvent, DraftsLibraryState>
     implements DraftsLibraryBloc {}
+
+class _MockDraftClipConversionCubit extends MockCubit<DraftClipConversionStatus>
+    implements DraftClipConversionCubit {}
 
 class _MockOutbox extends Mock implements VideoDmOutbox {}
 
@@ -72,6 +76,7 @@ void main() {
 
   group(DraftsTab, () {
     late _MockDraftsLibraryBloc mockBloc;
+    late _MockDraftClipConversionCubit conversionCubit;
 
     DraftSummary createDraft({
       String? id,
@@ -101,6 +106,7 @@ void main() {
 
     setUp(() {
       mockBloc = _MockDraftsLibraryBloc();
+      conversionCubit = _MockDraftClipConversionCubit();
     });
 
     Widget buildWidget({
@@ -117,8 +123,13 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           theme: VineTheme.theme,
           home: Scaffold(
-            body: BlocProvider<DraftsLibraryBloc>.value(
-              value: mockBloc,
+            body: MultiBlocProvider(
+              providers: [
+                BlocProvider<DraftsLibraryBloc>.value(value: mockBloc),
+                BlocProvider<DraftClipConversionCubit>.value(
+                  value: conversionCubit,
+                ),
+              ],
               child: DraftsTab(showRecordButton: isSelectionMode),
             ),
           ),
@@ -484,6 +495,23 @@ void main() {
         verify(
           () => mockBloc.add(const DraftsLibraryDuplicateRequested('draft1')),
         ).called(1);
+      });
+    });
+
+    group('convert to clip action', () {
+      testWidgets('starts converting the draft when tapped', (tester) async {
+        when(
+          () => mockBloc.state,
+        ).thenReturn(DraftsLibraryLoaded(drafts: [createDraft(id: 'draft1')]));
+        when(() => conversionCubit.convert(any())).thenAnswer((_) async {});
+
+        await tester.pumpWidget(buildWidget());
+        await tester.tap(find.byType(IconButton));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(en.libraryDraftActionConvertToClip));
+        await tester.pumpAndSettle();
+
+        verify(() => conversionCubit.convert('draft1')).called(1);
       });
     });
 

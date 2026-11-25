@@ -2262,6 +2262,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Duplicazione bozza non riuscita",
   "libraryDraftInProgressBadge": "In corso",
   "libraryDraftActionDuplicate": "Duplica",
+  "libraryDraftActionConvertToClip": "Converti in clip",
+  "libraryDraftConvertingToClip": "Conversione in clip...",
+  "libraryDraftConvertedToClipSnackbar": "Bozza convertita in clip",
+  "libraryDraftConvertToClipFailedSnackbar": "Conversione bozza non riuscita",
+  "libraryDraftConvertOverlaysUnavailable": "Non è stato possibile preparare testo e sticker di questa bozza. Aprila nell’editor e riprova.",
   "libraryDraftCopyTitle": "{title} (copia {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {
