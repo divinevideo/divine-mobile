@@ -1,7 +1,10 @@
 // ABOUTME: Verifies the hashtag feed hands a tapped video to its embedding host,
-// ABOUTME: and pushes the anchored fullscreen route when it owns the screen,
-// ABOUTME: logging a rejected push instead of leaking it.
+// ABOUTME: pushes an anchored reel that pages through the grid's feed when it
+// ABOUTME: owns the screen, and logs a rejected push instead of leaking it.
 
+import 'dart:async';
+
+import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -98,6 +101,48 @@ void main() {
     subscribedListVideoCacheProvider.overrideWithValue(null),
   ];
 
+  // A hand-rolled harness rather than testMaterialApp: the screen that owns
+  // its route needs MaterialApp.router so context.push has a GoRouter to reach.
+  Future<GoRouter> pumpRoutedScreen(
+    WidgetTester tester, {
+    required String hashtag,
+    required void Function(PooledFullscreenVideoFeedArgs args) onPushed,
+  }) async {
+    final router = GoRouter(
+      initialLocation: '/hashtag/$hashtag',
+      routes: [
+        GoRoute(
+          path: '/hashtag/:hashtag',
+          builder: (_, state) => HashtagFeedScreen(
+            hashtag: state.pathParameters['hashtag'] ?? '',
+          ),
+        ),
+        GoRoute(
+          path: PooledFullscreenVideoFeedScreen.path,
+          builder: (_, state) {
+            onPushed(state.extra! as PooledFullscreenVideoFeedArgs);
+            return const Scaffold(body: Text('fullscreen feed'));
+          },
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [...getStandardTestOverrides(), ...screenOverrides()],
+        child: MaterialApp.router(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    return router;
+  }
+
   group(HashtagFeedScreen, () {
     testWidgets('embedded feed delegates the selected video to its host', (
       tester,
@@ -129,44 +174,15 @@ void main() {
       expect(hostVideos![hostIndex!].id, equals('video-2'));
     });
 
-    // Keeps a hand-rolled harness rather than testMaterialApp: this path needs
-    // MaterialApp.router so the screen's context.push has a GoRouter to reach.
     testWidgets('feed that owns the screen pushes the tapped video route', (
       tester,
     ) async {
       PooledFullscreenVideoFeedArgs? args;
-      final router = GoRouter(
-        initialLocation: '/hashtag/funny',
-        routes: [
-          GoRoute(
-            path: '/hashtag/:hashtag',
-            builder: (_, state) => HashtagFeedScreen(
-              hashtag: state.pathParameters['hashtag'] ?? '',
-            ),
-          ),
-          GoRoute(
-            path: PooledFullscreenVideoFeedScreen.path,
-            builder: (_, state) {
-              args = state.extra! as PooledFullscreenVideoFeedArgs;
-              return const Scaffold(body: Text('fullscreen feed'));
-            },
-          ),
-        ],
+      final router = await pumpRoutedScreen(
+        tester,
+        hashtag: 'funny',
+        onPushed: (pushed) => args = pushed,
       );
-      addTearDown(router.dispose);
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [...getStandardTestOverrides(), ...screenOverrides()],
-          child: MaterialApp.router(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: router,
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.pump();
 
       await tester.tap(_tile(1));
       await tester.pumpAndSettle();
@@ -178,6 +194,79 @@ void main() {
       );
       addTearDown(() => args?.tileOrigin?.takeImage()?.dispose());
       expect(args?.tileOrigin?.videoId, equals('video-2'));
+    });
+
+    testWidgets('pushed reel continues the grid feed and loads its next page', (
+      tester,
+    ) async {
+      const hashtag = 'skate';
+      final firstPage = [_video('video-1'), _video('video-2')];
+      final nextPage = [_video('video-3')];
+      when(
+        () => hashtagService.getVideosByHashtags([hashtag]),
+      ).thenReturn(const []);
+      when(
+        () => hashtagService.subscribeToHashtagVideos([hashtag]),
+      ).thenAnswer((_) async {});
+      when(
+        () => videosRepository.getHashtagFeedVideos(hashtag: hashtag),
+      ).thenAnswer(
+        (_) async =>
+            HashtagFeedVideosResult.success(firstPage, nextCursor: 'o:50'),
+      );
+      when(
+        () => videosRepository.getHashtagFeedVideos(
+          hashtag: hashtag,
+          cursor: 'o:50',
+        ),
+      ).thenAnswer((_) async => HashtagFeedVideosResult.success(nextPage));
+      PooledFullscreenVideoFeedArgs? pushed;
+      await pumpRoutedScreen(
+        tester,
+        hashtag: hashtag,
+        onPushed: (args) => pushed = args,
+      );
+
+      await tester.tap(_tile(0));
+      await tester.pumpAndSettle();
+      final args = pushed!;
+      addTearDown(() => args.tileOrigin?.takeImage()?.dispose());
+
+      expect(args.source, equals(const HashtagViewSource(hashtag)));
+      final views = <List<VideoEvent>>[];
+      final hasMore = <bool>[];
+      final viewsSubscription = args.feedRepository
+          .watchView(args.source)
+          .listen(views.add);
+      final hasMoreSubscription = args.feedRepository
+          .watchHasMore(args.source)
+          .listen(hasMore.add);
+      await tester.pump();
+
+      expect(views.first, equals(firstPage));
+      expect(hasMore.first, isTrue);
+      verifyNever(
+        () => videosRepository.getHashtagFeedVideos(
+          hashtag: hashtag,
+          cursor: 'o:50',
+        ),
+      );
+
+      await args.feedRepository.loadMore(args.source);
+      await tester.pump();
+
+      expect(views.last, equals([...firstPage, ...nextPage]));
+      expect(hasMore.last, isFalse);
+      verify(
+        () => videosRepository.getHashtagFeedVideos(
+          hashtag: hashtag,
+          cursor: 'o:50',
+        ),
+      ).called(1);
+      // Not awaited: these cancels settle on the root zone, which the test's
+      // fake-async zone never drains, so awaiting them stalls the test.
+      unawaited(viewsSubscription.cancel());
+      unawaited(hasMoreSubscription.cancel());
     });
 
     testWidgets('logs a rejected fullscreen route push instead of leaking it', (
