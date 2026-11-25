@@ -89,6 +89,131 @@ void main() {
     }
 
     test(
+      'legacy identical same-second rows do not borrow a citation',
+      () async {
+        final repository = buildRepository();
+        await repository.getConversation(roomId);
+        for (final id in ['first', 'second']) {
+          await messagesDao.insertMessage(
+            id: id,
+            conversationId: roomId,
+            senderPubkey: _visibleMember,
+            content: 'ambiguous',
+            createdAt: _createdAt,
+            giftWrapId: 'wrap-$id',
+            ownerPubkey: _owner,
+            tagsJson: id == 'second'
+                ? '[["q","34236:$_owner:clip","","$_owner"]]'
+                : null,
+          );
+        }
+        await conversationsDao.upsertConversation(
+          id: roomId,
+          participantPubkeys: '["$_owner","$_visibleMember"]',
+          isGroup: false,
+          createdAt: _createdAt,
+          lastMessageContent: 'ambiguous',
+          lastMessageTimestamp: _createdAt,
+          lastMessageSenderPubkey: _visibleMember,
+          ownerPubkey: _owner,
+        );
+        expect(
+          (await repository.getConversation(roomId))?.lastMessageIsVideoShare,
+          isFalse,
+        );
+      },
+    );
+
+    test(
+      'legacy file preview cannot borrow tags from identical text',
+      () async {
+        final repository = buildRepository();
+        await repository.getConversation(roomId);
+        await messagesDao.insertMessage(
+          id: 'file',
+          conversationId: roomId,
+          senderPubkey: _visibleMember,
+          content: 'attachment',
+          createdAt: _createdAt,
+          giftWrapId: 'file-wrap',
+          messageKind: 15,
+          fileType: 'image/png',
+          ownerPubkey: _owner,
+        );
+        await messagesDao.insertMessage(
+          id: 'text',
+          conversationId: roomId,
+          senderPubkey: _visibleMember,
+          content: 'Sent a photo',
+          createdAt: _createdAt,
+          giftWrapId: 'text-wrap',
+          tagsJson: '[["q","34236:$_owner:clip","","$_owner"]]',
+          ownerPubkey: _owner,
+        );
+        await conversationsDao.upsertConversation(
+          id: roomId,
+          participantPubkeys: '["$_owner","$_visibleMember"]',
+          isGroup: false,
+          createdAt: _createdAt,
+          lastMessageContent: 'Sent a photo',
+          lastMessageTimestamp: _createdAt,
+          lastMessageSenderPubkey: _visibleMember,
+          ownerPubkey: _owner,
+        );
+        expect(
+          (await repository.getConversation(roomId))?.lastMessageIsVideoShare,
+          isFalse,
+        );
+      },
+    );
+
+    for (final higherIdFirst in [true, false]) {
+      for (final firstIsShare in [true, false]) {
+        for (final sameText in [true, false]) {
+          test(
+            'same-second inbox keeps first message citation '
+            '(share first: $firstIsShare, identical text: $sameText, '
+            'higher ID first: $higherIdFirst)',
+            () async {
+              final repository = buildRepository();
+              await repository.getConversation(roomId);
+              for (final first in [true, false]) {
+                final id = first == higherIdFirst ? 'z' : 'a';
+                final content = first || sameText ? 'same note' : 'second note';
+                await messagesDao.insertMessage(
+                  id: id,
+                  conversationId: roomId,
+                  senderPubkey: _visibleMember,
+                  content: content,
+                  createdAt: _createdAt,
+                  giftWrapId: 'wrap-$id',
+                  ownerPubkey: _owner,
+                  tagsJson: first == firstIsShare
+                      ? '[["q","34236:$_owner:clip","","$_owner"]]'
+                      : null,
+                );
+                await conversationsDao.upsertConversation(
+                  id: roomId,
+                  participantPubkeys: '["$_owner","$_visibleMember"]',
+                  isGroup: false,
+                  createdAt: _createdAt,
+                  lastMessageId: id,
+                  lastMessageContent: content,
+                  lastMessageTimestamp: _createdAt,
+                  lastMessageSenderPubkey: _visibleMember,
+                  ownerPubkey: _owner,
+                );
+              }
+              final preview = await repository.getConversation(roomId);
+              expect(preview?.lastMessageContent, 'same note');
+              expect(preview?.lastMessageIsVideoShare, firstIsShare);
+            },
+          );
+        }
+      }
+    }
+
+    test(
       "maps the newest visible message and the room's unread state",
       () async {
         await seedRoom();

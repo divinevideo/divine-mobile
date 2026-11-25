@@ -180,7 +180,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 39;
+  int get schemaVersion => 40;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -457,7 +457,7 @@ class AppDatabase extends _$AppDatabase {
       await _withholdV39Columns(to);
       await _withholdV31Columns(to);
       await _withholdV34Columns(to);
-      await _migrateShareDelivery(to);
+      await _migrateVersionedColumns(to);
     },
     beforeOpen: (details) async {
       // Salvage may preserve only one of these local-only tables. A missing
@@ -505,7 +505,7 @@ class AppDatabase extends _$AppDatabase {
         }
         await _withholdV31Columns(details.versionNow);
         await _withholdV34Columns(details.versionNow);
-        await _migrateShareDelivery(details.versionNow);
+        await _migrateVersionedColumns(details.versionNow);
         await _withholdV39Columns(details.versionNow);
       }
 
@@ -635,6 +635,8 @@ class AppDatabase extends _$AppDatabase {
       TableMigration(
         conversations,
         newColumns: [
+          if (!conversationColumns.contains('last_message_id'))
+            conversations.lastMessageId,
           if (!conversationColumns.contains('is_dismissed'))
             conversations.isDismissed,
           if (!conversationColumns.contains('last_message_created_at'))
@@ -851,10 +853,10 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
-  /// Adds the v37/v38 columns, or drops them again from a database opened at
-  /// an earlier [version] (only a migration test does); see
+  /// Adds the v37, v38, and v40 columns, or drops them again from a database
+  /// opened at an earlier [version] (only a migration test does); see
   /// [_withholdV31Columns].
-  Future<void> _migrateShareDelivery(int version) async {
+  Future<void> _migrateVersionedColumns(int version) async {
     const columns = [
       (37, 'direct_messages', 'recipient_accepted_environment', 'TEXT NULL'),
       (
@@ -869,6 +871,7 @@ class AppDatabase extends _$AppDatabase {
         'is_video_share',
         'INTEGER NOT NULL DEFAULT 0 CHECK (is_video_share IN (0, 1))',
       ),
+      (40, 'conversations', 'last_message_id', 'TEXT NULL'),
     ];
     for (final (added, table, column, definition) in columns) {
       if (version >= added) {
@@ -2099,6 +2102,7 @@ class AppDatabase extends _$AppDatabase {
         'last_read_timestamp',
         'is_dismissed',
         'last_message_created_at',
+        if (schemaVersion >= 40) 'last_message_id',
         'retained_message_ids',
       ],
       'pending_product_events': ['owner_pubkey'],

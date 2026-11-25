@@ -1151,6 +1151,9 @@ class Conversations extends Table {
   TextColumn get lastMessageContent =>
       text().nullable().named('last_message_content')();
 
+  /// Exact local message behind the preview, when known.
+  TextColumn get lastMessageId => text().nullable()();
+
   /// Unix timestamp of the last message.
   IntColumn get lastMessageTimestamp =>
       integer().nullable().named('last_message_timestamp')();

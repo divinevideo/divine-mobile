@@ -23,6 +23,7 @@ import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/message_bubble.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
+import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/blurhash_display.dart';
@@ -35,6 +36,11 @@ import '../../../../helpers/contrast.dart';
 import '../../../../helpers/decoded_images.dart';
 import '../../../../helpers/test_provider_overrides.dart';
 import '../../../../helpers/test_pubkeys.dart';
+
+class _VisibleVideoEventService extends MockVideoEventService {
+  @override
+  bool shouldHideVideo(VideoEvent video) => false;
+}
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
@@ -78,8 +84,15 @@ GoRouter _messageRouter(String message) {
       ),
       GoRoute(
         path: '/video/:id',
-        builder: (context, state) =>
-            Scaffold(body: Text('video:${state.pathParameters['id']}')),
+        builder: (context, state) => Scaffold(
+          body: Column(
+            children: [
+              Text('video:${state.pathParameters['id']}'),
+              if ((state.extra as VideoDetailRouteExtra?)?.fromMessage ?? false)
+                const Text('Opened from a message'),
+            ],
+          ),
+        ),
       ),
     ],
   );
@@ -91,6 +104,7 @@ Widget _routerTestApp(
   MockNostrClient? mockNostrService,
 }) {
   return testProviderScope(
+    mockVideoEventService: _VisibleVideoEventService(),
     additionalOverrides: additionalOverrides,
     mockNostrService: mockNostrService,
     child: MaterialApp.router(
@@ -1898,6 +1912,7 @@ void main() {
         VoidCallback? onDoubleTap,
         SharedPreferences? mockSharedPreferences,
       }) => testMaterialApp(
+        mockVideoEventService: _VisibleVideoEventService(),
         home: Scaffold(
           body: MessageBubble(
             message: message,
@@ -2098,6 +2113,7 @@ void main() {
 
           await tester.pumpWidget(
             testMaterialApp(
+              mockVideoEventService: _VisibleVideoEventService(),
               home: Scaffold(
                 body: SingleChildScrollView(
                   child: MessageBubble(
@@ -2148,6 +2164,7 @@ void main() {
 
           await tester.pumpWidget(
             testMaterialApp(
+              mockVideoEventService: _VisibleVideoEventService(),
               home: Scaffold(
                 body: SingleChildScrollView(
                   child: MessageBubble(
@@ -2274,7 +2291,7 @@ void main() {
       });
 
       testWidgets(
-        'the first frame offers Play at the final card size and goes back to the thread',
+        'two taps on first-frame Play open only one video and Back returns to the thread',
         (tester) async {
           final stats = Completer<VideoEvent?>();
           final playable = Completer<VideoEvent?>();
@@ -2316,9 +2333,11 @@ void main() {
           );
           expect(tester.getSize(play), const Size(248, 350));
           await tester.tap(play);
+          await tester.tap(play);
           playable.complete(testVideo);
           await tester.pumpAndSettle();
           expect(find.text('video:${testVideo.id}'), findsOneWidget);
+          expect(find.text('Opened from a message'), findsOneWidget);
           expect(stats.isCompleted, isFalse);
           router.pop();
           stats.complete(testVideo);
@@ -2980,6 +2999,7 @@ void main() {
         DmSharedVideoRef? quotedVideoRef,
         VoidCallback? onDoubleTap,
       }) => testMaterialApp(
+        mockVideoEventService: _VisibleVideoEventService(),
         home: Scaffold(
           body: MessageBubble(
             message: message,
@@ -3131,6 +3151,7 @@ void main() {
 
           await tester.pumpWidget(
             testMaterialApp(
+              mockVideoEventService: _VisibleVideoEventService(),
               home: const Scaffold(
                 body: MessageBubble(
                   message: 'watch this',

@@ -5339,6 +5339,7 @@ class DmRepository {
             participantPubkeys: jsonEncode(participants),
             isGroup: isGroup,
             createdAt: existing?.createdAt ?? persistedCreatedAt,
+            lastMessageId: rumor.id,
             lastMessageContent: previewContent,
             lastMessageTimestamp: persistedCreatedAt,
             // Unbounded on purpose: only the read-cursor pin reads it, and it
@@ -6266,6 +6267,7 @@ class DmRepository {
           participantPubkeys: jsonEncode(participants),
           isGroup: false,
           createdAt: existing?.createdAt ?? persistedCreatedAt,
+          lastMessageId: nip04Event.id,
           lastMessageContent: plaintext,
           lastMessageTimestamp: persistedCreatedAt,
           // Unbounded on purpose: only the read-cursor pin reads it, and it
@@ -7277,6 +7279,7 @@ class DmRepository {
     required int lastMessageTimestamp,
     required String lastMessageSenderPubkey,
     String? lastMessageContent,
+    String? lastMessageId,
     String? ownerPubkey,
     String? dmProtocol,
   }) async {
@@ -7285,6 +7288,7 @@ class DmRepository {
       participantPubkeys: participantPubkeys,
       isGroup: isGroup,
       createdAt: createdAt,
+      lastMessageId: lastMessageId,
       lastMessageContent: lastMessageContent,
       lastMessageTimestamp: lastMessageTimestamp,
       lastMessageSenderPubkey: lastMessageSenderPubkey,
@@ -7982,6 +7986,7 @@ class DmRepository {
             participantPubkeys: jsonEncode(participants),
             isGroup: false,
             createdAt: existingSend?.createdAt ?? now,
+            lastMessageId: rumor.id,
             lastMessageContent: content,
             lastMessageTimestamp: now,
             lastMessageSenderPubkey: owner,
@@ -9120,6 +9125,7 @@ class DmRepository {
             participantPubkeys: participantsJson,
             isGroup: isGroup,
             createdAt: existing?.createdAt ?? now,
+            lastMessageId: alreadyPersisted ? null : result.rumorEventId,
             lastMessageContent: row.content,
             lastMessageTimestamp: now,
             lastMessageSenderPubkey: owner,
@@ -11012,6 +11018,9 @@ class DmRepository {
           participantPubkeys: jsonEncode(participants),
           isGroup: true,
           createdAt: existingGroup?.createdAt ?? now,
+          lastMessageId: alreadyPersisted
+              ? null
+              : firstLiveSuccess.rumorEventId,
           lastMessageContent: content,
           lastMessageTimestamp: now,
           lastMessageSenderPubkey: owner,
@@ -11923,6 +11932,7 @@ class DmRepository {
         participantPubkeys: conversation.participantPubkeys,
         isGroup: conversation.isGroup,
         createdAt: conversation.createdAt,
+        lastMessageId: latest.id,
         lastMessageContent: previewContent,
         lastMessageTimestamp: latest.createdAt,
         lastMessageSenderPubkey: latest.senderPubkey,
@@ -12084,6 +12094,7 @@ class DmRepository {
           participantPubkeys: jsonEncode(participants),
           isGroup: false,
           createdAt: existingFile?.createdAt ?? now,
+          lastMessageId: result.rumorEventId,
           lastMessageContent: _filePreviewText(fileMetadata.fileType),
           lastMessageTimestamp: now,
           lastMessageSenderPubkey: _userPubkey,
@@ -13869,6 +13880,7 @@ class DmRepository {
       final snapshot = tags[row.id];
       final isShare =
           snapshot != null &&
+          snapshot.messageId == row.lastMessageId &&
           snapshot.timestamp == row.lastMessageTimestamp &&
           snapshot.content == row.lastMessageContent &&
           snapshot.sender == row.lastMessageSenderPubkey &&
@@ -14699,6 +14711,7 @@ class DmRepository {
         participantPubkeys: jsonEncode(home.participants),
         isGroup: home.participants.length > 2,
         createdAt: existing?.createdAt ?? moving.first.createdAt,
+        lastMessageId: newest.id,
         lastMessageContent: newest.messageKind == EventKind.fileMessage
             ? _filePreviewText(newest.fileType)
             : newest.content,

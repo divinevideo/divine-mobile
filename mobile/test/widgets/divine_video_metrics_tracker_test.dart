@@ -465,6 +465,7 @@ void main() {
             isActive: true,
             clock: () => now,
             trafficSource: ViewTrafficSource.share,
+            fromMessage: true,
           ),
         );
         now = now.add(const Duration(seconds: 16));
@@ -473,6 +474,32 @@ void main() {
         expect(analyticsService.events, isEmpty);
         expect(analyticsService.impressions, isEmpty);
         expect(analyticsService.playbackSessions, isEmpty);
+        expect(seenVideosService.records.single.videoId, _video.id);
+        await controller.close();
+      },
+    );
+
+    testWidgets(
+      'public video detail retains playback telemetry under share attribution',
+      (tester) async {
+        final controller = _stubController(isPlaying: true);
+        await tester.pumpWidget(
+          _buildTracker(
+            authService: authService,
+            analyticsService: analyticsService,
+            seenVideosService: seenVideosService,
+            controller: controller.controller,
+            isActive: true,
+            clock: () => now,
+            trafficSource: ViewTrafficSource.share,
+          ),
+        );
+        now = now.add(const Duration(seconds: 16));
+        await tester.pump(const Duration(seconds: 16));
+        await tester.pumpWidget(const SizedBox.shrink());
+        expect(analyticsService.events, isNotEmpty);
+        expect(analyticsService.impressions, isNotEmpty);
+        expect(analyticsService.playbackSessions, isNotEmpty);
         expect(seenVideosService.records.single.videoId, _video.id);
         await controller.close();
       },
@@ -1324,6 +1351,7 @@ Widget _buildTracker({
   required bool isActive,
   required DateTime Function() clock,
   ViewTrafficSource trafficSource = ViewTrafficSource.home,
+  bool fromMessage = false,
   AnalyticsEventSink? legacyAnalytics,
   VideoLoopsCubit? loopCounts,
 }) {
@@ -1344,6 +1372,7 @@ Widget _buildTracker({
         controller: controller,
         isActive: isActive,
         trafficSource: trafficSource,
+        fromMessage: fromMessage,
         clock: clock,
         child: const SizedBox.shrink(),
       ),

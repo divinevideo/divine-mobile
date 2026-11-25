@@ -12047,6 +12047,17 @@ class $ConversationsTable extends Conversations
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _lastMessageIdMeta = const VerificationMeta(
+    'lastMessageId',
+  );
+  @override
+  late final GeneratedColumn<String> lastMessageId = GeneratedColumn<String>(
+    'last_message_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _lastMessageTimestampMeta =
       const VerificationMeta('lastMessageTimestamp');
   @override
@@ -12193,6 +12204,7 @@ class $ConversationsTable extends Conversations
     participantPubkeys,
     isGroup,
     lastMessageContent,
+    lastMessageId,
     lastMessageTimestamp,
     lastMessageSenderPubkey,
     subject,
@@ -12246,6 +12258,15 @@ class $ConversationsTable extends Conversations
         lastMessageContent.isAcceptableOrUnknown(
           data['last_message_content']!,
           _lastMessageContentMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_message_id')) {
+      context.handle(
+        _lastMessageIdMeta,
+        lastMessageId.isAcceptableOrUnknown(
+          data['last_message_id']!,
+          _lastMessageIdMeta,
         ),
       );
     }
@@ -12372,6 +12393,10 @@ class $ConversationsTable extends Conversations
         DriftSqlType.string,
         data['${effectivePrefix}last_message_content'],
       ),
+      lastMessageId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_message_id'],
+      ),
       lastMessageTimestamp: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}last_message_timestamp'],
@@ -12443,6 +12468,9 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
   /// Preview text of the last message.
   final String? lastMessageContent;
 
+  /// Exact local message behind the preview, when known.
+  final String? lastMessageId;
+
   /// Unix timestamp of the last message.
   final int? lastMessageTimestamp;
 
@@ -12512,6 +12540,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
     required this.participantPubkeys,
     required this.isGroup,
     this.lastMessageContent,
+    this.lastMessageId,
     this.lastMessageTimestamp,
     this.lastMessageSenderPubkey,
     this.subject,
@@ -12533,6 +12562,9 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
     map['is_group'] = Variable<bool>(isGroup);
     if (!nullToAbsent || lastMessageContent != null) {
       map['last_message_content'] = Variable<String>(lastMessageContent);
+    }
+    if (!nullToAbsent || lastMessageId != null) {
+      map['last_message_id'] = Variable<String>(lastMessageId);
     }
     if (!nullToAbsent || lastMessageTimestamp != null) {
       map['last_message_timestamp'] = Variable<int>(lastMessageTimestamp);
@@ -12573,6 +12605,9 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
       lastMessageContent: lastMessageContent == null && nullToAbsent
           ? const Value.absent()
           : Value(lastMessageContent),
+      lastMessageId: lastMessageId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastMessageId),
       lastMessageTimestamp: lastMessageTimestamp == null && nullToAbsent
           ? const Value.absent()
           : Value(lastMessageTimestamp),
@@ -12616,6 +12651,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
       lastMessageContent: serializer.fromJson<String?>(
         json['lastMessageContent'],
       ),
+      lastMessageId: serializer.fromJson<String?>(json['lastMessageId']),
       lastMessageTimestamp: serializer.fromJson<int?>(
         json['lastMessageTimestamp'],
       ),
@@ -12646,6 +12682,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
       'participantPubkeys': serializer.toJson<String>(participantPubkeys),
       'isGroup': serializer.toJson<bool>(isGroup),
       'lastMessageContent': serializer.toJson<String?>(lastMessageContent),
+      'lastMessageId': serializer.toJson<String?>(lastMessageId),
       'lastMessageTimestamp': serializer.toJson<int?>(lastMessageTimestamp),
       'lastMessageSenderPubkey': serializer.toJson<String?>(
         lastMessageSenderPubkey,
@@ -12668,6 +12705,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
     String? participantPubkeys,
     bool? isGroup,
     Value<String?> lastMessageContent = const Value.absent(),
+    Value<String?> lastMessageId = const Value.absent(),
     Value<int?> lastMessageTimestamp = const Value.absent(),
     Value<String?> lastMessageSenderPubkey = const Value.absent(),
     Value<String?> subject = const Value.absent(),
@@ -12687,6 +12725,9 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
     lastMessageContent: lastMessageContent.present
         ? lastMessageContent.value
         : this.lastMessageContent,
+    lastMessageId: lastMessageId.present
+        ? lastMessageId.value
+        : this.lastMessageId,
     lastMessageTimestamp: lastMessageTimestamp.present
         ? lastMessageTimestamp.value
         : this.lastMessageTimestamp,
@@ -12720,6 +12761,9 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
       lastMessageContent: data.lastMessageContent.present
           ? data.lastMessageContent.value
           : this.lastMessageContent,
+      lastMessageId: data.lastMessageId.present
+          ? data.lastMessageId.value
+          : this.lastMessageId,
       lastMessageTimestamp: data.lastMessageTimestamp.present
           ? data.lastMessageTimestamp.value
           : this.lastMessageTimestamp,
@@ -12760,6 +12804,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
           ..write('participantPubkeys: $participantPubkeys, ')
           ..write('isGroup: $isGroup, ')
           ..write('lastMessageContent: $lastMessageContent, ')
+          ..write('lastMessageId: $lastMessageId, ')
           ..write('lastMessageTimestamp: $lastMessageTimestamp, ')
           ..write('lastMessageSenderPubkey: $lastMessageSenderPubkey, ')
           ..write('subject: $subject, ')
@@ -12782,6 +12827,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
     participantPubkeys,
     isGroup,
     lastMessageContent,
+    lastMessageId,
     lastMessageTimestamp,
     lastMessageSenderPubkey,
     subject,
@@ -12803,6 +12849,7 @@ class ConversationRow extends DataClass implements Insertable<ConversationRow> {
           other.participantPubkeys == this.participantPubkeys &&
           other.isGroup == this.isGroup &&
           other.lastMessageContent == this.lastMessageContent &&
+          other.lastMessageId == this.lastMessageId &&
           other.lastMessageTimestamp == this.lastMessageTimestamp &&
           other.lastMessageSenderPubkey == this.lastMessageSenderPubkey &&
           other.subject == this.subject &&
@@ -12822,6 +12869,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
   final Value<String> participantPubkeys;
   final Value<bool> isGroup;
   final Value<String?> lastMessageContent;
+  final Value<String?> lastMessageId;
   final Value<int?> lastMessageTimestamp;
   final Value<String?> lastMessageSenderPubkey;
   final Value<String?> subject;
@@ -12840,6 +12888,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
     this.participantPubkeys = const Value.absent(),
     this.isGroup = const Value.absent(),
     this.lastMessageContent = const Value.absent(),
+    this.lastMessageId = const Value.absent(),
     this.lastMessageTimestamp = const Value.absent(),
     this.lastMessageSenderPubkey = const Value.absent(),
     this.subject = const Value.absent(),
@@ -12859,6 +12908,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
     required String participantPubkeys,
     this.isGroup = const Value.absent(),
     this.lastMessageContent = const Value.absent(),
+    this.lastMessageId = const Value.absent(),
     this.lastMessageTimestamp = const Value.absent(),
     this.lastMessageSenderPubkey = const Value.absent(),
     this.subject = const Value.absent(),
@@ -12880,6 +12930,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
     Expression<String>? participantPubkeys,
     Expression<bool>? isGroup,
     Expression<String>? lastMessageContent,
+    Expression<String>? lastMessageId,
     Expression<int>? lastMessageTimestamp,
     Expression<String>? lastMessageSenderPubkey,
     Expression<String>? subject,
@@ -12900,6 +12951,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
       if (isGroup != null) 'is_group': isGroup,
       if (lastMessageContent != null)
         'last_message_content': lastMessageContent,
+      if (lastMessageId != null) 'last_message_id': lastMessageId,
       if (lastMessageTimestamp != null)
         'last_message_timestamp': lastMessageTimestamp,
       if (lastMessageSenderPubkey != null)
@@ -12926,6 +12978,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
     Value<String>? participantPubkeys,
     Value<bool>? isGroup,
     Value<String?>? lastMessageContent,
+    Value<String?>? lastMessageId,
     Value<int?>? lastMessageTimestamp,
     Value<String?>? lastMessageSenderPubkey,
     Value<String?>? subject,
@@ -12945,6 +12998,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
       participantPubkeys: participantPubkeys ?? this.participantPubkeys,
       isGroup: isGroup ?? this.isGroup,
       lastMessageContent: lastMessageContent ?? this.lastMessageContent,
+      lastMessageId: lastMessageId ?? this.lastMessageId,
       lastMessageTimestamp: lastMessageTimestamp ?? this.lastMessageTimestamp,
       lastMessageSenderPubkey:
           lastMessageSenderPubkey ?? this.lastMessageSenderPubkey,
@@ -12976,6 +13030,9 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
     }
     if (lastMessageContent.present) {
       map['last_message_content'] = Variable<String>(lastMessageContent.value);
+    }
+    if (lastMessageId.present) {
+      map['last_message_id'] = Variable<String>(lastMessageId.value);
     }
     if (lastMessageTimestamp.present) {
       map['last_message_timestamp'] = Variable<int>(lastMessageTimestamp.value);
@@ -13030,6 +13087,7 @@ class ConversationsCompanion extends UpdateCompanion<ConversationRow> {
           ..write('participantPubkeys: $participantPubkeys, ')
           ..write('isGroup: $isGroup, ')
           ..write('lastMessageContent: $lastMessageContent, ')
+          ..write('lastMessageId: $lastMessageId, ')
           ..write('lastMessageTimestamp: $lastMessageTimestamp, ')
           ..write('lastMessageSenderPubkey: $lastMessageSenderPubkey, ')
           ..write('subject: $subject, ')
@@ -30876,6 +30934,7 @@ typedef $$ConversationsTableCreateCompanionBuilder =
       required String participantPubkeys,
       Value<bool> isGroup,
       Value<String?> lastMessageContent,
+      Value<String?> lastMessageId,
       Value<int?> lastMessageTimestamp,
       Value<String?> lastMessageSenderPubkey,
       Value<String?> subject,
@@ -30896,6 +30955,7 @@ typedef $$ConversationsTableUpdateCompanionBuilder =
       Value<String> participantPubkeys,
       Value<bool> isGroup,
       Value<String?> lastMessageContent,
+      Value<String?> lastMessageId,
       Value<int?> lastMessageTimestamp,
       Value<String?> lastMessageSenderPubkey,
       Value<String?> subject,
@@ -30937,6 +30997,11 @@ class $$ConversationsTableFilterComposer
 
   ColumnFilters<String> get lastMessageContent => $composableBuilder(
     column: $table.lastMessageContent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastMessageId => $composableBuilder(
+    column: $table.lastMessageId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -31030,6 +31095,11 @@ class $$ConversationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get lastMessageId => $composableBuilder(
+    column: $table.lastMessageId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get lastMessageTimestamp => $composableBuilder(
     column: $table.lastMessageTimestamp,
     builder: (column) => ColumnOrderings(column),
@@ -31113,6 +31183,11 @@ class $$ConversationsTableAnnotationComposer
 
   GeneratedColumn<String> get lastMessageContent => $composableBuilder(
     column: $table.lastMessageContent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastMessageId => $composableBuilder(
+    column: $table.lastMessageId,
     builder: (column) => column,
   );
 
@@ -31206,6 +31281,7 @@ class $$ConversationsTableTableManager
                 Value<String> participantPubkeys = const Value.absent(),
                 Value<bool> isGroup = const Value.absent(),
                 Value<String?> lastMessageContent = const Value.absent(),
+                Value<String?> lastMessageId = const Value.absent(),
                 Value<int?> lastMessageTimestamp = const Value.absent(),
                 Value<String?> lastMessageSenderPubkey = const Value.absent(),
                 Value<String?> subject = const Value.absent(),
@@ -31224,6 +31300,7 @@ class $$ConversationsTableTableManager
                 participantPubkeys: participantPubkeys,
                 isGroup: isGroup,
                 lastMessageContent: lastMessageContent,
+                lastMessageId: lastMessageId,
                 lastMessageTimestamp: lastMessageTimestamp,
                 lastMessageSenderPubkey: lastMessageSenderPubkey,
                 subject: subject,
@@ -31244,6 +31321,7 @@ class $$ConversationsTableTableManager
                 required String participantPubkeys,
                 Value<bool> isGroup = const Value.absent(),
                 Value<String?> lastMessageContent = const Value.absent(),
+                Value<String?> lastMessageId = const Value.absent(),
                 Value<int?> lastMessageTimestamp = const Value.absent(),
                 Value<String?> lastMessageSenderPubkey = const Value.absent(),
                 Value<String?> subject = const Value.absent(),
@@ -31262,6 +31340,7 @@ class $$ConversationsTableTableManager
                 participantPubkeys: participantPubkeys,
                 isGroup: isGroup,
                 lastMessageContent: lastMessageContent,
+                lastMessageId: lastMessageId,
                 lastMessageTimestamp: lastMessageTimestamp,
                 lastMessageSenderPubkey: lastMessageSenderPubkey,
                 subject: subject,

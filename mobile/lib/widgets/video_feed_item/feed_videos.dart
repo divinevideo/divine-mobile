@@ -109,6 +109,7 @@ class FeedVideos extends ConsumerStatefulWidget {
     this.onActiveVideoChanged,
     this.trafficSource = ViewTrafficSource.unknown,
     this.trafficSourceForVideo,
+    this.messageVideoKey,
     this.sourceDetail,
     this.isAddYoursSeries = false,
     this.feedSessionRevision = 0,
@@ -167,6 +168,9 @@ class FeedVideos extends ConsumerStatefulWidget {
 
   /// Optional attribution for mixed feeds, such as a share followed by For You.
   final ViewTrafficSource Function(VideoEvent video)? trafficSourceForVideo;
+
+  /// The clip opened from a message. Discovery clips remain public.
+  final String? messageVideoKey;
   final String? sourceDetail;
 
   /// Whether the feed is the series an Add yours collects; see
@@ -629,7 +633,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             _activeIndex = index;
             final source = _trafficSourceFor(video);
             if (!isProgrammaticActivation &&
-                source != ViewTrafficSource.share &&
+                video.feedDedupKey != widget.messageVideoKey &&
                 _seenVideoIds.add(video.id)) {
               unawaited(
                 _consumptionAnalytics.feedDepthReached(
@@ -788,6 +792,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
                       isFeedVisible: isFeedActive,
                       position: index,
                       trafficSource: _trafficSourceFor(video),
+                      fromMessage: video.feedDedupKey == widget.messageVideoKey,
                       sourceDetail: widget.sourceDetail,
                       child: _Overlay(
                         isAddYoursSeries: widget.isAddYoursSeries,

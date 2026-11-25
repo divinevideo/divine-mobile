@@ -29,6 +29,7 @@ class DivineVideoMetricsTracker extends ConsumerStatefulWidget {
     this.position = 0,
     this.trafficSource = ViewTrafficSource.unknown,
     this.sourceDetail,
+    this.fromMessage = false,
     this.loopCounts,
     @visibleForTesting DateTime Function()? clock,
     super.key,
@@ -59,6 +60,9 @@ class DivineVideoMetricsTracker extends ConsumerStatefulWidget {
   final ViewTrafficSource trafficSource;
   final String? sourceDetail;
 
+  /// Suppresses attributed playback for the clip opened from a private message.
+  final bool fromMessage;
+
   /// Shared with the overlay; omitted by hosts without a public loop count.
   final VideoLoopsCubit? loopCounts;
   final DateTime Function() _clock;
@@ -73,7 +77,7 @@ class _DivineVideoMetricsTrackerState
   // Keep local loop and seen state working for shared clips, but never send
   // playback or impression events that could identify the clip in a message.
   late ViewTrafficSource _sessionSource;
-  bool get _canReport => _sessionSource != ViewTrafficSource.share;
+  late bool _canReport;
 
   bool get _isTracking => widget.isActive && widget.isFeedVisible;
 
@@ -138,6 +142,7 @@ class _DivineVideoMetricsTrackerState
   void initState() {
     super.initState();
     _sessionSource = widget.trafficSource;
+    _canReport = !widget.fromMessage;
     _analyticsService = ref.read(analyticsServiceProvider);
     _analyticsServiceSubscription = ref.listenManual<AnalyticsService>(
       analyticsServiceProvider,
@@ -154,7 +159,8 @@ class _DivineVideoMetricsTrackerState
 
     final videoChanged =
         oldWidget.video.id != widget.video.id ||
-        oldWidget.trafficSource != widget.trafficSource;
+        oldWidget.trafficSource != widget.trafficSource ||
+        oldWidget.fromMessage != widget.fromMessage;
     final controllerChanged = oldWidget.controller != widget.controller;
     final wasTracking = oldWidget.isActive && oldWidget.isFeedVisible;
     final becameInactive = wasTracking && !_isTracking;
@@ -166,6 +172,7 @@ class _DivineVideoMetricsTrackerState
         productEndReason: ProductAnalyticsV2PlaybackEndReason.navigation,
       );
       _sessionSource = widget.trafficSource;
+      _canReport = !widget.fromMessage;
       _resetTracking();
     } else if (becameInactive) {
       // Either way the visible segment ends, so report the delta so far.

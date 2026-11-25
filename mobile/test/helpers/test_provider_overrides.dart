@@ -85,9 +85,6 @@ class MockVideoEventService extends Mock implements VideoEventService {
 
   @override
   bool isVideoEventKnownDeleted(VideoEvent video) => false;
-
-  @override
-  bool shouldHideVideo(VideoEvent video) => false;
 }
 
 /// Prevents unrelated widget tests from starting timers or sending analytics.

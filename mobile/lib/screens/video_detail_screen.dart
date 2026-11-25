@@ -37,6 +37,7 @@ class VideoDetailRouteExtra {
     this.fallbackVideoIds = const [],
     this.initialVideo,
     this.dmReplyContext,
+    this.fromMessage = false,
     this.focusCommentId,
   });
 
@@ -51,6 +52,9 @@ class VideoDetailRouteExtra {
   /// Present when the reel was opened from a DM thread — drives the in-player
   /// reply/reaction bar. Null for feed/profile opens.
   final DmReplyContext? dmReplyContext;
+
+  /// The user opened this clip from a private message.
+  final bool fromMessage;
 }
 
 class VideoDetailScreen extends ConsumerWidget {
@@ -82,6 +86,7 @@ class VideoDetailScreen extends ConsumerWidget {
     this.initialVideo,
     this.videoFeedBuilder,
     this.dmReplyContext,
+    this.fromMessage = false,
     this.focusCommentId,
     super.key,
   });
@@ -105,6 +110,9 @@ class VideoDetailScreen extends ConsumerWidget {
   /// Present when opened from a DM thread — forwarded to the player for the
   /// in-player reply/reaction bar.
   final DmReplyContext? dmReplyContext;
+
+  /// The user opened this clip from a private message.
+  final bool fromMessage;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -310,6 +318,7 @@ class _VideoDetailViewState extends ConsumerState<_VideoDetailView> {
               autoOpenComments: screen.autoOpenComments,
               focusCommentId: screen.focusCommentId,
               dmReplyContext: screen.dmReplyContext,
+              fromMessage: screen.fromMessage,
             );
         }
       },

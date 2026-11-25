@@ -214,6 +214,7 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
     this.onPageChanged,
     this.onActiveVideoChanged,
     this.dmReplyContext,
+    this.fromMessage = false,
     this.onBack,
     this.isAddYoursSeries = false,
     super.key,
@@ -243,6 +244,9 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
   /// Present when the reel was opened from a DM thread — drives the in-player
   /// reply/reaction bar. Null on feed/profile opens.
   final DmReplyContext? dmReplyContext;
+
+  /// Whether the first clip was opened from a private message.
+  final bool fromMessage;
 
   /// When true, opens the comments sheet immediately after the first frame.
   ///
@@ -368,6 +372,7 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
         onPageChanged: onPageChanged,
         onActiveVideoChanged: onActiveVideoChanged,
         dmReplyContext: dmReplyContext,
+        fromMessage: fromMessage,
         loadMoreOnEndSwipe:
             source is SingleVideoViewSource || source is HashtagViewSource,
         initialVideoKey: switch (source) {
@@ -400,6 +405,7 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
     this.onPageChanged,
     this.onActiveVideoChanged,
     this.dmReplyContext,
+    this.fromMessage = false,
     this.initialVideoKey,
     this.loadMoreOnEndSwipe = false,
     this.onBack,
@@ -439,6 +445,9 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
   /// Present when the reel was opened from a DM thread — drives the in-player
   /// reply/reaction bar in the body footer.
   final DmReplyContext? dmReplyContext;
+
+  /// Whether the first clip was opened from a private message.
+  final bool fromMessage;
 
   /// Logical identity of the opened video, for DM controls and attribution.
   final String? initialVideoKey;
@@ -1086,6 +1095,10 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                                                     state.isLoadingMore,
                                                 trafficSource:
                                                     widget.trafficSource,
+                                                messageVideoKey:
+                                                    widget.fromMessage
+                                                    ? widget.initialVideoKey
+                                                    : null,
                                                 trafficSourceForVideo:
                                                     _trafficSourceForVideo,
                                                 sourceDetail:

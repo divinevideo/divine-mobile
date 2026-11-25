@@ -1031,9 +1031,10 @@ class _MessageTextState extends ConsumerState<_MessageText> {
     runDetached(
       VideoDetailRouteData(
         id: routeReference,
-        $extra: dmReplyContext != null
-            ? VideoDetailRouteExtra(dmReplyContext: dmReplyContext)
-            : null,
+        $extra: VideoDetailRouteExtra(
+          dmReplyContext: dmReplyContext,
+          fromMessage: true,
+        ),
       ).push<void>(context),
       'open video from DM',
       logName: 'MessageBubble',
@@ -1071,7 +1072,7 @@ class _MessageTextState extends ConsumerState<_MessageText> {
 /// Creates a [VideoLinkPreviewCubit] via [BlocProvider] to resolve the video
 /// and renders state via [BlocBuilder]. Falls back to a tappable link when
 /// the video cannot be resolved.
-class _VideoLinkPreview extends ConsumerWidget {
+class _VideoLinkPreview extends ConsumerStatefulWidget {
   const _VideoLinkPreview({
     required this.target,
     required this.isSent,
@@ -1088,7 +1089,42 @@ class _VideoLinkPreview extends ConsumerWidget {
   final DmReplyContext? dmReplyContext;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_VideoLinkPreview> createState() => _VideoLinkPreviewState();
+}
+
+class _VideoLinkPreviewState extends ConsumerState<_VideoLinkPreview> {
+  bool _opening = false;
+
+  Future<void> _open(BuildContext context, VideoEvent? ready) async {
+    if (_opening) return;
+    _opening = true;
+    try {
+      final route = ModalRoute.of(context);
+      final owner = ref.read(authServiceProvider).currentPublicKeyHex;
+      final video =
+          ready ?? await context.read<VideoLinkPreviewCubit>().playable;
+      if (!context.mounted || route?.isCurrent != true || video == null) return;
+      if (ref.read(authServiceProvider).currentPublicKeyHex != owner) return;
+      final service = ref.read(videoEventServiceProvider);
+      if (service.shouldHideVideo(video) ||
+          service.isVideoEventKnownDeleted(video)) {
+        return;
+      }
+      await VideoDetailRouteData(
+        id: video.id,
+        $extra: VideoDetailRouteExtra(
+          initialVideo: video,
+          fromMessage: true,
+          dmReplyContext: widget.dmReplyContext,
+        ),
+      ).push<void>(context);
+    } finally {
+      _opening = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Re-key on the repository identity: videosRepositoryProvider yields a
     // fresh instance when filter/aspect/host preferences change, and a bare
     // ref.read inside create: would keep the stale one for the cubit's life.
@@ -1096,14 +1132,14 @@ class _VideoLinkPreview extends ConsumerWidget {
     final videoService = ref.watch(videoEventServiceProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
     return BlocProvider(
-      key: ValueKey((videosRepository, target)),
+      key: ValueKey((videosRepository, widget.target)),
       create: (_) => VideoLinkPreviewCubit(
-        target: target,
+        target: widget.target,
         videosRepository: videosRepository,
       ),
       child: BlocBuilder<VideoLinkPreviewCubit, VideoLinkPreviewState>(
         builder: (context, state) => switch (state) {
-          VideoLinkPreviewLoading() => _buildLoadingPlaceholder(context, ref),
+          VideoLinkPreviewLoading() => _buildLoadingPlaceholder(context),
           VideoLinkPreviewNotFound() => const _VideoUnavailableCard(),
           VideoLinkPreviewResolved(:final video)
               when videoService.shouldHideVideo(video) ||
@@ -1111,49 +1147,19 @@ class _VideoLinkPreview extends ConsumerWidget {
             const _VideoUnavailableCard(),
           VideoLinkPreviewResolved(:final video) => _VideoCard(
             video: video,
-            enableTap: enableTap,
-            dmReplyContext: dmReplyContext,
+            onTap: widget.enableTap ? () => _open(context, video) : null,
           ),
         },
       ),
     );
   }
 
-  Widget _buildLoadingPlaceholder(BuildContext context, WidgetRef ref) {
+  Widget _buildLoadingPlaceholder(BuildContext context) {
     return Semantics(
-      label: enableTap ? context.l10n.videoPlayerPlayVideo : null,
-      button: enableTap,
+      label: widget.enableTap ? context.l10n.videoPlayerPlayVideo : null,
+      button: widget.enableTap,
       child: GestureDetector(
-        onTap: enableTap
-            ? () async {
-                final route = ModalRoute.of(context);
-                final owner = ref.read(authServiceProvider).currentPublicKeyHex;
-                final video = await context
-                    .read<VideoLinkPreviewCubit>()
-                    .playable;
-                if (!context.mounted ||
-                    route?.isCurrent != true ||
-                    video == null) {
-                  return;
-                }
-                if (ref.read(authServiceProvider).currentPublicKeyHex !=
-                    owner) {
-                  return;
-                }
-                final service = ref.read(videoEventServiceProvider);
-                if (service.shouldHideVideo(video) ||
-                    service.isVideoEventKnownDeleted(video)) {
-                  return;
-                }
-                await VideoDetailRouteData(
-                  id: video.id,
-                  $extra: VideoDetailRouteExtra(
-                    initialVideo: video,
-                    dmReplyContext: dmReplyContext,
-                  ),
-                ).push<void>(context);
-              }
-            : null,
+        onTap: widget.enableTap ? () => _open(context, null) : null,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(_videoCardRadius),
           child: Container(
@@ -1161,7 +1167,7 @@ class _VideoLinkPreview extends ConsumerWidget {
             height: _videoCardHeight,
             color: context.vineColors.card,
             alignment: Alignment.center,
-            child: enableTap ? const _VideoPlayBadge() : null,
+            child: widget.enableTap ? const _VideoPlayBadge() : null,
           ),
         ),
       ),
@@ -1422,6 +1428,7 @@ class _QuotedVideoCard extends ConsumerWidget {
               id: video.id,
               $extra: VideoDetailRouteExtra(
                 initialVideo: video,
+                fromMessage: true,
                 dmReplyContext: dmReplyContext,
               ),
             ).push<void>(context)
@@ -1585,8 +1592,7 @@ class _VideoUnavailableCard extends StatelessWidget {
 class _VideoCard extends ConsumerWidget {
   const _VideoCard({
     required this.video,
-    required this.enableTap,
-    this.dmReplyContext,
+    required this.onTap,
   });
 
   final VideoEvent video;
@@ -1595,8 +1601,8 @@ class _VideoCard extends ConsumerWidget {
   /// no button semantics, so the outer bubble's resend/delete tap wins the
   /// gesture arena and assistive tech stops announcing a dead "open video"
   /// action.
-  final bool enableTap;
-  final DmReplyContext? dmReplyContext;
+  final VoidCallback? onTap;
+  bool get enableTap => onTap != null;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1619,15 +1625,7 @@ class _VideoCard extends ConsumerWidget {
       button: enableTap,
       label: enableTap ? context.l10n.videoPlayerPlayVideo : null,
       child: GestureDetector(
-        onTap: enableTap
-            ? () => VideoDetailRouteData(
-                id: video.id,
-                $extra: VideoDetailRouteExtra(
-                  initialVideo: video,
-                  dmReplyContext: dmReplyContext,
-                ),
-              ).push<void>(context)
-            : null,
+        onTap: onTap,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(_videoCardRadius),
           child: SizedBox(
