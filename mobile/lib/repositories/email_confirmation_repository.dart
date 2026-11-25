@@ -68,8 +68,10 @@ class EmailConfirmation extends Equatable {
 
 /// Reads and nudges the email confirmation of the signed-in Keycast account.
 ///
-/// [readAccessToken] supplies the bearer token bound to the signed-in account.
-/// A missing token is no signal at all, so it reads as unknown: an account
+/// [readAccessToken] supplies the bearer token of the account it is given,
+/// and nothing once that account is no longer signed in, so a check or resend
+/// started for one account can never be answered or sent for another. A
+/// missing token is no signal at all, so it reads as unknown: an account
 /// signed in with a local key or a bunker never gets a confirmation nudge.
 ///
 /// The last answer for each account is kept in [preferences] under a key that
@@ -78,14 +80,14 @@ class EmailConfirmation extends Equatable {
 class EmailConfirmationRepository {
   EmailConfirmationRepository({
     required KeycastOAuth oauthClient,
-    required Future<String?> Function() readAccessToken,
+    required Future<String?> Function(String account) readAccessToken,
     required SharedPreferences preferences,
   }) : _oauthClient = oauthClient,
        _readAccessToken = readAccessToken,
        _preferences = preferences;
 
   final KeycastOAuth _oauthClient;
-  final Future<String?> Function() _readAccessToken;
+  final Future<String?> Function(String account) _readAccessToken;
   final SharedPreferences _preferences;
 
   /// The start of every account's cache key.
@@ -96,12 +98,12 @@ class EmailConfirmationRepository {
   /// this device.
   static String storageKey(String account) => '$storagePrefix$account';
 
-  /// Fetches the current confirmation state from Keycast.
+  /// Fetches [account]'s current confirmation state from Keycast.
   ///
   /// Never throws: any failure reads as [EmailConfirmation.unknown].
-  Future<EmailConfirmation> fetchStatus() async {
+  Future<EmailConfirmation> fetchStatus(String account) async {
     try {
-      final token = await _readAccessToken();
+      final token = await _readAccessToken(account);
       if (token == null || token.isEmpty) {
         return const EmailConfirmation.unknown();
       }
@@ -153,14 +155,14 @@ class EmailConfirmationRepository {
     );
   }
 
-  /// Asks Keycast to email a fresh confirmation link.
+  /// Asks Keycast to email [account] a fresh confirmation link.
   ///
   /// Returns whether Keycast accepted the request. Keycast answers success
   /// even when it rate-limits the send, so `true` means "requested", not
   /// "delivered".
-  Future<bool> resend() async {
+  Future<bool> resend(String account) async {
     try {
-      final token = await _readAccessToken();
+      final token = await _readAccessToken(account);
       if (token == null || token.isEmpty) return false;
       final result = await _oauthClient.resendVerificationForAccount(token);
       return result.success;

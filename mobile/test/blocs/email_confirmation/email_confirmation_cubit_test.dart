@@ -50,13 +50,25 @@ void main() {
 
     group('loadFor', () {
       blocTest<EmailConfirmationCubit, EmailConfirmationState>(
+        'asks Keycast about the account it is pointed at',
+        setUp: () {
+          when(
+            () => repository.fetchStatus(any()),
+          ).thenAnswer((_) async => const EmailConfirmation.unknown());
+        },
+        build: buildCubit,
+        act: (cubit) => cubit.loadFor(_account),
+        verify: (_) => verify(() => repository.fetchStatus(_account)).called(1),
+      );
+
+      blocTest<EmailConfirmationCubit, EmailConfirmationState>(
         'starts locked from the remembered answer before Keycast replies',
         setUp: () {
           when(
             () => repository.remembered(_account),
           ).thenReturn(const EmailConfirmation.unconfirmed(_email));
           when(
-            () => repository.fetchStatus(),
+            () => repository.fetchStatus(any()),
           ).thenAnswer((_) async => const EmailConfirmation.unknown());
         },
         build: buildCubit,
@@ -68,7 +80,7 @@ void main() {
         'emits and remembers what Keycast reports',
         setUp: () {
           when(
-            () => repository.fetchStatus(),
+            () => repository.fetchStatus(any()),
           ).thenAnswer(
             (_) async => const EmailConfirmation.unconfirmed(_email),
           );
@@ -91,7 +103,7 @@ void main() {
         'reports an account with no email',
         setUp: () {
           when(
-            () => repository.fetchStatus(),
+            () => repository.fetchStatus(any()),
           ).thenAnswer((_) async => const EmailConfirmation.missing());
         },
         build: buildCubit,
@@ -111,13 +123,13 @@ void main() {
         seed: () => _unconfirmed,
         act: (cubit) => cubit.loadFor(null),
         expect: () => const [EmailConfirmationState()],
-        verify: (_) => verifyNever(() => repository.fetchStatus()),
+        verify: (_) => verifyNever(() => repository.fetchStatus(any())),
       );
 
       test('drops an answer that arrives after the account changed', () async {
         final first = Completer<EmailConfirmation>();
         var calls = 0;
-        when(() => repository.fetchStatus()).thenAnswer((_) {
+        when(() => repository.fetchStatus(any())).thenAnswer((_) {
           calls++;
           return calls == 1
               ? first.future
@@ -147,7 +159,7 @@ void main() {
         'moves to confirmed once the link was clicked',
         setUp: () {
           when(
-            () => repository.fetchStatus(),
+            () => repository.fetchStatus(any()),
           ).thenAnswer((_) async => const EmailConfirmation.confirmed(_email));
         },
         build: buildCubit,
@@ -160,7 +172,7 @@ void main() {
         'never moves a confirmed address back to unconfirmed',
         setUp: () {
           when(
-            () => repository.fetchStatus(),
+            () => repository.fetchStatus(any()),
           ).thenAnswer(
             (_) async => const EmailConfirmation.unconfirmed(_email),
           );
@@ -175,7 +187,7 @@ void main() {
       blocTest<EmailConfirmationCubit, EmailConfirmationState>(
         'locks again for a new, unconfirmed address',
         setUp: () {
-          when(() => repository.fetchStatus()).thenAnswer(
+          when(() => repository.fetchStatus(any())).thenAnswer(
             (_) async => const EmailConfirmation.unconfirmed('new@example.com'),
           );
         },
@@ -195,14 +207,14 @@ void main() {
         'keeps the last answer when the check cannot answer',
         setUp: () {
           when(
-            () => repository.fetchStatus(),
+            () => repository.fetchStatus(any()),
           ).thenAnswer((_) async => const EmailConfirmation.unknown());
         },
         build: buildCubit,
         seed: () => _unconfirmed,
         act: (cubit) => cubit.refresh(),
         expect: () => const <EmailConfirmationState>[],
-        verify: (_) => verify(() => repository.fetchStatus()).called(1),
+        verify: (_) => verify(() => repository.fetchStatus(any())).called(1),
       );
     });
 
@@ -211,7 +223,7 @@ void main() {
         'locks again even if the app had the address as confirmed',
         setUp: () {
           when(
-            () => repository.fetchStatus(),
+            () => repository.fetchStatus(any()),
           ).thenAnswer((_) async => const EmailConfirmation.unknown());
         },
         build: buildCubit,
@@ -231,7 +243,7 @@ void main() {
         build: buildCubit,
         act: (cubit) => cubit.markUnconfirmedByKeycast(),
         expect: () => const <EmailConfirmationState>[],
-        verify: (_) => verifyNever(() => repository.fetchStatus()),
+        verify: (_) => verifyNever(() => repository.fetchStatus(any())),
       );
     });
 
@@ -252,9 +264,20 @@ void main() {
 
     group('resend', () {
       blocTest<EmailConfirmationCubit, EmailConfirmationState>(
+        'requests the link for the account it is pointed at',
+        setUp: () {
+          when(() => repository.resend(any())).thenAnswer((_) async => true);
+        },
+        build: buildCubit,
+        seed: () => _unconfirmed,
+        act: (cubit) => cubit.resend(),
+        verify: (_) => verify(() => repository.resend(_account)).called(1),
+      );
+
+      blocTest<EmailConfirmationCubit, EmailConfirmationState>(
         'reports sent when Keycast accepts',
         setUp: () {
-          when(() => repository.resend()).thenAnswer((_) async => true);
+          when(() => repository.resend(any())).thenAnswer((_) async => true);
         },
         build: buildCubit,
         seed: () => _unconfirmed,
@@ -272,7 +295,7 @@ void main() {
       blocTest<EmailConfirmationCubit, EmailConfirmationState>(
         'reports failed when Keycast declines',
         setUp: () {
-          when(() => repository.resend()).thenAnswer((_) async => false);
+          when(() => repository.resend(any())).thenAnswer((_) async => false);
         },
         build: buildCubit,
         seed: () => _unconfirmed,
@@ -293,7 +316,7 @@ void main() {
         seed: () => _unconfirmed,
         act: (cubit) => cubit.resend(account: _otherAccount),
         expect: () => const <EmailConfirmationState>[],
-        verify: (_) => verifyNever(() => repository.resend()),
+        verify: (_) => verifyNever(() => repository.resend(any())),
       );
 
       blocTest<EmailConfirmationCubit, EmailConfirmationState>(
@@ -304,7 +327,7 @@ void main() {
         ),
         act: (cubit) => cubit.resend(),
         expect: () => const <EmailConfirmationState>[],
-        verify: (_) => verifyNever(() => repository.resend()),
+        verify: (_) => verifyNever(() => repository.resend(any())),
       );
 
       blocTest<EmailConfirmationCubit, EmailConfirmationState>(
@@ -312,7 +335,7 @@ void main() {
         build: buildCubit,
         act: (cubit) => cubit.resend(),
         expect: () => const <EmailConfirmationState>[],
-        verify: (_) => verifyNever(() => repository.resend()),
+        verify: (_) => verifyNever(() => repository.resend(any())),
       );
     });
   });

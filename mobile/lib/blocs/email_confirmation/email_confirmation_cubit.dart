@@ -51,7 +51,7 @@ class EmailConfirmationCubit extends Cubit<EmailConfirmationState>
   Future<void> refresh() async {
     final account = state.account;
     if (account == null) return;
-    final confirmation = await _repository.fetchStatus();
+    final confirmation = await _repository.fetchStatus(account);
     if (state.account != account) return;
     if (confirmation.kind == EmailConfirmationKind.unknown) return;
     final isStale =
@@ -112,7 +112,7 @@ class EmailConfirmationCubit extends Cubit<EmailConfirmationState>
     emitIfOpen(
       state.copyWith(resendStatus: EmailConfirmationResendStatus.sending),
     );
-    final accepted = await _repository.resend();
+    final accepted = await _repository.resend(current);
     if (state.account != current) return;
     emitIfOpen(
       state.copyWith(

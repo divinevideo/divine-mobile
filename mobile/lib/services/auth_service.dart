@@ -3244,17 +3244,25 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   ///   behind by another account would otherwise authorize a call made on this
   ///   account's behalf.
   ///
-  /// Returns null when there is no OAuth client, no signed-in account, no
-  /// session after a refresh, or the session is not bound to the signed-in
-  /// account. Each caller maps that to its own re-authentication outcome.
+  /// [forAccount] names the account the caller is acting for. When it is no
+  /// longer the signed-in account, no token is returned, so work started for
+  /// one account cannot spend the next account's session.
+  ///
+  /// Returns null when there is no OAuth client, no signed-in account, the
+  /// signed-in account is not [forAccount], no session after a refresh, or the
+  /// session is not bound to the signed-in account. Each caller maps that to
+  /// its own re-authentication outcome.
   ///
   /// Throws [OAuthNetworkException] when the refresh cannot reach Keycast.
-  Future<String?> activeAccountKeycastToken() async {
+  Future<String?> activeAccountKeycastToken({String? forAccount}) async {
     final client = _oauthClient;
     if (client == null) return null;
 
     final ownerPubkey = currentPublicKeyHex;
-    if (ownerPubkey == null) return null;
+    if (ownerPubkey == null ||
+        (forAccount != null && forAccount != ownerPubkey)) {
+      return null;
+    }
 
     // getSession() answers null for an expired session, so this refreshes on
     // exactly the same condition getSessionOrRefresh() would.

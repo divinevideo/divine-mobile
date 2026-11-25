@@ -11,13 +11,14 @@ import 'package:openvine/services/auth_service.dart';
 /// Reads and resends the signed-in account's email confirmation.
 final emailConfirmationRepositoryProvider =
     Provider<EmailConfirmationRepository>((ref) {
+      final authService = ref.watch(authServiceProvider);
       return EmailConfirmationRepository(
         oauthClient: ref.watch(oauthClientProvider),
         // Owner-bound, so a session left behind by another account cannot
-        // answer for this one.
-        readAccessToken: ref
-            .watch(authServiceProvider)
-            .activeAccountKeycastToken,
+        // answer for this one, and a check started before a switch gets no
+        // token for the account that switched in.
+        readAccessToken: (account) =>
+            authService.activeAccountKeycastToken(forAccount: account),
         preferences: ref.watch(sharedPreferencesProvider),
       );
     });

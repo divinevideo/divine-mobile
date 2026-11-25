@@ -57,7 +57,7 @@ EmailConfirmationRepository _emailConfirmations(SharedPreferences prefs) =>
           redirectUri: 'divine://cb',
         ),
       ),
-      readAccessToken: () async => null,
+      readAccessToken: (_) async => null,
       preferences: prefs,
     );
 

@@ -24,6 +24,11 @@ String _accountBody({required String email, required bool verified}) =>
 const _account =
     'a3c1e0b6f7d2948e5c1b0a9f8e7d6c5b4a3928170f6e5d4c3b2a19087f6e5d4c';
 
+/// Keycast's bearer token for [_account] only, as the owner-bound reader
+/// answers once [_account] is the signed-in account.
+Future<String?> _tokenFor(String account) async =>
+    account == _account ? 'token' : null;
+
 void main() {
   group(EmailConfirmationRepository, () {
     late SharedPreferences preferences;
@@ -42,12 +47,12 @@ void main() {
               200,
             ),
           ),
-          readAccessToken: () async => 'token',
+          readAccessToken: _tokenFor,
           preferences: preferences,
         );
 
         expect(
-          await repository.fetchStatus(),
+          await repository.fetchStatus(_account),
           equals(const EmailConfirmation.unconfirmed('you@example.com')),
         );
       });
@@ -60,12 +65,12 @@ void main() {
               200,
             ),
           ),
-          readAccessToken: () async => 'token',
+          readAccessToken: _tokenFor,
           preferences: preferences,
         );
 
         expect(
-          await repository.fetchStatus(),
+          await repository.fetchStatus(_account),
           equals(const EmailConfirmation.confirmed('you@example.com')),
         );
       });
@@ -76,12 +81,12 @@ void main() {
             (_) async =>
                 http.Response(_accountBody(email: '', verified: false), 200),
           ),
-          readAccessToken: () async => 'token',
+          readAccessToken: _tokenFor,
           preferences: preferences,
         );
 
         expect(
-          await repository.fetchStatus(),
+          await repository.fetchStatus(_account),
           equals(const EmailConfirmation.missing()),
         );
       });
@@ -93,12 +98,54 @@ void main() {
             requested = true;
             return http.Response('{}', 200);
           }),
-          readAccessToken: () async => null,
+          readAccessToken: (_) async => null,
           preferences: preferences,
         );
 
         expect(
-          await repository.fetchStatus(),
+          await repository.fetchStatus(_account),
+          equals(const EmailConfirmation.unknown()),
+        );
+        expect(requested, isFalse);
+      });
+
+      test('asks for the token of the account it checks', () async {
+        final asked = <String>[];
+        final repository = EmailConfirmationRepository(
+          oauthClient: _oauth(
+            (_) async => http.Response(
+              _accountBody(email: 'you@example.com', verified: true),
+              200,
+            ),
+          ),
+          readAccessToken: (account) async {
+            asked.add(account);
+            return _tokenFor(account);
+          },
+          preferences: preferences,
+        );
+
+        await repository.fetchStatus(_account);
+
+        expect(asked, equals([_account]));
+      });
+
+      test('never answers for an account that has no token', () async {
+        var requested = false;
+        final repository = EmailConfirmationRepository(
+          oauthClient: _oauth((_) async {
+            requested = true;
+            return http.Response(
+              _accountBody(email: 'someone@example.com', verified: true),
+              200,
+            );
+          }),
+          readAccessToken: _tokenFor,
+          preferences: preferences,
+        );
+
+        expect(
+          await repository.fetchStatus('b' * 64),
           equals(const EmailConfirmation.unknown()),
         );
         expect(requested, isFalse);
@@ -107,12 +154,12 @@ void main() {
       test('is unknown when Keycast fails', () async {
         final repository = EmailConfirmationRepository(
           oauthClient: _oauth((_) async => http.Response('boom', 503)),
-          readAccessToken: () async => 'token',
+          readAccessToken: _tokenFor,
           preferences: preferences,
         );
 
         expect(
-          await repository.fetchStatus(),
+          await repository.fetchStatus(_account),
           equals(const EmailConfirmation.unknown()),
         );
       });
@@ -122,7 +169,7 @@ void main() {
       EmailConfirmationRepository buildRepository() =>
           EmailConfirmationRepository(
             oauthClient: _oauth((_) async => http.Response('{}', 200)),
-            readAccessToken: () async => 'token',
+            readAccessToken: _tokenFor,
             preferences: preferences,
           );
 
@@ -188,32 +235,47 @@ void main() {
             authorization = request.headers['Authorization'];
             return http.Response('{"success":true,"message":"Sent"}', 200);
           }),
-          readAccessToken: () async => 'token',
+          readAccessToken: _tokenFor,
           preferences: preferences,
         );
 
-        expect(await repository.resend(), isTrue);
+        expect(await repository.resend(_account), isTrue);
         expect(authorization, equals('Bearer token'));
       });
 
       test('reports failure without a Keycast token', () async {
         final repository = EmailConfirmationRepository(
           oauthClient: _oauth((_) async => http.Response('{}', 200)),
-          readAccessToken: () async => null,
+          readAccessToken: (_) async => null,
           preferences: preferences,
         );
 
-        expect(await repository.resend(), isFalse);
+        expect(await repository.resend(_account), isFalse);
+      });
+
+      test('never resends for an account that has no token', () async {
+        var requested = false;
+        final repository = EmailConfirmationRepository(
+          oauthClient: _oauth((_) async {
+            requested = true;
+            return http.Response('{"success":true,"message":"Sent"}', 200);
+          }),
+          readAccessToken: _tokenFor,
+          preferences: preferences,
+        );
+
+        expect(await repository.resend('b' * 64), isFalse);
+        expect(requested, isFalse);
       });
 
       test('reports failure when Keycast fails', () async {
         final repository = EmailConfirmationRepository(
           oauthClient: _oauth((_) async => http.Response('boom', 500)),
-          readAccessToken: () async => 'token',
+          readAccessToken: _tokenFor,
           preferences: preferences,
         );
 
-        expect(await repository.resend(), isFalse);
+        expect(await repository.resend(_account), isFalse);
       });
     });
   });
