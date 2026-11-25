@@ -1825,6 +1825,21 @@ void main() {
       },
     );
 
+    test('clears iPad recovery copies before writing a new key', () async {
+      items.addAll({
+        dbCipherKeyStorageKey: ('first_unlock', existingKey),
+        dbCipherKeyAccessibilityBackupStorageKey: ('first_unlock', existingKey),
+        dbCipherKeyV2StorageKey: ('first_unlock_this_device', 'cd' * 32),
+      });
+
+      final replacement = await bootstrap(
+        keyDecrypts: false,
+        deleteDatabase: () async {},
+      ).resolveCipherKey();
+
+      expect(items, {dbCipherKeyStorageKey: ('first_unlock', replacement)});
+    });
+
     test(
       'preserves a key that could still open the other Mac database',
       () async {
