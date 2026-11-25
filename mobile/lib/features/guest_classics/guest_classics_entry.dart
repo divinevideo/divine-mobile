@@ -81,7 +81,14 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
 
   Future<void> _refresh() => _load(muted: _muted, retire: true);
 
-  Future<void> _load({required bool muted, required bool retire}) async {
+  Future<void> _load({
+    required bool muted,
+    required bool retire,
+    bool keepCurrent = false,
+  }) async {
+    final currentId = keepCurrent && _clips.isNotEmpty
+        ? _clips[_page].id
+        : null;
     if (retire) setState(_retire);
     _loading?.close();
     final client = http.Client();
@@ -108,7 +115,6 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
     // When a viewer explicitly changes audio, the current clip can continue
     // only if the new mode independently admits it. Keep the server ordering
     // for subsequent, unseen candidates.
-    final currentId = !retire && _clips.isNotEmpty ? _clips[_page].id : null;
     final current = manifest.clips.where((clip) => clip.id == currentId);
     final clips = [
       ...current,
@@ -124,7 +130,11 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
       return;
     }
     _expiry?.cancel();
-    _expiry = Timer(remaining, _refresh);
+    _expiry = Timer(
+      remaining,
+      () =>
+          unawaited(_load(muted: _muted, retire: true, keepCurrent: _viewing)),
+    );
     setState(() {
       _manifest = manifest;
       _clips = clips;
@@ -135,13 +145,13 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
 
   void _toggleSound() {
     if (_muted) {
-      unawaited(_load(muted: false, retire: false));
+      unawaited(_load(muted: false, retire: false, keepCurrent: true));
       return;
     }
     // Stop sound immediately. Muted viewing needs its own current manifest.
     _muteRequests.value++;
     _muted = true;
-    unawaited(_refresh());
+    unawaited(_load(muted: true, retire: true, keepCurrent: true));
   }
 
   @override
@@ -166,6 +176,35 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
   Widget build(BuildContext context) {
     final manifest = _manifest;
     if (manifest == null || !manifest.expiresAt.isAfter(widget.now())) {
+      if (_viewing && _loading != null) {
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) _close();
+          },
+          child: Scaffold(
+            backgroundColor: VineTheme.backgroundColor,
+            body: Stack(
+              fit: StackFit.expand,
+              children: [
+                const Center(child: DivineCircularProgressIndicator()),
+                SafeArea(
+                  child: Align(
+                    alignment: Alignment.topRight,
+                    child: DivineIconButton(
+                      type: DivineIconButtonType.ghostOverMedia,
+                      semanticLabel: context.l10n.commonClose,
+                      tooltip: context.l10n.commonClose,
+                      icon: DivineIconName.x,
+                      onPressed: _close,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
       return widget.welcome(null);
     }
     if (!_viewing) {

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -430,5 +431,40 @@ void main() {
       expect(find.text('Welcome'), findsOneWidget);
       expect(find.byType(DivineVideoPlayer), findsNothing);
     });
+
+    testWidgets(
+      'muting preserves an admitted seen clip without flashing welcome',
+      (tester) async {
+        final native = _NativePlayback(tester);
+        addTearDown(tester.binding.resetInternalState);
+        final pendingMute = Completer<GuestClassicsManifest?>();
+        var mutedLoads = 0;
+        await openGuest(tester, (_, {required muted}) async {
+          if (muted) {
+            return ++mutedLoads == 1 ? manifest([1]) : pendingMute.future;
+          }
+          return manifest([1]);
+        });
+        await native.firstFrame();
+        await tester.tap(find.bySemanticsLabel('Unmute video'));
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Creator 1'), findsOneWidget);
+        expect(native.volumes.last, 1);
+
+        await tester.tap(find.bySemanticsLabel('Mute video'));
+        await tester.pump();
+        expect(native.volumes.last, 0);
+        expect(find.text('Creator 1'), findsNothing);
+        expect(find.text('Welcome'), findsNothing);
+        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+
+        pendingMute.complete(manifest([1]));
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Creator 1'), findsOneWidget);
+        expect(native.volumes.last, 0);
+      },
+    );
   });
 }
