@@ -1770,6 +1770,27 @@ void main() {
       );
     });
 
+    test('fails closed when the iPad key cannot be read', () async {
+      items[dbCipherKeyStorageKey] = ('first_unlock', existingKey);
+      when(
+        () => storage.read(
+          key: any(named: 'key'),
+          mOptions: any(named: 'mOptions', that: isNotNull),
+        ),
+      ).thenThrow(
+        PlatformException(
+          code: 'Unexpected security result code',
+          details: -25308,
+        ),
+      );
+
+      await expectLater(
+        bootstrap().resolveCipherKey(),
+        throwsA(isA<DatabaseCipherStorageUnavailableException>()),
+      );
+      expect(items, {dbCipherKeyStorageKey: ('first_unlock', existingKey)});
+    });
+
     test('keeps using a key created by the native Mac app', () async {
       items[dbCipherKeyStorageKey] = ('unlocked', existingKey);
 
