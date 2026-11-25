@@ -27,14 +27,16 @@ private const val LOG_NAME = "DivineCamera.WearRemote"
  *
  * Each state carries a revision, and a press names the revision the watch
  * showed. A press made on a state the recorder has since left is dropped: a
- * Stop for the take before this one must not stop this one.
+ * Stop for the take before this one must not stop this one. Dart hears of a
+ * press only after the recorder may have moved on again, so the press goes on
+ * with Dart's own number for the state, and Dart checks that too.
  *
  * The Data Layer is part of Google Play services, so [create] returns `null`
  * on a device without them and the recorder works as before.
  */
 internal class WearRemoteLink private constructor(
     context: Context,
-    private val onShutterAction: (String) -> Unit,
+    private val onShutterAction: (action: String, stateId: Long?) -> Unit,
     private val onWatchRemoteChanged: (Boolean) -> Unit,
 ) {
     private val dataClient = Wearable.getDataClient(context)
@@ -54,6 +56,9 @@ internal class WearRemoteLink private constructor(
 
     /** What the watch should show. Only touched on the main thread. */
     private var state: DataMap = WearRemoteProtocol.recorderDataMap(null, revision)
+
+    /** Dart's number for [state]. Only touched on the main thread. */
+    private var stateId: Long? = null
 
     private var isStarted = false
 
@@ -136,6 +141,7 @@ internal class WearRemoteLink private constructor(
     fun update(recorder: Map<*, *>?) {
         revision = WearRemoteProtocol.nextRevision(revision, System.currentTimeMillis())
         state = WearRemoteProtocol.recorderDataMap(recorder, revision)
+        stateId = WearRemoteProtocol.stateId(recorder)
         publish()
     }
 
@@ -161,7 +167,7 @@ internal class WearRemoteLink private constructor(
                     return
                 }
                 DivineCameraLog.debug("Watch shutter: ${press.action}", name = LOG_NAME)
-                onShutterAction(press.action)
+                onShutterAction(press.action, stateId)
             }
             WearRemoteProtocol.HELLO_PATH -> {
                 messageClient.sendMessage(
@@ -209,13 +215,14 @@ internal class WearRemoteLink private constructor(
          * services, where no watch can be paired.
          *
          * @param onShutterAction Called on the main thread with `watchStart`
-         *   or `watchStop` when the watch's shutter is pressed.
+         *   or `watchStop` when the watch's shutter is pressed, and Dart's
+         *   number for the state the press was made on.
          * @param onWatchRemoteChanged Called on the main thread when a
          *   reachable watch gains or loses the remote.
          */
         fun create(
             context: Context,
-            onShutterAction: (String) -> Unit,
+            onShutterAction: (action: String, stateId: Long?) -> Unit,
             onWatchRemoteChanged: (Boolean) -> Unit,
         ): WearRemoteLink? {
             // The check throws when the app's manifest lacks the Play services

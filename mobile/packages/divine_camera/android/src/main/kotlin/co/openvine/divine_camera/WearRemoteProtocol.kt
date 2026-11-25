@@ -54,6 +54,13 @@ internal object WearRemoteProtocol {
      */
     const val REVISION = "revision"
 
+    /**
+     * Dart's number for the state it sent. The watch never sees it: a press
+     * the phone forwards repeats the number of the state it matched, and Dart
+     * drops one made on a state it has since replaced.
+     */
+    const val STATE_ID = "stateId"
+
     /** A hello's number, which the answer repeats so the watch can match it. */
     const val HELLO_ID = "helloId"
 
@@ -94,6 +101,9 @@ internal object WearRemoteProtocol {
         }
         return map
     }
+
+    /** Dart's number for [state], or `null` for a closed recorder. */
+    fun stateId(state: Map<*, *>?): Long? = (state?.get(STATE_ID) as? Number)?.toLong()
 
     /**
      * The revision after [previous]. Starting from the clock keeps it above

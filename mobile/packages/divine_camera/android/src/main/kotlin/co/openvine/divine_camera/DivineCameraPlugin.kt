@@ -607,8 +607,11 @@ class DivineCameraPlugin :
         if (wearRemoteLink != null) return
         wearRemoteLink = WearRemoteLink.create(
             context,
-            onShutterAction = { action ->
-                channel.invokeMethod("onRemoteRecordTrigger", action)
+            onShutterAction = { action, stateId ->
+                channel.invokeMethod(
+                    "onRemoteRecordTrigger",
+                    mapOf("trigger" to action, WearRemoteProtocol.STATE_ID to stateId)
+                )
             },
             onWatchRemoteChanged = { available ->
                 volumeKeyHandler?.setWatchRemoteAvailable(available)

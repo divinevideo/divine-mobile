@@ -44,6 +44,16 @@ internal class WearRemoteProtocolTest {
         assertEquals(3, map.getInt("stillShutterCount"))
     }
 
+    // Dart's number stays on the phone: the watch orders states by revision.
+    @Test
+    fun stateId_isReadFromDartsStateButNotSentToTheWatch() {
+        val state = mapOf("recordedMs" to 0, "stateId" to 12)
+
+        assertEquals(12L, WearRemoteProtocol.stateId(state))
+        assertNull(WearRemoteProtocol.stateId(null))
+        assertFalse(WearRemoteProtocol.recorderDataMap(state, revision = 1).containsKey("stateId"))
+    }
+
     @Test
     fun recorderDataMap_leavesOutTheStartOfATakeThatIsNotRunning() {
         val map = WearRemoteProtocol.recorderDataMap(

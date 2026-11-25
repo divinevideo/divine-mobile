@@ -30,7 +30,10 @@ app publishes above its earlier run.
 
 The phone drops a press whose revision is not the state it last published,
 so a Stop meant for one take cannot stop the next, and a Start made before
-the recorder closed or changed modes does nothing.
+the recorder closed or changed modes does nothing. The recorder can move on
+before the phone's native side hears of it, so a press goes on to Dart with
+Dart's own number for the state it matched (`stateId`, which never reaches
+the watch), and Dart drops it too once it has sent a newer state.
 
 Each app declares a Data Layer capability (`divine_remote_shutter` on the
 watch, `divine_recorder` on the phone) so each finds the other.
