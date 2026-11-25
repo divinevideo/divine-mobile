@@ -132,7 +132,7 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
   }
 
   /// Applies the shared feed filters, including blocked/muted authors and
-  /// reposters.
+  /// reposters, and drops videos deleted or expired since their page loaded.
   ///
   /// The REST source is already parse-gated by the repository, so this
   /// seam mainly covers the WebSocket source and hides a just-blocked
@@ -143,7 +143,14 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
     if (videos.isEmpty) return videos;
     final videoEventService = ref.read(videoEventServiceProvider);
     return videoEventService.filterVideoList(
-      videos.where((v) => v.isSupportedOnCurrentPlatform).toList(),
+      videos
+          .where(
+            (v) =>
+                v.isSupportedOnCurrentPlatform &&
+                !v.isExpired &&
+                !videoEventService.isVideoEventKnownDeleted(v),
+          )
+          .toList(),
     );
   }
 

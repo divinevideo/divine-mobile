@@ -45,6 +45,7 @@ VideoEvent _video(String id, String pubkey) {
 void main() {
   setUpAll(() {
     registerFallbackValue(<VideoEvent>[]);
+    registerFallbackValue(_video('fallback', 'allowed-pubkey'));
   });
 
   const blockedPubkey =
@@ -67,6 +68,9 @@ void main() {
       () => mockHashtagService.subscribeToHashtagVideos(any()),
     ).thenAnswer((_) async {});
     when(() => mockBlocklist.shouldFilterFromFeeds(any())).thenReturn(false);
+    when(
+      () => mockVideoEventService.isVideoEventKnownDeleted(any()),
+    ).thenReturn(false);
     when(() => mockVideoEventService.filterVideoList(any())).thenAnswer((
       invocation,
     ) {

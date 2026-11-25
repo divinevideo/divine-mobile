@@ -44,6 +44,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue(<VideoEvent>[]);
     registerFallbackValue(() {});
+    registerFallbackValue(_video('fallback'));
   });
 
   late _MockHashtagService hashtagService;
@@ -61,6 +62,9 @@ void main() {
     when(
       () => hashtagService.subscribeToHashtagVideos(any()),
     ).thenAnswer((_) async {});
+    when(
+      () => videoEventService.isVideoEventKnownDeleted(any()),
+    ).thenReturn(false);
     when(() => videoEventService.filterVideoList(any())).thenAnswer(
       (invocation) => invocation.positionalArguments.first as List<VideoEvent>,
     );
@@ -170,6 +174,66 @@ void main() {
 
       expect(tester.widget<ComposableVideoGrid>(grid).videos, [first, next]);
       expect(tester.widget<ComposableVideoGrid>(grid).hasMoreContent, isFalse);
+    });
+
+    group('held pages', () {
+      testWidgets('hides a video deleted after its page loaded', (
+        tester,
+      ) async {
+        final deleted = _video('video-1');
+        final kept = _video('video-2');
+        when(
+          () => videosRepository.getHashtagFeedVideos(hashtag: 'loops'),
+        ).thenAnswer(
+          (_) async => HashtagFeedVideosResult.success([deleted, kept]),
+        );
+        void Function()? videoChanged;
+        when(() => videoEventService.addListener(any())).thenAnswer((
+          invocation,
+        ) {
+          videoChanged =
+              invocation.positionalArguments.first as void Function();
+        });
+        await pumpScreen(tester, 'loops');
+        final grid = find.byType(ComposableVideoGrid);
+        expect(tester.widget<ComposableVideoGrid>(grid).videos, [
+          deleted,
+          kept,
+        ]);
+
+        when(
+          () => videoEventService.isVideoEventKnownDeleted(deleted),
+        ).thenReturn(true);
+        videoChanged!();
+        await tester.pump();
+
+        expect(tester.widget<ComposableVideoGrid>(grid).videos, [kept]);
+      });
+
+      testWidgets('hides an expired video from the held pages', (
+        tester,
+      ) async {
+        final expired = VideoEvent(
+          id: 'video-1',
+          pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          content: 'Test video',
+          createdAt: 1,
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
+          videoUrl: 'https://example.com/video-1.mp4',
+          expirationTimestamp: 2,
+        );
+        final kept = _video('video-2');
+        when(
+          () => videosRepository.getHashtagFeedVideos(hashtag: 'loops'),
+        ).thenAnswer(
+          (_) async => HashtagFeedVideosResult.success([expired, kept]),
+        );
+
+        await pumpScreen(tester, 'loops');
+
+        final grid = find.byType(ComposableVideoGrid);
+        expect(tester.widget<ComposableVideoGrid>(grid).videos, [kept]);
+      });
     });
 
     testWidgets('titles its app bar with the hashtag', (tester) async {

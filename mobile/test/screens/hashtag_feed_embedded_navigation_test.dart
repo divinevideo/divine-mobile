@@ -60,6 +60,7 @@ Finder _tile(int index) => find
 void main() {
   setUpAll(() {
     registerFallbackValue(<VideoEvent>[]);
+    registerFallbackValue(_video('fallback'));
   });
 
   late _MockHashtagService hashtagService;
@@ -79,6 +80,9 @@ void main() {
     when(
       () => hashtagService.subscribeToHashtagVideos(['funny']),
     ).thenAnswer((_) async {});
+    when(
+      () => videoEventService.isVideoEventKnownDeleted(any()),
+    ).thenReturn(false);
     when(() => videoEventService.filterVideoList(any())).thenAnswer(
       (invocation) => invocation.positionalArguments.first as List<VideoEvent>,
     );
