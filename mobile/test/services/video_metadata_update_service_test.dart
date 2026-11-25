@@ -1858,6 +1858,64 @@ void main() {
           );
         });
 
+        test('builds from a newer revision read before the thumbnail upload, '
+            'not the opened copy the cache holds, when the read after it '
+            'falls short', () async {
+          final newer = Event(
+            held.pubkey,
+            NIP71VideoKinds.addressableShortVideo,
+            [
+              ['d', 'video-d-tag'],
+              ['title', 'Held title'],
+              [
+                'imeta',
+                'url https://cdn.example.com/video.mp4',
+                'm video/mp4',
+              ],
+              ['expiration', '1899999999'],
+            ],
+            'Newer content',
+            createdAt: held.createdAt + 100,
+          )..sign(privateKey);
+          var reads = 0;
+          when(
+            () => mockVideosRepository.fetchLatestVideoRevision(any()),
+          ).thenAnswer(
+            (_) async => reads++ == 0
+                ? LatestVideoRevisionFound(newer)
+                : const LatestVideoRevisionUnknown(),
+          );
+          when(
+            () => mockPersonalEventCacheService.getEventById(held.id),
+          ).thenReturn(held);
+          when(
+            () => mockBlossomUploadService.uploadImage(
+              imageFile: any(named: 'imageFile'),
+              nostrPubkey: any(named: 'nostrPubkey'),
+            ),
+          ).thenAnswer(
+            (_) async => const BlossomUploadResult(
+              success: true,
+              url: 'https://cdn.example.com/new-thumbnail.jpg',
+            ),
+          );
+
+          final result = await service.updateVideo(
+            originalVideo: opened,
+            editorState: editorStateFromPublishedVideo(opened),
+            initialCollaboratorPubkeys: const {},
+            newThumbnailFile: File('new-thumbnail.jpg'),
+          );
+
+          expect(reads, 2);
+          expect(result, isA<VideoUpdateSuccess>());
+          expect(capturedTags, contains(equals(['expiration', '1899999999'])));
+          expect(
+            capturedTags,
+            isNot(contains(equals(['expiration', '1799999999']))),
+          );
+        });
+
         test('does not republish a video the read finds gone', () async {
           when(
             () => mockVideosRepository.fetchLatestVideoRevision(any()),
