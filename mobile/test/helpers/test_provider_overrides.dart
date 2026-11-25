@@ -87,6 +87,12 @@ class MockVideoEventService extends Mock implements VideoEventService {
   bool isVideoEventKnownDeleted(VideoEvent video) => false;
 }
 
+/// A visible video fixture for inbox tests that resolve a real preview.
+class VisibleTestVideoEventService extends MockVideoEventService {
+  @override
+  bool shouldHideVideo(VideoEvent video) => false;
+}
+
 /// Prevents unrelated widget tests from starting timers or sending analytics.
 class TestAnalyticsService extends AnalyticsService {
   TestAnalyticsService()

@@ -37,11 +37,6 @@ import '../../../../helpers/decoded_images.dart';
 import '../../../../helpers/test_provider_overrides.dart';
 import '../../../../helpers/test_pubkeys.dart';
 
-class _VisibleVideoEventService extends MockVideoEventService {
-  @override
-  bool shouldHideVideo(VideoEvent video) => false;
-}
-
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
 Finder _divineIcon(DivineIconName icon) => find.byWidgetPredicate(
@@ -104,7 +99,7 @@ Widget _routerTestApp(
   MockNostrClient? mockNostrService,
 }) {
   return testProviderScope(
-    mockVideoEventService: _VisibleVideoEventService(),
+    mockVideoEventService: VisibleTestVideoEventService(),
     additionalOverrides: additionalOverrides,
     mockNostrService: mockNostrService,
     child: MaterialApp.router(
@@ -1912,7 +1907,7 @@ void main() {
         VoidCallback? onDoubleTap,
         SharedPreferences? mockSharedPreferences,
       }) => testMaterialApp(
-        mockVideoEventService: _VisibleVideoEventService(),
+        mockVideoEventService: VisibleTestVideoEventService(),
         home: Scaffold(
           body: MessageBubble(
             message: message,
@@ -2113,7 +2108,7 @@ void main() {
 
           await tester.pumpWidget(
             testMaterialApp(
-              mockVideoEventService: _VisibleVideoEventService(),
+              mockVideoEventService: VisibleTestVideoEventService(),
               home: Scaffold(
                 body: SingleChildScrollView(
                   child: MessageBubble(
@@ -2164,7 +2159,7 @@ void main() {
 
           await tester.pumpWidget(
             testMaterialApp(
-              mockVideoEventService: _VisibleVideoEventService(),
+              mockVideoEventService: VisibleTestVideoEventService(),
               home: Scaffold(
                 body: SingleChildScrollView(
                   child: MessageBubble(
@@ -2999,7 +2994,7 @@ void main() {
         DmSharedVideoRef? quotedVideoRef,
         VoidCallback? onDoubleTap,
       }) => testMaterialApp(
-        mockVideoEventService: _VisibleVideoEventService(),
+        mockVideoEventService: VisibleTestVideoEventService(),
         home: Scaffold(
           body: MessageBubble(
             message: message,
@@ -3151,7 +3146,7 @@ void main() {
 
           await tester.pumpWidget(
             testMaterialApp(
-              mockVideoEventService: _VisibleVideoEventService(),
+              mockVideoEventService: VisibleTestVideoEventService(),
               home: const Scaffold(
                 body: MessageBubble(
                   message: 'watch this',
