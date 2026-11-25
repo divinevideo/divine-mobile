@@ -507,7 +507,7 @@ void main() {
         when(() => follows.initialized).thenAnswer(
           (_) => followInitCompleter.future,
         );
-        when(() => follows.initialize()).thenAnswer(
+        when(follows.initialize).thenAnswer(
           (_) => followInitCompleter.future,
         );
         when(() => follows.followingPubkeys).thenAnswer((_) => following);
@@ -553,7 +553,7 @@ void main() {
         addTearDown(subscription.cancel);
 
         await pumpEventQueue();
-        verify(() => follows.initialize()).called(1);
+        verify(follows.initialize).called(1);
         expect(emissions, isNotEmpty);
         expect(emissions.last, isA<DmWrapPending>());
 

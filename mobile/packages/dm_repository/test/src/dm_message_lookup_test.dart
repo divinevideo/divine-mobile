@@ -140,7 +140,8 @@ void main() {
       },
     );
     test(
-      'waits for an initialized follow list when request classification depends on it',
+      'waits for an initialized follow list when request '
+      'classification depends on it',
       () async {
         followed = null;
         await message();

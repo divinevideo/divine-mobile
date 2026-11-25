@@ -55,143 +55,146 @@ void main() {
   final owner = 'a' * 64;
   final wrap = 'b' * 64;
   final other = 'c' * 64;
-  late _Auth auth;
-  late _Dm dm;
-  late _Official official;
-  late _Publish publish;
-  var switches = 0;
-  Object? pushedExtra;
-  late GoRouter router;
-  late ProviderContainer container;
-  var mountedContainer = false;
-  late StreamController<DmWrapLookup> messages;
-  late NostrSessionReadiness ready;
-  late OpenDirectMessageTarget target;
-
-  setUp(() {
-    mountedContainer = false;
-    auth = _Auth();
-    switches = 0;
-    pushedExtra = null;
-    official = _Official();
-    when(() => official.isReadableByProtectedMinor(any())).thenReturn(false);
-    publish = _Publish();
-    when(() => publish.state).thenReturn(const BackgroundPublishState());
-    when(() => publish.stream).thenAnswer((_) => const Stream.empty());
-    when(publish.parkInFlight).thenAnswer((_) async {});
-    dm = _Dm();
-    when(() => dm.userPubkey).thenReturn(owner);
-    when(() => dm.getConversation(any())).thenAnswer((_) async => null);
-    when(() => dm.countMessagesInConversation(any()))
-        .thenAnswer((_) async => 1);
-    when(() => dm.getMessages(any(), limit: any(named: 'limit')))
-        .thenAnswer((_) async => const []);
-    final client = _Nostr();
-    messages = StreamController<DmWrapLookup>.broadcast();
-    when(() => dm.watchWrapLookup(ownerPubkey: owner, giftWrapId: wrap))
-        .thenAnswer((_) => messages.stream);
-    when(() => auth.currentPublicKeyHex).thenReturn(owner);
-    when(auth.getKnownAccounts).thenAnswer((_) async => []);
-    when(() => client.publicKey).thenReturn(owner);
-    when(() => client.hasKeys).thenReturn(true);
-    ready = NostrSessionReadiness.nostrReady(pubkey: owner, client: client);
-    target = OpenDirectMessageTarget(receiverPubkey: owner, giftWrapId: wrap);
-    router = GoRouter(
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (_, _) => const Scaffold(body: Text('Home')),
-        ),
-        GoRoute(
-          path: '/inbox',
-          builder: (_, state) {
-            const child = Scaffold(body: Text('Messages'));
-            final intent = state.extra;
-            return intent is DmPushIntent
-                ? DmPushListener(
-                    key: ObjectKey(intent),
-                    intent: intent,
-                    child: child,
-                  )
-                : child;
-          },
-        ),
-        for (final path in [
-          '/inbox/conversation/:id',
-          '/inbox/message-requests/:id',
-        ])
-          GoRoute(
-            path: path,
-            builder: (_, state) {
-              pushedExtra = state.extra;
-              return Scaffold(body: Text(state.uri.toString()));
-            },
-          ),
-      ],
-    );
-  });
-  Future<void> mount(
-    WidgetTester t, {
-    bool cold = false,
-    bool restricted = false,
-  }) async {
-    container = ProviderContainer(
-      overrides: [
-        dmPushAccountSwitchProvider.overrideWithValue((account) async {
-          switches++;
-          when(() => auth.currentPublicKeyHex).thenReturn(account.pubkeyHex);
-          final client = _Nostr();
-          when(() => client.hasKeys).thenReturn(true);
-          when(() => client.publicKey).thenReturn(account.pubkeyHex);
-          container
-              .read(nostrSessionProvider.notifier)
-              .update(
-                NostrSessionReadiness.nostrReady(
-                  pubkey: account.pubkeyHex,
-                  client: client,
-                ),
-              );
-          return container;
-        }),
-        authServiceProvider.overrideWithValue(auth),
-        dmRepositoryProvider.overrideWithValue(dm),
-        goRouterProvider.overrideWithValue(router),
-        isDmRestrictedProvider.overrideWithValue(restricted),
-        officialAccountsServiceProvider.overrideWithValue(official),
-        currentMinorAccountReviewStatusProvider.overrideWith(
-          (_) async => MinorAccountReviewStatus.active(),
-        ),
-        nostrSessionProvider.overrideWith(
-          () => _Session(
-            cold ? NostrSessionReadiness.identityKnown(pubkey: owner) : ready,
-          ),
-        ),
-      ],
-    );
-    mountedContainer = true;
-    await t.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: BlocProvider<BackgroundPublishBloc>.value(
-          value: publish,
-          child: MaterialApp.router(
-            routerConfig: router,
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-          ),
-        ),
-      ),
-    );
-    await t.pumpAndSettle();
-  }
-
-  tearDown(() async {
-    await messages.close();
-    if (mountedContainer) container.dispose();
-    router.dispose();
-  });
+  final target = OpenDirectMessageTarget(
+    receiverPubkey: owner,
+    giftWrapId: wrap,
+  );
 
   group('DM push navigation', () {
+    late _Auth auth;
+    late _Dm dm;
+    late _Official official;
+    late _Publish publish;
+    var switches = 0;
+    Object? pushedExtra;
+    late GoRouter router;
+    late ProviderContainer container;
+    var mountedContainer = false;
+    late StreamController<DmWrapLookup> messages;
+    late NostrSessionReadiness ready;
+
+    setUp(() {
+      mountedContainer = false;
+      auth = _Auth();
+      switches = 0;
+      pushedExtra = null;
+      official = _Official();
+      when(() => official.isReadableByProtectedMinor(any())).thenReturn(false);
+      publish = _Publish();
+      when(() => publish.state).thenReturn(const BackgroundPublishState());
+      when(() => publish.stream).thenAnswer((_) => const Stream.empty());
+      when(publish.parkInFlight).thenAnswer((_) async {});
+      dm = _Dm();
+      when(() => dm.userPubkey).thenReturn(owner);
+      when(() => dm.getConversation(any())).thenAnswer((_) async => null);
+      when(() => dm.countMessagesInConversation(any()))
+          .thenAnswer((_) async => 1);
+      when(() => dm.getMessages(any(), limit: any(named: 'limit')))
+          .thenAnswer((_) async => const []);
+      final client = _Nostr();
+      messages = StreamController<DmWrapLookup>.broadcast();
+      when(() => dm.watchWrapLookup(ownerPubkey: owner, giftWrapId: wrap))
+          .thenAnswer((_) => messages.stream);
+      when(() => auth.currentPublicKeyHex).thenReturn(owner);
+      when(auth.getKnownAccounts).thenAnswer((_) async => []);
+      when(() => client.publicKey).thenReturn(owner);
+      when(() => client.hasKeys).thenReturn(true);
+      ready = NostrSessionReadiness.nostrReady(pubkey: owner, client: client);
+      router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => const Scaffold(body: Text('Home')),
+          ),
+          GoRoute(
+            path: '/inbox',
+            builder: (_, state) {
+              const child = Scaffold(body: Text('Messages'));
+              final intent = state.extra;
+              return intent is DmPushIntent
+                  ? DmPushListener(
+                      key: ObjectKey(intent),
+                      intent: intent,
+                      child: child,
+                    )
+                  : child;
+            },
+          ),
+          for (final path in [
+            '/inbox/conversation/:id',
+            '/inbox/message-requests/:id',
+          ])
+            GoRoute(
+              path: path,
+              builder: (_, state) {
+                pushedExtra = state.extra;
+                return Scaffold(body: Text(state.uri.toString()));
+              },
+            ),
+        ],
+      );
+    });
+    Future<void> mount(
+      WidgetTester t, {
+      bool cold = false,
+      bool restricted = false,
+    }) async {
+      container = ProviderContainer(
+        overrides: [
+          dmPushAccountSwitchProvider.overrideWithValue((account) async {
+            switches++;
+            when(() => auth.currentPublicKeyHex).thenReturn(account.pubkeyHex);
+            final client = _Nostr();
+            when(() => client.hasKeys).thenReturn(true);
+            when(() => client.publicKey).thenReturn(account.pubkeyHex);
+            container
+                .read(nostrSessionProvider.notifier)
+                .update(
+                  NostrSessionReadiness.nostrReady(
+                    pubkey: account.pubkeyHex,
+                    client: client,
+                  ),
+                );
+            return container;
+          }),
+          authServiceProvider.overrideWithValue(auth),
+          dmRepositoryProvider.overrideWithValue(dm),
+          goRouterProvider.overrideWithValue(router),
+          isDmRestrictedProvider.overrideWithValue(restricted),
+          officialAccountsServiceProvider.overrideWithValue(official),
+          currentMinorAccountReviewStatusProvider.overrideWith(
+            (_) async => MinorAccountReviewStatus.active(),
+          ),
+          nostrSessionProvider.overrideWith(
+            () => _Session(
+              cold ? NostrSessionReadiness.identityKnown(pubkey: owner) : ready,
+            ),
+          ),
+        ],
+      );
+      mountedContainer = true;
+      await t.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: BlocProvider<BackgroundPublishBloc>.value(
+            value: publish,
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+    }
+
+    tearDown(() async {
+      await messages.close();
+      if (mountedContainer) container.dispose();
+      router.dispose();
+    });
+
     test(
       'generic foreground alerts honor exact visibility, request and minor rules',
       () {
@@ -524,6 +527,42 @@ void main() {
   group(
     'redirect preservation across review loading and restricted accounts',
     () {
+      late _Dm dm;
+      late _Official official;
+      late _Publish publish;
+      Object? pushedExtra;
+      late StreamController<DmWrapLookup> messages;
+      late NostrSessionReadiness ready;
+
+      setUp(() {
+        pushedExtra = null;
+        official = _Official();
+        when(() => official.isReadableByProtectedMinor(any()))
+            .thenReturn(false);
+        publish = _Publish();
+        when(() => publish.state).thenReturn(const BackgroundPublishState());
+        when(() => publish.stream).thenAnswer((_) => const Stream.empty());
+        when(publish.parkInFlight).thenAnswer((_) async {});
+        dm = _Dm();
+        when(() => dm.userPubkey).thenReturn(owner);
+        when(() => dm.getConversation(any())).thenAnswer((_) async => null);
+        when(() => dm.countMessagesInConversation(any()))
+            .thenAnswer((_) async => 1);
+        when(() => dm.getMessages(any(), limit: any(named: 'limit')))
+            .thenAnswer((_) async => const []);
+        final client = _Nostr();
+        messages = StreamController<DmWrapLookup>.broadcast();
+        when(() => dm.watchWrapLookup(ownerPubkey: owner, giftWrapId: wrap))
+            .thenAnswer((_) => messages.stream);
+        when(() => client.publicKey).thenReturn(owner);
+        when(() => client.hasKeys).thenReturn(true);
+        ready = NostrSessionReadiness.nostrReady(pubkey: owner, client: client);
+      });
+
+      tearDown(() async {
+        await messages.close();
+      });
+
       MinorAccountReviewStatus restrictedStatus({
         required String moderationPubkey,
         String? moderationConversationId,

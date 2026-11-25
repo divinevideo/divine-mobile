@@ -6,7 +6,7 @@ import 'package:db_client/db_client.dart';
 
 /// Social state for the same account that owns the message row.
 ///
-/// A null [followed] set means the follow list has not finished its initial
+/// A null `followed` set means the follow list has not finished its initial
 /// load yet, so unreplied non-support messages stay [DmWrapPending] instead of
 /// misclassifying a followed peer as a request.
 typedef DmWrapAudience = ({
