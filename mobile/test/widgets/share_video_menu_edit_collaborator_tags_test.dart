@@ -123,7 +123,7 @@ void main() {
       () => mockPersonalEventCacheService.cacheUserEvent(any()),
     ).thenReturn(null);
     when(() => mockVideoEventService.updateVideoEvent(any())).thenReturn(null);
-    // The relays' newest revision is the one being edited.
+    // The newest revision read is the one being edited.
     final videosRepository = _MockVideosRepository();
     when(
       () => videosRepository.fetchLatestVideoRevision(any()),

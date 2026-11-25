@@ -364,6 +364,8 @@ void main() {
 
         await fetch();
 
+        // Mocktail matches named arguments by their key set, so this verify
+        // also fails if the read passes requireAllRelaysSettled (the gate).
         final captured = verify(
           () => nostr.readEvents(
             captureAny(),

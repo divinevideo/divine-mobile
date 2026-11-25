@@ -871,7 +871,7 @@ void main() {
           'no revision is read and no signed copy of the opened one is held',
           const LatestVideoRevisionUnknown(),
         ),
-        ('no signed revision is held', const LatestVideoRevisionAbsent()),
+        ('the read finds the video gone', const LatestVideoRevisionAbsent()),
       ]) {
         test('when $reason', () async {
           when(

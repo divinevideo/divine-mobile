@@ -151,7 +151,7 @@ void main() {
     });
   }
 
-  group('newest revision on the relays', () {
+  group('newest revision read', () {
     late _Auth auth;
     late _Nostr nostr;
     late _Videos videos;
@@ -351,10 +351,13 @@ void main() {
     });
 
     for (final (name, answer) in [
-      ('cannot tell and no copy is held', const LatestVideoRevisionUnknown()),
-      ('hold none', const LatestVideoRevisionAbsent()),
+      (
+        'returns nothing, does not complete and no copy is held',
+        const LatestVideoRevisionUnknown(),
+      ),
+      ('finds the video gone', const LatestVideoRevisionAbsent()),
     ]) {
-      test('refuses when the relays $name what the newest revision is', () {
+      test('refuses when the read $name', () {
         final publisher = publisherWith(answer);
 
         expect(

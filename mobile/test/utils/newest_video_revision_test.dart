@@ -249,7 +249,8 @@ void main() {
         expect(await readFrom('f' * 64), same(sameSecond));
       });
 
-      test('refuses it when the opened event wins the tie', () async {
+      test('refuses it when the opened event wins the tie and no copy is '
+          'held', () async {
         expect(await readFrom('0' * 64), isNull);
       });
     });
@@ -265,7 +266,8 @@ void main() {
     });
 
     test(
-      'returns null when no relay answered in full and no copy is held',
+      'returns null when the read returned nothing, did not complete and no '
+      'copy is held',
       () async {
         when(
           () => repository.fetchLatestVideoRevision(any()),
@@ -281,7 +283,7 @@ void main() {
       },
     );
 
-    test('returns null when no signed revision is held', () async {
+    test('returns null when the read finds the video gone', () async {
       when(
         () => repository.fetchLatestVideoRevision(any()),
       ).thenAnswer((_) async => const LatestVideoRevisionAbsent());
@@ -335,21 +337,24 @@ void main() {
         opened = openedFrom(held);
       });
 
-      test('uses it when no relay answered in full', () async {
-        stubRevision(const LatestVideoRevisionUnknown());
-        final asked = <String>[];
+      test(
+        'uses it when the read returned nothing and did not complete',
+        () async {
+          stubRevision(const LatestVideoRevisionUnknown());
+          final asked = <String>[];
 
-        final result = await read(
-          opened,
-          cachedEvent: (id) {
-            asked.add(id);
-            return held;
-          },
-        );
+          final result = await read(
+            opened,
+            cachedEvent: (id) {
+              asked.add(id);
+              return held;
+            },
+          );
 
-        expect(result, same(held));
-        expect(asked, [held.id]);
-      });
+          expect(result, same(held));
+          expect(asked, [held.id]);
+        },
+      );
 
       test('uses it when the revision found predates it', () async {
         stubRevision(
@@ -384,7 +389,8 @@ void main() {
         expect(await read(opened, cachedEvent: (_) => held), isNull);
       });
 
-      group('refuses it when no relay answered in full and it', () {
+      group('refuses it when the read returned nothing and did not complete, '
+          'and it', () {
         setUp(() => stubRevision(const LatestVideoRevisionUnknown()));
 
         test('is not held', () async {

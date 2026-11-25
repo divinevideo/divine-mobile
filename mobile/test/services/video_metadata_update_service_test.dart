@@ -172,7 +172,7 @@ void main() {
     'sig': '',
   });
 
-  /// Edits [originalVideo] while the relays' newest revision is that same
+  /// Edits [originalVideo] while the newest revision read is that same
   /// event, the common case: nobody changed the video since it was opened.
   Future<VideoUpdateResult> updateFromRelay({
     required VideoEvent originalVideo,
@@ -869,7 +869,7 @@ void main() {
       );
     });
 
-    group('newest revision on the relays', () {
+    group('newest revision read', () {
       const audioEventId =
           'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
       const collaborator = syntheticOtherTestPubkey;

@@ -1,6 +1,6 @@
 // ABOUTME: Tests for VideoEventPublisher.republishWithSubtitles method.
 // ABOUTME: Verifies tag construction, publishing, and that the republish is
-// ABOUTME: built from the relays' newest revision (#11250).
+// ABOUTME: built from the newest revision read (#11250).
 
 import 'package:collection/collection.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -135,7 +135,7 @@ void main() {
       ).thenAnswer((_) async => revision);
     }
 
-    /// Republishes [existingEvent] while the relays' newest revision is that
+    /// Republishes [existingEvent] while the newest revision read is that
     /// same event, the common case.
     Future<VideoEvent?> republishMirrored({
       required VideoEvent existingEvent,
@@ -618,7 +618,7 @@ void main() {
       verify(() => mockPersonalEventCache.cacheUserEvent(any())).called(1);
     });
 
-    group('newest revision on the relays', () {
+    group('newest revision read', () {
       late List<List<String>> capturedTags;
       late int capturedKind;
       late String capturedContent;
@@ -989,11 +989,13 @@ void main() {
       });
 
       for (final (name, revision) in [
-        ('cannot tell and no copy is held', const LatestVideoRevisionUnknown()),
-        ('hold none', const LatestVideoRevisionAbsent()),
+        (
+          'returns nothing, does not complete and no copy is held',
+          const LatestVideoRevisionUnknown(),
+        ),
+        ('finds the video gone', const LatestVideoRevisionAbsent()),
       ]) {
-        test('returns null without publishing when the relays $name what '
-            'the newest revision is', () async {
+        test('returns null without publishing when the read $name', () async {
           relaysAnswer(revision);
 
           final result = await publisher.republishWithSubtitles(
