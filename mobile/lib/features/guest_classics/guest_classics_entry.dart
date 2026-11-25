@@ -60,9 +60,23 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
     _loading?.close();
     _loading = null;
     _expiry?.cancel();
+    _expiry = null;
     _manifest = null;
     _clips = const [];
     _page = 0;
+  }
+
+  void _resetToWelcome() {
+    _viewing = false;
+    _muted = true;
+    _retire();
+  }
+
+  void _close() {
+    _muteRequests.value++;
+    _viewing = false;
+    _muted = true;
+    unawaited(_refresh());
   }
 
   Future<void> _refresh() => _load(muted: _muted, retire: true);
@@ -80,9 +94,17 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
     } finally {
       client.close();
     }
-    if (!mounted || _loading != client || manifest == null) return;
+    if (!mounted || _loading != client) return;
+    _loading = null;
+    if (manifest == null) {
+      if (retire) setState(_resetToWelcome);
+      return;
+    }
     final remaining = manifest.expiresAt.difference(widget.now());
-    if (remaining <= Duration.zero) return;
+    if (remaining <= Duration.zero) {
+      if (retire) setState(_resetToWelcome);
+      return;
+    }
     // When a viewer explicitly changes audio, the current clip can continue
     // only if the new mode independently admits it. Keep the server ordering
     // for subsequent, unseen candidates.
@@ -97,7 +119,10 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
             !_unplayable.contains(clip.id),
       ),
     ];
-    if (clips.isEmpty) return;
+    if (clips.isEmpty) {
+      if (retire) setState(_resetToWelcome);
+      return;
+    }
     _expiry?.cancel();
     _expiry = Timer(remaining, _refresh);
     setState(() {
@@ -124,7 +149,8 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
     if (state == AppLifecycleState.resumed) {
       unawaited(_refresh());
     } else {
-      setState(_retire);
+      if (_viewing) _muteRequests.value++;
+      setState(_resetToWelcome);
     }
   }
 
@@ -146,126 +172,129 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
       return widget.welcome(() => setState(() => _viewing = true));
     }
     final clip = _clips[_page];
-    return Scaffold(
-      backgroundColor: VineTheme.backgroundColor,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          PageView.builder(
-            key: ObjectKey(_clips),
-            scrollDirection: Axis.vertical,
-            itemCount: _clips.length,
-            onPageChanged: (page) {
-              if (_manifest != manifest || !_viewing || page >= _clips.length) {
-                return;
-              }
-              setState(() => _page = page);
-              widget.onObservation?.call(GuestClassicsObservation.swipe);
-            },
-            itemBuilder: (_, index) {
-              if (index != _page) return const SizedBox.shrink();
-              return _GuestPlayer(
-                key: ValueKey(clip.id),
-                clip: clip,
-                muted: _muted,
-                muteRequests: _muteRequests,
-                allowed: () =>
-                    mounted &&
-                    _viewing &&
-                    _manifest == manifest &&
-                    _clips.isNotEmpty &&
-                    _clips[_page].id == clip.id &&
-                    manifest.expiresAt.isAfter(widget.now()) &&
-                    _page == index,
-                firstFrame: () {
-                  if (_seen.add(clip.id)) {
-                    widget.onObservation?.call(
-                      GuestClassicsObservation.firstFrame,
-                    );
-                  }
-                  if (index + 1 < _clips.length) {
-                    unawaited(
-                      DivineVideoPlayerController.preload([
-                        VideoClip.network(
-                          _clips[index + 1].url.toString(),
-                        ),
-                      ]).catchError((Object _) {}),
-                    );
-                  }
-                },
-                failed: () {
-                  if (mounted &&
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _close();
+      },
+      child: Scaffold(
+        backgroundColor: VineTheme.backgroundColor,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            PageView.builder(
+              key: ObjectKey(_clips),
+              scrollDirection: Axis.vertical,
+              itemCount: _clips.length,
+              onPageChanged: (page) {
+                if (_manifest != manifest ||
+                    !_viewing ||
+                    page >= _clips.length) {
+                  return;
+                }
+                setState(() => _page = page);
+                widget.onObservation?.call(GuestClassicsObservation.swipe);
+              },
+              itemBuilder: (_, index) {
+                if (index != _page) return const SizedBox.shrink();
+                return _GuestPlayer(
+                  key: ValueKey(clip.id),
+                  clip: clip,
+                  muted: _muted,
+                  muteRequests: _muteRequests,
+                  allowed: () =>
+                      mounted &&
+                      _viewing &&
                       _manifest == manifest &&
-                      _page == index &&
                       _clips.isNotEmpty &&
-                      _clips[index].id == clip.id) {
-                    setState(() {
-                      _unplayable.add(clip.id);
-                      _clips = _clips.skip(index + 1).toList();
-                      _page = 0;
-                      if (_clips.isEmpty) _manifest = null;
-                    });
-                  }
-                },
-              );
-            },
-          ),
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topRight,
-              child: DivineIconButton(
-                type: DivineIconButtonType.ghostOverMedia,
-                semanticLabel: context.l10n.commonClose,
-                tooltip: context.l10n.commonClose,
-                icon: DivineIconName.x,
-                onPressed: () {
-                  _muteRequests.value++;
-                  _viewing = false;
-                  _muted = true;
-                  unawaited(_refresh());
-                },
+                      _clips[_page].id == clip.id &&
+                      manifest.expiresAt.isAfter(widget.now()) &&
+                      _page == index,
+                  firstFrame: () {
+                    if (_seen.add(clip.id)) {
+                      widget.onObservation?.call(
+                        GuestClassicsObservation.firstFrame,
+                      );
+                    }
+                    if (index + 1 < _clips.length) {
+                      unawaited(
+                        DivineVideoPlayerController.preload([
+                          VideoClip.network(
+                            _clips[index + 1].url.toString(),
+                          ),
+                        ]).catchError((Object _) {}),
+                      );
+                    }
+                  },
+                  failed: () {
+                    if (mounted &&
+                        _manifest == manifest &&
+                        _page == index &&
+                        _clips.isNotEmpty &&
+                        _clips[index].id == clip.id) {
+                      setState(() {
+                        _unplayable.add(clip.id);
+                        _clips = _clips.skip(index + 1).toList();
+                        _page = 0;
+                        if (_clips.isEmpty) _resetToWelcome();
+                      });
+                    }
+                  },
+                );
+              },
+            ),
+            SafeArea(
+              child: Align(
+                alignment: Alignment.topRight,
+                child: DivineIconButton(
+                  type: DivineIconButtonType.ghostOverMedia,
+                  semanticLabel: context.l10n.commonClose,
+                  tooltip: context.l10n.commonClose,
+                  icon: DivineIconName.x,
+                  onPressed: _close,
+                ),
               ),
             ),
-          ),
-          SafeArea(
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: ColoredBox(
-                color: VineTheme.scrim65,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          clip.attribution,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: VineTheme.bodyMediumFont(
-                            color: VineTheme.whiteText,
+            SafeArea(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: ColoredBox(
+                  color: VineTheme.scrim65,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            clip.attribution,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: VineTheme.bodyMediumFont(
+                              color: VineTheme.whiteText,
+                            ),
                           ),
                         ),
-                      ),
-                      DivineIconButton(
-                        type: DivineIconButtonType.ghostOverMedia,
-                        semanticLabel: _muted
-                            ? context.l10n.videoPlayerUnmute
-                            : context.l10n.videoPlayerMute,
-                        tooltip: _muted
-                            ? context.l10n.videoPlayerUnmute
-                            : context.l10n.videoPlayerMute,
-                        onPressed: _toggleSound,
-                        icon: _muted
-                            ? DivineIconName.speakerSimpleSlash
-                            : DivineIconName.speakerHigh,
-                      ),
-                    ],
+                        DivineIconButton(
+                          type: DivineIconButtonType.ghostOverMedia,
+                          semanticLabel: _muted
+                              ? context.l10n.videoPlayerUnmute
+                              : context.l10n.videoPlayerMute,
+                          tooltip: _muted
+                              ? context.l10n.videoPlayerUnmute
+                              : context.l10n.videoPlayerMute,
+                          onPressed: _toggleSound,
+                          icon: _muted
+                              ? DivineIconName.speakerSimpleSlash
+                              : DivineIconName.speakerHigh,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

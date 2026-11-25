@@ -315,5 +315,120 @@ void main() {
         );
       },
     );
+
+    testWidgets(
+      'backgrounding while unmuted silences and resets to muted welcome on resume',
+      (tester) async {
+        final native = _NativePlayback(tester);
+        addTearDown(tester.binding.resetInternalState);
+        final requestedMuted = <bool>[];
+        await openGuest(tester, (_, {required muted}) async {
+          requestedMuted.add(muted);
+          return muted ? manifest([1]) : manifest([2]);
+        });
+        await tester.tap(find.bySemanticsLabel('Unmute video'));
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Creator 2'), findsOneWidget);
+        expect(native.volumes.last, 1);
+
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        await tester.pump();
+        expect(native.volumes.last, 0);
+        expect(find.text('Creator 2'), findsNothing);
+        expect(find.text('Welcome'), findsOneWidget);
+
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        expect(requestedMuted.last, isTrue);
+        expect(find.byType(DivineVideoPlayer), findsNothing);
+        expect(find.text('Welcome'), findsOneWidget);
+        expect(
+          tester.widget<TextButton>(find.byType(TextButton)).onPressed,
+          isNotNull,
+        );
+      },
+    );
+
+    testWidgets(
+      'all clips failing resets viewing so later resume stays on welcome',
+      (tester) async {
+        _NativePlayback(tester);
+        addTearDown(tester.binding.resetInternalState);
+        var loads = 0;
+        await openGuest(
+          tester,
+          (_, {required muted}) async =>
+              ++loads == 1 ? manifest([1]) : manifest([2]),
+        );
+        await tester.pump(const Duration(seconds: 7));
+        await tester.pump();
+        expect(find.text('Welcome'), findsOneWidget);
+
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        await tester.pump();
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        expect(find.byType(DivineVideoPlayer), findsNothing);
+        expect(
+          tester.widget<TextButton>(find.byType(TextButton)).onPressed,
+          isNotNull,
+        );
+      },
+    );
+
+    testWidgets(
+      'failed retiring refresh clears viewing state before later resume',
+      (tester) async {
+        final native = _NativePlayback(tester);
+        addTearDown(tester.binding.resetInternalState);
+        var loads = 0;
+        await openGuest(tester, (_, {required muted}) async {
+          loads++;
+          if (loads == 1) return manifest([1], validFor: 3);
+          if (loads == 2) return null;
+          return manifest([2]);
+        });
+        await native.firstFrame();
+        await tester.pump(const Duration(seconds: 4));
+        await tester.pump();
+        expect(find.text('Welcome'), findsOneWidget);
+
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        await tester.pump();
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        expect(find.byType(DivineVideoPlayer), findsNothing);
+        expect(
+          tester.widget<TextButton>(find.byType(TextButton)).onPressed,
+          isNotNull,
+        );
+      },
+    );
+
+    testWidgets('system back closes the player back to welcome', (
+      tester,
+    ) async {
+      final native = _NativePlayback(tester);
+      addTearDown(tester.binding.resetInternalState);
+      await openGuest(
+        tester,
+        (_, {required muted}) async => manifest([1]),
+      );
+      expect(find.text('Creator 1'), findsOneWidget);
+
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(native.volumes.last, 0);
+      expect(find.text('Creator 1'), findsNothing);
+      expect(find.text('Welcome'), findsOneWidget);
+      expect(find.byType(DivineVideoPlayer), findsNothing);
+    });
   });
 }
