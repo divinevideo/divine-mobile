@@ -21,12 +21,12 @@ import 'package:videos_repository/videos_repository.dart'
 /// floor when its timestamp is known, so a REST answer older than it, for
 /// example when the API has not yet indexed this device's own latest
 /// publish, sends the read on to the relays. When the revision read still
-/// predates the opened one, or nothing was read, the signed copy of the
-/// opened revision that [cachedEvent] holds is used instead, when it is at
-/// the same address and validly signed. Returns null when the video has
-/// no unambiguous address, the reader is unavailable, the read found the
-/// address empty, the revision read has conflicting `d` tags, or neither
-/// revision can be used.
+/// predates the opened one, or the read returned nothing and did not
+/// complete, the signed copy of the opened revision that [cachedEvent] holds
+/// is used instead, when it is at the same address and validly signed.
+/// Returns null when the video has no unambiguous address, the reader is
+/// unavailable, the read found the address empty, the revision read has
+/// conflicting `d` tags, or neither revision can be used.
 ///
 /// A video's copy in hand can be older than the newest revision, and a
 /// replacement built from it deletes whatever only the newer one carried.
