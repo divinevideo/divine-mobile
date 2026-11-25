@@ -1019,7 +1019,10 @@ class DmRepository {
   final List<String> _dmInboxLookupRelays;
   final List<String> _dmInboxTaggedRelays;
 
-  /// Account-local block and mute policy, checked again when replaying a share.
+  /// Whether the share sheet would hide a recipient now; checked again each
+  /// time a share-sheet share is sent or replayed. Other DMs never consult it,
+  /// because the app wires it to feed filtering, which includes other
+  /// people's block and mute lists.
   final bool Function(String recipient)? isShareRecipientHidden;
 
   NIP17SendResult? _shareRefusal(bool isVideoShare, String recipient) =>
@@ -8811,12 +8814,16 @@ class DmRepository {
     // inbox-less recipient reads, and another one is not more likely to reach
     // an inbox we still cannot read. Only a found inbox is sent to again
     // (#10012).
-    // Older queue rows predate the flag. A structured share carries enough
-    // evidence to apply its policy without reclassifying ordinary text.
+    // Rows queued before the flag existed are recognized by the share sheet's
+    // exact shape. A reel reply or question answer also cites a video but is a
+    // DM, so it must not inherit the share sheet's feed-based eligibility.
     final isVideoShare =
         row.isVideoShare ||
         (!isGroupRow &&
-            DmSharedVideoCitation.parse(rumor.tags) != null &&
+            _isLegacyShareSheetRumor(
+              rumor,
+              recipientPubkey: row.recipientPubkey,
+            ) &&
             parseCollaboratorInviteRumor(rumor) == null);
     final poolWrapId = _heldPoolWrapId(row);
     // A retry that keeps or settles on that wrap skips sendRumor, so it makes
@@ -12124,6 +12131,28 @@ class DmRepository {
               'p' => tag[1] == recipientPubkey,
               'e' => tag[1] == replyToId,
               _sendBatchTagKey => true,
+              _ => false,
+            },
+      );
+
+  /// Whether [rumor] has the shape the share sheet queued before outbox rows
+  /// recorded `isVideoShare`: a kind-14 video citation with no tags beyond its
+  /// recipient, the `q` citation and the send batch token.
+  ///
+  /// A reel reply carries an `e` tag and a question answer its question tag,
+  /// so neither matches.
+  static bool _isLegacyShareSheetRumor(
+    Event rumor, {
+    required String recipientPubkey,
+  }) =>
+      rumor.kind == EventKind.privateDirectMessage &&
+      DmSharedVideoCitation.parse(rumor.tags) != null &&
+      rumor.tags.every(
+        (tag) =>
+            tag.length >= 2 &&
+            switch (tag.first) {
+              'p' => tag[1] == recipientPubkey,
+              'q' || _sendBatchTagKey => true,
               _ => false,
             },
       );

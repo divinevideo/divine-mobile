@@ -6,9 +6,11 @@ import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
+import 'package:dm_repository/src/dm_shared_video_citation.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show DmMessage, NIP17SendResult;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
@@ -262,6 +264,81 @@ void main() {
       await expectLater(share(peers), throwsStateError);
       expect(queue.commits, 0);
       expect(await queue.getAllForOwner(owner), isEmpty);
+    });
+  });
+
+  group('recoverFullSend share classification', () {
+    // A point on the curve, so a send that is not refused builds its gift
+    // wrap and stops at the offline probe instead of failing earlier.
+    final recipient = peers.last;
+    final citation = DmSharedVideoCitation.build(
+      videoKind: 34236,
+      authorPubkey: owner,
+      relayHint: 'wss://relay.example.com',
+      dTag: 'shared-video',
+    )!;
+
+    Future<String> parkUnflagged({
+      String? replyToId,
+      List<List<String>> extraTags = const [],
+    }) async {
+      final queued = await repo.enqueueSend(
+        recipientPubkey: recipient,
+        content: 'See https://divine.video/video\n${citation.nostrUri}',
+        replyToId: replyToId,
+        additionalTags: [citation.qTag, ...extraTags],
+      );
+      final id = queued.queuedRumorId!;
+      expect((await queue.getById(id))!.isVideoShare, isFalse);
+      return id;
+    }
+
+    Future<NIP17SendResult> recoverWhileHidden(String rumorId) {
+      final reopened = build(
+        dao: queue,
+        isHidden: (_) => true,
+        isOffline: () async => true,
+      );
+      addTearDown(reopened.stopListening);
+      return reopened.recoverFullSend(rumorId: rumorId);
+    }
+
+    test('a share-sheet row queued before the flag is rechecked', () async {
+      final id = await parkUnflagged();
+
+      final result = await recoverWhileHidden(id);
+
+      expect(result.blocked, isTrue);
+      expect(
+        (await queue.getById(id))!.recipientWrapStatus,
+        OutgoingWrapStatus.blocked,
+      );
+    });
+
+    test('a reel reply citing the video is not refused', () async {
+      final id = await parkUnflagged(replyToId: 'e' * 64);
+
+      final result = await recoverWhileHidden(id);
+
+      expect(result.blocked, isFalse);
+      expect(result.reachedNoRelay, isTrue);
+      expect(
+        (await queue.getById(id))!.recipientWrapStatus,
+        isNot(OutgoingWrapStatus.blocked),
+      );
+    });
+
+    test('a question answer citing the video is not refused', () async {
+      final id = await parkUnflagged(
+        extraTags: [
+          [DmMessage.questionTagName, 'Where was this filmed?'],
+        ],
+      );
+
+      final result = await recoverWhileHidden(id);
+
+      expect(result.blocked, isFalse);
+      expect(result.reachedNoRelay, isTrue);
     });
   });
 }
