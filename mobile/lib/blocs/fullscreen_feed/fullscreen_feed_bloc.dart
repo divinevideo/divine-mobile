@@ -361,7 +361,7 @@ class FullscreenFeedBloc
     );
 
     // The source stream completed, so nothing else can arrive. Single-emit
-    // sources — a static video list, the hashtag snapshot — end right away,
+    // sources such as a static video list end right away,
     // and an empty list there is terminal rather than a warm-up. A live source
     // ends under an open route when its owning bloc closes, e.g. the search
     // page replacing its VideoSearchBloc, so pagination ends too. `isDone`

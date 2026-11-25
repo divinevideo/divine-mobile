@@ -2650,10 +2650,9 @@ void main() {
       });
     });
 
-    group('getVideosByHashtag', () {
-      const validResponseBody =
+    group('getVideosByHashtagPage', () {
+      const validRow =
           '''
-[
   {
     "id": "hash123",
     "pubkey": "$testPubkey",
@@ -2669,52 +2668,94 @@ void main() {
     "reposts": 2,
     "engagement_score": 57
   }
-]
 ''';
+      const validResponseBody = '[$validRow]';
+
+      test(
+        'passes the v2 cursor through even when no rows are usable',
+        () async {
+          when(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          ).thenAnswer(
+            (_) async => http.Response(
+              '{"data":[{}],"pagination":'
+              '{"has_more":true,"next_cursor":"o:75"}}',
+              200,
+            ),
+          );
+
+          final page = await client.getVideosByHashtagPage(
+            hashtag: '#Loops',
+            cursor: 'o:50',
+          );
+
+          expect(page.videos, isEmpty);
+          expect(page.nextCursor, 'o:75');
+          final uri =
+              verify(
+                    () => mockHttpClient.get(
+                      captureAny(),
+                      headers: any(named: 'headers'),
+                    ),
+                  ).captured.single
+                  as Uri;
+          expect(uri.path, '/api/v2/videos');
+          expect(uri.queryParameters, containsPair('tag', 'loops'));
+          expect(uri.queryParameters, containsPair('sort', 'trending'));
+          expect(uri.queryParameters, containsPair('cursor', 'o:50'));
+          expect(uri.queryParameters, containsPair('limit', '50'));
+        },
+      );
+
+      test(
+        'returns no next cursor when has_more is false despite a next_cursor',
+        () async {
+          when(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          ).thenAnswer(
+            (_) async => http.Response(
+              '{"data":[$validRow],"pagination":'
+              '{"has_more":false,"next_cursor":"o:100"}}',
+              200,
+            ),
+          );
+
+          final page = await client.getVideosByHashtagPage(hashtag: 'flutter');
+
+          expect(page.videos, hasLength(1));
+          expect(page.nextCursor, isNull);
+        },
+      );
+
+      test(
+        'returns no next cursor when has_more is false despite a next_offset',
+        () async {
+          when(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          ).thenAnswer(
+            (_) async => http.Response(
+              '{"data":[$validRow],"pagination":'
+              '{"has_more":false,"next_offset":100}}',
+              200,
+            ),
+          );
+
+          final page = await client.getVideosByHashtagPage(hashtag: 'flutter');
+
+          expect(page.videos, hasLength(1));
+          expect(page.nextCursor, isNull);
+        },
+      );
 
       test('returns videos on successful response', () async {
         when(
           () => mockHttpClient.get(any(), headers: any(named: 'headers')),
         ).thenAnswer((_) async => http.Response(validResponseBody, 200));
 
-        final videos = await client.getVideosByHashtag(hashtag: 'flutter');
+        final page = await client.getVideosByHashtagPage(hashtag: 'flutter');
 
-        expect(videos, hasLength(1));
-        expect(videos.first.id, equals('hash123'));
-      });
-
-      test('constructs correct URL with tag and sort=trending', () async {
-        when(
-          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
-        ).thenAnswer((_) async => http.Response('[]', 200));
-
-        await client.getVideosByHashtag(hashtag: 'Flutter');
-
-        final captured = verify(
-          () =>
-              mockHttpClient.get(captureAny(), headers: any(named: 'headers')),
-        ).captured;
-
-        final uri = captured.first as Uri;
-        expect(uri.path, equals('/api/videos'));
-        expect(uri.queryParameters['tag'], equals('flutter'));
-        expect(uri.queryParameters['sort'], equals('trending'));
-      });
-
-      test('strips # prefix from hashtag', () async {
-        when(
-          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
-        ).thenAnswer((_) async => http.Response('[]', 200));
-
-        await client.getVideosByHashtag(hashtag: '#bitcoin');
-
-        final captured = verify(
-          () =>
-              mockHttpClient.get(captureAny(), headers: any(named: 'headers')),
-        ).captured;
-
-        final uri = captured.first as Uri;
-        expect(uri.queryParameters['tag'], equals('bitcoin'));
+        expect(page.videos, hasLength(1));
+        expect(page.videos.first.id, equals('hash123'));
       });
 
       test('throws FunnelcakeNotConfiguredException when not available', () {
@@ -2724,7 +2765,7 @@ void main() {
         );
 
         expect(
-          () => emptyClient.getVideosByHashtag(hashtag: 'test'),
+          () => emptyClient.getVideosByHashtagPage(hashtag: 'test'),
           throwsA(isA<FunnelcakeNotConfiguredException>()),
         );
 
@@ -2733,7 +2774,7 @@ void main() {
 
       test('throws FunnelcakeException when hashtag is empty', () {
         expect(
-          () => client.getVideosByHashtag(hashtag: ''),
+          () => client.getVideosByHashtagPage(hashtag: ''),
           throwsA(
             isA<FunnelcakeException>().having(
               (e) => e.message,
@@ -2746,7 +2787,7 @@ void main() {
 
       test('throws FunnelcakeException when hashtag is just #', () {
         expect(
-          () => client.getVideosByHashtag(hashtag: '#'),
+          () => client.getVideosByHashtagPage(hashtag: '#'),
           throwsA(
             isA<FunnelcakeException>().having(
               (e) => e.message,
@@ -2763,7 +2804,7 @@ void main() {
         ).thenAnswer((_) async => http.Response('Internal Server Error', 500));
 
         expect(
-          () => client.getVideosByHashtag(hashtag: 'test'),
+          () => client.getVideosByHashtagPage(hashtag: 'test'),
           throwsA(
             isA<FunnelcakeApiException>().having(
               (e) => e.statusCode,
@@ -2780,7 +2821,7 @@ void main() {
         ).thenAnswer((_) async => throw TimeoutException('Request timed out'));
 
         expect(
-          () => client.getVideosByHashtag(hashtag: 'test'),
+          () => client.getVideosByHashtagPage(hashtag: 'test'),
           throwsA(isA<FunnelcakeTimeoutException>()),
         );
       });
@@ -2791,7 +2832,7 @@ void main() {
         ).thenThrow(Exception('Network error'));
 
         expect(
-          () => client.getVideosByHashtag(hashtag: 'test'),
+          () => client.getVideosByHashtagPage(hashtag: 'test'),
           throwsA(
             isA<FunnelcakeException>().having(
               (e) => e.message,

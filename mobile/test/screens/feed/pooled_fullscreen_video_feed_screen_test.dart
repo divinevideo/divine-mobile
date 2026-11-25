@@ -502,6 +502,63 @@ void main() {
       );
     }
 
+    for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+      testWidgets(
+        'an end swipe on the last hashtag video loads the next page on '
+        '$platform',
+        (tester) async {
+          final videos = createTestVideos(count: 2);
+          var loadMoreCalls = 0;
+          final videoService = createMockVideoEventService();
+          when(() => videoService.shouldHideVideo(any())).thenReturn(false);
+          await tester.pumpWidget(
+            BlocProvider<VideoVolumeCubit>.value(
+              value: videoVolumeCubit,
+              child: testMaterialApp(
+                mockProfileRepository: mockProfileRepository,
+                mockNip05VerificationService: mockNip05VerificationService,
+                additionalOverrides: [
+                  pendingActionServiceProvider.overrideWithValue(null),
+                  videoEventServiceProvider.overrideWithValue(videoService),
+                ],
+                home: Theme(
+                  data: VineTheme.theme.copyWith(platform: platform),
+                  child: PooledFullscreenVideoFeedScreen(
+                    source: const HashtagViewSource('funny'),
+                    // Sources that never complete, like the hashtag cubit's:
+                    // a finished source stream ends the reel's pagination.
+                    feedRepository: StreamFeedRepository(
+                      videos: Stream.multi((source) => source.add(videos)),
+                      hasMore: Stream.multi((source) => source.add(true)),
+                      onLoadMore: () async => loadMoreCalls++,
+                    ),
+                    initialIndex: 1,
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          final bloc = tester
+              .element(find.byType(FullscreenFeedContent))
+              .read<FullscreenFeedBloc>();
+          expect(bloc.state.currentVideo, videos.last);
+          expect(loadMoreCalls, isZero);
+
+          await tester.drag(
+            find.byType(InfiniteVideoFeed),
+            const Offset(0, -160),
+          );
+          await tester.pump();
+
+          expect(loadMoreCalls, 1);
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        },
+      );
+    }
+
     testWidgets('traces its frames as the fullscreen feed', (tester) async {
       final videoService = createMockVideoEventService();
       when(() => videoService.shouldHideVideo(any())).thenReturn(false);
@@ -1057,6 +1114,61 @@ void main() {
             videos.first.id: ViewTrafficSource.share,
             videos.last.id: ViewTrafficSource.discoveryForYou,
           },
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
+
+    testWidgets(
+      'a paging feed without an opened video keeps its route attribution',
+      (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final analytics = RecordingConsumptionAnalytics();
+        addTearDown(analytics.dispose);
+        final videos = createTestVideos(count: 2);
+        final initial = FullscreenFeedState(
+          status: FullscreenFeedStatus.ready,
+          videos: videos,
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            state: initial,
+            trafficSource: ViewTrafficSource.search,
+            loadMoreOnEndSwipe: true,
+            additionalOverrides: [
+              pendingActionServiceProvider.overrideWithValue(null),
+              consumptionAnalyticsTrackerProvider.overrideWithValue(
+                ConsumptionAnalyticsTracker(analytics: () => analytics),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        nativeFeed(tester).onActiveVideoChanged?.call(videos.last, 1);
+        final swiped = initial.copyWith(currentIndex: 1);
+        when(() => mockBloc.state).thenReturn(swiped);
+        stateController.add(swiped);
+        await tester.pump();
+
+        final trackers = tester.widgetList<DivineVideoMetricsTracker>(
+          find.byType(DivineVideoMetricsTracker, skipOffstage: false),
+        );
+        expect(
+          {
+            for (final tracker in trackers)
+              tracker.video.id: tracker.trafficSource,
+          },
+          {for (final video in videos) video.id: ViewTrafficSource.search},
+        );
+        expect(
+          analytics.events
+              .where((event) => event.name == 'feed_depth_recorded')
+              .single
+              .parameters['feed_type'],
+          'search',
         );
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();

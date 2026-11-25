@@ -368,7 +368,8 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
         onPageChanged: onPageChanged,
         onActiveVideoChanged: onActiveVideoChanged,
         dmReplyContext: dmReplyContext,
-        loadMoreOnEndSwipe: source is SingleVideoViewSource,
+        loadMoreOnEndSwipe:
+            source is SingleVideoViewSource || source is HashtagViewSource,
         initialVideoKey: switch (source) {
           SingleVideoViewSource(:final video) => video.feedDedupKey,
           _ => null,
@@ -442,11 +443,10 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
   /// Logical identity of the opened video, for DM controls and attribution.
   final String? initialVideoKey;
 
-  /// Whether this feed continues the opened video into For You discovery.
+  /// Whether a swipe past the last video requests another page.
   ///
-  /// Another swipe past the end then retries discovery when no new page was
-  /// playable yet, and every video other than [initialVideoKey] is
-  /// attributed to For You.
+  /// Each new swipe retries when a page added no playable video. With an
+  /// [initialVideoKey], every other video is attributed to For You.
   final bool loadMoreOnEndSwipe;
 
   /// Overrides the app-bar back action when the feed is embedded as a parent
@@ -469,7 +469,7 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
 
   /// Whether the inline comment composer is focused.
   bool _inlineComposerFocused = false;
-  bool _requestedDiscoveryForDrag = false;
+  bool _requestedPageForDrag = false;
 
   /// Whether one of THIS screen's own bottom composers (inline comment or DM
   /// reply) currently holds focus. Drives `resizeToAvoidBottomInset`: we only
@@ -585,7 +585,7 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
     );
   }
 
-  bool _onDiscoveryScroll(ScrollNotification notification) {
+  bool _onEndSwipe(ScrollNotification notification) {
     if (!widget.loadMoreOnEndSwipe ||
         notification.depth != 0 ||
         notification.metrics.axis != Axis.vertical) {
@@ -593,7 +593,7 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
     }
     if (notification is ScrollStartNotification ||
         notification is ScrollEndNotification) {
-      _requestedDiscoveryForDrag = false;
+      _requestedPageForDrag = false;
     }
     // Clamping physics reports an overscroll; bouncing physics reports a
     // scroll update beyond the end. Only user drags request another page.
@@ -608,19 +608,21 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
     };
     final state = context.read<FullscreenFeedBloc>().state;
     if (swipingPastEnd &&
-        !_requestedDiscoveryForDrag &&
+        !_requestedPageForDrag &&
         state.canLoadMore &&
         !state.isLoadingMore &&
         state.currentIndex == state.videos.length - 1) {
-      _requestedDiscoveryForDrag = true;
+      _requestedPageForDrag = true;
       _triggerLoadMore();
     }
     return false;
   }
 
   ViewTrafficSource _trafficSourceForVideo(VideoEvent video) {
+    final initialVideoKey = widget.initialVideoKey;
     if (widget.loadMoreOnEndSwipe &&
-        video.feedDedupKey != widget.initialVideoKey) {
+        initialVideoKey != null &&
+        video.feedDedupKey != initialVideoKey) {
       return ViewTrafficSource.discoveryForYou;
     }
     return widget.trafficSource;
@@ -1055,7 +1057,7 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                                         child: _MaybeRoundFeedBottom(
                                           roundCorners: showCommentBar,
                                           child: NotificationListener<ScrollNotification>(
-                                            onNotification: _onDiscoveryScroll,
+                                            onNotification: _onEndSwipe,
                                             child: MediaQuery.removePadding(
                                               context: context,
                                               removeBottom: true,
