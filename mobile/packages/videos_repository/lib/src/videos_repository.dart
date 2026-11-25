@@ -4151,19 +4151,28 @@ class VideosRepository {
 
     // Fallback continuation retries recommendations with a fresh cursor first
     // so the feed recovers personalized ranking once a transient failure
-    // clears; if recommendations still fail, return nothing unseen, or come
-    // back terminal, it advances into the next popular page via
-    // `effectiveUntil`.
+    // clears. If recommendations fail or return nothing unseen, continue the
+    // popular stream from `effectiveUntil`.
     final recommendationCursor = isFallbackContinuation
         ? null
         : (cursor ?? until?.toString());
-    late final RecommendationsResponse response;
+    late final HomeFeedResult result;
     try {
-      response = await _fetchRecommendationsPage(
+      final response = await _fetchRecommendationsPage(
         pubkey: effectiveUserPubkey,
         limit: limit,
         cursor: recommendationCursor,
         seed: requestSeed,
+        seedVideoId: effectiveSeedVideoId,
+        preferredLanguages: preferredLanguages,
+        viewerCountry: viewerCountry,
+      );
+      result = await _buildRecommendedVideosResult(
+        response: response,
+        pubkey: effectiveUserPubkey,
+        limit: limit,
+        requestSeed: requestSeed,
+        recommendationCursor: recommendationCursor,
         seedVideoId: effectiveSeedVideoId,
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
@@ -4189,17 +4198,6 @@ class VideosRepository {
         seedVideoId: effectiveSeedVideoId,
       );
     }
-
-    final result = await _buildRecommendedVideosResult(
-      response: response,
-      pubkey: effectiveUserPubkey,
-      limit: limit,
-      requestSeed: requestSeed,
-      recommendationCursor: recommendationCursor,
-      seedVideoId: effectiveSeedVideoId,
-      preferredLanguages: preferredLanguages,
-      viewerCountry: viewerCountry,
-    );
 
     if (result.videos.isEmpty) {
       return _popularVideosInsteadOfRecommendations(

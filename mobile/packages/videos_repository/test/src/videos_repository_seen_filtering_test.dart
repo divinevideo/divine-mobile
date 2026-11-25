@@ -1540,6 +1540,47 @@ void main() {
     );
 
     test(
+      'falls back when a cursor reached while filtering seen videos is rejected',
+      () async {
+        when(
+          () => mockFunnelcake.getRecommendations(
+            pubkey: 'u',
+            limit: 10,
+            cursor: any(named: 'cursor'),
+            seed: any(named: 'seed'),
+          ),
+        ).thenAnswer((invocation) async {
+          if (invocation.namedArguments[#cursor] == 'expired') {
+            throw const FunnelcakeApiException(
+              message: 'Invalid cursor',
+              statusCode: 400,
+              url: 'https://api.divine.video/api/users/u/recommendations',
+            );
+          }
+          return RecommendationsResponse(
+            videos: [_stats('watched')],
+            source: 'personalized',
+            hasMore: true,
+            nextCursor: 'expired',
+          );
+        });
+        when(
+          () => mockFunnelcake.getWatchingVideos(limit: 10),
+        ).thenAnswer((_) async => [_stats('popular-unwatched')]);
+        final repo = buildRepository(watched: {'watched'});
+
+        final result = await repo.getVideoDiscoveryPage(
+          userPubkey: 'u',
+          limit: 10,
+          cursor: 'valid',
+        );
+
+        expect(result.videos.map((v) => v.id), ['popular-unwatched']);
+        expect(result.hasMore, isTrue);
+      },
+    );
+
+    test(
       'stops after maxSeenOnlyFeedPages seen recommendation pages and falls '
       'back to unwatched popular videos',
       () async {
