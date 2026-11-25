@@ -223,6 +223,9 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       scope: 'policy:full',
       instantAccess: true,
     );
+    // The route can be dismissed while Keycast is answering. A closed form
+    // must not seed the account's email cache or start another auth step.
+    if (isClosed) return;
 
     if (!result.success || result.code == null) {
       final reason = _signInFailureReasonFrom(result.failure);
@@ -336,6 +339,7 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
     // Keycast created the account without waiting for the email link: sign
     // in now and let the app nudge for confirmation instead of blocking.
     if (result.isInstantAccess) {
+      if (isClosed) return;
       Log.info(
         'Account created; signing in before email confirmation',
         name: 'DivineAuthCubit',
@@ -385,6 +389,8 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
   }
 
   Future<void> _exchangeCodeAndLogin(String code, String verifier) async {
+    // The form can also close while its confirmation cache write settles.
+    if (isClosed) return;
     try {
       Log.info(
         'Exchanging code for tokens',
@@ -396,6 +402,8 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
         code: code,
         verifier: verifier,
       );
+
+      if (isClosed) return;
 
       final session = KeycastSession.fromTokenResponse(tokenResponse);
 

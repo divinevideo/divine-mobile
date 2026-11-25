@@ -14,6 +14,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/pending_verification_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/validators.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class _MockKeycastOAuth extends Mock implements KeycastOAuth {}
@@ -870,6 +871,27 @@ void main() {
           ).thenAnswer((_) async {});
         });
 
+        void stubSuccessfulUnconfirmedSignIn() {
+          when(
+            () => mockOAuth.headlessLogin(
+              email: any(named: 'email'),
+              password: any(named: 'password'),
+              scope: any(named: 'scope'),
+              instantAccess: any(named: 'instantAccess'),
+            ),
+          ).thenAnswer(
+            (_) async => (
+              HeadlessLoginResult(
+                success: true,
+                code: testCode,
+                pubkey: pubkey,
+                emailVerified: false,
+              ),
+              testVerifier,
+            ),
+          );
+        }
+
         test(
           'records an instant sign-up as unconfirmed before signing in',
           () async {
@@ -912,24 +934,7 @@ void main() {
         );
 
         test('records what sign-in reports about the email', () async {
-          when(
-            () => mockOAuth.headlessLogin(
-              email: any(named: 'email'),
-              password: any(named: 'password'),
-              scope: any(named: 'scope'),
-              instantAccess: any(named: 'instantAccess'),
-            ),
-          ).thenAnswer(
-            (_) async => (
-              HeadlessLoginResult(
-                success: true,
-                code: testCode,
-                pubkey: pubkey,
-                emailVerified: false,
-              ),
-              testVerifier,
-            ),
-          );
+          stubSuccessfulUnconfirmedSignIn();
           final cubit = buildCubit(emailConfirmationRepository: confirmations)
             ..initialize(isSignIn: true)
             ..updateEmail(testEmail)
@@ -954,6 +959,166 @@ void main() {
           ]);
           await cubit.close();
         });
+
+        for (final isSignIn in [true, false]) {
+          test(
+            'abandoned ${isSignIn ? 'sign-in' : 'sign-up'} leaves the cache clear',
+            () async {
+              final requested = Completer<void>();
+              final reply = Completer<void>();
+              if (isSignIn) {
+                when(
+                  () => mockOAuth.headlessLogin(
+                    email: any(named: 'email'),
+                    password: any(named: 'password'),
+                    scope: any(named: 'scope'),
+                    instantAccess: any(named: 'instantAccess'),
+                  ),
+                ).thenAnswer((_) async {
+                  requested.complete();
+                  await reply.future;
+                  return (
+                    HeadlessLoginResult(
+                      success: true,
+                      code: testCode,
+                      pubkey: pubkey,
+                      emailVerified: false,
+                    ),
+                    testVerifier,
+                  );
+                });
+              } else {
+                when(
+                  () => mockOAuth.headlessRegister(
+                    email: any(named: 'email'),
+                    password: any(named: 'password'),
+                    scope: any(named: 'scope'),
+                    marketingConsent: any(named: 'marketingConsent'),
+                    instantAccess: any(named: 'instantAccess'),
+                  ),
+                ).thenAnswer((_) async {
+                  requested.complete();
+                  await reply.future;
+                  return (
+                    HeadlessRegisterResult(
+                      success: true,
+                      pubkey: pubkey,
+                      verificationRequired: false,
+                      code: testCode,
+                      email: testEmail,
+                    ),
+                    testVerifier,
+                  );
+                });
+              }
+
+              SharedPreferences.setMockInitialValues({});
+              final preferences = await SharedPreferences.getInstance();
+              final repository = EmailConfirmationRepository(
+                oauthClient: mockOAuth,
+                readAccessToken: (_) async => null,
+                preferences: preferences,
+              );
+              await repository.remember(
+                pubkey,
+                const EmailConfirmation.unconfirmed(testEmail),
+              );
+              final cubit = buildCubit(emailConfirmationRepository: repository)
+                ..initialize(isSignIn: isSignIn)
+                ..updateEmail(testEmail)
+                ..updatePassword(testPassword);
+
+              final submission = cubit.submit();
+              await requested.future;
+              await cubit.close();
+              await UserDataCleanupService(preferences).clearUserSpecificData(
+                userPubkey: pubkey,
+                forgetAccount: true,
+              );
+              expect(
+                repository.remembered(pubkey),
+                const EmailConfirmation.unknown(),
+              );
+
+              reply.complete();
+              await submission;
+              await preferences.reload();
+
+              expect(
+                preferences.containsKey(
+                  EmailConfirmationRepository.storageKey(pubkey),
+                ),
+                isFalse,
+              );
+              verifyNever(
+                () => mockOAuth.exchangeCode(
+                  code: any(named: 'code'),
+                  verifier: any(named: 'verifier'),
+                ),
+              );
+            },
+          );
+        }
+
+        test(
+          'does not exchange a code after closing during a cache write',
+          () async {
+            stubSuccessfulUnconfirmedSignIn();
+            final writing = Completer<void>();
+            final written = Completer<void>();
+            when(() => confirmations.remember(any(), any())).thenAnswer((_) {
+              writing.complete();
+              return written.future;
+            });
+            final cubit = buildCubit(emailConfirmationRepository: confirmations)
+              ..initialize(isSignIn: true)
+              ..updateEmail(testEmail)
+              ..updatePassword(testPassword);
+
+            final submission = cubit.submit();
+            await writing.future;
+            await cubit.close();
+            written.complete();
+            await submission;
+
+            verifyNever(
+              () => mockOAuth.exchangeCode(
+                code: any(named: 'code'),
+                verifier: any(named: 'verifier'),
+              ),
+            );
+          },
+        );
+
+        test(
+          'does not activate an account after closing during exchange',
+          () async {
+            stubSuccessfulUnconfirmedSignIn();
+            final exchanging = Completer<void>();
+            final exchanged = Completer<TokenResponse>();
+            when(
+              () => mockOAuth.exchangeCode(
+                code: any(named: 'code'),
+                verifier: any(named: 'verifier'),
+              ),
+            ).thenAnswer((_) {
+              exchanging.complete();
+              return exchanged.future;
+            });
+            final cubit = buildCubit(emailConfirmationRepository: confirmations)
+              ..initialize(isSignIn: true)
+              ..updateEmail(testEmail)
+              ..updatePassword(testPassword);
+
+            final submission = cubit.submit();
+            await exchanging.future;
+            await cubit.close();
+            exchanged.complete(const TokenResponse(bunkerUrl: 'bunker://test'));
+            await submission;
+
+            verifyNever(() => mockAuthService.signInWithDivineOAuth(any()));
+          },
+        );
 
         test('records nothing when the server does not report it', () async {
           when(
