@@ -7,11 +7,13 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <functional>
 #include <limits>
 #include <mutex>
+#include <string>
 #include <vector>
 
 #include "playback_telemetry.h"
@@ -228,9 +230,13 @@ std::optional<TrackEnds> ReadRemote(
                 request,
                 winrt::Windows::Web::Http::HttpCompletionOption::ResponseHeadersRead)
             .get();
-    if (static_cast<int32_t>(response.StatusCode()) != 206) {
+    const int32_t status = static_cast<int32_t>(response.StatusCode());
+    if (status != 206) {
       response.Close();
-      return std::vector<uint8_t>();
+      // 200 ignores Range and 416 starts past the end of the file: both
+      // answer for the file. Anything else may answer differently later.
+      if (status == 200 || status == 416) return std::vector<uint8_t>();
+      throw TrackEndsUnavailable("HTTP " + std::to_string(status));
     }
     const auto buffer = response.Content().ReadAsBufferAsync().get();
     std::vector<uint8_t> bytes(buffer.Length());
@@ -315,9 +321,13 @@ std::optional<TrackEnds> ReadTrackEnds(
                lower.rfind("file://", 0) == 0) {
       ends = ReadLocal(PathFromUri(uri));
     }
-  } catch (const winrt::hresult_error&) {
-    // Unreadable track lengths only mean the clip plays untrimmed.
-    ends.reset();
+  } catch (const winrt::hresult_error& error) {
+    // A failed request says nothing about the file.
+    char code[16];
+    std::snprintf(code, sizeof(code), "0x%08X",
+                  static_cast<uint32_t>(error.code()));
+    throw TrackEndsUnavailable(std::string(code) + " " +
+                               winrt::to_string(error.message()));
   }
   std::lock_guard<std::mutex> lock(g_cache_mutex);
   if (g_cache.size() >= kCacheLimit) g_cache.clear();

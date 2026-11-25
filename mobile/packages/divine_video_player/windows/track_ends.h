@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <map>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -19,12 +20,21 @@ struct TrackEnds {
   int64_t audio_lead_ms = 0;
 };
 
+// A read that failed this time, such as a dropped connection or a server
+// still processing the upload. Unlike a file without readable track ends,
+// it is not cached, so the next load reads again.
+class TrackEndsUnavailable : public std::runtime_error {
+ public:
+  using std::runtime_error::runtime_error;
+};
+
 // Reads the track ends from a moov box (its header included).
 std::optional<TrackEnds> ParseMoov(const uint8_t* data, size_t size);
 
 // Reads the track ends of a local MP4 or an http(s) one, fetching only its
 // boxes up to and including moov with Range requests that carry `headers`.
-// Blocks; call it off the platform thread. Answers are cached per URI.
+// Blocks; call it off the platform thread. Answers are cached per URI;
+// a failed read throws TrackEndsUnavailable instead.
 std::optional<TrackEnds> ReadTrackEnds(
     const std::string& uri, const std::map<std::string, std::string>& headers);
 
