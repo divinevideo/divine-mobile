@@ -1895,6 +1895,7 @@ void main() {
       await resetEncryptedDatabaseCache(
         secureStorage: storage,
         legacySecureStorage: storage,
+        hasAlternateDatabase: () async => false,
         deleteDatabase: () async {},
       );
 
@@ -1952,6 +1953,30 @@ void main() {
         expect(store, isNot(contains(dbCipherKeyStorageKey)));
         expect(store['auth_key'], equals('must-stay'));
         expect(reset, isTrue);
+      },
+    );
+
+    test(
+      'retains the cipher key while backing up a coexisting database',
+      () async {
+        final primary = store[dbCipherKeyStorageKey];
+        final legacyPrimary = legacyStore[dbCipherKeyStorageKey];
+        expect(primary, isNotNull);
+        expect(legacyPrimary, isNotNull);
+        var backedUp = false;
+
+        await resetEncryptedDatabaseCache(
+          secureStorage: storage,
+          legacySecureStorage: legacyStorage,
+          hasAlternateDatabase: () async => true,
+          deleteDatabase: () async => backedUp = true,
+        );
+
+        expect(backedUp, isTrue);
+        expect(store[dbCipherKeyStorageKey], primary);
+        expect(legacyStore[dbCipherKeyStorageKey], legacyPrimary);
+        verifyNever(() => storage.delete(key: any(named: 'key')));
+        verifyNever(() => legacyStorage.delete(key: any(named: 'key')));
       },
     );
 
