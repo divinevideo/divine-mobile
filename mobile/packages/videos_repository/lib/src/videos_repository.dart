@@ -99,6 +99,13 @@ const Duration _relaySearchTimeout = Duration(seconds: 15);
 /// healthy Funnelcake responses while still bounding degraded-service latency.
 const Duration _statsFetchTimeout = Duration(seconds: 3);
 
+/// Bounds Funnelcake's answer in [VideosRepository.fetchLatestVideoRevision].
+///
+/// The read is asked first because it is fast; a hung API must not hold a
+/// video republish for the client's full request timeout before the relays
+/// are asked. A timeout falls through to the relay read like a failure.
+const Duration _latestRevisionFunnelcakeTimeout = Duration(seconds: 3);
+
 /// Bounds the relay freshness check used by manual New-feed refreshes.
 ///
 /// The REST recent feed can lag briefly behind relays due to ingestion and edge
@@ -2152,10 +2159,11 @@ class VideosRepository {
   /// returned without asking any relay, so a newer revision it has not
   /// indexed, or never stored, is not seen.
   ///
-  /// Asks Funnelcake first, since it answers faster than the relays. Its
-  /// d-tag lookup is not scoped by author, so its event counts only when it
-  /// is at the exact address and validly signed. Without such an answer, or
-  /// when the request fails, it reads the relays without the local cache and
+  /// Asks Funnelcake first, since it answers faster than the relays, and
+  /// waits for it for at most three seconds. Its d-tag lookup is not scoped
+  /// by author, so its event counts only when it is at the exact address and
+  /// validly signed. Without such an answer, or when the request fails or
+  /// times out, it reads the relays without the local cache and
   /// takes the newest valid revision any of them returned. A slow or silent
   /// relay does not block the answer: the relay read is a fallback, not a
   /// gate that needs every relay. [LatestVideoRevisionAbsent] means no relay
@@ -2218,8 +2226,9 @@ class VideosRepository {
 
   /// What Funnelcake answers at [address]: its signed `revision` there, or
   /// `saysMissing` when it answered that it holds none (a 404). Neither when
-  /// it is not configured, fails, or returns an event that is not a signed
-  /// revision at exactly [address].
+  /// it is not configured, fails, does not answer within
+  /// [_latestRevisionFunnelcakeTimeout], or returns an event that is not a
+  /// signed revision at exactly [address].
   Future<({Event? revision, bool saysMissing})>
   _latestVideoRevisionFromFunnelcake(AId address) async {
     final client = _funnelcakeApiClient;
@@ -2227,7 +2236,9 @@ class VideosRepository {
       return (revision: null, saysMissing: false);
     }
     try {
-      final event = await client.getVideoEvent(address.dTag);
+      final event = await client
+          .getVideoEvent(address.dTag)
+          .timeout(_latestRevisionFunnelcakeTimeout);
       if (event == null) return (revision: null, saysMissing: true);
       if (_isSignedRevisionAt(event, address)) {
         Log.info(

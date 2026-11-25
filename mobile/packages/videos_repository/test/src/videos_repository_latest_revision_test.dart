@@ -1,6 +1,9 @@
 // ABOUTME: Verifies that a video republish reads its exact video address from
 // ABOUTME: Funnelcake first, then falls back to relays without gating on them.
 
+import 'dart:async';
+
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
@@ -187,6 +190,58 @@ void main() {
             () async => throw const FunnelcakeException('unavailable'),
           );
           await expectRelayRevision();
+        });
+      });
+
+      group('when it does not answer', () {
+        late Event onRelay;
+
+        setUp(() {
+          onRelay = revision(content: 'relay copy');
+          stubRelays([onRelay]);
+          // A request that never completes, as a hung API leaves it.
+          stubFunnelcake(() => Completer<Event?>().future);
+        });
+
+        test('waits up to three seconds before asking the relays', () {
+          fakeAsync((async) {
+            LatestVideoRevision? result;
+            unawaited(
+              withFunnelcake()
+                  .fetchLatestVideoRevision('34236:$pubkey:$_dTag')
+                  .then((value) => result = value),
+            );
+
+            async.elapse(const Duration(milliseconds: 2999));
+            expect(result, isNull);
+            verifyNever(readRelays);
+
+            async.elapse(const Duration(milliseconds: 1));
+            expect(
+              result,
+              isA<LatestVideoRevisionFound>().having(
+                (r) => r.event,
+                'event',
+                same(onRelay),
+              ),
+            );
+            verify(readRelays).called(1);
+          });
+        });
+
+        test('reports unknown, not absent, when no relay completes', () {
+          stubRelays([], endedBy: QueryEnd.settledEarly);
+          fakeAsync((async) {
+            LatestVideoRevision? result;
+            unawaited(
+              withFunnelcake()
+                  .fetchLatestVideoRevision('34236:$pubkey:$_dTag')
+                  .then((value) => result = value),
+            );
+
+            async.elapse(const Duration(seconds: 3));
+            expect(result, isA<LatestVideoRevisionUnknown>());
+          });
         });
       });
 
