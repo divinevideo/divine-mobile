@@ -13,13 +13,18 @@ import 'package:openvine/features/appearance/bloc/appearance_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/resolve_app_ui_locale.dart';
 import 'package:openvine/providers/layer_rasterizer_provider.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/router/share_delivery_host.dart';
 import 'package:openvine/startup/database_corruption_gate.dart';
 import 'package:openvine/ui/adaptive_layout.dart';
+import 'package:openvine/ui/back_on_escape.dart';
+import 'package:openvine/ui/macos_menu_bar.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show LayerRasterizerHost;
+import 'package:unified_logger/unified_logger.dart';
 
 /// The app's [MaterialApp].
 ///
@@ -69,14 +74,29 @@ class DivineMaterialApp extends ConsumerWidget {
         // The adaptive layout scope sits above every route too, so screens
         // pushed over the shell (camera, editor, fullscreen feeds) lay out
         // and lock orientation by the same rules as the tabs.
-        builder: (context, child) => LayerRasterizerHost(
-          rasterizer: ref.read(layerRasterizerProvider),
-          child: DatabaseCorruptionGate(
-            child: AppReviewCoordinator(
-              child: AdaptiveLayoutScope(
-                child: EyedropperSources(
-                  child: ShareDeliveryHost(
-                    child: child ?? const SizedBox.shrink(),
+        //
+        // The macOS menu bar sits above the corruption gate: taking it out of
+        // the tree empties the native menu bar, Quit included.
+        //
+        // Escape closes the screen on top from anywhere above the navigator.
+        builder: (context, child) => MacosMenuBar(
+          onOpenSupportCenter: () => runDetached(
+            ref.read(goRouterProvider).push<void>(RoutePaths.supportCenter),
+            'open support center from the menu bar',
+            logName: 'DivineMaterialApp',
+            category: LogCategory.ui,
+          ),
+          child: LayerRasterizerHost(
+            rasterizer: ref.read(layerRasterizerProvider),
+            child: DatabaseCorruptionGate(
+              child: AppReviewCoordinator(
+                child: AdaptiveLayoutScope(
+                  child: EyedropperSources(
+                    child: ShareDeliveryHost(
+                      child: BackOnEscape(
+                        child: child ?? const SizedBox.shrink(),
+                      ),
+                    ),
                   ),
                 ),
               ),

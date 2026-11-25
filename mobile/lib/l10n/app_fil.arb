@@ -5640,5 +5640,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Edit",
+  "menuBarUndo": "I-undo",
+  "menuBarRedo": "I-redo",
+  "menuBarCut": "I-cut",
+  "menuBarCopy": "Kopyahin",
+  "menuBarPaste": "I-paste",
+  "menuBarSelectAll": "Piliin Lahat",
+  "menuBarView": "View",
+  "menuBarVideo": "Video",
+  "menuBarPreviousVideo": "Nakaraang Video",
+  "menuBarNextVideo": "Susunod na Video",
+  "menuBarPlayPause": "I-play/I-pause",
+  "menuBarMute": "I-mute",
+  "menuBarUnmute": "I-unmute",
+  "menuBarWindow": "Window",
+  "menuBarHelp": "Tulong"
 }

@@ -6603,5 +6603,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Edycja",
+  "menuBarUndo": "Cofnij",
+  "menuBarRedo": "Ponów",
+  "menuBarCut": "Wytnij",
+  "menuBarCopy": "Kopiuj",
+  "menuBarPaste": "Wklej",
+  "menuBarSelectAll": "Zaznacz wszystko",
+  "menuBarView": "Widok",
+  "menuBarVideo": "Wideo",
+  "menuBarPreviousVideo": "Poprzednie wideo",
+  "menuBarNextVideo": "Następne wideo",
+  "menuBarPlayPause": "Odtwórz/wstrzymaj",
+  "menuBarMute": "Wycisz",
+  "menuBarUnmute": "Włącz dźwięk",
+  "menuBarWindow": "Okno",
+  "menuBarHelp": "Pomoc"
 }

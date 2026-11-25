@@ -14454,5 +14454,69 @@
         "type": "String"
       }
     }
+  },
+  "menuBarEdit": "Edit",
+  "@menuBarEdit": {
+    "description": "macOS menu bar: title of the Edit menu, as in other Mac apps."
+  },
+  "menuBarUndo": "Undo",
+  "@menuBarUndo": {
+    "description": "macOS menu bar: Edit menu item that undoes the last text edit."
+  },
+  "menuBarRedo": "Redo",
+  "@menuBarRedo": {
+    "description": "macOS menu bar: Edit menu item that redoes the last undone text edit."
+  },
+  "menuBarCut": "Cut",
+  "@menuBarCut": {
+    "description": "macOS menu bar: Edit menu item that cuts the selected text."
+  },
+  "menuBarCopy": "Copy",
+  "@menuBarCopy": {
+    "description": "macOS menu bar: Edit menu item that copies the selected text."
+  },
+  "menuBarPaste": "Paste",
+  "@menuBarPaste": {
+    "description": "macOS menu bar: Edit menu item that pastes text."
+  },
+  "menuBarSelectAll": "Select All",
+  "@menuBarSelectAll": {
+    "description": "macOS menu bar: Edit menu item that selects all text in the focused field."
+  },
+  "menuBarView": "View",
+  "@menuBarView": {
+    "description": "macOS menu bar: title of the View menu, which holds Enter Full Screen."
+  },
+  "menuBarVideo": "Video",
+  "@menuBarVideo": {
+    "description": "macOS menu bar: title of the menu with the video feed commands (previous, next, play/pause, mute, back)."
+  },
+  "menuBarPreviousVideo": "Previous Video",
+  "@menuBarPreviousVideo": {
+    "description": "macOS menu bar: Video menu item that moves the feed to the previous video (Up arrow)."
+  },
+  "menuBarNextVideo": "Next Video",
+  "@menuBarNextVideo": {
+    "description": "macOS menu bar: Video menu item that moves the feed to the next video (Down arrow)."
+  },
+  "menuBarPlayPause": "Play/Pause",
+  "@menuBarPlayPause": {
+    "description": "macOS menu bar: Video menu item that plays or pauses the current video (Space)."
+  },
+  "menuBarMute": "Mute",
+  "@menuBarMute": {
+    "description": "macOS menu bar: Video menu item that mutes feed playback (M). Shown while sound is on."
+  },
+  "menuBarUnmute": "Unmute",
+  "@menuBarUnmute": {
+    "description": "macOS menu bar: Video menu item that turns feed sound back on (M). Shown while muted."
+  },
+  "menuBarWindow": "Window",
+  "@menuBarWindow": {
+    "description": "macOS menu bar: title of the Window menu, as in other Mac apps."
+  },
+  "menuBarHelp": "Help",
+  "@menuBarHelp": {
+    "description": "macOS menu bar: title of the Help menu, as in other Mac apps."
   }
 }

@@ -7896,5 +7896,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Sunting",
+  "menuBarUndo": "Buat Asal",
+  "menuBarRedo": "Buat Semula",
+  "menuBarCut": "Potong",
+  "menuBarCopy": "Salin",
+  "menuBarPaste": "Tampal",
+  "menuBarSelectAll": "Pilih Semua",
+  "menuBarView": "Paparan",
+  "menuBarVideo": "Video",
+  "menuBarPreviousVideo": "Video Sebelumnya",
+  "menuBarNextVideo": "Video Seterusnya",
+  "menuBarPlayPause": "Main/Jeda",
+  "menuBarMute": "Senyapkan",
+  "menuBarUnmute": "Nyahsenyap",
+  "menuBarWindow": "Tetingkap",
+  "menuBarHelp": "Bantuan"
 }

@@ -17055,4 +17055,52 @@ class AppLocalizationsUr extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return '$badgeName کی ویڈیوز';
   }
+
+  @override
+  String get menuBarEdit => 'ترمیم';
+
+  @override
+  String get menuBarUndo => 'واپس کریں';
+
+  @override
+  String get menuBarRedo => 'دوبارہ کریں';
+
+  @override
+  String get menuBarCut => 'کاٹیں';
+
+  @override
+  String get menuBarCopy => 'کاپی کریں';
+
+  @override
+  String get menuBarPaste => 'چسپاں کریں';
+
+  @override
+  String get menuBarSelectAll => 'سب منتخب کریں';
+
+  @override
+  String get menuBarView => 'منظر';
+
+  @override
+  String get menuBarVideo => 'ویڈیو';
+
+  @override
+  String get menuBarPreviousVideo => 'پچھلی ویڈیو';
+
+  @override
+  String get menuBarNextVideo => 'اگلی ویڈیو';
+
+  @override
+  String get menuBarPlayPause => 'چلائیں/روکیں';
+
+  @override
+  String get menuBarMute => 'میوٹ کریں';
+
+  @override
+  String get menuBarUnmute => 'ان میوٹ کریں';
+
+  @override
+  String get menuBarWindow => 'ونڈو';
+
+  @override
+  String get menuBarHelp => 'مدد';
 }

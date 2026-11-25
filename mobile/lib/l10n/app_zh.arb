@@ -7896,5 +7896,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "编辑",
+  "menuBarUndo": "撤销",
+  "menuBarRedo": "重做",
+  "menuBarCut": "剪切",
+  "menuBarCopy": "拷贝",
+  "menuBarPaste": "粘贴",
+  "menuBarSelectAll": "全选",
+  "menuBarView": "显示",
+  "menuBarVideo": "视频",
+  "menuBarPreviousVideo": "上一个视频",
+  "menuBarNextVideo": "下一个视频",
+  "menuBarPlayPause": "播放/暂停",
+  "menuBarMute": "静音",
+  "menuBarUnmute": "取消静音",
+  "menuBarWindow": "窗口",
+  "menuBarHelp": "帮助"
 }

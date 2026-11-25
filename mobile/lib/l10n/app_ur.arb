@@ -7896,5 +7896,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "ترمیم",
+  "menuBarUndo": "واپس کریں",
+  "menuBarRedo": "دوبارہ کریں",
+  "menuBarCut": "کاٹیں",
+  "menuBarCopy": "کاپی کریں",
+  "menuBarPaste": "چسپاں کریں",
+  "menuBarSelectAll": "سب منتخب کریں",
+  "menuBarView": "منظر",
+  "menuBarVideo": "ویڈیو",
+  "menuBarPreviousVideo": "پچھلی ویڈیو",
+  "menuBarNextVideo": "اگلی ویڈیو",
+  "menuBarPlayPause": "چلائیں/روکیں",
+  "menuBarMute": "میوٹ کریں",
+  "menuBarUnmute": "ان میوٹ کریں",
+  "menuBarWindow": "ونڈو",
+  "menuBarHelp": "مدد"
 }

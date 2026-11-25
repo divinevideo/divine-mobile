@@ -6720,5 +6720,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Редакция",
+  "menuBarUndo": "Отмени",
+  "menuBarRedo": "Повтори",
+  "menuBarCut": "Изрежи",
+  "menuBarCopy": "Копирай",
+  "menuBarPaste": "Постави",
+  "menuBarSelectAll": "Избери всичко",
+  "menuBarView": "Изглед",
+  "menuBarVideo": "Видео",
+  "menuBarPreviousVideo": "Предишно видео",
+  "menuBarNextVideo": "Следващо видео",
+  "menuBarPlayPause": "Пусни/пауза",
+  "menuBarMute": "Без звук",
+  "menuBarUnmute": "Включи звука",
+  "menuBarWindow": "Прозорец",
+  "menuBarHelp": "Помощ"
 }

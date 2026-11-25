@@ -16643,4 +16643,52 @@ class AppLocalizationsAm extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'የ$badgeName ቪዲዮዎች';
   }
+
+  @override
+  String get menuBarEdit => 'አርትዕ';
+
+  @override
+  String get menuBarUndo => 'ቀልብስ';
+
+  @override
+  String get menuBarRedo => 'ድገም';
+
+  @override
+  String get menuBarCut => 'ቁረጥ';
+
+  @override
+  String get menuBarCopy => 'ቅዳ';
+
+  @override
+  String get menuBarPaste => 'ለጥፍ';
+
+  @override
+  String get menuBarSelectAll => 'ሁሉንም ምረጥ';
+
+  @override
+  String get menuBarView => 'እይታ';
+
+  @override
+  String get menuBarVideo => 'ቪዲዮ';
+
+  @override
+  String get menuBarPreviousVideo => 'ቀዳሚ ቪዲዮ';
+
+  @override
+  String get menuBarNextVideo => 'ቀጣይ ቪዲዮ';
+
+  @override
+  String get menuBarPlayPause => 'አጫውት/ለአፍታ አቁም';
+
+  @override
+  String get menuBarMute => 'ድምጸ-ከል አድርግ';
+
+  @override
+  String get menuBarUnmute => 'ድምጸ-ከል አንሳ';
+
+  @override
+  String get menuBarWindow => 'መስኮት';
+
+  @override
+  String get menuBarHelp => 'እገዛ';
 }

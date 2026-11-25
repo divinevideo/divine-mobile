@@ -28548,6 +28548,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Videos from {badgeName}'**
   String badgeDiscoveryVideosLabel(String badgeName);
+
+  /// macOS menu bar: title of the Edit menu, as in other Mac apps.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get menuBarEdit;
+
+  /// macOS menu bar: Edit menu item that undoes the last text edit.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get menuBarUndo;
+
+  /// macOS menu bar: Edit menu item that redoes the last undone text edit.
+  ///
+  /// In en, this message translates to:
+  /// **'Redo'**
+  String get menuBarRedo;
+
+  /// macOS menu bar: Edit menu item that cuts the selected text.
+  ///
+  /// In en, this message translates to:
+  /// **'Cut'**
+  String get menuBarCut;
+
+  /// macOS menu bar: Edit menu item that copies the selected text.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get menuBarCopy;
+
+  /// macOS menu bar: Edit menu item that pastes text.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste'**
+  String get menuBarPaste;
+
+  /// macOS menu bar: Edit menu item that selects all text in the focused field.
+  ///
+  /// In en, this message translates to:
+  /// **'Select All'**
+  String get menuBarSelectAll;
+
+  /// macOS menu bar: title of the View menu, which holds Enter Full Screen.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get menuBarView;
+
+  /// macOS menu bar: title of the menu with the video feed commands (previous, next, play/pause, mute, back).
+  ///
+  /// In en, this message translates to:
+  /// **'Video'**
+  String get menuBarVideo;
+
+  /// macOS menu bar: Video menu item that moves the feed to the previous video (Up arrow).
+  ///
+  /// In en, this message translates to:
+  /// **'Previous Video'**
+  String get menuBarPreviousVideo;
+
+  /// macOS menu bar: Video menu item that moves the feed to the next video (Down arrow).
+  ///
+  /// In en, this message translates to:
+  /// **'Next Video'**
+  String get menuBarNextVideo;
+
+  /// macOS menu bar: Video menu item that plays or pauses the current video (Space).
+  ///
+  /// In en, this message translates to:
+  /// **'Play/Pause'**
+  String get menuBarPlayPause;
+
+  /// macOS menu bar: Video menu item that mutes feed playback (M). Shown while sound is on.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute'**
+  String get menuBarMute;
+
+  /// macOS menu bar: Video menu item that turns feed sound back on (M). Shown while muted.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute'**
+  String get menuBarUnmute;
+
+  /// macOS menu bar: title of the Window menu, as in other Mac apps.
+  ///
+  /// In en, this message translates to:
+  /// **'Window'**
+  String get menuBarWindow;
+
+  /// macOS menu bar: title of the Help menu, as in other Mac apps.
+  ///
+  /// In en, this message translates to:
+  /// **'Help'**
+  String get menuBarHelp;
 }
 
 class _AppLocalizationsDelegate

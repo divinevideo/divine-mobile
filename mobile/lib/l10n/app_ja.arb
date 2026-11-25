@@ -6603,5 +6603,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "編集",
+  "menuBarUndo": "取り消す",
+  "menuBarRedo": "やり直す",
+  "menuBarCut": "カット",
+  "menuBarCopy": "コピー",
+  "menuBarPaste": "ペースト",
+  "menuBarSelectAll": "すべてを選択",
+  "menuBarView": "表示",
+  "menuBarVideo": "動画",
+  "menuBarPreviousVideo": "前の動画",
+  "menuBarNextVideo": "次の動画",
+  "menuBarPlayPause": "再生/一時停止",
+  "menuBarMute": "ミュート",
+  "menuBarUnmute": "ミュートを解除",
+  "menuBarWindow": "ウインドウ",
+  "menuBarHelp": "ヘルプ"
 }

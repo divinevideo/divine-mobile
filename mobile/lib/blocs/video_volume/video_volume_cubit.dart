@@ -114,6 +114,9 @@ class VideoVolumeCubit extends Cubit<VideoVolumeState>
     unawaited(_persist());
   }
 
+  /// Mutes playback, or unmutes it when it is muted.
+  void toggleMute() => onPlaybackVolumeChanged(state.isMuted ? 1 : 0);
+
   void _onSystemVolumeChanged(double systemVolume) {
     if (systemVolume == 0 && state.volume > 0) {
       // Device muted → mute video

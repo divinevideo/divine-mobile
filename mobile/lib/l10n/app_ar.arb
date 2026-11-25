@@ -6603,5 +6603,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "تحرير",
+  "menuBarUndo": "تراجع",
+  "menuBarRedo": "إعادة",
+  "menuBarCut": "قص",
+  "menuBarCopy": "نسخ",
+  "menuBarPaste": "لصق",
+  "menuBarSelectAll": "تحديد الكل",
+  "menuBarView": "عرض",
+  "menuBarVideo": "فيديو",
+  "menuBarPreviousVideo": "الفيديو السابق",
+  "menuBarNextVideo": "الفيديو التالي",
+  "menuBarPlayPause": "تشغيل/إيقاف مؤقت",
+  "menuBarMute": "كتم الصوت",
+  "menuBarUnmute": "إلغاء كتم الصوت",
+  "menuBarWindow": "نافذة",
+  "menuBarHelp": "مساعدة"
 }

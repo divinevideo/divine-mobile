@@ -16268,4 +16268,52 @@ class AppLocalizationsJa extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return '$badgeNameの動画';
   }
+
+  @override
+  String get menuBarEdit => '編集';
+
+  @override
+  String get menuBarUndo => '取り消す';
+
+  @override
+  String get menuBarRedo => 'やり直す';
+
+  @override
+  String get menuBarCut => 'カット';
+
+  @override
+  String get menuBarCopy => 'コピー';
+
+  @override
+  String get menuBarPaste => 'ペースト';
+
+  @override
+  String get menuBarSelectAll => 'すべてを選択';
+
+  @override
+  String get menuBarView => '表示';
+
+  @override
+  String get menuBarVideo => '動画';
+
+  @override
+  String get menuBarPreviousVideo => '前の動画';
+
+  @override
+  String get menuBarNextVideo => '次の動画';
+
+  @override
+  String get menuBarPlayPause => '再生/一時停止';
+
+  @override
+  String get menuBarMute => 'ミュート';
+
+  @override
+  String get menuBarUnmute => 'ミュートを解除';
+
+  @override
+  String get menuBarWindow => 'ウインドウ';
+
+  @override
+  String get menuBarHelp => 'ヘルプ';
 }

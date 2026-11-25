@@ -17258,4 +17258,52 @@ class AppLocalizationsEs extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Vídeos de $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Edición';
+
+  @override
+  String get menuBarUndo => 'Deshacer';
+
+  @override
+  String get menuBarRedo => 'Rehacer';
+
+  @override
+  String get menuBarCut => 'Cortar';
+
+  @override
+  String get menuBarCopy => 'Copiar';
+
+  @override
+  String get menuBarPaste => 'Pegar';
+
+  @override
+  String get menuBarSelectAll => 'Seleccionar todo';
+
+  @override
+  String get menuBarView => 'Visualización';
+
+  @override
+  String get menuBarVideo => 'Video';
+
+  @override
+  String get menuBarPreviousVideo => 'Video anterior';
+
+  @override
+  String get menuBarNextVideo => 'Video siguiente';
+
+  @override
+  String get menuBarPlayPause => 'Reproducir/Pausar';
+
+  @override
+  String get menuBarMute => 'Silenciar';
+
+  @override
+  String get menuBarUnmute => 'Activar sonido';
+
+  @override
+  String get menuBarWindow => 'Ventana';
+
+  @override
+  String get menuBarHelp => 'Ayuda';
 }

@@ -6656,5 +6656,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "አርትዕ",
+  "menuBarUndo": "ቀልብስ",
+  "menuBarRedo": "ድገም",
+  "menuBarCut": "ቁረጥ",
+  "menuBarCopy": "ቅዳ",
+  "menuBarPaste": "ለጥፍ",
+  "menuBarSelectAll": "ሁሉንም ምረጥ",
+  "menuBarView": "እይታ",
+  "menuBarVideo": "ቪዲዮ",
+  "menuBarPreviousVideo": "ቀዳሚ ቪዲዮ",
+  "menuBarNextVideo": "ቀጣይ ቪዲዮ",
+  "menuBarPlayPause": "አጫውት/ለአፍታ አቁም",
+  "menuBarMute": "ድምጸ-ከል አድርግ",
+  "menuBarUnmute": "ድምጸ-ከል አንሳ",
+  "menuBarWindow": "መስኮት",
+  "menuBarHelp": "እገዛ"
 }
