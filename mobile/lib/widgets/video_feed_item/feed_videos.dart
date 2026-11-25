@@ -76,6 +76,17 @@ final _bunnyPlaybackPaths = Set<String>.unmodifiable(
   ).split(',').where((path) => path.isNotEmpty),
 );
 
+/// Whether a user is dragging past the forward end of a feed.
+bool isFeedEndSwipe(ScrollNotification notification) => switch (notification) {
+  OverscrollNotification(:final overscroll, :final dragDetails) =>
+    dragDetails != null && overscroll > 0,
+  ScrollUpdateNotification(:final scrollDelta, :final dragDetails) =>
+    dragDetails != null &&
+        (scrollDelta ?? 0) > 0 &&
+        notification.metrics.pixels > notification.metrics.maxScrollExtent,
+  _ => false,
+};
+
 class FeedVideos extends ConsumerStatefulWidget {
   const FeedVideos({
     required this.videos,
@@ -83,6 +94,7 @@ class FeedVideos extends ConsumerStatefulWidget {
     this.contextTitle,
     this.currentIndex = 0,
     this.scrollPhysics,
+    this.loadMoreOnEndSwipe = false,
     this.shouldPortraitExpand = true,
     this.showTopScrim = false,
     this.isActive = true,
@@ -102,9 +114,10 @@ class FeedVideos extends ConsumerStatefulWidget {
   final List<VideoEvent> videos;
   final VoidCallback onNearEnd;
   final int currentIndex;
-
-  /// Optional physics, including end swipes while discovery has only one video.
   final ScrollPhysics? scrollPhysics;
+
+  /// Allows a swipe past the last video to request more, even with one video.
+  final bool loadMoreOnEndSwipe;
   final String? contextTitle;
   final bool shouldPortraitExpand;
 
@@ -176,6 +189,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
       context.read<FeedAutoAdvanceCubit>();
   final _feedKey = GlobalKey<InfiniteVideoFeedState>();
   bool _routeAllowsPlayback = true;
+  bool _requestedPageForDrag = false;
 
   /// Feed index of each completed loop of the active video, for the
   /// reactions overlay that appears after a video's first loop.
@@ -381,6 +395,27 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
 
   void _resumeAutoAdvanceAfterSwipe() => _autoAdvanceCubit.resumeAfterSwipe();
 
+  bool _onEndSwipe(ScrollNotification notification) {
+    if (!widget.loadMoreOnEndSwipe ||
+        notification.depth != 0 ||
+        notification.metrics.axis != Axis.vertical) {
+      return false;
+    }
+    if (notification is ScrollStartNotification ||
+        notification is ScrollEndNotification) {
+      _requestedPageForDrag = false;
+    }
+    if (isFeedEndSwipe(notification) &&
+        !_requestedPageForDrag &&
+        widget.hasMore &&
+        !widget.isLoadingMore &&
+        _feedKey.currentState?.currentIndex == widget.videos.length - 1) {
+      _requestedPageForDrag = true;
+      widget.onNearEnd();
+    }
+    return false;
+  }
+
   void _handleVideoLoopCompleted(int currentIndex) {
     _loopCompletions.add(currentIndex);
     // Reactions mode holds the viewer on every video, so Auto never advances.
@@ -459,7 +494,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
       largeScreenLayout: AdaptiveLayoutScope.isEnabledOf(context),
       window: MediaQuery.sizeOf(context),
     );
-    return MultiBlocListener(
+    final feed = MultiBlocListener(
       listeners: [
         if (context.read<FeedReactionsCubit?>() case final reactionsCubit?)
           BlocListener<FeedReactionsCubit, bool>(
@@ -523,7 +558,9 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             ? _bunnyPlaybackPaths
             : const {},
         initialIndex: widget.currentIndex,
-        scrollPhysics: widget.scrollPhysics,
+        scrollPhysics: widget.loadMoreOnEndSwipe
+            ? const AlwaysScrollableScrollPhysics()
+            : widget.scrollPhysics,
         onNearEnd: widget.onNearEnd,
         prefetchOnMount: widget.prefetchOnMount,
         initialVolume: context.read<VideoVolumeCubit>().state.volume,
@@ -734,6 +771,10 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
           );
         },
       ),
+    );
+    return NotificationListener<ScrollNotification>(
+      onNotification: _onEndSwipe,
+      child: feed,
     );
   }
 }

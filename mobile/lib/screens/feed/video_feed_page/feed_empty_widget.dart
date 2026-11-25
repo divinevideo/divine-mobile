@@ -14,9 +14,10 @@ import 'package:openvine/screens/explore/explore_screen.dart';
 /// "explore videos" call to action when the For You feed is empty because the
 /// viewer follows no one.
 class FeedEmptyWidget extends StatelessWidget {
-  const FeedEmptyWidget({required this.state, super.key});
+  const FeedEmptyWidget({required this.state, this.onRetry, super.key});
 
   final VideoFeedBlocState state;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +73,10 @@ class FeedEmptyWidget extends StatelessWidget {
                 foregroundColor: context.vineColors.background,
               ),
             ),
+          ],
+          if (onRetry != null) ...[
+            const SizedBox(height: 24),
+            DivineButton(label: context.l10n.feedRetry, onPressed: onRetry),
           ],
         ],
       ),

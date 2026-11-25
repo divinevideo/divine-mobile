@@ -1093,15 +1093,18 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     VideoFeedLoadMoreRequested event,
     Emitter<VideoFeedBlocState> emit,
   ) async {
+    final source = state.source;
+    final canContinueEmptyForYou =
+        source.type == VideoFeedSourceType.forYou &&
+        state.paginationCursor != null;
     // Skip if not in success state, already loading more, or no more content
     if (state.status != VideoFeedStatus.success ||
         state.isLoadingMore ||
         !state.hasMore ||
-        state.videos.isEmpty) {
+        (state.videos.isEmpty && !canContinueEmptyForYou)) {
       return;
     }
 
-    final source = state.source;
     final paginationGeneration = _paginationGeneration;
     final feedLoad = _feedTracker?.startFeedLoad(
       source.mode.name,
@@ -2134,6 +2137,12 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           feedSessionRevision: nextFeedSessionRevision,
         ),
       );
+
+      if (source.type == VideoFeedSourceType.forYou &&
+          displayedVideos.isEmpty &&
+          state.hasMore) {
+        addIfOpen(const VideoFeedLoadMoreRequested());
+      }
 
       if (!servedCache && displayedVideos.isNotEmpty) {
         if (feedLoad != null) {

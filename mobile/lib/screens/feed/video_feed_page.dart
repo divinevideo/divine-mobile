@@ -542,6 +542,8 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                   ),
               builder: (context, state) {
                 final itemCount = state.videos.length;
+                final isForYou =
+                    state.source.type == VideoFeedSourceType.forYou;
                 final clampedIndex = _clampIndexForItemCount(
                   _currentIndex,
                   itemCount,
@@ -585,9 +587,23 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
 
                 // Empty state
                 if (state.isEmpty) {
+                  final canContinueForYou =
+                      isForYou &&
+                      state.hasMore &&
+                      state.paginationCursor != null;
                   return Stack(
                     children: [
-                      FeedEmptyWidget(state: state),
+                      if (canContinueForYou && state.isLoadingMore)
+                        const Center(child: BrandedLoadingIndicator())
+                      else
+                        FeedEmptyWidget(
+                          state: state,
+                          onRetry: canContinueForYou
+                              ? () => context.read<VideoFeedBloc>().add(
+                                  const VideoFeedLoadMoreRequested(),
+                                )
+                              : null,
+                        ),
                       const FeedModeSwitch(),
                     ],
                   );
@@ -636,9 +652,8 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                                   !shouldRetainPlayer,
                               hasMore: state.hasMore,
                               isLoadingMore: state.isLoadingMore,
-                              prefetchOnMount:
-                                  state.source.type ==
-                                  VideoFeedSourceType.forYou,
+                              prefetchOnMount: isForYou,
+                              loadMoreOnEndSwipe: isForYou,
                               trafficSource: ViewTrafficSource.home,
                               // Every feed mode renders through this one page and
                               // reports source=home, so without this detail the
