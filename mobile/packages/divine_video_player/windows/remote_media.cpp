@@ -254,6 +254,9 @@ struct Download {
 IAsyncAction DownloadAsync(std::shared_ptr<const RequestContext> context,
                            HttpClient client, Uri uri, uint64_t start,
                            uint64_t end, std::shared_ptr<Download> out) {
+  // LoadSources and Preload start on the platform thread; leave it, or every
+  // 64 KiB read below resumes back on it.
+  co_await winrt::resume_background();
   const std::optional<std::string> load_id = context->CurrentLoadId();
   const std::string request_id = load_id ? NewUuid() : std::string();
   const auto started = std::chrono::steady_clock::now();
