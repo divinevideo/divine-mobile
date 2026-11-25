@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Chuyển sang {account} để mở tin nhắn này?",
+  "notificationSettingsDirectMessages": "Tin nhắn trực tiếp",
+  "notificationSettingsDirectMessagesSubtitle": "Hiện thông báo mà không hiển thị tên người gửi hay nội dung tin nhắn.",
+  "dmNotificationMessageUnavailable": "Tin nhắn này không khả dụng.",
   "@@locale": "vi",
   "videoEditorSocialStickerPoll": "Bình chọn",
   "videoEditorSocialStickerQuiz": "Đố vui",

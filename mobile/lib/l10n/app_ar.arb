@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "هل تريد التبديل إلى {account} لفتح هذه الرسالة؟",
+  "notificationSettingsDirectMessages": "الرسائل الخاصة",
+  "notificationSettingsDirectMessagesSubtitle": "عرض تنبيه خاص دون اسم المرسِل أو نص الرسالة.",
+  "dmNotificationMessageUnavailable": "هذه الرسالة غير متاحة.",
   "@@locale": "ar",
   "videoEditorSocialStickerPoll": "استطلاع",
   "videoEditorSocialStickerQuiz": "اختبار",

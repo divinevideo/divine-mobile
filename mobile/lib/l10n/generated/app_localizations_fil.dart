@@ -10,6 +10,22 @@ class AppLocalizationsFil extends AppLocalizations {
   AppLocalizationsFil([String locale = 'fil']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Lumipat sa $account para buksan ang mensaheng ito?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Mga direktang mensahe';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Magpakita ng abiso nang walang pangalan ng nagpadala o teksto ng mensahe.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Hindi available ang mensaheng ito.';
+
+  @override
   String get devOptionsClipRecovery => 'Pagbawi ng clip';
 
   @override

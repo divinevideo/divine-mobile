@@ -1,4 +1,25 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Switch to {account} to open this message?",
+  "@dmNotificationSwitchAccountPrompt": {
+    "description": "Asks before switching to a known account to open its direct message.",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationSettingsDirectMessages": "Direct messages",
+  "@notificationSettingsDirectMessages": {
+    "description": "Account preference for generic direct-message push alerts."
+  },
+  "notificationSettingsDirectMessagesSubtitle": "Show a private alert without the sender’s name or message.",
+  "@notificationSettingsDirectMessagesSubtitle": {
+    "description": "Direct-message notification setting. Keep both the sender and message private in the notification."
+  },
+  "dmNotificationMessageUnavailable": "This message is unavailable.",
+  "@dmNotificationMessageUnavailable": {
+    "description": "Generic fallback when a tapped private message cannot be opened."
+  },
   "@@locale": "en",
   "devOptionsClipRecovery": "Clip Recovery",
   "@devOptionsClipRecovery": {

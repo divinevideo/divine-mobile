@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "ఈ సందేశాన్ని తెరవడానికి {account} ఖాతాకు మారాలా?",
+  "notificationSettingsDirectMessages": "ప్రత్యక్ష సందేశాలు",
+  "notificationSettingsDirectMessagesSubtitle": "పంపినవారి పేరు లేదా సందేశం చూపకుండా నోటిఫికేషన్ ఇవ్వండి.",
+  "dmNotificationMessageUnavailable": "ఈ సందేశం అందుబాటులో లేదు.",
   "@@locale": "te",
   "videoEditorSocialStickerPoll": "పోల్",
   "videoEditorSocialStickerQuiz": "క్విజ్",

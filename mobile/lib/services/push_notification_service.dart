@@ -521,6 +521,8 @@ class PushNotificationService {
       'timezoneOffsetMinutes': timezone.offset,
       'campaignTargetTypes': NotificationWireValues.campaignTargetTypes,
       ...?_deviceMetadata?.toJson(),
+      if (_deviceMetadata?.supportsDirectMessageRouting ?? false)
+        'directMessageRouting': true,
       if (timezone.name != null) 'timezone': timezone.name,
     });
     final request = _pushControlRequest(identity, pushServicePubkey, plaintext);

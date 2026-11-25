@@ -139,6 +139,30 @@ abstract class AppLocalizations {
     Locale('zh'),
   ];
 
+  /// Asks before switching to a known account to open its direct message.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to {account} to open this message?'**
+  String dmNotificationSwitchAccountPrompt(String account);
+
+  /// Account preference for generic direct-message push alerts.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct messages'**
+  String get notificationSettingsDirectMessages;
+
+  /// Direct-message notification setting. Keep both the sender and message private in the notification.
+  ///
+  /// In en, this message translates to:
+  /// **'Show a private alert without the sender’s name or message.'**
+  String get notificationSettingsDirectMessagesSubtitle;
+
+  /// Generic fallback when a tapped private message cannot be opened.
+  ///
+  /// In en, this message translates to:
+  /// **'This message is unavailable.'**
+  String get dmNotificationMessageUnavailable;
+
   /// Header of the Developer Options section that recovers clips the app can no longer show.
   ///
   /// In en, this message translates to:

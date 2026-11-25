@@ -10,6 +10,22 @@ class AppLocalizationsNl extends AppLocalizations {
   AppLocalizationsNl([String locale = 'nl']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Overschakelen naar $account om dit bericht te openen?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Privéberichten';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Toon een melding zonder de naam van de afzender of de tekst van het bericht.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Dit bericht is niet beschikbaar.';
+
+  @override
   String get devOptionsClipRecovery => 'Clipherstel';
 
   @override

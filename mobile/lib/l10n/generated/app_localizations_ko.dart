@@ -10,6 +10,21 @@ class AppLocalizationsKo extends AppLocalizations {
   AppLocalizationsKo([String locale = 'ko']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return '이 메시지를 열려면 $account 계정으로 전환할까요?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => '다이렉트 메시지';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      '보낸 사람의 이름과 메시지 내용을 숨기고 알림을 표시합니다.';
+
+  @override
+  String get dmNotificationMessageUnavailable => '이 메시지를 볼 수 없습니다.';
+
+  @override
   String get devOptionsClipRecovery => '클립 복구';
 
   @override

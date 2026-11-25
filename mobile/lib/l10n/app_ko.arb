@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "이 메시지를 열려면 {account} 계정으로 전환할까요?",
+  "notificationSettingsDirectMessages": "다이렉트 메시지",
+  "notificationSettingsDirectMessagesSubtitle": "보낸 사람의 이름과 메시지 내용을 숨기고 알림을 표시합니다.",
+  "dmNotificationMessageUnavailable": "이 메시지를 볼 수 없습니다.",
   "@@locale": "ko",
   "videoEditorSocialStickerPoll": "투표",
   "videoEditorSocialStickerQuiz": "퀴즈",

@@ -10,6 +10,21 @@ class AppLocalizationsUr extends AppLocalizations {
   AppLocalizationsUr([String locale = 'ur']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'یہ پیغام کھولنے کے لیے $account پر سوئچ کریں؟';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'براہ راست پیغامات';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'بھیجنے والے کا نام یا پیغام کا متن دکھائے بغیر اطلاع دیں۔';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'یہ پیغام دستیاب نہیں ہے۔';
+
+  @override
   String get devOptionsClipRecovery => 'کلپ کی بازیابی';
 
   @override

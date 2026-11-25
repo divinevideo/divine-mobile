@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Tukar kepada {account} untuk membuka mesej ini?",
+  "notificationSettingsDirectMessages": "Mesej langsung",
+  "notificationSettingsDirectMessagesSubtitle": "Paparkan pemberitahuan tanpa nama pengirim atau kandungan mesej.",
+  "dmNotificationMessageUnavailable": "Mesej ini tidak tersedia.",
   "@@locale": "ms",
   "videoEditorSocialStickerPoll": "Undian",
   "videoEditorSocialStickerQuiz": "Kuiz",

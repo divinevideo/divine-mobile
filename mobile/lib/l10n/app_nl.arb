@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Overschakelen naar {account} om dit bericht te openen?",
+  "notificationSettingsDirectMessages": "Privéberichten",
+  "notificationSettingsDirectMessagesSubtitle": "Toon een melding zonder de naam van de afzender of de tekst van het bericht.",
+  "dmNotificationMessageUnavailable": "Dit bericht is niet beschikbaar.",
   "@@locale": "nl",
   "videoEditorSocialStickerPoll": "Poll",
   "videoEditorSocialStickerQuiz": "Quiz",

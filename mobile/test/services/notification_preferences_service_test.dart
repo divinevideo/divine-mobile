@@ -21,6 +21,53 @@ void main() {
   });
 
   group('unbound account preference port', () {
+    test('shared state and another account cannot grant DM consent', () async {
+      SharedPreferences.setMockInitialValues({});
+      final account = AccountPreferenceStore(
+        await SharedPreferences.getInstance(),
+      );
+      final first = FakeAccountState('a' * 64);
+      final second = FakeAccountState('b' * 64);
+      final store = _MemoryNotificationPreferencesStore()
+        ..preferences = const NotificationPreferences(
+          directMessagesEnabled: true,
+        );
+      var owner = first.pubkey;
+      final service = NotificationPreferencesService(
+        store: store,
+        currentPubkey: () => owner,
+        accountPreferences: account,
+        publishPreferences: (_, _) async => true,
+      );
+      addTearDown(service.dispose);
+      addTearDown(account.dispose);
+      addTearDown(first.close);
+      addTearDown(second.close);
+      expect((await service.loadPreferences()).directMessagesEnabled, isFalse);
+      await service.updatePreference(
+        NotificationPreference.directMessagesEnabled,
+        true,
+      );
+      expect(store.dirty, isEmpty);
+      await account.bind(first);
+      expect((await service.loadPreferences()).directMessagesEnabled, isFalse);
+      await service.updatePreference(
+        NotificationPreference.directMessagesEnabled,
+        true,
+      );
+      expect((await service.loadPreferences()).toKindsList(), contains(1059));
+      expect(first.data['notifications/directMessagesEnabled'], isTrue);
+      owner = second.pubkey;
+      expect((await service.loadPreferences()).directMessagesEnabled, isFalse);
+      await service.updatePreference(
+        NotificationPreference.directMessagesEnabled,
+        false,
+      );
+      expect(first.data['notifications/directMessagesEnabled'], isTrue);
+      await account.bind(second);
+      expect((await service.loadPreferences()).directMessagesEnabled, isFalse);
+    });
+
     for (final mutation in ['snapshot', 'field', 'reset']) {
       test(
         'unbound $mutation mutation retains its account lease',
@@ -375,6 +422,36 @@ void main() {
         NotificationPreferencesService.publishedKindsSchemaVersion,
       );
     });
+
+    test(
+      'upgrading schema one republishes without opting into DM alerts',
+      () async {
+        final store = _MemoryNotificationPreferencesStore()
+          ..publishedSchemaVersions[pubkey] = 1;
+        final published = <List<int>>[];
+        final service = NotificationPreferencesService(
+          store: store,
+          currentPubkey: () => pubkey,
+          publishPreferences: (_, prefs) async {
+            published.add(prefs.toKindsList());
+            return published.length > 1;
+          },
+        );
+        expect(await service.markDirtyIfSchemaOutdated(pubkey), isTrue);
+        expect(
+          await service.syncDirtyPreferencesForPubkey(pubkey),
+          NotificationPreferencesSyncOutcome.stillDirty,
+        );
+        expect(store.publishedSchemaVersions[pubkey], 1);
+        expect(
+          await service.syncDirtyPreferencesForPubkey(pubkey),
+          NotificationPreferencesSyncOutcome.publishedAndCleared,
+        );
+        expect(published, hasLength(2));
+        expect(published.expand((kinds) => kinds), isNot(contains(1059)));
+        expect(store.publishedSchemaVersions[pubkey], 2);
+      },
+    );
 
     test('does not republish once the marker is current', () async {
       final store = _MemoryNotificationPreferencesStore()

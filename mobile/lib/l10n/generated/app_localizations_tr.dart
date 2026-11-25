@@ -10,6 +10,21 @@ class AppLocalizationsTr extends AppLocalizations {
   AppLocalizationsTr([String locale = 'tr']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Bu mesajı açmak için $account hesabına geçilsin mi?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Özel mesajlar';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Gönderenin adını veya mesaj içeriğini göstermeden bildirim gönder.';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'Bu mesaj kullanılamıyor.';
+
+  @override
   String get devOptionsClipRecovery => 'Klip kurtarma';
 
   @override

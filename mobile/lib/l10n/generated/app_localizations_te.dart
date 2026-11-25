@@ -10,6 +10,21 @@ class AppLocalizationsTe extends AppLocalizations {
   AppLocalizationsTe([String locale = 'te']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'ఈ సందేశాన్ని తెరవడానికి $account ఖాతాకు మారాలా?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'ప్రత్యక్ష సందేశాలు';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'పంపినవారి పేరు లేదా సందేశం చూపకుండా నోటిఫికేషన్ ఇవ్వండి.';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'ఈ సందేశం అందుబాటులో లేదు.';
+
+  @override
   String get devOptionsClipRecovery => 'క్లిప్ రికవరీ';
 
   @override

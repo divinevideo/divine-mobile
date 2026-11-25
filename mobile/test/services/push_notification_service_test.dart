@@ -128,6 +128,7 @@ void main() {
 
   PushNotificationService buildService({
     String? token = testToken,
+    bool includeDeviceMetadata = true,
     Future<String?> Function()? getToken,
     FutureOr<bool> Function()? isCurrent,
     int Function()? timeZoneOffsetMinutes,
@@ -139,11 +140,13 @@ void main() {
       notificationService: mockNotificationService,
       environmentConfig: testEnvironment,
       getToken: getToken ?? () async => token,
-      deviceMetadata: PushDeviceMetadata.resolve(
-        platform: TargetPlatform.iOS,
-        source: InstallSource.appStore,
-        appVersion: '1.2.3',
-      ),
+      deviceMetadata: includeDeviceMetadata
+          ? PushDeviceMetadata.resolve(
+              platform: TargetPlatform.iOS,
+              source: InstallSource.appStore,
+              appVersion: '1.2.3',
+            )
+          : null,
       isCurrent: isCurrent,
       timeZoneIdentifier: timeZoneIdentifier ?? () async => null,
       timeZoneOffsetMinutes:
@@ -253,6 +256,7 @@ void main() {
           registrationCapture.captured.single as String,
         ) as Map<String, dynamic>;
         expect(registrationJson['token'], testToken);
+        expect(registrationJson['directMessageRouting'], isTrue);
         expect(registrationJson['platform'], 'ios');
         expect(registrationJson['installChannel'], 'app_store');
         expect(registrationJson['appVersion'], '1.2.3');
@@ -771,6 +775,52 @@ void main() {
         );
         service.dispose();
       });
+
+      test(
+        'an upgraded install registers its existing token with routing',
+        () async {
+          final published = stubSignAndPublish(
+            PushNotificationService.pushRegistrationKind,
+            [
+              _eventWithId('old-registration'),
+              _eventWithId('new-registration'),
+            ],
+            [acceptedOutcome, acceptedOutcome],
+          );
+          final legacy = buildService(includeDeviceMetadata: false);
+          expect(
+            await legacy.register(testPubkey),
+            PushRegistrationResult.published,
+          );
+          legacy.dispose();
+          final upgraded = buildService();
+          expect(
+            await upgraded.register(testPubkey),
+            PushRegistrationResult.published,
+          );
+          upgraded.dispose();
+          final registrations =
+              verify(
+                    () => mockNostrSigner.nip44Encrypt(
+                      testEnvironment.pushServicePubkey,
+                      captureAny(),
+                    ),
+                  ).captured
+                  .cast<String>()
+                  .map((data) => jsonDecode(data) as Map<String, dynamic>)
+                  .toList();
+          expect(published, hasLength(2));
+          expect(registrations.map((data) => data['token']), [
+            testToken,
+            testToken,
+          ]);
+          expect(
+            registrations.first.containsKey('directMessageRouting'),
+            isFalse,
+          );
+          expect(registrations.last['directMessageRouting'], isTrue);
+        },
+      );
 
       // Kind 3079 is a regular kind, so a re-signed retry of a registration
       // the relay already stored leaves a second one beside it (#8380).

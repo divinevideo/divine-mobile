@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "このメッセージを開くために {account} に切り替えますか？",
+  "notificationSettingsDirectMessages": "ダイレクトメッセージ",
+  "notificationSettingsDirectMessagesSubtitle": "送信者の名前やメッセージの内容を含めずに通知します。",
+  "dmNotificationMessageUnavailable": "このメッセージは表示できません。",
   "@@locale": "ja",
   "videoEditorSocialStickerPoll": "アンケート",
   "videoEditorSocialStickerQuiz": "クイズ",

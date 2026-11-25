@@ -394,7 +394,13 @@ class NotificationPreferencesService {
   /// mutations retain their own initiating-account lease.
   Future<NotificationPreferences> loadPreferences() async {
     final account = _accountPreferences;
-    if (account == null || !account.isBound) return _store.loadPreferences();
+    if (account == null || !account.isBound) {
+      // The legacy cache is shared by every account on this installation.
+      // It can never grant consent to private-message notifications.
+      return (await _store.loadPreferences()).copyWith(
+        directMessagesEnabled: false,
+      );
+    }
     final write = account.captureWrite();
     if (!(_migrationOwner?.isCurrent ?? false)) {
       _migration = null;
@@ -415,15 +421,20 @@ class NotificationPreferencesService {
           await account.seedLegacyNotificationPreferences({
             if (legacy != null)
               for (final entry in legacy.toJson().entries)
-                if (entry.value != defaults[entry.key])
+                if (entry.key !=
+                        NotificationPreference.directMessagesEnabled.name &&
+                    entry.value != defaults[entry.key])
                   'notifications/${entry.key}': entry.value,
           });
         }
       }());
     }
+    final owner = _currentPubkey();
+    final ownsConsent = owner != null && account.boundPubkey == owner;
     return NotificationPreferences.fromJson({
       for (final field in AccountPreferenceRegistry.notificationFields)
-        if (account.read('notifications/$field') is bool)
+        if (field != NotificationPreference.directMessagesEnabled.name ||
+            ownsConsent)
           field: account.read('notifications/$field'),
     });
   }
@@ -445,6 +456,19 @@ class NotificationPreferencesService {
     final account = _accountPreferences;
     final write = account?.captureWrite();
     final owner = _currentPubkey();
+    // A shared legacy preference has no evidence of who opted in. An account
+    // swap also invalidates a tap that belonged to the previous settings page.
+    if (requested.containsKey(
+      NotificationPreference.directMessagesEnabled.name,
+    )) {
+      final boundOwner = account?.boundPubkey;
+      if (boundOwner != null && boundOwner != owner) return;
+      if (boundOwner == null &&
+          requested[NotificationPreference.directMessagesEnabled.name] ==
+              true) {
+        return;
+      }
+    }
     if (account != null && account.isBound) {
       ++_localMutations;
       final generation = ++_generation;
@@ -521,6 +545,7 @@ class NotificationPreferencesService {
       final prefs = NotificationPreferences.fromJson({
         if (!replaceAll) ...(await _store.loadPreferences()).toJson(),
         ...requested,
+        'directMessagesEnabled': false,
       });
       write?.ensureCurrent();
       await _store.savePreferences(prefs);
@@ -553,7 +578,8 @@ class NotificationPreferencesService {
   /// list that predates the change.
   ///
   /// * 1 — added kind 34236 (new-post / "bell" notifications).
-  static const int publishedKindsSchemaVersion = 1;
+  /// * 2 — added kind 1059 for accounts that explicitly enable DM alerts.
+  static const int publishedKindsSchemaVersion = 2;
 
   /// Marks preferences dirty when the last published kind list predates
   /// [publishedKindsSchemaVersion].

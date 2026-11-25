@@ -10,6 +10,22 @@ class AppLocalizationsRo extends AppLocalizations {
   AppLocalizationsRo([String locale = 'ro']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Treci la contul $account pentru a deschide acest mesaj?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Mesaje directe';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Afișează o notificare fără numele expeditorului sau textul mesajului.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Acest mesaj nu este disponibil.';
+
+  @override
   String get devOptionsClipRecovery => 'Recuperare clipuri';
 
   @override
