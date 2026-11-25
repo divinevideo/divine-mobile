@@ -195,10 +195,10 @@ production.
 
   To put the app behind it, the environment decides how. In every non-production environment the app accepts only relays on the environment's own host (`lib/services/nostr_service_factory.dart`), so under STAGING it takes `relay.staging.divine.video` and nothing else: a loopback proxy cannot be added there. Under `DEFAULT_ENV=LOCAL` the host is `localhost`, the default relay is `ws://localhost:47777` and the REST API shares that port (`mobile/lib/models/environment_config.dart`):
 
-  - **No local stack.** Run the proxy with `--listen 47777` and any `--upstream`, for example `wss://relay.staging.divine.video`. The app's own default relay now goes through it, and nothing needs adding in the settings. Plain HTTP to that port is forwarded too, so REST reads work.
+  - **No local stack.** Start `nak serve --port 47778 </dev/null`, then run the proxy with `--listen 47777 --upstream ws://localhost:47778`. The LOCAL default relay goes through the proxy. The proxy also forwards HTTP to the upstream, so Funnelcake REST reads require an upstream that serves those endpoints. Use the local stack when the reproduction needs Funnelcake REST.
   - **With the local stack** (`mise run local_up` from `mobile/`; for the iOS simulator export `BLOSSOM_PUBLIC_URL=http://localhost:43003` first, per `AGENTS.md`): `--upstream ws://localhost:47777` (`localRelayPort`), the proxy on 47801, and add `ws://localhost:47801` in the app's relay settings. This route has not been run.
 
-  **Run with the app** on 2026-11-02: iOS 27.0 simulator, debug, the first route above, staging relay upstream.
+  **Run with the app** on 2026-11-02: iOS 27.0 simulator, debug, `DEFAULT_ENV=LOCAL`, proxy on port 47777 with the staging relay as upstream.
 
   - A signed-out app opens no relay WebSocket (every protected route redirects to the welcome screen, and the log says `relays: 0`). Account creation was not tried, because it writes. A session without a real account: import a throwaway key with `c.read(authServiceProvider).importFromHex(…)` through `evaluate`, post-frame, the expression read from a 0600 file on stdin and never in argv, and grep the run's logs for the key afterwards (0).
   - **Signing in writes on its own**: five kind 3083 and one kind 10002 event in the first seconds, then a kind 22236 about every 15 s. Run with `--reject-event <prefix> --reject-event-count 100000` as a write guard and compare `rejected-with-OK-false` with what the app tried. The app logged the refusals as `OK accepted=false (reason=rate-limited)`.

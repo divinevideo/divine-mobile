@@ -6091,7 +6091,10 @@ void main() {
               lastMessageSenderPubkey: any(named: 'lastMessageSenderPubkey'),
               subject: any(named: 'subject'),
               isRead: any(named: 'isRead'),
-              currentUserHasSent: any(named: 'currentUserHasSent'),
+              currentUserHasSent: any(
+                named: 'currentUserHasSent',
+                that: isFalse,
+              ),
               ownerPubkey: any(named: 'ownerPubkey'),
               dmProtocol: any(named: 'dmProtocol'),
             ),
@@ -22773,7 +22776,10 @@ void main() {
               lastMessageCreatedAt: any(named: 'lastMessageCreatedAt'),
               lastMessageSenderPubkey: _validPubkeyB,
               isRead: false,
-              currentUserHasSent: any(named: 'currentUserHasSent'),
+              currentUserHasSent: any(
+                named: 'currentUserHasSent',
+                that: isFalse,
+              ),
               ownerPubkey: any(named: 'ownerPubkey'),
               dmProtocol: any(named: 'dmProtocol'),
             ),
