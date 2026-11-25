@@ -643,6 +643,70 @@ void main() {
         expectSilent();
       });
 
+      test(
+        'a wrap suppressed during the final consent read cancels the alert',
+        () async {
+          final consent = Completer<NotificationPreferences>();
+          await receive();
+          when(preferences.loadPreferences).thenAnswer((_) => consent.future);
+          await verified();
+          lookups.add(const DmWrapSuppressed());
+          await pumpEventQueue(times: 2);
+          consent.complete(optedIn);
+          await pumpEventQueue(times: 2);
+          expectSilent();
+          expect(lookups.hasListener, isFalse);
+        },
+      );
+
+      test(
+        'disposing the provider stops a pending verification immediately',
+        () async {
+          await receive();
+          expect(lookups.hasListener, isTrue);
+          foreground.invalidate(pushNotificationSyncProvider);
+          expect(lookups.hasListener, isFalse);
+          await verified();
+          expectSilent();
+        },
+      );
+
+      test(
+        'the original ten-second wait bounds an unverified foreground alert',
+        () {
+          fakeAsync((clock) {
+            // Register the FCM listener in the same virtual-time zone as its
+            // lookup deadline.
+            foreground.invalidate(pushNotificationSyncProvider);
+            foreground.read(pushNotificationSyncProvider);
+            pushes.add(
+              const RemoteMessage(
+                data: {
+                  'type': 'directMessage',
+                  'receiverPubkey': pubkeyA,
+                  'eventId': wrap,
+                },
+              ),
+            );
+            clock.flushMicrotasks();
+            expect(lookups.hasListener, isTrue);
+            clock.elapse(const Duration(seconds: 9));
+            lookups.add(const DmWrapPending());
+            clock.flushMicrotasks();
+            expectSilent();
+            clock.elapse(const Duration(seconds: 1));
+            verify(
+              () => local.sendLocal(
+                title: 'Divine',
+                body: 'New message',
+                payload: any(named: 'payload'),
+              ),
+            ).called(1);
+            expect(lookups.hasListener, isFalse);
+          });
+        },
+      );
+
       test('the same message becoming visible during the final consent read suppresses the alert', () async {
         final consent = Completer<NotificationPreferences>();
         await receive();

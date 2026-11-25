@@ -416,6 +416,13 @@ Future<void> _handleForegroundDm(Ref ref, RemoteMessage message) async {
       ref.read(accountPreferenceStoreProvider).boundPubkey == owner &&
       ref.read(nostrSessionProvider).pubkey == owner;
   if (!current()) return;
+  StreamSubscription<DmWrapLookup>? subscription;
+  VoidCallback? removeDisposeListener;
+  void stopWatching() {
+    subscription?.cancel().ignore();
+    subscription = null;
+  }
+
   try {
     final service = ref.read(notificationServiceProvider);
     final prefs = ref.read(notificationPreferencesServiceProvider);
@@ -424,18 +431,38 @@ Future<void> _handleForegroundDm(Ref ref, RemoteMessage message) async {
         !current()) {
       return;
     }
-    final lookup = await ref
+    final firstResult = Completer<void>();
+    DmWrapLookup lookup = const DmWrapPending();
+    void receive(DmWrapLookup result) {
+      // A known result that loses its evidence during the consent read cannot
+      // use the timeout exception for a wrap that has never settled.
+      lookup = firstResult.isCompleted && result is DmWrapPending
+          ? const DmWrapSuppressed()
+          : result;
+      if (result is! DmWrapPending && !firstResult.isCompleted) {
+        firstResult.complete();
+      }
+    }
+
+    subscription = ref
         .read(dmRepositoryProvider)
         .watchWrapLookup(ownerPubkey: owner, giftWrapId: wrap)
-        .where((result) => result is! DmWrapPending)
-        .timeout(
-          const Duration(seconds: 10),
-          onTimeout: (sink) {
-            sink.add(const DmWrapPending());
-            sink.close();
+        .listen(
+          receive,
+          onError: (Object _) => receive(const DmWrapSuppressed()),
+          onDone: () {
+            if (!firstResult.isCompleted) receive(const DmWrapSuppressed());
           },
-        )
-        .first;
+          cancelOnError: true,
+        );
+    removeDisposeListener = ref.onDispose(() {
+      receive(const DmWrapSuppressed());
+      stopWatching();
+    });
+    await firstResult.future.timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {},
+    );
     if (!current() || !service.hasPermissions) return;
     if (!(await prefs.loadPreferences()).directMessagesEnabled ||
         !current() ||
@@ -466,5 +493,8 @@ Future<void> _handleForegroundDm(Ref ref, RemoteMessage message) async {
   } on Object {
     // A retired account scope or unavailable private state cannot authorize an alert.
     return;
+  } finally {
+    removeDisposeListener?.call();
+    stopWatching();
   }
 }
