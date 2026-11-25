@@ -124,7 +124,8 @@ enum FeatureFlag {
     'Layouts for tablets and foldables like the iPhone Duo: whole videos '
         'instead of cropped ones, more grid columns, rotation on large '
         'screens, and side navigation with comments beside the video in '
-        'landscape.',
+        'landscape. Turning it off cannot lock an iPad running windowed apps '
+        'to portrait, so it shows the phone layout in landscape there.',
   );
 
   const FeatureFlag(
