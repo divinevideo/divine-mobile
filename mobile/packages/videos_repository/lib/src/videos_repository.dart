@@ -2155,23 +2155,25 @@ class VideosRepository {
 
   /// The revision of the video [addressableId] (`kind:pubkey:d-tag`) that
   /// Divine's REST API returns, or the newest a relay returns when the API
-  /// has none, for a caller about to replace it. A Funnelcake answer that is
-  /// not older than [notOlderThan], the revision the caller opened, is
-  /// returned without asking any relay, so a newer revision it has not
-  /// indexed, or never stored, is not seen.
+  /// has none as new as [notOlderThan], for a caller about to replace it. A
+  /// Funnelcake answer that is not older than [notOlderThan], the revision
+  /// the caller opened, or any answer when it is null, is returned without
+  /// asking any relay, so a newer revision it has not indexed, or never
+  /// stored, is not seen.
   ///
   /// Asks Funnelcake first, since it answers faster than the relays, and
-  /// waits for it for at most three seconds. Its d-tag lookup is not scoped
-  /// by author, so its event counts only when it is at the exact address and
-  /// validly signed. Without such an answer, when the request fails or times
-  /// out, or when its revision predates [notOlderThan], it reads the relays
-  /// without the local cache and takes the newest valid revision any of them
-  /// returned, or Funnelcake's older one when none is newer. A slow or
-  /// silent relay does not block the answer: the relay read is a fallback,
-  /// not a gate that needs every relay. [LatestVideoRevisionAbsent] means no
-  /// relay returned a revision and either that read completed or Funnelcake
-  /// answered that it holds none, which is also how it reports a deleted
-  /// video; [LatestVideoRevisionUnknown] means neither held.
+  /// waits at most [_latestRevisionFunnelcakeTimeout] for it. Its d-tag
+  /// lookup is not scoped by author, so its event counts only when it is at
+  /// the exact address and validly signed. Without such an answer, when the
+  /// request fails or times out, or when its revision predates
+  /// [notOlderThan], it reads the relays without the local cache and takes
+  /// the newest valid revision any of them returned, or Funnelcake's older
+  /// one when none is newer. A slow or silent relay does not block the
+  /// answer: the relay read is a fallback, not a gate that needs every relay.
+  /// [LatestVideoRevisionAbsent] means no relay returned a revision and
+  /// either that read completed or Funnelcake answered that it holds none,
+  /// which is also how it reports a deleted video;
+  /// [LatestVideoRevisionUnknown] means neither held.
   ///
   /// Throws [ArgumentError] when [addressableId] is not a Kind 34235 or
   /// 34236 address.
