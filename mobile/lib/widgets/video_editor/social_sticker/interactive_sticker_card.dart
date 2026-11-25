@@ -823,7 +823,7 @@ class _CyclingThumbnailState extends State<_CyclingThumbnail>
 
   /// Fades the loaded thumbnail after the one shown in over it.
   void _next() {
-    if (!mounted || _isFading) return;
+    if (!mounted || _isFading || _current == null) return;
     final ready = _ready;
     if (ready.length < 2) return;
     final at = ready.indexWhere(

@@ -618,6 +618,28 @@ void main() {
         expect(thumbnail(b), findsNothing);
       });
 
+      testWidgets('waits for the newest through a timer tick with two older '
+          'thumbnails ready', (tester) async {
+        const c = 'https://example.com/replies-sticker-thumbnail-c.jpg';
+        loadable = {b, c};
+        latest.value = const [
+          StickerResponsePreview(thumbnailUrl: a),
+          StickerResponsePreview(thumbnailUrl: b),
+          StickerResponsePreview(thumbnailUrl: c),
+        ];
+        await pumpThumbnails(tester);
+        await load(tester, [b, c]);
+
+        await tester.pump(repliesThumbnailInterval);
+        await tester.pumpAndSettle();
+        expect(thumbnail(b), findsNothing);
+        expect(thumbnail(c), findsNothing);
+
+        held[a]!.complete(served(a));
+        await load(tester, [a]);
+        expect(thumbnail(a), findsOneWidget);
+      });
+
       testWidgets('keeps the one it shows when the card is built again with '
           'the avatars of the same replies', (tester) async {
         await pumpThumbnails(tester);
