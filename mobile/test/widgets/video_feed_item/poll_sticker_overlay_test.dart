@@ -130,6 +130,7 @@ void main() {
     Future<void> pump(
       WidgetTester tester, {
       bool isActive = true,
+      bool? isCurrent,
       NostrSessionReadiness? session,
       _Session? sessionNotifier,
       VideoStickerRegion? region,
@@ -167,6 +168,7 @@ void main() {
                         video: _video,
                         data: SocialStickerData.ofRegion(shown)!,
                         isActive: isActive,
+                        isCurrent: isCurrent ?? isActive,
                         onInteraction: () => interactions++,
                       ),
                     ),
@@ -218,17 +220,47 @@ void main() {
     }
 
     group('renders', () {
-      testWidgets('draws the poll of a video the feed only loads ahead, '
-          'without reading it', (tester) async {
-        await pump(tester, isActive: false);
+      testWidgets('reads the poll of a video the feed only loads ahead, and '
+          'grows its votes in once it is swiped to', (tester) async {
+        await pump(tester, session: ready(_author), isActive: false);
+        await tester.pump(pollResultsGrowDuration);
 
         expect(find.text('Red'), findsOneWidget);
+        expect(find.text('100%'), findsNothing);
+        verify(
+          () => repository.fetchPoll(_pollId, authorPubkey: _author),
+        ).called(1);
+
+        await pump(tester, session: ready(_author));
+
+        expect(find.text('0%'), findsNWidgets(2));
+        await tester.pump(pollResultsGrowDuration);
+        expect(find.text('100%'), findsOneWidget);
         verifyNever(
           () => repository.fetchPoll(
             any(),
             authorPubkey: any(named: 'authorPubkey'),
           ),
         );
+      });
+
+      testWidgets('keeps the votes, without reading them again, while the '
+          'video is paused under the comments', (tester) async {
+        await pump(tester, session: ready(_author));
+        await tester.pump(pollResultsGrowDuration);
+
+        await pump(
+          tester,
+          session: ready(_author),
+          isActive: false,
+          isCurrent: true,
+        );
+        await tester.pump(pollResultsGrowDuration);
+
+        expect(find.text('100%'), findsOneWidget);
+        verify(
+          () => repository.fetchPoll(_pollId, authorPubkey: _author),
+        ).called(1);
       });
 
       testWidgets('shows the creator the votes without a vote of theirs', (

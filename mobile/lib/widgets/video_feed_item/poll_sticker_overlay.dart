@@ -19,18 +19,21 @@ import 'package:openvine/widgets/video_editor/social_sticker/poll_sticker_card.d
 import 'package:poll_repository/poll_repository.dart' show PollKind;
 import 'package:unified_logger/unified_logger.dart';
 
-/// The poll, quiz or slider [region] on [video], as the frames show it until
-/// [isActive], and from then on with the votes on it, taking the viewer's.
+/// The poll, quiz or slider [region] on [video] with the votes on it while
+/// [isCurrent], taking the viewer's while [isActive].
 ///
-/// Only the active video reads its poll, so the videos the feed loads ahead
-/// ask the relays for nothing. [onInteraction] is called when the viewer
-/// starts to vote, so the feed does not move on under them.
+/// It reads its poll as soon as the feed builds its video, the ones it loads
+/// ahead included, so the votes grow in without a wait when the viewer
+/// swipes to it, and keeps them while the video is paused under a sheet, as
+/// under the comments. [onInteraction] is called when the viewer starts to
+/// vote, so the feed does not move on under them.
 class PollStickerOverlay extends StatelessWidget {
   const PollStickerOverlay({
     required this.region,
     required this.video,
     required this.data,
     required this.isActive,
+    this.isCurrent = true,
     this.onInteraction,
     super.key,
   });
@@ -41,17 +44,28 @@ class PollStickerOverlay extends StatelessWidget {
   /// The sticker as the region publishes it.
   final SocialStickerData data;
 
+  /// Whether the video is the one the feed plays, which takes votes.
   final bool isActive;
+
+  /// Whether the video is the feed's current one, also while it is paused:
+  /// the votes show only then, so they grow in each time it is swiped to.
+  final bool isCurrent;
+
   final VoidCallback? onInteraction;
 
   @override
   Widget build(BuildContext context) {
-    if (!isActive) return IgnorePointer(child: PollStickerCopy(data: data));
-    return _PollStickerScope(
-      region: region,
-      video: video,
-      data: data,
-      onInteraction: onInteraction,
+    // Ignored rather than built without its poll, which would read it again
+    // once the video plays.
+    return IgnorePointer(
+      ignoring: !isActive,
+      child: _PollStickerScope(
+        region: region,
+        video: video,
+        data: data,
+        showsVotes: isCurrent,
+        onInteraction: onInteraction,
+      ),
     );
   }
 }
@@ -63,12 +77,14 @@ class _PollStickerScope extends ConsumerWidget {
     required this.region,
     required this.video,
     required this.data,
+    required this.showsVotes,
     required this.onInteraction,
   });
 
   final VideoStickerRegion region;
   final VideoEvent video;
   final SocialStickerData data;
+  final bool showsVotes;
   final VoidCallback? onInteraction;
 
   @override
@@ -138,6 +154,7 @@ class _PollStickerScope extends ConsumerWidget {
         },
         child: _PollStickerView(
           data: data,
+          showsVotes: showsVotes,
           isAuthor: viewer != null && viewer == video.pubkey.toLowerCase(),
           isSignedIn: viewer != null,
           canVote: session.isReadyForActiveClient,
@@ -148,11 +165,13 @@ class _PollStickerScope extends ConsumerWidget {
   }
 }
 
-/// The sticker with the votes once there are any to show: the viewer's own
-/// once they voted, or straight away for the creator, who does not vote.
+/// The sticker with the votes once there are any to show and it
+/// [showsVotes]: the viewer's own once they voted, or straight away for the
+/// creator, who does not vote.
 class _PollStickerView extends StatefulWidget {
   const _PollStickerView({
     required this.data,
+    required this.showsVotes,
     required this.isAuthor,
     required this.isSignedIn,
     required this.canVote,
@@ -160,6 +179,7 @@ class _PollStickerView extends StatefulWidget {
   });
 
   final SocialStickerData data;
+  final bool showsVotes;
   final bool isAuthor;
   final bool isSignedIn;
   final bool canVote;
@@ -221,7 +241,8 @@ class _PollStickerViewState extends State<_PollStickerView> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<PollStickerCubit>().state;
-    final ready = state.status == PollStickerStatus.ready;
+    // Until it shows its votes, it is drawn as the frames show it.
+    final ready = widget.showsVotes && state.status == PollStickerStatus.ready;
     final hasVoted = state.results.hasVoted;
     final showsResults = ready && (hasVoted || widget.isAuthor);
     final isQuiz = state.poll?.kind == PollKind.quiz;
