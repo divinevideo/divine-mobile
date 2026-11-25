@@ -373,8 +373,9 @@ def _check_ancestry(base, source):
     _git("merge-base", "--is-ancestor", base, source)
 
 
-def bundle_path(platform, source, baseline):
-    return f"release-notes/{platform}/{source}/{baseline}-{policy_digest()}.json"
+def bundle_path(platform, source, baseline, *, prelaunch=False):
+    namespace = f"{platform}-prelaunch" if prelaunch else platform
+    return f"release-notes/{namespace}/{source}/{baseline}-{policy_digest()}.json"
 
 
 def response_json(response):
@@ -657,13 +658,30 @@ def _ensure_bundle(platform, source_sha, data=None, *, env, ledger):
         return _validate_bundle(ledger.read_json(candidates[0]), source_sha, platform)
     data = data if data is not None else _production_data(platform, env, ledger)
     if platform == "macos" and not _live_versions(data):
+        prelaunch_prefix = f"release-notes/macos-prelaunch/{source_sha}/"
+        prelaunch_candidates = [
+            path
+            for path in ledger.paths()
+            if path.startswith(prelaunch_prefix) and path.endswith(".json")
+        ]
+        if len(prelaunch_candidates) > 1:
+            raise ReleaseNotesError(
+                "Ambiguous retained release-note production baselines; reconcile before publishing"
+            )
+        if prelaunch_candidates:
+            return _validate_bundle(
+                ledger.read_json(prelaunch_candidates[0]), source_sha, platform
+            )
         # Before macOS has its own live Mac App Store version, anchor release
-        # notes against the live iOS baseline sharing the same marketing train.
+        # notes against the live iOS baseline in a prelaunch cache namespace so
+        # once a Mac version goes live the same candidate switches cleanly.
         baseline = production_baseline("ios", _production_data("ios", env, ledger))
+        _check_ancestry(baseline["sha"], source_sha)
+        path = bundle_path(platform, source_sha, baseline["sha"], prelaunch=True)
     else:
         baseline = production_baseline(platform, data)
-    _check_ancestry(baseline["sha"], source_sha)
-    path = bundle_path(platform, source_sha, baseline["sha"])
+        _check_ancestry(baseline["sha"], source_sha)
+        path = bundle_path(platform, source_sha, baseline["sha"])
     if path in ledger.paths():
         return _validate_bundle(ledger.read_json(path), source_sha, platform, baseline)
     locales = _apple_locales(env, data) if platform in {"ios", "macos"} else []

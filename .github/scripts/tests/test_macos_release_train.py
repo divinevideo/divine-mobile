@@ -461,6 +461,12 @@ class MacosReleaseTrainTest(unittest.TestCase):
         mock_prod.assert_called_once_with("ios", {}, ledger)
         self.assertEqual(bundle["platform"], "macos")
         self.assertEqual(bundle["baseline"], {"version": "1.0.36", "sha": SHA_OLD})
+        self.assertTrue(
+            any(p.startswith(f"release-notes/macos-prelaunch/{SHA_NEW}/") for p in ledger.files)
+        )
+        self.assertFalse(
+            any(p.startswith(f"release-notes/macos/{SHA_NEW}/") for p in ledger.files)
+        )
 
     def test_release_notes_macos_live_legacy_version_without_provenance_does_not_fall_back(self):
         live_legacy = {
@@ -958,6 +964,80 @@ class MacosReleaseTrainTest(unittest.TestCase):
                 now=datetime(2026, 11, 25, tzinfo=UTC),
             )
             self.assertEqual(ios_rc, 1)
+
+    def test_release_notes_macos_prelaunch_cache_switches_to_mac_baseline_once_live(self):
+        sha_mac_40 = "c" * 40
+        sha_ios_41 = "d" * 40
+        sha_cand = "e" * 40
+        ledger = MemoryLedger()
+        ios_data = {
+            "versions": [{"id": "iv1", "version": "1.0.41", "state": "READY_FOR_SALE", "build_id": "ib41"}],
+            "builds": [{"id": "ib41", "version": "1.0.41", "sha": sha_ios_41}],
+        }
+        prelaunch_snap = {
+            "versions": [{"id": "mv40", "version": "1.0.40", "state": "WAITING_FOR_REVIEW", "build_id": "mb40"}],
+            "builds": [{"id": "mb40", "version": "1.0.40", "sha": sha_mac_40, "default_env": "PRODUCTION"}],
+        }
+        live_snap = {
+            "versions": [{"id": "mv40", "version": "1.0.40", "state": "READY_FOR_SALE", "build_id": "mb40"}],
+            "builds": [{"id": "mb40", "version": "1.0.40", "sha": sha_mac_40, "default_env": "PRODUCTION"}],
+        }
+        seen_baselines = []
+
+        def fake_generate(platform, source, baseline, locales, env):
+            seen_baselines.append(dict(baseline))
+            return release_notes_bundle(platform, source) | {"baseline": baseline}
+
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {"PROVENANCE_TOKEN": "tok", "PUBLIC_PEOPLE_LIST_POLICY": "pol"}
+        runtime.ledger = ledger
+        runtime.cm = lambda *a, **kw: None
+
+        with (
+            patch("release_train.release_notes._production_data", return_value=ios_data) as mock_prod,
+            patch("release_train.release_notes._check_ancestry"),
+            patch("release_train.release_notes._apple_locales", return_value=["en-US"]),
+            patch("release_train.release_notes._generate", side_effect=fake_generate) as mock_gen,
+            patch("release_train.setup.configure_build_credentials"),
+        ):
+            runtime.prepare_action(
+                {"kind": "build", "platform": "macos", "sha": sha_cand, "attempt": 1},
+                {"macos": prelaunch_snap},
+            )
+            mock_prod.assert_called_once_with("ios", runtime.env, ledger)
+            self.assertEqual(len(seen_baselines), 1)
+            self.assertEqual(seen_baselines[0], {"version": "1.0.41", "sha": sha_ios_41})
+
+            # Second prelaunch pass reuses release-notes/macos-prelaunch/ without regenerating.
+            prelaunch_retry = ensure_bundle(
+                "macos", sha_cand, data=prelaunch_snap, env=runtime.env, ledger=ledger
+            )
+            self.assertEqual(prelaunch_retry["baseline"], {"version": "1.0.41", "sha": sha_ios_41})
+            self.assertEqual(mock_gen.call_count, 1)
+
+            # Once Mac 1.0.40 goes live, app-store promotion for the SAME candidate generates Mac-baselined notes.
+            app_store_action = {
+                "kind": "app-store",
+                "platform": "macos",
+                "build": {"id": "mb42", "number": 915, "version": "1.0.42", "sha": sha_cand},
+            }
+            runtime.prepare_action(app_store_action, {"macos": live_snap})
+
+        self.assertEqual(app_store_action["release_notes"]["baseline"], {"version": "1.0.40", "sha": sha_mac_40})
+        self.assertEqual(len(seen_baselines), 2)
+        self.assertEqual(seen_baselines[1], {"version": "1.0.40", "sha": sha_mac_40})
+        prelaunch_paths = [p for p in ledger.files if p.startswith(f"release-notes/macos-prelaunch/{sha_cand}/")]
+        live_paths = [p for p in ledger.files if p.startswith(f"release-notes/macos/{sha_cand}/")]
+        self.assertEqual(len(prelaunch_paths), 1)
+        self.assertEqual(len(live_paths), 1)
+
+        # Post-launch retries reuse the live Mac-baselined cache without calling _production_data or _generate.
+        with (
+            patch("release_train.release_notes._production_data", side_effect=AssertionError("must reuse live Mac cache")),
+            patch("release_train.release_notes._generate", side_effect=AssertionError("must reuse live Mac cache")),
+        ):
+            reused = ensure_bundle("macos", sha_cand, env={}, ledger=ledger)
+        self.assertEqual(reused["baseline"], {"version": "1.0.40", "sha": sha_mac_40})
 
 
 if __name__ == "__main__":
