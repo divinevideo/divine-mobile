@@ -255,6 +255,9 @@ class VideoSharingService {
   String generateShareUrl(VideoEvent video) =>
       divineVideoShareUrlForEvent(video);
 
+  /// A short URL already available for this canonical external link.
+  String? cachedShortUrl(String url) => _shortLinkClient?.cachedShortUrl(url);
+
   /// Shortens [url] for a link that leaves the app; message bodies and
   /// protocol payloads stay canonical.
   Future<String> shortenExternalUrl(String url) =>

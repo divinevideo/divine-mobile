@@ -6,7 +6,6 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
-import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
@@ -54,27 +53,33 @@ class VideoLinkPreviewCubit extends Cubit<VideoLinkPreviewState> {
        super(const VideoLinkPreviewLoading()) {
     // Schedule as microtask so the first emit happens after callers
     // (BlocProvider, blocTest) have subscribed to the stream.
-    runDetached(
-      Future.microtask(_resolve),
-      'resolve DM video link preview',
-      logName: 'VideoLinkPreviewCubit',
-      category: LogCategory.ui,
-    );
+    resolved = Future.microtask(_resolve);
   }
 
   final DmVideoTarget _target;
   final VideosRepository _videosRepository;
 
-  Future<void> _resolve() async {
+  /// The same canonical result is used when the play button is tapped during
+  /// loading. A disposed card must never open a replacement target.
+  late final Future<VideoEvent?> resolved;
+
+  Future<VideoEvent?> get playable =>
+      _videosRepository.pendingPlayableRoute(
+        _target.routeId,
+        expectedAuthor: _target.routeAuthor,
+      ) ??
+      resolved;
+
+  Future<VideoEvent?> _resolve() async {
     try {
       final video = await _videosRepository.fetchVideoWithStatsForRouteId(
         _target.routeId,
         expectedAuthor: _target.routeAuthor,
       );
-      if (isClosed) return;
+      if (isClosed) return null;
       if (video != null) {
         emit(VideoLinkPreviewResolved(video));
-        return;
+        return video;
       }
     } catch (e) {
       Log.warning(
@@ -85,5 +90,6 @@ class VideoLinkPreviewCubit extends Cubit<VideoLinkPreviewState> {
     }
 
     if (!isClosed) emit(const VideoLinkPreviewNotFound());
+    return null;
   }
 }

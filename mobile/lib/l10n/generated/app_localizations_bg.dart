@@ -6411,6 +6411,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'Поканата е изпратена';
 
   @override
+  String get inboxSharedVideoPreview => 'Сподели видео';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'Покана за сътрудник';
 
   @override

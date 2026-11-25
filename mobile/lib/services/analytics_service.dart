@@ -546,11 +546,14 @@ class AnalyticsService implements BackgroundAwareService {
     ),
   );
 
-  /// Records a confirmed engagement or share intent without raw target pubkeys.
+  /// Records confirmed engagements without raw target pubkeys.
   Future<String?> recordEngagement({
     required ProductAnalyticsV2EngagementAction action,
     String? contentId,
   }) async {
+    // This queue signs engagement events as the current account. A share
+    // intent cannot travel in that envelope, even with its clip ID omitted.
+    if (action == ProductAnalyticsV2EngagementAction.shareTapped) return null;
     if (!_consumptionAnalyticsEnabled) return null;
     if (contentId != null &&
         (contentId.length != 64 ||

@@ -3,12 +3,12 @@
 // ABOUTME: and one-shot actions (copy link, share via)
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:dm_repository/dm_repository.dart'
     show ShareSessionEndedException;
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -59,7 +59,6 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
        _rankingSignalsLoader = rankingSignalsLoader,
        _currentUserPubkey = currentUserPubkey,
        _isOwnerCurrent = isOwnerCurrent,
-       _cacheManager = cacheManager,
        super(
          ShareSheetState(
            contacts: [
@@ -83,6 +82,10 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     _eligibility = eligibilityChanges?.listen((_) {
       addIfOpen(const ShareSheetEligibilityChanged());
     });
+    final thumbnail = video.effectiveThumbnailUrl;
+    if (!kIsWeb && cacheManager != null && thumbnail != null) {
+      unawaited(_prepareCachedThumbnail(cacheManager, thumbnail));
+    }
     on<ShareSheetContactsLoadRequested>(_onContactsLoadRequested);
     on<ShareSheetRecipientToggled>(_onRecipientToggled);
     on<ShareSheetSendRequested>(_onSendRequested, transformer: droppable());
@@ -140,7 +143,28 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
   final String _currentUserPubkey;
   final bool Function() _isOwnerCurrent;
   final void Function(ShareSheetEnqueueResult)? onQueued;
-  final BaseCacheManager? _cacheManager;
+  String? _readyThumbnailPath;
+
+  // A local lookup may still be pending when Share via is tapped. In that
+  // case the platform receives the link alone. Never fetch remote media here.
+  Future<void> _prepareCachedThumbnail(
+    BaseCacheManager cacheManager,
+    String thumbnail,
+  ) async {
+    try {
+      final file = (await cacheManager.getFileFromCache(thumbnail))?.file;
+      if (file == null ||
+          !RegExp(
+            r'\.(jpe?g|png|webp|gif)$',
+            caseSensitive: false,
+          ).hasMatch(file.path)) {
+        return;
+      }
+      if (!isClosed) _readyThumbnailPath = file.path;
+    } catch (_) {
+      // Cache cleanup or a failed file lookup leaves the attachment optional.
+    }
+  }
 
   void _addUnexpectedError(
     Object error,
@@ -593,13 +617,13 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
   // Copy / Share actions (BLoC generates data, UI handles platform calls)
   // --------------------------------------------------------------------------
 
-  Future<void> _onCopyLinkRequested(
+  void _onCopyLinkRequested(
     ShareSheetCopyLinkRequested event,
     Emitter<ShareSheetState> emit,
-  ) async {
+  ) {
     try {
       final canonical = _videoSharingService.generateShareUrl(_video);
-      final url = await _videoSharingService.shortenExternalUrl(canonical);
+      final url = _videoSharingService.cachedShortUrl(canonical) ?? canonical;
       if (isClosed || emit.isDone) return;
       emit(
         state.copyWith(
@@ -625,50 +649,21 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     }
   }
 
-  Future<void> _onShareViaRequested(
+  void _onShareViaRequested(
     ShareSheetShareViaRequested event,
     Emitter<ShareSheetState> emit,
-  ) async {
+  ) {
     try {
       final shareData = _videoSharingService.generateShareData(_video);
-      final shareUrl = await _videoSharingService.shortenExternalUrl(
-        shareData.shareUrl,
-      );
-      if (isClosed || emit.isDone) return;
-
-      // Download thumbnail if available and a cache manager was provided.
-      // Copy to a temp file with a .jpg extension so iOS recognises it as
-      // an image rather than a generic document.
-      String? thumbnailPath;
-      final thumbUrl = shareData.thumbnailUrl;
-      if (thumbUrl != null && _cacheManager != null) {
-        try {
-          final file = await _cacheManager
-              .getSingleFile(thumbUrl)
-              .timeout(const Duration(seconds: 5));
-          final tmpDir = Directory.systemTemp;
-          final tmpFile = File('${tmpDir.path}/divine_share_thumb.jpg');
-          await file.copy(tmpFile.path);
-          thumbnailPath = tmpFile.path;
-        } catch (e) {
-          // Intentional silent fallback (no addError): sharing proceeds
-          // without a thumbnail attachment. No caller-visible failure —
-          // the share sheet still opens with the URL + title.
-          Log.warning(
-            'Thumbnail download failed, sharing without image: $e',
-            name: 'ShareSheetBloc',
-            category: LogCategory.ui,
-          );
-        }
-      }
-
-      if (isClosed || emit.isDone) return;
+      final shareUrl =
+          _videoSharingService.cachedShortUrl(shareData.shareUrl) ??
+          shareData.shareUrl;
       final title = shareData.title;
       emit(
         state.copyWith(
           actionResult: ShareSheetShareViaTriggered(
             shareUrl: shareUrl,
-            thumbnailPath: thumbnailPath,
+            thumbnailPath: _readyThumbnailPath,
             title: title,
             subject: title,
           ),

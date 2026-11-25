@@ -627,10 +627,13 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
               _programmaticActivationIndex = null;
             }
             _activeIndex = index;
-            if (!isProgrammaticActivation && _seenVideoIds.add(video.id)) {
+            final source = _trafficSourceFor(video);
+            if (!isProgrammaticActivation &&
+                source != ViewTrafficSource.share &&
+                _seenVideoIds.add(video.id)) {
               unawaited(
                 _consumptionAnalytics.feedDepthReached(
-                  trafficSource: _trafficSourceFor(video),
+                  trafficSource: source,
                   feedSessionId: _feedSessionId,
                   depth: _seenVideoIds.length,
                   sourceDetail: widget.sourceDetail,

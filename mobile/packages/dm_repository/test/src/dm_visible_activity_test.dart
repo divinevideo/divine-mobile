@@ -104,9 +104,68 @@ void main() {
               lastMessageContent: 'from the visible member',
               lastMessageTimestamp: _createdAt + 100,
               lastMessageSenderPubkey: _visibleMember,
+              lastMessageIsVideoShare: false,
               hasUnread: true,
             ),
           }),
+        );
+      },
+    );
+
+    test(
+      'uses the newest visible non-reply citation after deletion',
+      () async {
+        await seedRoom();
+        final repository = buildRepository();
+        const tags = '[["q","34236:$_owner:clip","","$_owner"]]';
+        await messagesDao.insertMessage(
+          id: 'shared-clip',
+          conversationId: roomId,
+          senderPubkey: _visibleMember,
+          content: 'my note',
+          createdAt: _createdAt + 300,
+          giftWrapId: 'wrap-clip',
+          ownerPubkey: _owner,
+          tagsJson: tags,
+        );
+        await conversationsDao.backfillLatestMessagePreviews(
+          ownerPubkey: _owner,
+        );
+        expect(
+          (await repository.getConversation(roomId))?.lastMessageIsVideoShare,
+          isTrue,
+        );
+        expect(
+          (await repository.visibleActivityExcluding({
+            roomId: {_hiddenMember},
+          }))[roomId]?.lastMessageIsVideoShare,
+          isTrue,
+        );
+        await messagesDao.insertMessage(
+          id: 'reply',
+          conversationId: roomId,
+          senderPubkey: _visibleMember,
+          content: 'my reply',
+          createdAt: _createdAt + 400,
+          giftWrapId: 'wrap-reply',
+          ownerPubkey: _owner,
+          tagsJson: tags,
+          replyToId: 'shared-clip',
+        );
+        await conversationsDao.backfillLatestMessagePreviews(
+          ownerPubkey: _owner,
+        );
+        expect(
+          (await repository.getConversation(roomId))?.lastMessageIsVideoShare,
+          isFalse,
+        );
+        await messagesDao.markMessageDeleted('reply', ownerPubkey: _owner);
+        await conversationsDao.backfillLatestMessagePreviews(
+          ownerPubkey: _owner,
+        );
+        expect(
+          (await repository.getConversation(roomId))?.lastMessageIsVideoShare,
+          isTrue,
         );
       },
     );
@@ -127,6 +186,7 @@ void main() {
               lastMessageContent: null,
               lastMessageTimestamp: null,
               lastMessageSenderPubkey: null,
+              lastMessageIsVideoShare: false,
               hasUnread: false,
             ),
           }),

@@ -1682,6 +1682,7 @@
   "inboxCollabInviteIgnoredStatus": "Binalewala",
   "inboxCollabInviteAcceptError": "Hindi natanggap. Subukan ulit.",
   "inboxCollabInviteSentStatus": "Naipadala ang imbitasyon",
+  "inboxSharedVideoPreview": "Nagbahagi ng video",
   "inboxConversationCollabInvitePreview": "Imbitasyon bilang collaborator",
   "collaboratorInviteDmBody": "In-imbita ka bilang collaborator sa {title}: {url}\n\nOpen Divine to review and accept.",
   "collaboratorInviteDmBodyUntitled": "In-imbita ka bilang collaborator sa isang video: {url}\n\nOpen Divine to review and accept.",

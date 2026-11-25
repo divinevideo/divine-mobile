@@ -32,21 +32,6 @@ import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/markdown/markdown.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 
-/// Matches a single line whose entire content is a straight-quoted
-/// string — the shape `VideoSharingService` uses to embed the title in
-/// the share-message body (`"<title>"`). The bubble drops this line so
-/// the title isn't duplicated alongside the overlay-footer rendering.
-final _quotedTitleRegex = RegExp(r'^".*"$');
-
-/// Matches a line that is just a NIP-21 `nostr:` citation (or bare entity).
-/// The share body carries a `nostr:naddr…`/`nevent…` reference for other
-/// clients to resolve, but in-app it duplicates the tappable video card, so
-/// the bubble drops it rather than rendering a redundant "View video" link.
-final _nostrRefLineRegex = RegExp(
-  r'^(?:nostr:)?(?:naddr|nevent|note|npub|nprofile)1[0-9a-z]+$',
-  caseSensitive: false,
-);
-
 class _DmBubbleContent {
   const _DmBubbleContent({
     required this.videoTarget,
@@ -94,7 +79,7 @@ class _DmBubbleContent {
           .split('\n')
           .map((line) => line.trim())
           .where((line) => line.isNotEmpty)
-          .where((line) => !_nostrRefLineRegex.hasMatch(line))
+          .where((line) => !dmVideoCitationLine.hasMatch(line))
           .toList();
       textAfterUrl = afterLines.isEmpty ? null : afterLines.join('\n');
 
@@ -103,8 +88,8 @@ class _DmBubbleContent {
           .split('\n')
           .map((line) => line.trim())
           .where((line) => line.isNotEmpty)
-          .where((line) => !_quotedTitleRegex.hasMatch(line))
-          .where((line) => !_nostrRefLineRegex.hasMatch(line))
+          .where((line) => !dmVideoQuotedTitleLine.hasMatch(line))
+          .where((line) => !dmVideoCitationLine.hasMatch(line))
           .toList();
       personalMessage = beforeLines.isEmpty ? null : beforeLines.join('\n');
     } else if (videoTarget != null) {
@@ -116,7 +101,7 @@ class _DmBubbleContent {
           .split('\n')
           .map((line) => line.trim())
           .where((line) => line.isNotEmpty)
-          .where((line) => !_nostrRefLineRegex.hasMatch(line))
+          .where((line) => !dmVideoCitationLine.hasMatch(line))
           .toList();
       personalMessage = lines.isEmpty ? null : lines.join('\n');
       textAfterUrl = null;
@@ -130,7 +115,7 @@ class _DmBubbleContent {
     final quotedReplyText = hasQuotedVideo
         ? safeMessage
               .split('\n')
-              .where((line) => !_nostrRefLineRegex.hasMatch(line.trim()))
+              .where((line) => !dmVideoCitationLine.hasMatch(line.trim()))
               .join('\n')
               .trim()
         : safeMessage;
@@ -1107,17 +1092,23 @@ class _VideoLinkPreview extends ConsumerWidget {
     // Re-key on the repository identity: videosRepositoryProvider yields a
     // fresh instance when filter/aspect/host preferences change, and a bare
     // ref.read inside create: would keep the stale one for the cubit's life.
+    ref.watch(blocklistVersionProvider);
+    final videoService = ref.watch(videoEventServiceProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
     return BlocProvider(
-      key: ValueKey(videosRepository),
+      key: ValueKey((videosRepository, target)),
       create: (_) => VideoLinkPreviewCubit(
         target: target,
         videosRepository: videosRepository,
       ),
       child: BlocBuilder<VideoLinkPreviewCubit, VideoLinkPreviewState>(
         builder: (context, state) => switch (state) {
-          VideoLinkPreviewLoading() => _buildLoadingPlaceholder(context),
+          VideoLinkPreviewLoading() => _buildLoadingPlaceholder(context, ref),
           VideoLinkPreviewNotFound() => const _VideoUnavailableCard(),
+          VideoLinkPreviewResolved(:final video)
+              when videoService.shouldHideVideo(video) ||
+                  videoService.isVideoEventKnownDeleted(video) =>
+            const _VideoUnavailableCard(),
           VideoLinkPreviewResolved(:final video) => _VideoCard(
             video: video,
             enableTap: enableTap,
@@ -1128,21 +1119,49 @@ class _VideoLinkPreview extends ConsumerWidget {
     );
   }
 
-  static Widget _buildLoadingPlaceholder(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(_videoCardRadius),
-      child: Container(
-        width: _videoCardWidth,
-        height: _videoCardHeight,
-        color: context.vineColors.card,
-        child: Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: DivineCircularProgressIndicator(
-              strokeWidth: 2,
-              color: context.vineColors.accentPositive,
-            ),
+  Widget _buildLoadingPlaceholder(BuildContext context, WidgetRef ref) {
+    return Semantics(
+      label: enableTap ? context.l10n.videoPlayerPlayVideo : null,
+      button: enableTap,
+      child: GestureDetector(
+        onTap: enableTap
+            ? () async {
+                final route = ModalRoute.of(context);
+                final owner = ref.read(authServiceProvider).currentPublicKeyHex;
+                final video = await context
+                    .read<VideoLinkPreviewCubit>()
+                    .playable;
+                if (!context.mounted ||
+                    route?.isCurrent != true ||
+                    video == null) {
+                  return;
+                }
+                if (ref.read(authServiceProvider).currentPublicKeyHex !=
+                    owner) {
+                  return;
+                }
+                final service = ref.read(videoEventServiceProvider);
+                if (service.shouldHideVideo(video) ||
+                    service.isVideoEventKnownDeleted(video)) {
+                  return;
+                }
+                await VideoDetailRouteData(
+                  id: video.id,
+                  $extra: VideoDetailRouteExtra(
+                    initialVideo: video,
+                    dmReplyContext: dmReplyContext,
+                  ),
+                ).push<void>(context);
+              }
+            : null,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(_videoCardRadius),
+          child: Container(
+            width: _videoCardWidth,
+            height: _videoCardHeight,
+            color: context.vineColors.card,
+            alignment: Alignment.center,
+            child: enableTap ? const _VideoPlayBadge() : null,
           ),
         ),
       ),
@@ -1203,9 +1222,11 @@ class _QuotedVideoPreview extends ConsumerWidget {
       sharedVideoRef: quotedVideoRef,
     );
     if (target == null) return const SizedBox.shrink();
+    ref.watch(blocklistVersionProvider);
+    final videoService = ref.watch(videoEventServiceProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
     return BlocProvider(
-      key: ValueKey(videosRepository),
+      key: ValueKey((videosRepository, target)),
       create: (_) => VideoLinkPreviewCubit(
         target: target,
         videosRepository: videosRepository,
@@ -1214,6 +1235,10 @@ class _QuotedVideoPreview extends ConsumerWidget {
         builder: (context, state) => switch (state) {
           VideoLinkPreviewLoading() => _QuotedVideoLoading(isSent: isSent),
           VideoLinkPreviewNotFound() => _QuotedVideoUnavailable(isSent: isSent),
+          VideoLinkPreviewResolved(:final video)
+              when videoService.shouldHideVideo(video) ||
+                  videoService.isVideoEventKnownDeleted(video) =>
+            _QuotedVideoUnavailable(isSent: isSent),
           VideoLinkPreviewResolved(:final video) => _QuotedVideoCard(
             video: video,
             isSent: isSent,
@@ -1418,7 +1443,7 @@ class _QuotedVideoCard extends ConsumerWidget {
                 fit: StackFit.expand,
                 children: [
                   VideoThumbnailWidget(video: video),
-                  const Center(child: _QuotedPlayBadge()),
+                  const Center(child: _VideoPlayBadge(compact: true)),
                 ],
               ),
             ),
@@ -1454,14 +1479,16 @@ class _QuotedVideoCard extends ConsumerWidget {
 /// dark disc reads on light thumbnails; the hairline light ring keeps the chip
 /// visible on dark thumbnails, where a translucent-black disc would otherwise
 /// vanish into the content.
-class _QuotedPlayBadge extends StatelessWidget {
-  const _QuotedPlayBadge();
+class _VideoPlayBadge extends StatelessWidget {
+  const _VideoPlayBadge({this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: _quotedPlayBadgeSize,
-      height: _quotedPlayBadgeSize,
+      width: compact ? _quotedPlayBadgeSize : 48,
+      height: compact ? _quotedPlayBadgeSize : 48,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: VineTheme.backgroundColor.withValues(alpha: 0.6),
@@ -1471,10 +1498,12 @@ class _QuotedPlayBadge extends StatelessWidget {
           width: 1.5,
         ),
       ),
-      child: const DivineIcon(
-        icon: DivineIconName.play,
-        color: VineTheme.primaryText,
-        size: _quotedPlayGlyphSize,
+      child: ExcludeSemantics(
+        child: DivineIcon(
+          icon: DivineIconName.play,
+          color: VineTheme.primaryText,
+          size: compact ? _quotedPlayGlyphSize : 24,
+        ),
       ),
     );
   }
@@ -1610,6 +1639,7 @@ class _VideoCard extends ConsumerWidget {
                 // Unlabeled, so it would only turn the button into an image
                 // for assistive tech (#9621).
                 ExcludeSemantics(child: VideoThumbnailWidget(video: video)),
+                if (enableTap) const Center(child: _VideoPlayBadge()),
                 if (hasAuthor || hasTitle || hasLoops)
                   Positioned(
                     left: 0,

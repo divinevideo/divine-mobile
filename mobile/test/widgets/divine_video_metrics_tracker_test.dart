@@ -452,6 +452,32 @@ void main() {
       },
     );
 
+    testWidgets(
+      'shared playback emits no clip, viewer or impression analytics',
+      (tester) async {
+        final controller = _stubController(isPlaying: true);
+        await tester.pumpWidget(
+          _buildTracker(
+            authService: authService,
+            analyticsService: analyticsService,
+            seenVideosService: seenVideosService,
+            controller: controller.controller,
+            isActive: true,
+            clock: () => now,
+            trafficSource: ViewTrafficSource.share,
+          ),
+        );
+        now = now.add(const Duration(seconds: 16));
+        await tester.pump(const Duration(seconds: 16));
+        await tester.pumpWidget(const SizedBox.shrink());
+        expect(analyticsService.events, isEmpty);
+        expect(analyticsService.impressions, isEmpty);
+        expect(analyticsService.playbackSessions, isEmpty);
+        expect(seenVideosService.records.single.videoId, _video.id);
+        await controller.close();
+      },
+    );
+
     testWidgets('records one impression after one visible second', (
       tester,
     ) async {
@@ -1297,6 +1323,7 @@ Widget _buildTracker({
   required DivineVideoPlayerController controller,
   required bool isActive,
   required DateTime Function() clock,
+  ViewTrafficSource trafficSource = ViewTrafficSource.home,
   AnalyticsEventSink? legacyAnalytics,
   VideoLoopsCubit? loopCounts,
 }) {
@@ -1316,7 +1343,7 @@ Widget _buildTracker({
         loopCounts: loopCounts,
         controller: controller,
         isActive: isActive,
-        trafficSource: ViewTrafficSource.home,
+        trafficSource: trafficSource,
         clock: clock,
         child: const SizedBox.shrink(),
       ),

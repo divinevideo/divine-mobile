@@ -537,6 +537,7 @@ void main() {
               lastMessageContent: null,
               lastMessageTimestamp: null,
               lastMessageSenderPubkey: null,
+              lastMessageIsVideoShare: false,
               hasUnread: false,
             ),
           },

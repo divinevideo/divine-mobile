@@ -79,6 +79,45 @@ void main() {
       },
     );
 
+    test(
+      'a queued share tap from an older build is dropped before signing',
+      () async {
+        final kept = _row('kept', ownerPubkey: owner);
+        final legacy = PendingProductEvent(
+          id: 'legacy',
+          ownerPubkey: owner,
+          createdAt: DateTime.utc(2026),
+          status: PendingProductEventStatus.pending,
+          eventName: 'engagement_recorded',
+          payloadJson: jsonEncode({
+            'event_name': 'engagement_recorded',
+            'properties': {'action': 'share_tapped', 'content_id': 'a' * 64},
+          }),
+        );
+        when(
+          () => dao.getRetryable(
+            now: any(named: 'now'),
+            limit: any(named: 'limit'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer(
+          (call) async =>
+              call.namedArguments[#ownerPubkey] == owner ? [legacy, kept] : [],
+        );
+        when(() => dao.markPublishing(any())).thenAnswer((_) async => true);
+        when(() => dao.deleteById(any())).thenAnswer((_) async => 1);
+        when(() => client.publishBatch(any(), subjectPubkey: owner))
+            .thenAnswer((_) async => const AnalyticsIngestAccepted());
+        await queue.flush();
+        final sent = verify(
+          () => client.publishBatch(captureAny(), subjectPubkey: owner),
+        ).captured.single;
+        expect(sent, [jsonDecode(kept.payloadJson)]);
+        verify(() => dao.deleteById('legacy')).called(1);
+        verify(() => dao.deleteById('kept')).called(1);
+      },
+    );
+
     test('anonymous events remain ownerless', () async {
       when(() => dao.enqueue(any())).thenAnswer((_) async {});
 

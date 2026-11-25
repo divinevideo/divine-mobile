@@ -5,6 +5,21 @@ import 'package:flutter/foundation.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 
+/// Matches a single line whose entire content is a straight-quoted
+/// string — the shape `VideoSharingService` uses to embed the title in
+/// the share-message body (`"<title>"`). The bubble drops this line so
+/// the title isn't duplicated alongside the overlay-footer rendering.
+final dmVideoQuotedTitleLine = RegExp(r'^".*"$');
+
+/// Matches a line that is just a NIP-21 `nostr:` citation (or bare entity).
+/// The share body carries a `nostr:naddr…`/`nevent…` reference for other
+/// clients to resolve, but in-app it duplicates the tappable video card, so
+/// the bubble drops it rather than rendering a redundant "View video" link.
+final dmVideoCitationLine = RegExp(
+  r'^(?:nostr:)?(?:naddr|nevent|note|npub|nprofile)1[0-9a-z]+$',
+  caseSensitive: false,
+);
+
 /// Normalized identity and routing metadata for a video shared in a DM.
 @immutable
 class DmVideoTarget {

@@ -3884,11 +3884,58 @@ class VideosRepository {
     String routeId, {
     List<String> fallbackRouteIds = const [],
     String? expectedAuthor,
+  }) {
+    if (fallbackRouteIds.isNotEmpty) {
+      return _fetchRouteVideo(routeId, fallbackRouteIds, expectedAuthor);
+    }
+    final key = (routeId, expectedAuthor);
+    final current = _pendingRouteVideos[key];
+    if (current != null) return current.withStats;
+    final playable = Completer<VideoEvent?>();
+    final withStats =
+        _fetchRouteVideo(
+          routeId,
+          fallbackRouteIds,
+          expectedAuthor,
+          onPlayable: playable.complete,
+        ).whenComplete(() {
+          if (!playable.isCompleted) playable.complete(null);
+          _pendingRouteVideos.remove(key);
+        });
+    _pendingRouteVideos[key] = (
+      playable: playable.future,
+      withStats: withStats,
+    );
+    return withStats;
+  }
+
+  final _pendingRouteVideos =
+      <
+        (String, String?),
+        ({
+          Future<VideoEvent?> playable,
+          Future<VideoEvent?> withStats,
+        })
+      >{};
+
+  /// Joins an active canonical card lookup before optional stats hydration.
+  /// Never starts a lookup or returns data from a previous resolver instance.
+  Future<VideoEvent?>? pendingPlayableRoute(
+    String routeId, {
+    String? expectedAuthor,
+  }) => _pendingRouteVideos[(routeId, expectedAuthor)]?.playable;
+
+  Future<VideoEvent?> _fetchRouteVideo(
+    String routeId,
+    List<String> fallbackRouteIds,
+    String? expectedAuthor, {
+    void Function(VideoEvent)? onPlayable,
   }) async {
-    final result = await lookupVideoForRouteId(
+    final result = await _lookupRoute(
       routeId,
       fallbackRouteIds: fallbackRouteIds,
       expectedAuthor: expectedAuthor,
+      onPlayable: onPlayable,
     );
     return result is VideoRouteFound ? result.video : null;
   }
@@ -3916,6 +3963,17 @@ class VideosRepository {
     String routeId, {
     List<String> fallbackRouteIds = const [],
     String? expectedAuthor,
+  }) => _lookupRoute(
+    routeId,
+    fallbackRouteIds: fallbackRouteIds,
+    expectedAuthor: expectedAuthor,
+  );
+
+  Future<VideoRouteLookupResult> _lookupRoute(
+    String routeId, {
+    required List<String> fallbackRouteIds,
+    String? expectedAuthor,
+    void Function(VideoEvent)? onPlayable,
   }) async {
     FunnelcakeException? apiFailure;
     final attempted = <String>{};
@@ -3931,12 +3989,19 @@ class VideosRepository {
     for (final candidateRouteId in [routeId, ...fallbackRouteIds]) {
       if (!attempted.add(candidateRouteId)) continue;
       try {
-        final video = await _fetchVideoWithStatsForSingleRouteId(
+        final video = await _fetchVideoForSingleRouteId(
           candidateRouteId,
           routeAuthor: routeAuthor,
           onContentFiltered: onContentFiltered,
         );
-        if (video != null) return VideoRouteFound(video);
+        if (video != null) {
+          onPlayable?.call(video);
+          final hydrated = await _hydrateVideosWithBulkStats([video]).timeout(
+            _statsFetchTimeout,
+            onTimeout: () => [video],
+          );
+          return VideoRouteFound(hydrated.first);
+        }
       } on FunnelcakeException catch (e) {
         // Keep going: a fallback route is a different query shape (an
         // author-scoped addressable resolves against relays alone) and can
@@ -3963,7 +4028,7 @@ class VideosRepository {
     return const VideoRouteMissing();
   }
 
-  Future<VideoEvent?> _fetchVideoWithStatsForSingleRouteId(
+  Future<VideoEvent?> _fetchVideoForSingleRouteId(
     String routeId, {
     String? routeAuthor,
     void Function(VideoEvent video)? onContentFiltered,
@@ -4680,7 +4745,7 @@ class VideosRepository {
     });
 
     if (candidates.isEmpty) return null;
-    return _parseAndHydrateFirstRouteVideo(
+    return _parseFirstRouteVideo(
       candidates,
       onContentFiltered: onContentFiltered,
     );
@@ -4718,7 +4783,7 @@ class VideosRepository {
           ),
         ])
         .timeout(_routeRelayTimeout, onTimeout: () => const <Event>[]);
-    return _parseAndHydrateFirstRouteVideo(
+    return _parseFirstRouteVideo(
       events,
       onContentFiltered: onContentFiltered,
     );
@@ -4749,7 +4814,7 @@ class VideosRepository {
           ),
         ])
         .timeout(_routeRelayTimeout, onTimeout: () => const <Event>[]);
-    return _parseAndHydrateFirstRouteVideo(
+    return _parseFirstRouteVideo(
       events,
       onContentFiltered: onContentFiltered,
     );
@@ -4794,7 +4859,7 @@ class VideosRepository {
           ),
         ])
         .timeout(_routeRelayTimeout, onTimeout: () => const <Event>[]);
-    return _parseAndHydrateFirstRouteVideo(
+    return _parseFirstRouteVideo(
       events,
       onContentFiltered: onContentFiltered,
     );
@@ -4828,19 +4893,16 @@ class VideosRepository {
       includeFeedShape: false,
       onContentFiltered: onContentFiltered,
     );
-    if (video == null) return null;
-
-    return _hydrateFirstRouteVideo([video]);
+    return video;
   }
 
-  Future<VideoEvent?> _parseAndHydrateFirstRouteVideo(
+  VideoEvent? _parseFirstRouteVideo(
     List<Event> events, {
     void Function(VideoEvent video)? onContentFiltered,
-  }) async {
+  }) {
     if (events.isEmpty) return null;
 
     events.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    final videos = <VideoEvent>[];
     for (final event in events) {
       final video = _tryParseAndFilter(
         event,
@@ -4849,20 +4911,9 @@ class VideosRepository {
         includeFeedShape: false,
         onContentFiltered: onContentFiltered,
       );
-      if (video != null) {
-        videos.add(video);
-      }
+      if (video != null) return video;
     }
 
-    return _hydrateFirstRouteVideo(videos);
-  }
-
-  Future<VideoEvent?> _hydrateFirstRouteVideo(List<VideoEvent> videos) async {
-    if (videos.isEmpty) return null;
-
-    final hydrated = await _hydrateVideosWithBulkStats(
-      videos,
-    ).timeout(_statsFetchTimeout, onTimeout: () => videos);
-    return hydrated.firstOrNull;
+    return null;
   }
 }

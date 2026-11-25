@@ -86,8 +86,7 @@ class ShareSheetShareViaTriggered extends ShareSheetActionResult {
   /// The share URL to pass as text to the platform share sheet.
   final String shareUrl;
 
-  /// Local file path of the downloaded thumbnail image, or `null` if
-  /// the download failed or no thumbnail was available.
+  /// A ready local thumbnail, if the cache found one before the tap.
   final String? thumbnailPath;
 
   /// Video title used as the share sheet title / Android `EXTRA_TITLE`.

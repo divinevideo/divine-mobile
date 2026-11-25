@@ -6004,6 +6004,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get inboxCollabInviteSentStatus => '招待を送ったよ';
 
   @override
+  String get inboxSharedVideoPreview => '動画をシェアしました';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'コラボ招待';
 
   @override

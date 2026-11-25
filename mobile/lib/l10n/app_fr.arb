@@ -2138,6 +2138,7 @@
   "inboxCollabInviteAcceptedStatus": "Acceptée",
   "inboxCollabInviteCardTitle": "Invitation à collaborer",
   "inboxCollabInviteIgnoredStatus": "Ignorée",
+  "inboxSharedVideoPreview": "A partagé une vidéo",
   "inboxConversationCollabInvitePreview": "Invitation à collaborer",
   "@inboxConversationCollabInvitePreview": {
     "description": "Substituted for the legacy NIP-04 plaintext invite copy when shown as the most-recent-message preview in the DM conversation list."

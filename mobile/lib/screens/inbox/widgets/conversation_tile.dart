@@ -15,6 +15,7 @@ import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_name_builder.dart';
@@ -286,6 +287,8 @@ class ConversationTile extends ConsumerWidget {
                               : _previewPayload(
                                   context,
                                   conversation.lastMessageContent!,
+                                  structuredShare:
+                                      conversation.lastMessageIsVideoShare,
                                 ),
                           emphasized: !conversation.isRead,
                           senderPrefix: senderPrefix,
@@ -329,7 +332,11 @@ class _PreviewPayload {
   final bool isDivineVideoShare;
 }
 
-_PreviewPayload _previewPayload(BuildContext context, String rawContent) {
+_PreviewPayload _previewPayload(
+  BuildContext context,
+  String rawContent, {
+  required bool structuredShare,
+}) {
   // This is an endsWith check against fixed short suffixes, so it can safely
   // inspect the original string without doing work proportional to its length.
   // Run it before slicing so a long legacy invite still gets the localized
@@ -346,11 +353,11 @@ _PreviewPayload _previewPayload(BuildContext context, String rawContent) {
   // layout. This preview renders through plain `Text`/`Text.rich` rather than
   // `LinkifiedText`, so it does not inherit the span builder's guard and
   // sanitizes once here, ahead of every split and both output paths.
-  final boundedContent = sliceDmDisplayText(
+  final slice = sliceDmDisplayText(
     rawContent,
     dmPreviewDisplayCodeUnits,
-  ).text;
-  final content = StringUtils.sanitizeUtf16(boundedContent);
+  );
+  final content = StringUtils.sanitizeUtf16(slice.text);
 
   // Drop blank lines and trim each remaining line. Shared-video DMs and
   // similar payloads arrive with a blank line between title and URL —
@@ -361,13 +368,22 @@ _PreviewPayload _previewPayload(BuildContext context, String rawContent) {
       .map((line) => line.trim())
       .where((line) => line.isNotEmpty)
       .toList();
-  final isDivineVideoShare = lines.any(divineVideoUrlLineRegex.hasMatch);
-  if (isDivineVideoShare) {
-    final nonUrlLines = lines
-        .where((line) => !divineVideoUrlLineRegex.hasMatch(line))
-        .toList();
+  final urlIndex = lines.indexWhere(divineVideoUrlLineRegex.hasMatch);
+  final completeUrl =
+      urlIndex >= 0 &&
+      !(slice.hasMore && content.trimRight().endsWith(lines[urlIndex]));
+  if (structuredShare || completeUrl) {
+    final note = [
+      for (final (index, line) in lines.indexed)
+        if (!divineVideoUrlLineRegex.hasMatch(line) &&
+            !dmVideoCitationLine.hasMatch(line) &&
+            !(completeUrl &&
+                index == urlIndex - 1 &&
+                dmVideoQuotedTitleLine.hasMatch(line)))
+          line,
+    ];
     return _PreviewPayload(
-      text: nonUrlLines.join('\n'),
+      text: [context.l10n.inboxSharedVideoPreview, ...note].join('\n'),
       isDivineVideoShare: true,
     );
   }

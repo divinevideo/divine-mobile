@@ -6346,6 +6346,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'Jemputan dihantar';
 
   @override
+  String get inboxSharedVideoPreview => 'Berkongsi video';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'Jemputan kolaborator';
 
   @override

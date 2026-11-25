@@ -16,6 +16,9 @@ class ShortLinkClient {
   final _aborts = <Completer<void>>{};
   bool _closed = false;
 
+  /// A previously validated mapping, available without network or disk I/O.
+  String? cachedShortUrl(String target) => _cache[target];
+
   /// The short link for [target], or [target] itself when it is not a
   /// shortener destination, the client is closed, or creation fails or takes
   /// longer than two seconds. Never throws.

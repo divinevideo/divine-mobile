@@ -541,6 +541,19 @@ void main() {
         );
         await analyticsService.initialize();
 
+        for (final shareContent in [null, 'b' * 64]) {
+          expect(
+            await analyticsService.recordEngagement(
+              action: ProductAnalyticsV2EngagementAction.shareTapped,
+              contentId: shareContent,
+            ),
+            isNull,
+          );
+        }
+        verifyNever(
+          () => queue.enqueue(any(), ownerPubkey: any(named: 'ownerPubkey')),
+        );
+
         for (final contentId in [
           '34236:${'c' * 64}:video',
           '',

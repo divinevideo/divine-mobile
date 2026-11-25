@@ -6542,6 +6542,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'ఆహ్వానం పంపబడింది';
 
   @override
+  String get inboxSharedVideoPreview => 'వీడియోను పంచుకున్నారు';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'సహకారి ఆహ్వానం';
 
   @override

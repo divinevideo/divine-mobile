@@ -6307,6 +6307,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'Đã gửi lời mời';
 
   @override
+  String get inboxSharedVideoPreview => 'Đã chia sẻ một video';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'Lời mời cộng tác';
 
   @override

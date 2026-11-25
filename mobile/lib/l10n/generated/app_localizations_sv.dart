@@ -6342,6 +6342,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'Inbjudan skickad';
 
   @override
+  String get inboxSharedVideoPreview => 'Delade en video';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'Inbjudan att samarbeta';
 
   @override

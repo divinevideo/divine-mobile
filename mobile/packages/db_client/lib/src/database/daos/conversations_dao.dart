@@ -860,6 +860,7 @@ $table.conversation_id = ?1
     final row = await customSelect(
       '''
 SELECT newest.content AS content,
+       newest.tags_json AS tags_json,
        newest.created_at AS created_at,
        newest.sender_pubkey AS sender_pubkey,
        EXISTS (
@@ -875,6 +876,7 @@ SELECT newest.content AS content,
 FROM (SELECT 1) AS anchor
 LEFT JOIN (
   SELECT $_latestMessagePreviewCase AS content,
+         CASE WHEN dm.reply_to_id IS NULL AND dm.message_kind = 14 THEN dm.tags_json END AS tags_json,
          dm.created_at AS created_at,
          dm.sender_pubkey AS sender_pubkey
   FROM direct_messages dm
@@ -893,10 +895,65 @@ LEFT JOIN (
     ).getSingle();
     return (
       content: row.readNullable<String>('content'),
+      tagsJson: row.readNullable<String>('tags_json'),
       createdAt: row.readNullable<int>('created_at'),
       senderPubkey: row.readNullable<String>('sender_pubkey'),
       hasUnread: row.read<bool>('has_unread'),
     );
+  }
+
+  /// Reads the citation tags for the exact row behind each local inbox
+  /// snapshot. Old snapshots may outlive message history after sign-out.
+  /// Only a matching, visible non-reply text message can supply tags.
+  Future<
+    Map<String, ({String content, int timestamp, String sender, String tags})>
+  >
+  latestPreviewTags(Iterable<String> ids, {required String ownerPubkey}) async {
+    final results =
+        <
+          String,
+          ({String content, int timestamp, String sender, String tags})
+        >{};
+    final keys = ids.toList();
+    const shown = DirectMessagesDao.retractionsShownToSender;
+    for (var start = 0; start < keys.length; start += 400) {
+      final batch = keys.skip(start).take(400).toList();
+      final rows = await customSelect(
+        '''
+SELECT c.id, dm.content, dm.created_at, dm.sender_pubkey, dm.tags_json
+FROM conversations c JOIN direct_messages dm ON dm.rowid = (
+  SELECT m.rowid FROM direct_messages m
+  WHERE m.conversation_id = c.id AND m.created_at = c.last_message_timestamp
+    AND (m.owner_pubkey = ?1 OR (COALESCE(m.owner_pubkey, '') = ''
+      AND NOT EXISTS (SELECT 1 FROM direct_messages owned
+                      WHERE owned.id = m.id AND owned.owner_pubkey = ?1)))
+    AND (m.is_deleted = 0 OR (m.sender_pubkey = ?1 AND
+      m.deletion_publish_status IN (${shown.map((s) => "'$s'").join(', ')})))
+  ORDER BY m.id DESC LIMIT 1
+)
+WHERE c.id IN (${List.filled(batch.length, '?').join(', ')})
+  AND (c.owner_pubkey = ?1 OR (COALESCE(c.owner_pubkey, '') = ''
+    AND NOT EXISTS (SELECT 1 FROM conversations owned
+                    WHERE owned.id = c.id AND owned.owner_pubkey = ?1)))
+  AND dm.tags_json IS NOT NULL AND dm.reply_to_id IS NULL AND dm.message_kind = 14
+  AND dm.content = c.last_message_content
+  AND dm.sender_pubkey = c.last_message_sender_pubkey
+''',
+        variables: [
+          Variable(ownerPubkey),
+          for (final id in batch) Variable(id),
+        ],
+      ).get();
+      for (final row in rows) {
+        results[row.read<String>('id')] = (
+          content: row.read<String>('content'),
+          timestamp: row.read<int>('created_at'),
+          sender: row.read<String>('sender_pubkey'),
+          tags: row.read<String>('tags_json'),
+        );
+      }
+    }
+    return results;
   }
 
   /// Get unread conversation count.
@@ -1176,6 +1233,7 @@ LIMIT 1
 /// `content`, `createdAt` and `senderPubkey` are all null when no such message
 /// is stored.
 typedef ConversationVisibleActivity = ({
+  String? tagsJson,
   String? content,
   int? createdAt,
   String? senderPubkey,

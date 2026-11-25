@@ -945,6 +945,12 @@ void main() {
       mockMessageService = _MockNIP17MessageService();
       mockDirectMessagesDao = _MockDirectMessagesDao();
       mockConversationsDao = _MockConversationsDao();
+      when(
+        () => mockConversationsDao.latestPreviewTags(
+          any(),
+          ownerPubkey: any(named: 'ownerPubkey'),
+        ),
+      ).thenAnswer((_) async => {});
       mockReactionsRepository = _MockDmReactionsRepository();
       reporterCalls = <_ReporterCall>[];
 

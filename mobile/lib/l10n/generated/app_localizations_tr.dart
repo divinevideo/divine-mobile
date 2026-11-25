@@ -6283,6 +6283,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'Davet gönderildi';
 
   @override
+  String get inboxSharedVideoPreview => 'Bir video paylaştı';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'İşbirliği daveti';
 
   @override

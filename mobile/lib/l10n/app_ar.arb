@@ -2128,6 +2128,7 @@
   "inboxCollabInviteAcceptedStatus": "تم القبول",
   "inboxCollabInviteCardTitle": "دعوة للتعاون",
   "inboxCollabInviteIgnoredStatus": "تم التجاهل",
+  "inboxSharedVideoPreview": "تمت مشاركة فيديو",
   "inboxConversationCollabInvitePreview": "دعوة للتعاون",
   "@inboxConversationCollabInvitePreview": {
     "description": "Substituted for the legacy NIP-04 plaintext invite copy when shown as the most-recent-message preview in the DM conversation list."

@@ -1945,7 +1945,7 @@ void main() {
         },
       );
 
-      testWidgets('shows loading spinner before video resolves', (
+      testWidgets('offers Play on the first frame before video resolves', (
         tester,
       ) async {
         // Use a Completer that never completes so the cubit stays in
@@ -1964,7 +1964,16 @@ void main() {
         // Single pump to build the widget tree (don't settle).
         await tester.pump();
 
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.label ==
+                    AppLocalizationsEn().videoPlayerPlayVideo &&
+                widget.properties.button == true,
+          ),
+          findsOneWidget,
+        );
         expect(find.byType(VideoThumbnailWidget), findsNothing);
       });
 
@@ -2263,6 +2272,68 @@ void main() {
         expect(decoration.color, VineTheme.neutral10);
         expect(decoration.color, isNot(VineTheme.primaryAccessible));
       });
+
+      testWidgets(
+        'the first frame offers Play at the final card size and goes back to the thread',
+        (tester) async {
+          final stats = Completer<VideoEvent?>();
+          final playable = Completer<VideoEvent?>();
+          when(
+            () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+              'abc123',
+              fallbackRouteIds: any(named: 'fallbackRouteIds'),
+            ),
+          ).thenAnswer((_) => stats.future);
+          when(() => mockVideosRepository.pendingPlayableRoute('abc123'))
+              .thenAnswer((_) => playable.future);
+          final router = _messageRouter('https://divine.video/video/abc123');
+          addTearDown(router.dispose);
+          await tester.pumpWidget(
+            _routerTestApp(
+              router,
+              mockNostrService: mockNostrClient,
+              additionalOverrides: [
+                videosRepositoryProvider.overrideWithValue(
+                  mockVideosRepository,
+                ),
+              ],
+            ),
+          );
+          await tester.pump();
+          final fullPlayIcon = find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon &&
+                widget.icon == DivineIconName.play &&
+                widget.size == 24,
+          );
+          expect(fullPlayIcon, findsOneWidget);
+          final play = find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.label ==
+                    AppLocalizationsEn().videoPlayerPlayVideo &&
+                widget.properties.button == true,
+          );
+          expect(tester.getSize(play), const Size(248, 350));
+          await tester.tap(play);
+          playable.complete(testVideo);
+          await tester.pumpAndSettle();
+          expect(find.text('video:${testVideo.id}'), findsOneWidget);
+          expect(stats.isCompleted, isFalse);
+          router.pop();
+          stats.complete(testVideo);
+          await tester.pumpAndSettle();
+          expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+          expect(fullPlayIcon, findsOneWidget);
+          expect(tester.getSize(play), const Size(248, 350));
+          verify(
+            () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+              'abc123',
+              fallbackRouteIds: any(named: 'fallbackRouteIds'),
+            ),
+          ).called(1);
+        },
+      );
 
       testWidgets('shared-video card matches Figma geometry', (tester) async {
         when(

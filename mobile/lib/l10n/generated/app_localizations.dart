@@ -10771,6 +10771,12 @@ abstract class AppLocalizations {
   /// **'Invitation sent'**
   String get inboxCollabInviteSentStatus;
 
+  /// Inbox row summary for a shared video. Any personal note follows on the next line.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared a video'**
+  String get inboxSharedVideoPreview;
+
   /// Substituted for the legacy NIP-04 plaintext invite copy when shown as the most-recent-message preview in the DM conversation list. The plaintext copy ('Open Divine to review and accept') is misleading inside Divine.
   ///
   /// In en, this message translates to:
