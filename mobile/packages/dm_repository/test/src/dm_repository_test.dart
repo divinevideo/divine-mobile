@@ -1188,6 +1188,8 @@ void main() {
           awaitRecipientOk: any(named: 'awaitRecipientOk'),
           selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
           onSelfWrapDue: any(named: 'onSelfWrapDue'),
+          recipientWrap: any(named: 'recipientWrap'),
+          publishRefusal: any(named: 'publishRefusal'),
         ),
       ).thenAnswer((inv) async {
         final rumorEvent = inv.namedArguments[#rumorEvent] as Event;
@@ -33055,10 +33057,15 @@ void main() {
             'content': 'love this reel',
             'sig': '',
           });
+          // The pair's own thread: a one-to-one share is recovered on the
+          // one-to-one path, not as a group row.
+          final pairConversationId = DmRepository.computeConversationId(
+            [_validPubkeyA, _validPubkeyB]..sort(),
+          );
           when(() => mockOutgoingDmsDao.getById(_rumorEventId)).thenAnswer(
             (_) async => OutgoingDm(
               id: _rumorEventId,
-              conversationId: 'conv',
+              conversationId: pairConversationId,
               recipientPubkey: _validPubkeyB,
               content: 'love this reel',
               createdAt: 1700000000,
@@ -33092,7 +33099,7 @@ void main() {
           verify(
             () => mockDirectMessagesDao.insertMessage(
               id: _rumorEventId,
-              conversationId: 'conv',
+              conversationId: pairConversationId,
               senderPubkey: _validPubkeyA,
               content: 'love this reel',
               createdAt: any(named: 'createdAt'),
