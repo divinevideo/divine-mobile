@@ -24,6 +24,11 @@ import 'package:skeletonizer/skeletonizer.dart';
 import '../../../helpers/retired_key_custody.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
+/// The localized inbox summary for a shared video.
+final String _sharedVideo = lookupAppLocalizations(
+  const Locale('en'),
+).inboxSharedVideoPreview;
+
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
 
@@ -478,7 +483,7 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(
-            find.textContaining('Shared a video'),
+            find.textContaining(_sharedVideo),
             findsOneWidget,
           );
           expect(
@@ -525,7 +530,7 @@ void main() {
           );
           await tester.pumpAndSettle();
 
-          expect(find.textContaining('Shared a video'), findsOneWidget);
+          expect(find.textContaining(_sharedVideo), findsOneWidget);
           expect(find.textContaining('https://divine.video'), findsNothing);
         },
       );
@@ -534,17 +539,17 @@ void main() {
         (
           body: 'https://divine.video/video/untitled',
           structured: false,
-          expected: 'Shared a video',
+          expected: _sharedVideo,
         ),
         (
           body: 'Watch this\n\n"Template title"\n\nhttps://divine.video/video/clip',
           structured: false,
-          expected: 'Shared a video\nWatch this',
+          expected: '$_sharedVideo\nWatch this',
         ),
         (
           body: '"A personal note"\nnostr:nevent1abc',
           structured: true,
-          expected: 'Shared a video\n"A personal note"',
+          expected: '$_sharedVideo\n"A personal note"',
         ),
         (
           body: 'Read https://divine.video/video/clip when you can',
@@ -1742,7 +1747,7 @@ void main() {
         );
 
         final preview = tester.widget<Text>(
-          find.textContaining('Shared a video'),
+          find.textContaining(_sharedVideo),
         );
         expect(preview.textSpan!.toPlainText(), startsWith(prefixFor('Bob')));
         expect(find.textContaining('https://divine.video'), findsNothing);
