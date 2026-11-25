@@ -1082,6 +1082,98 @@ void main() {
         );
         expect(_divineIcon(DivineIconName.x), findsWidgets);
       });
+
+      testWidgets('send replies when its comment is still in the list', (
+        tester,
+      ) async {
+        final parent = CommentBuilder()
+            .withId(TestCommentIds.comment1Id)
+            .withAuthorPubkey(TestCommentIds.author1Pubkey)
+            .withContent('Parent comment')
+            .build();
+        await tester.pumpWidget(
+          buildTestWidget(
+            listState: CommentsListState(
+              rootEventId: testVideoEventId,
+              rootAuthorPubkey: testVideoAuthorPubkey,
+              status: CommentsStatus.success,
+              commentsById: {parent.id: parent},
+            ),
+            composerState: const CommentComposerState(
+              activeReplyCommentId: TestCommentIds.comment1Id,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.enterText(find.byType(TextField), 'hi');
+        await tester.pump();
+
+        await tester.tap(find.bySemanticsIdentifier('send_comment_button'));
+        await tester.pump();
+
+        final sent = verify(() => mockComposerBloc.add(captureAny())).captured;
+        final submitted = sent.whereType<CommentSubmitted>().single;
+        expect(submitted.parentCommentId, TestCommentIds.comment1Id);
+        expect(submitted.parentAuthorPubkey, TestCommentIds.author1Pubkey);
+        expect(sent.whereType<CommentReplyToggled>(), isEmpty);
+      });
+
+      testWidgets('send cancels the reply when its comment has left the list', (
+        tester,
+      ) async {
+        final parent = CommentBuilder()
+            .withId(TestCommentIds.comment1Id)
+            .withAuthorPubkey(TestCommentIds.author1Pubkey)
+            .withContent('Parent comment')
+            .build();
+        final listStates = StreamController<CommentsListState>();
+        addTearDown(listStates.close);
+        whenListen(
+          mockListBloc,
+          listStates.stream,
+          initialState: CommentsListState(
+            rootEventId: testVideoEventId,
+            rootAuthorPubkey: testVideoAuthorPubkey,
+            status: CommentsStatus.success,
+            commentsById: {parent.id: parent},
+          ),
+        );
+        const replying = CommentComposerState(
+          activeReplyCommentId: TestCommentIds.comment1Id,
+        );
+        final composerStates = StreamController<CommentComposerState>();
+        addTearDown(composerStates.close);
+        whenListen(
+          mockComposerBloc,
+          composerStates.stream,
+          initialState: replying,
+        );
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pump();
+
+        // Its author deletes it, or the viewer blocks them, mid-reply.
+        listStates.add(
+          const CommentsListState(
+            rootEventId: testVideoEventId,
+            rootAuthorPubkey: testVideoAuthorPubkey,
+            status: CommentsStatus.success,
+          ),
+        );
+        await tester.pump();
+        await tester.enterText(find.byType(TextField), 'hi');
+        composerStates.add(replying.copyWith(replyInputText: 'hi'));
+        await tester.pump();
+
+        await tester.tap(find.bySemanticsIdentifier('send_comment_button'));
+        await tester.pump();
+
+        final sent = verify(() => mockComposerBloc.add(captureAny())).captured;
+        expect(
+          sent.whereType<CommentReplyToggled>().map((e) => e.commentId),
+          [TestCommentIds.comment1Id],
+        );
+        expect(sent.whereType<CommentSubmitted>(), isEmpty);
+      });
     });
 
     group('title count', () {

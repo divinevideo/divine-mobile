@@ -1302,7 +1302,14 @@ class _MainCommentInputState extends ConsumerState<MainCommentInput> {
                     // with parentAuthorPubkey=null produces a malformed NIP-22
                     // reply (E tag without matching P tag). Cancel reply mode
                     // instead so the user can re-target a still-visible comment.
-                    if (replyToAuthorPubkey == null) {
+                    // Read at send time: list changes never rebuild this
+                    // builder, so a value captured at build can be stale.
+                    final parentAuthorPubkey = context
+                        .read<CommentsListBloc>()
+                        .state
+                        .commentsById[state.activeReplyCommentId]
+                        ?.authorPubkey;
+                    if (parentAuthorPubkey == null) {
                       composer.add(
                         CommentReplyToggled(state.activeReplyCommentId!),
                       );
@@ -1311,7 +1318,7 @@ class _MainCommentInputState extends ConsumerState<MainCommentInput> {
                     composer.add(
                       CommentSubmitted(
                         parentCommentId: state.activeReplyCommentId,
-                        parentAuthorPubkey: replyToAuthorPubkey,
+                        parentAuthorPubkey: parentAuthorPubkey,
                       ),
                     );
                   } else {
