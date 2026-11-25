@@ -1217,6 +1217,62 @@ void main() {
       expect(bloc.state.results, [ownProfile]);
     });
 
+    testWidgets("drops the previous term's people while a new term loads", (
+      tester,
+    ) async {
+      final alice = UserProfile(
+        pubkey: 'a' * 64,
+        displayName: 'Alice',
+        createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+        eventId: 'event-alice',
+        rawData: const {},
+      );
+      final pendingBob = StreamController<ProgressiveSearchResult>();
+      addTearDown(pendingBob.close);
+      when(
+        () => mockProfileRepository.searchUsersProgressive(
+          query: any(named: 'query'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          sortBy: any(named: 'sortBy'),
+          hasVideos: any(named: 'hasVideos'),
+          boostPubkeys: any(named: 'boostPubkeys'),
+          cancellationToken: any(named: 'cancellationToken'),
+        ),
+      ).thenAnswer(
+        (invocation) => invocation.namedArguments[#query] == 'alice'
+            ? Stream.value(
+                ProgressiveSearchResult(
+                  profiles: [alice],
+                  sources: const {},
+                  isComplete: true,
+                ),
+              )
+            : pendingBob.stream,
+      );
+
+      await tester.pumpWidget(createTestWidget());
+      final bloc = BlocProvider.of<UserSearchBloc>(
+        tester.element(find.byType(SearchResultsView)),
+      );
+      bloc.add(const UserSearchQueryChanged('alice'));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+      expect(bloc.state.results, [alice]);
+
+      bloc.add(const UserSearchQueryChanged('bob'));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+
+      expect(bloc.state.status, UserSearchStatus.loading);
+      expect(bloc.state.query, 'bob');
+      expect(bloc.state.results, isEmpty);
+
+      // Dispose and drain pending debounce timers.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 400));
+    });
+
     testWidgets('shows a waiting state while the profile repository is null', (
       tester,
     ) async {

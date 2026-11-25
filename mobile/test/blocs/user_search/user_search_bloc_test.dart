@@ -67,8 +67,10 @@ void main() {
       Duration? searchTimeout = const Duration(seconds: 20),
       String? excludedPubkey,
       UserRankingSignalsLoader? rankingSignalsLoader,
+      bool clearResultsOnNewQuery = false,
     }) => UserSearchBloc(
       profileRepository: mockProfileRepository,
+      clearResultsOnNewQuery: clearResultsOnNewQuery,
       searchTimeout: searchTimeout,
       excludedPubkey: excludedPubkey,
       rankingSignalsLoader: rankingSignalsLoader,
@@ -2401,6 +2403,91 @@ void main() {
                 'stale results still in state',
                 hasLength(1),
               ),
+        ],
+      );
+    });
+
+    group('clearResultsOnNewQuery', () {
+      const debounceDuration = Duration(milliseconds: 400);
+
+      void stubAlice() {
+        when(
+          () => mockProfileRepository.searchUsersProgressive(
+            query: 'alice',
+            limit: any(named: 'limit'),
+            sortBy: any(named: 'sortBy'),
+            hasVideos: any(named: 'hasVideos'),
+          ),
+        ).thenAnswer(
+          (_) => progressive([createTestProfile('a' * 64, 'Alice')]),
+        );
+      }
+
+      Future<void> searchAlice(UserSearchBloc bloc) async {
+        final first = bloc.stream.firstWhere(
+          (s) => s.query == 'alice' && s.status == UserSearchStatus.success,
+        );
+        bloc.add(const UserSearchQueryChanged('alice'));
+        await first.timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => fail('search for alice never succeeded'),
+        );
+      }
+
+      blocTest<UserSearchBloc, UserSearchState>(
+        'drops previous results while a new query loads and fails with none',
+        setUp: () {
+          stubAlice();
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: 'error',
+              limit: any(named: 'limit'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+            ),
+          ).thenAnswer(
+            (_) => Stream<ProgressiveSearchResult>.error(
+              Exception('Network error'),
+            ),
+          );
+        },
+        build: () => createBloc(clearResultsOnNewQuery: true),
+        act: (bloc) async {
+          await searchAlice(bloc);
+          bloc.add(const UserSearchQueryChanged('error'));
+        },
+        skip: 3,
+        wait: debounceDuration,
+        expect: () => [
+          isA<UserSearchState>()
+              .having((s) => s.status, 'status', UserSearchStatus.loading)
+              .having((s) => s.query, 'query', 'error')
+              .having((s) => s.results, 'results', isEmpty)
+              .having((s) => s.resultCount, 'resultCount', isNull),
+          isA<UserSearchState>()
+              .having((s) => s.status, 'status', UserSearchStatus.failure)
+              .having((s) => s.results, 'results', isEmpty),
+        ],
+        errors: () => [isA<Exception>()],
+      );
+
+      blocTest<UserSearchBloc, UserSearchState>(
+        'keeps results when the same query runs again',
+        setUp: stubAlice,
+        build: () => createBloc(clearResultsOnNewQuery: true),
+        act: (bloc) async {
+          await searchAlice(bloc);
+          bloc.add(const UserSearchQueryChanged('alice'));
+        },
+        skip: 3,
+        wait: debounceDuration,
+        expect: () => [
+          isA<UserSearchState>()
+              .having((s) => s.status, 'status', UserSearchStatus.loading)
+              .having((s) => s.results, 'results', hasLength(1)),
+          isA<UserSearchState>()
+              .having((s) => s.status, 'status', UserSearchStatus.success)
+              .having((s) => s.results, 'results', hasLength(1)),
         ],
       );
     });

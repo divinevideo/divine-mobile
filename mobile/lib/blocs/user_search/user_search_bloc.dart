@@ -49,6 +49,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
     FollowRepository? followRepository,
     UserRankingSignalsLoader? rankingSignalsLoader,
     this.hasVideos = false,
+    this.clearResultsOnNewQuery = false,
     this.searchTimeout = userSearchOuterTimeout,
     this.excludedPubkey,
     this.excludeWhere,
@@ -118,6 +119,14 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
 
   /// Whether to filter results to users who have uploaded videos.
   final bool hasVideos;
+
+  /// Whether a new term drops the previous term's rows while it loads.
+  ///
+  /// The search screen sets it so its People section shows the loading
+  /// skeleton rather than rows for a term no longer in the field. The pickers
+  /// leave it off and keep those rows, so a query rewritten between
+  /// keystrokes (iOS autocorrect) does not flash a spinner.
+  final bool clearResultsOnNewQuery;
 
   /// Optional timeout for the progressive search stream.
   ///
@@ -303,12 +312,12 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
     if (repository == null && _searchRunner == null) return;
 
     // Resuming an interrupted same-owner query keeps positions already shown.
-    final retainedProfiles = state.query == query
-        ? state.results
-        : <UserProfile>[];
-    final retainedSignals = state.query == query
+    final sameQuery = state.query == query;
+    final retainedProfiles = sameQuery ? state.results : <UserProfile>[];
+    final retainedSignals = sameQuery
         ? state.rankingSignals
         : <String, UserRankingSignals>{};
+    final clearsResults = !sameQuery && clearResultsOnNewQuery;
 
     // No dedup guard here — the restartable() transformer already cancels the
     // previous in-flight handler via switchMap. Adding a same-query skip caused
@@ -319,6 +328,8 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
       state.copyWith(
         status: UserSearchStatus.loading,
         query: query,
+        results: clearsResults ? const [] : state.results,
+        resultCount: clearsResults ? null : state.resultCount,
         offset: 0,
         hasMore: false,
         isLoadingMore: false,
