@@ -299,7 +299,17 @@ void main() {
         );
       });
 
-      testWidgets('resends the link and keeps the sheet open', (tester) async {
+      testWidgets('shows resend feedback inside the open sheet', (
+        tester,
+      ) async {
+        final states = StreamController<EmailConfirmationState>();
+        addTearDown(states.close);
+        final initial = emailConfirmationCubit.state;
+        whenListen(
+          emailConfirmationCubit,
+          states.stream,
+          initialState: initial,
+        );
         await tester.pumpWidget(
           buildApp(
             actions: [ProfileActionType.confirmEmail],
@@ -311,10 +321,36 @@ void main() {
 
         final l10n = lookupAppLocalizations(const Locale('en'));
         await tester.tap(find.text(l10n.emailConfirmationResendButton));
+        states.add(
+          initial.copyWith(resendStatus: EmailConfirmationResendStatus.failed),
+        );
         await tester.pumpAndSettle();
 
         verify(() => emailConfirmationCubit.resend()).called(1);
         expect(find.text(l10n.emailConfirmationTitle), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(ProfileActionsSheetContent),
+            matching: find.text(l10n.emailConfirmationResendFailed),
+          ),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text(l10n.emailConfirmationResendButton));
+        states.add(
+          initial.copyWith(resendStatus: EmailConfirmationResendStatus.sent),
+        );
+        await tester.pumpAndSettle();
+
+        verify(() => emailConfirmationCubit.resend()).called(1);
+        expect(find.text(l10n.emailConfirmationResendFailed), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(ProfileActionsSheetContent),
+            matching: find.text(l10n.emailConfirmationResendSent),
+          ),
+          findsOneWidget,
+        );
       });
     });
 

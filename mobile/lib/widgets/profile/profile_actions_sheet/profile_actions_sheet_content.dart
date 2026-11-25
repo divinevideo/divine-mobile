@@ -73,9 +73,8 @@ Future<void> showProfileActionsSheet({
 /// Displays a prompt for each pending [ProfileActionType] in order.
 /// When the user taps "Maybe Later", the sheet transitions to the next
 /// action (if any) or dismisses. Tapping the primary button navigates
-/// to the corresponding screen and closes the sheet. The supporter prompt
-/// is the exception: it shows the Supporter screen's content in place, so
-/// the user can join without leaving the sheet.
+/// to the corresponding screen and closes the sheet. Email confirmation
+/// and the supporter prompt also offer actions within the sheet.
 class ProfileActionsSheetContent extends StatefulWidget {
   /// Creates a [ProfileActionsSheetContent].
   ///
@@ -197,8 +196,7 @@ class _ProfileActionsSheetContentState
 
 /// Prompt asking the account to confirm its email, with a resend button.
 ///
-/// Resending keeps the sheet open: the app-wide notice reports the outcome,
-/// and the user can still step on to the next pending action.
+/// Shows resend feedback inside the sheet, above the modal barrier.
 class _ConfirmEmailPrompt extends StatelessWidget {
   const _ConfirmEmailPrompt({required this.onMaybeLater, super.key});
 
@@ -210,10 +208,10 @@ class _ConfirmEmailPrompt extends StatelessWidget {
     final email = context.select<EmailConfirmationCubit, String>(
       (cubit) => cubit.state.email ?? '',
     );
-    final isSending = context.select<EmailConfirmationCubit, bool>(
-      (cubit) =>
-          cubit.state.resendStatus == EmailConfirmationResendStatus.sending,
-    );
+    final resendStatus = context
+        .select<EmailConfirmationCubit, EmailConfirmationResendStatus>(
+          (cubit) => cubit.state.resendStatus,
+        );
     // Confirming in the mail app while this sheet is open clears the action,
     // so step on to the next one instead of offering a stale resend.
     return BlocListener<EmailConfirmationCubit, EmailConfirmationState>(
@@ -224,8 +222,15 @@ class _ConfirmEmailPrompt extends StatelessWidget {
         sticker: DivineStickerName.email,
         title: l10n.emailConfirmationTitle,
         subtitle: l10n.emailConfirmationProfileSubtitle(email),
+        statusMessage: switch (resendStatus) {
+          EmailConfirmationResendStatus.sent =>
+            l10n.emailConfirmationResendSent,
+          EmailConfirmationResendStatus.failed =>
+            l10n.emailConfirmationResendFailed,
+          _ => null,
+        },
         primaryLabel: l10n.emailConfirmationResendButton,
-        onPrimaryTap: isSending
+        onPrimaryTap: resendStatus == EmailConfirmationResendStatus.sending
             ? null
             : () => runDetached(
                 context.read<EmailConfirmationCubit>().resend(),
@@ -251,12 +256,14 @@ class _ActionPrompt extends StatelessWidget {
     required this.primaryLabel,
     required this.onPrimaryTap,
     required this.onSecondaryTap,
+    this.statusMessage,
     super.key,
   });
 
   final DivineStickerName sticker;
   final String title;
   final String subtitle;
+  final String? statusMessage;
   final String primaryLabel;
   final VoidCallback? onPrimaryTap;
   final VoidCallback onSecondaryTap;
@@ -290,6 +297,19 @@ class _ActionPrompt extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
+          if (statusMessage case final message?) ...[
+            const SizedBox(height: 8),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                message,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.primaryText,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
           const SizedBox(height: 32),
           DivineButton(
             label: primaryLabel,
