@@ -12,6 +12,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/exceptions/video_exceptions.dart'
     show AccountRestrictedPublishException;
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/subtitle_fetcher.dart';
 import 'package:openvine/services/subtitle_service.dart';
 import 'package:openvine/services/video_event_publisher.dart';
@@ -42,6 +43,7 @@ class SubtitleRepository {
     required BlossomUploadService blossomUploadService,
     required VideoEventPublisher videoEventPublisher,
     required VideosRepository videosRepository,
+    required PersonalEventCacheService personalEventCache,
     required AuthService authService,
     required NostrClient nostrClient,
     required http.Client httpClient,
@@ -49,6 +51,7 @@ class SubtitleRepository {
   }) : _blossom = blossomUploadService,
        _publisher = videoEventPublisher,
        _videosRepository = videosRepository,
+       _personalEventCache = personalEventCache,
        _authService = authService,
        _nostrClient = nostrClient,
        _httpClient = httpClient,
@@ -57,6 +60,7 @@ class SubtitleRepository {
   final BlossomUploadService _blossom;
   final VideoEventPublisher _publisher;
   final VideosRepository _videosRepository;
+  final PersonalEventCacheService _personalEventCache;
   final AuthService _authService;
   final NostrClient _nostrClient;
   final http.Client _httpClient;
@@ -148,6 +152,7 @@ class SubtitleRepository {
       _videosRepository.fetchLatestVideoRevision,
       video,
       logName: 'SubtitleRepository',
+      cachedEvent: _personalEventCache.getEventById,
     );
     if (newest == null) {
       throw SubtitleEditException('Newest revision of the video unavailable');
@@ -169,8 +174,8 @@ class SubtitleRepository {
       throw SubtitleEditException('Subtitle upload to Blossom failed');
     }
 
-    // The republish reads the relays again after the upload. Make the
-    // revision read here its floor, so that read cannot go back past it.
+    // The republish reads the newest revision again after the upload. Make
+    // the revision read here its floor, so that read cannot go back past it.
     final readBeforeUpload =
         (newest.id == video.id
                 ? video

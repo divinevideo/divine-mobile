@@ -1062,7 +1062,9 @@ class VideoEventPublisher {
   );
 
   /// Replaces only audio-sharing tags on a signed, addressable owner video,
-  /// rebuilt from the newest revision the relays hold (#11250).
+  /// rebuilt from the newest revision Divine's REST API or the relays hold,
+  /// or from the signed opened copy in the personal event cache when no newer
+  /// one can be read (#11250).
   ///
   /// Throws [SoundReusePublicationException] if the newest revision cannot be
   /// read, or signing or publication fails.
@@ -1088,6 +1090,7 @@ class VideoEventPublisher {
       _videosRepositoryGetter?.call().fetchLatestVideoRevision,
       existingEvent,
       logName: _logName,
+      cachedEvent: _personalEventCache?.getEventById,
     );
     if (latest == null) {
       throw const SoundReusePublicationException(
@@ -1155,7 +1158,9 @@ class VideoEventPublisher {
 
   /// Republish a video event with added text-track tags for subtitles.
   ///
-  /// Rebuilds from the newest revision the relays hold, not [existingEvent]
+  /// Rebuilds from the newest revision Divine's REST API or the relays hold,
+  /// or from the signed copy of [existingEvent] in the personal event cache
+  /// when no newer one can be read, not from [existingEvent] itself
   /// (#11250). Its caption tracks in [textTrackLang], and any that name no
   /// language, are replaced by one tag per ref ([textTrackRef] followed by
   /// each entry in [extraTextTrackRefs]) for read-time redundancy; tracks in
@@ -1188,6 +1193,7 @@ class VideoEventPublisher {
             _videosRepositoryGetter?.call().fetchLatestVideoRevision,
             existingEvent,
             logName: _logName,
+            cachedEvent: _personalEventCache?.getEventById,
           )
         : null;
     final editedRefs = [textTrackRef, ...extraTextTrackRefs];

@@ -1,7 +1,6 @@
 // ABOUTME: Result of reading the newest revision at a video address before
 // ABOUTME: replacing it: found, absent, or unknown when no read completed.
 
-import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
 /// What Divine's REST API or the relays hold at a video address, read so
@@ -9,14 +8,6 @@ import 'package:nostr_sdk/nostr_sdk.dart';
 sealed class LatestVideoRevision {
   /// Base constructor for the three outcomes.
   const LatestVideoRevision();
-
-  /// Adapts the canonical settled read without treating failure as absence.
-  factory LatestVideoRevision.fromCurrentVersion(CurrentVersionRead read) =>
-      switch (read) {
-        CurrentVersionFound(:final event) => LatestVideoRevisionFound(event),
-        CurrentVersionAbsent() => const LatestVideoRevisionAbsent(),
-        CurrentVersionFailed() => const LatestVideoRevisionUnknown(),
-      };
 }
 
 /// [event] is the newest signed revision the read returned.

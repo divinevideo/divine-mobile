@@ -1,8 +1,8 @@
 // ABOUTME: Unit tests for VideoMetadataUpdateService.
 // ABOUTME: Covers auth guard, video-URL guard, original-tag preservation,
 // ABOUTME: edited-field replacement, replacement created_at, successful publish,
-// ABOUTME: publish failure, invite failure, and rebuilding from the relays'
-// ABOUTME: newest revision rather than the one the editor opened (#11250).
+// ABOUTME: publish failure, invite failure, and rebuilding from the newest
+// ABOUTME: revision read, or the held signed opened copy when that falls short.
 
 import 'dart:io';
 import 'dart:ui' show Locale;
@@ -14,8 +14,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/nostr_sdk.dart' show generatePrivateKey, getPublicKey;
 import 'package:nostr_sdk/utils/nostr_timestamp.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
@@ -32,6 +32,8 @@ import 'package:openvine/services/video_metadata_update_service.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 
+import 'package:videos_repository/videos_repository.dart';
+
 import '../helpers/test_provider_overrides.dart';
 import '../helpers/test_pubkeys.dart';
 
@@ -47,7 +49,7 @@ class _MockVideoEventService extends Mock implements VideoEventService {}
 class _MockSignedEventRelayPublisher extends Mock
     implements SignedEventRelayPublisher {}
 
-class _MockNostrClient extends Mock implements NostrClient {}
+class _MockVideosRepository extends Mock implements VideosRepository {}
 
 class _FakeEvent extends Fake implements Event {}
 
@@ -86,7 +88,7 @@ void main() {
   late _MockDmRepository mockDmRepository;
   late _MockPersonalEventCacheService mockPersonalEventCacheService;
   late _MockVideoEventService mockVideoEventService;
-  late _MockNostrClient mockNostrClient;
+  late _MockVideosRepository mockVideosRepository;
   late VideoMetadataUpdateService service;
   late List<List<String>> capturedTags;
   late int capturedCreatedAt;
@@ -107,7 +109,7 @@ void main() {
     mockDmRepository = _MockDmRepository();
     mockPersonalEventCacheService = _MockPersonalEventCacheService();
     mockVideoEventService = _MockVideoEventService();
-    mockNostrClient = _MockNostrClient();
+    mockVideosRepository = _MockVideosRepository();
     capturedTags = [];
     capturedCreatedAt = 0;
 
@@ -147,7 +149,7 @@ void main() {
       relayPublisher: mockRelayPublisher,
       personalEventCache: mockPersonalEventCacheService,
       videoEventService: mockVideoEventService,
-      nostrClient: mockNostrClient,
+      readLatestRevision: mockVideosRepository.fetchLatestVideoRevision,
       collaboratorInviteService: CollaboratorInviteService(
         dmRepository: mockDmRepository,
         l10n: lookupAppLocalizations(const Locale('en')),
@@ -179,13 +181,9 @@ void main() {
     File? newThumbnailFile,
   }) {
     when(
-      () => mockNostrClient.readCurrentVersion(
-        kind: any(named: 'kind'),
-        pubkey: any(named: 'pubkey'),
-        dTag: any(named: 'dTag'),
-      ),
+      () => mockVideosRepository.fetchLatestVideoRevision(any()),
     ).thenAnswer(
-      (_) async => CurrentVersionFound(relayRevisionOf(originalVideo)),
+      (_) async => LatestVideoRevisionFound(relayRevisionOf(originalVideo)),
     );
     return service.updateVideo(
       originalVideo: originalVideo,
@@ -714,13 +712,9 @@ void main() {
           addressableDTag: 'video-d-tag',
         );
         when(
-          () => mockNostrClient.readCurrentVersion(
-            kind: any(named: 'kind'),
-            pubkey: any(named: 'pubkey'),
-            dTag: any(named: 'dTag'),
-          ),
+          () => mockVideosRepository.fetchLatestVideoRevision(any()),
         ).thenAnswer(
-          (_) async => CurrentVersionFound(
+          (_) async => LatestVideoRevisionFound(
             Event.fromJson({
               'id': 'event-id',
               'pubkey': _ownerPubkey,
@@ -769,18 +763,15 @@ void main() {
 
       for (final (name, revision) in [
         (
-          'refused or did not answer',
-          const CurrentVersionFailed(noRelay: false),
+          'returns nothing and does not complete',
+          const LatestVideoRevisionUnknown(),
         ),
-        ('hold none', const CurrentVersionAbsent()),
+        ('finds no revision', const LatestVideoRevisionAbsent()),
       ]) {
-        test('refuses to publish when the relays $name', () async {
+        test('refuses to publish when the read $name and no copy of the '
+            'opened revision is held', () async {
           when(
-            () => mockNostrClient.readCurrentVersion(
-              kind: any(named: 'kind'),
-              pubkey: any(named: 'pubkey'),
-              dTag: any(named: 'dTag'),
-            ),
+            () => mockVideosRepository.fetchLatestVideoRevision(any()),
           ).thenAnswer((_) async => revision);
 
           final result = await service.updateVideo(
@@ -916,12 +907,8 @@ void main() {
 
       void relaysHold(Event event) {
         when(
-          () => mockNostrClient.readCurrentVersion(
-            kind: any(named: 'kind'),
-            pubkey: any(named: 'pubkey'),
-            dTag: any(named: 'dTag'),
-          ),
-        ).thenAnswer((_) async => CurrentVersionFound(event));
+          () => mockVideosRepository.fetchLatestVideoRevision(any()),
+        ).thenAnswer((_) async => LatestVideoRevisionFound(event));
       }
 
       test('reads the address of the video being edited', () async {
@@ -934,10 +921,8 @@ void main() {
         );
 
         verify(
-          () => mockNostrClient.readCurrentVersion(
-            kind: 34236,
-            pubkey: _ownerPubkey,
-            dTag: 'video-d-tag',
+          () => mockVideosRepository.fetchLatestVideoRevision(
+            '34236:$_ownerPubkey:video-d-tag',
           ),
         ).called(1);
       });
@@ -1705,10 +1690,8 @@ void main() {
           ),
         ).called(1);
         verify(
-          () => mockNostrClient.readCurrentVersion(
-            kind: 34235,
-            pubkey: _ownerPubkey,
-            dTag: 'video-d-tag',
+          () => mockVideosRepository.fetchLatestVideoRevision(
+            '34235:$_ownerPubkey:video-d-tag',
           ),
         ).called(1);
         verify(
@@ -1771,6 +1754,127 @@ void main() {
             skipNip04Fallback: any(named: 'skipNip04Fallback'),
           ),
         );
+      });
+      group('when no newer revision can be read', () {
+        late String privateKey;
+        late Event held;
+        late VideoEvent opened;
+
+        setUp(() {
+          privateKey = generatePrivateKey();
+          final owner = getPublicKey(privateKey);
+          when(() => mockAuthService.currentPublicKeyHex).thenReturn(owner);
+          when(
+            () => mockAuthService.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+            ),
+          ).thenAnswer((invocation) async {
+            capturedTags = List<List<String>>.from(
+              invocation.namedArguments[#tags] as List<List<String>>,
+            );
+            return Event(
+              owner,
+              invocation.namedArguments[#kind] as int,
+              capturedTags,
+              invocation.namedArguments[#content] as String,
+              createdAt: invocation.namedArguments[#createdAt] as int?,
+            )..sign(privateKey);
+          });
+          held = Event(
+            owner,
+            NIP71VideoKinds.addressableShortVideo,
+            [
+              ['d', 'video-d-tag'],
+              ['title', 'Held title'],
+              [
+                'imeta',
+                'url https://cdn.example.com/video.mp4',
+                'm video/mp4',
+              ],
+              ['expiration', '1799999999'],
+            ],
+            'Held content',
+            createdAt: 1757385263,
+          )..sign(privateKey);
+          opened = VideoEvent.fromNostrEvent(held);
+        });
+
+        test('builds from the signed opened copy the cache holds', () async {
+          when(
+            () => mockVideosRepository.fetchLatestVideoRevision(any()),
+          ).thenAnswer((_) async => const LatestVideoRevisionUnknown());
+          when(
+            () => mockPersonalEventCacheService.getEventById(held.id),
+          ).thenReturn(held);
+
+          final result = await service.updateVideo(
+            originalVideo: opened,
+            editorState: editorStateFromPublishedVideo(opened),
+            initialCollaboratorPubkeys: const {},
+          );
+
+          expect(result, isA<VideoUpdateSuccess>());
+          expect(capturedTags, contains(equals(['expiration', '1799999999'])));
+          verify(() => mockRelayPublisher.publishViaWebSocket(any())).called(1);
+        });
+
+        test('builds from the revision read before the thumbnail upload '
+            'when the read after it falls short', () async {
+          var reads = 0;
+          when(
+            () => mockVideosRepository.fetchLatestVideoRevision(any()),
+          ).thenAnswer(
+            (_) async => reads++ == 0
+                ? LatestVideoRevisionFound(held)
+                : const LatestVideoRevisionUnknown(),
+          );
+          when(
+            () => mockBlossomUploadService.uploadImage(
+              imageFile: any(named: 'imageFile'),
+              nostrPubkey: any(named: 'nostrPubkey'),
+            ),
+          ).thenAnswer(
+            (_) async => const BlossomUploadResult(
+              success: true,
+              url: 'https://cdn.example.com/new-thumbnail.jpg',
+            ),
+          );
+
+          final result = await service.updateVideo(
+            originalVideo: opened,
+            editorState: editorStateFromPublishedVideo(opened),
+            initialCollaboratorPubkeys: const {},
+            newThumbnailFile: File('new-thumbnail.jpg'),
+          );
+
+          expect(reads, 2);
+          expect(result, isA<VideoUpdateSuccess>());
+          expect(capturedTags, contains(equals(['expiration', '1799999999'])));
+          verifyNever(
+            () => mockPersonalEventCacheService.getEventById(any()),
+          );
+        });
+
+        test('does not republish a video the read finds gone', () async {
+          when(
+            () => mockVideosRepository.fetchLatestVideoRevision(any()),
+          ).thenAnswer((_) async => const LatestVideoRevisionAbsent());
+          when(
+            () => mockPersonalEventCacheService.getEventById(held.id),
+          ).thenReturn(held);
+
+          final result = await service.updateVideo(
+            originalVideo: opened,
+            editorState: editorStateFromPublishedVideo(opened),
+            initialCollaboratorPubkeys: const {},
+          );
+
+          expect(result, isA<VideoUpdateOriginalUnavailable>());
+          verifyNever(() => mockRelayPublisher.publishViaWebSocket(any()));
+        });
       });
     });
 

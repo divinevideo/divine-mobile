@@ -3,9 +3,11 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/nostr_sdk.dart' show generatePrivateKey, getPublicKey;
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_event_publisher.dart';
 import 'package:videos_repository/videos_repository.dart'
@@ -25,6 +27,8 @@ class _Nostr extends Mock implements NostrClient {}
 class _Uploads extends Mock implements UploadManager {}
 
 class _Videos extends Mock implements VideosRepository {}
+
+class _PersonalEvents extends Mock implements PersonalEventCacheService {}
 
 class _Event extends Fake implements Event {}
 
@@ -347,7 +351,7 @@ void main() {
     });
 
     for (final (name, answer) in [
-      ('cannot tell', const LatestVideoRevisionUnknown()),
+      ('cannot tell and no copy is held', const LatestVideoRevisionUnknown()),
       ('hold none', const LatestVideoRevisionAbsent()),
     ]) {
       test('refuses when the relays $name what the newest revision is', () {
@@ -363,6 +367,65 @@ void main() {
         );
       });
     }
+
+    test('rebuilds from the signed opened copy the personal event cache '
+        'holds when no revision is read', () async {
+      final privateKey = generatePrivateKey();
+      final key = getPublicKey(privateKey);
+      final held = Event(
+        key,
+        34236,
+        [
+          ['d', 'clip:one'],
+          ['imeta', 'url https://example.com/video.mp4', 'm video/mp4'],
+          ['allow_audio_reuse', 'false'],
+        ],
+        'Held description',
+        createdAt: 1700000000,
+      )..sign(privateKey);
+      when(() => auth.currentPublicKeyHex).thenReturn(key);
+      when(
+        () => auth.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
+        ),
+      ).thenAnswer(
+        (call) async => signed = Event(
+          key,
+          call.namedArguments[#kind] as int,
+          call.namedArguments[#tags] as List<List<String>>,
+          call.namedArguments[#content] as String,
+          createdAt: call.namedArguments[#createdAt] as int?,
+        )..sign(privateKey),
+      );
+      final personalEvents = _PersonalEvents();
+      when(() => personalEvents.getEventById(held.id)).thenReturn(held);
+      when(
+        () => videos.fetchLatestVideoRevision(any()),
+      ).thenAnswer((_) async => const LatestVideoRevisionUnknown());
+      final publisher = VideoEventPublisher(
+        uploadManager: _Uploads(),
+        nostrService: nostr,
+        authService: auth,
+        personalEventCache: personalEvents,
+        videosRepositoryGetter: () => videos,
+      );
+
+      await publisher.republishWithAudioReuse(
+        existingEvent: VideoEvent.fromNostrEvent(held),
+        audioEventId: audio,
+        audioRelayHint: 'wss://relay.divine.video',
+      );
+
+      expect(signed!.content, 'Held description');
+      expect(signed!.createdAt, greaterThan(held.createdAt));
+      expect(
+        signed!.tags,
+        contains(equals(['e', audio, 'wss://relay.divine.video', 'audio'])),
+      );
+    });
 
     test('refuses when it has no repository to read the newest revision '
         'from', () async {

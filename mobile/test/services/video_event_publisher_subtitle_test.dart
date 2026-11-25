@@ -8,6 +8,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' hide NIP71VideoKinds;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/nostr_sdk.dart' show generatePrivateKey, getPublicKey;
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -872,8 +873,51 @@ void main() {
         verify(() => mockVideoEventService.updateVideoEvent(result!)).called(1);
       });
 
+      test('rebuilds from the signed opened copy the personal event cache '
+          'holds when the relays cannot tell', () async {
+        final privateKey = generatePrivateKey();
+        final key = getPublicKey(privateKey);
+        final held = Event(
+          key,
+          34236,
+          existingTags,
+          'Held description',
+          createdAt: 1700000000,
+        )..sign(privateKey);
+        when(() => mockAuthService.currentPublicKeyHex).thenReturn(key);
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        ).thenAnswer(
+          (invocation) async => Event(
+            key,
+            invocation.namedArguments[#kind] as int,
+            invocation.namedArguments[#tags] as List<List<String>>,
+            invocation.namedArguments[#content] as String,
+            createdAt: invocation.namedArguments[#createdAt] as int?,
+          )..sign(privateKey),
+        );
+        when(() => mockPersonalEventCache.getEventById(held.id)).thenReturn(
+          held,
+        );
+        relaysAnswer(const LatestVideoRevisionUnknown());
+
+        final result = await publisher.republishWithSubtitles(
+          existingEvent: VideoEvent.fromNostrEvent(held),
+          textTrackRef: textTrackRef,
+        );
+
+        expect(result, isNotNull);
+        expect(result!.content, 'Held description');
+        expect(result.textTrackRef, textTrackRef);
+      });
+
       for (final (name, revision) in [
-        ('cannot tell', const LatestVideoRevisionUnknown()),
+        ('cannot tell and no copy is held', const LatestVideoRevisionUnknown()),
         ('hold none', const LatestVideoRevisionAbsent()),
       ]) {
         test('returns null without publishing when the relays $name what '

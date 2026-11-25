@@ -11,8 +11,10 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/nostr_sdk.dart' show generatePrivateKey, getPublicKey;
 import 'package:openvine/repositories/subtitle_repository.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/subtitle_fetcher.dart';
 import 'package:openvine/services/subtitle_service.dart';
 import 'package:openvine/services/video_event_publisher.dart';
@@ -36,6 +38,9 @@ class _MockNostrClient extends Mock implements NostrClient {}
 class _MockHttpClient extends Mock implements http.Client {}
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
+
+class _MockPersonalEventCache extends Mock
+    implements PersonalEventCacheService {}
 
 final _video = VideoEvent(
   id: 'vid1',
@@ -72,6 +77,7 @@ void main() {
     late _MockAuth auth;
     late _MockHttpClient httpClient;
     late _MockVideosRepository videos;
+    late _MockPersonalEventCache personalEventCache;
     late SubtitleRepository repo;
 
     setUp(() {
@@ -80,10 +86,12 @@ void main() {
       auth = _MockAuth();
       httpClient = _MockHttpClient();
       videos = _MockVideosRepository();
+      personalEventCache = _MockPersonalEventCache();
       repo = SubtitleRepository(
         blossomUploadService: blossom,
         videoEventPublisher: publisher,
         videosRepository: videos,
+        personalEventCache: personalEventCache,
         authService: auth,
         nostrClient: _MockNostrClient(),
         httpClient: httpClient,
@@ -720,6 +728,61 @@ void main() {
         });
       });
 
+      test('builds on the signed opened copy the cache holds when no '
+          'revision is read', () async {
+        final privateKey = generatePrivateKey();
+        final owner = getPublicKey(privateKey);
+        final held = Event(
+          owner,
+          34236,
+          [
+            ['d', 'my-vine-id'],
+            ['url', 'https://media.divine.video/video.mp4'],
+          ],
+          'held copy',
+          createdAt: 1700000000,
+        )..sign(privateKey);
+        when(() => auth.currentPublicKeyHex).thenReturn(owner);
+        when(
+          () => videos.fetchLatestVideoRevision(any()),
+        ).thenAnswer((_) async => const LatestVideoRevisionUnknown());
+        when(() => personalEventCache.getEventById(held.id)).thenReturn(held);
+        when(
+          () => publisher.republishWithSubtitles(
+            existingEvent: any(named: 'existingEvent'),
+            textTrackRef: any(named: 'textTrackRef'),
+            extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
+            textTrackLang: any(named: 'textTrackLang'),
+          ),
+        ).thenAnswer((_) async => _updatedVideo);
+        when(
+          () => publisher.publishSubtitleEvent(
+            video: any(named: 'video'),
+            vttContent: any(named: 'vttContent'),
+            blossomUrl: any(named: 'blossomUrl'),
+            lang: any(named: 'lang'),
+          ),
+        ).thenAnswer((_) async => '39307:$owner:subtitles:my-vine-id');
+
+        await repo.publishEditedSubtitles(
+          video: VideoEvent.fromNostrEvent(held),
+          cues: _cues,
+        );
+
+        final republished =
+            verify(
+                  () => publisher.republishWithSubtitles(
+                    existingEvent: captureAny(named: 'existingEvent'),
+                    textTrackRef: any(named: 'textTrackRef'),
+                    extraTextTrackRefs: any(named: 'extraTextTrackRefs'),
+                    textTrackLang: any(named: 'textTrackLang'),
+                  ),
+                ).captured.single
+                as VideoEvent;
+        expect(republished.id, held.id);
+        expect(republished.eventCreatedAt, held.createdAt);
+      });
+
       group('fails the save when the subtitle event', () {
         // A reader using the subtitle event can still play the old captions
         // when the subtitle publish fails after the video is accepted.
@@ -770,11 +833,11 @@ void main() {
 
     group('refuses before uploading anything', () {
       for (final (reason, revision) in [
-        ('no relay answered in full', const LatestVideoRevisionUnknown()),
         (
-          'the relays return no signed revision',
-          const LatestVideoRevisionAbsent(),
+          'no revision is read and no signed copy of the opened one is held',
+          const LatestVideoRevisionUnknown(),
         ),
+        ('no signed revision is held', const LatestVideoRevisionAbsent()),
       ]) {
         test('when $reason', () async {
           when(

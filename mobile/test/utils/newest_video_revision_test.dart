@@ -1,13 +1,15 @@
 // ABOUTME: Pins the read a video republish rebuilds from: the address, the
-// ABOUTME: opened revision as its floor, and none when unanswered or empty.
+// ABOUTME: opened revision as its floor and fallback, and none when deleted.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show VideoEvent;
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/nostr_sdk.dart' show generatePrivateKey, getPublicKey;
 import 'package:openvine/utils/newest_video_revision.dart';
 import 'package:videos_repository/videos_repository.dart'
     show
+        LatestVideoRevision,
         LatestVideoRevisionAbsent,
         LatestVideoRevisionFound,
         LatestVideoRevisionUnknown,
@@ -262,17 +264,12 @@ void main() {
       expect(result, isNull);
     });
 
-    for (final (name, revision) in [
-      ('no relay answered in full', const LatestVideoRevisionUnknown()),
-      (
-        'the relays return no signed revision',
-        const LatestVideoRevisionAbsent(),
-      ),
-    ]) {
-      test('returns null when $name', () async {
+    test(
+      'returns null when no relay answered in full and no copy is held',
+      () async {
         when(
           () => repository.fetchLatestVideoRevision(any()),
-        ).thenAnswer((_) async => revision);
+        ).thenAnswer((_) async => const LatestVideoRevisionUnknown());
 
         final result = await newestVideoRevision(
           repository.fetchLatestVideoRevision,
@@ -281,7 +278,176 @@ void main() {
         );
 
         expect(result, isNull);
+      },
+    );
+
+    test('returns null when no signed revision is held', () async {
+      when(
+        () => repository.fetchLatestVideoRevision(any()),
+      ).thenAnswer((_) async => const LatestVideoRevisionAbsent());
+
+      final result = await newestVideoRevision(
+        repository.fetchLatestVideoRevision,
+        _video(),
+        logName: 'test',
+      );
+
+      expect(result, isNull);
+    });
+
+    group('with the signed copy of the opened video in hand', () {
+      late String privateKey;
+      late Event held;
+      late VideoEvent opened;
+
+      Event signedAt(String dTag, {int createdAt = 1700000000}) => Event(
+        getPublicKey(privateKey),
+        34236,
+        [
+          ['d', dTag],
+          ['url', 'https://example.com/held.mp4'],
+        ],
+        'held copy',
+        createdAt: createdAt,
+      )..sign(privateKey);
+
+      VideoEvent openedFrom(Event event) => VideoEvent.fromNostrEvent(event);
+
+      Future<Event?> read(
+        VideoEvent video, {
+        required Event? Function(String eventId) cachedEvent,
+      }) => newestVideoRevision(
+        repository.fetchLatestVideoRevision,
+        video,
+        logName: 'test',
+        cachedEvent: cachedEvent,
+      );
+
+      void stubRevision(LatestVideoRevision revision) {
+        when(
+          () => repository.fetchLatestVideoRevision(any()),
+        ).thenAnswer((_) async => revision);
+      }
+
+      setUp(() {
+        privateKey = generatePrivateKey();
+        held = signedAt('my-video');
+        opened = openedFrom(held);
       });
-    }
+
+      test('uses it when no relay answered in full', () async {
+        stubRevision(const LatestVideoRevisionUnknown());
+        final asked = <String>[];
+
+        final result = await read(
+          opened,
+          cachedEvent: (id) {
+            asked.add(id);
+            return held;
+          },
+        );
+
+        expect(result, same(held));
+        expect(asked, [held.id]);
+      });
+
+      test('uses it when the revision found predates it', () async {
+        stubRevision(
+          LatestVideoRevisionFound(
+            signedAt('my-video', createdAt: 1699999999),
+          ),
+        );
+
+        expect(await read(opened, cachedEvent: (_) => held), same(held));
+      });
+
+      test('prefers a newer revision found over it', () async {
+        final newer = signedAt('my-video', createdAt: 1700000001);
+        stubRevision(LatestVideoRevisionFound(newer));
+        var asked = false;
+
+        final result = await read(
+          opened,
+          cachedEvent: (_) {
+            asked = true;
+            return held;
+          },
+        );
+
+        expect(result, same(newer));
+        expect(asked, isFalse);
+      });
+
+      test('does not resurrect a video no revision is held for', () async {
+        stubRevision(const LatestVideoRevisionAbsent());
+
+        expect(await read(opened, cachedEvent: (_) => held), isNull);
+      });
+
+      group('refuses it when no relay answered in full and it', () {
+        setUp(() => stubRevision(const LatestVideoRevisionUnknown()));
+
+        test('is not held', () async {
+          expect(await read(opened, cachedEvent: (_) => null), isNull);
+        });
+
+        test('is another event', () async {
+          final other = signedAt('my-video', createdAt: 1700000005);
+
+          expect(await read(opened, cachedEvent: (_) => other), isNull);
+        });
+
+        test('has a signature by another key', () async {
+          final forged = Event(
+            held.pubkey,
+            held.kind,
+            held.tags,
+            held.content,
+            createdAt: held.createdAt,
+          )..sign(generatePrivateKey());
+
+          expect(
+            await read(
+              opened.copyWith(id: forged.id),
+              cachedEvent: (_) => forged,
+            ),
+            isNull,
+          );
+        });
+
+        test('is at another address', () async {
+          final elsewhere = signedAt('other-video');
+
+          expect(
+            await read(
+              opened.copyWith(id: elsewhere.id),
+              cachedEvent: (_) => elsewhere,
+            ),
+            isNull,
+          );
+        });
+
+        test('has conflicting d tags', () async {
+          final ambiguous = Event(
+            getPublicKey(privateKey),
+            34236,
+            [
+              ['d', 'my-video'],
+              ['d', 'other-video'],
+            ],
+            'ambiguous held copy',
+            createdAt: 1700000000,
+          )..sign(privateKey);
+
+          expect(
+            await read(
+              opened.copyWith(id: ambiguous.id),
+              cachedEvent: (_) => ambiguous,
+            ),
+            isNull,
+          );
+        });
+      });
+    });
   });
 }
