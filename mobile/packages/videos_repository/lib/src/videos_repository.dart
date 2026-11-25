@@ -117,6 +117,7 @@ const Duration _routeRelayTimeout = Duration(seconds: 3);
 const String _popularCacheKey = 'popular';
 const String _popularLegacyBeforeCursorPrefix = 'before:';
 const String _recommendedFallbackCursorPrefix = 'recommended-fallback:';
+const String _recommendedPopularCursorPrefix = 'recommended-popular:';
 const String _classicsCacheKey = 'classics';
 const String _classicsOffsetCursorPrefix = 'classic-offset:';
 const Duration _classicsFirstPageCacheTtl = Duration(minutes: 15);
@@ -186,17 +187,31 @@ int? _decodeClassicsOffsetCursor(String? cursor) {
   return int.tryParse(cursor.substring(_classicsOffsetCursorPrefix.length));
 }
 
-String _encodeRecommendedFallbackCursor(int? until) =>
-    '$_recommendedFallbackCursorPrefix${until ?? 'retry'}';
+String _encodeRecommendedFallbackCursor(
+  int? until, {
+  bool recommendationsExhausted = false,
+}) {
+  final prefix = recommendationsExhausted
+      ? _recommendedPopularCursorPrefix
+      : _recommendedFallbackCursorPrefix;
+  return '$prefix${until ?? ''}';
+}
 
-({bool isFallback, int? until}) _decodeRecommendedFallbackCursor(
-  String? cursor,
-) {
-  if (cursor == null || !cursor.startsWith(_recommendedFallbackCursorPrefix)) {
-    return (isFallback: false, until: null);
+({bool isFallback, bool recommendationsExhausted, int? until})
+_decodeRecommendedFallbackCursor(String? cursor) {
+  final recommendationsExhausted =
+      cursor?.startsWith(_recommendedPopularCursorPrefix) ?? false;
+  final prefix = recommendationsExhausted
+      ? _recommendedPopularCursorPrefix
+      : _recommendedFallbackCursorPrefix;
+  if (cursor == null || !cursor.startsWith(prefix)) {
+    return (isFallback: false, recommendationsExhausted: false, until: null);
   }
-  final suffix = cursor.substring(_recommendedFallbackCursorPrefix.length);
-  return (isFallback: true, until: int.tryParse(suffix));
+  return (
+    isFallback: true,
+    recommendationsExhausted: recommendationsExhausted,
+    until: int.tryParse(cursor.substring(prefix.length)),
+  );
 }
 
 /// Cache-key suffix for the popular feed's viewer preferences.
@@ -3989,8 +4004,8 @@ class VideosRepository {
   ///
   /// An opaque [cursor] continues recommendations. When recommendations fall
   /// back to popular videos, a synthetic fallback cursor keeps pagination
-  /// alive so later pages retry recommendations and otherwise page popular
-  /// videos instead of stranding the viewer at a dead end.
+  /// alive so later pages can page popular videos and retry recommendations
+  /// after a temporary fallback.
   ///
   /// Every opened video starts its own discovery, so the first page is always
   /// fetched rather than read from the For You tab's cached first page, which
@@ -4096,17 +4111,21 @@ class VideosRepository {
         ? generateRecommendationSessionSeed()
         : _recommendationSessionSeed;
 
-    if (effectiveUserPubkey == null ||
+    if (decodedFallback.recommendationsExhausted ||
+        effectiveUserPubkey == null ||
         _funnelcakeApiClient == null ||
         !_funnelcakeApiClient.isAvailable) {
       return _popularVideosInsteadOfRecommendations(
-        reason: 'recommendations unavailable',
+        reason: decodedFallback.recommendationsExhausted
+            ? 'recommendation session exhausted'
+            : 'recommendations unavailable',
         limit: limit,
         until: effectiveUntil,
         skipCache: skipCache || isFallbackContinuation,
         revalidate: revalidate,
         preferredLanguages: preferredLanguages,
         viewerCountry: viewerCountry,
+        recommendationsExhausted: decodedFallback.recommendationsExhausted,
       );
     }
 
@@ -4208,7 +4227,12 @@ class VideosRepository {
             listOnlyVideoIds: result.listOnlyVideoIds,
             consumedItemCount: result.consumedItemCount,
             nextCursor: result.nextCursor,
-            paginationCursor: _encodeRecommendedFallbackCursor(effectiveUntil),
+            // Reopening an exhausted cursor chain would replay its first
+            // page, which can still advertise more recommendations.
+            paginationCursor: _encodeRecommendedFallbackCursor(
+              effectiveUntil,
+              recommendationsExhausted: recommendationCursor != null,
+            ),
             hasMore: true,
             recommendationPageCount: result.recommendationPageCount,
             followingPageCount: result.followingPageCount,
@@ -4223,9 +4247,8 @@ class VideosRepository {
   /// Serves popular videos when the For You feed cannot be personalized.
   ///
   /// Returns a synthetic fallback cursor so For You stays paginated: the next
-  /// `loadMore` retries personalized recommendations first and otherwise
-  /// continues paging popular videos by timestamp instead of hitting a dead
-  /// end.
+  /// `loadMore` continues by timestamp and can retry recommendations if the
+  /// recommendation session has not already been exhausted.
   Future<HomeFeedResult> _popularVideosInsteadOfRecommendations({
     required String reason,
     required int limit,
@@ -4234,6 +4257,7 @@ class VideosRepository {
     required bool revalidate,
     required List<String> preferredLanguages,
     required String? viewerCountry,
+    bool recommendationsExhausted = false,
   }) async {
     Log.warning(
       'For You falling back to popular videos: $reason',
@@ -4296,7 +4320,10 @@ class VideosRepository {
       videos: collected,
       paginationCursor: nextUntil == null
           ? null
-          : _encodeRecommendedFallbackCursor(nextUntil),
+          : _encodeRecommendedFallbackCursor(
+              nextUntil,
+              recommendationsExhausted: recommendationsExhausted,
+            ),
       hasMore: nextUntil != null,
     );
   }

@@ -104,9 +104,7 @@ class SingleVideoFeedRepository implements FeedRepository {
           _hasMore.add(result.hasMore != false && _cursors.add(cursor));
           _cursor = cursor;
         } else {
-          // Like the home For You feed, stop when the source has no cursor.
-          // Popular is engagement-ordered, so its oldest publication time is
-          // not a safe boundary: it would skip newer, lower-ranked videos.
+          // The page loader owns continuation, including popular fallback.
           _hasMore.add(false);
         }
         final visibleAfter =
