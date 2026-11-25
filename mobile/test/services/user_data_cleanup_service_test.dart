@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:creator_sync/creator_sync.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show UserProfile;
 import 'package:notification_repository/notification_repository.dart';
@@ -15,6 +16,7 @@ import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashta
 import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
+import 'package:openvine/repositories/email_confirmation_repository.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
@@ -43,6 +45,21 @@ import 'package:unified_logger/unified_logger.dart';
 import '../helpers/test_pubkeys.dart';
 
 class _MockSyncIndexClient extends Mock implements SyncIndexClient {}
+
+/// The repository that writes the per-account email confirmation cache. It
+/// never reaches Keycast in these tests: only its preference cache is used.
+EmailConfirmationRepository _emailConfirmations(SharedPreferences prefs) =>
+    EmailConfirmationRepository(
+      oauthClient: KeycastOAuth(
+        config: const OAuthConfig(
+          serverUrl: 'https://login.divine.video',
+          clientId: 'c',
+          redirectUri: 'divine://cb',
+        ),
+      ),
+      readAccessToken: () async => null,
+      preferences: prefs,
+    );
 
 const _restrictedReviewStatus = MinorAccountReviewStatus(
   restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
@@ -462,6 +479,97 @@ void main() {
           );
 
           expect(store.lastKnownRestrictedFor(verificationPubkey), isTrue);
+        });
+      });
+
+      // The cache holds the account's email address, so it must not outlive
+      // the account on this device.
+      group('email confirmation cache', () {
+        const otherPubkey =
+            'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+
+        late EmailConfirmationRepository confirmations;
+
+        setUp(() async {
+          confirmations = _emailConfirmations(prefs);
+          await confirmations.remember(
+            verificationPubkey,
+            const EmailConfirmation.unconfirmed('leaving@example.com'),
+          );
+          await confirmations.remember(
+            otherPubkey,
+            const EmailConfirmation.unconfirmed('staying@example.com'),
+          );
+        });
+
+        test('destructive sign-out forgets only that account', () async {
+          await service.clearUserSpecificData(
+            deleteUserData: true,
+            userPubkey: verificationPubkey,
+          );
+
+          expect(
+            confirmations.remembered(verificationPubkey),
+            equals(const EmailConfirmation.unknown()),
+          );
+          expect(
+            confirmations.remembered(otherPubkey),
+            equals(const EmailConfirmation.unconfirmed('staying@example.com')),
+          );
+        });
+
+        test('removing the account from the device forgets it', () async {
+          await service.clearUserSpecificData(
+            userPubkey: verificationPubkey,
+            forgetAccount: true,
+          );
+
+          expect(
+            confirmations.remembered(verificationPubkey),
+            equals(const EmailConfirmation.unknown()),
+          );
+          expect(
+            confirmations.remembered(otherPubkey),
+            equals(const EmailConfirmation.unconfirmed('staying@example.com')),
+          );
+        });
+
+        test('logs the cleared cache without its account key', () async {
+          final logs = LogCaptureService();
+          await logs.clearAllLogs();
+
+          await service.clearUserSpecificData(
+            userPubkey: verificationPubkey,
+            forgetAccount: true,
+          );
+
+          final messages = logs.getRecentLogs().map((entry) => entry.message);
+          expect(
+            messages,
+            contains(contains(EmailConfirmationRepository.storagePrefix)),
+          );
+          expect(
+            messages,
+            isNot(
+              contains(
+                contains(
+                  EmailConfirmationRepository.storageKey(verificationPubkey),
+                ),
+              ),
+            ),
+          );
+        });
+
+        test('account switch keeps it', () async {
+          await service.clearUserSpecificData(
+            isIdentityChange: true,
+            userPubkey: verificationPubkey,
+          );
+
+          expect(
+            confirmations.remembered(verificationPubkey),
+            equals(const EmailConfirmation.unconfirmed('leaving@example.com')),
+          );
         });
       });
 
@@ -1476,6 +1584,35 @@ void main() {
 
         expect(store.lastKnownRestrictedFor(deletedPubkey), isNull);
         expect(store.lastKnownRestrictedFor(otherPubkey), isTrue);
+      });
+
+      test("forgets only that account's email confirmation cache", () async {
+        final deletedPubkey = 'a' * 64;
+        final otherPubkey = 'b' * 64;
+        final confirmations = _emailConfirmations(prefs);
+        await confirmations.remember(
+          deletedPubkey,
+          const EmailConfirmation.unconfirmed('deleted@example.com'),
+        );
+        await confirmations.remember(
+          otherPubkey,
+          const EmailConfirmation.unconfirmed('other@example.com'),
+        );
+
+        await service.deleteAccountData(
+          deletedPubkey,
+          userNpub: NostrKeyUtils.encodePubKey(deletedPubkey),
+          preserveActiveSession: true,
+        );
+
+        expect(
+          confirmations.remembered(deletedPubkey),
+          equals(const EmailConfirmation.unknown()),
+        );
+        expect(
+          confirmations.remembered(otherPubkey),
+          equals(const EmailConfirmation.unconfirmed('other@example.com')),
+        );
       });
 
       test("forgets only that account's Messages section choice", () async {

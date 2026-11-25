@@ -88,7 +88,13 @@ class EmailConfirmationRepository {
   final Future<String?> Function() _readAccessToken;
   final SharedPreferences _preferences;
 
-  static String _cacheKey(String account) => 'email_confirmation_$account';
+  /// The start of every account's cache key.
+  static const String storagePrefix = 'email_confirmation_';
+
+  /// The preference holding [account]'s last answer. It includes the email
+  /// address, so it is removed when the account is deleted or removed from
+  /// this device.
+  static String storageKey(String account) => '$storagePrefix$account';
 
   /// Fetches the current confirmation state from Keycast.
   ///
@@ -109,7 +115,7 @@ class EmailConfirmationRepository {
 
   /// The last confirmation state remembered for [account], or unknown.
   EmailConfirmation remembered(String account) {
-    final raw = _preferences.getString(_cacheKey(account));
+    final raw = _preferences.getString(storageKey(account));
     if (raw == null) return const EmailConfirmation.unknown();
     final Object? decoded;
     try {
@@ -139,7 +145,7 @@ class EmailConfirmationRepository {
   Future<void> remember(String account, EmailConfirmation confirmation) async {
     if (confirmation.kind == EmailConfirmationKind.unknown) return;
     await _preferences.setString(
-      _cacheKey(account),
+      storageKey(account),
       jsonEncode({
         'kind': confirmation.kind.name,
         'email': confirmation.email,

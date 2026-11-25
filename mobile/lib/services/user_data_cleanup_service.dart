@@ -19,6 +19,7 @@ import 'package:openvine/features/creator_highlights/creator_highlights_reposito
 import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/notifications/services/announcement_store.dart';
+import 'package:openvine/repositories/email_confirmation_repository.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/age_verification_service.dart';
@@ -526,6 +527,7 @@ class UserDataCleanupService {
     await remove(MinorAccountReviewStatusStore.storageKey(userPubkey));
     await remove(MessagesPreferenceService.storageKey(userPubkey));
     await remove(DmVideoBlurPreferenceService.storageKey(userPubkey));
+    await remove(EmailConfirmationRepository.storageKey(userPubkey));
     for (final key in AccountStateRepository.localAccountKeys(
       _prefs,
       userPubkey,
@@ -874,6 +876,12 @@ class UserDataCleanupService {
       await remove(
         FunnelcakeCreatorHighlightsRepository.inviteKey(userPubkey),
         diagnosticKey: FunnelcakeCreatorHighlightsRepository.invitePrefix,
+      );
+      // The cache holds the account's email address. A plain switch keeps
+      // it so a returning account stays locked until Keycast answers.
+      await remove(
+        EmailConfirmationRepository.storageKey(userPubkey),
+        diagnosticKey: EmailConfirmationRepository.storagePrefix,
       );
       for (final key in BadgeRepository.localAccountKeys(userPubkey)) {
         await remove(key);
