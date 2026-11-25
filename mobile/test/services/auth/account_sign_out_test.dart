@@ -1747,4 +1747,81 @@ void main() {
       },
     );
   });
+
+  group('overlapping sign out', () {
+    /// Starts [startSecond] once the first sign-out has dropped the outgoing
+    /// key but has not settled auth state yet: the window a second "Add
+    /// another account" tap landed in on device.
+    AuthService subjectWithCaptureProbe(
+      void Function(AuthService) startSecond,
+    ) {
+      late AuthService auth;
+      var armed = true;
+      storage.dispose();
+      storage = _CaptureProbeStorage(
+        platformStorage: PlatformSecureStorage.forPlatform(
+          TargetPlatform.iOS,
+          fallbackStorage: _slotStorage('current'),
+          legacyStorage: _slotStorage('legacy'),
+        ),
+        beforeCapture: () {
+          if (!armed) return;
+          armed = false;
+          expect(auth.currentPublicKeyHex, isNull);
+          expect(auth.authState, AuthState.authenticated);
+          startSecond(auth);
+        },
+      );
+      return auth = subject();
+    }
+
+    Future<Object?> outcomeOf(Future<void> signOut) =>
+        signOut.then<Object?>((_) => null, onError: (Object error) => error);
+
+    test('a repeat request joins the running sign-out', () async {
+      Future<Object?>? second;
+      final auth = subjectWithCaptureProbe(
+        (auth) => second = outcomeOf(auth.signOut()),
+      );
+      expect((await auth.importFromHex('3' * 64)).success, isTrue);
+
+      final firstError = await outcomeOf(auth.signOut());
+      expect(second, isNotNull);
+      final secondError = await second;
+
+      expect(auth.currentPublicKeyHex, isNull);
+      expect(auth.authState, AuthState.unauthenticated);
+      expect(firstError, isNull);
+      expect(secondError, isNull);
+      expect(
+        AccountActivationCoordinator.forPreferences(prefs)
+            .hasUnresolvedActivation,
+        isFalse,
+      );
+      // A later request is the verified no-op, not an ownerless refusal.
+      await expectLater(auth.signOut(), completes);
+      expect(auth.authState, AuthState.unauthenticated);
+    });
+
+    test('a request to delete keys waits instead of joining a sign-out that '
+        'keeps them', () async {
+      Future<Object?>? second;
+      final auth = subjectWithCaptureProbe(
+        (auth) => second = outcomeOf(auth.signOut(deleteKeys: true)),
+      );
+      expect((await auth.importFromHex('3' * 64)).success, isTrue);
+      final retainedKey = native[primaryKey];
+      expect(retainedKey, isNotNull);
+
+      final firstError = await outcomeOf(auth.signOut());
+      final secondError = await second;
+
+      expect(firstError, isNull);
+      expect(auth.authState, AuthState.unauthenticated);
+      // Joining would report success while the key is still on disk. Run
+      // after the first, it gets the refusal a sequential repeat gets.
+      expect(secondError, isA<AccountStorageException>());
+      expect(native[primaryKey], retainedKey);
+    });
+  });
 }

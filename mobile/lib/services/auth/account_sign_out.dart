@@ -4,6 +4,37 @@
 part of '../auth_service.dart';
 
 final _completedSignOutProofs = Expando<_CompletedSignOutProof>();
+final _runningSignOuts = Expando<_RunningSignOut>();
+
+/// The sign-out an [AuthService] is running, so a later request can wait for
+/// it instead of retiring it.
+class _RunningSignOut {
+  _RunningSignOut({
+    required this.deleteKeys,
+    required this.abortOnKeyDeletionFailure,
+    required this.deleteLocalUserData,
+    required this.done,
+  });
+
+  final bool deleteKeys;
+  final bool abortOnKeyDeletionFailure;
+  final bool deleteLocalUserData;
+  final Future<void> done;
+
+  /// Whether finishing this sign-out also answers a request with these flags.
+  ///
+  /// As for a repeat after a completed sign-out, it has to remove at least
+  /// what the request asks for; a key deletion must also fail the same way.
+  bool answers({
+    required bool deleteKeys,
+    required bool abortOnKeyDeletionFailure,
+    required bool deleteLocalUserData,
+  }) =>
+      (!deleteKeys ||
+          (this.deleteKeys &&
+              this.abortOnKeyDeletionFailure == abortOnKeyDeletionFailure)) &&
+      (!deleteLocalUserData || this.deleteLocalUserData);
+}
 
 class _CompletedSignOutProof {
   const _CompletedSignOutProof({
@@ -20,7 +51,58 @@ class _CompletedSignOutProof {
 }
 
 extension _AccountSignOut on AuthService {
+  /// Runs one sign-out at a time.
+  ///
+  /// Each sign-out starts by retiring the current activation, including one
+  /// still signing out. A later request would retire the first before it set
+  /// auth state, then fail on the ownerless path, leaving the session
+  /// authenticated with no account until restart. A request the running
+  /// sign-out answers joins it; any other waits for it to settle.
   Future<void> _signOutWithActivation({
+    required bool deleteKeys,
+    required bool abortOnKeyDeletionFailure,
+    required bool deleteLocalUserData,
+  }) async {
+    var earlier = _runningSignOuts[this];
+    while (earlier != null) {
+      if (earlier.answers(
+        deleteKeys: deleteKeys,
+        abortOnKeyDeletionFailure: abortOnKeyDeletionFailure,
+        deleteLocalUserData: deleteLocalUserData,
+      )) {
+        return earlier.done;
+      }
+      try {
+        await earlier.done;
+      } on Object {
+        // Its own caller reports that failure; this request still runs.
+      }
+      earlier = _runningSignOuts[this];
+    }
+    final done = Completer<void>();
+    final running = _RunningSignOut(
+      deleteKeys: deleteKeys,
+      abortOnKeyDeletionFailure: abortOnKeyDeletionFailure,
+      deleteLocalUserData: deleteLocalUserData,
+      done: done.future,
+    );
+    // Registered before the first await, so even a synchronous re-entry joins.
+    _runningSignOuts[this] = running;
+    done.complete(
+      _runSignOutWithActivation(
+        deleteKeys: deleteKeys,
+        abortOnKeyDeletionFailure: abortOnKeyDeletionFailure,
+        deleteLocalUserData: deleteLocalUserData,
+      ).whenComplete(() {
+        if (identical(_runningSignOuts[this], running)) {
+          _runningSignOuts[this] = null;
+        }
+      }),
+    );
+    return done.future;
+  }
+
+  Future<void> _runSignOutWithActivation({
     required bool deleteKeys,
     required bool abortOnKeyDeletionFailure,
     required bool deleteLocalUserData,
