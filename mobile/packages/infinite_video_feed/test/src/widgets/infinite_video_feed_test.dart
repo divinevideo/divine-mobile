@@ -2490,6 +2490,45 @@ void main() {
         },
       );
 
+      testWidgets('Windows native player receives a load id header', (
+        tester,
+      ) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(playerIds: const <int>[0]);
+        FeedPlaybackTelemetry.configure(enabled: true);
+        addTearDown(() => FeedPlaybackTelemetry.configure(enabled: false));
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo('windows')],
+                cache: cache,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          await tester.pump();
+          final headers =
+              harness.clipsHandedToPlayer.single['httpHeaders'] as Map? ?? {};
+          expect(
+            headers['X-Playback-Load-Id'],
+            matches(
+              RegExp(
+                '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}'
+                r'-[0-9a-f]{12}$',
+              ),
+            ),
+          );
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
       testWidgets('legacy native binary receives no telemetry headers', (
         tester,
       ) async {
