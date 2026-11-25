@@ -105,6 +105,7 @@ void main() {
     required _MockReactionsBloc reactionsBloc,
     Comment? comment,
     int depth = 0,
+    Locale? locale,
     List<Override>? overrides,
     bool isHiddenByOwner = false,
     bool repliesToHiddenComment = false,
@@ -121,6 +122,7 @@ void main() {
     return ProviderScope(
       overrides: overrides ?? [_signedOutSession],
       child: MaterialApp(
+        locale: locale,
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
@@ -883,8 +885,12 @@ void main() {
           videoDuration: 6,
         );
 
-    Future<void> pumpVideoReply(WidgetTester tester, {int depth = 0}) async {
-      // A phone-sized screen, so the comment is wider than the player.
+    Future<void> pumpVideoReply(
+      WidgetTester tester, {
+      int depth = 0,
+      Locale? locale,
+    }) async {
+      // A phone-sized screen, so the rows are as wide as on a phone.
       tester.view.physicalSize = const Size(1179, 2556);
       tester.view.devicePixelRatio = 3;
       addTearDown(tester.view.resetPhysicalSize);
@@ -898,6 +904,7 @@ void main() {
           reactionsBloc: mocks.reactions,
           comment: videoReply,
           depth: depth,
+          locale: locale,
         ),
       );
       await tester.pump();
@@ -912,6 +919,29 @@ void main() {
 
     Finder ofItem(Finder matching) =>
         find.descendant(of: find.byType(CommentItem), matching: matching);
+
+    final threadLines = ofItem(
+      find.byWidgetPredicate((widget) {
+        if (widget is! DecoratedBox) return false;
+        final decoration = widget.decoration;
+        if (decoration is! BoxDecoration) return false;
+        final border = decoration.border;
+        return border is Border &&
+            border.left != BorderSide.none &&
+            border.right == BorderSide.none;
+      }),
+    );
+
+    // Outermost first.
+    List<Rect> lineRects(WidgetTester tester) => [
+      for (final element in threadLines.evaluate())
+        tester.getRect(find.byElementPredicate((e) => e == element)),
+    ];
+
+    List<double> lineWidths(WidgetTester tester) => [
+      for (final line in tester.widgetList<DecoratedBox>(threadLines))
+        ((line.decoration as BoxDecoration).border! as Border).left.width,
+    ];
 
     testWidgets('ends a video reply right below its actions', (tester) async {
       await pumpVideoReply(tester);
@@ -928,42 +958,71 @@ void main() {
     testWidgets('draws each thread line down the whole of a nested reply', (
       tester,
     ) async {
-      // Five levels deep, which draws the most lines there are: four.
-      await pumpVideoReply(tester, depth: 5);
+      // One 24 dp column per level up to four, the line next to the comment
+      // the bold one.
+      const expectedLines = {
+        1: ([0.0], [2.0]),
+        3: ([0.0, 24.0, 48.0], [1.0, 1.0, 2.0]),
+        5: ([0.0, 24.0, 48.0, 72.0], [1.0, 1.0, 1.0, 2.0]),
+      };
+      for (final MapEntry(key: depth, value: (lefts, widths))
+          in expectedLines.entries) {
+        await pumpVideoReply(tester, depth: depth);
 
-      final lines = ofItem(
-        find.byWidgetPredicate((widget) {
-          if (widget is! DecoratedBox) return false;
-          final decoration = widget.decoration;
-          if (decoration is! BoxDecoration) return false;
-          final border = decoration.border;
-          return border is Border &&
-              border.left != BorderSide.none &&
-              border.right == BorderSide.none;
-        }),
-      );
-      final item = tester.getRect(find.byType(CommentItem));
-      final lineRects = [
-        for (final element in lines.evaluate())
-          tester.getRect(find.byElementPredicate((e) => e == element)),
-      ];
-      final lineWidths = [
-        for (final line in tester.widgetList<DecoratedBox>(lines))
-          ((line.decoration as BoxDecoration).border! as Border).left.width,
-      ];
-
-      // Outermost first: one 24 dp column per level, the line next to the
-      // comment the bold one.
-      expect(lineRects.map((rect) => rect.left), [0, 24, 48, 72]);
-      expect(lineWidths, [1, 1, 1, 2]);
-      for (final rect in lineRects) {
-        expect(rect.top, item.top);
-        expect(rect.bottom, item.bottom);
+        final item = tester.getRect(find.byType(CommentItem));
+        final rects = lineRects(tester);
+        expect(rects.map((rect) => rect.left), lefts, reason: 'depth $depth');
+        expect(lineWidths(tester), widths, reason: 'depth $depth');
+        for (final rect in rects) {
+          expect(rect.top, item.top);
+          expect(rect.bottom, item.bottom);
+        }
+        expect(tester.getSize(find.byType(VideoCommentPlayer)), playerSize);
+        final actions = tester.getRect(ofItem(find.byType(Wrap)));
+        // Only a reply's 12 dp bottom padding sits below the actions.
+        expect(item.bottom - actions.bottom, closeTo(12, 0.01));
       }
-      expect(tester.getSize(find.byType(VideoCommentPlayer)), playerSize);
-      final actions = tester.getRect(ofItem(find.byType(Wrap)));
-      // Only a reply's 12 dp bottom padding sits below the actions.
-      expect(item.bottom - actions.bottom, closeTo(12, 0.01));
+
+      await drainTimers(tester);
+    });
+
+    testWidgets('indents a nested reply from the right in Arabic', (
+      tester,
+    ) async {
+      await pumpVideoReply(tester, depth: 3, locale: const Locale('ar'));
+
+      final item = tester.getRect(find.byType(CommentItem));
+      // The columns run from the right edge; each line keeps its column's
+      // left edge, the side that faces the comment.
+      expect(lineRects(tester).map((rect) => rect.left), [
+        item.right - 24,
+        item.right - 48,
+        item.right - 72,
+      ]);
+      expect(lineWidths(tester), [1, 1, 2]);
+      // Three columns plus the comment's 16 dp padding on that side.
+      final avatar = tester.getRect(ofItem(find.byType(UserAvatar)).first);
+      expect(avatar.right, item.right - 72 - 16);
+
+      await drainTimers(tester);
+    });
+
+    testWidgets("keeps a video reply's player when its depth changes", (
+      tester,
+    ) async {
+      // A reply's depth changes when its parent is hidden, shown, or loads on
+      // a later page.
+      await pumpVideoReply(tester, depth: 1);
+      final player = tester.state(find.byType(VideoCommentPlayer));
+
+      for (final depth in [0, 2, 1]) {
+        await pumpVideoReply(tester, depth: depth);
+        expect(
+          tester.state(find.byType(VideoCommentPlayer)),
+          same(player),
+          reason: 'depth $depth',
+        );
+      }
 
       await drainTimers(tester);
     });

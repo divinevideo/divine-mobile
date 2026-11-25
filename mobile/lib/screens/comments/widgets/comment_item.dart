@@ -360,12 +360,15 @@ class _CommentItemState extends ConsumerState<CommentItem> {
   }
 }
 
-/// Draws one 24 dp wide thread column per nesting level, up to four, to the
-/// left of [child]; the line next to the comment is the bold one.
+/// Draws one [_columnWidth]-wide thread column per nesting level, up to
+/// [_maxLines], on the start side of [child]; the line next to the comment is
+/// the thicker one.
 ///
-/// Each line is a left border on a box around the comment, so it is as tall
-/// as the comment without an intrinsic-height pass, which measured the inline
-/// video player wider than it is drawn and left a gap below video replies.
+/// The lines fill a row behind the comment instead of sitting in an
+/// intrinsic-height row, which measured the inline player at the full row
+/// width rather than its 248 dp cap and left a gap below video replies. The
+/// comment keeps one [Stack] slot at every depth, so a change of depth does
+/// not rebuild it and stop a playing reply.
 class _ThreadLines extends StatelessWidget {
   const _ThreadLines({required this.depth, required this.child});
 
@@ -378,24 +381,36 @@ class _ThreadLines extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lineCount = min(depth, _maxLines);
-    var lines = child;
-    for (var i = lineCount - 1; i >= 0; i--) {
-      lines = DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(
-            left: BorderSide(
-              color: context.vineColors.containerLow,
-              width: i == lineCount - 1 ? 2 : 1,
-            ),
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        Positioned.fill(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < lineCount; i++)
+                SizedBox(
+                  width: _columnWidth,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        left: BorderSide(
+                          color: context.vineColors.containerLow,
+                          width: i == lineCount - 1 ? 2 : 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.only(left: _columnWidth),
-          child: lines,
+        Padding(
+          padding: EdgeInsetsDirectional.only(start: lineCount * _columnWidth),
+          child: child,
         ),
-      );
-    }
-    return lines;
+      ],
+    );
   }
 }
 
