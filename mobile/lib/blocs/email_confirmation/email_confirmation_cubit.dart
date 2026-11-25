@@ -5,6 +5,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/repositories/email_confirmation_repository.dart';
+import 'package:openvine/services/account_state_write_barrier.dart';
 
 part 'email_confirmation_state.dart';
 
@@ -16,11 +17,17 @@ part 'email_confirmation_state.dart';
 /// with [loadFor] whenever that account changes.
 class EmailConfirmationCubit extends Cubit<EmailConfirmationState>
     with CloseGuardedEmit<EmailConfirmationState> {
-  EmailConfirmationCubit({required EmailConfirmationRepository repository})
-    : _repository = repository,
-      super(const EmailConfirmationState());
+  EmailConfirmationCubit({
+    required EmailConfirmationRepository repository,
+    AccountStateWriteBarrier? accountWrites,
+  }) : _repository = repository,
+       _accountWrites = accountWrites,
+       super(const EmailConfirmationState());
 
   final EmailConfirmationRepository _repository;
+  final AccountStateWriteBarrier? _accountWrites;
+  Object? _accountSession = Object();
+  Future<void> Function()? _closeAccountWrites;
 
   /// Points the cubit at [account], the signed-in account's public key, or
   /// nobody when it is null, then checks it with Keycast.
@@ -29,7 +36,20 @@ class EmailConfirmationCubit extends Cubit<EmailConfirmationState>
   /// known to be unconfirmed is locked from the first frame rather than only
   /// once the network answers.
   Future<void> loadFor(String? account) async {
+    if (isClosed) return;
     if (account == state.account) return refresh();
+
+    final closePrevious = _closeAccountWrites;
+    final session = _accountSession = Object();
+    _closeAccountWrites = account == null
+        ? null
+        : _accountWrites?.register(account, () async {
+            if (!identical(_accountSession, session)) return;
+            // Cleanup can start while auth still reports this account. Keep
+            // its identity until auth changes, but retire its email work now.
+            _accountSession = null;
+            emitIfOpen(EmailConfirmationState(account: account));
+          });
     emitIfOpen(
       account == null
           ? const EmailConfirmationState()
@@ -38,7 +58,8 @@ class EmailConfirmationCubit extends Cubit<EmailConfirmationState>
               _repository.remembered(account),
             ),
     );
-    await refresh();
+    if (closePrevious != null) await closePrevious();
+    if (identical(_accountSession, session)) await refresh();
   }
 
   /// Re-checks the confirmation with Keycast.
@@ -50,9 +71,10 @@ class EmailConfirmationCubit extends Cubit<EmailConfirmationState>
   /// was clicked.
   Future<void> refresh() async {
     final account = state.account;
-    if (account == null) return;
+    final session = _accountSession;
+    if (account == null || session == null) return;
     final confirmation = await _repository.fetchStatus(account);
-    if (state.account != account) return;
+    if (!identical(_accountSession, session)) return;
     if (confirmation.kind == EmailConfirmationKind.unknown) return;
     final isStale =
         state.status == EmailConfirmationStatus.confirmed &&
@@ -66,7 +88,9 @@ class EmailConfirmationCubit extends Cubit<EmailConfirmationState>
         resendStatus: state.resendStatus,
       ),
     );
-    await _repository.remember(account, confirmation);
+    if (identical(_accountSession, session)) {
+      await _repository.remember(account, confirmation);
+    }
   }
 
   /// Keycast refused to sign a direct message for [refusedAccount] because it
@@ -80,7 +104,8 @@ class EmailConfirmationCubit extends Cubit<EmailConfirmationState>
   Future<void> markUnconfirmedByKeycast(String? refusedAccount) async {
     final account = state.account;
     final email = state.email;
-    if (account == null) return;
+    final session = _accountSession;
+    if (account == null || session == null) return;
     if (refusedAccount != null && refusedAccount != account) return;
     if (email != null && !state.isUnconfirmed) {
       final confirmation = EmailConfirmation.unconfirmed(email);
@@ -91,9 +116,11 @@ class EmailConfirmationCubit extends Cubit<EmailConfirmationState>
           resendStatus: state.resendStatus,
         ),
       );
-      await _repository.remember(account, confirmation);
+      if (identical(_accountSession, session)) {
+        await _repository.remember(account, confirmation);
+      }
     }
-    await refresh();
+    if (identical(_accountSession, session)) await refresh();
   }
 
   /// Keycast refused a post, comment or report because [refusedAccount] used
@@ -103,7 +130,7 @@ class EmailConfirmationCubit extends Cubit<EmailConfirmationState>
   /// [markUnconfirmedByKeycast].
   void reportCapReached(String? refusedAccount) {
     final account = state.account;
-    if (account == null) return;
+    if (account == null || _accountSession == null) return;
     if (refusedAccount != null && refusedAccount != account) return;
     emitIfOpen(state.copyWith(capRefusals: state.capRefusals + 1));
   }
@@ -115,14 +142,15 @@ class EmailConfirmationCubit extends Cubit<EmailConfirmationState>
   /// cannot resend for whoever signed in after it.
   Future<void> resend({String? account}) async {
     final current = state.account;
-    if (current == null) return;
+    final session = _accountSession;
+    if (current == null || session == null) return;
     if (account != null && account != current) return;
     if (state.resendStatus == EmailConfirmationResendStatus.sending) return;
     emitIfOpen(
       state.copyWith(resendStatus: EmailConfirmationResendStatus.sending),
     );
     final accepted = await _repository.resend(current);
-    if (state.account != current) return;
+    if (!identical(_accountSession, session)) return;
     emitIfOpen(
       state.copyWith(
         resendStatus: accepted
@@ -130,5 +158,14 @@ class EmailConfirmationCubit extends Cubit<EmailConfirmationState>
             : EmailConfirmationResendStatus.failed,
       ),
     );
+  }
+
+  @override
+  Future<void> close() async {
+    _accountSession = null;
+    final closeAccountWrites = _closeAccountWrites;
+    _closeAccountWrites = null;
+    await super.close();
+    await closeAccountWrites?.call();
   }
 }

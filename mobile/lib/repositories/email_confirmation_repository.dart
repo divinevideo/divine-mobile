@@ -5,6 +5,7 @@ import 'dart:convert';
 
 import 'package:equatable/equatable.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
+import 'package:openvine/services/account_state_write_barrier.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Whether a Keycast account still has to confirm its email.
@@ -82,13 +83,16 @@ class EmailConfirmationRepository {
     required KeycastOAuth oauthClient,
     required Future<String?> Function(String account) readAccessToken,
     required SharedPreferences preferences,
+    AccountStateWriteBarrier? accountWrites,
   }) : _oauthClient = oauthClient,
        _readAccessToken = readAccessToken,
-       _preferences = preferences;
+       _preferences = preferences,
+       _accountWrites = accountWrites;
 
   final KeycastOAuth _oauthClient;
   final Future<String?> Function(String account) _readAccessToken;
   final SharedPreferences _preferences;
+  final AccountStateWriteBarrier? _accountWrites;
 
   /// The start of every account's cache key.
   static const String storagePrefix = 'email_confirmation_';
@@ -146,13 +150,27 @@ class EmailConfirmationRepository {
   /// Remembers [confirmation] for [account]. An unknown answer is not stored.
   Future<void> remember(String account, EmailConfirmation confirmation) async {
     if (confirmation.kind == EmailConfirmationKind.unknown) return;
-    await _preferences.setString(
+    final write = _preferences.setString(
       storageKey(account),
       jsonEncode({
         'kind': confirmation.kind.name,
         'email': confirmation.email,
       }),
     );
+    // A dispatched native write can finish after remove. Account cleanup
+    // waits for this write to settle before it deletes the preference.
+    final drain = _accountWrites?.register(account, () async {
+      try {
+        await write;
+      } on Object {
+        // The caller observes the write failure. Erasure can still proceed.
+      }
+    });
+    try {
+      await write;
+    } finally {
+      await drain?.call();
+    }
   }
 
   /// Asks Keycast to email [account] a fresh confirmation link.
