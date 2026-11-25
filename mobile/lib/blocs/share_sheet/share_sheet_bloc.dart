@@ -3,6 +3,7 @@
 // ABOUTME: and one-shot actions (copy link, share via)
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:dm_repository/dm_repository.dart'
@@ -148,6 +149,13 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
   final void Function(ShareSheetEnqueueResult)? onQueued;
   // A local lookup may still be pending when Share via is tapped. In that
   // case the platform receives the link alone. Never fetch remote media here.
+  // The image cache can evict the file while the sheet is open; the platform
+  // then gets the link alone rather than a path to nothing.
+  String? _existingThumbnailPath() {
+    final path = state.readyThumbnailPath;
+    return path != null && File(path).existsSync() ? path : null;
+  }
+
   Future<void> _prepareCachedThumbnail(
     BaseCacheManager cacheManager,
     String thumbnail,
@@ -664,7 +672,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         state.copyWith(
           actionResult: ShareSheetShareViaTriggered(
             shareUrl: shareUrl,
-            thumbnailPath: state.readyThumbnailPath,
+            thumbnailPath: _existingThumbnailPath(),
             title: title,
             subject: title,
           ),

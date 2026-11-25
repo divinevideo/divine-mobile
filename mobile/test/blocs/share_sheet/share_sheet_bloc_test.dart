@@ -2599,6 +2599,39 @@ void main() {
       );
 
       blocTest<ShareSheetBloc, ShareSheetState>(
+        'shares the link alone when the cache evicted the prepared thumbnail',
+        setUp: () {
+          when(() => mockSharingService.generateShareData(any())).thenReturn((
+            shareUrl: 'https://divine.video/video/test-id',
+            title: 'Test Video',
+            thumbnailUrl: 'https://example.com/thumb.jpg',
+          ));
+          cachedThumbnail = stubCachedThumbnail();
+        },
+        build: () => createBloc(cacheManager: mockCacheManager),
+        act: (bloc) async {
+          await pumpEventQueue();
+          expect(bloc.state.readyThumbnailPath, cachedThumbnail.path);
+          cachedThumbnail.deleteSync();
+          bloc.add(const ShareSheetShareViaRequested());
+        },
+        skip: 1,
+        expect: () => [
+          isA<ShareSheetState>().having(
+            (s) => s.actionResult,
+            'actionResult',
+            isA<ShareSheetShareViaTriggered>()
+                .having(
+                  (r) => r.shareUrl,
+                  'shareUrl',
+                  'https://divine.video/video/test-id',
+                )
+                .having((r) => r.thumbnailPath, 'thumbnailPath', isNull),
+          ),
+        ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
         'emits with null thumbnailPath when thumbnail cache lookup fails',
         setUp: () {
           when(() => mockSharingService.generateShareData(any())).thenReturn((
