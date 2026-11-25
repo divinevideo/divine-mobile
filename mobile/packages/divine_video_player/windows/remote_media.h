@@ -25,9 +25,10 @@ class RequestContext {
 
   const std::string& uri() const { return uri_; }
 
-  // Whether the clip sends headers other than the load id; such files are
-  // not shared with other players or preload.
-  bool has_app_headers() const { return !headers_.empty(); }
+  // Whether the file's chunks may be shared with other players and with
+  // preload: not when the clip sends headers other than the load id, nor
+  // for the hosts Android keeps out of its cache.
+  bool shareable() const { return shareable_; }
 
   // The load id a request sent now carries, if any.
   std::optional<std::string> CurrentLoadId() const;
@@ -43,6 +44,7 @@ class RequestContext {
   std::map<std::string, std::string> headers_;
   std::optional<std::string> load_id_;
   std::shared_ptr<const PlaybackTelemetry> telemetry_;
+  bool shareable_ = false;
 };
 
 // An HttpClient that sends every request, redirects and HLS segments
@@ -51,8 +53,8 @@ winrt::Windows::Web::Http::HttpClient ClientFor(
     std::shared_ptr<const RequestContext> context);
 
 // Opens a remote progressive file as a stream that Media Foundation reads
-// from 1 MiB chunks, each fetched with one Range request. Files without app
-// headers share their chunks with every player and with Preload.
+// from 1 MiB chunks, each fetched with one Range request. Shareable files
+// share their chunks with every player and with Preload.
 winrt::Windows::Foundation::IAsyncOperation<
     winrt::Windows::Media::Core::MediaSource>
 OpenRangeSourceAsync(std::shared_ptr<const RequestContext> context);
@@ -63,8 +65,8 @@ void ObserveAdaptiveDownloads(
         source,
     std::shared_ptr<const RequestContext> context);
 
-// Fetches the first chunk of a remote progressive file into the shared
-// cache, so a player opening it later starts without waiting for the
+// Fetches the first chunk of a shareable remote progressive file into the
+// shared cache, so a player opening it later starts without waiting for the
 // network. Best effort: failures leave nothing behind.
 winrt::Windows::Foundation::IAsyncAction PreloadAsync(std::string uri);
 

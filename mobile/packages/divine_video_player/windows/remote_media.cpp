@@ -11,7 +11,9 @@
 #include <cctype>
 #include <chrono>
 #include <cstring>
+#include <cwchar>
 #include <deque>
+#include <iterator>
 #include <list>
 #include <mutex>
 #include <utility>
@@ -79,6 +81,27 @@ uint8_t* BufferData(const IBuffer& buffer) {
   auto access = buffer.as<::Windows::Storage::Streams::IBufferByteAccess>();
   winrt::check_hresult(access->Buffer(&data));
   return data;
+}
+
+// The B2 playback canary hosts and the Bunny playback host. Android's
+// VideoCache keeps them out of its cache so every open checks the
+// endpoint's policy instead of replaying an earlier approved copy.
+constexpr const wchar_t* kUncachedHosts[] = {
+    L"media-b2.divine.video", L"media-b2-cdn.divine.video",
+    L"media-bunny.divine.video"};
+
+bool IsUncachedHost(const std::string& uri) {
+  winrt::hstring host;
+  try {
+    host = Uri(winrt::to_hstring(uri)).Host();
+  } catch (const winrt::hresult_error&) {
+    // Not a URI with a host, so not one of these.
+    return false;
+  }
+  return std::any_of(std::begin(kUncachedHosts), std::end(kUncachedHosts),
+                     [&host](const wchar_t* uncached) {
+                       return _wcsicmp(host.c_str(), uncached) == 0;
+                     });
 }
 
 bool IsRemoteProgressive(const std::string& uri) {
@@ -269,7 +292,7 @@ class RangeFile : public std::enable_shared_from_this<RangeFile> {
         client_(std::move(client)),
         uri_(winrt::to_hstring(context_->uri())),
         info_(std::move(info)),
-        shared_(!context_->has_app_headers()) {}
+        shared_(context_->shareable()) {}
 
   uint64_t size() const { return info_.size; }
   uint64_t chunk_count() const { return (info_.size + kChunkBytes - 1) / kChunkBytes; }
@@ -458,6 +481,7 @@ RequestContext::RequestContext(
       load_id_ = value;
     }
   }
+  shareable_ = headers_.empty() && !IsUncachedHost(uri_);
 }
 
 std::optional<std::string> RequestContext::CurrentLoadId() const {
@@ -492,7 +516,7 @@ HttpClient ClientFor(std::shared_ptr<const RequestContext> context) {
 IAsyncOperation<MediaSource> OpenRangeSourceAsync(
     std::shared_ptr<const RequestContext> context) {
   HttpClient client = ClientFor(context);
-  const bool shared = !context->has_app_headers();
+  const bool shared = context->shareable();
   std::optional<FileInfo> info;
   if (shared) info = SharedChunkCache::Instance().Info(context->uri());
   std::shared_ptr<RangeFile> file;
@@ -532,11 +556,13 @@ void ObserveAdaptiveDownloads(const AdaptiveMediaSource& source,
 
 IAsyncAction PreloadAsync(std::string uri) {
   if (!IsRemoteProgressive(uri)) co_return;
-  SharedChunkCache& cache = SharedChunkCache::Instance();
-  if (cache.Info(uri) && cache.Find(uri, 0)) co_return;
   // As on Android, preload sends no app headers and no load id.
   auto context = std::make_shared<const RequestContext>(
       uri, std::map<std::string, std::string>{}, nullptr);
+  // Nothing a player could take from the shared cache.
+  if (!context->shareable()) co_return;
+  SharedChunkCache& cache = SharedChunkCache::Instance();
+  if (cache.Info(uri) && cache.Find(uri, 0)) co_return;
   auto first = std::make_shared<Download>();
   try {
     co_await DownloadAsync(context, ClientFor(context),
