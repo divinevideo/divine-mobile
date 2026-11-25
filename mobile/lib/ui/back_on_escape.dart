@@ -24,9 +24,9 @@ class GoBackIntent extends Intent {
 ///
 /// * in a dialog or sheet route, does only what [DismissIntent] did before, so
 ///   one shown with `barrierDismissible: false` stays open;
-/// * otherwise dismisses a menu that takes [DismissIntent], as before;
 /// * otherwise gives up the focus of a text field, so a half-written comment
 ///   is not closed with its screen;
+/// * otherwise dismisses a menu that takes [DismissIntent], as before;
 /// * otherwise pops the innermost navigator that can pop, the way the system
 ///   back button does, so a screen that guards its back navigation still
 ///   gets to ask first.
