@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
+import 'package:openvine/blocs/dm/minor_dm_approval.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/notifications/routing/notification_tap_target.dart';
@@ -209,10 +210,12 @@ class _DmPushListenerState extends ConsumerState<DmPushListener> {
       _finish(unavailable: true);
       return;
     }
+    final participants = List<String>.unmodifiable(result.participants);
     // Observe all eligibility changes until the last synchronous navigation
     // decision. The destination applies its live protected-minor gate as well.
     if (ref.read(isDmRestrictedProvider) &&
-        !result.participants.every(
+        !allParticipantsApprovedForMinor(
+          participants,
           ref.read(officialAccountsServiceProvider).isReadableByProtectedMinor,
         )) {
       _finish(unavailable: true);
@@ -226,7 +229,7 @@ class _DmPushListenerState extends ConsumerState<DmPushListener> {
           ).location;
     widget.intent.destination = location;
     _finish();
-    unawaited(_router.push<void>(location));
+    unawaited(_router.push<void>(location, extra: participants));
   }
 
   Future<void> _offerSwitch() async {

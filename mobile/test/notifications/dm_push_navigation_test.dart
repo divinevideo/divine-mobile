@@ -11,6 +11,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
+import 'package:openvine/blocs/dm/conversation/conversation_participants_cubit.dart';
+import 'package:openvine/blocs/dm/message_requests/request_preview_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/notifications/routing/dm_message_visibility.dart';
@@ -21,6 +23,7 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/app_router.dart';
+import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/official_accounts_service.dart';
 
@@ -47,8 +50,10 @@ void main() {
   final other = 'c' * 64;
   late _Auth auth;
   late _Dm dm;
+  late _Official official;
   late _Publish publish;
   var switches = 0;
+  Object? pushedExtra;
   late GoRouter router;
   late ProviderContainer container;
   var mountedContainer = false;
@@ -60,11 +65,20 @@ void main() {
     mountedContainer = false;
     auth = _Auth();
     switches = 0;
+    pushedExtra = null;
+    official = _Official();
+    when(() => official.isReadableByProtectedMinor(any())).thenReturn(false);
     publish = _Publish();
     when(() => publish.state).thenReturn(const BackgroundPublishState());
     when(() => publish.stream).thenAnswer((_) => const Stream.empty());
     when(publish.parkInFlight).thenAnswer((_) async {});
     dm = _Dm();
+    when(() => dm.userPubkey).thenReturn(owner);
+    when(() => dm.getConversation(any())).thenAnswer((_) async => null);
+    when(() => dm.countMessagesInConversation(any()))
+        .thenAnswer((_) async => 1);
+    when(() => dm.getMessages(any(), limit: any(named: 'limit')))
+        .thenAnswer((_) async => const []);
     final client = _Nostr();
     messages = StreamController<DmWrapLookup>.broadcast();
     when(() => dm.watchWrapLookup(ownerPubkey: owner, giftWrapId: wrap))
@@ -101,7 +115,10 @@ void main() {
         ])
           GoRoute(
             path: path,
-            builder: (_, state) => Scaffold(body: Text(state.uri.toString())),
+            builder: (_, state) {
+              pushedExtra = state.extra;
+              return Scaffold(body: Text(state.uri.toString()));
+            },
           ),
       ],
     );
@@ -111,8 +128,6 @@ void main() {
     bool cold = false,
     bool restricted = false,
   }) async {
-    final official = _Official();
-    when(() => official.isReadableByProtectedMinor(other)).thenReturn(false);
     container = ProviderContainer(
       overrides: [
         dmPushAccountSwitchProvider.overrideWithValue((account) async {
@@ -228,6 +243,81 @@ void main() {
           expect(router.routeInformationProvider.value.uri.path, '/inbox');
           expect(messages.hasListener, isFalse);
         }
+      },
+    );
+
+    testWidgets(
+      'protected minor passes verified peers to conversation and request destination gates',
+      (t) async {
+        final approvedPeer = 'f' * 64;
+        when(
+          () => official.isReadableByProtectedMinor(approvedPeer),
+        ).thenReturn(true);
+        await mount(t, restricted: true);
+
+        openDmPush(container, target);
+        await t.pumpAndSettle();
+        messages.add(
+          DmWrapFound(
+            conversationId: 'room',
+            messageId: 'rumor',
+            participants: {approvedPeer},
+            isRequest: false,
+          ),
+        );
+        await t.pumpAndSettle();
+        expect(
+          find.text('/inbox/conversation/room?messageId=rumor'),
+          findsOneWidget,
+        );
+        expect(pushedExtra, [approvedPeer]);
+
+        final participantsCubit = ConversationParticipantsCubit(
+          dmRepository: dm,
+          conversationId: 'room',
+          isDmRestricted: () => true,
+          isApprovedRecipient: official.isReadableByProtectedMinor,
+          initialParticipantPubkeys: dmRouteExtra(pushedExtra)
+              .participantPubkeys,
+        );
+        addTearDown(participantsCubit.close);
+        await participantsCubit.load();
+        expect(
+          participantsCubit.state.status,
+          ConversationParticipantsStatus.ready,
+        );
+        expect(participantsCubit.state.participantPubkeys, [approvedPeer]);
+
+        pushedExtra = null;
+        router.go('/');
+        await t.pumpAndSettle();
+
+        openDmPush(container, target);
+        await t.pumpAndSettle();
+        messages.add(
+          DmWrapFound(
+            conversationId: 'room-req',
+            messageId: 'rumor-req',
+            participants: {approvedPeer},
+            isRequest: true,
+          ),
+        );
+        await t.pumpAndSettle();
+        expect(find.text('/inbox/message-requests/room-req'), findsOneWidget);
+        expect(pushedExtra, [approvedPeer]);
+
+        final previewCubit = RequestPreviewCubit(
+          dmRepository: dm,
+          conversationId: 'room-req',
+          isDmRestricted: () => true,
+          isApprovedRecipient: official.isReadableByProtectedMinor,
+          initialParticipantPubkeys: dmRouteExtra(pushedExtra)
+              .participantPubkeys,
+        );
+        addTearDown(previewCubit.close);
+        await previewCubit.load();
+        expect(previewCubit.state.status, RequestPreviewStatus.loaded);
+        expect(previewCubit.state.participantPubkeys, [approvedPeer]);
       },
     );
 
