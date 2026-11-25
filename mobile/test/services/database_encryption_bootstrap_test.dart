@@ -1741,12 +1741,13 @@ void main() {
     DatabaseEncryptionBootstrap bootstrap({
       bool keyDecrypts = true,
       bool hasAlternateDatabase = false,
+      CipherMigrationOutcome outcome = CipherMigrationOutcome.alreadyEncrypted,
       Future<void> Function()? deleteDatabase,
     }) => DatabaseEncryptionBootstrap(
       secureStorage: storage,
       ensureRuntime: () async {},
       isCipherAvailable: () => true,
-      migrate: (_) async => CipherMigrationOutcome.alreadyEncrypted,
+      migrate: (_) async => outcome,
       canOpenEncryptedDatabase: (key) async =>
           keyDecrypts && key == existingKey,
       salvageDatabase: (_) async => false,
@@ -1774,6 +1775,14 @@ void main() {
 
       expect(await bootstrap().resolveCipherKey(), existingKey);
       expect(items, {dbCipherKeyStorageKey: ('unlocked', existingKey)});
+    });
+
+    test('creates a new key in the Mac default class', () async {
+      final key = await bootstrap(
+        outcome: CipherMigrationOutcome.noDatabase,
+      ).resolveCipherKey();
+
+      expect(items, {dbCipherKeyStorageKey: ('unlocked', key)});
     });
 
     test(
