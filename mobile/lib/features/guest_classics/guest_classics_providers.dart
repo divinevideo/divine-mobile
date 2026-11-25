@@ -11,14 +11,19 @@ import 'package:openvine/services/app_engagement_store.dart';
 import 'package:openvine/services/language_preference_service.dart';
 import 'package:openvine/services/locale_preference_service.dart';
 
-final guestClassicsBaseProvider = Provider<Uri?>((ref) {
-  const configured = String.fromEnvironment('GUEST_CLASSICS_MANIFEST_BASE_URL');
+@visibleForTesting
+Uri? resolveGuestClassicsBase({
+  required String configured,
+  required bool isWeb,
+  required TargetPlatform platform,
+  required int? sessionCount,
+}) {
   if (configured.isEmpty ||
-      kIsWeb ||
+      isWeb ||
       !const {
         TargetPlatform.iOS,
         TargetPlatform.android,
-      }.contains(defaultTargetPlatform)) {
+      }.contains(platform)) {
     return null;
   }
   final base = Uri.tryParse(configured);
@@ -30,9 +35,20 @@ final guestClassicsBaseProvider = Provider<Uri?>((ref) {
       base.hasFragment) {
     return null;
   }
-  final preferences = ref.read(sharedPreferencesProvider);
-  if (preferences.getInt(AppEngagementStore.sessionCountKey) != 1) return null;
+  if (sessionCount != 1) return null;
   return base.path.endsWith('/') ? base : base.replace(path: '${base.path}/');
+}
+
+final guestClassicsBaseProvider = Provider<Uri?>((ref) {
+  const configured = String.fromEnvironment('GUEST_CLASSICS_MANIFEST_BASE_URL');
+  if (configured.isEmpty) return null;
+  final preferences = ref.read(sharedPreferencesProvider);
+  return resolveGuestClassicsBase(
+    configured: configured,
+    isWeb: kIsWeb,
+    platform: defaultTargetPlatform,
+    sessionCount: preferences.getInt(AppEngagementStore.sessionCountKey),
+  );
 });
 
 /// A fresh client per request permits cancellation on expiry, background or

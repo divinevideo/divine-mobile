@@ -9,12 +9,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/guest_classics/guest_classics_entry.dart';
+import 'package:openvine/features/guest_classics/guest_classics_manifest.dart';
 import 'package:openvine/features/guest_classics/guest_classics_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
@@ -111,6 +113,8 @@ void main() {
     AuthState authState = AuthState.unauthenticated,
     String? initialSelectedPubkeyHex,
     bool guestEntry = false,
+    Future<GuestClassicsManifest?> Function(http.Client, {required bool muted})?
+    guestLoader,
   }) {
     final app = MaterialApp.router(
       localizationsDelegates: appLocalizationsDelegates,
@@ -163,7 +167,7 @@ void main() {
             Uri.parse('https://example.test/'),
           ),
           guestClassicsManifestProvider.overrideWithValue(
-            (_, {required muted}) async => null,
+            guestLoader ?? (_, {required muted}) async => null,
           ),
         ],
         authServiceProvider.overrideWithValue(mockAuthService),
@@ -220,6 +224,78 @@ void main() {
           await tester.pumpWidget(createTestWidget(guestEntry: true));
           await tester.pump();
           expect(find.byType(GuestClassicsEntry), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'guest entry shows Classics button on welcome and returns on close',
+        (tester) async {
+          await useTallSurface(tester);
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          );
+          addTearDown(tester.binding.resetInternalState);
+          final channels = <MethodChannel>[];
+          const global = MethodChannel('divine_video_player');
+          channels.add(global);
+          final messenger = tester.binding.defaultBinaryMessenger;
+          messenger.setMockMethodCallHandler(global, (call) async {
+            if (call.method == 'create') {
+              final id = call.arguments['id'];
+              for (final name in [
+                'divine_video_player/player_$id',
+                'divine_video_player/player_$id/events',
+              ]) {
+                final channel = MethodChannel(name);
+                channels.add(channel);
+                messenger.setMockMethodCallHandler(channel, (_) async => null);
+              }
+              return {'textureId': 1};
+            }
+            return null;
+          });
+          addTearDown(() {
+            for (final channel in channels) {
+              messenger.setMockMethodCallHandler(channel, null);
+            }
+          });
+          final manifest = GuestClassicsManifest.parse({
+            'schema_version': 1,
+            'revision': 'qa1',
+            'expires_at': DateTime.now()
+                .toUtc()
+                .add(const Duration(minutes: 10))
+                .toIso8601String(),
+            'items': [
+              {
+                'event_id': 'ab' * 32,
+                'sha256': 'cd' * 32,
+                'video_url': 'https://media.divine.video/classic.mp4',
+                'attribution': 'Creator 1',
+                'original_loops': 100,
+              },
+            ],
+          }, now: DateTime.now().toUtc())!;
+
+          await tester.pumpWidget(
+            createTestWidget(
+              guestEntry: true,
+              guestLoader: (_, {required muted}) async => manifest,
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(find.text('Classics'), findsOneWidget);
+
+          await tester.tap(find.text('Classics'));
+          await tester.pump();
+          await tester.pump();
+          expect(find.text('Creator 1'), findsOneWidget);
+
+          await tester.tap(find.bySemanticsLabel('Close'));
+          await tester.pump();
+          expect(find.text('Creator 1'), findsNothing);
+          expect(find.text('Classics'), findsOneWidget);
         },
       );
 
