@@ -1,6 +1,6 @@
 ---
 name: brainstorm
-description: "Pre-planning exploration for open-ended features or architectural decisions. Three phases: understand the problem, explore approaches, converge on direction. Produces a brainstorm note outside git. Does NOT produce code. Use before /plan when the problem space is unclear or multiple valid approaches exist. Invoke with /brainstorm."
+description: "Pre-planning exploration for open-ended features or architectural decisions. Three phases: understand the problem, explore approaches, converge on direction. Produces a brainstorm note outside git. Does NOT produce code. Use before the plan skill when the problem space is unclear or multiple valid approaches exist."
 argument-hint: "[topic, question, or issue number]"
 ---
 
@@ -9,22 +9,20 @@ argument-hint: "[topic, question, or issue number]"
 ## Purpose
 
 Exploratory thinking for problems where the solution direction is not obvious.
-Brainstorm answers **"what should we build?"** — then `/plan` makes it concrete
-with **"how do we build it?"**
+Use `brainstorm` to choose a direction, then use `plan` to turn it into an implementation spec.
 
-This is NOT a replacement for `/plan`. Brainstorm converges on a direction;
-plan produces an implementation spec.
+To invoke either skill explicitly, use `/brainstorm` or `/plan` in Claude Code and `$brainstorm` or `$plan` in Codex.
 
-## When to Use /brainstorm vs /plan
+## When to Use Brainstorm or Plan
 
 | Scenario | Start With |
 |----------|------------|
-| GitHub issue with clear requirements | `/plan` directly |
-| Open-ended feature, multiple valid approaches | `/brainstorm` then `/plan` |
-| Architectural decision (which pattern, library, structure) | `/brainstorm` |
-| "How should we handle X?" questions | `/brainstorm` |
-| Bug fix or well-scoped task | `/plan` directly |
-| Spike or feasibility check | `/brainstorm` |
+| GitHub issue with clear requirements | `plan` directly |
+| Open-ended feature, multiple valid approaches | `brainstorm` then `plan` |
+| Architectural decision (which pattern, library, structure) | `brainstorm` |
+| "How should we handle X?" questions | `brainstorm` |
+| Bug fix or well-scoped task | `plan` directly |
+| Spike or feasibility check | `brainstorm` |
 
 ---
 
@@ -137,7 +135,7 @@ provisional recommendation and record the outstanding decision.
 
 ### Phase 3: Converge
 
-**Goal:** Recommend a direction and hand off to `/plan`.
+**Goal:** Recommend a direction and hand off to `plan`.
 
 1. **Recommend** the best approach (or recommend gathering more information
    if the unknowns are too large to decide).
@@ -146,17 +144,17 @@ provisional recommendation and record the outstanding decision.
    alternatives — be specific about architecture alignment, reuse, and
    simplicity.
 
-3. **List open questions** that `/plan` will need to resolve. These are
+3. **List open questions** that `plan` will need to resolve. These are
    implementation details, not directional questions.
 
-4. **Identify prerequisites** — things that need to happen before `/plan`:
+4. **Identify prerequisites** — things that need to happen before `plan`:
    - Design mockups needed from Figma?
    - Protocol decisions that need team input?
    - New packages that need scaffolding?
    - Dependencies to evaluate?
 
 5. **Suggest next step** — usually one of:
-   - `/plan <issue-number>` to proceed with implementation planning
+   - Run the `plan` skill for the issue number
    - "Gather more info on X before planning"
    - "Discuss with team before committing to direction"
 
@@ -225,7 +223,7 @@ Date: YYYY-MM-DD
 
 [Which approach and why, or "need more information on X"]
 
-## Open Questions for /plan
+## Open Questions for Planning
 
 - [ ] Question 1
 - [ ] Question 2
@@ -236,7 +234,7 @@ Date: YYYY-MM-DD
 
 ## Next Step
 
-[/plan <issue>, or gather info on X, or discuss with team]
+[Run the plan skill for the issue, gather evidence, or discuss with the team]
 ```
 
 ---
