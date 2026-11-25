@@ -1129,7 +1129,7 @@ class _MainCommentInputState extends ConsumerState<MainCommentInput> {
   void initState() {
     super.initState();
     final state = context.read<CommentComposerBloc>().state;
-    _controller = TextEditingController(text: state.mainInputText);
+    _controller = TextEditingController(text: state.activeInputText);
     _focusNode = FocusNode();
     _focusNode.addListener(_handleFocusChanged);
     widget.draggableController.addListener(_handleSheetSizeChanged);
@@ -1203,8 +1203,18 @@ class _MainCommentInputState extends ConsumerState<MainCommentInput> {
           BlocConsumer<CommentComposerBloc, CommentComposerState>(
             listenWhen: (prev, next) =>
                 prev.activeReplyCommentId != next.activeReplyCommentId ||
-                prev.activeEditCommentId != next.activeEditCommentId,
+                prev.activeEditCommentId != next.activeEditCommentId ||
+                (prev.draftRevision != next.draftRevision &&
+                    prev.activeInputText != next.activeInputText),
             listener: (context, state) {
+              final text = state.activeInputText;
+              if (_controller.text != text) {
+                _controller.value = TextEditingValue(
+                  text: text,
+                  selection: TextSelection.collapsed(offset: text.length),
+                );
+              }
+
               // Focus input when reply or edit is activated.
               if (state.activeReplyCommentId != null ||
                   state.activeEditCommentId != null) {
@@ -1212,28 +1222,12 @@ class _MainCommentInputState extends ConsumerState<MainCommentInput> {
               }
             },
             buildWhen: (prev, next) =>
-                prev.mainInputText != next.mainInputText ||
-                prev.replyInputText != next.replyInputText ||
                 prev.activeReplyCommentId != next.activeReplyCommentId ||
                 prev.activeEditCommentId != next.activeEditCommentId ||
-                prev.editInputText != next.editInputText ||
                 prev.mentionSuggestions != next.mentionSuggestions,
             builder: (context, state) {
               final isReplyMode = state.activeReplyCommentId != null;
               final isEditMode = state.activeEditCommentId != null;
-              final inputText = isEditMode
-                  ? state.editInputText
-                  : isReplyMode
-                  ? state.replyInputText
-                  : state.mainInputText;
-
-              // Sync controller with state.
-              if (_controller.text != inputText) {
-                _controller.text = inputText;
-                _controller.selection = TextSelection.collapsed(
-                  offset: inputText.length,
-                );
-              }
 
               // Get display name of user being replied to.
               String? replyToDisplayName;
@@ -1308,7 +1302,14 @@ class _MainCommentInputState extends ConsumerState<MainCommentInput> {
                     // with parentAuthorPubkey=null produces a malformed NIP-22
                     // reply (E tag without matching P tag). Cancel reply mode
                     // instead so the user can re-target a still-visible comment.
-                    if (replyToAuthorPubkey == null) {
+                    // Read at send time: list changes never rebuild this
+                    // builder, so a value captured at build can be stale.
+                    final parentAuthorPubkey = context
+                        .read<CommentsListBloc>()
+                        .state
+                        .commentsById[state.activeReplyCommentId]
+                        ?.authorPubkey;
+                    if (parentAuthorPubkey == null) {
                       composer.add(
                         CommentReplyToggled(state.activeReplyCommentId!),
                       );
@@ -1317,7 +1318,7 @@ class _MainCommentInputState extends ConsumerState<MainCommentInput> {
                     composer.add(
                       CommentSubmitted(
                         parentCommentId: state.activeReplyCommentId,
-                        parentAuthorPubkey: replyToAuthorPubkey,
+                        parentAuthorPubkey: parentAuthorPubkey,
                       ),
                     );
                   } else {

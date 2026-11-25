@@ -90,6 +90,7 @@ final class CommentComposerState extends Equatable {
     this.activeEditOriginalReplyToAuthorPubkey,
     this.activeEditOriginalComment,
     this.editInputText = '',
+    this.draftRevision = 0,
     this.mentionQuery = '',
     this.mentionSuggestions = const [],
     this.activeMentions = const {},
@@ -123,6 +124,18 @@ final class CommentComposerState extends Equatable {
   /// Text content of the edit input buffer.
   final String editInputText;
 
+  /// Advances on `copyWith(replaceDraft: true)` and never on typing, so a late
+  /// echo of typed text cannot reset the field's text or cursor. Reply and
+  /// edit switches reach the field through their ids instead.
+  final int draftRevision;
+
+  /// Draft currently visible in the composer.
+  String get activeInputText {
+    if (activeEditCommentId != null) return editInputText;
+    if (activeReplyCommentId != null) return replyInputText;
+    return mainInputText;
+  }
+
   /// Current @mention query text (after the @ symbol).
   final String mentionQuery;
 
@@ -153,6 +166,8 @@ final class CommentComposerState extends Equatable {
 
   /// Returns a copy with input/reply/edit state and outbox optionally updated.
   ///
+  /// Pass `replaceDraft: true` when the bloc rewrites a draft itself, so the
+  /// field picks up the change.
   /// Pass `clearError: true` to clear [error] explicitly. `clearOutbox: true`
   /// clears the outbox (used by the [ComposerOutboxConsumed] handler).
   CommentComposerState copyWith({
@@ -170,6 +185,7 @@ final class CommentComposerState extends Equatable {
     List<MentionBinding>? activeMentionBindings,
     ComposerError? error,
     ComposerOutbox? outbox,
+    bool replaceDraft = false,
     bool clearError = false,
     bool clearOutbox = false,
   }) {
@@ -187,6 +203,7 @@ final class CommentComposerState extends Equatable {
       activeEditOriginalComment:
           activeEditOriginalComment ?? this.activeEditOriginalComment,
       editInputText: editInputText ?? this.editInputText,
+      draftRevision: replaceDraft ? draftRevision + 1 : draftRevision,
       mentionQuery: mentionQuery ?? this.mentionQuery,
       mentionSuggestions: mentionSuggestions ?? this.mentionSuggestions,
       activeMentions: activeMentions ?? this.activeMentions,
@@ -210,6 +227,7 @@ final class CommentComposerState extends Equatable {
           activeEditOriginalReplyToAuthorPubkey,
       activeEditOriginalComment: activeEditOriginalComment,
       editInputText: editInputText,
+      draftRevision: draftRevision,
       error: error,
       outbox: outbox,
     );
@@ -224,6 +242,7 @@ final class CommentComposerState extends Equatable {
       mainInputText: mainInputText,
       replyInputText: replyInputText,
       activeReplyCommentId: activeReplyCommentId,
+      draftRevision: draftRevision,
       error: error,
       outbox: outbox,
     );
@@ -239,6 +258,7 @@ final class CommentComposerState extends Equatable {
     activeEditOriginalReplyToAuthorPubkey,
     activeEditOriginalComment,
     editInputText,
+    draftRevision,
     mentionQuery,
     mentionSuggestions,
     activeMentions,
