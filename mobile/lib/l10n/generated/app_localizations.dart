@@ -3115,7 +3115,7 @@ abstract class AppLocalizations {
   /// **'Share video'**
   String get shareVideoLabel;
 
-  /// One line of the snackbar after sharing a video: this person will not get it, because the send was refused (for example, an account nobody reads anymore) and will not be retried. Shown on its own line, possibly after a 'Post shared with' line.
+  /// One line naming a person who will not get the shared video: the send was refused or stopped (for example, an account nobody reads anymore) and will not be retried. Shown in the share sheet or the delivery banner, possibly beside other recipients' lines.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t send to {recipientName}'**

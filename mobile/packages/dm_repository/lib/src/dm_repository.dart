@@ -113,13 +113,14 @@ final class ShareEnqueueBlocked extends ShareEnqueueOutcome {
   const ShareEnqueueBlocked();
 }
 
-/// The serialized rumor exceeds the NIP-17 size limit.
+/// The built rumor exceeds [maxDmRumorBytes], the most a gift wrap can carry.
 final class ShareEnqueueTooLong extends ShareEnqueueOutcome {
   /// The caller can shorten the share and send again.
   const ShareEnqueueTooLong();
 }
 
-/// A recipient or send intent could not be queued.
+/// The recipient is not a valid hex pubkey, is the sender, or was refused for
+/// another local reason before anything was queued.
 final class ShareEnqueueRefused extends ShareEnqueueOutcome {
   /// Carries the local cause of this refusal.
   const ShareEnqueueRefused(this.reason);
@@ -8226,8 +8227,8 @@ class DmRepository {
   /// remains in [baseContent]).
   ///
   /// [skipNip04Fallback] forwards to [sendMessage]: pass `true` to suppress the
-  /// legacy plaintext kind-4 copy (recommended for shares — see the caller in
-  /// `VideoSharingService`).
+  /// legacy plaintext kind-4 copy. Recommended for shares;
+  /// [enqueueSharedVideoBatch] always suppresses it.
   ///
   /// [additionalTags] ride on the rumor after the citation, such as the
   /// question a viewer answers with a question sticker's answer.
@@ -8654,8 +8655,12 @@ class DmRepository {
   ///
   /// After a full success on a one-to-one thread still latched to NIP-04, the
   /// legacy kind-4 copy goes out too, as it would have from [sendMessage]
-  /// (#8506) when the rumor is plain text and the sender allowed the copy.
-  /// Structured tags also suppress the fallback on older outbox rows.
+  /// (#8506), unless the row opted out or the rumor carries structured tags.
+  /// The tag check covers rows queued before the opt-out was recorded, which
+  /// read as not opted out, and structured sends that never opted out.
+  ///
+  /// A row queued in another relay environment, or an account change during
+  /// the attempt, returns a pending result without finalizing the row.
   ///
   /// A one-to-one row addressed to its own sender is never republished: it is
   /// dropped and reported as blocked (#8363). [sendMessage] refuses such a
@@ -8754,6 +8759,8 @@ class DmRepository {
       );
     }
 
+    // Another environment's relays own this row (#10148); leave it queued for
+    // the retry service running there.
     if (_environment != null &&
         row.environment != null &&
         row.environment != _environment) {
@@ -8761,7 +8768,8 @@ class DmRepository {
     }
 
     // A one-to-one row addressed to its own sender is never republished
-    // (#8363). Checked first, so it is dropped whatever state it is in.
+    // (#8363). Checked before any wrap-state guard, so in this environment it
+    // is dropped whatever state it is in.
     if (_isSelfAddressedRow(row)) {
       return _dropSelfAddressedRow(dao: dao, row: row);
     }
@@ -9095,6 +9103,8 @@ class DmRepository {
             rumorId: rumorId,
             result: result,
           );
+          // Throwing rolls the finalize back so the old account's row stays
+          // queued for its own session.
           if (!isCurrent()) throw StateError('Account changed during recovery');
           persistedLocally = true;
         });
@@ -9149,9 +9159,10 @@ class DmRepository {
         // The publish landed but the local persist failed. The transaction
         // rolled the queue transition back with the message, so the row
         // keeps its status and the retry sweep re-drives it; receivers drop
-        // the replay by its rumor id. The attempt spends retry budget, so a
-        // persist failure that keeps recurring stops being republished once
-        // the budget runs out. The row then shows as failed with Resend,
+        // the replay by its rumor id. Unless the account changed, the attempt
+        // spends retry budget, so a persist failure that keeps recurring
+        // stops being republished once the budget runs out. The row then shows
+        // as failed with Resend,
         // although the recipient has the message. The charge is a write of
         // its own, so if the database cannot record it either, the sweep
         // keeps re-driving the row. Don't rethrow: the caller still gets the
@@ -9733,6 +9744,9 @@ class DmRepository {
   }
 
   /// Observe this 1:1 delivery under the same account and relay environment.
+  ///
+  /// Emits [DmDeliveryState.cancelled] when [ownerPubkey] is not the signed-in
+  /// account or the repository is disposed.
   Stream<DmDeliveryState> watchDeliveryState({
     required String ownerPubkey,
     required String rumorId,
@@ -9801,6 +9815,7 @@ class DmRepository {
       await outgoingDao.markRecipientWrapStatus(
         id: rumorId,
         status: OutgoingWrapStatus.failed,
+        // watchDeliveryState reads this exact sentinel as still queued.
         lastError: reachedNoRelay ? outgoingDmOfflineError : errorMessage,
       );
       await outgoingDao.markSelfWrapStatus(
