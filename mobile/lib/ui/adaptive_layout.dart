@@ -205,15 +205,20 @@ class _AdaptiveLayoutScopeState extends ConsumerState<AdaptiveLayoutScope> {
 
   @override
   Widget build(BuildContext context) {
+    final flagEnabled = ref.watch(
+      isFeatureEnabledProvider(FeatureFlag.largeScreenLayout),
+    );
     final enabled =
-        ref.watch(isFeatureEnabledProvider(FeatureFlag.largeScreenLayout)) ||
+        flagEnabled ||
         (ref.watch(ignoresOrientationLockOnLargeScreensProvider) &&
             _isOnLargeDisplay(context));
     // Before any orientation request, so the delegate's mask already allows
     // what Dart asks for.
-    _reportToSystem(enabled);
+    _reportToSystem(flagEnabled);
+    // The display fallback only changes layout. The system can still honor
+    // portrait lock when its aspect-ratio settings override the default.
     _rotationWanted =
-        enabled &&
+        flagEnabled &&
         (_systemKeepsSmallScreensPortrait ||
             MediaQuery.sizeOf(context).shortestSide >=
                 AdaptiveBreakpoints.large);

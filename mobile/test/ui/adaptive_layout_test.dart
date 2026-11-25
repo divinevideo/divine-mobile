@@ -389,6 +389,20 @@ void main() {
         expect(orientationCalls, isEmpty);
       });
 
+      testWidgets('does not request rotation when only the layout is forced', (
+        tester,
+      ) async {
+        await pumpScope(
+          tester,
+          enabled: false,
+          size: _tabletLandscape,
+          display: _tabletLandscape,
+          ignoresOrientationLock: true,
+        );
+
+        expect(orientationCalls, isEmpty);
+      });
+
       testWidgets('allows rotation on a large screen with the flag on', (
         tester,
       ) async {
