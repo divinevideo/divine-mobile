@@ -1,6 +1,7 @@
 // dart format width=80
 import 'package:db_client/src/database/app_database.dart';
 import 'package:db_client/src/database/daos/nostr_events_dao.dart';
+import 'package:db_client/src/database/daos/outgoing_dms_dao.dart';
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:drift_dev/api/migrations_native.dart';
@@ -364,7 +365,48 @@ void main() {
       expect(row.giftWrapId, 'self-wrap');
     });
 
-    test('current schema version is 37', () {
+    test('v37 queued DMs gain is_video_share as false, keeping every field '
+        'they had', () async {
+      final schema = await verifier.schemaAt(37);
+      final rumorId = 'a' * 64;
+      final owner = 'b' * 64;
+      schema.rawDatabase.execute(
+        'INSERT INTO outgoing_dms (id, conversation_id, recipient_pubkey, '
+        'content, created_at, rumor_event_json, recipient_wrap_status, '
+        'self_wrap_status, retry_count, queued_at, owner_pubkey, environment, '
+        'skip_nip04_fallback) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        [
+          rumorId,
+          'c' * 64,
+          'd' * 64,
+          'queued before the upgrade',
+          1700000000,
+          '{"id":"$rumorId","kind":14}',
+          'failed',
+          'pending',
+          2,
+          1700000000,
+          owner,
+          'staging',
+          1,
+        ],
+      );
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+
+      await verifier.migrateAndValidate(db, 38);
+
+      final row = await db.outgoingDmsDao.getById(rumorId);
+      expect(row, isNotNull);
+      expect(row!.isVideoShare, isFalse);
+      expect(row.skipNip04Fallback, isTrue);
+      expect(row.content, 'queued before the upgrade');
+      expect(row.recipientWrapStatus, OutgoingWrapStatus.failed);
+      expect(row.retryCount, 2);
+      expect(row.environment, 'staging');
+    });
+
+    test('current schema version is 38', () {
       expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 38);
     });
 
