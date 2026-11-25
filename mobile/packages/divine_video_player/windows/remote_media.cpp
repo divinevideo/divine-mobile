@@ -4,12 +4,15 @@
 #include <windows.h>
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Storage.Streams.h>
+#include <winrt/Windows.System.Threading.h>
 #include <winrt/Windows.Web.Http.Filters.h>
 #include <winrt/Windows.Web.Http.Headers.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <chrono>
+#include <cstddef>
 #include <cstring>
 #include <cwchar>
 #include <deque>
@@ -42,6 +45,7 @@ using winrt::Windows::Storage::Streams::IInputStream;
 using winrt::Windows::Storage::Streams::InputStreamOptions;
 using winrt::Windows::Storage::Streams::IOutputStream;
 using winrt::Windows::Storage::Streams::IRandomAccessStream;
+using winrt::Windows::System::Threading::ThreadPoolTimer;
 using winrt::Windows::Web::Http::HttpClient;
 using winrt::Windows::Web::Http::HttpCompletionOption;
 using winrt::Windows::Web::Http::HttpMethod;
@@ -61,6 +65,20 @@ constexpr size_t kPrivateChunks = 8;
 constexpr uint64_t kMaxWholeFileBytes = 256ull << 20;
 // Files whose length and type are remembered.
 constexpr size_t kMaxRememberedFiles = 1024;
+// As Media3's DefaultHttpDataSource: a request gives up when the server has
+// not answered, or not sent more of the body, for this long.
+constexpr auto kRequestTimeout = std::chrono::seconds(8);
+// Bytes asked of a response at a time, each read under its own timeout.
+constexpr uint32_t kReadPieceBytes = 64 * 1024;
+// As Media3's DefaultLoadErrorHandlingPolicy for progressive media: a failed
+// download is tried again up to three times, after 0, 1 and 2 seconds.
+constexpr int kMaxDownloadRetries = 3;
+constexpr int32_t kTimeoutHresult =
+    static_cast<int32_t>(0x800705B4);  // ERROR_TIMEOUT
+constexpr int32_t kCancelledHresult =
+    static_cast<int32_t>(0x800704C7);  // ERROR_CANCELLED
+constexpr int32_t kInvalidResponseHresult =
+    static_cast<int32_t>(0x80072F78);  // ERROR_HTTP_INVALID_SERVER_RESPONSE
 constexpr wchar_t kDefaultContentType[] = L"video/mp4";
 
 using Chunk = std::shared_ptr<const std::vector<uint8_t>>;
@@ -189,6 +207,41 @@ struct HeaderFilter
   HttpBaseProtocolFilter inner_;
 };
 
+// Cancels a timer when the scope that armed it ends.
+struct CancelTimerOnExit {
+  ThreadPoolTimer timer;
+  ~CancelTimerOnExit() { timer.Cancel(); }
+};
+
+// Awaits `operation`, cancelling it if it has not completed within
+// kRequestTimeout. A cancellation the timeout caused throws ERROR_TIMEOUT,
+// which DownloadWithRetriesAsync tries again.
+template <typename Operation>
+auto WithTimeout(Operation operation)
+    -> IAsyncOperation<decltype(operation.GetResults())> {
+  const auto expired = std::make_shared<std::atomic<bool>>(false);
+  const CancelTimerOnExit guard{ThreadPoolTimer::CreateTimer(
+      [operation, expired](const ThreadPoolTimer&) {
+        expired->store(true);
+        operation.Cancel();
+      },
+      kRequestTimeout)};
+  try {
+    co_return co_await operation;
+  } catch (const winrt::hresult_canceled&) {
+    if (!expired->load()) throw;
+  }
+  throw winrt::hresult_error(kTimeoutHresult, L"Request timed out");
+}
+
+// Whether a failed download may succeed when tried again. As in Media3, a
+// 416 is final, and so are an answer this reader cannot use and a
+// cancellation.
+bool IsRetryable(int32_t hresult) {
+  return hresult != E_OUTOFMEMORY && hresult != kInvalidResponseHresult &&
+         hresult != kCancelledHresult && HttpStatusFromHresult(hresult) != 416;
+}
+
 // What one Range request brought back.
 struct Download {
   Chunk data;
@@ -221,8 +274,8 @@ IAsyncAction DownloadAsync(std::shared_ptr<const RequestContext> context,
     request.Headers().TryAppendWithoutValidation(
         L"Range",
         L"bytes=" + winrt::to_hstring(start) + L"-" + winrt::to_hstring(end));
-    HttpResponseMessage response = co_await client.SendRequestAsync(
-        request, HttpCompletionOption::ResponseHeadersRead);
+    HttpResponseMessage response = co_await WithTimeout(client.SendRequestAsync(
+        request, HttpCompletionOption::ResponseHeadersRead));
     const int32_t status = static_cast<int32_t>(response.StatusCode());
     if (status != 200 && status != 206) {
       // 202 is the media server still processing an upload.
@@ -237,34 +290,70 @@ IAsyncAction DownloadAsync(std::shared_ptr<const RequestContext> context,
     if (const auto type = content_headers.ContentType()) {
       out->content_type = type.MediaType().c_str();
     }
-    if (status == 206) {
-      // Content-Range: bytes <start>-<end>/<total>
-      if (content_headers.HasKey(L"Content-Range")) {
-        const std::wstring text(content_headers.Lookup(L"Content-Range"));
-        const size_t slash = text.rfind(L'/');
-        if (slash != std::wstring::npos) {
-          out->total = std::wcstoull(text.c_str() + slash + 1, nullptr, 10);
+    const uint64_t wanted = end - start + 1;
+    // The most the body may hold: the range asked for, or the whole file
+    // from a server that ignores Range.
+    const uint64_t limit = status == 206 ? wanted : kMaxWholeFileBytes;
+    const auto too_much = [&response, status]() {
+      response.Close();
+      return status == 206
+                 ? winrt::hresult_error(kInvalidResponseHresult,
+                                        L"Server sent more than the range")
+                 : winrt::hresult_error(E_OUTOFMEMORY,
+                                        L"Server sent the whole file, too large");
+    };
+    if (status == 206 && content_headers.HasKey(L"Content-Range")) {
+      // Content-Range: bytes <first>-<last>/<total>
+      const std::wstring text(content_headers.Lookup(L"Content-Range"));
+      const size_t space = text.find(L' ');
+      const size_t dash = text.find(L'-');
+      const size_t slash = text.rfind(L'/');
+      if (space != std::wstring::npos && dash != std::wstring::npos &&
+          space < dash) {
+        const uint64_t first =
+            std::wcstoull(text.c_str() + space + 1, nullptr, 10);
+        const uint64_t last = std::wcstoull(text.c_str() + dash + 1, nullptr, 10);
+        if (first != start || last > end) {
+          response.Close();
+          throw winrt::hresult_error(kInvalidResponseHresult,
+                                     L"Server sent a different range");
         }
       }
-    } else if (const auto length = content_headers.ContentLength()) {
-      if (length.Value() > kMaxWholeFileBytes) {
-        response.Close();
-        throw winrt::hresult_error(E_OUTOFMEMORY,
-                                   L"Server sent the whole file, too large");
+      if (slash != std::wstring::npos) {
+        out->total = std::wcstoull(text.c_str() + slash + 1, nullptr, 10);
       }
     }
+    const auto content_length = content_headers.ContentLength();
+    if (content_length && content_length.Value() > limit) throw too_much();
 
-    const IBuffer body = co_await response.Content().ReadAsBufferAsync();
-    bytes = body.Length();
-    const uint8_t* source = BufferData(body);
+    // Read in pieces, so a stalled body times out and an oversized one is
+    // refused before it is all in memory.
+    const IInputStream stream =
+        co_await WithTimeout(response.Content().ReadAsInputStreamAsync());
+    std::vector<uint8_t> body;
+    if (content_length) {
+      body.reserve(static_cast<size_t>(content_length.Value()));
+    }
+    const winrt::Windows::Storage::Streams::Buffer piece(kReadPieceBytes);
+    for (;;) {
+      const IBuffer read = co_await WithTimeout(
+          stream.ReadAsync(piece, kReadPieceBytes, InputStreamOptions::Partial));
+      const uint32_t count = read.Length();
+      if (count == 0) break;
+      if (body.size() + count > limit) throw too_much();
+      const uint8_t* data = BufferData(read);
+      body.insert(body.end(), data, data + count);
+      bytes = static_cast<int64_t>(body.size());
+    }
     // A server that ignores Range sends the whole file from byte 0.
-    const uint64_t skip = status == 200 ? start : 0;
-    if (status == 200) out->total = body.Length();
-    const uint64_t available = body.Length() > skip ? body.Length() - skip : 0;
-    const uint64_t wanted = end - start + 1;
-    const size_t length = static_cast<size_t>(std::min(available, wanted));
-    out->data = std::make_shared<const std::vector<uint8_t>>(
-        source + skip, source + skip + length);
+    if (status == 200) out->total = body.size();
+    const auto skip = static_cast<std::ptrdiff_t>(
+        std::min<uint64_t>(status == 200 ? start : 0, body.size()));
+    const auto length = static_cast<std::ptrdiff_t>(
+        std::min<uint64_t>(body.size() - static_cast<size_t>(skip), wanted));
+    body.erase(body.begin() + skip + length, body.end());
+    body.erase(body.begin(), body.begin() + skip);
+    out->data = std::make_shared<const std::vector<uint8_t>>(std::move(body));
     report("complete", true);
   } catch (const winrt::hresult_canceled&) {
     report("cancelled", true);
@@ -272,6 +361,25 @@ IAsyncAction DownloadAsync(std::shared_ptr<const RequestContext> context,
   } catch (...) {
     report("error", true);
     throw;
+  }
+}
+
+// DownloadAsync, tried again after a failure that may not repeat, as Media3
+// does for progressive media, so one 5xx or dropped connection mid-file does
+// not end playback.
+IAsyncAction DownloadWithRetriesAsync(
+    std::shared_ptr<const RequestContext> context, HttpClient client, Uri uri,
+    uint64_t start, uint64_t end, std::shared_ptr<Download> out) {
+  for (int failures = 0;; ++failures) {
+    try {
+      co_await DownloadAsync(context, client, uri, start, end, out);
+      co_return;
+    } catch (const winrt::hresult_error& error) {
+      if (failures == kMaxDownloadRetries || !IsRetryable(error.code())) {
+        throw;
+      }
+    }
+    co_await winrt::resume_after(std::chrono::seconds(failures));
   }
 }
 
@@ -346,8 +454,8 @@ class RangeFile : public std::enable_shared_from_this<RangeFile> {
       const uint64_t start = index * kChunkBytes;
       const uint64_t end = std::min(start + kChunkBytes, file->info_.size) - 1;
       auto download = std::make_shared<Download>();
-      co_await DownloadAsync(file->context_, file->client_, file->uri_, start,
-                             end, download);
+      co_await DownloadWithRetriesAsync(file->context_, file->client_,
+                                        file->uri_, start, end, download);
       fetch->data = download->data;
       file->Store(index, download->data);
     } catch (const winrt::hresult_error& error) {
@@ -526,8 +634,9 @@ IAsyncOperation<MediaSource> OpenRangeSourceAsync(
     file = std::make_shared<RangeFile>(context, client, *info);
   } else {
     auto first = std::make_shared<Download>();
-    co_await DownloadAsync(context, client, Uri(winrt::to_hstring(context->uri())),
-                           0, kChunkBytes - 1, first);
+    co_await DownloadWithRetriesAsync(context, client,
+                                      Uri(winrt::to_hstring(context->uri())), 0,
+                                      kChunkBytes - 1, first);
     if (first->total == 0) {
       throw winrt::hresult_error(E_FAIL, L"Unknown content length");
     }

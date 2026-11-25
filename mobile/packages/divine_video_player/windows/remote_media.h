@@ -53,8 +53,9 @@ winrt::Windows::Web::Http::HttpClient ClientFor(
     std::shared_ptr<const RequestContext> context);
 
 // Opens a remote progressive file as a stream that Media Foundation reads
-// from 1 MiB chunks, each fetched with one Range request. Shareable files
-// share their chunks with every player and with Preload.
+// from 1 MiB chunks, each fetched with one Range request and fetched again
+// after a failure, as Media3 does. Shareable files share their chunks with
+// every player and with Preload.
 winrt::Windows::Foundation::IAsyncOperation<
     winrt::Windows::Media::Core::MediaSource>
 OpenRangeSourceAsync(std::shared_ptr<const RequestContext> context);
