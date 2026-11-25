@@ -195,40 +195,51 @@ void main() {
     });
 
     group('gift wrap ledger schema recovery', () {
-      test('restores processed_gift_wraps.verified_message_id, so a second '
-          'wrap of a verified message still records its alias', () async {
-        await database.customStatement(
-          'ALTER TABLE processed_gift_wraps DROP COLUMN verified_message_id',
-        );
-        await database.close();
-        database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
-        final rumorId = 'a' * 64;
-        final conversationId = 'c' * 64;
-        await database.directMessagesDao.insertMessage(
-          id: rumorId,
-          conversationId: conversationId,
-          senderPubkey: testPubkey2,
-          content: 'hello',
-          createdAt: 1700000000,
-          giftWrapId: 'b' * 64,
-          ownerPubkey: testPubkey,
-        );
-
-        await database.processedGiftWrapsDao.record(
-          giftWrapId: 'd' * 64,
-          ownerPubkey: testPubkey,
-          verifiedDuplicate: (
-            messageId: rumorId,
-            sender: testPubkey2,
+      test(
+        'restores processed_gift_wraps.verified_message_id, so a second '
+        'wrap records its alias and existing ledger evidence survives',
+        () async {
+          final existingWrapId = 'e' * 64;
+          await database.processedGiftWrapsDao.record(
+            giftWrapId: existingWrapId,
+            ownerPubkey: testPubkey,
+          );
+          await database.customStatement(
+            'ALTER TABLE processed_gift_wraps DROP COLUMN verified_message_id',
+          );
+          await database.close();
+          database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+          final rumorId = 'a' * 64;
+          final conversationId = 'c' * 64;
+          await database.directMessagesDao.insertMessage(
+            id: rumorId,
             conversationId: conversationId,
-          ),
-        );
+            senderPubkey: testPubkey2,
+            content: 'hello',
+            createdAt: 1700000000,
+            giftWrapId: 'b' * 64,
+            ownerPubkey: testPubkey,
+          );
 
-        final ledger = await database
-            .select(database.processedGiftWraps)
-            .getSingle();
-        expect(ledger.verifiedMessageId, rumorId);
-      });
+          await database.processedGiftWrapsDao.record(
+            giftWrapId: 'd' * 64,
+            ownerPubkey: testPubkey,
+            verifiedDuplicate: (
+              messageId: rumorId,
+              sender: testPubkey2,
+              conversationId: conversationId,
+            ),
+          );
+
+          final ledger = await database
+              .select(database.processedGiftWraps)
+              .get();
+          expect(
+            {for (final row in ledger) row.giftWrapId: row.verifiedMessageId},
+            {existingWrapId: null, 'd' * 64: rumorId},
+          );
+        },
+      );
     });
 
     group('conversation dismissal schema recovery', () {
