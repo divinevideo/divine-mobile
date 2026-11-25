@@ -636,6 +636,9 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                                   !shouldRetainPlayer,
                               hasMore: state.hasMore,
                               isLoadingMore: state.isLoadingMore,
+                              prefetchOnMount:
+                                  state.source.type ==
+                                  VideoFeedSourceType.forYou,
                               trafficSource: ViewTrafficSource.home,
                               // Every feed mode renders through this one page and
                               // reports source=home, so without this detail the

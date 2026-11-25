@@ -89,6 +89,7 @@ class FeedVideos extends ConsumerStatefulWidget {
     this.releaseNeighboursWhenInactive = false,
     this.hasMore = false,
     this.isLoadingMore = false,
+    this.prefetchOnMount = false,
     this.onActiveVideoChanged,
     this.trafficSource = ViewTrafficSource.unknown,
     this.trafficSourceForVideo,
@@ -135,6 +136,9 @@ class FeedVideos extends ConsumerStatefulWidget {
   /// Used together with [hasMore] to decide whether auto-advance should
   /// wait for more content before advancing.
   final bool isLoadingMore;
+
+  /// Whether a short opening page should request pagination before a swipe.
+  final bool prefetchOnMount;
 
   /// Called when the active (visible) video changes.
   final void Function(VideoEvent video, int index)? onActiveVideoChanged;
@@ -521,6 +525,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         initialIndex: widget.currentIndex,
         scrollPhysics: widget.scrollPhysics,
         onNearEnd: widget.onNearEnd,
+        prefetchOnMount: widget.prefetchOnMount,
         initialVolume: context.read<VideoVolumeCubit>().state.volume,
         onVolumeChanged: context
             .read<VideoVolumeCubit>()

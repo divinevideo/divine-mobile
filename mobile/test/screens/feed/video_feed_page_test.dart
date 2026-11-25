@@ -303,6 +303,45 @@ void main() {
   });
 
   group(VideoFeedView, () {
+    testWidgets('requests more for a single opening For You video', (
+      tester,
+    ) async {
+      final state = VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        source: const VideoFeedSource.forYou(),
+        videos: [createTestVideoEvent()],
+        paginationCursor: 'continuation',
+      );
+      whenListen(
+        videoFeedBloc,
+        const Stream<VideoFeedBlocState>.empty(),
+        initialState: state,
+      );
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<VideoFeedBloc>.value(value: videoFeedBloc),
+              BlocProvider<VideoPlaybackStatusCubit>(
+                create: (_) => VideoPlaybackStatusCubit(),
+              ),
+              BlocProvider<VideoVolumeCubit>.value(value: videoVolumeCubit),
+            ],
+            child: const VideoFeedView(),
+          ),
+        ),
+      );
+
+      verify(
+        () => videoFeedBloc.add(const VideoFeedLoadMoreRequested()),
+      ).called(1);
+
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
+
     // Every home feed mode renders through this one page and reports
     // `source=home`, so the source detail is the only thing distinguishing
     // them in view_traffic_sources. Parameterised over the enum so a new feed

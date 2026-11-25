@@ -72,6 +72,7 @@ class InfiniteVideoFeed extends StatefulWidget {
     this.onActiveVideoChanged,
     this.onNearEnd,
     this.nearEndThreshold = 15,
+    this.prefetchOnMount = false,
     this.onVideoLoopCompleted,
     this.onVideoStalled,
     this.slowLoadThreshold = const Duration(seconds: 8),
@@ -279,6 +280,9 @@ class InfiniteVideoFeed extends StatefulWidget {
 
   /// How many videos from the end should trigger [onNearEnd].
   final int nearEndThreshold;
+
+  /// Whether to check [onNearEnd] when the opening list mounts.
+  final bool prefetchOnMount;
 
   /// Called each time the active video completes a loop.
   ///
@@ -630,6 +634,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
     _beginFirstFrameMeasurement(_currentIndex);
     unawaited(_onIndexChanged(_currentIndex));
+    if (widget.prefetchOnMount) _scheduleNearEndCheckIfNeeded();
   }
 
   @override
@@ -731,10 +736,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     }
   }
 
-  /// Requests the next page after frame commit when a list update still leaves
-  /// fewer than [InfiniteVideoFeed.nearEndThreshold] videos ahead of the
-  /// current position (e.g. a short cached window or heavily seen-filtered
-  /// page), so pagination buffers ahead before the viewer reaches the end.
+  /// Requests the next page after frame commit when the opening or updated
+  /// list leaves at most [InfiniteVideoFeed.nearEndThreshold] videos ahead.
   void _scheduleNearEndCheckIfNeeded() {
     if (widget.onNearEnd == null || widget.videos.isEmpty) return;
     final distanceFromEnd = widget.videos.length - _currentIndex - 1;
