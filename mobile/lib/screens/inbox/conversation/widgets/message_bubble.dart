@@ -1155,7 +1155,7 @@ class _VideoLinkPreviewBodyState extends State<_VideoLinkPreviewBody> {
     final onTap = widget.enableTap ? _open : null;
     return BlocBuilder<VideoLinkPreviewCubit, VideoLinkPreviewState>(
       builder: (context, state) => switch (state) {
-        VideoLinkPreviewLoading() => _buildLoadingPlaceholder(context),
+        VideoLinkPreviewLoading() => _VideoLinkLoadingCard(onTap: onTap),
         VideoLinkPreviewNotFound() => const _VideoUnavailableCard(),
         VideoLinkPreviewResolved(:final video)
             when context.read<VideoLinkPreviewCubit>().hides(video) =>
@@ -1167,13 +1167,23 @@ class _VideoLinkPreviewBodyState extends State<_VideoLinkPreviewBody> {
       },
     );
   }
+}
 
-  Widget _buildLoadingPlaceholder(BuildContext context) {
+/// The card a shared video shows while it resolves. It already offers Play,
+/// which waits for the lookup, when [onTap] is set.
+class _VideoLinkLoadingCard extends StatelessWidget {
+  const _VideoLinkLoadingCard({required this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final enableTap = onTap != null;
     return Semantics(
-      label: widget.enableTap ? context.l10n.videoPlayerPlayVideo : null,
-      button: widget.enableTap,
+      label: enableTap ? context.l10n.videoPlayerPlayVideo : null,
+      button: enableTap,
       child: GestureDetector(
-        onTap: widget.enableTap ? _open : null,
+        onTap: onTap,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(_videoCardRadius),
           child: Container(
@@ -1181,7 +1191,7 @@ class _VideoLinkPreviewBodyState extends State<_VideoLinkPreviewBody> {
             height: _videoCardHeight,
             color: context.vineColors.card,
             alignment: Alignment.center,
-            child: widget.enableTap ? const _VideoPlayBadge() : null,
+            child: enableTap ? const _VideoPlayBadge() : null,
           ),
         ),
       ),
