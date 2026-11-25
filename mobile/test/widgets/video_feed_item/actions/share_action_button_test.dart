@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:analytics/analytics.dart';
 import 'package:bookmarks_repository/bookmarks_repository.dart';
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter/services.dart';
@@ -60,6 +61,7 @@ import '../../../helpers/recording_consumption_analytics.dart';
 import '../../../helpers/retired_key_custody.dart';
 import '../../../helpers/scroll.dart';
 import '../../../helpers/test_provider_overrides.dart';
+import '../../../helpers/test_pubkeys.dart';
 
 class _MockDmRepository extends Mock implements DmRepository {}
 
@@ -135,8 +137,7 @@ void main() {
   });
 
   group(ShareActionButton, () {
-    const ownPubkey =
-        'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
+    final ownPubkey = testPubkeyFromSeed(70);
 
     late VideoEvent testVideo;
     late _MockFollowRepository mockFollowRepository;
@@ -1617,10 +1618,8 @@ void main() {
               'fedcba9876543210fedcba9876543210',
           displayName: 'Alice',
         );
-        const bob = ShareableUser(
-          pubkey:
-              '11111111111111111111111111111111'
-              '11111111111111111111111111111111',
+        final bob = ShareableUser(
+          pubkey: testPubkeyFromSeed(72),
           displayName: 'Bob',
         );
 
@@ -1756,10 +1755,13 @@ void main() {
         final delivery = <String, StreamController<DmDeliveryState>>{};
         setUp(delivery.clear);
 
-        Future<void> pumpOpenSheet(WidgetTester tester) async {
+        Future<void> pumpOpenSheet(
+          WidgetTester tester, {
+          List<Override> extraOverrides = const [],
+        }) async {
           final mockAuth = createMockAuthService(
             authState: AuthState.authenticated,
-            currentPublicKeyHex: '9' * 64,
+            currentPublicKeyHex: testPubkeyFromSeed(71),
           );
           final repository = _MockDmRepository();
           when(
@@ -1788,6 +1790,7 @@ void main() {
                 videoSharingServiceProvider.overrideWith(
                   (ref) => mockVideoSharingService,
                 ),
+                ...extraOverrides,
               ],
               mockAuthService: mockAuth,
               mockProfileRepository: mockProfileRepository,
@@ -1860,7 +1863,7 @@ void main() {
               ),
             ).called(1);
             pending.complete({
-              alice.pubkey: const ShareResult.failure('Refused'),
+              alice.pubkey: const ShareResult.failure(ShareRefusal.blocked),
             });
             await tester.pumpAndSettle();
             expect(find.byType(TextField), findsOneWidget);
@@ -1973,6 +1976,111 @@ void main() {
             expect(field.controller!.text, equals('draft text'));
           },
         );
+
+        group('row Send', () {
+          Finder sendButtonFor(String name) => find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineButton &&
+                widget.semanticLabel == l10n.shareRecipientSendTo(name),
+          );
+
+          testWidgets('announces which recipient it sends to', (tester) async {
+            final semantics = tester.ensureSemantics();
+            await pumpOpenSheet(tester);
+
+            final node = tester.getSemantics(sendButtonFor('Alice'));
+
+            expect(node.label, l10n.shareRecipientSendTo('Alice'));
+            expect(node.flagsCollection.isButton, isTrue);
+            semantics.dispose();
+          });
+
+          testWidgets(
+            'a contact a live block disables cannot be sent to or selected',
+            (tester) async {
+              final blocklist = ContentBlocklistRepository();
+              addTearDown(blocklist.dispose);
+              await pumpOpenSheet(
+                tester,
+                extraOverrides: [
+                  contentBlocklistRepositoryProvider.overrideWithValue(
+                    blocklist,
+                  ),
+                ],
+              );
+              DivineButton button(String name) =>
+                  tester.widget<DivineButton>(sendButtonFor(name));
+              expect(button('Alice').onPressed, isNotNull);
+
+              when(
+                () => mockRankingSignalsLoader.isEligible(alice.pubkey),
+              ).thenReturn(false);
+              unawaited(blocklist.blockUser(alice.pubkey));
+              await tester.pumpAndSettle();
+
+              expect(button('Alice').onPressed, isNull);
+              expect(button('Bob').onPressed, isNotNull);
+              await tester.tap(find.text('Alice').first, warnIfMissed: false);
+              await tester.pumpAndSettle();
+              final bloc = tester
+                  .element(find.text(l10n.shareWithTitle))
+                  .read<ShareSheetBloc>();
+              expect(bloc.state.disabledPubkeys, {alice.pubkey});
+              expect(bloc.state.attemptedRecipients, isEmpty);
+              expect(find.byType(TextField), findsNothing);
+            },
+          );
+
+          testWidgets(
+            'keeps naming refused recipients through a background contact '
+            'refresh',
+            (tester) async {
+              final unknownPubkey = testPubkeyFromSeed(73);
+              final hydration = Completer<Map<String, UserProfile>>();
+              when(
+                () => mockFollowRepository.followingPubkeys,
+              ).thenReturn([unknownPubkey]);
+              when(
+                () => mockProfileRepository.fetchBatchProfiles(
+                  pubkeys: [unknownPubkey],
+                ),
+              ).thenAnswer((_) => hydration.future);
+              when(
+                () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                  video: any(named: 'video'),
+                  recipientPubkeys: any(named: 'recipientPubkeys'),
+                  personalMessage: any(named: 'personalMessage'),
+                ),
+              ).thenAnswer(
+                (_) async => {
+                  alice.pubkey: const ShareResult.failure(
+                    ShareRefusal.blocked,
+                  ),
+                },
+              );
+              await pumpOpenSheet(tester);
+
+              await tester.tap(sendButtonFor('Alice'));
+              await tester.pumpAndSettle();
+              final refusal = find.text(l10n.shareCouldNotSendTo('Alice'));
+              expect(refusal, findsOneWidget);
+
+              hydration.complete({
+                unknownPubkey: UserProfile(
+                  pubkey: unknownPubkey,
+                  createdAt: DateTime.utc(2026),
+                  eventId: 'e' * 64,
+                  rawData: const {},
+                  name: 'Carol',
+                ),
+              });
+              await tester.pumpAndSettle();
+
+              expect(find.text('Carol'), findsOneWidget);
+              expect(refusal, findsOneWidget);
+            },
+          );
+        });
 
         group('share delivery feedback', () {
           List<String> captureAnnouncements(WidgetTester tester) {
@@ -2168,7 +2276,7 @@ void main() {
               final announcements = captureAnnouncements(tester);
               stubSend({
                 alice.pubkey: const ShareResult.queued('rumor-a', 'chat-a'),
-                bob.pubkey: const ShareResult.failure('blocked'),
+                bob.pubkey: const ShareResult.failure(ShareRefusal.blocked),
               });
               await send(tester, ['Alice', 'Bob']);
               final refused = l10n.shareCouldNotSendTo('Bob');
@@ -2224,8 +2332,10 @@ void main() {
             'zero queued preserves note and selection and reports both refusals',
             (tester) async {
               stubSend({
-                alice.pubkey: const ShareResult.failure('blocked'),
-                bob.pubkey: const ShareResult.failure('refused'),
+                alice.pubkey: const ShareResult.failure(ShareRefusal.blocked),
+                bob.pubkey: const ShareResult.failure(
+                  ShareRefusal.recipientRefused,
+                ),
               });
               await send(tester, ['Alice', 'Bob'], note: 'Keep this draft');
               expect(find.text(l10n.shareWithTitle), findsOneWidget);

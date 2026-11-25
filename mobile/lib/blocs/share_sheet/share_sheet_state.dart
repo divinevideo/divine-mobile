@@ -27,15 +27,31 @@ sealed class ShareSheetActionResult {
   ShareSheetActionResult();
 }
 
+/// A send finished, with the local outcome of every attempted recipient.
+///
+/// When at least one recipient is queued the sheet hands [recipients] to the
+/// delivery banner and closes; when none is, it stays open on the draft.
 class ShareSheetEnqueueResult extends ShareSheetActionResult {
   ShareSheetEnqueueResult(this.ownerPubkey, this.recipients);
+
+  /// The account that sent the share.
   final String ownerPubkey;
+
+  /// Every attempted recipient in selection order, refused ones included.
   final List<ShareDeliveryRecipient> recipients;
+
+  /// Whether no recipient reached the outgoing queue.
+  bool get noneQueued =>
+      recipients.every((r) => r.outcome.delivery == ShareDelivery.notSent);
 }
 
+/// The account that opened the sheet is no longer the signed-in one.
+///
+/// The sheet closes; nothing it held may be sent as the new account.
 class ShareSheetAccountChanged extends ShareSheetActionResult {}
 
-/// The whole send threw before any recipient's outcome was known.
+/// The whole send threw before committing, so nothing was queued and a resend
+/// cannot duplicate a message.
 class ShareSheetSendFailure extends ShareSheetActionResult {
   ShareSheetSendFailure();
 }
@@ -88,7 +104,11 @@ class ShareSheetState extends Equatable {
     this.contacts = const [],
     List<ShareableUser> selectedRecipients = const [],
     this.disabledPubkeys = const {},
+    this.unavailablePubkeys = const {},
     this.isSending = false,
+    this.refusedRecipients = const [],
+    this.sendFailed = false,
+    this.ownerExpired = false,
     this.actionResult,
   }) : attemptedRecipients = selectedRecipients;
 
@@ -107,10 +127,32 @@ class ShareSheetState extends Equatable {
             .where((r) => !disabledPubkeys.contains(r.pubkey))
             .toList(growable: false);
 
+  /// Contacts shown but not selectable or sendable: ineligible under the
+  /// local block and mute policy, or in [unavailablePubkeys].
+  ///
+  /// A selected recipient that becomes disabled stays in
+  /// [attemptedRecipients] but leaves [selectedRecipients].
   final Set<String> disabledPubkeys;
+
+  /// The part of [disabledPubkeys] that eligibility does not decide: contacts
+  /// the ranking snapshot excluded, and rows hydration left without an
+  /// identity. Kept so an eligibility change cannot re-enable them.
+  final Set<String> unavailablePubkeys;
 
   /// Whether a send operation is in progress.
   final bool isSending;
+
+  /// Every recipient of the latest send when none of them was queued, so the
+  /// sheet keeps naming them until the selection changes or a send starts.
+  final List<ShareDeliveryRecipient> refusedRecipients;
+
+  /// Whether the latest send threw before committing, kept until the
+  /// selection changes or a send starts.
+  final bool sendFailed;
+
+  /// Whether the account that opened the sheet has gone. Once set it stays
+  /// set, and the sheet refuses every further load, selection and send.
+  final bool ownerExpired;
 
   /// One-shot action result for BlocListener consumption.
   /// Cleared on next state emission.
@@ -128,7 +170,10 @@ class ShareSheetState extends Equatable {
     List<ShareableUser>? contacts,
     List<ShareableUser>? selectedRecipients,
     Set<String>? disabledPubkeys,
+    Set<String>? unavailablePubkeys,
     bool? isSending,
+    List<ShareDeliveryRecipient>? refusedRecipients,
+    bool? sendFailed,
     ShareSheetActionResult? actionResult,
     bool clearActionResult = false,
   }) {
@@ -137,7 +182,11 @@ class ShareSheetState extends Equatable {
       contacts: contacts ?? this.contacts,
       selectedRecipients: selectedRecipients ?? attemptedRecipients,
       disabledPubkeys: disabledPubkeys ?? this.disabledPubkeys,
+      unavailablePubkeys: unavailablePubkeys ?? this.unavailablePubkeys,
       isSending: isSending ?? this.isSending,
+      refusedRecipients: refusedRecipients ?? this.refusedRecipients,
+      sendFailed: sendFailed ?? this.sendFailed,
+      ownerExpired: ownerExpired,
       actionResult: clearActionResult
           ? null
           : (actionResult ?? this.actionResult),
@@ -150,7 +199,11 @@ class ShareSheetState extends Equatable {
     contacts,
     attemptedRecipients,
     disabledPubkeys,
+    unavailablePubkeys,
     isSending,
+    refusedRecipients,
+    sendFailed,
+    ownerExpired,
     actionResult,
   ];
 }

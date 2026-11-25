@@ -21,6 +21,8 @@ import 'package:openvine/services/video_sharing_service.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:user_ranking/user_ranking.dart';
 
+import '../../helpers/test_pubkeys.dart';
+
 class _MockVideoSharingService extends Mock implements VideoSharingService {}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
@@ -55,10 +57,9 @@ void main() {
       picture: 'https://example.com/alice.png',
     );
 
-    const currentUserPubkey =
-        'facade00facade00facade00facade00facade00facade00facade00facade00';
+    final currentUserPubkey = testPubkeyFromSeed(50);
 
-    const viewerAsRecipient = ShareableUser(
+    final viewerAsRecipient = ShareableUser(
       pubkey: currentUserPubkey,
       displayName: 'Me',
       picture: 'https://example.com/me.png',
@@ -97,8 +98,7 @@ void main() {
 
       testVideo = VideoEvent(
         id: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        pubkey:
-            'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+        pubkey: testPubkeyFromSeed(51),
         createdAt: 1757385263,
         content: 'Test video',
         timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
@@ -136,18 +136,39 @@ void main() {
       rankingSignalsLoader: mockRankingSignalsLoader,
       currentUserPubkey: currentUserPubkey,
       cacheManager: cacheManager,
-      isOwnerCurrent: isOwnerCurrent,
+      isOwnerCurrent: isOwnerCurrent ?? () => true,
       eligibilityChanges: eligibilityChanges,
     );
 
-    test('initial state is correct', () async {
-      final bloc = createBloc();
-      expect(bloc.state.status, equals(ShareSheetStatus.initial));
-      expect(bloc.state.contacts, isEmpty);
-      expect(bloc.state.selectedRecipients, isEmpty);
-      expect(bloc.state.isSending, isFalse);
-      expect(bloc.state.actionResult, isNull);
-      await bloc.close();
+    group('initial state', () {
+      test('is empty before contacts load', () async {
+        final bloc = createBloc();
+        expect(bloc.state.status, equals(ShareSheetStatus.initial));
+        expect(bloc.state.contacts, isEmpty);
+        expect(bloc.state.selectedRecipients, isEmpty);
+        expect(bloc.state.isSending, isFalse);
+        expect(bloc.state.ownerExpired, isFalse);
+        expect(bloc.state.actionResult, isNull);
+        await bloc.close();
+      });
+
+      test('leaves an ineligible recent out of the first frame', () async {
+        final blocked = ShareableUser(
+          pubkey: testPubkeyFromSeed(62),
+          displayName: 'Blocked',
+        );
+        when(
+          () => mockRankingSignalsLoader.isEligible(blocked.pubkey),
+        ).thenReturn(false);
+        when(
+          () => mockSharingService.recentlySharedWith,
+        ).thenReturn([blocked, testRecipient]);
+
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+
+        expect(bloc.state.contacts, [testRecipient]);
+      });
     });
 
     // -----------------------------------------------------------------------
@@ -156,8 +177,10 @@ void main() {
 
     group('contact ranking', () {
       final alice = 'a' * 64;
-      final bob = 'b' * 64;
-      final carol = 'c' * 64;
+      // Letter-led keys: ties fall back to a missing name's pubkey, which must
+      // sort after the cached names these tests use.
+      final bob = testPubkeyFromSeed(53);
+      final carol = testPubkeyFromSeed(63);
       final dave = 'd' * 64;
 
       UserProfile profile(String key, String name) => UserProfile(
@@ -269,7 +292,7 @@ void main() {
           ).called(1);
           verify(
             () => mockProfileRepository.fetchBatchProfiles(
-              pubkeys: [alice, bob, carol, dave],
+              pubkeys: [alice, bob, carol, dave]..sort(),
             ),
           ).called(1);
         },
@@ -690,15 +713,13 @@ void main() {
       blocTest<ShareSheetBloc, ShareSheetState>(
         'ignores a Find People selection that resolves to the viewer',
         build: createBloc,
-        act: (bloc) =>
-            bloc.add(const ShareSheetRecipientToggled(viewerAsRecipient)),
+        act: (bloc) => bloc.add(ShareSheetRecipientToggled(viewerAsRecipient)),
         expect: () => <ShareSheetState>[],
       );
     });
 
     group('ShareSheetContactsLoadRequested', () {
-      const profiledFollow =
-          'cccc456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      final profiledFollow = testPubkeyFromSeed(54);
       const unprofiledFollow =
           'dddd456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
@@ -753,15 +774,17 @@ void main() {
         ],
       );
 
+      final warmFailure = Exception('local cache read failed');
       blocTest<ShareSheetBloc, ShareSheetState>(
-        'emits ready with empty contacts on error',
+        'a failed recents warm still emits ready and is not a crash report',
         setUp: () {
-          when(() => mockSharingService.warmRecents(any()))
-              .thenThrow(Exception('local cache read failed'));
+          when(
+            () => mockSharingService.warmRecents(any()),
+          ).thenThrow(warmFailure);
         },
         build: createBloc,
         act: (bloc) => bloc.add(const ShareSheetContactsLoadRequested()),
-        errors: () => [isA<Exception>()],
+        errors: () => [same(warmFailure)],
         expect: () => [
           isA<ShareSheetState>().having(
             (s) => s.status,
@@ -769,6 +792,34 @@ void main() {
             ShareSheetStatus.loading,
           ),
           const ShareSheetState(status: ShareSheetStatus.ready),
+        ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'a contact-load failure keeps the recents already on screen',
+        setUp: () {
+          when(
+            () => mockSharingService.recentlySharedWith,
+          ).thenReturn([testRecipient]);
+          when(
+            () => mockFollowRepository.followingPubkeys,
+          ).thenReturn([unprofiledFollow]);
+          when(
+            () => mockProfileRepository.getCachedProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenThrow(Exception('profile cache read failed'));
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetContactsLoadRequested()),
+        errors: () => [isA<Reportable<Object>>()],
+        expect: () => [
+          isA<ShareSheetState>()
+              .having((s) => s.status, 'status', ShareSheetStatus.loading)
+              .having((s) => s.contacts, 'seeded', [testRecipient]),
+          isA<ShareSheetState>()
+              .having((s) => s.status, 'status', ShareSheetStatus.ready)
+              .having((s) => s.contacts, 'kept', [testRecipient]),
         ],
       );
 
@@ -910,9 +961,9 @@ void main() {
           bloc.add(const ShareSheetContactsLoadRequested());
           await pumpEventQueue();
           bloc.add(
-            const ShareSheetRecipientToggled(
+            ShareSheetRecipientToggled(
               ShareableUser(
-                pubkey: 'zzzz56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+                pubkey: testPubkeyFromSeed(55),
                 displayName: 'Picked Stranger',
               ),
             ),
@@ -978,9 +1029,9 @@ void main() {
           bloc.add(const ShareSheetContactsLoadRequested());
           await pumpEventQueue();
           bloc.add(
-            const ShareSheetRecipientToggled(
+            ShareSheetRecipientToggled(
               ShareableUser(
-                pubkey: 'zzzz56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+                pubkey: testPubkeyFromSeed(55),
                 displayName: 'Picked Stranger',
               ),
             ),
@@ -1052,15 +1103,15 @@ void main() {
         },
         build: createBloc,
         act: (bloc) async {
-          const picked = ShareableUser(
-            pubkey: 'zzzz56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          final picked = ShareableUser(
+            pubkey: testPubkeyFromSeed(55),
             displayName: 'Picked Stranger',
           );
           bloc.add(const ShareSheetContactsLoadRequested());
           await pumpEventQueue();
-          bloc.add(const ShareSheetRecipientToggled(picked));
+          bloc.add(ShareSheetRecipientToggled(picked));
           await pumpEventQueue();
-          bloc.add(const ShareSheetRecipientToggled(picked));
+          bloc.add(ShareSheetRecipientToggled(picked));
           await pumpEventQueue();
           hydration.complete({
             profiledFollow: UserProfile(
@@ -1128,19 +1179,19 @@ void main() {
         },
         build: createBloc,
         act: (bloc) async {
-          const firstPicked = ShareableUser(
-            pubkey: 'yyyy56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          final firstPicked = ShareableUser(
+            pubkey: testPubkeyFromSeed(56),
             displayName: 'Picked First',
           );
-          const secondPicked = ShareableUser(
-            pubkey: 'zzzz56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          final secondPicked = ShareableUser(
+            pubkey: testPubkeyFromSeed(55),
             displayName: 'Picked Second',
           );
           bloc.add(const ShareSheetContactsLoadRequested());
           await pumpEventQueue();
-          bloc.add(const ShareSheetRecipientToggled(firstPicked));
+          bloc.add(ShareSheetRecipientToggled(firstPicked));
           await pumpEventQueue();
-          bloc.add(const ShareSheetRecipientToggled(secondPicked));
+          bloc.add(ShareSheetRecipientToggled(secondPicked));
           await pumpEventQueue();
           hydration.complete({
             profiledFollow: UserProfile(
@@ -1497,7 +1548,7 @@ void main() {
       final longContactRow = List.generate(
         40,
         (index) => ShareableUser(
-          pubkey: (index + 1).toRadixString(16).padLeft(64, '0'),
+          pubkey: testPubkeyFromSeed(index + 100),
           displayName: 'Contact $index',
         ),
       );
@@ -1545,6 +1596,87 @@ void main() {
               .having((s) => s.contacts.map((c) => c.pubkey), 'contacts', [
                 otherRecipient.pubkey,
                 testRecipient.pubkey,
+              ]),
+        ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'is refused while a send is in flight',
+        seed: () => const ShareSheetState(
+          status: ShareSheetStatus.ready,
+          contacts: [testRecipient, otherRecipient],
+          selectedRecipients: [testRecipient],
+          isSending: true,
+        ),
+        build: createBloc,
+        act: (bloc) =>
+            bloc.add(const ShareSheetRecipientToggled(otherRecipient)),
+        expect: () => <ShareSheetState>[],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'still removes a pick that became disabled',
+        setUp: () {
+          when(
+            () => mockRankingSignalsLoader.isEligible(testRecipient.pubkey),
+          ).thenReturn(false);
+        },
+        seed: () => ShareSheetState(
+          status: ShareSheetStatus.ready,
+          contacts: const [testRecipient, otherRecipient],
+          selectedRecipients: const [testRecipient],
+          disabledPubkeys: {testRecipient.pubkey},
+        ),
+        build: createBloc,
+        act: (bloc) =>
+            bloc.add(const ShareSheetRecipientToggled(testRecipient)),
+        expect: () => [
+          isA<ShareSheetState>().having(
+            (s) => s.attemptedRecipients,
+            'attempted',
+            isEmpty,
+          ),
+        ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'does not select a disabled contact that is not picked',
+        seed: () => ShareSheetState(
+          status: ShareSheetStatus.ready,
+          contacts: const [testRecipient, otherRecipient],
+          disabledPubkeys: {otherRecipient.pubkey},
+        ),
+        build: createBloc,
+        act: (bloc) =>
+            bloc.add(const ShareSheetRecipientToggled(otherRecipient)),
+        expect: () => <ShareSheetState>[],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'clears the outcome of the previous send',
+        seed: () => ShareSheetState(
+          status: ShareSheetStatus.ready,
+          contacts: const [testRecipient, otherRecipient],
+          selectedRecipients: const [testRecipient],
+          refusedRecipients: [
+            (
+              pubkey: testRecipient.pubkey,
+              name: 'Alice',
+              outcome: const ShareResult.failure(ShareRefusal.blocked),
+            ),
+          ],
+          sendFailed: true,
+        ),
+        build: createBloc,
+        act: (bloc) =>
+            bloc.add(const ShareSheetRecipientToggled(otherRecipient)),
+        expect: () => [
+          isA<ShareSheetState>()
+              .having((s) => s.refusedRecipients, 'refused', isEmpty)
+              .having((s) => s.sendFailed, 'send failed', isFalse)
+              .having((s) => s.selectedRecipients, 'selection', [
+                testRecipient,
+                otherRecipient,
               ]),
         ],
       );
@@ -1759,7 +1891,9 @@ void main() {
           setUp: () => stubMultiSend({
             testRecipient.pubkey: const ShareResult.queued('rumor-a', 'chat-a'),
             if (!missing)
-              otherRecipient.pubkey: const ShareResult.failure('blocked'),
+              otherRecipient.pubkey: const ShareResult.failure(
+                ShareRefusal.blocked,
+              ),
           }),
           seed: () => twoSelected,
           build: createBloc,
@@ -1796,8 +1930,12 @@ void main() {
       blocTest<ShareSheetBloc, ShareSheetState>(
         'keeps every selected recipient when zero rows are queued',
         setUp: () => stubMultiSend({
-          testRecipient.pubkey: const ShareResult.failure('refused'),
-          otherRecipient.pubkey: const ShareResult.failure('refused'),
+          testRecipient.pubkey: const ShareResult.failure(
+            ShareRefusal.recipientRefused,
+          ),
+          otherRecipient.pubkey: const ShareResult.failure(
+            ShareRefusal.blocked,
+          ),
         }),
         seed: () => twoSelected,
         build: createBloc,
@@ -1809,6 +1947,11 @@ void main() {
                 (s) => s.selectedRecipients,
                 'selection',
                 twoSelected.selectedRecipients,
+              )
+              .having(
+                (s) => s.refusedRecipients.map((r) => r.outcome.refusal),
+                'lasting refusals',
+                [ShareRefusal.recipientRefused, ShareRefusal.blocked],
               )
               .having(
                 (s) => s.actionResult,
@@ -1872,6 +2015,7 @@ void main() {
           ),
           isA<ShareSheetState>()
               .having((s) => s.isSending, 'isSending', isFalse)
+              .having((s) => s.sendFailed, 'sendFailed', isTrue)
               .having((s) => s.selectedRecipients, 'selection preserved', [
                 testRecipient,
               ])
@@ -1935,6 +2079,358 @@ void main() {
         build: createBloc,
         act: (bloc) => bloc.add(const ShareSheetSendRequested()),
         expect: () => <ShareSheetState>[],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'a row Send is ignored while a selection exists',
+        seed: () => const ShareSheetState(
+          status: ShareSheetStatus.ready,
+          contacts: [testRecipient, otherRecipient],
+          selectedRecipients: [testRecipient],
+        ),
+        build: createBloc,
+        act: (bloc) =>
+            bloc.add(const ShareSheetSendRequested(only: otherRecipient)),
+        expect: () => <ShareSheetState>[],
+        verify: (_) => verifyNever(
+          () => mockSharingService.shareVideoWithMultipleUsers(
+            video: any(named: 'video'),
+            recipientPubkeys: any(named: 'recipientPubkeys'),
+            personalMessage: any(named: 'personalMessage'),
+          ),
+        ),
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'a row Send is ignored while a message is typed',
+        seed: () => const ShareSheetState(
+          status: ShareSheetStatus.ready,
+          contacts: [testRecipient],
+        ),
+        build: createBloc,
+        act: (bloc) => bloc.add(
+          const ShareSheetSendRequested(only: testRecipient, message: ' hi '),
+        ),
+        expect: () => <ShareSheetState>[],
+        verify: (_) => verifyNever(
+          () => mockSharingService.shareVideoWithMultipleUsers(
+            video: any(named: 'video'),
+            recipientPubkeys: any(named: 'recipientPubkeys'),
+            personalMessage: any(named: 'personalMessage'),
+          ),
+        ),
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'leaves out a recipient made ineligible after the last refresh',
+        setUp: () {
+          // No eligibility event fires: the send re-checks on its own.
+          when(
+            () => mockRankingSignalsLoader.isEligible(otherRecipient.pubkey),
+          ).thenReturn(false);
+          stubMultiSend({
+            testRecipient.pubkey: const ShareResult.queued('rumor-a', 'chat-a'),
+          });
+        },
+        seed: () => twoSelected,
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetSendRequested()),
+        skip: 1,
+        expect: () => [
+          isA<ShareSheetState>().having(
+            (s) => s.actionResult,
+            'outcomes',
+            isA<ShareSheetEnqueueResult>().having(
+              (r) => r.recipients.map((p) => p.outcome.refusal),
+              'refusals',
+              [null, ShareRefusal.unavailable],
+            ),
+          ),
+        ],
+        verify: (_) => verify(
+          () => mockSharingService.shareVideoWithMultipleUsers(
+            video: testVideo,
+            recipientPubkeys: [testRecipient.pubkey],
+          ),
+        ).called(1),
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'leaves out a disabled recipient even while it is eligible',
+        setUp: () => stubMultiSend({
+          testRecipient.pubkey: const ShareResult.queued('rumor-a', 'chat-a'),
+        }),
+        seed: () => ShareSheetState(
+          status: ShareSheetStatus.ready,
+          selectedRecipients: const [testRecipient, otherRecipient],
+          disabledPubkeys: {otherRecipient.pubkey},
+          unavailablePubkeys: {otherRecipient.pubkey},
+        ),
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetSendRequested()),
+        verify: (_) => verify(
+          () => mockSharingService.shareVideoWithMultipleUsers(
+            video: testVideo,
+            recipientPubkeys: [testRecipient.pubkey],
+          ),
+        ).called(1),
+      );
+
+      test(
+        'an all-refused send stays named through a background contact '
+        'refresh, until the next send starts',
+        () async {
+          final hydration = Completer<Map<String, UserProfile>>();
+          final unprofiled = testPubkeyFromSeed(57);
+          when(
+            () => mockSharingService.recentlySharedWith,
+          ).thenReturn([testRecipient]);
+          when(
+            () => mockFollowRepository.followingPubkeys,
+          ).thenReturn([unprofiled]);
+          when(
+            () => mockProfileRepository.fetchBatchProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenAnswer((_) => hydration.future);
+          stubMultiSend({
+            testRecipient.pubkey: const ShareResult.failure(
+              ShareRefusal.blocked,
+            ),
+          });
+          final sheet = createBloc();
+          addTearDown(sheet.close);
+          sheet.add(const ShareSheetContactsLoadRequested());
+          await sheet.stream.firstWhere(
+            (s) => s.status == ShareSheetStatus.ready,
+          );
+          sheet.add(const ShareSheetSendRequested(only: testRecipient));
+          final refused = await sheet.stream.firstWhere(
+            (s) => s.actionResult is ShareSheetEnqueueResult,
+          );
+          expect(refused.refusedRecipients.map((r) => r.name), ['Alice']);
+
+          hydration.complete({
+            unprofiled: UserProfile(
+              pubkey: unprofiled,
+              createdAt: DateTime.utc(2026),
+              eventId: 'e' * 64,
+              rawData: const {},
+              name: 'Hydrated',
+            ),
+          });
+          final refreshed = await sheet.stream.firstWhere(
+            (s) => s.contacts.any((c) => c.displayName == 'Hydrated'),
+          );
+          expect(refreshed.actionResult, isNull);
+          expect(refreshed.refusedRecipients.map((r) => r.name), ['Alice']);
+
+          final starting = sheet.stream.first;
+          sheet.add(const ShareSheetSendRequested());
+          final sending = await starting;
+          expect(sending.isSending, isTrue);
+          expect(sending.refusedRecipients, isEmpty);
+        },
+      );
+    });
+
+    group('ShareSheetEligibilityChanged', () {
+      const otherRecipient = ShareableUser(
+        pubkey:
+            'bbbb456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        displayName: 'Bob',
+      );
+
+      test(
+        'keeps excluded and identity-less contacts disabled when a block '
+        'changes',
+        () async {
+          final changes = StreamController<void>.broadcast(sync: true);
+          addTearDown(changes.close);
+          final named = testPubkeyFromSeed(58);
+          final nameless = testPubkeyFromSeed(59);
+          final excluded = testPubkeyFromSeed(60);
+          final trailing = testPubkeyFromSeed(61);
+          when(
+            () => mockSharingService.recentlySharedWith,
+          ).thenReturn([ShareableUser(pubkey: excluded, displayName: 'Old')]);
+          when(
+            () => mockFollowRepository.followingPubkeys,
+          ).thenReturn([nameless, named, trailing]);
+          // Successful signals that leave the old recent out.
+          when(
+            () => mockRankingSignalsLoader.load(
+              any(),
+              includeDmCounterparts: true,
+            ),
+          ).thenAnswer(
+            (_) async => {
+              nameless: UserRankingSignals(
+                pubkey: nameless,
+                lastInteractionAt: DateTime.utc(2026, 1, 3),
+              ),
+              named: UserRankingSignals(
+                pubkey: named,
+                lastInteractionAt: DateTime.utc(2026, 1, 2),
+              ),
+              trailing: UserRankingSignals(
+                pubkey: trailing,
+                lastInteractionAt: DateTime.utc(2026),
+              ),
+            },
+          );
+          when(
+            () => mockProfileRepository.fetchBatchProfiles(
+              pubkeys: any(named: 'pubkeys'),
+            ),
+          ).thenAnswer(
+            (_) async => {
+              named: UserProfile(
+                pubkey: named,
+                createdAt: DateTime.utc(2026),
+                eventId: 'e' * 64,
+                rawData: const {},
+                name: 'Named',
+              ),
+            },
+          );
+          final sheet = createBloc(eligibilityChanges: changes.stream);
+          addTearDown(sheet.close);
+          sheet.add(const ShareSheetContactsLoadRequested());
+          final hydrated = await sheet.stream.firstWhere(
+            (s) => s.contacts.any((c) => c.displayName == 'Named'),
+          );
+          // The trailing miss is dropped; the leading one keeps its slot.
+          expect(hydrated.contacts.map((c) => c.pubkey), [
+            excluded,
+            nameless,
+            named,
+          ]);
+          expect(hydrated.disabledPubkeys, {excluded, nameless});
+
+          changes.add(null);
+          await pumpEventQueue();
+
+          expect(sheet.state.contacts, hydrated.contacts);
+          expect(sheet.state.disabledPubkeys, {excluded, nameless});
+        },
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        're-checks eligibility for every contact',
+        setUp: () {
+          when(
+            () => mockRankingSignalsLoader.isEligible(otherRecipient.pubkey),
+          ).thenReturn(false);
+        },
+        seed: () => const ShareSheetState(
+          status: ShareSheetStatus.ready,
+          contacts: [testRecipient, otherRecipient],
+        ),
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetEligibilityChanged()),
+        expect: () => [
+          isA<ShareSheetState>().having(
+            (s) => s.disabledPubkeys,
+            'disabled',
+            {otherRecipient.pubkey},
+          ),
+        ],
+      );
+    });
+
+    group('ShareSheetOwnerChanged', () {
+      const otherRecipient = ShareableUser(
+        pubkey:
+            'bbbb456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        displayName: 'Bob',
+      );
+
+      late StreamController<void> changes;
+      late Set<String> hidden;
+
+      setUp(() {
+        changes = StreamController<void>.broadcast(sync: true);
+        hidden = {};
+        when(() => mockRankingSignalsLoader.isEligible(any())).thenAnswer(
+          (call) => !hidden.contains(call.positionalArguments.single),
+        );
+        when(
+          () => mockSharingService.recentlySharedWith,
+        ).thenReturn([testRecipient, otherRecipient]);
+      });
+
+      tearDown(() => changes.close());
+
+      /// A sheet showing the old owner's recents, with one selected and one
+      /// disabled.
+      Future<ShareSheetBloc> openSheet({
+        bool Function()? isOwnerCurrent,
+      }) async {
+        final sheet = createBloc(
+          isOwnerCurrent: isOwnerCurrent,
+          eligibilityChanges: changes.stream,
+        );
+        addTearDown(sheet.close);
+        expect(sheet.state.contacts, [testRecipient, otherRecipient]);
+        sheet.add(const ShareSheetRecipientToggled(testRecipient));
+        await sheet.stream.firstWhere((s) => s.attemptedRecipients.isNotEmpty);
+        hidden.add(otherRecipient.pubkey);
+        changes.add(null);
+        await sheet.stream.firstWhere((s) => s.disabledPubkeys.isNotEmpty);
+        return sheet;
+      }
+
+      void expectExpired(ShareSheetState state) {
+        expect(state.ownerExpired, isTrue);
+        expect(state.actionResult, isA<ShareSheetAccountChanged>());
+        expect(state.contacts, isEmpty);
+        expect(state.attemptedRecipients, isEmpty);
+        expect(state.disabledPubkeys, isEmpty);
+      }
+
+      test('drops the old owner recents, selection and disabled set', () async {
+        final sheet = await openSheet();
+
+        sheet.add(const ShareSheetOwnerChanged());
+        await pumpEventQueue();
+
+        expectExpired(sheet.state);
+      });
+
+      test('an owner that stops being current expires the same way', () async {
+        var current = true;
+        final sheet = await openSheet(isOwnerCurrent: () => current);
+
+        current = false;
+        sheet.add(const ShareSheetEligibilityChanged());
+        await pumpEventQueue();
+
+        expectExpired(sheet.state);
+      });
+
+      test(
+        'stays expired even if the old owner reads as current again',
+        () async {
+          final sheet = await openSheet();
+          sheet.add(const ShareSheetOwnerChanged());
+          await pumpEventQueue();
+
+          sheet.add(const ShareSheetRecipientToggled(testRecipient));
+          await pumpEventQueue();
+          expect(sheet.state.attemptedRecipients, isEmpty);
+
+          sheet.add(const ShareSheetSendRequested(only: testRecipient));
+          await pumpEventQueue();
+          expect(sheet.state.actionResult, isA<ShareSheetAccountChanged>());
+          verifyNever(
+            () => mockSharingService.shareVideoWithMultipleUsers(
+              video: any(named: 'video'),
+              recipientPubkeys: any(named: 'recipientPubkeys'),
+              personalMessage: any(named: 'personalMessage'),
+            ),
+          );
+        },
       );
     });
 

@@ -36,8 +36,11 @@ class ShareSheetRecipientToggled extends ShareSheetEvent {
 class ShareSheetSendRequested extends ShareSheetEvent {
   const ShareSheetSendRequested({this.message, this.only});
 
+  /// A single contact's row Send: sends to just them, and only while nothing
+  /// is selected and no message is typed.
   final ShareableUser? only;
 
+  /// The optional note sent with the video; blank is sent as none.
   final String? message;
 
   @override
@@ -59,6 +62,10 @@ class ShareSheetEligibilityChanged extends ShareSheetEvent {
   const ShareSheetEligibilityChanged();
 }
 
+/// The signed-in account changed or its session is being torn down.
+///
+/// Clears every contact and selection and closes the sheet; the bloc then
+/// refuses all further work for the old account.
 class ShareSheetOwnerChanged extends ShareSheetEvent {
   const ShareSheetOwnerChanged();
 }

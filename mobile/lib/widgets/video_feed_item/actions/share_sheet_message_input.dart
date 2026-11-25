@@ -93,7 +93,7 @@ class _SendButton extends StatelessWidget {
                     color: VineTheme.onPrimary,
                   ),
                 )
-              // Center loosens the Container's tight 40x40 constraints —
+              // Center loosens the Container's tight 48x48 constraints —
               // without it the SvgPicture is forced to fill the circle and
               // the size below is silently ignored. The arrow glyph fills
               // only ~66%x78% of its SVG viewBox, so 28 renders a ~18x22pt

@@ -371,10 +371,8 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     final messenger = ScaffoldMessenger.of(context);
 
     switch (result) {
-      case ShareSheetEnqueueResult(:final recipients):
-        if (recipients.every(
-          (r) => r.outcome.delivery == ShareDelivery.notSent,
-        )) {
+      case ShareSheetEnqueueResult(:final recipients, :final noneQueued):
+        if (noneQueued) {
           _announceFailure(
             context,
             recipients
@@ -579,17 +577,15 @@ class _UnifiedShareSheetView extends StatelessWidget {
               builder: (context, state) {
                 final bloc = context.read<ShareSheetBloc>();
 
-                final error = switch (state.actionResult) {
-                  ShareSheetSendFailure() => context.l10n.shareFailedToSend,
-                  ShareSheetEnqueueResult(:final recipients)
-                      when recipients.every(
-                        (r) => r.outcome.delivery == ShareDelivery.notSent,
-                      ) =>
-                    recipients
-                        .map((r) => context.l10n.shareCouldNotSendTo(r.name))
-                        .join('\n'),
-                  _ => null,
-                };
+                // Read from lasting fields, not the one-off actionResult that
+                // a background contact refresh clears.
+                final error = state.sendFailed
+                    ? context.l10n.shareFailedToSend
+                    : state.refusedRecipients.isEmpty
+                    ? null
+                    : state.refusedRecipients
+                          .map((r) => context.l10n.shareCouldNotSendTo(r.name))
+                          .join('\n');
                 final content = Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,

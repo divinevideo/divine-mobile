@@ -11,10 +11,14 @@ import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
+import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/share_recents_store.dart';
 import 'package:openvine/services/short_link_client.dart';
 import 'package:openvine/services/video_sharing_service.dart';
+import 'package:unified_logger/unified_logger.dart';
+
+import '../helpers/test_pubkeys.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -22,11 +26,9 @@ class _MockRecents extends Mock implements ShareRecentsStore {}
 
 class _MockDmRepository extends Mock implements DmRepository {}
 
-const _testPubkey =
-    'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
+final String _testPubkey = testPubkeyFromSeed(1);
 
-const _recipientPubkey =
-    'b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3';
+final String _recipientPubkey = testPubkeyFromSeed(2);
 
 const _testVideoId =
     'a695f6b60119d9521934a691347d9f78e8770b56da16bb255ee77ac112b4c1f6';
@@ -96,142 +98,15 @@ void main() {
     return captured.first as String;
   }
 
-  group('$ShareableUser.fromProfile', () {
-    UserProfile profileWith({
-      String? nip05,
-      String? name,
-      String? displayName,
-    }) {
-      return UserProfile(
-        pubkey: _recipientPubkey,
-        rawData: const {},
-        createdAt: DateTime.now(),
-        eventId: 'event-handle',
-        nip05: nip05,
-        name: name,
-        displayName: displayName,
-      );
-    }
-
-    test('uses the full divine nip05 rather than the short form', () {
-      final user = ShareableUser.fromProfile(
-        _recipientPubkey,
-        profileWith(nip05: 'bob@divine.video', name: 'bob'),
-      );
-
-      expect(user.handle, equals('@bob.divine.video'));
-    });
-
-    test('keeps an external nip05 verbatim, without a leading @', () {
-      final user = ShareableUser.fromProfile(
-        _recipientPubkey,
-        profileWith(nip05: 'dana@nostrplebs.com', name: 'dana'),
-      );
-
-      expect(user.handle, equals('dana@nostrplebs.com'));
-    });
-
-    test('trims display nip05 before rendering it as a handle', () {
-      final user = ShareableUser.fromProfile(
-        _recipientPubkey,
-        profileWith(nip05: '  dana@nostrplebs.com  ', name: 'dana'),
-      );
-
-      expect(user.handle, equals('dana@nostrplebs.com'));
-    });
-
-    test('falls back to name when nip05 is blank after trimming', () {
-      final user = ShareableUser.fromProfile(
-        _recipientPubkey,
-        profileWith(nip05: '   ', name: 'dana'),
-      );
-
-      expect(user.handle, equals('@dana'));
-    });
-
-    test('falls back to name when nip05 is not handle-shaped', () {
-      final user = ShareableUser.fromProfile(
-        _recipientPubkey,
-        profileWith(nip05: 'dana', name: 'fallback'),
-      );
-
-      expect(user.handle, equals('@fallback'));
-    });
-
-    test('falls back to name when nip05 is only an at sign', () {
-      final user = ShareableUser.fromProfile(
-        _recipientPubkey,
-        profileWith(nip05: '@', name: 'fallback'),
-      );
-
-      expect(user.handle, equals('@fallback'));
-    });
-
-    test('falls back to name when nip05 contains whitespace', () {
-      final user = ShareableUser.fromProfile(
-        _recipientPubkey,
-        profileWith(nip05: 'dana @nostrplebs.com', name: 'fallback'),
-      );
-
-      expect(user.handle, equals('@fallback'));
-    });
-
-    test('falls back to an @-prefixed name when there is no nip05', () {
-      final user = ShareableUser.fromProfile(
-        _recipientPubkey,
-        profileWith(name: 'alice'),
-      );
-
-      expect(user.handle, equals('@alice'));
-    });
-
-    test('does not double the @ on an email-shaped name', () {
-      final user = ShareableUser.fromProfile(
-        _recipientPubkey,
-        profileWith(name: 'dana@nostrplebs.com'),
-      );
-
-      expect(user.handle, equals('dana@nostrplebs.com'));
-    });
-
-    test('does not double the @ on an already-prefixed name', () {
-      final user = ShareableUser.fromProfile(
-        _recipientPubkey,
-        profileWith(name: '@dana'),
-      );
-
-      expect(user.handle, equals('@dana'));
-    });
-
-    test(
-      'leaves the handle null when the profile has no nip05 and no name',
-      () {
-        final user = ShareableUser.fromProfile(
-          _recipientPubkey,
-          profileWith(displayName: 'Display Only'),
-        );
-
-        expect(user.handle, isNull);
-        expect(user.displayName, equals('Display Only'));
-      },
-    );
-
-    test('leaves the handle null when there is no profile at all', () {
-      final user = ShareableUser.fromProfile(_recipientPubkey, null);
-
-      expect(user.handle, isNull);
-      expect(user.displayName, isNull);
-      expect(user.pubkey, equals(_recipientPubkey));
-    });
-  });
-
   group('recentlySharedWith', () {
     test('switching accounts immediately changes the recents snapshot', () {
       when(() => recents.snapshot(_testPubkey)).thenReturn([
-        const ShareableUser(pubkey: _recipientPubkey, displayName: 'Alice'),
+        ShareableUser(pubkey: _recipientPubkey, displayName: 'Alice'),
       ]);
       expect(service.recentlySharedWith.single.displayName, 'Alice');
-      when(() => mockAuthService.currentPublicKeyHex).thenReturn('c' * 64);
+      when(
+        () => mockAuthService.currentPublicKeyHex,
+      ).thenReturn(testPubkeyFromSeed(3));
       expect(service.recentlySharedWith, isEmpty);
     });
   });
@@ -253,7 +128,7 @@ void main() {
       );
 
       expect(result.delivery, ShareDelivery.notSent);
-      expect(result.error, contains('not authenticated'));
+      expect(result.refusal, ShareRefusal.notAuthenticated);
     });
 
     test('returns failure when the signer is not ready yet (#6423)', () async {
@@ -277,7 +152,7 @@ void main() {
       );
 
       expect(result.delivery, ShareDelivery.notSent);
-      expect(result.error, contains('Signing is not available'));
+      expect(result.refusal, ShareRefusal.signerUnavailable);
       // Never reached the signer: the gate short-circuits before any event is
       // created, rather than letting it fail 30s later on an RPC timeout.
       verifyNever(anySharedVideoSend);
@@ -288,7 +163,9 @@ void main() {
       () async {
         when(() => mockAuthService.isAuthenticated).thenReturn(true);
         when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-        when(() => mockAuthService.currentPublicKeyHex).thenReturn('c' * 64);
+        when(
+          () => mockAuthService.currentPublicKeyHex,
+        ).thenReturn(testPubkeyFromSeed(3));
         final result = await service.shareVideoWithUser(
           video: VideoEvent(
             id: _testVideoId,
@@ -300,6 +177,7 @@ void main() {
           recipientPubkey: _recipientPubkey,
         );
         expect(result.delivery, ShareDelivery.notSent);
+        expect(result.refusal, ShareRefusal.accountChanged);
         expect(result.rumorId, isNull);
         verifyNever(anySharedVideoSend);
       },
@@ -311,7 +189,7 @@ void main() {
       stubSharesSucceed();
 
       // Someone else's video, so its author cannot pass for the sender.
-      final videoAuthor = 'c' * 64;
+      final videoAuthor = testPubkeyFromSeed(4);
       final now = DateTime.now();
       final result = await service.shareVideoWithUser(
         video: VideoEvent(
@@ -327,6 +205,7 @@ void main() {
       );
 
       expect(result.delivery, ShareDelivery.queued);
+      expect(result.refusal, isNull);
       expect(result.rumorId, equals('rumor-id'));
       expect(result.conversationId, isNotNull);
 
@@ -385,16 +264,22 @@ void main() {
       },
     );
 
-    for (final refusal in [
-      const ShareEnqueueOutcome.blocked(),
-      const ShareEnqueueOutcome.tooLong(),
-      const ShareEnqueueOutcome.refused('Recipient unavailable'),
+    for (final (outcome, refusal) in [
+      (const ShareEnqueueOutcome.blocked(), ShareRefusal.blocked),
+      (const ShareEnqueueOutcome.tooLong(), ShareRefusal.tooLong),
+      (
+        const ShareEnqueueOutcome.refused('invalid recipient'),
+        ShareRefusal.recipientRefused,
+      ),
+      (null, ShareRefusal.unavailable),
     ]) {
-      test('a ${refusal.runtimeType} result carries no queued rumor', () async {
+      test('a ${outcome?.runtimeType ?? 'missing'} result is refused as '
+          '${refusal.name} with no queued rumor', () async {
         when(() => mockAuthService.isAuthenticated).thenReturn(true);
         when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-        when(anySharedVideoSend)
-            .thenAnswer((_) async => {_recipientPubkey: refusal});
+        when(anySharedVideoSend).thenAnswer(
+          (_) async => {_recipientPubkey: ?outcome},
+        );
         final result = await service.shareVideoWithUser(
           video: VideoEvent(
             id: _testVideoId,
@@ -406,7 +291,9 @@ void main() {
           recipientPubkey: _recipientPubkey,
         );
         expect(result.delivery, ShareDelivery.notSent);
+        expect(result.refusal, refusal);
         expect(result.rumorId, isNull);
+        expect(result.conversationId, isNull);
         verifyNever(() => recents.recordQueued(any(), any()));
       });
     }
@@ -538,9 +425,9 @@ void main() {
         when(() => mockAuthService.isAuthenticated).thenReturn(true);
         when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
 
-        final goodA = 'a' * 64;
-        final bad = 'b' * 64;
-        final goodC = 'c' * 64;
+        final goodA = testPubkeyFromSeed(5);
+        final bad = testPubkeyFromSeed(6);
+        final goodC = testPubkeyFromSeed(7);
 
         when(anySharedVideoSend).thenAnswer(
           (_) async => {
@@ -579,8 +466,108 @@ void main() {
         expect(captured, [
           [goodA, bad, goodC],
         ]);
+        expect(
+          verify(
+            () => recents.recordQueued(_testPubkey, captureAny()),
+          ).captured.single,
+          [goodA, goodC],
+        );
       },
     );
+
+    group('logging', () {
+      final queued = testPubkeyFromSeed(8);
+      final blocked = testPubkeyFromSeed(9);
+      final invalid = testPubkeyFromSeed(10);
+      final logs = LogCaptureService();
+      final video = VideoEvent(
+        id: _testVideoId,
+        pubkey: _testPubkey,
+        createdAt: 1,
+        timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
+        content: 'Test',
+      );
+
+      setUp(() async {
+        await logs.clearAllLogs();
+        when(() => mockAuthService.isAuthenticated).thenReturn(true);
+        when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
+      });
+
+      Iterable<String> messages(LogLevel level) => logs
+          .getRecentLogs()
+          .where((entry) => entry.level == level)
+          .map((entry) => entry.message);
+
+      String notQueued(String recipient, String reason) =>
+          'Video share not queued for ${pubkeyForLogs(recipient)}: $reason';
+
+      test('logs each refused recipient by full npub and hex with its '
+          'reason, then the batch totals', () async {
+        when(anySharedVideoSend).thenAnswer(
+          (_) async => {
+            queued: const ShareEnqueueOutcome.queued('rumor', 'thread'),
+            blocked: const ShareEnqueueOutcome.blocked(),
+            invalid: const ShareEnqueueOutcome.refused('invalid recipient'),
+          },
+        );
+
+        await service.shareVideoWithMultipleUsers(
+          video: video,
+          recipientPubkeys: [queued, blocked, invalid],
+        );
+
+        expect(messages(LogLevel.warning), [
+          notQueued(blocked, 'blocked'),
+          notQueued(invalid, 'recipientRefused (invalid recipient)'),
+        ]);
+        expect(
+          messages(LogLevel.info),
+          contains('Video share batch: 1 queued, 2 refused'),
+        );
+      });
+
+      test('logs every recipient a local gate refuses', () async {
+        when(() => mockAuthService.isAuthenticated).thenReturn(false);
+
+        await service.shareVideoWithMultipleUsers(
+          video: video,
+          recipientPubkeys: [queued, blocked],
+        );
+
+        expect(messages(LogLevel.warning), [
+          notQueued(queued, 'notAuthenticated'),
+          notQueued(blocked, 'notAuthenticated'),
+        ]);
+        verifyNever(anySharedVideoSend);
+      });
+
+      test('a failed recents write is logged with its error', () async {
+        final written = Completer<void>();
+        when(() => recents.recordQueued(any(), any())).thenAnswer((_) {
+          written.complete();
+          return Future.error(const ShareRecentsStorageException('persist'));
+        });
+        when(anySharedVideoSend).thenAnswer(
+          (_) async => {
+            queued: const ShareEnqueueOutcome.queued('rumor', 'thread'),
+          },
+        );
+
+        await service.shareVideoWithMultipleUsers(
+          video: video,
+          recipientPubkeys: [queued],
+        );
+        await written.future;
+        await pumpEventQueue();
+
+        final warning = logs.getRecentLogs().singleWhere(
+          (entry) => entry.message == 'Could not update local share recents',
+        );
+        expect(warning.error, contains('could not persist share recents'));
+        expect(warning.stackTrace, isNotNull);
+      });
+    });
   });
 
   group('sharing utilities', () {

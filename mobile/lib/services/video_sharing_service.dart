@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:dm_repository/dm_repository.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/models/shareable_user.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/share_recents_store.dart';
@@ -21,19 +22,61 @@ typedef ShareData = ({String shareUrl, String? title, String? thumbnailUrl});
 /// Local enqueue outcome. Recipient-route acceptance is observed separately.
 enum ShareDelivery { queued, notSent }
 
+/// Why a video share was not queued for one recipient.
+enum ShareRefusal {
+  /// No account is signed in.
+  notAuthenticated,
+
+  /// The account cannot sign yet, for example while a remote signer connects.
+  signerUnavailable,
+
+  /// The signed-in account changed before the batch was queued.
+  accountChanged,
+
+  /// The recipient fails the current outbound block or mute policy.
+  blocked,
+
+  /// The share is longer than one gift wrap can carry.
+  tooLong,
+
+  /// The DM repository refused the recipient before queueing: an invalid key,
+  /// the sender themselves, or another local rule. The log carries the detail.
+  recipientRefused,
+
+  /// The recipient was left out of the batch, or the batch returned no outcome
+  /// for them.
+  unavailable,
+}
+
+/// The local outcome of queueing a video share for one recipient.
+///
+/// It says only whether the share reached the durable outgoing queue; whether
+/// the recipient's relays accepted it is observed later through the delivery
+/// state of [rumorId].
 class ShareResult {
+  /// The share is committed to the outgoing queue.
   const ShareResult.queued(String this.rumorId, String this.conversationId)
     : delivery = ShareDelivery.queued,
-      error = null;
+      refusal = null;
 
-  const ShareResult.failure(String this.error)
+  /// Nothing was queued for this recipient, because of [refusal].
+  const ShareResult.failure(ShareRefusal this.refusal)
     : delivery = ShareDelivery.notSent,
       rumorId = null,
       conversationId = null;
 
+  /// Whether the share reached the outgoing queue.
   final ShareDelivery delivery;
-  final String? error;
+
+  /// Why nothing was queued; null when [delivery] is [ShareDelivery.queued].
+  final ShareRefusal? refusal;
+
+  /// Stable id of the queued message, whose delivery state the sender
+  /// watches; null when nothing was queued.
   final String? rumorId;
+
+  /// The one-to-one conversation holding the queued message, used for "View
+  /// chat"; null when nothing was queued.
   final String? conversationId;
 }
 
@@ -59,6 +102,9 @@ class VideoSharingService {
 
   Future<void> warmRecents(String owner) => _recentsStore.warm(owner);
 
+  /// Queues one share of [video] to [recipientPubkey] and returns its outcome.
+  ///
+  /// A single-recipient [shareVideoWithMultipleUsers], with the same throws.
   Future<ShareResult> shareVideoWithUser({
     required VideoEvent video,
     required String recipientPubkey,
@@ -72,7 +118,17 @@ class VideoSharingService {
     return outcomes[recipientPubkey.trim().toLowerCase()]!;
   }
 
-  /// Queue the entire eligible fan-out before exposing any successful result.
+  /// Queues one share of [video] per recipient as a single local batch, and
+  /// returns every outcome only once the whole batch is committed.
+  ///
+  /// Results are keyed by the trimmed, lower-cased [recipientPubkeys], so
+  /// duplicates collapse. Each recipient left unqueued is logged with its
+  /// reason. Queued recipients join the owner's share recents without delaying
+  /// the result.
+  ///
+  /// Throws whatever [DmRepository.enqueueSharedVideoBatch] throws, such as
+  /// [ShareSessionEndedException] when the account changes before the commit;
+  /// nothing is queued then.
   Future<Map<String, ShareResult>> shareVideoWithMultipleUsers({
     required VideoEvent video,
     required List<String> recipientPubkeys,
@@ -81,18 +137,18 @@ class VideoSharingService {
     final recipients = recipientPubkeys
         .map((key) => key.trim().toLowerCase())
         .toSet();
-    Map<String, ShareResult> refuseAll(String reason) => {
-      for (final key in recipients) key: ShareResult.failure(reason),
-    };
+    Map<String, ShareResult> refuseAll(ShareRefusal refusal) => _logged({
+      for (final key in recipients) key: ShareResult.failure(refusal),
+    });
     if (!_authService.isAuthenticated) {
-      return refuseAll('User not authenticated');
+      return refuseAll(ShareRefusal.notAuthenticated);
     }
     if (!_authService.canPublishNostrWritesNow) {
-      return refuseAll('Signing is not available yet');
+      return refuseAll(ShareRefusal.signerUnavailable);
     }
     final owner = _dmRepository.userPubkey;
     if (_authService.currentPublicKeyHex != owner) {
-      return refuseAll('Account changed');
+      return refuseAll(ShareRefusal.accountChanged);
     }
     final identity = divineVideoShareIdentity(video);
     final outcomes = await _dmRepository.enqueueSharedVideoBatch(
@@ -104,18 +160,29 @@ class VideoSharingService {
       videoEventId: video.id,
       relayHint: video.sourceRelay,
     );
-    final results = <String, ShareResult>{};
-    for (final key in recipients) {
-      final outcome = outcomes[key];
-      results[key] = switch (outcome) {
-        ShareEnqueueQueued(:final rumorId, :final conversationId) =>
-          ShareResult.queued(rumorId, conversationId),
-        ShareEnqueueRefused(:final reason) => ShareResult.failure(reason),
-        ShareEnqueueBlocked() => const ShareResult.failure('Recipient blocked'),
-        ShareEnqueueTooLong() => const ShareResult.failure('Message too long'),
-        null => const ShareResult.failure('Recipient unavailable'),
-      };
-    }
+    final results = _logged(
+      {
+        for (final key in recipients)
+          key: switch (outcomes[key]) {
+            ShareEnqueueQueued(:final rumorId, :final conversationId) =>
+              ShareResult.queued(rumorId, conversationId),
+            ShareEnqueueBlocked() => const ShareResult.failure(
+              ShareRefusal.blocked,
+            ),
+            ShareEnqueueTooLong() => const ShareResult.failure(
+              ShareRefusal.tooLong,
+            ),
+            ShareEnqueueRefused() => const ShareResult.failure(
+              ShareRefusal.recipientRefused,
+            ),
+            null => const ShareResult.failure(ShareRefusal.unavailable),
+          },
+      },
+      details: {
+        for (final MapEntry(:key, :value) in outcomes.entries)
+          if (value case ShareEnqueueRefused(:final reason)) key: reason,
+      },
+    );
     final queued = results.keys.where(
       (key) => results[key]!.delivery == ShareDelivery.queued,
     );
@@ -127,11 +194,42 @@ class VideoSharingService {
               'Could not update local share recents',
               name: 'VideoSharingService',
               category: LogCategory.video,
+              error: error,
+              stackTrace: stack,
             );
           },
         ),
       );
     }
+    return results;
+  }
+
+  /// Logs each recipient [results] left unqueued, then the batch totals.
+  ///
+  /// [details] holds the repository's own reason for a local refusal.
+  Map<String, ShareResult> _logged(
+    Map<String, ShareResult> results, {
+    Map<String, String> details = const {},
+  }) {
+    var refused = 0;
+    for (final MapEntry(key: recipient, value: result) in results.entries) {
+      final refusal = result.refusal;
+      if (refusal == null) continue;
+      refused++;
+      final detail = details[recipient];
+      Log.warning(
+        'Video share not queued for ${pubkeyForLogs(recipient)}: '
+        '${refusal.name}${detail == null ? '' : ' ($detail)'}',
+        name: 'VideoSharingService',
+        category: LogCategory.video,
+      );
+    }
+    Log.info(
+      'Video share batch: ${results.length - refused} queued, '
+      '$refused refused',
+      name: 'VideoSharingService',
+      category: LogCategory.video,
+    );
     return results;
   }
 

@@ -64,7 +64,7 @@ void main() {
             (
               name: 'refused',
               pubkey: 'other',
-              outcome: const ShareResult.failure('blocked'),
+              outcome: const ShareResult.failure(ShareRefusal.blocked),
             ),
           ],
         );

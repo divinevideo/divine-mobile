@@ -48,7 +48,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     required FollowRepository followRepository,
     required UserRankingSignalsLoader rankingSignalsLoader,
     required String currentUserPubkey,
-    this.isOwnerCurrent,
+    required bool Function() isOwnerCurrent,
     this.onQueued,
     Stream<void>? eligibilityChanges,
     BaseCacheManager? cacheManager,
@@ -58,6 +58,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
        _followRepository = followRepository,
        _rankingSignalsLoader = rankingSignalsLoader,
        _currentUserPubkey = currentUserPubkey,
+       _isOwnerCurrent = isOwnerCurrent,
        _cacheManager = cacheManager,
        super(
          ShareSheetState(
@@ -70,13 +71,14 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
            ],
          ),
        ) {
-    on<ShareSheetOwnerChanged>((_, emit) {
-      _ownerExpired = true;
-      emit(ShareSheetState(actionResult: ShareSheetAccountChanged()));
-    });
+    on<ShareSheetOwnerChanged>((_, emit) => emit(_expiredState()));
     on<ShareSheetEligibilityChanged>((event, emit) {
       if (!_checkOwner()) return;
-      emit(state.copyWith(disabledPubkeys: _disabled(state.contacts)));
+      emit(
+        state.copyWith(
+          disabledPubkeys: _disabled(state.contacts, state.unavailablePubkeys),
+        ),
+      );
     });
     _eligibility = eligibilityChanges?.listen((_) {
       addIfOpen(const ShareSheetEligibilityChanged());
@@ -102,18 +104,32 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     return super.close();
   }
 
-  bool _ownerExpired = false;
+  /// Whether the account that opened the sheet has gone, now or before.
+  bool get _ownerLost => state.ownerExpired || !_isOwnerCurrent();
+
+  /// An empty state that latches the owner as gone and closes the sheet.
+  ShareSheetState _expiredState() => ShareSheetState(
+    ownerExpired: true,
+    actionResult: ShareSheetAccountChanged(),
+  );
+
+  /// Whether work may continue for the sheet's owner; emits the expired
+  /// state when it may not.
   bool _checkOwner() {
     if (isClosed) return false;
-    if (!_ownerExpired && isOwnerCurrent?.call() != false) return true;
-    _ownerExpired = true;
-    emitIfOpen(ShareSheetState(actionResult: ShareSheetAccountChanged()));
+    if (!_ownerLost) return true;
+    emitIfOpen(_expiredState());
     return false;
   }
 
-  Set<String> _disabled(Iterable<ShareableUser> contacts) => {
+  /// Contacts that cannot be picked: ineligible now, or [unavailable].
+  Set<String> _disabled(
+    Iterable<ShareableUser> contacts,
+    Set<String> unavailable,
+  ) => {
     for (final contact in contacts)
       if (!_rankingSignalsLoader.isEligible(contact.pubkey)) contact.pubkey,
+    ...unavailable,
   };
 
   final VideoEvent _video;
@@ -122,7 +138,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
   final FollowRepository _followRepository;
   final UserRankingSignalsLoader _rankingSignalsLoader;
   final String _currentUserPubkey;
-  final bool Function()? isOwnerCurrent;
+  final bool Function() _isOwnerCurrent;
   final void Function(ShareSheetEnqueueResult)? onQueued;
   final BaseCacheManager? _cacheManager;
 
@@ -155,11 +171,9 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       try {
         await _videoSharingService.warmRecents(_currentUserPubkey);
       } on Object catch (error, stackTrace) {
-        _addUnexpectedError(
-          error,
-          stackTrace,
-          ShareSheetBlocReportableSites.onContactsLoadRequested,
-        );
+        // A local storage read: the sheet goes on without recents, and the
+        // observer still reports a programming error the read surfaced.
+        addError(error, stackTrace);
       }
       if (!_checkOwner()) return;
       var recentUsers = _videoSharingService.recentlySharedWith
@@ -309,7 +323,8 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         state.copyWith(
           status: ShareSheetStatus.ready,
           contacts: visible,
-          disabledPubkeys: {..._disabled(visible), ...excludedPubkeys},
+          disabledPubkeys: _disabled(visible, excludedPubkeys),
+          unavailablePubkeys: excludedPubkeys,
           clearActionResult: true,
         ),
       )) {
@@ -342,16 +357,17 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
           includeMisses: false,
         );
         final merged = mergeVisibleContacts(hydrated, finished: true);
+        final unavailable = {
+          ...excludedPubkeys,
+          for (final contact in merged)
+            if (!contact.hasVisibleIdentity) contact.pubkey,
+        };
         emitIfOpen(
           state.copyWith(
             status: ShareSheetStatus.ready,
             contacts: merged,
-            disabledPubkeys: {
-              ..._disabled(merged),
-              ...excludedPubkeys,
-              for (final contact in merged)
-                if (!contact.hasVisibleIdentity) contact.pubkey,
-            },
+            disabledPubkeys: _disabled(merged, unavailable),
+            unavailablePubkeys: unavailable,
             clearActionResult: true,
           ),
         );
@@ -383,7 +399,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         state.copyWith(
           status: ShareSheetStatus.ready,
           contacts: state.contacts,
-          disabledPubkeys: _disabled(state.contacts),
+          disabledPubkeys: _disabled(state.contacts, state.unavailablePubkeys),
         ),
       );
     }
@@ -438,6 +454,8 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       state.copyWith(
         selectedRecipients: updatedSelection,
         contacts: updatedContacts,
+        refusedRecipients: const [],
+        sendFailed: false,
         clearActionResult: true,
       ),
     );
@@ -459,14 +477,21 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     }
     final recipients = only == null ? state.attemptedRecipients : [only];
     if (recipients.isEmpty || state.isSending) return;
-    if (_ownerExpired || isOwnerCurrent?.call() == false) {
+    if (_ownerLost) {
       emit(state.copyWith(actionResult: ShareSheetAccountChanged()));
       return;
     }
 
     // Wait only for local validation and durable enqueue. Relay discovery,
     // publishing and retries belong to the repository after the sheet closes.
-    emit(state.copyWith(isSending: true, clearActionResult: true));
+    emit(
+      state.copyWith(
+        isSending: true,
+        refusedRecipients: const [],
+        sendFailed: false,
+        clearActionResult: true,
+      ),
+    );
 
     try {
       final message = event.message?.trim();
@@ -487,7 +512,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
               personalMessage: message?.isEmpty == true ? null : message,
             );
 
-      if (_ownerExpired || isOwnerCurrent?.call() == false) {
+      if (_ownerLost) {
         if (!isClosed && !emit.isDone) {
           emit(
             state.copyWith(
@@ -498,29 +523,29 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         }
         return;
       }
-      final attempted = [
+      final result = ShareSheetEnqueueResult(_currentUserPubkey, [
         for (final r in recipients)
           (
             pubkey: r.pubkey,
             name: r.displayName ?? UserProfile.defaultDisplayNameFor(r.pubkey),
             outcome:
                 results[r.pubkey.trim().toLowerCase()] ??
-                const ShareResult.failure('Recipient unavailable'),
+                const ShareResult.failure(ShareRefusal.unavailable),
           ),
-      ];
-      final queued = attempted.any(
-        (r) => r.outcome.delivery == ShareDelivery.queued,
-      );
-      final outcome = ShareSheetEnqueueResult(_currentUserPubkey, attempted);
+      ]);
+      final noneQueued = result.noneQueued;
       // The durable commit can outlive this sheet. Hand it to the account's
       // app-shell tracker even if its route and emitter have already closed.
-      if (queued) onQueued?.call(outcome);
+      if (!noneQueued) onQueued?.call(result);
       if (isClosed || emit.isDone) return;
       emit(
         state.copyWith(
           isSending: false,
-          selectedRecipients: queued ? const [] : recipients,
-          actionResult: outcome,
+          // A queued row dismisses the sheet; the draft is kept only when
+          // nothing was queued.
+          selectedRecipients: noneQueued ? recipients : const [],
+          refusedRecipients: noneQueued ? result.recipients : const [],
+          actionResult: result,
         ),
       );
     } on ShareSessionEndedException catch (e, stackTrace) {
@@ -532,7 +557,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         category: LogCategory.ui,
       );
       if (isClosed) return;
-      emit(state.copyWith(isSending: false, actionResult: _sendFailure()));
+      _emitSendFailure(emit);
     } catch (e, stackTrace) {
       _addUnexpectedError(
         e,
@@ -545,14 +570,24 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         category: LogCategory.ui,
       );
       if (isClosed) return;
-      emit(state.copyWith(isSending: false, actionResult: _sendFailure()));
+      _emitSendFailure(emit);
     }
   }
 
-  ShareSheetActionResult _sendFailure() =>
-      _ownerExpired || isOwnerCurrent?.call() == false
-      ? ShareSheetAccountChanged()
-      : ShareSheetSendFailure();
+  /// Ends a send that threw: a lost owner closes the sheet, otherwise the
+  /// failure stays on screen until the selection changes or a send starts.
+  void _emitSendFailure(Emitter<ShareSheetState> emit) {
+    final ownerLost = _ownerLost;
+    emit(
+      state.copyWith(
+        isSending: false,
+        sendFailed: !ownerLost,
+        actionResult: ownerLost
+            ? ShareSheetAccountChanged()
+            : ShareSheetSendFailure(),
+      ),
+    );
+  }
 
   // --------------------------------------------------------------------------
   // Copy / Share actions (BLoC generates data, UI handles platform calls)

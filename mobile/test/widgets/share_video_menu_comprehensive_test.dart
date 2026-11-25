@@ -33,6 +33,7 @@ import 'package:openvine/widgets/video_feed_item/actions/share_action_button.dar
 import 'package:profile_repository/profile_repository.dart';
 
 import '../helpers/test_provider_overrides.dart';
+import '../helpers/test_pubkeys.dart';
 
 class _MockBookmarksRepository extends Mock implements BookmarksRepository {}
 
@@ -92,7 +93,7 @@ VideoEvent _testVideo({
 }) {
   return VideoEvent(
     id: id,
-    pubkey: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+    pubkey: testPubkeyFromSeed(80),
     createdAt: 1757385263,
     content: 'Test video content',
     timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
@@ -916,9 +917,8 @@ void main() {
   });
 
   group('Select-then-send behavior', () {
-    const testContact = ShareableUser(
-      pubkey:
-          '1111111111111111111111111111111111111111111111111111111111111111',
+    final testContact = ShareableUser(
+      pubkey: testPubkeyFromSeed(81),
       displayName: 'Alice',
     );
     late _MockFollowRepository mockFollowRepository;
@@ -945,7 +945,7 @@ void main() {
       return testProviderScope(
         mockAuthService: createMockAuthService(
           authState: AuthState.authenticated,
-          currentPublicKeyHex: '9' * 64,
+          currentPublicKeyHex: testPubkeyFromSeed(82),
         ),
         mockFollowRepository: mockFollowRepository,
         additionalOverrides: [
@@ -1073,7 +1073,9 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => {
-          testContact.pubkey: const ShareResult.failure('Network timeout'),
+          testContact.pubkey: const ShareResult.failure(
+            ShareRefusal.unavailable,
+          ),
         },
       );
 

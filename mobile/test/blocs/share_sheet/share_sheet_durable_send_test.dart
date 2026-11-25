@@ -161,6 +161,7 @@ void main() {
           followRepository: _FollowRepository(),
           rankingSignalsLoader: ranking,
           currentUserPubkey: owner,
+          isOwnerCurrent: () => true,
         );
         addTearDown(() async {
           if (!releaseDiscovery.isCompleted) releaseDiscovery.complete();
