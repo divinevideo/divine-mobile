@@ -1223,6 +1223,12 @@ const double _quotedPlayBadgeSize = 22;
 /// triangle keeps visible padding within the chip.
 const double _quotedPlayGlyphSize = 11;
 
+/// Diameter of the Play badge centred on a full shared-video card.
+const double _cardPlayBadgeSize = 48;
+
+/// Play-glyph diameter inside the full card's badge.
+const double _cardPlayGlyphSize = 24;
+
 /// Compact WhatsApp-style quoted preview of the video a reply references.
 ///
 /// Reuses the [VideoLinkPreviewCubit] resolve harness so it can render even
@@ -1520,8 +1526,8 @@ class _VideoPlayBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: compact ? _quotedPlayBadgeSize : 48,
-      height: compact ? _quotedPlayBadgeSize : 48,
+      width: compact ? _quotedPlayBadgeSize : _cardPlayBadgeSize,
+      height: compact ? _quotedPlayBadgeSize : _cardPlayBadgeSize,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: VineTheme.backgroundColor.withValues(alpha: 0.6),
@@ -1535,7 +1541,7 @@ class _VideoPlayBadge extends StatelessWidget {
         child: DivineIcon(
           icon: DivineIconName.play,
           color: VineTheme.primaryText,
-          size: compact ? _quotedPlayGlyphSize : 24,
+          size: compact ? _quotedPlayGlyphSize : _cardPlayGlyphSize,
         ),
       ),
     );
