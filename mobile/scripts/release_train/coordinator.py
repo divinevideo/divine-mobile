@@ -202,6 +202,10 @@ def last_operation_started(state, kind, platform=None):
     )
 
 
+def is_production_build(platform, build):
+    return platform != "macos" or build.get("default_env") == "PRODUCTION"
+
+
 def is_public_beta_release(action):
     return action["kind"] == "public-beta" or (
         action["kind"] == "attach-beta-groups"
@@ -298,7 +302,7 @@ def plan_tick(snapshot, state, levels):
             and snapshot.get("changes", {}).get(platform)
             and not active
             and not any(
-                b.get("sha") == candidate
+                b.get("sha") == candidate and is_production_build(platform, b)
                 for b in data.get("builds" if platform in APPLE_PLATFORMS else "internal", [])
             )
             and can_replace
@@ -351,6 +355,7 @@ def plan_tick(snapshot, state, levels):
             for b in builds:
                 if (
                     b.get("ci_verified")
+                    and is_production_build(platform, b)
                     and not b.get("public_complete", b.get("public"))
                     and b["id"] not in completed_attachment_ids
                     and (b.get("groups") or b["id"] in known_beta_ids)
@@ -387,6 +392,7 @@ def plan_tick(snapshot, state, levels):
                 for b in builds
                 if b.get("valid")
                 and b.get("ci_verified")
+                and is_production_build(platform, b)
                 and not b.get("public")
                 and b["id"] not in completed_attachment_ids
                 and b["number"] > newest_public
@@ -492,6 +498,7 @@ def plan_tick(snapshot, state, levels):
                     )
                     and b.get("valid")
                     and b.get("ci_verified")
+                    and is_production_build(platform, b)
                     and b.get("external") not in BETA_REJECTED
                     and (
                         parse_version(b["version"]) > highest

@@ -58,6 +58,7 @@ class StoreStateTest(unittest.TestCase):
     def test_ios_empty_lookup_fails_closed(self):
         with self.assertRaises(ValueError):
             ios_submitted_versions([])
+        self.assertEqual(ios_submitted_versions([], allow_empty=True), [])
         with self.assertRaises(ValueError):
             ios_submitted_versions([{"attributes": {"appVersionState": "REJECTED"}}])
         with self.assertRaises(ValueError):

@@ -12,7 +12,12 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from release_train.ledger import GhLedgerStore, LedgerError, provenance_path
+from release_train.ledger import (
+    ALLOWED_MACOS_DEFAULT_ENVS,
+    GhLedgerStore,
+    LedgerError,
+    provenance_path,
+)
 
 DEFAULT_REPOSITORY = "divinevideo/divine-release-provenance"
 _SHA_RE = re.compile(r"[0-9a-f]{40}")
@@ -69,6 +74,10 @@ def record_provenance(
     pkg = pkgs[0]
     pkg_sha256 = _sha256_file(pkg)
 
+    default_env = (env.get("DEFAULT_ENV") or "").strip()
+    if default_env not in ALLOWED_MACOS_DEFAULT_ENVS:
+        raise ValueError(f"invalid or missing macOS DEFAULT_ENV: {default_env!r}")
+
     record = {
         "schema": 1,
         "platform": "macos",
@@ -76,6 +85,7 @@ def record_provenance(
         "build_name": version_name,
         "build_number": int(build_number),
         "build_source_commit": source,
+        "default_env": default_env,
         "patchable": False,
         "pkg_name": pkg.name,
         "pkg_sha256": pkg_sha256,

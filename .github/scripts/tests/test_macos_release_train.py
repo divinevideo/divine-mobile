@@ -22,6 +22,7 @@ if str(TESTS_DIR) not in sys.path:
 
 from allocate_build_identity import allocate_build
 from record_macos_provenance import record_provenance
+from release_identity import main as release_identity_main
 from release_train.coordinator import (
     DAY,
     HOUR,
@@ -29,9 +30,15 @@ from release_train.coordinator import (
     TESTFLIGHT_INTERVAL,
     plan_tick,
 )
-from release_train.providers import Apple
-from release_train.release_notes import ReleaseNotesError, ensure_bundle
-from release_train.runner import Runtime, execute_plan, reconcile_operations
+from release_train.ledger import BOOTSTRAP_PATH
+from release_train.providers import Apple, ProviderError
+from release_train.release_notes import (
+    ReleaseNotesError,
+    _identity as notes_identity,
+    ensure_bundle,
+    production_build as notes_production_build,
+)
+from release_train.runner import Runtime, UnmappedBuild, execute_plan, reconcile_operations
 from release_train_fakes import release_notes_bundle
 
 SHA_OLD = "a" * 40
@@ -137,13 +144,18 @@ class MacosReleaseTrainTest(unittest.TestCase):
                 release_env_path=env_file,
                 pkg_dir=pkg_dir,
                 output_path=out_file,
-                env={"CM_BUILD_ID": "2" * 24, "CM_WORKFLOW_ID": "macos-scheduled-build"},
+                env={
+                    "CM_BUILD_ID": "2" * 24,
+                    "CM_WORKFLOW_ID": "macos-scheduled-build",
+                    "DEFAULT_ENV": "PRODUCTION",
+                },
                 ledger=ledger,
                 source_sha=SHA_NEW,
                 now=datetime(2026, 11, 25, tzinfo=UTC),
             )
             self.assertEqual(record["platform"], "macos")
             self.assertEqual(record["release_version"], "1.0.37+912")
+            self.assertEqual(record["default_env"], "PRODUCTION")
             self.assertEqual(record["pkg_sha256"], PKG_DIGEST)
             self.assertIs(record["patchable"], False)
             self.assertIn("releases/macos/1.0.37+912.json", ledger.files)
@@ -154,10 +166,46 @@ class MacosReleaseTrainTest(unittest.TestCase):
                     release_env_path=env_file,
                     pkg_dir=pkg_dir,
                     output_path=out_file,
-                    env={"CM_BUILD_ID": "2" * 24, "CM_WORKFLOW_ID": "macos-scheduled-build"},
+                    env={
+                        "CM_BUILD_ID": "2" * 24,
+                        "CM_WORKFLOW_ID": "macos-scheduled-build",
+                        "DEFAULT_ENV": "PRODUCTION",
+                    },
                     ledger=ledger,
                     source_sha=SHA_NEW,
                 )
+
+            with self.assertRaisesRegex(ValueError, "DEFAULT_ENV"):
+                record_provenance(
+                    release_env_path=env_file,
+                    pkg_dir=pkg_dir,
+                    output_path=out_file,
+                    env={"CM_BUILD_ID": "2" * 24, "CM_WORKFLOW_ID": "macos-build"},
+                    ledger=MemoryLedger(),
+                    source_sha=SHA_NEW,
+                )
+
+            staging_env = root / "macos_staging.env"
+            staging_env.write_text(
+                f"SHOREBIRD_BUILD_NAME=1.0.37\n"
+                f"SHOREBIRD_BUILD_NUMBER=913\n"
+                f"SHOREBIRD_RELEASE_VERSION=1.0.37+913\n"
+                f"RELEASE_SOURCE_SHA={SHA_NEW}\n",
+                encoding="utf-8",
+            )
+            staging_record = record_provenance(
+                release_env_path=staging_env,
+                pkg_dir=pkg_dir,
+                output_path=out_file,
+                env={
+                    "CM_BUILD_ID": "3" * 24,
+                    "CM_WORKFLOW_ID": "macos-build",
+                    "DEFAULT_ENV": "STAGING",
+                },
+                ledger=ledger,
+                source_sha=SHA_NEW,
+            )
+            self.assertEqual(staging_record["default_env"], "STAGING")
 
     def test_coordinator_plans_macos_build_beta_and_app_store_independently_of_ios(self):
         now = 2_000_000
@@ -176,6 +224,7 @@ class MacosReleaseTrainTest(unittest.TestCase):
                         "number": 912,
                         "version": "1.0.37",
                         "sha": SHA_OLD,
+                        "default_env": "PRODUCTION",
                         "valid": True,
                         "ci_verified": True,
                         "public": False,
@@ -344,6 +393,7 @@ class MacosReleaseTrainTest(unittest.TestCase):
                     "platform": "macos",
                     "release_version": "1.0.37+912",
                     "build_source_commit": SHA_NEW,
+                    "default_env": "PRODUCTION",
                     "patchable": False,
                     "pkg_sha256": PKG_DIGEST,
                 },
@@ -352,7 +402,15 @@ class MacosReleaseTrainTest(unittest.TestCase):
         runtime = Runtime.__new__(Runtime)
         runtime.ledger = ledger
         identity = runtime.identity("macos", 912, "1.0.37")
-        self.assertEqual(identity, {"number": 912, "version": "1.0.37", "sha": SHA_NEW})
+        self.assertEqual(
+            identity,
+            {
+                "number": 912,
+                "version": "1.0.37",
+                "sha": SHA_NEW,
+                "default_env": "PRODUCTION",
+            },
+        )
 
     def test_runner_execute_dispatches_macos_scheduled_build_with_macos_inputs(self):
         cm_calls = []
@@ -431,6 +489,7 @@ class MacosReleaseTrainTest(unittest.TestCase):
             "number": 912,
             "version": "1.0.37",
             "sha": SHA_OLD,
+            "default_env": "PRODUCTION",
             "valid": True,
             "ci_verified": True,
             "public": False,
@@ -589,6 +648,316 @@ class MacosReleaseTrainTest(unittest.TestCase):
         self.assertEqual(exec_plan.get("errors", []), [])
         self.assertEqual(exec_state["macos_app_store_submissions"], [now + 11])
         self.assertNotIn("app_store_submissions", exec_state)
+
+    def test_non_production_macos_build_does_not_suppress_build_or_promote(self):
+        for env_value in ("STAGING", "POC", None):
+            with self.subTest(default_env=env_value):
+                build_entry = {
+                    "id": "mb-nonprod",
+                    "number": 912,
+                    "version": "1.0.37",
+                    "sha": SHA_NEW,
+                    "valid": True,
+                    "ci_verified": True,
+                    "public": False,
+                    "public_complete": False,
+                    "groups": ["g1"],
+                    "external": "READY_FOR_BETA_SUBMISSION",
+                }
+                if env_value is not None:
+                    build_entry["default_env"] = env_value
+                snapshot = {
+                    "now": 3_000_000,
+                    "ci_passed": True,
+                    "candidate": SHA_NEW,
+                    "changes": {"ios": False, "macos": True, "android": False},
+                    "cm": [],
+                    "ios": {},
+                    "macos": {
+                        "group_valid": True,
+                        "builds": [build_entry],
+                        "versions": [
+                            {"id": "mv1", "version": "1.0.0", "state": "PREPARE_FOR_SUBMISSION", "build_id": None}
+                        ],
+                        "submissions": [],
+                        "review_submissions": [],
+                    },
+                    "android": {},
+                }
+                state = {
+                    "operations": {
+                        "public-beta:macos:912": {
+                            "action": {"kind": "public-beta", "platform": "macos", "build": {"id": "mb-nonprod", "number": 912}},
+                            "started_at": 2_900_000,
+                            "status": "started",
+                        }
+                    }
+                }
+                plan = plan_tick(snapshot, state, {"ios": "off", "macos": "app-store", "android": "off"})
+                self.assertEqual(
+                    [(a["platform"], a["kind"]) for a in plan["actions"]],
+                    [("macos", "build")],
+                )
+
+    def test_backfilled_live_macos_build_preserves_legacy_betas_until_first_allocation(self):
+        class FakeApple:
+            def __init__(self):
+                self.group = "g1"
+                self.groups = ["g1"]
+
+            def call(self, method, path, body=None):
+                if path.startswith("/betaGroups/"):
+                    return {"data": {"attributes": {"isInternalGroup": False, "publicLinkEnabled": True, "publicLink": "https://testflight.apple.com/join/x"}}}
+                if path.endswith("/build"):
+                    return {"data": None}
+                return {"data": {}}
+
+            def pages(self, path):
+                return []
+
+            def beta_detail(self, build_id, current):
+                return current or {
+                    "id": "bd-" + build_id,
+                    "attributes": {
+                        "internalBuildState": "IN_BETA_TESTING",
+                        "externalBuildState": "IN_BETA_TESTING",
+                    },
+                }
+
+            def pages_including(self, path):
+                return (
+                    [
+                        {
+                            "id": "mb911",
+                            "attributes": {"version": "911", "processingState": "VALID", "expired": False},
+                            "relationships": {
+                                "preReleaseVersion": {"data": {"type": "preReleaseVersions", "id": "prv1"}}
+                            },
+                        },
+                        {
+                            "id": "mb912",
+                            "attributes": {"version": "912", "processingState": "VALID", "expired": False},
+                            "relationships": {
+                                "preReleaseVersion": {"data": {"type": "preReleaseVersions", "id": "prv1"}}
+                            },
+                        },
+                    ],
+                    {("preReleaseVersions", "prv1"): {"attributes": {"version": "1.0.37"}}},
+                )
+
+        ledger = MemoryLedger(
+            {
+                "releases/macos/1.0.37+911.json": {
+                    "platform": "macos",
+                    "release_version": "1.0.37+911",
+                    "build_source_commit": SHA_OLD,
+                    "default_env": "PRODUCTION",
+                    "patchable": False,
+                    "pkg_sha256": PKG_DIGEST,
+                }
+            }
+        )
+        runtime = Runtime.__new__(Runtime)
+        runtime.apple = FakeApple()
+        runtime.ledger = ledger
+
+        snap = runtime.apple_snapshot("macos")
+        by_num = {b["number"]: b for b in snap["builds"]}
+        self.assertEqual(by_num[911]["sha"], SHA_OLD)
+        self.assertEqual(by_num[911]["default_env"], "PRODUCTION")
+        self.assertTrue(by_num[911]["valid"])
+        self.assertTrue(by_num[912]["legacy"])
+        self.assertIsNone(by_num[912]["sha"])
+        self.assertFalse(by_num[912]["valid"])
+
+        ledger.files["allocations/builds/macos/913.json"] = {
+            "platform": "macos",
+            "version": "1.0.37",
+            "source_sha": SHA_NEW,
+            "reservation_key": f"scheduled/macos/{SHA_NEW}",
+        }
+        ledger.files["releases/macos/1.0.37+913.json"] = {
+            "platform": "macos",
+            "release_version": "1.0.37+913",
+            "build_source_commit": SHA_NEW,
+            "default_env": "PRODUCTION",
+            "patchable": False,
+            "pkg_sha256": PKG_DIGEST,
+        }
+        self.assertTrue(runtime.identity("macos", 912, "1.0.37", allow_historical=True)["legacy"])
+        with self.assertRaises(UnmappedBuild):
+            runtime.identity("macos", 914, "1.0.37", allow_historical=True)
+
+    def test_backfilled_macos_provenance_and_release_notes_enforce_complete_fields(self):
+        base_record = {
+            "platform": "macos",
+            "release_version": "1.0.37+911",
+            "build_source_commit": SHA_OLD,
+            "default_env": "PRODUCTION",
+            "patchable": False,
+            "pkg_sha256": PKG_DIGEST,
+        }
+        for mutation in (
+            {"pkg_sha256": ""},
+            {"patchable": True},
+            {"default_env": ""},
+        ):
+            with self.subTest(mutation=mutation):
+                record = dict(base_record) | mutation
+                ledger = MemoryLedger({"releases/macos/1.0.37+911.json": record})
+                runtime = Runtime.__new__(Runtime)
+                runtime.ledger = ledger
+                with self.assertRaises(ProviderError):
+                    runtime.identity("macos", 911, "1.0.37")
+                with self.assertRaises(ReleaseNotesError):
+                    notes_identity(ledger, "macos", 911, "1.0.37")
+
+        staging_record = dict(base_record) | {"default_env": "STAGING"}
+        staging_ledger = MemoryLedger({"releases/macos/1.0.37+911.json": staging_record})
+        runtime = Runtime.__new__(Runtime)
+        runtime.ledger = staging_ledger
+        self.assertEqual(runtime.identity("macos", 911, "1.0.37")["default_env"], "STAGING")
+        with self.assertRaises(ReleaseNotesError):
+            notes_identity(staging_ledger, "macos", 911, "1.0.37")
+        with self.assertRaisesRegex(ReleaseNotesError, "PRODUCTION environment provenance"):
+            notes_production_build(
+                "macos",
+                {
+                    "versions": [{"id": "mv1", "version": "1.0.37", "state": "READY_FOR_SALE", "build_id": "mb911"}],
+                    "builds": [{"id": "mb911", "version": "1.0.37", "sha": SHA_OLD, "default_env": "STAGING"}],
+                },
+            )
+
+    def test_runner_snapshot_skips_macos_builds_when_off_and_isolates_macos_lookup_error(self):
+        queried_workflows = []
+
+        def fake_cm(method, path, body=None):
+            import urllib.parse
+
+            workflow = urllib.parse.parse_qs(urllib.parse.urlsplit(path).query)["workflow_id"][0]
+            queried_workflows.append(workflow)
+            if workflow == "macos-scheduled-build":
+                raise ProviderError("macos workflow disabled")
+            return {"data": []}
+
+        class FakeApple:
+            def __init__(self, token, group):
+                self.group = group
+                self.groups = []
+
+        def make_runtime():
+            rt = Runtime.__new__(Runtime)
+            rt.env = {"CODEMAGIC_API_TOKEN": "tok", "GITHUB_REPOSITORY": "divinevideo/divine-mobile"}
+            rt.cm = fake_cm
+            rt.candidate = lambda: None
+            rt.apple = None
+            rt.play = None
+            rt.apple_snapshot = lambda platform: {"builds": [], "versions": [], "submissions": [], "review_submissions": [], "group_valid": True}
+            return rt
+
+        queried_workflows.clear()
+        off_runtime = make_runtime()
+        with (
+            patch("release_train.runner.apple_token", return_value="token"),
+            patch("release_train.runner.Apple", FakeApple),
+            patch("release_train.runner.DEFAULT_GROUPS", ["g1", "g2", "g3", "g4"]),
+        ):
+            off_runtime.env["TESTFLIGHT_PUBLIC_GROUP_ID"] = "g1"
+            off_runtime.env["TESTFLIGHT_GROUP_IDS"] = json.dumps(["g1", "g2", "g3", "g4"])
+            snap_off = off_runtime.snapshot({}, {"ios": "testflight", "macos": "off", "android": "off"})
+        self.assertNotIn("macos-build", queried_workflows)
+        self.assertNotIn("macos-scheduled-build", queried_workflows)
+        self.assertNotIn("error", snap_off["ios"])
+        self.assertEqual(snap_off["macos"], {})
+
+        queried_workflows.clear()
+        on_runtime = make_runtime()
+        on_runtime.env["TESTFLIGHT_PUBLIC_GROUP_ID"] = "g1"
+        on_runtime.env["TESTFLIGHT_GROUP_IDS"] = json.dumps(["g1", "g2", "g3", "g4"])
+        with (
+            patch("release_train.runner.apple_token", return_value="token"),
+            patch("release_train.runner.Apple", FakeApple),
+            patch("release_train.runner.DEFAULT_GROUPS", ["g1", "g2", "g3", "g4"]),
+        ):
+            snap_on = on_runtime.snapshot({}, {"ios": "testflight", "macos": "testflight", "android": "off"})
+        self.assertIn("macos-build", queried_workflows)
+        self.assertIn("macos-scheduled-build", queried_workflows)
+        self.assertNotIn("error", snap_on["ios"])
+        self.assertIn("macos workflow disabled", snap_on["macos"]["error"])
+        self.assertEqual(snap_on["android"], {})
+
+    def test_release_identity_allows_verified_empty_macos_versions_list(self):
+        ledger = MemoryLedger({BOOTSTRAP_PATH: {"schema": 1}})
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pubspec = root / "pubspec.yaml"
+            pubspec.write_text("name: divine\nversion: 1.0.37+911\n", encoding="utf-8")
+            tags = root / "stable_tags.txt"
+            tags.write_text("", encoding="utf-8")
+            versions = root / "store_versions.json"
+            versions.write_text("[]", encoding="utf-8")
+            shorebird = root / "shorebird.json"
+            shorebird.write_text('{"status": "success", "data": {"releases": []}}', encoding="utf-8")
+            out = root / "release.env"
+
+            rc = release_identity_main(
+                [
+                    "allocate",
+                    "--platform",
+                    "macos",
+                    "--pubspec",
+                    str(pubspec),
+                    "--source-sha",
+                    SHA_NEW,
+                    "--reservation-key",
+                    "manual/1",
+                    "--codemagic-build-id",
+                    "1" * 24,
+                    "--store-latest-build",
+                    "0",
+                    "--stable-tags",
+                    str(tags),
+                    "--app-store-versions",
+                    str(versions),
+                    "--output",
+                    str(out),
+                ],
+                ledger_factory=lambda _repo: ledger,
+                now=datetime(2026, 11, 25, tzinfo=UTC),
+            )
+            self.assertEqual(rc, 0)
+            env_text = out.read_text(encoding="utf-8")
+            self.assertIn("SHOREBIRD_BUILD_NAME=1.0.37", env_text)
+            self.assertIn("SHOREBIRD_BUILD_NUMBER=1", env_text)
+
+            ios_rc = release_identity_main(
+                [
+                    "allocate",
+                    "--platform",
+                    "ios",
+                    "--pubspec",
+                    str(pubspec),
+                    "--source-sha",
+                    SHA_NEW,
+                    "--reservation-key",
+                    "manual/2",
+                    "--codemagic-build-id",
+                    "2" * 24,
+                    "--store-latest-build",
+                    "0",
+                    "--shorebird-releases",
+                    str(shorebird),
+                    "--stable-tags",
+                    str(tags),
+                    "--app-store-versions",
+                    str(versions),
+                    "--output",
+                    str(out),
+                ],
+                ledger_factory=lambda _repo: ledger,
+                now=datetime(2026, 11, 25, tzinfo=UTC),
+            )
+            self.assertEqual(ios_rc, 1)
 
 
 if __name__ == "__main__":

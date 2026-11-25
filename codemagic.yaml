@@ -1534,7 +1534,7 @@ workflows:
       - *build_macos
       - *package_macos_mas_pkg
       - name: Record macOS release provenance
-        script: python3 scripts/record_macos_provenance.py
+        script: DEFAULT_ENV="${{ inputs.DEFAULT_ENV }}" python3 scripts/record_macos_provenance.py
     artifacts:
       - build/macos/pkg/*.pkg
       - build/macos/archive/Runner.xcarchive/dSYMs/**

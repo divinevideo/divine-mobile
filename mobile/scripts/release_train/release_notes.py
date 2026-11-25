@@ -15,7 +15,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from release_train.ledger import LedgerError
+from release_train.ledger import LedgerError, validate_macos_provenance
 from release_train.providers import (
     APP_ID,
     Apple,
@@ -228,6 +228,10 @@ def production_build(platform, data):
         raise ReleaseNotesError(
             "Previous production release is missing verified source provenance"
         )
+    if platform == "macos" and build.get("default_env") != "PRODUCTION":
+        raise ReleaseNotesError(
+            "Previous production release is missing verified PRODUCTION environment provenance"
+        )
     parse_version(build["version"])
     return build
 
@@ -255,11 +259,29 @@ def _identity(ledger, platform, number, version=None):
     path, match = matches[0]
     record = ledger.read_json(path)
     actual_version = match[1]
-    integrity_ok = (
-        bool(re.fullmatch(r"[0-9a-f]{64}", record.get("pkg_sha256") or ""))
-        if platform == "macos"
-        else bool(record.get("record_hmac"))
-    )
+    if platform == "macos":
+        try:
+            validate_macos_provenance(
+                record,
+                expected_version=actual_version,
+                expected_number=int(number),
+                require_production=True,
+            )
+        except ValueError:
+            raise ReleaseNotesError(
+                "Production source provenance conflicts with provider identity"
+            ) from None
+        if version and version != actual_version:
+            raise ReleaseNotesError(
+                "Production source provenance conflicts with provider identity"
+            )
+        return {
+            "version": actual_version,
+            "sha": record.get("build_source_commit"),
+            "number": number,
+            "default_env": "PRODUCTION",
+        }
+    integrity_ok = bool(record.get("record_hmac"))
     if (
         record.get("platform") != platform
         or record.get("release_version") != f"{actual_version}+{number}"

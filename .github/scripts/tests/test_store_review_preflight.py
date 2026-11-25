@@ -540,7 +540,7 @@ class StoreReviewTest(unittest.TestCase):
             return {
                 'macos': {
                     'versions': [{'state': 'READY_FOR_SALE', 'version': '1.0.1', 'build_id': 'live'}],
-                    'builds': [{'id': 'live', 'number': 1, 'version': '1.0.1', 'sha': base}],
+                    'builds': [{'id': 'live', 'number': 1, 'version': '1.0.1', 'sha': base, 'default_env': 'PRODUCTION'}],
                 }
             }
 

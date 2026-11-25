@@ -1469,6 +1469,10 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn("Build macOS app", step_names)
         self.assertIn("Archive and export Mac App Store pkg", step_names)
         self.assertIn("Record macOS release provenance", step_names)
+        provenance_step = next(
+            step for step in workflow["scripts"] if step["name"] == "Record macOS release provenance"
+        )
+        self.assertIn('DEFAULT_ENV="${{ inputs.DEFAULT_ENV }}"', provenance_step["script"])
         self.assertNotIn("Package macOS DMG", step_names)
         self.assertNotIn("Publish to GitHub Release", step_names)
         self.assertLess(

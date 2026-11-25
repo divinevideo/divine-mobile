@@ -168,7 +168,11 @@ def _allocate(args, ledger, now):
             Path(args.stable_tags).read_text().splitlines()
         ),
         store_versions=(
-            ios_submitted_versions(_json(args.app_store_versions)) if apple else ()
+            ios_submitted_versions(
+                _json(args.app_store_versions), allow_empty=args.platform == "macos"
+            )
+            if apple
+            else ()
         ),
         store_version_codes=(
             () if apple else play_production_version_codes(_json(args.play_production_track))

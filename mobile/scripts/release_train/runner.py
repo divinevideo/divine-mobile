@@ -32,7 +32,12 @@ from release_train.coordinator import (
     plan_tick,
     version_ack_key,
 )
-from release_train.ledger import GhLedgerStore, LedgerError, claim_path
+from release_train.ledger import (
+    GhLedgerStore,
+    LedgerError,
+    claim_path,
+    validate_macos_provenance,
+)
 from release_train.providers import (
     APP_ID,
     Apple,
@@ -490,16 +495,8 @@ class Runtime:
             body,
         )
 
-    def list_builds(self):
+    def list_workflow_builds(self, workflows):
         entries = []
-        workflows = [
-            "ios-build",
-            "ios-scheduled-build",
-            "macos-build",
-            "macos-scheduled-build",
-            "android-build",
-            "zapstore-publish",
-        ]
         for workflow in workflows:
             cursor = None
             seen = set()
@@ -580,6 +577,14 @@ class Runtime:
                     raise ProviderError("Codemagic pagination did not finish")
                 seen.add(text)
         return entries
+
+    def list_builds(self):
+        return self.list_workflow_builds(
+            ["ios-build", "ios-scheduled-build", "android-build", "zapstore-publish"]
+        )
+
+    def list_macos_builds(self):
+        return self.list_workflow_builds(["macos-build", "macos-scheduled-build"])
 
     def candidate(self):
         shas = subprocess.check_output(
@@ -664,26 +669,42 @@ class Runtime:
                 )
             ]
             if not matches and allow_historical and platform in APPLE_PLATFORMS:
-                recorded = [
-                    int(m.group(1))
-                    for p in self.ledger.paths()
-                    if (
-                        m := re.fullmatch(
-                            r"releases/" + platform + r"/[0-9]+\.[0-9]+\.[0-9]+\+([0-9]+)\.json",
-                            p,
+                if platform == "macos":
+                    allocated = [
+                        int(m.group(1))
+                        for p in self.ledger.paths()
+                        if (
+                            m := re.fullmatch(
+                                r"allocations/builds/macos/([0-9]+)\.json",
+                                p,
+                            )
                         )
-                    )
-                ]
-                if (
-                    (platform == "macos" and not recorded)
-                    or (recorded and int(number) < min(recorded))
-                ):
-                    return {
-                        "number": int(number),
-                        "version": version,
-                        "sha": None,
-                        "legacy": True,
-                    }
+                    ]
+                    if not allocated or int(number) < min(allocated):
+                        return {
+                            "number": int(number),
+                            "version": version,
+                            "sha": None,
+                            "legacy": True,
+                        }
+                else:
+                    recorded = [
+                        int(m.group(1))
+                        for p in self.ledger.paths()
+                        if (
+                            m := re.fullmatch(
+                                r"releases/" + platform + r"/[0-9]+\.[0-9]+\.[0-9]+\+([0-9]+)\.json",
+                                p,
+                            )
+                        )
+                    ]
+                    if recorded and int(number) < min(recorded):
+                        return {
+                            "number": int(number),
+                            "version": version,
+                            "sha": None,
+                            "legacy": True,
+                        }
             if len(matches) != 1:
                 error_type = ProviderError if matches else UnmappedBuild
                 raise error_type(
@@ -716,17 +737,49 @@ class Runtime:
                 return {"number": int(number), "version": name or version,
                         "sha": None, "legacy": True, "provenance_incomplete": True}
             provenance = self.ledger.read_json(completed)
-            provenance_valid = (
-                provenance.get("patchable") is False
-                and bool(re.fullmatch(r"[0-9a-f]{64}", provenance.get("pkg_sha256") or ""))
-                if platform == "macos"
-                else provenance.get("patchable") is True
-            )
+            if platform == "macos":
+                try:
+                    default_env = validate_macos_provenance(
+                        provenance,
+                        expected_version=name or version,
+                        expected_number=int(number),
+                        expected_source=source,
+                    )
+                except ValueError:
+                    raise ProviderError(
+                        f"{platform} build {number} has no matching completed provenance; "
+                        "reconcile the partial native release before promotion"
+                    ) from None
+                return {
+                    "number": int(number),
+                    "version": name or version,
+                    "sha": source,
+                    "default_env": default_env,
+                }
             if (provenance.get("platform") != platform
                     or provenance.get("release_version") != f"{name or version}+{number}"
                     or provenance.get("build_source_commit") != source
-                    or not provenance_valid):
+                    or provenance.get("patchable") is not True):
                 raise ProviderError(f"{platform} build {number} has no matching completed provenance; reconcile the partial native release before promotion")
+        elif platform == "macos":
+            try:
+                default_env = validate_macos_provenance(
+                    record,
+                    expected_version=name or version,
+                    expected_number=int(number),
+                    expected_source=source,
+                )
+            except ValueError:
+                raise ProviderError(
+                    f"{platform} build {number} has invalid macOS provenance; "
+                    "repair private provenance mapping"
+                ) from None
+            return {
+                "number": int(number),
+                "version": name or version,
+                "sha": source,
+                "default_env": default_env,
+            }
         return {"number": int(number), "version": name or version, "sha": source}
 
     def apple_snapshot(self, platform="ios"):
@@ -917,7 +970,7 @@ class Runtime:
             "now": int(time.time()),
             "ci_passed": False,
             "changes": {},
-            "cm": self.list_builds(),
+            "cm": list(self.list_builds()),
         }
         snapshot["candidate"] = self.candidate()
         snapshot["ci_passed"] = bool(snapshot["candidate"])
@@ -957,6 +1010,8 @@ class Runtime:
                                 "TestFlight groups must preserve the four existing external audiences"
                             )
                         self.apple = apple
+                    if platform == "macos":
+                        snapshot["cm"].extend(self.list_macos_builds())
                     snapshot[platform] = self.apple_snapshot(platform)
                     snapshot[platform]["observed_at"] = math.ceil(time.time())
                 else:
