@@ -18,9 +18,11 @@ import 'package:openvine/notifications/routing/dm_push_navigation.dart';
 import 'package:openvine/notifications/routing/notification_tap_target.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/official_accounts_service.dart';
 
 class _Publish extends Mock implements BackgroundPublishBloc {}
 
@@ -29,6 +31,8 @@ class _Auth extends Mock implements AuthService {}
 class _Nostr extends Mock implements NostrClient {}
 
 class _Dm extends Mock implements DmRepository {}
+
+class _Official extends Mock implements OfficialAccountsService {}
 
 class _Session extends NostrSession {
   _Session(this.initial);
@@ -102,7 +106,13 @@ void main() {
       ],
     );
   });
-  Future<void> mount(WidgetTester t, {bool cold = false}) async {
+  Future<void> mount(
+    WidgetTester t, {
+    bool cold = false,
+    bool restricted = false,
+  }) async {
+    final official = _Official();
+    when(() => official.isReadableByProtectedMinor(other)).thenReturn(false);
     container = ProviderContainer(
       overrides: [
         dmPushAccountSwitchProvider.overrideWithValue((account) async {
@@ -124,7 +134,8 @@ void main() {
         authServiceProvider.overrideWithValue(auth),
         dmRepositoryProvider.overrideWithValue(dm),
         goRouterProvider.overrideWithValue(router),
-        isDmRestrictedProvider.overrideWithValue(false),
+        isDmRestrictedProvider.overrideWithValue(restricted),
+        officialAccountsServiceProvider.overrideWithValue(official),
         nostrSessionProvider.overrideWith(
           () => _Session(
             cold ? NostrSessionReadiness.identityKnown(pubkey: owner) : ready,
@@ -194,6 +205,29 @@ void main() {
           ),
           isFalse,
         );
+      },
+    );
+
+    testWidgets(
+      'protected minor never opens an unreadable verified room or request',
+      (t) async {
+        await mount(t, restricted: true);
+        for (final request in [false, true]) {
+          openDmPush(container, target);
+          await t.pumpAndSettle();
+          expect(messages.hasListener, isTrue);
+          messages.add(
+            DmWrapFound(
+              conversationId: 'room',
+              messageId: 'rumor',
+              participants: {other},
+              isRequest: request,
+            ),
+          );
+          await t.pumpAndSettle();
+          expect(router.routeInformationProvider.value.uri.path, '/inbox');
+          expect(messages.hasListener, isFalse);
+        }
       },
     );
 

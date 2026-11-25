@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:app_update_repository/app_update_repository.dart';
+import 'package:dm_repository/dm_repository.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/services.dart';
@@ -16,12 +17,15 @@ import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/notification_preferences_service.dart';
@@ -40,6 +44,14 @@ class _MockPushNotificationService extends Mock
 class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockNostrSigner extends Mock implements NostrSigner {}
+
+class _MockDmRepository extends Mock implements DmRepository {}
+
+class _MockBoundPreferenceStore extends Mock
+    implements AccountPreferenceStore {}
+
+class _MockMessagePreferences extends Mock
+    implements NotificationPreferencesService {}
 
 class _MockNotificationService extends Mock implements NotificationService {}
 
@@ -451,6 +463,182 @@ void main() {
         verify(refreshCoordinator.schedulePushRefresh).called(1);
       },
     );
+
+    group('foreground direct messages', () {
+      const wrap =
+          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      late _MockDmRepository dm;
+      late _MockNotificationService local;
+      late _MockMessagePreferences preferences;
+      late _MockBoundPreferenceStore accountStore;
+      late StreamController<RemoteMessage> pushes;
+      late StreamController<DmWrapLookup> lookups;
+      const optedIn = NotificationPreferences(directMessagesEnabled: true);
+
+      setUp(() {
+        dm = _MockDmRepository();
+        local = _MockNotificationService();
+        preferences = _MockMessagePreferences();
+        accountStore = _MockBoundPreferenceStore();
+        pushes = StreamController<RemoteMessage>.broadcast();
+        lookups = StreamController<DmWrapLookup>.broadcast();
+        addTearDown(pushes.close);
+        addTearDown(lookups.close);
+        when(() => authService.currentPublicKeyHex).thenReturn(pubkeyA);
+        when(() => accountStore.boundPubkey).thenReturn(pubkeyA);
+        when(() => local.hasPermissions).thenReturn(true);
+        when(preferences.loadPreferences).thenAnswer((_) async => optedIn);
+        when(() => dm.watchWrapLookup(ownerPubkey: pubkeyA, giftWrapId: wrap))
+            .thenAnswer((_) => lookups.stream);
+        when(
+          () => local.sendLocal(
+            title: any(named: 'title'),
+            body: any(named: 'body'),
+            payload: any(named: 'payload'),
+          ),
+        ).thenAnswer((_) async {});
+        final container = buildContainer(
+          nostrSession: _TestNostrSession(
+            const NostrSessionReadiness.identityKnown(pubkey: pubkeyA),
+          ),
+          extraOverrides: [
+            firebaseOnMessageProvider.overrideWithValue(pushes.stream),
+            dmRepositoryProvider.overrideWithValue(dm),
+            notificationServiceProvider.overrideWithValue(local),
+            notificationPreferencesServiceProvider.overrideWithValue(
+              preferences,
+            ),
+            accountPreferenceStoreProvider.overrideWithValue(accountStore),
+            isDmRestrictedProvider.overrideWithValue(false),
+          ],
+        );
+        container.read(pushNotificationSyncProvider);
+      });
+
+      Future<void> receive({String receiver = pubkeyA}) async {
+        pushes.add(
+          RemoteMessage(
+            data: {
+              'type': 'directMessage',
+              'receiverPubkey': receiver,
+              'eventId': wrap,
+              'title': 'Untrusted title',
+              'body': 'Untrusted body',
+            },
+          ),
+        );
+        await pumpEventQueue(times: 2);
+      }
+
+      Future<void> verified({bool request = false}) async {
+        lookups.add(
+          DmWrapFound(
+            conversationId: 'room',
+            messageId: 'rumor',
+            participants: {pubkeyB},
+            isRequest: request,
+          ),
+        );
+        await pumpEventQueue(times: 2);
+      }
+
+      void expectSilent() => verifyNever(
+        () => local.sendLocal(
+          title: any(named: 'title'),
+          body: any(named: 'body'),
+          payload: any(named: 'payload'),
+        ),
+      );
+
+      test(
+        'shows localized generic copy only after verified delivery',
+        () async {
+          await receive();
+          expect(lookups.hasListener, isTrue);
+          expectSilent();
+          await verified();
+          final result =
+              verify(
+                    () => local.sendLocal(
+                      title: 'Divine',
+                      body: 'New message',
+                      payload: captureAny(named: 'payload'),
+                    ),
+                  ).captured.single
+                  as String;
+          expect(jsonDecode(result), containsPair('eventId', wrap));
+          expect(result, isNot(contains('Untrusted')));
+        },
+      );
+
+      test(
+        'rejects a foreign receiver and an unbound preference owner',
+        () async {
+          await receive(receiver: pubkeyB);
+          expect(lookups.hasListener, isFalse);
+          when(() => accountStore.boundPubkey).thenReturn(pubkeyB);
+          await receive();
+          expect(lookups.hasListener, isFalse);
+          verifyNever(preferences.loadPreferences);
+          expectSilent();
+        },
+      );
+
+      test(
+        'requires OS permission and explicit opt-in before lookup',
+        () async {
+          when(() => local.hasPermissions).thenReturn(false);
+          await receive();
+          verifyNever(preferences.loadPreferences);
+          expect(lookups.hasListener, isFalse);
+          when(() => local.hasPermissions).thenReturn(true);
+          when(preferences.loadPreferences)
+              .thenAnswer((_) async => const NotificationPreferences());
+          await receive();
+          expect(lookups.hasListener, isFalse);
+          expectSilent();
+        },
+      );
+
+      test('suppresses a verified request', () async {
+        await receive();
+        expect(lookups.hasListener, isTrue);
+        await verified(request: true);
+        expectSilent();
+      });
+
+      test(
+        'switching account while verification waits cancels the alert',
+        () async {
+          await receive();
+          expect(lookups.hasListener, isTrue);
+          when(() => authService.currentPublicKeyHex).thenReturn(pubkeyB);
+          await verified();
+          expectSilent();
+        },
+      );
+
+      test('opting out while verification waits cancels the alert', () async {
+        await receive();
+        expect(lookups.hasListener, isTrue);
+        when(preferences.loadPreferences)
+            .thenAnswer((_) async => const NotificationPreferences());
+        await verified();
+        expectSilent();
+      });
+
+      test('revoking OS permission during the final consent read cancels the alert', () async {
+        final consent = Completer<NotificationPreferences>();
+        await receive();
+        expect(lookups.hasListener, isTrue);
+        when(preferences.loadPreferences).thenAnswer((_) => consent.future);
+        await verified();
+        when(() => local.hasPermissions).thenReturn(false);
+        consent.complete(optedIn);
+        await pumpEventQueue(times: 2);
+        expectSilent();
+      });
+    });
 
     test(
       'does not publish stale registration when auth changes mid-flight',

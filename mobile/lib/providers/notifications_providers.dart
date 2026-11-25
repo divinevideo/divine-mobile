@@ -447,7 +447,9 @@ Future<void> _handleForegroundDm(Ref ref, RemoteMessage message) async {
     )) {
       return;
     }
-    if (!(await prefs.loadPreferences()).directMessagesEnabled || !current()) {
+    if (!(await prefs.loadPreferences()).directMessagesEnabled ||
+        !current() ||
+        !service.hasPermissions) {
       return;
     }
     final languageCode = LocalePreferenceService(
