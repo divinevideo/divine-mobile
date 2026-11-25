@@ -2572,6 +2572,7 @@ void _runMethodChannelTests() {
         'shutterActive': true,
         'shutterEnabled': false,
         'stillShutterCount': 3,
+        'stateId': 1,
       });
     });
 
@@ -2629,6 +2630,76 @@ void _runMethodChannelTests() {
         );
 
         expect(receivedTrigger, equals(RemoteRecordTrigger.volumeDown));
+      });
+
+      group('a watch press', () {
+        const recorder = RemoteRecorderState(
+          recorded: Duration.zero,
+          budget: Duration(seconds: 6),
+          modeName: 'Capture',
+          isShutterActive: true,
+        );
+
+        Future<void> press(String trigger, int? stateId) {
+          const codec = StandardMethodCodec();
+          return TestDefaultBinaryMessengerBinding
+              .instance
+              .defaultBinaryMessenger
+              .handlePlatformMessage(
+                'divine_camera',
+                codec.encodeMethodCall(
+                  MethodCall('onRemoteRecordTrigger', {
+                    'trigger': trigger,
+                    'stateId': stateId,
+                  }),
+                ),
+                (_) {},
+              );
+        }
+
+        test('made on the state last sent is passed on', () async {
+          final triggers = <RemoteRecordTrigger>[];
+          methodChannelImpl.onRemoteRecordTrigger = triggers.add;
+          await methodChannelImpl.updateRemoteRecorderState(recorder);
+          final stateId =
+              (capturedCalls.single.arguments as Map)['stateId'] as int;
+
+          await press('watchStop', stateId);
+
+          expect(triggers, equals([RemoteRecordTrigger.watchStop]));
+        });
+
+        // Native accepted the press before it heard of the recorder's next
+        // take: a Stop shown for one take must not stop the next.
+        test('made on a state since replaced is dropped', () async {
+          final triggers = <RemoteRecordTrigger>[];
+          methodChannelImpl.onRemoteRecordTrigger = triggers.add;
+          await methodChannelImpl.updateRemoteRecorderState(recorder);
+          final firstTake =
+              (capturedCalls.single.arguments as Map)['stateId'] as int;
+          await methodChannelImpl.updateRemoteRecorderState(
+            const RemoteRecorderState(
+              recorded: Duration(seconds: 2),
+              budget: Duration(seconds: 6),
+              modeName: 'Capture',
+              isShutterActive: true,
+            ),
+          );
+
+          await press('watchStop', firstTake);
+
+          expect(triggers, isEmpty);
+        });
+
+        test('made on a closed recorder is dropped', () async {
+          final triggers = <RemoteRecordTrigger>[];
+          methodChannelImpl.onRemoteRecordTrigger = triggers.add;
+          await methodChannelImpl.updateRemoteRecorderState(null);
+
+          await press('watchStart', null);
+
+          expect(triggers, isEmpty);
+        });
       });
 
       test('handles onRemoteRecordTrigger with null callback', () async {

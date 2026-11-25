@@ -341,9 +341,11 @@ final class MediaSessionScopePolicyTests: XCTestCase {
 /// Without it, a Stop the Watch still showed for a finished take would stop
 /// the next one.
 final class WatchShutterGateTests: XCTestCase {
+  private let takeRunning: [String: Any] = ["recordedMs": 0, "shutterActive": true]
+
   func testAdmitsAPressOnTheLatestState() {
     var gate = WatchShutterGate(nowMs: 1_000)
-    let revision = gate.advance(nowMs: 2_000)
+    let revision = gate.publish(takeRunning, nowMs: 2_000)["revision"]!
 
     XCTAssertEqual(gate.action(for: ["command": "watchStop", "revision": revision]), .stop)
     XCTAssertEqual(gate.action(for: ["command": "watchStart", "revision": revision]), .start)
@@ -351,9 +353,9 @@ final class WatchShutterGateTests: XCTestCase {
 
   func testDropsAStopShownForTheTakeBefore() {
     var gate = WatchShutterGate(nowMs: 1_000)
-    let firstTakeRunning = gate.advance(nowMs: 2_000)
-    _ = gate.advance(nowMs: 3_000)  // The first take ended.
-    _ = gate.advance(nowMs: 4_000)  // The next one is running.
+    let firstTakeRunning = gate.publish(takeRunning, nowMs: 2_000)["revision"]!
+    _ = gate.publish(["recordedMs": 2000, "shutterActive": false], nowMs: 3_000)
+    _ = gate.publish(["recordedMs": 2000, "shutterActive": true], nowMs: 4_000)
 
     XCTAssertNil(gate.action(for: ["command": "watchStop", "revision": firstTakeRunning]))
   }
@@ -381,8 +383,56 @@ final class WatchShutterGateTests: XCTestCase {
   func testRevisionsKeepRisingWhenTheClockDoesNot() {
     var gate = WatchShutterGate(nowMs: 5_000)
 
-    XCTAssertEqual(gate.advance(nowMs: 4_000), 5_001)
-    XCTAssertEqual(gate.advance(nowMs: 9_000), 9_000)
+    _ = gate.publish(nil, nowMs: 4_000)
+    XCTAssertEqual(gate.revision, 5_001)
+    _ = gate.publish(nil, nowMs: 9_000)
+    XCTAssertEqual(gate.revision, 9_000)
+  }
+
+  func testTheWatchGetsTheStateWithoutDartsNumber() {
+    var gate = WatchShutterGate(nowMs: 1_000)
+
+    let payload = gate.publish(
+      ["recordedMs": 900, "activeTakeStartedAtMs": NSNull(), "stateId": 7],
+      nowMs: 2_000
+    )
+
+    XCTAssertEqual(payload["available"] as? Bool, true)
+    XCTAssertEqual(payload["recordedMs"] as? Int, 900)
+    XCTAssertEqual((payload["revision"] as? NSNumber)?.int64Value, 2_000)
+    XCTAssertNil(payload["stateId"])
+    XCTAssertNil(payload["activeTakeStartedAtMs"])
+  }
+
+  func testAClosedRecorderTellsTheWatchOnlyThatItIsClosed() {
+    var gate = WatchShutterGate(nowMs: 1_000)
+
+    let payload = gate.publish(nil, nowMs: 2_000)
+
+    XCTAssertEqual(Set(payload.keys), ["available", "revision"])
+    XCTAssertEqual(payload["available"] as? Bool, false)
+  }
+
+  // Dart can move to the next take before this side hears of it, so a press
+  // that passes here goes on with Dart's number for its state, and Dart
+  // checks that number again.
+  func testAPressGoesToDartWithDartsNumberForItsState() {
+    var gate = WatchShutterGate(nowMs: 1_000)
+    _ = gate.publish(["shutterActive": true, "stateId": 7], nowMs: 2_000)
+
+    let arguments = gate.triggerArguments(for: .stop)
+
+    XCTAssertEqual(arguments["trigger"] as? String, "watchStop")
+    XCTAssertEqual((arguments["stateId"] as? NSNumber)?.int64Value, 7)
+  }
+
+  func testAPressOnAClosedRecorderGoesToDartWithoutAState() {
+    var gate = WatchShutterGate(nowMs: 1_000)
+    _ = gate.publish(nil, nowMs: 2_000)
+
+    let arguments = gate.triggerArguments(for: .start)
+
+    XCTAssertTrue(arguments["stateId"] is NSNull)
   }
 }
 
