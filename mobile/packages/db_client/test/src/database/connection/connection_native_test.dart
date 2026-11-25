@@ -62,7 +62,9 @@ void main() {
 
       expect(path, equals('/tmp/app-support/openvine/database/divine_db.db'));
     });
+  });
 
+  group('resolveMacOsSharedDatabasePath', () {
     group('native Mac App Store upgrade', () {
       const bundleId = 'co.openvine.app';
       late Directory tempRoot;
