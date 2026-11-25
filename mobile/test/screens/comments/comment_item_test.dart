@@ -104,6 +104,7 @@ void main() {
     required _MockComposerBloc composerBloc,
     required _MockReactionsBloc reactionsBloc,
     Comment? comment,
+    int depth = 0,
     List<Override>? overrides,
     bool isHiddenByOwner = false,
     bool repliesToHiddenComment = false,
@@ -133,6 +134,7 @@ void main() {
             child: SingleChildScrollView(
               child: CommentItem(
                 comment: comment,
+                depth: depth,
                 isHiddenByOwner: isHiddenByOwner,
                 viewerOwnsVideo: listBloc != null,
                 supportsModeration: supportsModeration,
@@ -861,6 +863,109 @@ void main() {
       // 7s fallthrough so no pending timers leak into the next test.
       await tester.pump(const Duration(seconds: 8));
       await tester.pumpAndSettle();
+    });
+  });
+
+  group('layout', () {
+    // The inline player is capped at 248 dp wide and is 9:16.
+    const playerSize = Size(248, 248 * 16 / 9);
+
+    final videoReply = CommentBuilder()
+        .withAuthorPubkey(_testHexPubkey)
+        .withRootEventId(_testRootEventId)
+        .withRootAuthorPubkey(_testRootAuthorPubkey)
+        .withContent('Ferns')
+        .build()
+        .copyWith(
+          videoUrl: 'https://media.divine.video/some-video.mp4',
+          thumbnailUrl: 'https://media.divine.video/some-thumb.jpg',
+          videoDimensions: '1080x1920',
+          videoDuration: 6,
+        );
+
+    Future<void> pumpVideoReply(WidgetTester tester, {int depth = 0}) async {
+      // A phone-sized screen, so the comment is wider than the player.
+      tester.view.physicalSize = const Size(1179, 2556);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final mocks = buildMocks();
+      await tester.pumpWidget(
+        buildTestWidget(
+          videoReply.content,
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          comment: videoReply,
+          depth: depth,
+        ),
+      );
+      await tester.pump();
+    }
+
+    // Drains VisibilityDetector's debounce and the identity skeleton's 7s
+    // fallthrough so no pending timers leak into the next test.
+    Future<void> drainTimers(WidgetTester tester) async {
+      await tester.pump(const Duration(seconds: 8));
+      await tester.pumpAndSettle();
+    }
+
+    Finder ofItem(Finder matching) =>
+        find.descendant(of: find.byType(CommentItem), matching: matching);
+
+    testWidgets('ends a video reply right below its actions', (tester) async {
+      await pumpVideoReply(tester);
+
+      expect(tester.getSize(find.byType(VideoCommentPlayer)), playerSize);
+      final item = tester.getRect(find.byType(CommentItem));
+      final actions = tester.getRect(ofItem(find.byType(Wrap)));
+      // Only the row's 20 dp bottom padding sits below the actions.
+      expect(item.bottom - actions.bottom, closeTo(20, 0.01));
+
+      await drainTimers(tester);
+    });
+
+    testWidgets('draws each thread line down the whole of a nested reply', (
+      tester,
+    ) async {
+      // Five levels deep, which draws the most lines there are: four.
+      await pumpVideoReply(tester, depth: 5);
+
+      final lines = ofItem(
+        find.byWidgetPredicate((widget) {
+          if (widget is! DecoratedBox) return false;
+          final decoration = widget.decoration;
+          if (decoration is! BoxDecoration) return false;
+          final border = decoration.border;
+          return border is Border &&
+              border.left != BorderSide.none &&
+              border.right == BorderSide.none;
+        }),
+      );
+      final item = tester.getRect(find.byType(CommentItem));
+      final lineRects = [
+        for (final element in lines.evaluate())
+          tester.getRect(find.byElementPredicate((e) => e == element)),
+      ];
+      final lineWidths = [
+        for (final line in tester.widgetList<DecoratedBox>(lines))
+          ((line.decoration as BoxDecoration).border! as Border).left.width,
+      ];
+
+      // Outermost first: one 24 dp column per level, the line next to the
+      // comment the bold one.
+      expect(lineRects.map((rect) => rect.left), [0, 24, 48, 72]);
+      expect(lineWidths, [1, 1, 1, 2]);
+      for (final rect in lineRects) {
+        expect(rect.top, item.top);
+        expect(rect.bottom, item.bottom);
+      }
+      expect(tester.getSize(find.byType(VideoCommentPlayer)), playerSize);
+      final actions = tester.getRect(ofItem(find.byType(Wrap)));
+      // Only a reply's 12 dp bottom padding sits below the actions.
+      expect(item.bottom - actions.bottom, closeTo(12, 0.01));
+
+      await drainTimers(tester);
     });
   });
 
