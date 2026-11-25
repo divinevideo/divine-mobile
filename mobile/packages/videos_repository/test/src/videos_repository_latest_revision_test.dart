@@ -190,6 +190,20 @@ void main() {
         });
       });
 
+      test(
+        'lets a programming error surface instead of asking the relays',
+        () async {
+          stubFunnelcake(() async => throw StateError('bug'));
+          stubRelays([revision()]);
+
+          await expectLater(
+            withFunnelcake().fetchLatestVideoRevision('34236:$pubkey:$_dTag'),
+            throwsStateError,
+          );
+          verifyNever(readRelays);
+        },
+      );
+
       test('is not asked when it is not available', () async {
         when(() => funnelcake.isAvailable).thenReturn(false);
         final onRelay = revision();
