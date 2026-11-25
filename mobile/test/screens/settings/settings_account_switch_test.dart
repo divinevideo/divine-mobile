@@ -727,9 +727,11 @@ void main() {
         ),
       );
       await tester.tap(find.text(l10n.settingsAddAnotherAccount).last);
-      await tester.pumpAndSettle();
+      // The sign-out spinner never settles while the sign-out is pending.
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
       screen.value = const Scaffold(body: Text('Welcome host'));
-      await tester.pumpAndSettle();
+      await tester.pump();
       signOut.completeError(
         const UserDataCleanupException('cleanup incomplete'),
       );
@@ -803,6 +805,39 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(() => publishBloc.parkInFlight()).called(1);
+    });
+
+    testWidgets('adding an account blocks Settings until sign-out settles', (
+      tester,
+    ) async {
+      // Sign-out takes seconds on a device. With nothing on screen the header
+      // button stayed live, and a second pass through the picker started a
+      // second sign-out that retired the first one midway.
+      final signOut = Completer<void>();
+      when(() => authService.signOut()).thenAnswer((_) => signOut.future);
+
+      final l10n = await pumpAndTapSwitch(tester);
+      await tester.tap(find.text(l10n.settingsAddAnotherAccount).last);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+
+      await tester.tap(
+        find.text(l10n.settingsSwitchAccount),
+        warnIfMissed: false,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text(l10n.settingsAddAnotherAccount), findsNothing);
+
+      signOut.complete();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+      verify(() => authService.signOut()).called(1);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('failed parking aborts adding an account with feedback', (
