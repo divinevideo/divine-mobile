@@ -264,6 +264,11 @@ libmpv. The original `LinuxVideoPlayerBackend`, `linuxBackendFactory`,
 `usesLinuxBackend` and `buildLinuxView` names remain for compatibility and
 refer to this shared backend on both platforms.
 
+Linux uses mpv's `auto-safe` decoder selection with software texture output.
+This retains allowlisted hardware decoding while avoiding unrestricted codec
+probing, which can report a failed decoder attempt after a successful software
+fallback and leave paused preview readiness in error.
+
 The shared desktop backend supports:
 
 - HLS and MP4 playback
@@ -280,6 +285,32 @@ and `end`, so a source that needs request headers cannot play on this backend.
 `setClipVolumes`, `setClipEqualizers`, `setAudioTrackEqualizer` and
 `setFrameEffects` do nothing there, and the backend does not pause when the
 app goes to the background.
+
+### Native Linux playback verification
+
+With Flutter 3.47.9 and the Linux native build dependencies installed, run:
+
+```sh
+python3 tool/native_playback_harness_test.py
+python3 tool/native_playback_harness.py --platform linux
+```
+
+The harness builds a separate Release consumer with the application's locked
+dependencies and launches it under Xvfb. It checks actual Flutter pixels for a
+green local clip, a paused red HTTP replacement at position zero, and blue after
+explicit playback advances. A synthetic invalid source must still report an
+error and must never report a rendered frame. The HTTP server is loopback-only;
+the probe uses no account or remote media. Desktop CI runs the same checks.
+
+The four-second changing fixture is synthetic H.264, generated with:
+
+```sh
+ffmpeg -f lavfi -i color=c=red:s=128x240:r=12:d=2 \
+  -f lavfi -i color=c=blue:s=128x240:r=12:d=2 \
+  -filter_complex '[0:v][1:v]concat=n=2:v=1:a=0[v]' -map '[v]' \
+  -c:v libx264 -pix_fmt yuv420p -movflags +faststart -map_metadata -1 \
+  test/fixtures/desktop_changing_portrait.mp4
+```
 
 ## Web Backend Notes
 
