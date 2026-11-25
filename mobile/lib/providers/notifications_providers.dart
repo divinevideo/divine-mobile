@@ -437,6 +437,13 @@ Future<void> _handleForegroundDm(Ref ref, RemoteMessage message) async {
         )
         .first;
     if (!current() || !service.hasPermissions) return;
+    if (!(await prefs.loadPreferences()).directMessagesEnabled ||
+        !current() ||
+        !service.hasPermissions) {
+      return;
+    }
+    // The account, the visible row, and minor restrictions can change while
+    // the final consent read is in flight. There is no await before sendLocal.
     if (!shouldDisplayDmAlert(
       lookup,
       owner: owner,
@@ -445,11 +452,6 @@ Future<void> _handleForegroundDm(Ref ref, RemoteMessage message) async {
           .read(officialAccountsServiceProvider)
           .isReadableByProtectedMinor,
     )) {
-      return;
-    }
-    if (!(await prefs.loadPreferences()).directMessagesEnabled ||
-        !current() ||
-        !service.hasPermissions) {
       return;
     }
     final languageCode = LocalePreferenceService(

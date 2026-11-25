@@ -16,6 +16,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/models/notification_preferences.dart';
+import 'package:openvine/notifications/routing/dm_message_visibility.dart';
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -467,6 +468,8 @@ void main() {
     group('foreground direct messages', () {
       const wrap =
           'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      late ProviderContainer foreground;
+      late bool restricted;
       late _MockDmRepository dm;
       late _MockNotificationService local;
       late _MockMessagePreferences preferences;
@@ -476,6 +479,7 @@ void main() {
       const optedIn = NotificationPreferences(directMessagesEnabled: true);
 
       setUp(() {
+        restricted = false;
         dm = _MockDmRepository();
         local = _MockNotificationService();
         preferences = _MockMessagePreferences();
@@ -497,7 +501,7 @@ void main() {
             payload: any(named: 'payload'),
           ),
         ).thenAnswer((_) async {});
-        final container = buildContainer(
+        foreground = buildContainer(
           nostrSession: _TestNostrSession(
             const NostrSessionReadiness.identityKnown(pubkey: pubkeyA),
           ),
@@ -509,10 +513,10 @@ void main() {
               preferences,
             ),
             accountPreferenceStoreProvider.overrideWithValue(accountStore),
-            isDmRestrictedProvider.overrideWithValue(false),
+            isDmRestrictedProvider.overrideWith((_) => restricted),
           ],
         );
-        container.read(pushNotificationSyncProvider);
+        foreground.read(pushNotificationSyncProvider);
       });
 
       Future<void> receive({String receiver = pubkeyA}) async {
@@ -634,6 +638,32 @@ void main() {
         when(preferences.loadPreferences).thenAnswer((_) => consent.future);
         await verified();
         when(() => local.hasPermissions).thenReturn(false);
+        consent.complete(optedIn);
+        await pumpEventQueue(times: 2);
+        expectSilent();
+      });
+
+      test('the same message becoming visible during the final consent read suppresses the alert', () async {
+        final consent = Completer<NotificationPreferences>();
+        await receive();
+        when(preferences.loadPreferences).thenAnswer((_) => consent.future);
+        await verified();
+        bool seesTarget(String owner, String conversation, String message) =>
+            owner == pubkeyA && conversation == 'room' && message == 'rumor';
+        DmMessageVisibility.attach(seesTarget);
+        addTearDown(() => DmMessageVisibility.detach(seesTarget));
+        consent.complete(optedIn);
+        await pumpEventQueue(times: 2);
+        expectSilent();
+      });
+
+      test('a protected-minor designation during the final consent read suppresses the alert', () async {
+        final consent = Completer<NotificationPreferences>();
+        await receive();
+        when(preferences.loadPreferences).thenAnswer((_) => consent.future);
+        await verified();
+        restricted = true;
+        foreground.invalidate(isDmRestrictedProvider);
         consent.complete(optedIn);
         await pumpEventQueue(times: 2);
         expectSilent();
