@@ -304,14 +304,17 @@ class KeycastOAuth {
     );
   }
 
-  /// Exchange authorization code for tokens
-  /// Automatically saves session to storage after successful exchange
+  /// Exchanges an authorization code for tokens.
+  ///
+  /// By default, saves the session and its credentials. Pass
+  /// `persistSession: false` when the caller owns credential persistence.
   ///
   /// Throws [TimeoutException] if the server does not respond within
   /// [requestTimeout].
   Future<TokenResponse> exchangeCode({
     required String code,
     required String verifier,
+    bool persistSession = true,
   }) async {
     final response = await _client
         .post(
@@ -340,9 +343,9 @@ class KeycastOAuth {
 
     final tokenResponse = TokenResponse.fromJson(json);
 
-    // Auto-save session and authorization handle to storage
-    final session = KeycastSession.fromTokenResponse(tokenResponse);
-    await _saveSession(session);
+    if (persistSession) {
+      await _saveSession(KeycastSession.fromTokenResponse(tokenResponse));
+    }
 
     return tokenResponse;
   }

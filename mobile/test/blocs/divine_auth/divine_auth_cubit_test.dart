@@ -2,10 +2,13 @@
 // ABOUTME: Verifies form state, validation, sign-in, sign-up, and error handling
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
@@ -83,10 +86,11 @@ void main() {
 
     DivineAuthCubit buildCubit({
       String? appVersion,
+      KeycastOAuth? oauthClient,
       EmailConfirmationRepository? emailConfirmationRepository,
     }) {
       return DivineAuthCubit(
-        oauthClient: mockOAuth,
+        oauthClient: oauthClient ?? mockOAuth,
         authService: mockAuthService,
         pendingVerificationService: mockPendingVerification,
         emailConfirmationRepository: emailConfirmationRepository,
@@ -326,6 +330,7 @@ void main() {
               () => mockOAuth.exchangeCode(
                 code: any(named: 'code'),
                 verifier: any(named: 'verifier'),
+                persistSession: false,
               ),
             ).thenAnswer(
               (_) async => const TokenResponse(bunkerUrl: 'bunker://test'),
@@ -363,6 +368,7 @@ void main() {
               () => mockOAuth.exchangeCode(
                 code: testCode,
                 verifier: testVerifier,
+                persistSession: false,
               ),
             ).called(1);
             verify(
@@ -391,6 +397,7 @@ void main() {
               () => mockOAuth.exchangeCode(
                 code: any(named: 'code'),
                 verifier: any(named: 'verifier'),
+                persistSession: false,
               ),
             ).thenAnswer(
               (_) async => const TokenResponse(bunkerUrl: 'bunker://test'),
@@ -447,6 +454,7 @@ void main() {
               () => mockOAuth.exchangeCode(
                 code: any(named: 'code'),
                 verifier: any(named: 'verifier'),
+                persistSession: false,
               ),
             ).thenAnswer(
               (_) async => const TokenResponse(bunkerUrl: 'bunker://test'),
@@ -721,6 +729,7 @@ void main() {
               () => mockOAuth.exchangeCode(
                 code: any(named: 'code'),
                 verifier: any(named: 'verifier'),
+                persistSession: false,
               ),
             ).thenAnswer(
               (_) async => const TokenResponse(bunkerUrl: 'bunker://test'),
@@ -773,6 +782,7 @@ void main() {
               () => mockOAuth.exchangeCode(
                 code: any(named: 'code'),
                 verifier: any(named: 'verifier'),
+                persistSession: false,
               ),
             ).thenThrow(OAuthException('Token exchange failed'));
           },
@@ -820,6 +830,7 @@ void main() {
               () => mockOAuth.exchangeCode(
                 code: any(named: 'code'),
                 verifier: any(named: 'verifier'),
+                persistSession: false,
               ),
             ).thenThrow(Exception('network timeout'));
           },
@@ -862,6 +873,7 @@ void main() {
             () => mockOAuth.exchangeCode(
               code: any(named: 'code'),
               verifier: any(named: 'verifier'),
+              persistSession: false,
             ),
           ).thenAnswer(
             (_) async => const TokenResponse(bunkerUrl: 'bunker://test'),
@@ -1054,6 +1066,7 @@ void main() {
                 () => mockOAuth.exchangeCode(
                   code: any(named: 'code'),
                   verifier: any(named: 'verifier'),
+                  persistSession: any(named: 'persistSession'),
                 ),
               );
             },
@@ -1085,38 +1098,68 @@ void main() {
               () => mockOAuth.exchangeCode(
                 code: any(named: 'code'),
                 verifier: any(named: 'verifier'),
+                persistSession: any(named: 'persistSession'),
               ),
             );
           },
         );
 
         test(
-          'does not activate an account after closing during exchange',
+          'abandoned instant signup leaves credentials empty after exchange',
           () async {
-            stubSuccessfulUnconfirmedSignIn();
             final exchanging = Completer<void>();
-            final exchanged = Completer<TokenResponse>();
-            when(
-              () => mockOAuth.exchangeCode(
-                code: any(named: 'code'),
-                verifier: any(named: 'verifier'),
-              ),
-            ).thenAnswer((_) {
-              exchanging.complete();
-              return exchanged.future;
-            });
-            final cubit = buildCubit(emailConfirmationRepository: confirmations)
-              ..initialize(isSignIn: true)
-              ..updateEmail(testEmail)
-              ..updatePassword(testPassword);
+            final exchanged = Completer<http.Response>();
+            final storage = MemoryKeycastStorage();
+            final oauth = KeycastOAuth(
+              config: mockOAuth.config,
+              storage: storage,
+              httpClient: MockClient((request) async {
+                if (request.url.path == '/api/headless/register') {
+                  return http.Response(
+                    jsonEncode({
+                      'success': true,
+                      'pubkey': pubkey,
+                      'verification_required': false,
+                      'code': testCode,
+                    }),
+                    201,
+                  );
+                }
+                expect(request.url.path, '/api/oauth/token');
+                exchanging.complete();
+                return exchanged.future;
+              }),
+            );
+            addTearDown(oauth.close);
+            final cubit =
+                buildCubit(
+                    oauthClient: oauth,
+                    emailConfirmationRepository: confirmations,
+                  )
+                  ..initialize()
+                  ..updateEmail(testEmail)
+                  ..updatePassword(testPassword);
 
             final submission = cubit.submit();
             await exchanging.future;
             await cubit.close();
-            exchanged.complete(const TokenResponse(bunkerUrl: 'bunker://test'));
+            exchanged.complete(
+              http.Response(
+                jsonEncode({
+                  'bunker_url': 'bunker://test',
+                  'access_token': 'test-access-token',
+                  'refresh_token': 'test-refresh-token',
+                  'authorization_handle': 'test-handle',
+                }),
+                200,
+              ),
+            );
             await submission;
 
             verifyNever(() => mockAuthService.signInWithDivineOAuth(any()));
+            expect(await oauth.getSession(), isNull);
+            expect(await oauth.getAuthorizationHandle(), isNull);
+            expect(await storage.read('keycast_refresh_token'), isNull);
           },
         );
 
@@ -1293,6 +1336,7 @@ void main() {
               () => mockOAuth.exchangeCode(
                 code: any(named: 'code'),
                 verifier: any(named: 'verifier'),
+                persistSession: false,
               ),
             ).thenAnswer(
               (_) async => const TokenResponse(bunkerUrl: 'bunker://test'),
@@ -1329,6 +1373,7 @@ void main() {
               () => mockOAuth.exchangeCode(
                 code: testCode,
                 verifier: testVerifier,
+                persistSession: false,
               ),
             ).called(1);
             verifyNever(

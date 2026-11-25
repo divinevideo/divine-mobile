@@ -153,12 +153,19 @@ void main() {
               'access_token': 'access_token_xyz',
               'token_type': 'Bearer',
               'expires_in': 3600,
+              'refresh_token': 'test-refresh-token',
+              'authorization_handle': 'test-handle',
             }),
             200,
           );
         });
 
-        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final storage = MemoryKeycastStorage();
+        final oauth = KeycastOAuth(
+          config: config,
+          httpClient: mockClient,
+          storage: storage,
+        );
         final response = await oauth.exchangeCode(
           code: 'auth_code',
           verifier: 'test_verifier',
@@ -167,6 +174,59 @@ void main() {
         expect(response.bunkerUrl, 'bunker://abc123');
         expect(response.accessToken, 'access_token_xyz');
         expect(response.expiresIn, 3600);
+        expect((await oauth.getSession())?.accessToken, 'access_token_xyz');
+        expect(await oauth.getAuthorizationHandle(), 'test-handle');
+        expect(
+          await storage.read('keycast_refresh_token'),
+          'test-refresh-token',
+        );
+      });
+
+      test('can return tokens without changing stored credentials', () async {
+        const previousSession = KeycastSession(
+          bunkerUrl: 'bunker://previous',
+          accessToken: 'previous-access-token',
+          authorizationHandle: 'previous-handle',
+          refreshToken: 'previous-refresh-token',
+        );
+        final storage = MemoryKeycastStorage();
+        await storage.write(
+          'keycast_session',
+          jsonEncode(previousSession.toJson()),
+        );
+        await storage.write('keycast_auth_handle', 'previous-handle');
+        await storage.write('keycast_refresh_token', 'previous-refresh-token');
+        final oauth = KeycastOAuth(
+          config: config,
+          storage: storage,
+          httpClient: MockClient(
+            (_) async => http.Response(
+              jsonEncode({
+                'bunker_url': 'bunker://new',
+                'access_token': 'new-access-token',
+                'refresh_token': 'new-refresh-token',
+                'authorization_handle': 'new-handle',
+              }),
+              200,
+            ),
+          ),
+        );
+
+        final response = await oauth.exchangeCode(
+          code: 'auth_code',
+          verifier: 'test_verifier',
+          persistSession: false,
+        );
+
+        expect(response.accessToken, 'new-access-token');
+        expect(response.refreshToken, 'new-refresh-token');
+        expect(response.authorizationHandle, 'new-handle');
+        expect((await oauth.getSession())?.toJson(), previousSession.toJson());
+        expect(await oauth.getAuthorizationHandle(), 'previous-handle');
+        expect(
+          await storage.read('keycast_refresh_token'),
+          'previous-refresh-token',
+        );
       });
 
       test('throws OAuthException on error response', () async {

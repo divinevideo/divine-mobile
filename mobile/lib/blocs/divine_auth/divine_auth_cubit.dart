@@ -398,9 +398,11 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
         category: LogCategory.auth,
       );
 
+      // AuthService saves the bound credentials under the activation lease.
       final tokenResponse = await _oauthClient.exchangeCode(
         code: code,
         verifier: verifier,
+        persistSession: false,
       );
 
       if (isClosed) return;
