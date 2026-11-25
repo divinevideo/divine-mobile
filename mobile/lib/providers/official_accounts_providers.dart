@@ -91,8 +91,10 @@ final dmSendPolicyProvider = Provider<DmSendPolicy>((ref) {
     if (isRetiredModerationAccount(recipientPubkey)) {
       return DmSendPolicyDecision.terminallyBlockedRetain;
     }
-    // Temporary, not terminal: confirming the email lifts it, and a queued
-    // send stays queued until then instead of being discarded.
+    // Temporary, not terminal: confirming the email lifts it. Nothing waits
+    // for that: a new send is refused before it is queued and the person is
+    // asked to confirm, and a row queued before the lock was known is retried
+    // like any failed send, spending its retries, and is never discarded.
     if (ref.read(emailConfirmationCubitProvider).state.isUnconfirmed) {
       return DmSendPolicyDecision.temporarilyBlocked;
     }

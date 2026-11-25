@@ -69,7 +69,7 @@ void main() {
 
   group('dmSendPolicyProvider', () {
     test(
-      'holds sends back until the email is confirmed, keeping them queued',
+      'blocks sends temporarily, not terminally, until the email is confirmed',
       () async {
         final container = containerWith(
           isRestricted: false,
