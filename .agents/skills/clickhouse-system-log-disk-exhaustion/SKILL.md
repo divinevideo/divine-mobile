@@ -6,11 +6,11 @@ description: |
   Use when: (1) ClickHouse inserts fail with NOT_ENOUGH_SPACE error, (2) Disk is 100% full
   but application tables are small, (3) system database is 10-100x larger than user databases,
   (4) Sentry shows batch insert/commit failures across multiple tables simultaneously.
-  Covers both self-hosted ClickHouse (Altinity operator on K8s) and ClickHouse Cloud with
-  different remediation paths for each.
+  Covers self-hosted ClickHouse (Altinity operator on K8s) system log cleanup and TTL
+  configuration.
 author: Claude Code
-version: 1.0.0
-date: 2026-03-01
+version: 2.0.0
+date: 2026-11-25
 ---
 
 # ClickHouse System Log Disk Exhaustion
@@ -28,8 +28,6 @@ tables simultaneously.
 - **Sentry pattern**: Multiple batch insert/commit failure issues appearing at the same time
 - **Diagnosis query**: `SELECT database, formatReadableSize(sum(total_bytes)) FROM system.tables WHERE total_bytes > 0 GROUP BY database ORDER BY sum(total_bytes) DESC`
   - If `system` database is 10x+ larger than application databases, this is the cause
-- **ClickHouse Cloud additional symptom**: Numbered suffix tables (`trace_log_16`, `text_log_19`)
-  from decommissioned server nodes accumulate and never get cleaned up within the TTL window
 
 ## Solution
 
@@ -107,31 +105,12 @@ ALTER TABLE system.part_log MODIFY TTL event_date + INTERVAL 3 DAY SETTINGS mate
 ALTER TABLE system.query_views_log MODIFY TTL event_date + INTERVAL 3 DAY SETTINGS materialize_ttl_after_modify = 0;
 ```
 
-### Fix: ClickHouse Cloud (no shell access)
-
-ClickHouse Cloud revokes all modify permissions on `system.*` from user-created roles:
-```
-REVOKE INSERT, ALTER, CREATE TABLE, DROP TABLE, TRUNCATE, OPTIMIZE ON system.* FROM default_role
-```
-
-**You CANNOT fix this via SQL.** The only options are:
-
-1. **ClickHouse Cloud Console** (https://clickhouse.cloud/): Go to service settings and
-   reduce system log TTLs to 3-7 days
-2. **Get the `default` user password** from the console, then run the ALTER TTL commands
-3. **ClickHouse Cloud Support**: Request system log cleanup
-
-To identify ClickHouse Cloud: check for numbered suffix tables (e.g., `trace_log_16`,
-`text_log_19`) which are from rotated server pods. Also, `system.disks` will show
-`system-tables/mergetree/` paths with 16 EiB (object storage).
-
 ## Verification
 ```sql
 -- After cleanup, verify disk usage
--- Self-hosted:
 SELECT formatReadableSize(free_space) FROM system.disks WHERE name = 'default';
 
--- Both: verify system database is now small
+-- Verify system database is now small
 SELECT database, formatReadableSize(sum(total_bytes)) as size
 FROM system.tables WHERE total_bytes > 0 GROUP BY database;
 
@@ -148,9 +127,6 @@ INSERT INTO your_table (...) VALUES (...);
   ClickHouse from trying to access the removed files.
 - `materialize_ttl_after_modify = 0` prevents ClickHouse from immediately trying to
   rewrite all data to apply TTL (which would need disk space you don't have).
-- On ClickHouse Cloud, each server node rotation leaves behind numbered system log tables
-  (e.g., `_16`, `_19`) that accumulate over time. With 65+ nodes over months, this adds
-  up to tens of GB.
 - The `text_log` is typically the largest offender because it logs at trace/debug level
   by default and includes every log line from the ClickHouse server.
 
