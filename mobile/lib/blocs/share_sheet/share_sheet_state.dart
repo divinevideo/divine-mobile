@@ -86,10 +86,11 @@ class ShareSheetState extends Equatable {
   const ShareSheetState({
     this.status = ShareSheetStatus.initial,
     this.contacts = const [],
-    this.selectedRecipients = const [],
+    List<ShareableUser> selectedRecipients = const [],
+    this.disabledPubkeys = const {},
     this.isSending = false,
     this.actionResult,
-  });
+  }) : attemptedRecipients = selectedRecipients;
 
   /// Current loading status.
   final ShareSheetStatus status;
@@ -98,7 +99,15 @@ class ShareSheetState extends Equatable {
   final List<ShareableUser> contacts;
 
   /// Recipients selected for the message-send flow, in selection order.
-  final List<ShareableUser> selectedRecipients;
+  final List<ShareableUser> attemptedRecipients;
+
+  List<ShareableUser> get selectedRecipients => disabledPubkeys.isEmpty
+      ? attemptedRecipients
+      : attemptedRecipients
+            .where((r) => !disabledPubkeys.contains(r.pubkey))
+            .toList(growable: false);
+
+  final Set<String> disabledPubkeys;
 
   /// Whether a send operation is in progress.
   final bool isSending;
@@ -118,6 +127,7 @@ class ShareSheetState extends Equatable {
     ShareSheetStatus? status,
     List<ShareableUser>? contacts,
     List<ShareableUser>? selectedRecipients,
+    Set<String>? disabledPubkeys,
     bool? isSending,
     ShareSheetActionResult? actionResult,
     bool clearActionResult = false,
@@ -125,7 +135,8 @@ class ShareSheetState extends Equatable {
     return ShareSheetState(
       status: status ?? this.status,
       contacts: contacts ?? this.contacts,
-      selectedRecipients: selectedRecipients ?? this.selectedRecipients,
+      selectedRecipients: selectedRecipients ?? attemptedRecipients,
+      disabledPubkeys: disabledPubkeys ?? this.disabledPubkeys,
       isSending: isSending ?? this.isSending,
       actionResult: clearActionResult
           ? null
@@ -137,7 +148,8 @@ class ShareSheetState extends Equatable {
   List<Object?> get props => [
     status,
     contacts,
-    selectedRecipients,
+    attemptedRecipients,
+    disabledPubkeys,
     isSending,
     actionResult,
   ];

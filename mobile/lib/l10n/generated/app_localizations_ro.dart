@@ -1929,6 +1929,14 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientSend => 'Trimite';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'Trimite către $name';
+  }
+
+  @override
   String get shareMessageHint => 'Adaugă un mesaj opțional...';
 
   @override

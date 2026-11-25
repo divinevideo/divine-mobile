@@ -733,6 +733,8 @@
       }
     }
   },
+  "shareRecipientSend": "Kirim",
+  "shareRecipientSendTo": "Kirim ke {name}",
   "shareMessageHint": "Tambahkan pesan opsional...",
   "videoActionUnlike": "Batalkan suka video",
   "videoActionLike": "Suka video",

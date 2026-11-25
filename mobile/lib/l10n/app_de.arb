@@ -733,6 +733,8 @@
       }
     }
   },
+  "shareRecipientSend": "Senden",
+  "shareRecipientSendTo": "An {name} senden",
   "shareMessageHint": "Optionale Nachricht hinzufügen...",
   "videoActionUnlike": "Like entfernen",
   "videoActionLike": "Video liken",

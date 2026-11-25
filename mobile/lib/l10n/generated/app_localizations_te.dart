@@ -1920,6 +1920,14 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientSend => 'పంపండి';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return '$nameకు పంపు';
+  }
+
+  @override
   String get shareMessageHint => 'ఐచ్ఛిక సందేశాన్ని జోడించండి...';
 
   @override

@@ -733,6 +733,8 @@
       }
     }
   },
+  "shareRecipientSend": "送信",
+  "shareRecipientSendTo": "{name}に送信",
   "shareMessageHint": "メッセージを追加 (任意)...",
   "videoActionUnlike": "いいねを取り消す",
   "videoActionLike": "いいね",

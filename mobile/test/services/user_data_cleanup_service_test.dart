@@ -30,6 +30,7 @@ import 'package:openvine/services/minor_account_review_status_store.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
+import 'package:openvine/services/share_recents_store.dart';
 import 'package:openvine/services/sound_library_service.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
@@ -1875,6 +1876,36 @@ void main() {
               lastUsedAt: DateTime.utc(2026),
             ).toJson(),
         ]),
+      );
+
+      test(
+        'keeps known and active share recents and forgets a removed owner',
+        () async {
+          final unknown = 'f' * 64;
+          final recents = ShareRecentsStore(
+            prefs,
+            loadProfiles: (_) async => [],
+          );
+          final cleanup = UserDataCleanupService(prefs, shareRecents: recents);
+          await rememberAccounts([knownPubkey]);
+          await prefs.setString('current_user_pubkey_hex', activePubkey);
+          for (final owner in [knownPubkey, activePubkey, unknown]) {
+            await recents.recordQueued(owner, ['b' * 64]);
+          }
+          await cleanup.sweepRowsOfUnknownAccounts();
+          expect(
+            prefs.containsKey(ShareRecentsStore.storageKey(unknown)),
+            isFalse,
+          );
+          expect(
+            prefs.containsKey(ShareRecentsStore.storageKey(knownPubkey)),
+            isTrue,
+          );
+          expect(
+            prefs.containsKey(ShareRecentsStore.storageKey(activePubkey)),
+            isTrue,
+          );
+        },
       );
 
       test('keeps the known accounts and the active one', () async {

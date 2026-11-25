@@ -733,6 +733,8 @@
       }
     }
   },
+  "shareRecipientSend": "Enviar",
+  "shareRecipientSendTo": "Enviar para {name}",
   "shareMessageHint": "Adicione uma mensagem opcional...",
   "videoActionUnlike": "Descurtir vídeo",
   "videoActionLike": "Curtir vídeo",

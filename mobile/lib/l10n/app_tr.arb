@@ -733,6 +733,8 @@
       }
     }
   },
+  "shareRecipientSend": "Gönder",
+  "shareRecipientSendTo": "{name} adlı kişiye gönder",
   "shareMessageHint": "Opsiyonel mesaj ekle...",
   "videoActionUnlike": "Beğenmekten vazgeç",
   "videoActionLike": "Videoyu beğen",

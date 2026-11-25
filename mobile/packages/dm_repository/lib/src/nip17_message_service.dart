@@ -786,6 +786,7 @@ class NIP17MessageService {
     Duration? selfWrapBuildTimeout = DmSendBudget.selfWrapBuild,
     void Function(Event? prebuiltSelfWrap)? onSelfWrapDue,
     Event? recipientWrap,
+    NIP17SendResult? Function()? publishRefusal,
   }) async {
     final recipientWrapBound = recipientWrapBuildTimeout;
     final selfWrapBound = selfWrapBuildTimeout;
@@ -895,6 +896,10 @@ class NIP17MessageService {
                   '${pubkeyForLogs(giftWrapEvent.pubkey)}',
         category: LogCategory.system,
       );
+
+      // A local block or account change can arrive while the signer is busy.
+      final refused = publishRefusal?.call();
+      if (refused != null) return refused;
 
       // Publish the recipient's gift wrap. Route it to the recipient's
       // NIP-17 kind-10050 DM inbox relays when known (so non-diVine users

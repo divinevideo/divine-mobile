@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 37** (see `app_database.dart`).
+**Version: 38** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -636,3 +636,7 @@ artifacts rather than permanent Drift schema entities.
 A local recipient acknowledgment records its environment on the sender's message.
 Existing and synced messages have no acknowledgment marker. Outbox rows also
 retain an explicit request to suppress the kind-4 fallback on recovery.
+
+## Version 38 — Share recipient eligibility
+
+Outgoing rows carry a local video-share flag so retries recheck the current block and mute policy for shares. Recovery also recognizes structured video citations on older queued messages.

@@ -25,9 +25,6 @@ class _MessageInput extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
-              // Selection reveals the composer; pop the keyboard right away
-              // so compose-and-send is a single uninterrupted gesture.
-              autofocus: true,
               style: TextStyle(
                 color: context.vineColors.primaryText,
                 fontSize: 14,
@@ -72,37 +69,43 @@ class _SendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: isSending ? null : onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: isSending
-              ? VineTheme.vineGreen.withValues(alpha: 0.5)
-              : VineTheme.vineGreen,
-          shape: BoxShape.circle,
+    return Semantics(
+      label: context.l10n.dmMessageSendLabel,
+      button: true,
+      enabled: !isSending,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: isSending ? null : onTap,
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: isSending
+                ? VineTheme.vineGreen.withValues(alpha: 0.5)
+                : VineTheme.vineGreen,
+            shape: BoxShape.circle,
+          ),
+          child: isSending
+              ? const Padding(
+                  padding: EdgeInsets.all(10),
+                  child: DivineCircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: VineTheme.onPrimary,
+                  ),
+                )
+              // Center loosens the Container's tight 40x40 constraints —
+              // without it the SvgPicture is forced to fill the circle and
+              // the size below is silently ignored. The arrow glyph fills
+              // only ~66%x78% of its SVG viewBox, so 28 renders a ~18x22pt
+              // glyph (device-tuned; Figma spec draws ~18x20).
+              : const Center(
+                  child: DivineIcon(
+                    icon: DivineIconName.arrowUp,
+                    size: 28,
+                    color: VineTheme.onPrimary,
+                  ),
+                ),
         ),
-        child: isSending
-            ? const Padding(
-                padding: EdgeInsets.all(10),
-                child: DivineCircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: VineTheme.onPrimary,
-                ),
-              )
-            // Center loosens the Container's tight 40x40 constraints —
-            // without it the SvgPicture is forced to fill the circle and
-            // the size below is silently ignored. The arrow glyph fills
-            // only ~66%x78% of its SVG viewBox, so 28 renders a ~18x22pt
-            // glyph (device-tuned; Figma spec draws ~18x20).
-            : const Center(
-                child: DivineIcon(
-                  icon: DivineIconName.arrowUp,
-                  size: 28,
-                  color: VineTheme.onPrimary,
-                ),
-              ),
       ),
     );
   }

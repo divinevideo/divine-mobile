@@ -111,6 +111,7 @@ class OutgoingDm {
     this.environment,
     this.unconfirmedRecipientWrapJson,
     this.skipNip04Fallback = false,
+    this.isVideoShare = false,
   }) : rumorId = _rumorIdFromJson(rumorEventJson) ?? id;
 
   /// Opaque durable queue-row handle.
@@ -162,6 +163,7 @@ class OutgoingDm {
 
   /// Prevents a legacy kind-4 copy when replaying this gift wrap.
   final bool skipNip04Fallback;
+  final bool isVideoShare;
 
   /// The kind-14/15 wire rumor id, stable across retries and recipients.
   ///
@@ -206,6 +208,7 @@ class OutgoingDm {
     String? environment,
     String? unconfirmedRecipientWrapJson,
     bool? skipNip04Fallback,
+    bool? isVideoShare,
   }) => OutgoingDm(
     id: id ?? this.id,
     conversationId: conversationId ?? this.conversationId,
@@ -229,6 +232,7 @@ class OutgoingDm {
     sendBatchId: sendBatchId ?? this.sendBatchId,
     environment: environment ?? this.environment,
     skipNip04Fallback: skipNip04Fallback ?? this.skipNip04Fallback,
+    isVideoShare: isVideoShare ?? this.isVideoShare,
     unconfirmedRecipientWrapJson:
         unconfirmedRecipientWrapJson ?? this.unconfirmedRecipientWrapJson,
   );
@@ -264,6 +268,7 @@ class OutgoingDm {
           sendBatchId == other.sendBatchId &&
           environment == other.environment &&
           skipNip04Fallback == other.skipNip04Fallback &&
+          isVideoShare == other.isVideoShare &&
           unconfirmedRecipientWrapJson == other.unconfirmedRecipientWrapJson;
 
   @override
@@ -289,6 +294,7 @@ class OutgoingDm {
     sendBatchId,
     environment,
     skipNip04Fallback,
+    isVideoShare,
     unconfirmedRecipientWrapJson,
   ]);
 
@@ -331,6 +337,7 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
       sendBatchId: Value(dm.sendBatchId),
       environment: Value(dm.environment),
       skipNip04Fallback: Value(dm.skipNip04Fallback),
+      isVideoShare: Value(dm.isVideoShare),
       unconfirmedRecipientWrapJson: Value(dm.unconfirmedRecipientWrapJson),
     );
   }
@@ -358,6 +365,7 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
       sendBatchId: row.sendBatchId,
       environment: row.environment,
       skipNip04Fallback: row.skipNip04Fallback,
+      isVideoShare: row.isVideoShare,
       unconfirmedRecipientWrapJson: row.unconfirmedRecipientWrapJson,
     );
   }

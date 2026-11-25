@@ -2,6 +2,7 @@
 // ABOUTME: Manages contact loading, recipient selection, video sharing,
 // ABOUTME: and one-shot actions (copy link, share via)
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_concurrency/bloc_concurrency.dart';
@@ -46,6 +47,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     required UserRankingSignalsLoader rankingSignalsLoader,
     required String currentUserPubkey,
     this.isOwnerCurrent,
+    Stream<void>? eligibilityChanges,
     BaseCacheManager? cacheManager,
   }) : _video = video,
        _videoSharingService = videoSharingService,
@@ -54,7 +56,28 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
        _rankingSignalsLoader = rankingSignalsLoader,
        _currentUserPubkey = currentUserPubkey,
        _cacheManager = cacheManager,
-       super(const ShareSheetState()) {
+       super(
+         ShareSheetState(
+           contacts: [
+             for (final user in videoSharingService.recentlySharedWith)
+               if (!pubkeysEqual(user.pubkey, currentUserPubkey) &&
+                   !isRetiredModerationAccount(user.pubkey) &&
+                   rankingSignalsLoader.isEligible(user.pubkey))
+                 user,
+           ],
+         ),
+       ) {
+    on<ShareSheetOwnerChanged>((_, emit) {
+      _ownerExpired = true;
+      emit(ShareSheetState(actionResult: ShareSheetAccountChanged()));
+    });
+    on<ShareSheetEligibilityChanged>((event, emit) {
+      if (!_checkOwner()) return;
+      emit(state.copyWith(disabledPubkeys: _disabled(state.contacts)));
+    });
+    _eligibility = eligibilityChanges?.listen((_) {
+      addIfOpen(const ShareSheetEligibilityChanged());
+    });
     on<ShareSheetContactsLoadRequested>(_onContactsLoadRequested);
     on<ShareSheetRecipientToggled>(_onRecipientToggled);
     on<ShareSheetSendRequested>(_onSendRequested, transformer: droppable());
@@ -67,6 +90,28 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       transformer: droppable(),
     );
   }
+
+  StreamSubscription<void>? _eligibility;
+
+  @override
+  Future<void> close() async {
+    await _eligibility?.cancel();
+    return super.close();
+  }
+
+  bool _ownerExpired = false;
+  bool _checkOwner() {
+    if (isClosed) return false;
+    if (!_ownerExpired && isOwnerCurrent?.call() != false) return true;
+    _ownerExpired = true;
+    emitIfOpen(ShareSheetState(actionResult: ShareSheetAccountChanged()));
+    return false;
+  }
+
+  Set<String> _disabled(Iterable<ShareableUser> contacts) => {
+    for (final contact in contacts)
+      if (!_rankingSignalsLoader.isEligible(contact.pubkey)) contact.pubkey,
+  };
 
   final VideoEvent _video;
   final VideoSharingService _videoSharingService;
@@ -103,9 +148,33 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       // contact list written by another Nostr client can self-follow, and
       // recents accumulate whoever a share was sent to. Retired moderation
       // accounts refuse sends, so they cannot be offered as recipients either.
+      try {
+        await _videoSharingService.warmRecents(_currentUserPubkey);
+      } on Object catch (error, stackTrace) {
+        _addUnexpectedError(
+          error,
+          stackTrace,
+          ShareSheetBlocReportableSites.onContactsLoadRequested,
+        );
+      }
+      if (!_checkOwner()) return;
       var recentUsers = _videoSharingService.recentlySharedWith
           .where((user) => _isSupportedRecipient(user.pubkey))
           .toList();
+      final visibleKeys = state.contacts.map((u) => u.pubkey).toSet();
+      final newlyWarm = recentUsers
+          .where(
+            (u) =>
+                u.hasVisibleIdentity &&
+                _rankingSignalsLoader.isEligible(u.pubkey) &&
+                visibleKeys.add(u.pubkey),
+          )
+          .toList();
+      if (newlyWarm.isNotEmpty) {
+        emitIfOpen(
+          state.copyWith(contacts: [...state.contacts, ...newlyWarm]),
+        );
+      }
       final followList = _followRepository.followingPubkeys
           .where(_isSupportedRecipient)
           .toSet();
@@ -132,7 +201,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
           stackTrace,
         );
       }
-      if (isClosed) return;
+      if (!_checkOwner()) return;
       final snapshot = signals;
       if (snapshot != null) {
         recentUsers = recentUsers
@@ -176,46 +245,37 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
             ShareableUser.fromProfile(pubkey, null),
       ];
 
-      List<ShareableUser> mergeVisibleContacts(List<ShareableUser> base) {
+      List<ShareableUser> mergeVisibleContacts(
+        List<ShareableUser> base, {
+        bool finished = false,
+      }) {
         final updates = {
           for (final contact in base)
-            if (snapshot != null ||
-                _rankingSignalsLoader.isEligible(contact.pubkey))
+            if (_rankingSignalsLoader.isEligible(contact.pubkey))
               contact.pubkey: contact,
         };
-        final loadedPubkeys = {...recentPubkeys, ...remainingPubkeys};
-        return [
-          // Preserve the first visible order, including recipients selected
-          // while the cache read or hydration was in flight. Identity-less
-          // misses disappear after hydration; a miss that hydration identifies
-          // keeps its place, and only rows not shown before append.
+        final merged = [
           for (final contact in state.contacts)
-            if (_isSupportedRecipient(contact.pubkey) &&
-                !excludedPubkeys.contains(contact.pubkey) &&
-                (snapshot != null ||
-                    _rankingSignalsLoader.isEligible(contact.pubkey)))
-              if (updates.remove(contact.pubkey) case final updated?)
-                updated
-              else if (!loadedPubkeys.contains(contact.pubkey) &&
-                  contact.hasVisibleIdentity)
-                contact,
+            updates.remove(contact.pubkey) ?? contact,
           ...updates.values,
         ];
+        // Removing an unresolved slot ahead of a visible person would move
+        // that person's Send button. Only trailing empty slots can disappear.
+        if (finished) {
+          while (merged.isNotEmpty && !merged.last.hasVisibleIdentity) {
+            merged.removeLast();
+          }
+        }
+        return merged;
       }
 
-      // Cache-first: one batched Drift read already covers what the visible
-      // row needs, so the sheet renders now instead of shimmering through
-      // the network batch. Recents already carry their display data
-      // snapshotted at last-send time. Staleness is session-bounded:
-      // VideoSharingService._recentlySharedWith is in-memory only and resets
-      // to empty on app restart, so a stale avatar or name is visible at most
-      // within the same session until the user shares with that contact
-      // again. See #5391.
+      // Read identities in one local batch before hydrating misses.
       final cached = remainingPubkeys.isEmpty
           ? const <UserProfile>[]
           : await _profileRepository.getCachedProfiles(
               pubkeys: remainingPubkeys,
             );
+      if (!_checkOwner()) return;
       final cachedByPubkey = {
         for (final profile in cached)
           if (identifiedContact(profile.pubkey, profile) != null)
@@ -240,10 +300,12 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         includeMisses: true,
       );
 
+      final visible = mergeVisibleContacts(cacheFirstContacts);
       if (!emitIfOpen(
         state.copyWith(
           status: ShareSheetStatus.ready,
-          contacts: mergeVisibleContacts(cacheFirstContacts),
+          contacts: visible,
+          disabledPubkeys: {..._disabled(visible), ...excludedPubkeys},
           clearActionResult: true,
         ),
       )) {
@@ -269,17 +331,23 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         final profiles = await _profileRepository.fetchBatchProfiles(
           pubkeys: cacheMisses,
         );
-        if (isClosed) return;
+        if (!_checkOwner()) return;
 
         final hydrated = buildContacts(
           {...cachedByPubkey, ...profiles},
           includeMisses: false,
         );
-        final merged = mergeVisibleContacts(hydrated);
+        final merged = mergeVisibleContacts(hydrated, finished: true);
         emitIfOpen(
           state.copyWith(
             status: ShareSheetStatus.ready,
             contacts: merged,
+            disabledPubkeys: {
+              ..._disabled(merged),
+              ...excludedPubkeys,
+              for (final contact in merged)
+                if (!contact.hasVisibleIdentity) contact.pubkey,
+            },
             clearActionResult: true,
           ),
         );
@@ -296,6 +364,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         );
       }
     } catch (e, stackTrace) {
+      if (!_checkOwner()) return;
       _addUnexpectedError(
         e,
         stackTrace,
@@ -309,8 +378,8 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       emitIfOpen(
         state.copyWith(
           status: ShareSheetStatus.ready,
-          contacts: [],
-          clearActionResult: true,
+          contacts: state.contacts,
+          disabledPubkeys: _disabled(state.contacts),
         ),
       );
     }
@@ -335,22 +404,31 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     final recipient = event.recipient;
     // Find People already leaves these out (#8351, #9711). Refused here too,
     // so no caller can select one.
-    if (!_isSupportedRecipient(recipient.pubkey)) return;
+    if (!_checkOwner() || state.isSending) return;
+    final alreadyPicked = state.attemptedRecipients.any(
+      (r) => r.pubkey == recipient.pubkey,
+    );
+    if (!alreadyPicked &&
+        (!_isSupportedRecipient(recipient.pubkey) ||
+            !_rankingSignalsLoader.isEligible(recipient.pubkey) ||
+            state.disabledPubkeys.contains(recipient.pubkey))) {
+      return;
+    }
 
-    final updatedSelection = state.isSelected(recipient)
+    final updatedSelection = alreadyPicked
         ? [
-            for (final r in state.selectedRecipients)
+            for (final r in state.attemptedRecipients)
               if (r.pubkey != recipient.pubkey) r,
           ]
-        : [...state.selectedRecipients, recipient];
+        : [...state.attemptedRecipients, recipient];
 
     // Find People can pick someone who isn't in the contacts row yet —
-    // prepend them so the selected contact is visible when the picker closes.
+    // append them so existing contacts retain their positions.
     // Keep every existing contact in its current relative order.
     final inContacts = state.contacts.any((c) => c.pubkey == recipient.pubkey);
     final updatedContacts = inContacts
         ? state.contacts
-        : [recipient, ...state.contacts];
+        : [...state.contacts, recipient];
 
     emit(
       state.copyWith(
@@ -369,8 +447,15 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     ShareSheetSendRequested event,
     Emitter<ShareSheetState> emit,
   ) async {
-    if (state.selectedRecipients.isEmpty || state.isSending) return;
-    if (isOwnerCurrent?.call() == false) {
+    final only = event.only;
+    if (only != null &&
+        (state.attemptedRecipients.isNotEmpty ||
+            (event.message?.trim().isNotEmpty ?? false))) {
+      return;
+    }
+    final recipients = only == null ? state.attemptedRecipients : [only];
+    if (recipients.isEmpty || state.isSending) return;
+    if (_ownerExpired || isOwnerCurrent?.call() == false) {
       emit(state.copyWith(actionResult: ShareSheetAccountChanged()));
       return;
     }
@@ -380,19 +465,27 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     emit(state.copyWith(isSending: true, clearActionResult: true));
 
     try {
-      final recipients = state.selectedRecipients;
       final message = event.message?.trim();
 
       // Fans out one DM per recipient (each gets its own gift wrap).
-      final results = await _videoSharingService.shareVideoWithMultipleUsers(
-        video: _video,
-        recipientPubkeys: [for (final r in recipients) r.pubkey],
-        personalMessage: message?.isEmpty == true ? null : message,
-      );
+      final eligible = [
+        for (final recipient in recipients)
+          if (_isSupportedRecipient(recipient.pubkey) &&
+              !state.disabledPubkeys.contains(recipient.pubkey) &&
+              _rankingSignalsLoader.isEligible(recipient.pubkey))
+            recipient.pubkey,
+      ];
+      final results = eligible.isEmpty
+          ? const <String, ShareResult>{}
+          : await _videoSharingService.shareVideoWithMultipleUsers(
+              video: _video,
+              recipientPubkeys: eligible,
+              personalMessage: message?.isEmpty == true ? null : message,
+            );
 
       if (isClosed) return;
 
-      if (isOwnerCurrent?.call() == false) {
+      if (_ownerExpired || isOwnerCurrent?.call() == false) {
         emit(
           state.copyWith(
             isSending: false,
@@ -436,7 +529,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       emit(
         state.copyWith(
           isSending: false,
-          actionResult: isOwnerCurrent?.call() == false
+          actionResult: _ownerExpired || isOwnerCurrent?.call() == false
               ? ShareSheetAccountChanged()
               : ShareSheetSendFailure(),
         ),

@@ -941,13 +941,6 @@ void main() {
       mockNostrClient = _MockNostrClient();
       mockMessageService = _MockNIP17MessageService();
       mockDirectMessagesDao = _MockDirectMessagesDao();
-      when(
-        () => mockDirectMessagesDao.markRecipientAccepted(
-          ownerPubkey: any(named: 'ownerPubkey'),
-          rumorId: any(named: 'rumorId'),
-          environment: any(named: 'environment'),
-        ),
-      ).thenAnswer((_) async {});
       mockConversationsDao = _MockConversationsDao();
       mockReactionsRepository = _MockDmReactionsRepository();
       reporterCalls = <_ReporterCall>[];
@@ -28080,7 +28073,18 @@ void main() {
       );
     });
 
+    void stubRecipientAckWrite() {
+      when(
+        () => mockDirectMessagesDao.markRecipientAccepted(
+          ownerPubkey: any(named: 'ownerPubkey'),
+          rumorId: any(named: 'rumorId'),
+          environment: any(named: 'environment'),
+        ),
+      ).thenAnswer((_) async {});
+    }
+
     group('sendMessage with outgoing_dms queue wired in', () {
+      setUp(stubRecipientAckWrite);
       setUp(stubSendPolicyPermitsEveryone);
 
       late _MockOutgoingDmsDao mockOutgoingDmsDao;
@@ -32254,6 +32258,7 @@ void main() {
     });
 
     group('recoverFullSend', () {
+      setUp(stubRecipientAckWrite);
       setUp(stubNoMatchingStoredMessage);
 
       late _MockOutgoingDmsDao mockOutgoingDmsDao;

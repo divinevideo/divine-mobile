@@ -1259,6 +1259,19 @@
       }
     }
   },
+  "shareRecipientSend": "Send",
+  "@shareRecipientSend": {
+    "description": "Button that sends a video directly to one share-sheet recipient."
+  },
+  "shareRecipientSendTo": "Send to {name}",
+  "@shareRecipientSendTo": {
+    "description": "Screen reader label for the button that sends a video to this recipient.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "shareMessageHint": "Add optional message...",
   "videoActionUnlike": "Unlike video",
   "videoActionLike": "Like video",

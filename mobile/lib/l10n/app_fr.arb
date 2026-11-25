@@ -733,6 +733,8 @@
       }
     }
   },
+  "shareRecipientSend": "Envoyer",
+  "shareRecipientSendTo": "Envoyer à {name}",
   "shareMessageHint": "Ajouter un message (facultatif)...",
   "videoActionUnlike": "Ne plus aimer la vidéo",
   "videoActionLike": "Aimer la vidéo",

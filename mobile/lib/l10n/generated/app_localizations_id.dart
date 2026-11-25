@@ -1813,6 +1813,14 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientSend => 'Kirim';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'Kirim ke $name';
+  }
+
+  @override
   String get shareMessageHint => 'Tambahkan pesan opsional...';
 
   @override

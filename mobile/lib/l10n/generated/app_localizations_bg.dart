@@ -1903,6 +1903,14 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientSend => 'Изпрати';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'Изпращане до $name';
+  }
+
+  @override
   String get shareMessageHint => 'Добави съобщение (по избор)...';
 
   @override

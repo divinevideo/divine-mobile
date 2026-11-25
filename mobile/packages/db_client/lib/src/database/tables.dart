@@ -1521,6 +1521,10 @@ class OutgoingDms extends Table {
       .named('skip_nip04_fallback')
       .withDefault(const Constant(false))();
 
+  /// Apply the share sheet's live recipient eligibility on every replay.
+  BoolColumn get isVideoShare =>
+      boolean().named('is_video_share').withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {id};
 

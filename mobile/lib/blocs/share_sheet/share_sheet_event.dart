@@ -34,12 +34,14 @@ class ShareSheetRecipientToggled extends ShareSheetEvent {
 
 /// Send video with an optional message to all selected recipients.
 class ShareSheetSendRequested extends ShareSheetEvent {
-  const ShareSheetSendRequested({this.message});
+  const ShareSheetSendRequested({this.message, this.only});
+
+  final ShareableUser? only;
 
   final String? message;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, only];
 }
 
 /// Copy share link to clipboard.
@@ -50,4 +52,13 @@ class ShareSheetCopyLinkRequested extends ShareSheetEvent {
 /// Share externally via platform share sheet.
 class ShareSheetShareViaRequested extends ShareSheetEvent {
   const ShareSheetShareViaRequested();
+}
+
+/// Local block or mute policy changed while the sheet was visible.
+class ShareSheetEligibilityChanged extends ShareSheetEvent {
+  const ShareSheetEligibilityChanged();
+}
+
+class ShareSheetOwnerChanged extends ShareSheetEvent {
+  const ShareSheetOwnerChanged();
 }

@@ -70,7 +70,11 @@ class _MockRankingSignalsLoader extends Mock
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
-class _MockVideoSharingService extends Mock implements VideoSharingService {}
+class _MockVideoSharingService extends Mock implements VideoSharingService {
+  // Widget fixtures supply already-resolved recents through the snapshot.
+  @override
+  Future<void> warmRecents(String owner) async {}
+}
 
 class _MockVideoClipImportService extends Mock
     implements VideoClipImportService {}
@@ -494,6 +498,37 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Find\npeople'), findsOneWidget);
+      });
+
+      testWidgets('owner change closes the picker and its share sheet', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: Scaffold(body: ShareActionButton(video: testVideo)),
+            additionalOverrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(
+                mockRankingSignalsLoader,
+              ),
+              videoSharingServiceProvider.overrideWith(
+                (ref) => mockVideoSharingService,
+              ),
+            ],
+            mockAuthService: createMockAuthService(),
+            mockProfileRepository: mockProfileRepository,
+          ),
+        );
+        await tester.tap(find.byType(ShareActionButton));
+        await tester.pumpAndSettle();
+        final sheetContext = tester.element(find.text('Share with'));
+        final route = ModalRoute.of(sheetContext)!;
+        final bloc = sheetContext.read<ShareSheetBloc>();
+        await tester.tap(find.text('Find\npeople'));
+        await tester.pumpAndSettle();
+        bloc.add(const ShareSheetOwnerChanged());
+        await tester.pumpAndSettle();
+        expect(find.byType(ShareActionButton).hitTestable(), findsOneWidget);
+        expect(route.isActive, isFalse);
       });
 
       testWidgets('shows More actions section', (tester) async {
@@ -1776,11 +1811,17 @@ void main() {
           (tester) async {
             await pumpOpenSheet(tester);
             expect(find.text('More actions'), findsOneWidget);
+            expect(find.text(l10n.shareRecipientSend), findsNWidgets(2));
 
-            await tester.tap(find.text('Alice'));
+            await tester.tap(find.text('Alice').first);
             await tester.pumpAndSettle();
 
             expect(find.byType(TextField), findsOneWidget);
+            expect(tester.testTextInput.isVisible, isFalse);
+            expect(find.text(l10n.shareRecipientSend), findsNothing);
+            await tester.tap(find.byType(TextField));
+            await tester.pump();
+            expect(tester.testTextInput.isVisible, isTrue);
             expect(find.text('More actions'), findsNothing);
             verifyNever(
               () => mockVideoSharingService.shareVideoWithMultipleUsers(
@@ -1789,6 +1830,40 @@ void main() {
                 personalMessage: any(named: 'personalMessage'),
               ),
             );
+          },
+        );
+
+        testWidgets(
+          'explicit row Send queues just its recipient once while busy',
+          (tester) async {
+            final pending = Completer<Map<String, ShareResult>>();
+            when(
+              () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                video: any(named: 'video'),
+                recipientPubkeys: any(named: 'recipientPubkeys'),
+                personalMessage: any(named: 'personalMessage'),
+              ),
+            ).thenAnswer((_) => pending.future);
+            await pumpOpenSheet(tester);
+            final button = find.text(l10n.shareRecipientSend).first;
+            await tester.tap(button);
+            await tester.tap(button);
+            await tester.pump();
+            expect(
+              find.byType(DivineCircularProgressIndicator),
+              findsNWidgets(2),
+            );
+            verify(
+              () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                video: any(named: 'video'),
+                recipientPubkeys: [alice.pubkey],
+              ),
+            ).called(1);
+            pending.complete({
+              alice.pubkey: const ShareResult.failure('Refused'),
+            });
+            await tester.pumpAndSettle();
+            expect(find.byType(TextField), findsOneWidget);
           },
         );
 
@@ -1830,18 +1905,18 @@ void main() {
           (tester) async {
             await pumpOpenSheet(tester);
 
-            await tester.tap(find.text('Alice'));
+            await tester.tap(find.text('Alice').first);
             await tester.pumpAndSettle();
             await tester.enterText(find.byType(TextField), 'draft text');
 
-            await tester.tap(find.text('Alice'));
+            await tester.tap(find.text('Alice').first);
             await tester.pumpAndSettle();
 
             expect(find.byType(TextField), findsNothing);
             expect(find.text('More actions'), findsOneWidget);
 
             // Re-selecting shows an empty composer — the draft was dropped.
-            await tester.tap(find.text('Alice'));
+            await tester.tap(find.text('Alice').first);
             await tester.pumpAndSettle();
             final field = tester.widget<TextField>(find.byType(TextField));
             expect(field.controller!.text, isEmpty);
@@ -1854,11 +1929,11 @@ void main() {
           (tester) async {
             await pumpOpenSheet(tester);
 
-            await tester.tap(find.text('Alice'));
+            await tester.tap(find.text('Alice').first);
             await tester.pumpAndSettle();
             await tester.enterText(find.byType(TextField), 'draft text');
 
-            await tester.tap(find.text('Bob'));
+            await tester.tap(find.text('Bob').first);
             await tester.pumpAndSettle();
 
             final blocContext = tester.element(find.text('Share with'));
@@ -1878,13 +1953,13 @@ void main() {
           (tester) async {
             await pumpOpenSheet(tester);
 
-            await tester.tap(find.text('Alice'));
+            await tester.tap(find.text('Alice').first);
             await tester.pumpAndSettle();
-            await tester.tap(find.text('Bob'));
+            await tester.tap(find.text('Bob').first);
             await tester.pumpAndSettle();
             await tester.enterText(find.byType(TextField), 'draft text');
 
-            await tester.tap(find.text('Alice'));
+            await tester.tap(find.text('Alice').first);
             await tester.pumpAndSettle();
 
             final blocContext = tester.element(find.text('Share with'));
@@ -1969,7 +2044,7 @@ void main() {
                 ),
               ).thenAnswer((_) => commit.future);
               await pumpOpenSheet(tester);
-              await tester.tap(find.text('Alice'));
+              await tester.tap(find.text('Alice').first);
               await tester.pumpAndSettle();
               final haptics = <Object?>[];
               final messenger = tester.binding.defaultBinaryMessenger;

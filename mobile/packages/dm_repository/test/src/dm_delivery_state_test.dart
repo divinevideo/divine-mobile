@@ -52,76 +52,78 @@ void main() {
     );
   }
 
-  test(
-    'scope, refused attempt, offline retry, held pool, stopped send',
-    () async {
-      await enqueue();
-      expect(
-        await watch(account: 'different').first,
-        DmDeliveryState.cancelled,
-      );
-      expect(await watch(env: 'production').first, DmDeliveryState.cancelled);
-      expect(await watch().first, DmDeliveryState.queued);
-      await mark(OutgoingWrapStatus.failed, error: outgoingDmOfflineError);
-      expect(await watch().first, DmDeliveryState.queued);
-      await mark(OutgoingWrapStatus.failed, error: 'refused');
-      expect(await watch().first, DmDeliveryState.failed);
-      await mark(OutgoingWrapStatus.pending, wrap: 'pool-wrap');
-      expect(await watch().first, DmDeliveryState.held);
-      await mark(OutgoingWrapStatus.failed);
-      expect(await watch().first, DmDeliveryState.held);
-      await mark(OutgoingWrapStatus.blocked);
-      expect(await watch().first, DmDeliveryState.cancelled);
-    },
-  );
-
-  test(
-    'self-copy stays queued until recipient OK and atomic removal',
-    () async {
-      await enqueue();
-      await db.directMessagesDao.insertMessage(
-        id: id,
-        conversationId: 'conversation',
-        senderPubkey: owner,
-        content: 'share',
-        createdAt: 1,
-        giftWrapId: 'self-wrap',
-        ownerPubkey: owner,
-      );
-      await db.outgoingDmsDao.markSelfWrapStatus(
-        id: id,
-        status: OutgoingWrapStatus.sent,
-      );
-      final stream = StreamIterator(watch());
-      addTearDown(stream.cancel);
-      expect(await stream.moveNext(), isTrue);
-      expect(stream.current, DmDeliveryState.queued);
-      final next = stream.moveNext();
-      await db.transaction(() async {
-        await db.outgoingDmsDao.deleteById(id);
-        await db.directMessagesDao.markRecipientAccepted(
-          ownerPubkey: owner,
-          rumorId: id,
-          environment: environment,
+  group('watchDeliveryState', () {
+    test(
+      'scope, refused attempt, offline retry, held pool, stopped send',
+      () async {
+        await enqueue();
+        expect(
+          await watch(account: 'different').first,
+          DmDeliveryState.cancelled,
         );
-      });
-      expect(await next, isTrue);
-      expect(stream.current, DmDeliveryState.accepted);
-      expect(await watch(env: 'production').first, DmDeliveryState.cancelled);
-      expect(await watch(account: 'peer').first, DmDeliveryState.cancelled);
-    },
-  );
+        expect(await watch(env: 'production').first, DmDeliveryState.cancelled);
+        expect(await watch().first, DmDeliveryState.queued);
+        await mark(OutgoingWrapStatus.failed, error: outgoingDmOfflineError);
+        expect(await watch().first, DmDeliveryState.queued);
+        await mark(OutgoingWrapStatus.failed, error: 'refused');
+        expect(await watch().first, DmDeliveryState.failed);
+        await mark(OutgoingWrapStatus.pending, wrap: 'pool-wrap');
+        expect(await watch().first, DmDeliveryState.held);
+        await mark(OutgoingWrapStatus.failed);
+        expect(await watch().first, DmDeliveryState.held);
+        await mark(OutgoingWrapStatus.blocked);
+        expect(await watch().first, DmDeliveryState.cancelled);
+      },
+    );
 
-  test(
-    'a recipient ACK counts while the self-wrap is still retrying',
-    () async {
-      await enqueue();
-      await db.outgoingDmsDao.markSelfWrapStatus(
-        id: id,
-        status: OutgoingWrapStatus.failed,
-      );
-      await mark(OutgoingWrapStatus.sent, wrap: 'recipient-wrap');
-      expect(await watch().first, DmDeliveryState.accepted);
-    },
-  );
+    test(
+      'self-copy stays queued until recipient OK and atomic removal',
+      () async {
+        await enqueue();
+        await db.directMessagesDao.insertMessage(
+          id: id,
+          conversationId: 'conversation',
+          senderPubkey: owner,
+          content: 'share',
+          createdAt: 1,
+          giftWrapId: 'self-wrap',
+          ownerPubkey: owner,
+        );
+        await db.outgoingDmsDao.markSelfWrapStatus(
+          id: id,
+          status: OutgoingWrapStatus.sent,
+        );
+        final stream = StreamIterator(watch());
+        addTearDown(stream.cancel);
+        expect(await stream.moveNext(), isTrue);
+        expect(stream.current, DmDeliveryState.queued);
+        final next = stream.moveNext();
+        await db.transaction(() async {
+          await db.outgoingDmsDao.deleteById(id);
+          await db.directMessagesDao.markRecipientAccepted(
+            ownerPubkey: owner,
+            rumorId: id,
+            environment: environment,
+          );
+        });
+        expect(await next, isTrue);
+        expect(stream.current, DmDeliveryState.accepted);
+        expect(await watch(env: 'production').first, DmDeliveryState.cancelled);
+        expect(await watch(account: 'peer').first, DmDeliveryState.cancelled);
+      },
+    );
+
+    test(
+      'a recipient ACK counts while the self-wrap is still retrying',
+      () async {
+        await enqueue();
+        await db.outgoingDmsDao.markSelfWrapStatus(
+          id: id,
+          status: OutgoingWrapStatus.failed,
+        );
+        await mark(OutgoingWrapStatus.sent, wrap: 'recipient-wrap');
+        expect(await watch().first, DmDeliveryState.accepted);
+      },
+    );
+  });
 }

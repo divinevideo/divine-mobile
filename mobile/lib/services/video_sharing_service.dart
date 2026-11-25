@@ -4,102 +4,14 @@
 import 'dart:async';
 
 import 'package:dm_repository/dm_repository.dart';
-import 'package:meta/meta.dart';
 import 'package:models/models.dart';
-// `auth_service` exports an unrelated `UserProfile`; hide it so the models
-// one (used by [ShareableUser.fromProfile]) resolves unambiguously.
+import 'package:openvine/models/shareable_user.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/services/share_recents_store.dart';
 import 'package:openvine/services/short_link_client.dart';
-import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Represents a user that can receive shared videos
-/// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
-@immutable
-class ShareableUser {
-  const ShareableUser({
-    required this.pubkey,
-    this.displayName,
-    this.handle,
-    this.picture,
-  });
-
-  /// Builds a shareable user from a (possibly missing) [profile].
-  ///
-  /// Uses `displayNip05` — the full `@username.divine.video` form the
-  /// find-people design calls for (Figma node `13945:91140`) — rather than
-  /// `UserProfile.handle`, which shortens divine identifiers to `@username`
-  /// and prefixes external ones into a doubled `@alice@example.com`. Falls
-  /// back to the kind-0 `name`, then to `null` when the profile carries
-  /// neither, so the row can drop its handle line entirely.
-  factory ShareableUser.fromProfile(String pubkey, UserProfile? profile) {
-    return ShareableUser(
-      pubkey: pubkey,
-      displayName: profile?.bestDisplayName,
-      handle:
-          _handleFromDisplayNip05(profile?.displayNip05) ??
-          _handleFromName(profile?.name),
-      picture: profile?.picture,
-    );
-  }
-
-  /// [displayNip05] as a handle when it is already handle-shaped.
-  static String? _handleFromDisplayNip05(String? displayNip05) {
-    final trimmed = displayNip05?.trim();
-    if (trimmed == null ||
-        trimmed.isEmpty ||
-        RegExp(r'\s').hasMatch(trimmed) ||
-        !trimmed.contains('@') ||
-        trimmed == '@') {
-      return null;
-    }
-    return trimmed;
-  }
-
-  /// [name] as a handle: `@`-prefixed unless it already reads as one.
-  ///
-  /// A kind-0 `name` is free-form and often email-shaped
-  /// (`dana@nostrplebs.com`) or already prefixed (`@dana`). Prefixing those
-  /// would produce the doubled `@dana@nostrplebs.com` that this factory
-  /// avoids for external NIP-05.
-  static String? _handleFromName(String? name) {
-    if (name == null || name.isEmpty) return null;
-    final sanitized = UserProfile.sanitizeDisplayName(name);
-    return sanitized.contains('@') ? sanitized : '@$sanitized';
-  }
-
-  final String pubkey;
-
-  /// Populate from `UserProfile.bestDisplayName`, never the raw kind-0
-  /// fields: this renders directly in the share sheet and find-people list,
-  /// where a lone UTF-16 surrogate crashes the paragraph builder.
-  final String? displayName;
-
-  /// Handle for the user (e.g. `@alice.divine.video` or `alice@example.com`).
-  ///
-  /// Populate via [ShareableUser.fromProfile]. `null` means the profile has
-  /// no `nip05` and no `name`, and the find-people row then renders no
-  /// secondary line at all rather than falling back to an npub.
-  final String? handle;
-  final String? picture;
-
-  /// Whether the share row has enough user-visible data for a recipient tile.
-  bool get hasVisibleIdentity =>
-      displayName != null || handle != null || picture != null;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ShareableUser &&
-          runtimeType == other.runtimeType &&
-          pubkey == other.pubkey &&
-          displayName == other.displayName &&
-          handle == other.handle &&
-          picture == other.picture;
-
-  @override
-  int get hashCode => Object.hash(pubkey, displayName, handle, picture);
-}
+export 'package:openvine/models/shareable_user.dart';
 
 /// Structured share metadata for the platform share sheet.
 ///
@@ -130,24 +42,22 @@ class ShareResult {
 class VideoSharingService {
   VideoSharingService({
     required AuthService authService,
-    required ProfileReader profileRepository,
+    required ShareRecentsStore recentsStore,
     required DmRepository dmRepository,
     ShortLinkClient? shortLinkClient,
   }) : _authService = authService,
-       _profileRepository = profileRepository,
+       _recentsStore = recentsStore,
        _dmRepository = dmRepository,
        _shortLinkClient = shortLinkClient;
   final AuthService _authService;
-  final ProfileReader _profileRepository;
+  final ShareRecentsStore _recentsStore;
   final DmRepository _dmRepository;
   final ShortLinkClient? _shortLinkClient;
 
-  final List<ShareableUser> _recentlySharedWith = [];
-  final Map<String, DateTime> _shareHistory = {};
-
-  // Getters
   List<ShareableUser> get recentlySharedWith =>
-      List.unmodifiable(_recentlySharedWith);
+      _recentsStore.snapshot(_authService.currentPublicKeyHex ?? '');
+
+  Future<void> warmRecents(String owner) => _recentsStore.warm(owner);
 
   Future<ShareResult> shareVideoWithUser({
     required VideoEvent video,
@@ -205,11 +115,22 @@ class VideoSharingService {
         ShareEnqueueTooLong() => const ShareResult.failure('Message too long'),
         null => const ShareResult.failure('Recipient unavailable'),
       };
-      if (outcome is ShareEnqueueQueued &&
-          _authService.currentPublicKeyHex == owner) {
-        _shareHistory[key] = DateTime.now();
-        unawaited(_updateRecentlySharedWith(owner, key));
-      }
+    }
+    final queued = results.keys.where(
+      (key) => results[key]!.delivery == ShareDelivery.queued,
+    );
+    if (_authService.currentPublicKeyHex == owner && queued.isNotEmpty) {
+      unawaited(
+        _recentsStore.recordQueued(owner, queued).catchError(
+          (Object error, StackTrace stack) {
+            Log.warning(
+              'Could not update local share recents',
+              name: 'VideoSharingService',
+              category: LogCategory.video,
+            );
+          },
+        ),
+      );
     }
     return results;
   }
@@ -261,30 +182,6 @@ class VideoSharingService {
     );
   }
 
-  /// Check if user has been shared with recently
-  bool hasSharedWithRecently(String pubkey) {
-    final lastShared = _shareHistory[pubkey];
-    if (lastShared == null) return false;
-
-    final daysSinceShared = DateTime.now().difference(lastShared).inDays;
-    return daysSinceShared < 7; // Consider "recent" as within 7 days
-  }
-
-  /// Get sharing statistics
-  Map<String, dynamic> getSharingStats() {
-    final totalShares = _shareHistory.length;
-    final recentShares = _shareHistory.values
-        .where((date) => DateTime.now().difference(date).inDays <= 30)
-        .length;
-
-    return {
-      'totalShares': totalShares,
-      'recentShares': recentShares,
-      'uniqueRecipients': _shareHistory.keys.length,
-      'averageSharesPerMonth': recentShares, // Simplified calculation
-    };
-  }
-
   /// Create the message content for sharing a video.
   ///
   /// Uses the canonical share URL for the video.
@@ -304,45 +201,5 @@ class VideoSharingService {
     buffer.writeln(generateShareUrl(video));
 
     return buffer.toString();
-  }
-
-  /// Update recently shared with list
-  Future<void> _updateRecentlySharedWith(String owner, String pubkey) async {
-    try {
-      // Remove if already in list
-      _recentlySharedWith.removeWhere((user) => user.pubkey == pubkey);
-
-      // Fetch user profile for display
-      final profile = await _profileRepository.fetchFreshProfile(
-        pubkey: pubkey,
-      );
-
-      if (_authService.currentPublicKeyHex != owner) return;
-      // Add to front of list
-      _recentlySharedWith.insert(0, ShareableUser.fromProfile(pubkey, profile));
-
-      // Keep only recent 10 users
-      if (_recentlySharedWith.length > 10) {
-        _recentlySharedWith.removeRange(10, _recentlySharedWith.length);
-      }
-    } catch (e) {
-      Log.error(
-        'Failed to update recently shared with: $e',
-        name: 'VideoSharingService',
-        category: LogCategory.video,
-      );
-    }
-  }
-
-  /// Clear sharing history (for privacy)
-  void clearSharingHistory() {
-    _shareHistory.clear();
-    _recentlySharedWith.clear();
-
-    Log.debug(
-      '🧹 Cleared sharing history',
-      name: 'VideoSharingService',
-      category: LogCategory.video,
-    );
   }
 }

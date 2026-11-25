@@ -1924,6 +1924,14 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientSend => 'Wyślij';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'Wyślij do $name';
+  }
+
+  @override
   String get shareMessageHint => 'Dodaj opcjonalną wiadomość...';
 
   @override

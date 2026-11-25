@@ -733,6 +733,8 @@
       }
     }
   },
+  "shareRecipientSend": "Wyślij",
+  "shareRecipientSendTo": "Wyślij do {name}",
   "shareMessageHint": "Dodaj opcjonalną wiadomość...",
   "videoActionUnlike": "Cofnij polubienie",
   "videoActionLike": "Polub film",

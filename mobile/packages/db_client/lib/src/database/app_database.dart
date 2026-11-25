@@ -180,7 +180,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 37;
+  int get schemaVersion => 38;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -838,15 +838,22 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> _migrateShareDelivery(int version) async {
     const columns = [
-      ('direct_messages', 'recipient_accepted_environment', 'TEXT NULL'),
+      (37, 'direct_messages', 'recipient_accepted_environment', 'TEXT NULL'),
       (
+        37,
         'outgoing_dms',
         'skip_nip04_fallback',
         'INTEGER NOT NULL DEFAULT 0 CHECK (skip_nip04_fallback IN (0, 1))',
       ),
+      (
+        38,
+        'outgoing_dms',
+        'is_video_share',
+        'INTEGER NOT NULL DEFAULT 0 CHECK (is_video_share IN (0, 1))',
+      ),
     ];
-    for (final (table, column, definition) in columns) {
-      if (version >= 37) {
+    for (final (added, table, column, definition) in columns) {
+      if (version >= added) {
         await _addColumnIfMissing(table, column, definition);
       } else if ((await _columnNames(table)).contains(column)) {
         // Rebuilds use today's table definitions on historical upgrades.
@@ -2075,6 +2082,7 @@ class AppDatabase extends _$AppDatabase {
         'environment',
         if (schemaVersion >= 34) 'unconfirmed_recipient_wrap_json',
         if (schemaVersion >= 37) 'skip_nip04_fallback',
+        if (schemaVersion >= 38) 'is_video_share',
       ],
       'removed_conversations': ['rejoined_at'],
       'personal_reactions': ['addressable_id'],

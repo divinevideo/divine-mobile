@@ -24,89 +24,93 @@ class _Auth extends Mock implements AuthService {}
 class _Repository extends Mock implements DmRepository {}
 
 void main() {
-  testWidgets(
-    'View chat samples current restrictions and owner changes clear feedback',
-    (tester) async {
-      final auth = _Auth();
-      final repository = _Repository();
-      final stream = StreamController<DmDeliveryState>();
-      addTearDown(stream.close);
-      var owner = 'original';
-      var restricted = true;
-      when(() => auth.currentPublicKeyHex).thenAnswer((_) => owner);
-      when(
-        () =>
-            repository.watchDeliveryState(ownerPubkey: owner, rumorId: 'rumor'),
-      ).thenAnswer((_) => stream.stream);
-      final providers = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(auth),
-          dmRepositoryProvider.overrideWithValue(repository),
-          isDmRestrictedProvider.overrideWith((ref) => restricted),
-        ],
-      );
-      addTearDown(providers.dispose);
-      final router = GoRouter(
-        navigatorKey: NavigatorKeys.root,
-        routes: [
-          GoRoute(
-            path: '/',
-            builder: (context, state) => Scaffold(
-              body: TextButton(
-                onPressed: () => context.read<ShareDeliveryCubit>().track(
-                  ownerPubkey: owner,
-                  recipients: [
-                    (
-                      name: 'Friend',
-                      pubkey: 'peer',
-                      outcome: const ShareResult.queued('rumor', 'chat'),
-                    ),
-                  ],
+  group('navigation', () {
+    testWidgets(
+      'View chat samples current restrictions and owner changes clear feedback',
+      (tester) async {
+        final auth = _Auth();
+        final repository = _Repository();
+        final stream = StreamController<DmDeliveryState>();
+        addTearDown(stream.close);
+        var owner = 'original';
+        var restricted = true;
+        when(() => auth.currentPublicKeyHex).thenAnswer((_) => owner);
+        when(
+          () => repository.watchDeliveryState(
+            ownerPubkey: owner,
+            rumorId: 'rumor',
+          ),
+        ).thenAnswer((_) => stream.stream);
+        final providers = ProviderContainer(
+          overrides: [
+            authServiceProvider.overrideWithValue(auth),
+            dmRepositoryProvider.overrideWithValue(repository),
+            isDmRestrictedProvider.overrideWith((ref) => restricted),
+          ],
+        );
+        addTearDown(providers.dispose);
+        final router = GoRouter(
+          navigatorKey: NavigatorKeys.root,
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) => Scaffold(
+                body: TextButton(
+                  onPressed: () => context.read<ShareDeliveryCubit>().track(
+                    ownerPubkey: owner,
+                    recipients: [
+                      (
+                        name: 'Friend',
+                        pubkey: 'peer',
+                        outcome: const ShareResult.queued('rumor', 'chat'),
+                      ),
+                    ],
+                  ),
+                  child: const Text('queue'),
                 ),
-                child: const Text('queue'),
               ),
             ),
+            GoRoute(
+              path: '/inbox/conversation/:id',
+              builder: (_, state) =>
+                  Scaffold(body: Text('Opened ${state.pathParameters["id"]}')),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: providers,
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              builder: (_, child) => ShareDeliveryHost(child: child!),
+            ),
           ),
-          GoRoute(
-            path: '/inbox/conversation/:id',
-            builder: (_, state) =>
-                Scaffold(body: Text('Opened ${state.pathParameters["id"]}')),
-          ),
-        ],
-      );
-      addTearDown(router.dispose);
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: providers,
-          child: MaterialApp.router(
-            routerConfig: router,
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            builder: (_, child) => ShareDeliveryHost(child: child!),
-          ),
-        ),
-      );
-      await tester.tap(find.text('queue'));
-      await tester.pumpAndSettle();
-      expect(find.text('Sending…'), findsOneWidget);
-      final chat = find.text('View chat');
-      await tester.tap(chat);
-      await tester.pumpAndSettle();
-      expect(find.text('queue'), findsOneWidget);
-      restricted = false;
-      providers.invalidate(isDmRestrictedProvider);
-      stream.add(DmDeliveryState.accepted);
-      await tester.pumpAndSettle();
-      expect(find.text('Sent'), findsOneWidget);
-      await tester.tap(chat);
-      await tester.pumpAndSettle();
-      expect(find.text('Opened chat'), findsOneWidget);
-      owner = 'other';
-      providers
-          .read(nostrSessionProvider.notifier)
-          .update(NostrSessionReadiness.identityKnown(pubkey: owner));
-      await tester.pumpAndSettle();
-      expect(find.text('Sent'), findsNothing);
-    },
-  );
+        );
+        await tester.tap(find.text('queue'));
+        await tester.pumpAndSettle();
+        expect(find.text('Sending…'), findsOneWidget);
+        final chat = find.text('View chat');
+        await tester.tap(chat);
+        await tester.pumpAndSettle();
+        expect(find.text('queue'), findsOneWidget);
+        restricted = false;
+        providers.invalidate(isDmRestrictedProvider);
+        stream.add(DmDeliveryState.accepted);
+        await tester.pumpAndSettle();
+        expect(find.text('Sent'), findsOneWidget);
+        await tester.tap(chat);
+        await tester.pumpAndSettle();
+        expect(find.text('Opened chat'), findsOneWidget);
+        owner = 'other';
+        providers
+            .read(nostrSessionProvider.notifier)
+            .update(NostrSessionReadiness.identityKnown(pubkey: owner));
+        await tester.pumpAndSettle();
+        expect(find.text('Sent'), findsNothing);
+      },
+    );
+  });
 }

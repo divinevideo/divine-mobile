@@ -3211,6 +3211,18 @@ abstract class AppLocalizations {
   /// **'Selected {name}'**
   String shareSelectedRecipientAnnouncement(String name);
 
+  /// Button that sends a video directly to one share-sheet recipient.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get shareRecipientSend;
+
+  /// Screen reader label for the button that sends a video to this recipient.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to {name}'**
+  String shareRecipientSendTo(String name);
+
   /// No description provided for @shareMessageHint.
   ///
   /// In en, this message translates to:

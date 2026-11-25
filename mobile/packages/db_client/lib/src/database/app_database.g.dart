@@ -13659,6 +13659,21 @@ class $OutgoingDmsTable extends OutgoingDms
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _isVideoShareMeta = const VerificationMeta(
+    'isVideoShare',
+  );
+  @override
+  late final GeneratedColumn<bool> isVideoShare = GeneratedColumn<bool>(
+    'is_video_share',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_video_share" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -13683,6 +13698,7 @@ class $OutgoingDmsTable extends OutgoingDms
     environment,
     unconfirmedRecipientWrapJson,
     skipNip04Fallback,
+    isVideoShare,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -13893,6 +13909,15 @@ class $OutgoingDmsTable extends OutgoingDms
         ),
       );
     }
+    if (data.containsKey('is_video_share')) {
+      context.handle(
+        _isVideoShareMeta,
+        isVideoShare.isAcceptableOrUnknown(
+          data['is_video_share']!,
+          _isVideoShareMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -13989,6 +14014,10 @@ class $OutgoingDmsTable extends OutgoingDms
       skipNip04Fallback: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}skip_nip04_fallback'],
+      )!,
+      isVideoShare: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_video_share'],
       )!,
     );
   }
@@ -14124,6 +14153,9 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
 
   /// Keep explicitly private sends off the legacy kind-4 route on replay.
   final bool skipNip04Fallback;
+
+  /// Apply the share sheet's live recipient eligibility on every replay.
+  final bool isVideoShare;
   const OutgoingDmRow({
     required this.id,
     required this.conversationId,
@@ -14147,6 +14179,7 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
     this.environment,
     this.unconfirmedRecipientWrapJson,
     required this.skipNip04Fallback,
+    required this.isVideoShare,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -14195,6 +14228,7 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
       );
     }
     map['skip_nip04_fallback'] = Variable<bool>(skipNip04Fallback);
+    map['is_video_share'] = Variable<bool>(isVideoShare);
     return map;
   }
 
@@ -14241,6 +14275,7 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
           ? const Value.absent()
           : Value(unconfirmedRecipientWrapJson),
       skipNip04Fallback: Value(skipNip04Fallback),
+      isVideoShare: Value(isVideoShare),
     );
   }
 
@@ -14282,6 +14317,7 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
         json['unconfirmedRecipientWrapJson'],
       ),
       skipNip04Fallback: serializer.fromJson<bool>(json['skipNip04Fallback']),
+      isVideoShare: serializer.fromJson<bool>(json['isVideoShare']),
     );
   }
   @override
@@ -14314,6 +14350,7 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
         unconfirmedRecipientWrapJson,
       ),
       'skipNip04Fallback': serializer.toJson<bool>(skipNip04Fallback),
+      'isVideoShare': serializer.toJson<bool>(isVideoShare),
     };
   }
 
@@ -14340,6 +14377,7 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
     Value<String?> environment = const Value.absent(),
     Value<String?> unconfirmedRecipientWrapJson = const Value.absent(),
     bool? skipNip04Fallback,
+    bool? isVideoShare,
   }) => OutgoingDmRow(
     id: id ?? this.id,
     conversationId: conversationId ?? this.conversationId,
@@ -14375,6 +14413,7 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
         ? unconfirmedRecipientWrapJson.value
         : this.unconfirmedRecipientWrapJson,
     skipNip04Fallback: skipNip04Fallback ?? this.skipNip04Fallback,
+    isVideoShare: isVideoShare ?? this.isVideoShare,
   );
   OutgoingDmRow copyWithCompanion(OutgoingDmsCompanion data) {
     return OutgoingDmRow(
@@ -14434,6 +14473,9 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
       skipNip04Fallback: data.skipNip04Fallback.present
           ? data.skipNip04Fallback.value
           : this.skipNip04Fallback,
+      isVideoShare: data.isVideoShare.present
+          ? data.isVideoShare.value
+          : this.isVideoShare,
     );
   }
 
@@ -14463,7 +14505,8 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
           ..write(
             'unconfirmedRecipientWrapJson: $unconfirmedRecipientWrapJson, ',
           )
-          ..write('skipNip04Fallback: $skipNip04Fallback')
+          ..write('skipNip04Fallback: $skipNip04Fallback, ')
+          ..write('isVideoShare: $isVideoShare')
           ..write(')'))
         .toString();
   }
@@ -14492,6 +14535,7 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
     environment,
     unconfirmedRecipientWrapJson,
     skipNip04Fallback,
+    isVideoShare,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -14519,7 +14563,8 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
           other.environment == this.environment &&
           other.unconfirmedRecipientWrapJson ==
               this.unconfirmedRecipientWrapJson &&
-          other.skipNip04Fallback == this.skipNip04Fallback);
+          other.skipNip04Fallback == this.skipNip04Fallback &&
+          other.isVideoShare == this.isVideoShare);
 }
 
 class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
@@ -14545,6 +14590,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
   final Value<String?> environment;
   final Value<String?> unconfirmedRecipientWrapJson;
   final Value<bool> skipNip04Fallback;
+  final Value<bool> isVideoShare;
   final Value<int> rowid;
   const OutgoingDmsCompanion({
     this.id = const Value.absent(),
@@ -14569,6 +14615,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     this.environment = const Value.absent(),
     this.unconfirmedRecipientWrapJson = const Value.absent(),
     this.skipNip04Fallback = const Value.absent(),
+    this.isVideoShare = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   OutgoingDmsCompanion.insert({
@@ -14594,6 +14641,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     this.environment = const Value.absent(),
     this.unconfirmedRecipientWrapJson = const Value.absent(),
     this.skipNip04Fallback = const Value.absent(),
+    this.isVideoShare = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        conversationId = Value(conversationId),
@@ -14628,6 +14676,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     Expression<String>? environment,
     Expression<String>? unconfirmedRecipientWrapJson,
     Expression<bool>? skipNip04Fallback,
+    Expression<bool>? isVideoShare,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -14657,6 +14706,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
       if (unconfirmedRecipientWrapJson != null)
         'unconfirmed_recipient_wrap_json': unconfirmedRecipientWrapJson,
       if (skipNip04Fallback != null) 'skip_nip04_fallback': skipNip04Fallback,
+      if (isVideoShare != null) 'is_video_share': isVideoShare,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -14684,6 +14734,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     Value<String?>? environment,
     Value<String?>? unconfirmedRecipientWrapJson,
     Value<bool>? skipNip04Fallback,
+    Value<bool>? isVideoShare,
     Value<int>? rowid,
   }) {
     return OutgoingDmsCompanion(
@@ -14711,6 +14762,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
       unconfirmedRecipientWrapJson:
           unconfirmedRecipientWrapJson ?? this.unconfirmedRecipientWrapJson,
       skipNip04Fallback: skipNip04Fallback ?? this.skipNip04Fallback,
+      isVideoShare: isVideoShare ?? this.isVideoShare,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -14792,6 +14844,9 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     if (skipNip04Fallback.present) {
       map['skip_nip04_fallback'] = Variable<bool>(skipNip04Fallback.value);
     }
+    if (isVideoShare.present) {
+      map['is_video_share'] = Variable<bool>(isVideoShare.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -14825,6 +14880,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
             'unconfirmedRecipientWrapJson: $unconfirmedRecipientWrapJson, ',
           )
           ..write('skipNip04Fallback: $skipNip04Fallback, ')
+          ..write('isVideoShare: $isVideoShare, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -31412,6 +31468,7 @@ typedef $$OutgoingDmsTableCreateCompanionBuilder =
       Value<String?> environment,
       Value<String?> unconfirmedRecipientWrapJson,
       Value<bool> skipNip04Fallback,
+      Value<bool> isVideoShare,
       Value<int> rowid,
     });
 typedef $$OutgoingDmsTableUpdateCompanionBuilder =
@@ -31438,6 +31495,7 @@ typedef $$OutgoingDmsTableUpdateCompanionBuilder =
       Value<String?> environment,
       Value<String?> unconfirmedRecipientWrapJson,
       Value<bool> skipNip04Fallback,
+      Value<bool> isVideoShare,
       Value<int> rowid,
     });
 
@@ -31557,6 +31615,11 @@ class $$OutgoingDmsTableFilterComposer
 
   ColumnFilters<bool> get skipNip04Fallback => $composableBuilder(
     column: $table.skipNip04Fallback,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isVideoShare => $composableBuilder(
+    column: $table.isVideoShare,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -31680,6 +31743,11 @@ class $$OutgoingDmsTableOrderingComposer
     column: $table.skipNip04Fallback,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isVideoShare => $composableBuilder(
+    column: $table.isVideoShare,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$OutgoingDmsTableAnnotationComposer
@@ -31791,6 +31859,11 @@ class $$OutgoingDmsTableAnnotationComposer
     column: $table.skipNip04Fallback,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get isVideoShare => $composableBuilder(
+    column: $table.isVideoShare,
+    builder: (column) => column,
+  );
 }
 
 class $$OutgoingDmsTableTableManager
@@ -31847,6 +31920,7 @@ class $$OutgoingDmsTableTableManager
                 Value<String?> unconfirmedRecipientWrapJson =
                     const Value.absent(),
                 Value<bool> skipNip04Fallback = const Value.absent(),
+                Value<bool> isVideoShare = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => OutgoingDmsCompanion(
                 id: id,
@@ -31871,6 +31945,7 @@ class $$OutgoingDmsTableTableManager
                 environment: environment,
                 unconfirmedRecipientWrapJson: unconfirmedRecipientWrapJson,
                 skipNip04Fallback: skipNip04Fallback,
+                isVideoShare: isVideoShare,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -31898,6 +31973,7 @@ class $$OutgoingDmsTableTableManager
                 Value<String?> unconfirmedRecipientWrapJson =
                     const Value.absent(),
                 Value<bool> skipNip04Fallback = const Value.absent(),
+                Value<bool> isVideoShare = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => OutgoingDmsCompanion.insert(
                 id: id,
@@ -31922,6 +31998,7 @@ class $$OutgoingDmsTableTableManager
                 environment: environment,
                 unconfirmedRecipientWrapJson: unconfirmedRecipientWrapJson,
                 skipNip04Fallback: skipNip04Fallback,
+                isVideoShare: isVideoShare,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

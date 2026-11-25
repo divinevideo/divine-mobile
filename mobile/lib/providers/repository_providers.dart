@@ -1148,6 +1148,9 @@ DmRepository dmRepository(Ref ref) {
 
   final repository = DmRepository(
     nostrClient: nostrService,
+    isShareRecipientHidden: (recipient) => ref
+        .read(contentBlocklistRepositoryProvider)
+        .shouldFilterFromFeeds(recipient),
     directMessagesDao: db.directMessagesDao,
     conversationsDao: db.conversationsDao,
     outgoingDmsDao: db.outgoingDmsDao,

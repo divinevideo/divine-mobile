@@ -950,6 +950,8 @@
       }
     }
   },
+  "shareRecipientSend": "Hantar",
+  "shareRecipientSendTo": "Hantar kepada {name}",
   "shareMessageHint": "Tambah mesej pilihan...",
   "videoActionUnlike": "Nyahsuka video",
   "videoActionLike": "Suka video",

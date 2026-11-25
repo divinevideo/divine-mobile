@@ -733,6 +733,8 @@
       }
     }
   },
+  "shareRecipientSend": "Trimite",
+  "shareRecipientSendTo": "Trimite către {name}",
   "shareMessageHint": "Adaugă un mesaj opțional...",
   "videoActionUnlike": "Retrage aprecierea",
   "videoActionLike": "Apreciază videoclipul",

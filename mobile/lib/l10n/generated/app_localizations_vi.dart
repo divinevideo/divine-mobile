@@ -1848,6 +1848,14 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientSend => 'Gửi';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'Gửi cho $name';
+  }
+
+  @override
   String get shareMessageHint => 'Thêm tin nhắn (không bắt buộc)...';
 
   @override

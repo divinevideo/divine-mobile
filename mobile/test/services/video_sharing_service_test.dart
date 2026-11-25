@@ -12,13 +12,13 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/services/share_recents_store.dart';
 import 'package:openvine/services/short_link_client.dart';
 import 'package:openvine/services/video_sharing_service.dart';
-import 'package:profile_repository/profile_repository.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
-class _MockProfileRepository extends Mock implements ProfileRepository {}
+class _MockRecents extends Mock implements ShareRecentsStore {}
 
 class _MockDmRepository extends Mock implements DmRepository {}
 
@@ -34,19 +34,21 @@ const _testVideoId =
 void main() {
   late VideoSharingService service;
   late _MockAuthService mockAuthService;
-  late _MockProfileRepository mockProfileRepository;
+  late _MockRecents recents;
   late _MockDmRepository mockDmRepository;
 
   setUp(() {
     mockAuthService = _MockAuthService();
-    mockProfileRepository = _MockProfileRepository();
+    recents = _MockRecents();
+    when(() => recents.snapshot(any())).thenReturn([]);
+    when(() => recents.recordQueued(any(), any())).thenAnswer((_) async {});
     mockDmRepository = _MockDmRepository();
     when(() => mockAuthService.currentPublicKeyHex).thenReturn(_testPubkey);
     when(() => mockDmRepository.userPubkey).thenReturn(_testPubkey);
 
     service = VideoSharingService(
       authService: mockAuthService,
-      profileRepository: mockProfileRepository,
+      recentsStore: recents,
       dmRepository: mockDmRepository,
     );
   });
@@ -224,122 +226,13 @@ void main() {
   });
 
   group('recentlySharedWith', () {
-    test('starts empty', () {
+    test('switching accounts immediately changes the recents snapshot', () {
+      when(() => recents.snapshot(_testPubkey)).thenReturn([
+        const ShareableUser(pubkey: _recipientPubkey, displayName: 'Alice'),
+      ]);
+      expect(service.recentlySharedWith.single.displayName, 'Alice');
+      when(() => mockAuthService.currentPublicKeyHex).thenReturn('c' * 64);
       expect(service.recentlySharedWith, isEmpty);
-    });
-
-    test('includes profile data after sharing', () async {
-      // Arrange - set up successful share
-      when(() => mockAuthService.isAuthenticated).thenReturn(true);
-      when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-      stubSharesSucceed();
-      when(
-        () => mockProfileRepository.fetchFreshProfile(pubkey: _recipientPubkey),
-      ).thenAnswer(
-        (_) async => UserProfile(
-          pubkey: _recipientPubkey,
-          rawData: const {},
-          createdAt: DateTime.now(),
-          eventId: 'event1',
-          displayName: 'Alice',
-          picture: 'https://example.com/alice.jpg',
-        ),
-      );
-
-      final now = DateTime.now();
-      final testVideo = VideoEvent(
-        id: _testVideoId,
-        pubkey: _testPubkey,
-        createdAt: now.millisecondsSinceEpoch ~/ 1000,
-        timestamp: now,
-        content: 'Test video',
-      );
-
-      // Act - share a video, which populates recently shared list
-      await service.shareVideoWithUser(
-        video: testVideo,
-        recipientPubkey: _recipientPubkey,
-      );
-      // The recents update is now fire-and-forget (see #5391); drain the
-      // event loop so the background insert completes before asserting.
-      await pumpEventQueue();
-
-      final result = service.recentlySharedWith;
-
-      // Assert
-      expect(result, hasLength(1));
-      expect(result[0].pubkey, _recipientPubkey);
-      expect(result[0].displayName, 'Alice');
-      expect(result[0].picture, 'https://example.com/alice.jpg');
-    });
-
-    test(
-      'an asynchronous profile resolved after a switch stays out of recents',
-      () async {
-        when(() => mockAuthService.isAuthenticated).thenReturn(true);
-        when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-        stubSharesSucceed();
-        final profile = Completer<UserProfile?>();
-        when(
-          () =>
-              mockProfileRepository.fetchFreshProfile(pubkey: _recipientPubkey),
-        ).thenAnswer((_) => profile.future);
-        final result = await service.shareVideoWithUser(
-          video: VideoEvent(
-            id: _testVideoId,
-            pubkey: _testPubkey,
-            createdAt: 1,
-            timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
-            content: '',
-          ),
-          recipientPubkey: _recipientPubkey,
-        );
-        expect(result.delivery, ShareDelivery.queued);
-        when(() => mockAuthService.currentPublicKeyHex).thenReturn('c' * 64);
-        profile.complete(null);
-        await pumpEventQueue();
-        expect(service.recentlySharedWith, isEmpty);
-      },
-    );
-
-    test('keeps only the ten most recent users', () async {
-      // Arrange - share with multiple users
-      when(() => mockAuthService.isAuthenticated).thenReturn(true);
-      when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-      stubSharesSucceed();
-      when(
-        () => mockProfileRepository.fetchFreshProfile(
-          pubkey: any(named: 'pubkey'),
-        ),
-      ).thenAnswer((_) async => null);
-
-      final now = DateTime.now();
-      final testVideo = VideoEvent(
-        id: _testVideoId,
-        pubkey: _testPubkey,
-        createdAt: now.millisecondsSinceEpoch ~/ 1000,
-        timestamp: now,
-        content: 'Test video',
-      );
-
-      // Share with 11 users to exceed the recent list cap.
-      for (var i = 0; i < 11; i++) {
-        final hexI = i.toRadixString(16).padLeft(64, '0');
-        await service.shareVideoWithUser(
-          video: testVideo,
-          recipientPubkey: hexI,
-        );
-      }
-
-      // The recents update is now fire-and-forget (see #5391); drain the
-      // event loop so all background inserts complete before asserting.
-      await pumpEventQueue();
-
-      final result = service.recentlySharedWith;
-
-      expect(result.length, 10);
-      expect(result.first.pubkey, 'a'.padLeft(64, '0'));
-      expect(result.last.pubkey, '1'.padLeft(64, '0'));
     });
   });
 
@@ -416,11 +309,6 @@ void main() {
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
       stubSharesSucceed();
-      when(
-        () => mockProfileRepository.fetchFreshProfile(
-          pubkey: any(named: 'pubkey'),
-        ),
-      ).thenAnswer((_) async => null);
 
       // Someone else's video, so its author cannot pass for the sender.
       final videoAuthor = 'c' * 64;
@@ -474,12 +362,9 @@ void main() {
         stubSharesSucceed();
         // The post-send recents refresh must be fire-and-forget: a hung
         // profile fetch must NOT delay the success result (the toast).
-        final neverCompletes = Completer<UserProfile?>();
-        when(
-          () => mockProfileRepository.fetchFreshProfile(
-            pubkey: any(named: 'pubkey'),
-          ),
-        ).thenAnswer((_) => neverCompletes.future);
+        final neverCompletes = Completer<void>();
+        when(() => recents.recordQueued(any(), any()))
+            .thenAnswer((_) => neverCompletes.future);
 
         final now = DateTime.now();
         final result = await service
@@ -522,7 +407,7 @@ void main() {
         );
         expect(result.delivery, ShareDelivery.notSent);
         expect(result.rumorId, isNull);
-        expect(service.hasSharedWithRecently(_recipientPubkey), isFalse);
+        verifyNever(() => recents.recordQueued(any(), any()));
       });
     }
 
@@ -530,11 +415,6 @@ void main() {
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
       stubSharesSucceed();
-      when(
-        () => mockProfileRepository.fetchFreshProfile(
-          pubkey: any(named: 'pubkey'),
-        ),
-      ).thenAnswer((_) async => null);
 
       final now = DateTime.now();
       await service.shareVideoWithUser(
@@ -556,11 +436,6 @@ void main() {
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
       stubSharesSucceed();
-      when(
-        () => mockProfileRepository.fetchFreshProfile(
-          pubkey: any(named: 'pubkey'),
-        ),
-      ).thenAnswer((_) async => null);
 
       final now = DateTime.now();
       await service.shareVideoWithUser(
@@ -586,11 +461,6 @@ void main() {
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
       stubSharesSucceed();
-      when(
-        () => mockProfileRepository.fetchFreshProfile(
-          pubkey: any(named: 'pubkey'),
-        ),
-      ).thenAnswer((_) async => null);
 
       final now = DateTime.now();
       await service.shareVideoWithUser(
@@ -615,11 +485,6 @@ void main() {
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
       stubSharesSucceed();
-      when(
-        () => mockProfileRepository.fetchFreshProfile(
-          pubkey: any(named: 'pubkey'),
-        ),
-      ).thenAnswer((_) async => null);
 
       final now = DateTime.now();
       final result = await service.shareVideoWithUser(
@@ -643,11 +508,6 @@ void main() {
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
       when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
       stubSharesSucceed();
-      when(
-        () => mockProfileRepository.fetchFreshProfile(
-          pubkey: any(named: 'pubkey'),
-        ),
-      ).thenAnswer((_) async => null);
 
       final now = DateTime.now();
       await service.shareVideoWithUser(
@@ -661,7 +521,12 @@ void main() {
         recipientPubkey: _recipientPubkey,
       );
 
-      expect(service.hasSharedWithRecently(_recipientPubkey), isTrue);
+      expect(
+        verify(() => recents.recordQueued(_testPubkey, captureAny()))
+            .captured
+            .single,
+        [_recipientPubkey],
+      );
     });
   });
 
@@ -672,11 +537,6 @@ void main() {
       () async {
         when(() => mockAuthService.isAuthenticated).thenReturn(true);
         when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-        when(
-          () => mockProfileRepository.fetchFreshProfile(
-            pubkey: any(named: 'pubkey'),
-          ),
-        ).thenAnswer((_) async => null);
 
         final goodA = 'a' * 64;
         final bad = 'b' * 64;
@@ -882,7 +742,7 @@ void main() {
         );
         service = VideoSharingService(
           authService: mockAuthService,
-          profileRepository: mockProfileRepository,
+          recentsStore: recents,
           dmRepository: mockDmRepository,
           shortLinkClient: shortener,
         );
@@ -997,46 +857,6 @@ void main() {
         ),
         equals(service.generateShareUrl(video)),
       );
-    });
-
-    test('hasSharedWithRecently returns false for unknown user', () {
-      expect(service.hasSharedWithRecently('unknown'), isFalse);
-    });
-
-    test('clearSharingHistory removes all data', () async {
-      // Arrange - populate some history
-      when(() => mockAuthService.isAuthenticated).thenReturn(true);
-      when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
-      stubSharesSucceed();
-      when(
-        () => mockProfileRepository.fetchFreshProfile(
-          pubkey: any(named: 'pubkey'),
-        ),
-      ).thenAnswer((_) async => null);
-
-      final now = DateTime.now();
-      await service.shareVideoWithUser(
-        video: VideoEvent(
-          id: _testVideoId,
-          pubkey: _testPubkey,
-          createdAt: now.millisecondsSinceEpoch ~/ 1000,
-          timestamp: now,
-          content: 'Test',
-        ),
-        recipientPubkey: _recipientPubkey,
-      );
-      // The recents update is fire-and-forget (#5391); let it land so there
-      // is something to clear.
-      await pumpEventQueue();
-      expect(service.recentlySharedWith, hasLength(1));
-      expect(service.hasSharedWithRecently(_recipientPubkey), isTrue);
-
-      // Act
-      service.clearSharingHistory();
-
-      // Assert
-      expect(service.recentlySharedWith, isEmpty);
-      expect(service.hasSharedWithRecently(_recipientPubkey), isFalse);
     });
   });
 }

@@ -706,6 +706,7 @@ class DmRepository {
     List<String> dmInboxTaggedRelays = const <String>[],
     Duration readMarkerDebounceDelay = _defaultReadMarkerDebounceDelay,
     Duration readStateRetryDelay = const Duration(seconds: 5),
+    this.isShareRecipientHidden,
     String Function()? sendBatchIdGenerator,
     String? environment,
   }) : _nostrClient = nostrClient,
@@ -1018,9 +1019,35 @@ class DmRepository {
   final List<String> _dmInboxLookupRelays;
   final List<String> _dmInboxTaggedRelays;
 
-  /// The app environment this repository sends in, stamped on every queued
-  /// DM so the retry service never resends it in another one (#10148). Null
-  /// leaves the rows unstamped, as before.
+  /// Account-local block and mute policy, checked again when replaying a share.
+  final bool Function(String recipient)? isShareRecipientHidden;
+
+  NIP17SendResult? _shareRefusal(bool isVideoShare, String recipient) =>
+      isVideoShare && (isShareRecipientHidden?.call(recipient) ?? false)
+      ? const NIP17SendResult.blocked(
+          'Recipient is unavailable',
+          disposition: NIP17BlockedSendDisposition.retain,
+        )
+      : null;
+
+  NIP17SendResult? Function()? _beforeSharePublish({
+    required bool isVideoShare,
+    required String recipient,
+    required String owner,
+    required int generation,
+    required String rumorId,
+  }) {
+    if (!isVideoShare) return null;
+    return () {
+      if (_ingestSessionEnded(owner, generation)) {
+        return _queuedForDelivery(rumorId);
+      }
+      return _shareRefusal(true, recipient);
+    };
+  }
+
+  /// The app environment stamped on queued DMs to keep retries in the same
+  /// environment (#10148). Null retains the legacy unstamped behavior.
   final String? _environment;
 
   /// Mints the durable, collision-proof identity for one send invocation.
@@ -7322,6 +7349,7 @@ class DmRepository {
     int? createdAt,
     List<List<String>> additionalTags = const [],
     bool skipNip04Fallback = false,
+    bool isVideoShare = false,
   }) async {
     final messageService = _messageService!;
     const abandoned = (
@@ -7362,6 +7390,8 @@ class DmRepository {
     // NIP17MessageService.sendRumor is the authoritative choke point (it also
     // covers the drain replay); this earlier check avoids storing a queue row
     // that would only ever re-fail the gate.
+    final shareRefusal = _shareRefusal(isVideoShare, recipientPubkey);
+    if (shareRefusal != null) return (refusal: shareRefusal, send: null);
     final permitted = await messageService.canSendTo(recipientPubkey);
     if (_ingestSessionEnded(owner, generation)) return abandoned;
     if (!permitted) {
@@ -7445,6 +7475,7 @@ class DmRepository {
           sendBatchId: sendBatchId,
           environment: _environment,
           skipNip04Fallback: skipNip04Fallback,
+          isVideoShare: isVideoShare,
         ),
         rumor: rumor,
         rumorTags: rumorTags,
@@ -7640,6 +7671,7 @@ class DmRepository {
           content: row.content,
           replyToId: row.replyToId,
           skipNip04Fallback: row.skipNip04Fallback,
+          isVideoShare: row.isVideoShare,
           generation: generation,
           checkCancelledBeforePublish: backgroundDelivery,
         );
@@ -7717,6 +7749,7 @@ class DmRepository {
     required bool skipNip04Fallback,
     required int generation,
     required bool checkCancelledBeforePublish,
+    required bool isVideoShare,
   }) async {
     final outgoingDao = _outgoingDmsDao;
     final owner = rumor.pubkey;
@@ -7772,6 +7805,13 @@ class DmRepository {
     final publishResult = await _sendRumorWithTimeout(
       rumor: rumor,
       recipientPubkey: recipientPubkey,
+      publishRefusal: _beforeSharePublish(
+        isVideoShare: isVideoShare,
+        recipient: recipientPubkey,
+        owner: owner,
+        generation: generation,
+        rumorId: rumor.id,
+      ),
       targetRelays: inbox.relays,
       selfWrapTargetRelays: selfWrapRelays,
       awaitRecipientOk: true,
@@ -8091,6 +8131,7 @@ class DmRepository {
         content: share.content,
         additionalTags: share.tags,
         skipNip04Fallback: true,
+        isVideoShare: true,
       );
       if (!isCurrent()) {
         throw StateError('Account changed before share was queued');
@@ -8770,6 +8811,13 @@ class DmRepository {
     // inbox-less recipient reads, and another one is not more likely to reach
     // an inbox we still cannot read. Only a found inbox is sent to again
     // (#10012).
+    // Older queue rows predate the flag. A structured share carries enough
+    // evidence to apply its policy without reclassifying ordinary text.
+    final isVideoShare =
+        row.isVideoShare ||
+        (!isGroupRow &&
+            DmSharedVideoCitation.parse(rumor.tags) != null &&
+            parseCollaboratorInviteRumor(rumor) == null);
     final poolWrapId = _heldPoolWrapId(row);
     // A retry that keeps or settles on that wrap skips sendRumor, so it makes
     // sendRumor's pre-send checks here: the send policy (#176) and the offline
@@ -8778,7 +8826,9 @@ class DmRepository {
         poolWrapId != null &&
         (inbox.state == DmInboxResolution.unreadable ||
             inbox.state == DmInboxResolution.absent);
-    final refusal = keepsOrSettles ? await _heldRetryRefusal(rumor, row) : null;
+    final refusal =
+        _shareRefusal(isVideoShare, row.recipientPubkey) ??
+        (keepsOrSettles ? await _heldRetryRefusal(rumor, row) : null);
     if (!isCurrent()) return _queuedForDelivery(rumorId);
     final NIP17SendResult result;
     if (refusal != null) {
@@ -8807,6 +8857,13 @@ class DmRepository {
         // Held by the downgrade below, so no self-copy yet (#10012).
         withholdSelfWrap: inbox.state == DmInboxResolution.unreadable,
         recipientWrap: _storedUnconfirmedWrap(row),
+        publishRefusal: _beforeSharePublish(
+          isVideoShare: isVideoShare,
+          recipient: row.recipientPubkey,
+          owner: owner,
+          generation: generation,
+          rumorId: rumorId,
+        ),
       );
 
       if (!isCurrent()) return _queuedForDelivery(rumorId);
@@ -10146,6 +10203,7 @@ class DmRepository {
     bool awaitRecipientOk = false,
     bool withholdSelfWrap = false,
     Event? recipientWrap,
+    NIP17SendResult? Function()? publishRefusal,
   }) {
     return _messageService!
         .sendRumor(
@@ -10155,6 +10213,7 @@ class DmRepository {
           selfWrapTargetRelays: selfWrapTargetRelays,
           awaitRecipientOk: awaitRecipientOk,
           recipientWrap: recipientWrap,
+          publishRefusal: publishRefusal,
           // A soft-unconfirmed message send must NOT publish the self-wrap:
           // the durable queue replays the full send until the recipient wrap
           // confirms (publishing both wraps then), while a soft self-wrap

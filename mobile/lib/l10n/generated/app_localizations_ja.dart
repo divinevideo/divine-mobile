@@ -1725,6 +1725,14 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientSend => '送信';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return '$nameに送信';
+  }
+
+  @override
   String get shareMessageHint => 'メッセージを追加 (任意)...';
 
   @override

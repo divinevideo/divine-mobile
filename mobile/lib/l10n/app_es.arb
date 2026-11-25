@@ -733,6 +733,8 @@
       }
     }
   },
+  "shareRecipientSend": "Enviar",
+  "shareRecipientSendTo": "Enviar a {name}",
   "shareMessageHint": "Agregá un mensaje (opcional)...",
   "videoActionUnlike": "Sacar me gusta",
   "videoActionLike": "Dar me gusta",

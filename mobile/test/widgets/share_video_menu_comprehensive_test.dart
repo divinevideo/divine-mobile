@@ -40,7 +40,11 @@ class _MockDmRepository extends Mock implements DmRepository {}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
-class _MockVideoSharingService extends Mock implements VideoSharingService {}
+class _MockVideoSharingService extends Mock implements VideoSharingService {
+  // Widget fixtures supply already-resolved recents through the snapshot.
+  @override
+  Future<void> warmRecents(String owner) async {}
+}
 
 class _MockContentDeletionService extends Mock
     implements ContentDeletionService {}
@@ -983,7 +987,7 @@ void main() {
       expect(find.text('Alice'), findsOneWidget);
 
       // Tap contact — selects and reveals the message composer
-      await tester.tap(find.text('Alice'));
+      await tester.tap(find.text('Alice').first);
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.shareMessageHint), findsOneWidget);
@@ -1016,7 +1020,7 @@ void main() {
       await tester.tap(find.byType(ShareActionButton));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Alice'));
+      await tester.tap(find.text('Alice').first);
       await tester.pumpAndSettle();
       await tester.tap(sendButton());
       await tester.pumpAndSettle();
@@ -1042,11 +1046,11 @@ void main() {
       await tester.tap(find.byType(ShareActionButton));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Alice'));
+      await tester.tap(find.text('Alice').first);
       await tester.pumpAndSettle();
       expect(find.text(l10n.shareMessageHint), findsOneWidget);
 
-      await tester.tap(find.text('Alice'));
+      await tester.tap(find.text('Alice').first);
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.shareMessageHint), findsNothing);
@@ -1077,7 +1081,7 @@ void main() {
       await tester.tap(find.byType(ShareActionButton));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Alice'));
+      await tester.tap(find.text('Alice').first);
       await tester.pumpAndSettle();
       await tester.tap(sendButton());
       await tester.pumpAndSettle();

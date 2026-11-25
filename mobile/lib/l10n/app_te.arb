@@ -1184,6 +1184,8 @@
       }
     }
   },
+  "shareRecipientSend": "పంపండి",
+  "shareRecipientSendTo": "{name}కు పంపు",
   "shareMessageHint": "ఐచ్ఛిక సందేశాన్ని జోడించండి...",
   "videoActionUnlike": "వీడియో కాకుండా",
   "videoActionLike": "వీడియోని ఇష్టపడండి",

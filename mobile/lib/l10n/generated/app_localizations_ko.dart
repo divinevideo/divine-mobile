@@ -1735,6 +1735,14 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientSend => '보내기';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return '$name에게 보내기';
+  }
+
+  @override
   String get shareMessageHint => '메시지 추가 (선택)...';
 
   @override

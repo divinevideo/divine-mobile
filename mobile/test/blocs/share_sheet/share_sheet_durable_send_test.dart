@@ -19,9 +19,11 @@ import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/services/share_recents_store.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _NostrClient extends Mock implements NostrClient {}
 
@@ -37,6 +39,7 @@ class _FallbackEvent extends Fake implements Event {}
 
 void main() {
   setUpAll(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
     registerFallbackValue(Duration.zero);
     registerFallbackValue(_FallbackEvent());
   });
@@ -128,9 +131,16 @@ void main() {
             nostrService: client,
           ),
         );
+        SharedPreferences.setMockInitialValues({});
+        final recents = ShareRecentsStore(
+          await SharedPreferences.getInstance(),
+          loadProfiles: (_) async => [],
+        );
+        final ranking = _RankingSignalsLoader();
+        when(() => ranking.isEligible(any())).thenReturn(true);
         final sharing = VideoSharingService(
           authService: auth,
-          profileRepository: profiles,
+          recentsStore: recents,
           dmRepository: repository,
         );
         final video = VideoEvent(
@@ -149,7 +159,7 @@ void main() {
           videoSharingService: sharing,
           profileRepository: profiles,
           followRepository: _FollowRepository(),
-          rankingSignalsLoader: _RankingSignalsLoader(),
+          rankingSignalsLoader: ranking,
           currentUserPubkey: owner,
         );
         addTearDown(() async {

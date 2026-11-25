@@ -1871,6 +1871,14 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientSend => 'إرسال';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'إرسال إلى $name';
+  }
+
+  @override
   String get shareMessageHint => 'أضف رسالة اختيارية...';
 
   @override

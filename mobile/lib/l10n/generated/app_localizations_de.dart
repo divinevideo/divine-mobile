@@ -1906,6 +1906,14 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get shareRecipientSend => 'Senden';
+
+  @override
+  String shareRecipientSendTo(String name) {
+    return 'An $name senden';
+  }
+
+  @override
   String get shareMessageHint => 'Optionale Nachricht hinzufügen...';
 
   @override
