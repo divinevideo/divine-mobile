@@ -13,7 +13,7 @@ as important — what each one deliberately leaves alone. The screen is
 |---|---|---|
 | Temporary (`getTemporaryDirectory`) | Feed video cache, image cache, the working renders Clear cache matches by name (`TempRenderPatterns`: `trimmed_*`, `cropped_*`, `normalized_*`, `speed_*`, `merged_*`, `merged_audio_*`, `watermarked_*`, `extracted_audio_*`, `strip_*`), the `speed_clips/` cache, the `divine_player_*` scratch directories and unfinished `sound_recordings/`. Split-screen speed intermediates (`split_layout_<clipId>_*.mp4`) and the `voice_effect_audition/` directory are normally cleaned up by their owners, but an interrupted operation can leave them behind; Clear cache does not match them | Clear cache (the named files and directories); Reset app data |
 | Documents (`getApplicationDocumentsDirectory`) | Recordings, imports, `divine_<micros>.mp4` renders, finished split-screen layouts (`split_layout_<micros>.mp4`), stop-motion stills, thumbnails, ghost frames, chroma-key and transform outputs, the sound library (`library_audio_imports/`), voice-overs (`voice_over_recordings/`), extracted clip audio (`extracted_clip_audio/`), plus the regenerable `transition_seams/` and `transition_frames/` previews | Remove leftover files (unreferenced media); Clear cache (the two preview directories); deleting clips and drafts |
-| Application Support | The durable SQLite database (`openvine/database/`), the durable Hive boxes, the disposable `cache_sync` database and hashtag/people-list boxes | Reset app data (everything except the durable database and boxes) |
+| Application Support | The durable SQLite database (`openvine/database/`; on a Mac that replaced the iPad app it stays in that app's `openvine/database/`, one level above this root), the durable Hive boxes, the disposable `cache_sync` database and hashtag/people-list boxes | Reset app data (everything except the durable database and boxes) |
 | Caches (`getApplicationCacheDirectory`) | Platform cache directory; on Android the same directory as Temporary | Reset app data |
 
 The screen shows two "in use" figures so the split is visible: **Cached
@@ -126,7 +126,9 @@ cannot be refetched from a relay does not belong in that box.
 4. Documents subdirectories → sounds and voice-overs are content; the two
    `transition_*` directories are cache.
 5. Application Support, `openvine/database/` → the SQLite file. Its retention
-   and `VACUUM` are tracked in #6987 and nothing on this screen shrinks it.
+   and `VACUUM` are tracked in #6987 and nothing on this screen shrinks it. On
+   a Mac that replaced the iPad app the file sits one level above the
+   Application Support root, which this screen does not walk.
 
 ## Background janitors
 

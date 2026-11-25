@@ -137,7 +137,7 @@ naming the first one that lacks it.
 |---|---|
 | Relay REQ | §3, one relay per call |
 | funnelcake REST | `curl -s -w '\nHTTP %{http_code}\n' "$API/api/videos?limit=1"`, where `API` is `apiBaseUrl` in `mobile/lib/models/environment_config.dart` (production: `https://api.divine.video`). The paths and parameters the app sends are in `mobile/packages/funnelcake_api_client/lib/src/funnelcake_api_client.dart` (for example `/api/users/<pubkey hex>/videos`). A public GET is a read-only production read; keep the status code beside the body, as with `nak` |
-| Local cache | The Drift file is `{appSupport}/openvine/database/divine_db.db` (`connection_native.dart`). It may be encrypted at rest (SQLite3MultipleCiphers, `mobile/docs/sqlcipher_at_rest_plan.md`), and then `sqlite3` on a copy of the file cannot open it: query the DAO in the running app with `evaluate` (flutter lens §4). Hive boxes and `cache_sync` entries the same way |
+| Local cache | The Drift file is whatever `getSharedDatabasePath()` returns (`connection_native.dart`): `{appSupport}/openvine/database/divine_db.db`, or one level above `{appSupport}` on a Mac that replaced the iPad app. It may be encrypted at rest (SQLite3MultipleCiphers, `mobile/docs/sqlcipher_at_rest_plan.md`), and then `sqlite3` on a copy of the file cannot open it: query the DAO in the running app with `evaluate` (flutter lens §4). Hive boxes and `cache_sync` entries the same way |
 | Bloc state | `evaluate` `bloc.state` (flutter lens §4) |
 
 ## 5. Failure classes

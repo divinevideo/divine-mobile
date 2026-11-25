@@ -456,7 +456,7 @@ class StorageManagementService {
     return freed;
   }
 
-  /// Every directory the app writes to, each with its largest immediate
+  /// Every platform root the app writes to, each with its largest immediate
   /// children — the diagnostic for "the OS reports tens of GB but the cache
   /// readout says megabytes".
   ///
@@ -464,7 +464,9 @@ class StorageManagementService {
   /// it cannot locate a footprint that sits anywhere else. This walks all four
   /// platform roots instead, including the ones no in-app action clears: the
   /// documents directory (clip library, drafts, rendered videos) and the
-  /// durable database, which even the repair wipe preserves.
+  /// durable database, which even the repair wipe preserves. A Mac that
+  /// replaced the iPad app keeps that app's database one level above the
+  /// Application Support root, outside every root walked here.
   ///
   /// Roots that resolve to the same directory are measured once — on Android
   /// the temporary and cache directories are both `getCacheDir()` — so the
