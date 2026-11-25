@@ -9,7 +9,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/notifications/routing/dm_message_visibility.dart';
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
@@ -24,9 +24,10 @@ import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
-import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/services/app_badge_service.dart';
+import 'package:openvine/services/locale_preference_service.dart';
 import 'package:openvine/services/notification_background_preloader.dart';
 import 'package:openvine/services/notification_content_preloader.dart';
 import 'package:openvine/services/notification_helpers.dart';
@@ -449,11 +450,13 @@ Future<void> _handleForegroundDm(Ref ref, RemoteMessage message) async {
     if (!(await prefs.loadPreferences()).directMessagesEnabled || !current()) {
       return;
     }
-    final context = NavigatorKeys.root.currentContext;
-    if (context == null || !context.mounted) return;
+    final languageCode = LocalePreferenceService(
+      sharedPreferences: ref.read(sharedPreferencesProvider),
+      accountPreferences: ref.read(accountPreferenceStoreProvider),
+    ).getLocale();
     await service.sendLocal(
       title: 'Divine',
-      body: context.l10n.newMessageTitle,
+      body: appL10nForLanguage(languageCode).newMessageTitle,
       payload: jsonEncode(localNotificationTapPayload(data)),
     );
   } on Object {
