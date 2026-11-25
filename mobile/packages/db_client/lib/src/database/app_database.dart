@@ -452,11 +452,7 @@ class AppDatabase extends _$AppDatabase {
         );
       }
       if (from < 39 && to >= 39) {
-        await _addColumnIfMissing(
-          'processed_gift_wraps',
-          'verified_message_id',
-          'TEXT NULL',
-        );
+        await _ensureProcessedGiftWraps(m);
       }
       await _withholdV39Columns(to);
       await _withholdV31Columns(to);
@@ -894,6 +890,18 @@ class AppDatabase extends _$AppDatabase {
         'ALTER TABLE processed_gift_wraps DROP COLUMN verified_message_id',
       );
     }
+  }
+
+  Future<void> _ensureProcessedGiftWraps(Migrator migrator) async {
+    if (!await _tableExists('processed_gift_wraps')) {
+      await migrator.createTable(processedGiftWraps);
+      return;
+    }
+    await _addColumnIfMissing(
+      'processed_gift_wraps',
+      'verified_message_id',
+      'TEXT NULL',
+    );
   }
 
   Future<void> _repairSchemaV3() async {
@@ -1845,15 +1853,7 @@ class AppDatabase extends _$AppDatabase {
 
     // Recreate a missing ledger from the current Drift schema. Older rows
     // without a verified alias remain terminal dedup evidence.
-    if (!await _tableExists('processed_gift_wraps')) {
-      await Migrator(this).createTable(processedGiftWraps);
-    } else {
-      await _addColumnIfMissing(
-        'processed_gift_wraps',
-        'verified_message_id',
-        'TEXT',
-      );
-    }
+    await _ensureProcessedGiftWraps(createMigrator());
 
     // Check if identity_events table exists, create if missing.
     // Added for #3936 (NIP-39 kind-10011 source + verification cache).

@@ -437,6 +437,36 @@ void main() {
       await verifier.migrateAndValidate(db, 38);
     });
 
+    test('v38 with a missing gift wrap ledger still upgrades to v39', () async {
+      final schema = await verifier.schemaAt(38);
+      schema.rawDatabase
+        ..execute('DROP TABLE processed_gift_wraps')
+        ..execute(
+          'INSERT INTO direct_messages (id, conversation_id, sender_pubkey, '
+          'content, created_at, gift_wrap_id, owner_pubkey, '
+          'recipient_accepted_environment) VALUES (?,?,?,?,?,?,?,?)',
+          [
+            'rumor',
+            'thread',
+            'owner',
+            'hello',
+            1,
+            'self-wrap',
+            'owner',
+            'staging',
+          ],
+        );
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+
+      await verifier.migrateAndValidate(db, 39);
+
+      expect(await db.processedGiftWrapsDao.count(), 0);
+      final message = await db.select(db.directMessages).getSingle();
+      expect(message.giftWrapId, 'self-wrap');
+      expect(message.recipientAcceptedEnvironment, 'staging');
+    });
+
     test('current schema version is 39', () {
       expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 39);
     });
