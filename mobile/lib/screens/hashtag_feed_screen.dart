@@ -198,8 +198,8 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
   }
 
   /// Navigate to fullscreen video feed through the hashtag [ViewSource].
-  /// The tapped video id anchors playback when the repository-resolved list
-  /// differs from the grid order (fixes #1751).
+  /// The reel starts from the grid's list; the tapped video id re-anchors
+  /// playback when the reel's filters drop a video ahead of it (#1751).
   void _navigateToFullscreenFeed(
     BuildContext context,
     List<VideoEvent> videoList,
@@ -248,9 +248,8 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // The repository parse-gates the REST results, so the cached
-    // ranked videos never hold a blocked author — an unblock can only
-    // re-show their videos through a refetch. See #948.
+    // The repository drops authors blocked at fetch time, so an unblock can
+    // only re-show their videos through a refetch. See #948.
     ref.listen<int>(blocklistVersionProvider, (previous, next) {
       if (previous == next || !mounted) return;
       _clearHashtagCache();
@@ -376,7 +375,8 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
 
           return NotificationListener<OverscrollNotification>(
             onNotification: (notification) {
-              // A short grid can have no scroll extent on clamping physics.
+              // Clamping physics never scrolls a grid with no extent, so the
+              // grid's own load-more trigger cannot fire; overscroll still can.
               if (hasMore &&
                   !state.isLoading &&
                   notification.depth == 0 &&

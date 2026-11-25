@@ -1,5 +1,5 @@
-// ABOUTME: Covers the chrome the hashtag feed owns when it is not embedded:
-// ABOUTME: its app-bar title and the pull-to-refresh wiring on its grid.
+// ABOUTME: Covers the standalone hashtag feed: app-bar title, pull-to-refresh,
+// ABOUTME: relay results while REST is pending, held-page filters and paging.
 
 import 'dart:async';
 

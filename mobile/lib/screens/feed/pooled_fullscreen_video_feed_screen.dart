@@ -445,7 +445,8 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
 
   /// Whether a swipe past the last video requests another page.
   ///
-  /// This also lets someone retry when a page added no playable videos.
+  /// Each new swipe retries when a page added no playable video. With an
+  /// [initialVideoKey], every other video is attributed to For You.
   final bool loadMoreOnEndSwipe;
 
   /// Overrides the app-bar back action when the feed is embedded as a parent

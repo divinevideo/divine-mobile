@@ -819,10 +819,9 @@ void main() {
         },
       );
 
-      // Single-emit sources (StaticFeedRepository's `Stream.value`, the
-      // hashtag snapshot's `Stream.fromFuture`) close after one event, so an
-      // empty one is terminal — nothing can arrive later to clear the
-      // placeholder.
+      // Single-emit sources such as StaticFeedRepository's `Stream.value`
+      // close after one event, so an empty one is terminal — nothing can
+      // arrive later to clear the placeholder.
       blocTest<FullscreenFeedBloc, FullscreenFeedState>(
         'emits empty when an empty source stream closes without ever '
         'delivering a video',
