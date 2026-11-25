@@ -7,6 +7,7 @@ import 'package:divine_video_player/divine_video_player.dart';
 import 'package:divine_video_player/src/linux/linux_video_player_backend.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, debugDefaultTargetPlatformOverride;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -4636,6 +4637,347 @@ void main() {
         // Drain the animation.
         await tester.pumpAndSettle();
         expect(find.byType(InfiniteVideoFeed), findsOneWidget);
+      });
+    });
+
+    group('nextPage and previousPage', () {
+      late GlobalKey<InfiniteVideoFeedState> key;
+
+      Future<void> pumpFeed(WidgetTester tester, {int initialIndex = 0}) async {
+        key = GlobalKey<InfiniteVideoFeedState>();
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              key: key,
+              videos: List.generate(3, (i) => _makeVideo('v$i')),
+              cache: cache,
+              prefetchCount: 0,
+              initialIndex: initialIndex,
+            ),
+          ),
+        );
+      }
+
+      testWidgets('nextPage moves one video on and previousPage one back', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+
+        unawaited(key.currentState!.nextPage());
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, equals(1));
+
+        unawaited(key.currentState!.previousPage());
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, equals(0));
+      });
+
+      testWidgets('stays on the first and the last video', (tester) async {
+        await pumpFeed(tester, initialIndex: 2);
+
+        unawaited(key.currentState!.nextPage());
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, equals(2));
+
+        unawaited(key.currentState!.animateToPage(0));
+        await tester.pumpAndSettle();
+        unawaited(key.currentState!.previousPage());
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, equals(0));
+      });
+
+      testWidgets('a second nextPage during the animation moves on from its '
+          'target', (tester) async {
+        await pumpFeed(tester);
+
+        unawaited(key.currentState!.nextPage());
+        await tester.pump(const Duration(milliseconds: 60));
+        expect(
+          key.currentState!.currentIndex,
+          equals(0),
+          reason: 'the first step is still under way',
+        );
+        unawaited(key.currentState!.nextPage());
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(2));
+      });
+    });
+
+    group('pointer scroll', () {
+      late GlobalKey<InfiniteVideoFeedState> key;
+      late bool otherHandlerGotScroll;
+
+      Future<void> pumpFeed(
+        WidgetTester tester, {
+        int initialIndex = 0,
+        Axis scrollDirection = Axis.vertical,
+        ScrollPhysics? scrollPhysics,
+      }) async {
+        key = GlobalKey<InfiniteVideoFeedState>();
+        otherHandlerGotScroll = false;
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              key: key,
+              videos: List.generate(3, (i) => _makeVideo('v$i')),
+              cache: cache,
+              prefetchCount: 0,
+              initialIndex: initialIndex,
+              scrollDirection: scrollDirection,
+              scrollPhysics: scrollPhysics,
+            ),
+          ),
+        );
+      }
+
+      /// Wraps the feed in a listener that bids for every scroll after the
+      /// feed and its page view, so it only wins a scroll both pass on.
+      Future<void> pumpFeedInsideOtherScrollHandler(
+        WidgetTester tester, {
+        int initialIndex = 0,
+        ScrollPhysics? scrollPhysics,
+      }) async {
+        key = GlobalKey<InfiniteVideoFeedState>();
+        otherHandlerGotScroll = false;
+        await tester.pumpWidget(
+          Listener(
+            onPointerSignal: (event) =>
+                GestureBinding.instance.pointerSignalResolver.register(
+                  event,
+                  (_) => otherHandlerGotScroll = true,
+                ),
+            child: _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: List.generate(3, (i) => _makeVideo('v$i')),
+                cache: cache,
+                prefetchCount: 0,
+                initialIndex: initialIndex,
+                scrollPhysics: scrollPhysics,
+              ),
+            ),
+          ),
+        );
+      }
+
+      Future<void> scroll(
+        WidgetTester tester,
+        Offset delta, {
+        int atMs = 0,
+        PointerDeviceKind kind = PointerDeviceKind.mouse,
+      }) async {
+        final pointer = TestPointer(1, kind)
+          ..hover(tester.getCenter(find.byType(PageView)));
+        await tester.sendEventToBinding(
+          pointer.scroll(delta, timeStamp: Duration(milliseconds: atMs)),
+        );
+      }
+
+      double page(WidgetTester tester) =>
+          tester.widget<PageView>(find.byType(PageView)).controller!.page!;
+
+      testWidgets('one wheel notch down moves exactly one video', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+
+        await scroll(tester, const Offset(0, 40));
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+        expect(page(tester), equals(1));
+      });
+
+      testWidgets('one wheel notch up moves exactly one video back', (
+        tester,
+      ) async {
+        await pumpFeed(tester, initialIndex: 2);
+
+        await scroll(tester, const Offset(0, -40));
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+      });
+
+      testWidgets('a small trackpad scroll leaves the page where it is', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+
+        await scroll(
+          tester,
+          const Offset(0, 10),
+          kind: PointerDeviceKind.trackpad,
+        );
+        await tester.pump();
+
+        expect(
+          page(tester),
+          equals(0),
+          reason: 'the page view did not scroll the delta by itself',
+        );
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, equals(0));
+      });
+
+      testWidgets('the rest of a trackpad swipe and its momentum move no '
+          'second video', (tester) async {
+        await pumpFeed(tester);
+
+        // A swipe reported as wheel events every frame for most of a second,
+        // longer than the page animation it starts.
+        for (var i = 0; i < 40; i++) {
+          await scroll(
+            tester,
+            const Offset(0, 12),
+            atMs: i * 16,
+            kind: PointerDeviceKind.trackpad,
+          );
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+      });
+
+      testWidgets('a notch after a pause moves the next video', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+
+        await scroll(tester, const Offset(0, 40));
+        await tester.pumpAndSettle();
+        await scroll(tester, const Offset(0, 40), atMs: 1000);
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(2));
+      });
+
+      testWidgets('a notch during a page animation is ignored', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+
+        unawaited(key.currentState!.nextPage());
+        await tester.pump(const Duration(milliseconds: 60));
+        await scroll(tester, const Offset(0, 40));
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+      });
+
+      testWidgets('a scroll mostly sideways is left alone', (tester) async {
+        await pumpFeed(tester);
+
+        await scroll(tester, const Offset(40, 10));
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(0));
+      });
+
+      testWidgets('a horizontal feed pages with sideways scrolls', (
+        tester,
+      ) async {
+        await pumpFeed(tester, scrollDirection: Axis.horizontal);
+
+        await scroll(tester, const Offset(40, 0));
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+      });
+
+      testWidgets('a scroll up on the first video is left to others', (
+        tester,
+      ) async {
+        await pumpFeedInsideOtherScrollHandler(tester);
+
+        await scroll(tester, const Offset(0, -40));
+        await tester.pumpAndSettle();
+
+        expect(otherHandlerGotScroll, isTrue);
+        expect(key.currentState!.currentIndex, equals(0));
+      });
+
+      testWidgets('a scroll down on the last video is left to others', (
+        tester,
+      ) async {
+        await pumpFeedInsideOtherScrollHandler(tester, initialIndex: 2);
+
+        await scroll(tester, const Offset(0, 40));
+        await tester.pumpAndSettle();
+
+        expect(otherHandlerGotScroll, isTrue);
+        expect(key.currentState!.currentIndex, equals(2));
+      });
+
+      testWidgets('a scroll the feed takes is not passed on', (tester) async {
+        await pumpFeedInsideOtherScrollHandler(tester);
+
+        await scroll(tester, const Offset(0, 40));
+        await tester.pumpAndSettle();
+
+        expect(otherHandlerGotScroll, isFalse);
+        expect(key.currentState!.currentIndex, equals(1));
+      });
+
+      testWidgets('scrolling stays off when the physics forbid it', (
+        tester,
+      ) async {
+        await pumpFeedInsideOtherScrollHandler(
+          tester,
+          scrollPhysics: const NeverScrollableScrollPhysics(),
+        );
+
+        await scroll(tester, const Offset(0, 40));
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(0));
+        expect(otherHandlerGotScroll, isTrue);
+      });
+
+      testWidgets('tells the platform it took the scroll', (tester) async {
+        await pumpFeed(tester);
+        bool? allowedPlatformDefault;
+
+        await tester.sendEventToBinding(
+          PointerScrollEvent(
+            position: tester.getCenter(find.byType(PageView)),
+            scrollDelta: const Offset(0, 40),
+            onRespond: ({required allowPlatformDefault}) =>
+                allowedPlatformDefault = allowPlatformDefault,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(allowedPlatformDefault, isFalse);
+      });
+
+      testWidgets('a wheel turned with Shift held is left alone', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await scroll(tester, const Offset(0, 40));
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(0));
+      });
+
+      testWidgets('ignores a trackpad touch that stops momentum', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+
+        final pointer = TestPointer(1, PointerDeviceKind.trackpad)
+          ..hover(tester.getCenter(find.byType(PageView)));
+        await tester.sendEventToBinding(pointer.scrollInertiaCancel());
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(0));
+        expect(tester.takeException(), isNull);
       });
     });
 
