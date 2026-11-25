@@ -48,16 +48,26 @@ class VideoLinkPreviewCubit extends Cubit<VideoLinkPreviewState> {
   VideoLinkPreviewCubit({
     required DmVideoTarget target,
     required VideosRepository videosRepository,
+    bool Function(VideoEvent video) isHidden = _neverHidden,
+    String? Function() currentAccount = _noAccount,
   }) : _target = target,
        _videosRepository = videosRepository,
+       _isHidden = isHidden,
+       _currentAccount = currentAccount,
        super(const VideoLinkPreviewLoading()) {
     // Schedule as microtask so the first emit happens after callers
     // (BlocProvider, blocTest) have subscribed to the stream.
     resolved = Future.microtask(_resolve);
   }
 
+  static bool _neverHidden(VideoEvent video) => false;
+
+  static String? _noAccount() => null;
+
   final DmVideoTarget _target;
   final VideosRepository _videosRepository;
+  final bool Function(VideoEvent video) _isHidden;
+  final String? Function() _currentAccount;
 
   /// The same canonical result is used when the play button is tapped during
   /// loading. A disposed card must never open a replacement target.
@@ -69,6 +79,24 @@ class VideoLinkPreviewCubit extends Cubit<VideoLinkPreviewState> {
         expectedAuthor: _target.routeAuthor,
       ) ??
       resolved;
+
+  /// Whether moderation or a known deletion keeps [video] off the card.
+  bool hides(VideoEvent video) => _isHidden(video);
+
+  /// The video a Play tap opens, waiting for the lookup when the card is
+  /// still loading. Null when nothing resolves, the video is hidden, or the
+  /// signed-in account changed while the lookup was pending.
+  Future<VideoEvent?> videoToOpen() async {
+    final account = _currentAccount();
+    final video = switch (state) {
+      VideoLinkPreviewResolved(:final video) => video,
+      _ => await playable,
+    };
+    if (video == null || _isHidden(video) || _currentAccount() != account) {
+      return null;
+    }
+    return video;
+  }
 
   Future<VideoEvent?> _resolve() async {
     try {

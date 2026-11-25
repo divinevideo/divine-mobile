@@ -39,6 +39,12 @@ import '../../../../helpers/test_pubkeys.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
+/// Hides every video, as a block or mute of its author would.
+class _HidingVideoEventService extends VisibleTestVideoEventService {
+  @override
+  bool shouldHideVideo(VideoEvent video) => true;
+}
+
 Finder _divineIcon(DivineIconName icon) => find.byWidgetPredicate(
   (widget) => widget is DivineIcon && widget.icon == icon,
 );
@@ -1906,8 +1912,10 @@ void main() {
         DmSharedVideoRef? sharedVideoRef,
         VoidCallback? onDoubleTap,
         SharedPreferences? mockSharedPreferences,
+        MockVideoEventService? videoEventService,
       }) => testMaterialApp(
-        mockVideoEventService: VisibleTestVideoEventService(),
+        mockVideoEventService:
+            videoEventService ?? VisibleTestVideoEventService(),
         home: Scaffold(
           body: MessageBubble(
             message: message,
@@ -2452,6 +2460,30 @@ void main() {
             expectedAuthor: author,
           ),
         ).called(1);
+      });
+
+      testWidgets('shows the unavailable card for a video moderation hides', (
+        tester,
+      ) async {
+        when(
+          () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+            'abc123',
+            fallbackRouteIds: any(named: 'fallbackRouteIds'),
+          ),
+        ).thenAnswer((_) async => testVideo);
+        await tester.pumpWidget(
+          buildWithVideoMessage(
+            message: 'https://divine.video/video/abc123',
+            videoEventService: _HidingVideoEventService(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(AppLocalizationsEn().notificationsVideoUnavailable),
+          findsOneWidget,
+        );
+        expect(find.byType(VideoThumbnailWidget), findsNothing);
       });
 
       testWidgets('shows the unavailable card when video not found', (
