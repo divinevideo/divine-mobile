@@ -299,6 +299,32 @@ class MacosReleaseTrainTest(unittest.TestCase):
         self.assertTrue(snap["builds"][0]["legacy"])
         self.assertFalse(snap["builds"][0]["valid"])
 
+    def test_runner_macos_snapshot_fails_when_ios_rejected_testflight_groups(self):
+        snapshotted = []
+
+        class FakeApple:
+            def __init__(self, token, group):
+                self.group = group
+                self.groups = []
+
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {"TESTFLIGHT_GROUP_IDS": json.dumps(["unexpected-group"])}
+        runtime.apple = None
+        runtime.play = None
+        runtime.list_builds = lambda: []
+        runtime.candidate = lambda: None
+        runtime.apple_snapshot = lambda platform: snapshotted.append(platform) or {}
+
+        with (
+            patch("release_train.runner.apple_token", return_value="token"),
+            patch("release_train.runner.Apple", FakeApple),
+        ):
+            snap = runtime.snapshot({}, {"ios": "testflight", "macos": "testflight"})
+
+        self.assertEqual(snapshotted, [])
+        for platform in ("ios", "macos"):
+            self.assertIn("four existing external audiences", snap[platform]["error"])
+
     def test_runner_identity_verifies_macos_pkg_provenance(self):
         ledger = MemoryLedger(
             {

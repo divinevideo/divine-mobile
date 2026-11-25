@@ -937,23 +937,26 @@ class Runtime:
             try:
                 if platform in APPLE_PLATFORMS:
                     if self.apple is None:
+                        # Assign only once the groups validate, so a failed
+                        # iOS pass cannot leave macOS an unvalidated client.
                         group = (
                             self.env.get("TESTFLIGHT_PUBLIC_GROUP_ID") or DEFAULT_GROUPS[0]
                         )
-                        self.apple = Apple(apple_token(self.env), group)
-                        self.apple.groups = json.loads(
+                        apple = Apple(apple_token(self.env), group)
+                        apple.groups = json.loads(
                             self.env.get("TESTFLIGHT_GROUP_IDS")
                             or json.dumps(DEFAULT_GROUPS)
                         )
                         if (
-                            not isinstance(self.apple.groups, list)
-                            or len(self.apple.groups) != 4
-                            or set(self.apple.groups) != set(DEFAULT_GROUPS)
-                            or group not in self.apple.groups
+                            not isinstance(apple.groups, list)
+                            or len(apple.groups) != 4
+                            or set(apple.groups) != set(DEFAULT_GROUPS)
+                            or group not in apple.groups
                         ):
                             raise ProviderError(
                                 "TestFlight groups must preserve the four existing external audiences"
                             )
+                        self.apple = apple
                     snapshot[platform] = self.apple_snapshot(platform)
                     snapshot[platform]["observed_at"] = math.ceil(time.time())
                 else:
