@@ -1,6 +1,6 @@
 // ABOUTME: Explore "Lists" tab — the discovery gallery: video lists and
-// ABOUTME: people lists in two independent columns. My Lists lives on the
-// ABOUTME: profile's Lists tab, not here.
+// ABOUTME: people lists side by side in independent columns. My Lists lives
+// ABOUTME: on the profile's Lists tab, not here.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,6 +15,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/routes/lists_routes.dart';
 import 'package:openvine/router/routes/route_extras.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
@@ -112,7 +113,7 @@ class _ExploreListsTabState extends ConsumerState<ExploreListsTab>
   }
 }
 
-/// View half: renders the two-column discovery gallery from cubit state.
+/// View half: renders the discovery gallery from cubit state.
 class ExploreListsView extends StatelessWidget {
   /// Creates the view. Requires a [ListsDiscoveryCubit] above it.
   @visibleForTesting
@@ -147,10 +148,10 @@ class ExploreListsView extends StatelessWidget {
               key: const Key('lists-tab-content'),
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              // Two independent columns under one scroll: when one runs out
-              // its space stays empty while the other keeps going. Discovery
-              // is capped at kListsDiscoveryColumnCap per column, so building
-              // the cards eagerly stays bounded.
+              // Independent columns under one scroll: when one runs out its
+              // space stays empty while the others keep going. Discovery is
+              // capped at kListsDiscoveryColumnCap per source, so building the
+              // cards eagerly stays bounded.
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -167,27 +168,20 @@ class ExploreListsView extends StatelessWidget {
                       ),
                     )
                   else
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: 16,
-                      children: [
-                        Expanded(
-                          child: _VideoListsColumn(
-                            status: state.videoStatus,
-                            initializationFailed:
-                                state.videoInitializationFailed,
-                            onRetryInitialization: onRetryVideoInitialization,
-                            lists: state.videoLists,
-                            thumbnailsPending: state.videoThumbnailsPending,
-                          ),
-                        ),
-                        Expanded(
-                          child: _PeopleListsColumn(
-                            status: state.peopleStatus,
-                            lists: state.peopleLists,
-                          ),
-                        ),
-                      ],
+                    _SourceColumns(
+                      video: (columns) => _VideoListsColumn(
+                        columns: columns,
+                        status: state.videoStatus,
+                        initializationFailed: state.videoInitializationFailed,
+                        onRetryInitialization: onRetryVideoInitialization,
+                        lists: state.videoLists,
+                        thumbnailsPending: state.videoThumbnailsPending,
+                      ),
+                      people: (columns) => _PeopleListsColumn(
+                        columns: columns,
+                        status: state.peopleStatus,
+                        lists: state.peopleLists,
+                      ),
                     ),
                 ],
               ),
@@ -199,9 +193,94 @@ class ExploreListsView extends StatelessWidget {
   }
 }
 
-/// Left column: discovered kind-30005 video lists.
+/// Horizontal gap between the gallery's columns.
+const double _columnGap = 16;
+
+/// Vertical gap between the cards in a column.
+const double _cardGap = 20;
+
+/// The video lists and the people lists side by side.
+///
+/// Each source gets its share of [AdaptiveLayout.gridColumns] columns: one
+/// each on a phone, and on a wider window with the large-screen layouts the
+/// extra column of an odd count goes to the video lists. Every column is as
+/// wide as the others.
+class _SourceColumns extends StatelessWidget {
+  const _SourceColumns({required this.video, required this.people});
+
+  /// Builds the video lists in the given number of columns.
+  final Widget Function(int columns) video;
+
+  /// Builds the people lists in the given number of columns.
+  final Widget Function(int columns) people;
+
+  @override
+  Widget build(BuildContext context) {
+    final layout = context.adaptiveLayout;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final columns = layout.gridColumns(compact: 2, width: width);
+        final videoColumns = (columns + 1) ~/ 2;
+        final columnWidth = (width - _columnGap * (columns - 1)) / columns;
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: _columnGap,
+          children: [
+            SizedBox(
+              width:
+                  videoColumns * columnWidth + (videoColumns - 1) * _columnGap,
+              child: video(videoColumns),
+            ),
+            Expanded(child: people(columns - videoColumns)),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// [children] dealt row by row into [columns] columns, each of which runs on
+/// independently of the others.
+class _CardColumns extends StatelessWidget {
+  const _CardColumns({required this.columns, required this.children});
+
+  final int columns;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    if (columns == 1) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: _cardGap,
+        children: children,
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: _columnGap,
+      children: [
+        for (var column = 0; column < columns; column++)
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: _cardGap,
+              children: [
+                for (var i = column; i < children.length; i += columns)
+                  children[i],
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Discovered kind-30005 video lists, at the start of the gallery.
 class _VideoListsColumn extends StatelessWidget {
   const _VideoListsColumn({
+    required this.columns,
     required this.status,
     required this.lists,
     required this.thumbnailsPending,
@@ -209,6 +288,7 @@ class _VideoListsColumn extends StatelessWidget {
     this.onRetryInitialization,
   });
 
+  final int columns;
   final ListsDiscoveryColumnStatus status;
   final List<CuratedList> lists;
   final bool thumbnailsPending;
@@ -221,6 +301,7 @@ class _VideoListsColumn extends StatelessWidget {
       return _VideoInitializationFailure(onRetry: onRetryInitialization);
     }
     return _DiscoveryColumn(
+      columns: columns,
       status: status,
       placeholder: const DivineListThumbnailSkeleton.videos(),
       isColumnEmpty: lists.isEmpty,
@@ -293,16 +374,22 @@ class _VideoInitializationFailure extends StatelessWidget {
   }
 }
 
-/// Right column: discovered kind-30000 people lists.
+/// Discovered kind-30000 people lists, at the end of the gallery.
 class _PeopleListsColumn extends StatelessWidget {
-  const _PeopleListsColumn({required this.status, required this.lists});
+  const _PeopleListsColumn({
+    required this.columns,
+    required this.status,
+    required this.lists,
+  });
 
+  final int columns;
   final ListsDiscoveryColumnStatus status;
   final List<PeopleListSearchResult> lists;
 
   @override
   Widget build(BuildContext context) {
     return _DiscoveryColumn(
+      columns: columns,
       status: status,
       placeholder: const DivineListThumbnailSkeleton.people(),
       isColumnEmpty: lists.isEmpty,
@@ -332,18 +419,20 @@ class _PeopleListsColumn extends StatelessWidget {
   }
 }
 
-/// One discovery column: cards stacked with the design's row spacing, a
-/// small loader while its source loads, and a quiet error line when its
-/// source failed. A successfully-empty column renders nothing — the other
-/// column keeps the tab alive.
+/// One discovery source in [columns] columns: cards stacked with the
+/// design's row spacing, a small loader while its source loads, and a quiet
+/// error line when its source failed. A successfully-empty source renders
+/// nothing — the other source keeps the tab alive.
 class _DiscoveryColumn extends StatelessWidget {
   const _DiscoveryColumn({
+    required this.columns,
     required this.status,
     required this.isColumnEmpty,
     required this.placeholder,
     required this.children,
   });
 
+  final int columns;
   final ListsDiscoveryColumnStatus status;
   final bool isColumnEmpty;
 
@@ -356,7 +445,10 @@ class _DiscoveryColumn extends StatelessWidget {
     if (isColumnEmpty) {
       return switch (status) {
         ListsDiscoveryColumnStatus.initial ||
-        ListsDiscoveryColumnStatus.loading => _LoadingColumn(card: placeholder),
+        ListsDiscoveryColumnStatus.loading => _LoadingColumn(
+          card: placeholder,
+          columns: columns,
+        ),
         ListsDiscoveryColumnStatus.failure => Padding(
           padding: const EdgeInsets.only(top: 48),
           child: Text(
@@ -371,11 +463,7 @@ class _DiscoveryColumn extends StatelessWidget {
       };
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 20,
-      children: children,
-    );
+    return _CardColumns(columns: columns, children: children);
   }
 }
 
@@ -388,15 +476,18 @@ const _loadingCardCount = 4;
 /// Stands in for a column whose lists have not arrived yet, in the same
 /// slot and with the same card geometry, so nothing shifts when they do.
 class _LoadingColumn extends StatelessWidget {
-  const _LoadingColumn({required this.card});
+  const _LoadingColumn({required this.card, required this.columns});
 
   final DivineListThumbnailSkeleton card;
+  final int columns;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       label: context.l10n.listsDiscoveryLoadingLabel,
-      child: ListSkeletonizer(child: _SkeletonCards(card: card)),
+      child: ListSkeletonizer(
+        child: _SkeletonCards(card: card, columns: columns),
+      ),
     );
   }
 }
@@ -424,22 +515,16 @@ class _LoadingGallery extends StatelessWidget {
             if (showCreationActions) const _ExploreCreationHeader(),
             Semantics(
               label: context.l10n.listsDiscoveryLoadingLabel,
-              child: const ListSkeletonizer(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 16,
-                  children: [
-                    Expanded(
-                      child: _SkeletonCards(
-                        card: DivineListThumbnailSkeleton.videos(),
-                      ),
-                    ),
-                    Expanded(
-                      child: _SkeletonCards(
-                        card: DivineListThumbnailSkeleton.people(),
-                      ),
-                    ),
-                  ],
+              child: ListSkeletonizer(
+                child: _SourceColumns(
+                  video: (columns) => _SkeletonCards(
+                    card: const DivineListThumbnailSkeleton.videos(),
+                    columns: columns,
+                  ),
+                  people: (columns) => _SkeletonCards(
+                    card: const DivineListThumbnailSkeleton.people(),
+                    columns: columns,
+                  ),
                 ),
               ),
             ),
@@ -482,17 +567,18 @@ class _ExploreCreationHeader extends StatelessWidget {
   }
 }
 
+/// [_loadingCardCount] silhouettes in each of [columns] columns.
 class _SkeletonCards extends StatelessWidget {
-  const _SkeletonCards({required this.card});
+  const _SkeletonCards({required this.card, required this.columns});
 
   final DivineListThumbnailSkeleton card;
+  final int columns;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 20,
-      children: List.filled(_loadingCardCount, card),
+    return _CardColumns(
+      columns: columns,
+      children: List.filled(_loadingCardCount * columns, card),
     );
   }
 }

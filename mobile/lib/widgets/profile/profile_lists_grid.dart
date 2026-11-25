@@ -12,6 +12,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/router/routes/lists_routes.dart';
 import 'package:openvine/router/routes/route_extras.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -214,44 +215,52 @@ List<CuratedList> _withResolvedThumbnails(
   ];
 }
 
-/// Two columns, filled row by row; cards in a row align to the top because
-/// a description can make one card taller than its neighbour.
+/// Two columns on a phone, more on wide windows with the large-screen
+/// layouts, filled row by row; cards in a row align to the top because a
+/// description can make one card taller than its neighbour.
 class _ListsGrid extends StatelessWidget {
   const _ListsGrid({required this.entries, required this.thumbnailsPending});
 
   final List<ProfileListEntry> entries;
   final bool thumbnailsPending;
 
+  /// Side padding around the cards, and the gap between them.
+  static const double _sidePadding = 16;
+
   @override
   Widget build(BuildContext context) {
+    final layout = context.adaptiveLayout;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: 20,
-        children: [
-          for (var i = 0; i < entries.length; i += 2)
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 16,
-              children: [
-                Expanded(
-                  child: _ListCard(
-                    entry: entries[i],
-                    thumbnailsPending: thumbnailsPending,
-                  ),
+      padding: const EdgeInsets.fromLTRB(_sidePadding, 16, _sidePadding, 0),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final columns = layout.gridColumns(
+            compact: 2,
+            width: constraints.maxWidth,
+          );
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 20,
+            children: [
+              for (var row = 0; row < entries.length; row += columns)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: _sidePadding,
+                  children: [
+                    for (var i = row; i < row + columns; i++)
+                      Expanded(
+                        child: i < entries.length
+                            ? _ListCard(
+                                entry: entries[i],
+                                thumbnailsPending: thumbnailsPending,
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                  ],
                 ),
-                Expanded(
-                  child: i + 1 < entries.length
-                      ? _ListCard(
-                          entry: entries[i + 1],
-                          thumbnailsPending: thumbnailsPending,
-                        )
-                      : const SizedBox.shrink(),
-                ),
-              ],
-            ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }

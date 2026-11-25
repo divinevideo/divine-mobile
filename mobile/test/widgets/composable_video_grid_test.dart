@@ -57,6 +57,7 @@ import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/decoded_images.dart';
+import '../helpers/large_screen_layout.dart';
 import '../helpers/semantics_nodes.dart';
 import '../helpers/test_provider_overrides.dart';
 
@@ -575,6 +576,72 @@ void main() {
 
       expect(delegate.crossAxisCount, equals(3));
       expect(delegate.childAspectRatio, equals(1.0));
+    });
+
+    group('column count', () {
+      /// The grid [gridWidth] wide at the start of a [windowWidth] wide
+      /// window, and its column count.
+      Future<int> columnsOf(
+        WidgetTester tester, {
+        required double windowWidth,
+        required double gridWidth,
+        required bool largeScreenLayout,
+      }) async {
+        setTestWindowSize(tester, windowWidth);
+        await tester.pumpWidget(
+          largeScreenLayoutApp(
+            enabled: largeScreenLayout,
+            overrides: _gridOverrides(mockTracker),
+            home: Scaffold(
+              body: Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: gridWidth,
+                  child: ComposableVideoGrid(
+                    videos: testVideos.take(2).toList(),
+                    onVideoTap: (videos, index, _) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        final delegate =
+            tester.widget<SliverGrid>(find.byType(SliverGrid)).gridDelegate
+                as SliverGridDelegateWithFixedCrossAxisCount;
+        return delegate.crossAxisCount;
+      }
+
+      testWidgets('follows its own width with the large-screen layouts', (
+        tester,
+      ) async {
+        // Beside the side navigation and a comments panel the grid is far
+        // narrower than the window: 676 pt between its padding is one
+        // breakpoint, not the window's three.
+        expect(
+          await columnsOf(
+            tester,
+            windowWidth: 1300,
+            gridWidth: 700,
+            largeScreenLayout: true,
+          ),
+          equals(3),
+        );
+      });
+
+      testWidgets('keeps the window rule with the flag off', (tester) async {
+        // A tablet window gave every grid its tablet count before the flag.
+        expect(
+          await columnsOf(
+            tester,
+            windowWidth: 700,
+            gridWidth: 500,
+            largeScreenLayout: false,
+          ),
+          equals(3),
+        );
+      });
     });
 
     testWidgets('renders the video title over the thumbnail', (tester) async {

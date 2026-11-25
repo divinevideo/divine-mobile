@@ -221,16 +221,8 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
     // videos into VideoEventService. The grid never reads its value.
     ref.watch(subscribedListVideoCacheProvider);
 
-    // Responsive column count: 3 for tablets/desktop (width >= 600),
-    // 2 for phones; with the large-screen layouts on, a column more at each
-    // breakpoint.
     final screenSize = MediaQuery.sizeOf(context);
     final layout = context.adaptiveLayout;
-    final responsiveCrossAxisCount = layout.gridColumns(
-      compact: widget.crossAxisCount,
-      width: screenSize.width,
-      largeColumnsWithoutFlag: 3,
-    );
     final cacheExtent = screenSize.height * _gridCacheExtentScreens;
 
     // Whether to render the load-more footer below the grid.
@@ -238,99 +230,115 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
         widget.isLoadingMore ||
         (widget.hasMoreContent && widget.onLoadMore != null);
 
-    // Masonry fills the shortest column start to end, so the first
-    // [responsiveCrossAxisCount] items are the top row in column order.
-    // Directional, not physical: under RTL the render object mirrors the
-    // columns, so index 0 paints at the right — topStart follows it there,
-    // while a physical topLeft would round mid-edge (#8453 review).
-    BorderRadiusGeometry tileRadiusFor(int index) {
-      const inner = Radius.circular(4);
-      final outer = widget.topOuterRadius;
-      if (outer == null || index >= responsiveCrossAxisCount) {
-        return const BorderRadius.all(inner);
-      }
-      return BorderRadiusDirectional.only(
-        topStart: index == 0 ? Radius.circular(outer) : inner,
-        topEnd: index == responsiveCrossAxisCount - 1
-            ? Radius.circular(outer)
-            : inner,
-        bottomStart: inner,
-        bottomEnd: inner,
-      );
-    }
-
-    Widget buildItem(BuildContext context, int index) {
-      final video = videosToShow[index];
-      final selectedIds = widget.selectedVideoIds;
-      return _VideoItem(
-        borderRadius: tileRadiusFor(index),
-        video: video,
-        aspectRatio: widget.thumbnailAspectRatio,
-        onVideoTap: widget.onVideoTap,
-        index: index,
-        displayedVideos: videosToShow,
-        viewerPubkey: viewerPubkey,
-        onOwnerLongPress: () => _showVideoContextMenu(context, video),
-        isSelected: selectedIds?.contains(video.id),
-      );
-    }
-
     final gridPadding =
         widget.padding ??
         (widget.useMasonryLayout
             ? const EdgeInsets.all(4)
             : const EdgeInsets.all(12));
 
-    final gridSliver = widget.useMasonryLayout
-        ? SliverMasonryGrid.count(
-            crossAxisCount: responsiveCrossAxisCount,
-            mainAxisSpacing: 4,
-            crossAxisSpacing: 4,
-            childCount: videosToShow.length,
-            itemBuilder: buildItem,
-          )
-        : SliverGrid.builder(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: responsiveCrossAxisCount,
-              childAspectRatio: widget.thumbnailAspectRatio,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            itemCount: videosToShow.length,
-            itemBuilder: buildItem,
+    // The tiles need the column count to round the first row, so it is read
+    // from the grid's width here rather than counted during layout. A box
+    // builder does not run again while the grid scrolls.
+    final scrollView = LayoutBuilder(
+      builder: (context, constraints) {
+        // 2 columns on a phone and 3 on a tablet; with the large-screen
+        // layouts on, a column more at each breakpoint the grid crosses.
+        final responsiveCrossAxisCount = layout.gridColumns(
+          compact: widget.crossAxisCount,
+          width: constraints.maxWidth - gridPadding.horizontal,
+          largeColumnsWithoutFlag: 3,
+        );
+        // Masonry fills the shortest column start to end, so the first
+        // [responsiveCrossAxisCount] items are the top row in column order.
+        // Directional, not physical: under RTL the render object mirrors the
+        // columns, so index 0 paints at the right — topStart follows it there,
+        // while a physical topLeft would round mid-edge (#8453 review).
+        BorderRadiusGeometry tileRadiusFor(int index) {
+          const inner = Radius.circular(4);
+          final outer = widget.topOuterRadius;
+          if (outer == null || index >= responsiveCrossAxisCount) {
+            return const BorderRadius.all(inner);
+          }
+          return BorderRadiusDirectional.only(
+            topStart: index == 0 ? Radius.circular(outer) : inner,
+            topEnd: index == responsiveCrossAxisCount - 1
+                ? Radius.circular(outer)
+                : inner,
+            bottomStart: inner,
+            bottomEnd: inner,
           );
+        }
 
-    final scrollView = CustomScrollView(
-      controller: _scrollController,
-      scrollCacheExtent: ScrollCacheExtent.pixels(cacheExtent),
-      physics: const AlwaysScrollableScrollPhysics(),
-      slivers: [
-        ...widget.headerSlivers,
-        if (widget.backgroundColor case final panelColor?) ...[
-          DecoratedSliver(
-            decoration: _panelDecoration(panelColor),
-            sliver: SliverPadding(padding: gridPadding, sliver: gridSliver),
-          ),
-          if (showLoadingIndicator)
-            SliverToBoxAdapter(
-              child: ColoredBox(
-                color: panelColor,
-                child: _LoadingMoreIndicator(isLoading: widget.isLoadingMore),
+        Widget buildItem(BuildContext context, int index) {
+          final video = videosToShow[index];
+          final selectedIds = widget.selectedVideoIds;
+          return _VideoItem(
+            borderRadius: tileRadiusFor(index),
+            video: video,
+            aspectRatio: widget.thumbnailAspectRatio,
+            onVideoTap: widget.onVideoTap,
+            index: index,
+            displayedVideos: videosToShow,
+            viewerPubkey: viewerPubkey,
+            onOwnerLongPress: () => _showVideoContextMenu(context, video),
+            isSelected: selectedIds?.contains(video.id),
+          );
+        }
+
+        final gridSliver = widget.useMasonryLayout
+            ? SliverMasonryGrid.count(
+                crossAxisCount: responsiveCrossAxisCount,
+                mainAxisSpacing: 4,
+                crossAxisSpacing: 4,
+                childCount: videosToShow.length,
+                itemBuilder: buildItem,
+              )
+            : SliverGrid.builder(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: responsiveCrossAxisCount,
+                  childAspectRatio: widget.thumbnailAspectRatio,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: videosToShow.length,
+                itemBuilder: buildItem,
+              );
+
+        return CustomScrollView(
+          controller: _scrollController,
+          scrollCacheExtent: ScrollCacheExtent.pixels(cacheExtent),
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            ...widget.headerSlivers,
+            if (widget.backgroundColor case final panelColor?) ...[
+              DecoratedSliver(
+                decoration: _panelDecoration(panelColor),
+                sliver: SliverPadding(padding: gridPadding, sliver: gridSliver),
               ),
-            ),
-          SliverFillRemaining(
-            hasScrollBody: false,
-            fillOverscroll: true,
-            child: ColoredBox(color: panelColor),
-          ),
-        ] else ...[
-          SliverPadding(padding: gridPadding, sliver: gridSliver),
-          if (showLoadingIndicator)
-            SliverToBoxAdapter(
-              child: _LoadingMoreIndicator(isLoading: widget.isLoadingMore),
-            ),
-        ],
-      ],
+              if (showLoadingIndicator)
+                SliverToBoxAdapter(
+                  child: ColoredBox(
+                    color: panelColor,
+                    child: _LoadingMoreIndicator(
+                      isLoading: widget.isLoadingMore,
+                    ),
+                  ),
+                ),
+              SliverFillRemaining(
+                hasScrollBody: false,
+                fillOverscroll: true,
+                child: ColoredBox(color: panelColor),
+              ),
+            ] else ...[
+              SliverPadding(padding: gridPadding, sliver: gridSliver),
+              if (showLoadingIndicator)
+                SliverToBoxAdapter(
+                  child: _LoadingMoreIndicator(isLoading: widget.isLoadingMore),
+                ),
+            ],
+          ],
+        );
+      },
     );
 
     return _wrapWithRefreshIndicator(context, scrollView);
@@ -340,9 +348,7 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
     color: color,
     borderRadius: widget.topOuterRadius == null
         ? null
-        : BorderRadius.vertical(
-            top: Radius.circular(widget.topOuterRadius!),
-          ),
+        : BorderRadius.vertical(top: Radius.circular(widget.topOuterRadius!)),
   );
 
   Widget _buildEmptyState(BuildContext context) {

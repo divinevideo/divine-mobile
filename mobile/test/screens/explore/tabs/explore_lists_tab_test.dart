@@ -31,6 +31,7 @@ import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helpers/go_router.dart';
+import '../../../helpers/large_screen_layout.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
 class _MockListsDiscoveryCubit extends MockCubit<ListsDiscoveryState>
@@ -869,6 +870,117 @@ void main() {
         find.byType(DivineListThumbnail),
       );
       expect(card.thumbnailsPending, isTrue);
+    });
+
+    group('on a wide window', () {
+      /// The gallery in a 1300 pt window: 1268 pt between the side padding,
+      /// past the last breakpoint, so five columns with the large-screen
+      /// layouts.
+      Future<void> pumpWide(
+        WidgetTester tester, {
+        required bool largeScreenLayout,
+        required ListsDiscoveryState state,
+      }) async {
+        whenListen(
+          cubit,
+          const Stream<ListsDiscoveryState>.empty(),
+          initialState: state,
+        );
+        setTestWindowSize(tester, 1300);
+        await tester.pumpWidget(
+          largeScreenLayoutApp(
+            enabled: largeScreenLayout,
+            overrides: getStandardTestOverrides(),
+            home: Scaffold(
+              body: BlocProvider<ListsDiscoveryCubit>.value(
+                value: cubit,
+                child: const ExploreListsView(),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+      }
+
+      final loaded = ListsDiscoveryState(
+        videoStatus: ListsDiscoveryColumnStatus.success,
+        peopleStatus: ListsDiscoveryColumnStatus.success,
+        videoLists: [
+          _videoList('a'),
+          _videoList('b'),
+          _videoList('c'),
+          _videoList('d'),
+        ],
+        peopleLists: [_peopleList('x'), _peopleList('y')],
+      );
+
+      Rect card(WidgetTester tester, String name) => tester.getRect(
+        find.ancestor(
+          of: find.text(name),
+          matching: find.byType(DivineListThumbnail),
+        ),
+      );
+
+      testWidgets('gives the video lists the odd column of five', (
+        tester,
+      ) async {
+        await pumpWide(tester, largeScreenLayout: true, state: loaded);
+
+        final firstRow = [
+          for (final name in [
+            'Video a',
+            'Video b',
+            'Video c',
+            'People x',
+            'People y',
+          ])
+            card(tester, name),
+        ];
+        // (1268 - 4 gaps of 16) / 5 columns, all equally wide.
+        for (final rect in firstRow) {
+          expect(rect.width, moreOrLessEquals(240.8));
+          expect(rect.top, equals(firstRow.first.top));
+        }
+        for (var i = 1; i < firstRow.length; i++) {
+          expect(firstRow[i].left, greaterThan(firstRow[i - 1].right));
+        }
+        // The fourth video list starts a second row under the first.
+        final d = card(tester, 'Video d');
+        expect(d.left, equals(firstRow.first.left));
+        expect(d.top, greaterThan(firstRow.first.bottom));
+      });
+
+      testWidgets('fills every loading column with silhouettes', (
+        tester,
+      ) async {
+        await pumpWide(
+          tester,
+          largeScreenLayout: true,
+          state: const ListsDiscoveryState(
+            videoStatus: ListsDiscoveryColumnStatus.loading,
+            peopleStatus: ListsDiscoveryColumnStatus.loading,
+          ),
+        );
+
+        // Four silhouettes in each of the five columns.
+        expect(find.byType(DivineListThumbnailSkeleton), findsNWidgets(20));
+      });
+
+      testWidgets('keeps one video and one people column with the flag off', (
+        tester,
+      ) async {
+        await pumpWide(tester, largeScreenLayout: false, state: loaded);
+
+        final a = card(tester, 'Video a');
+        final b = card(tester, 'Video b');
+        final x = card(tester, 'People x');
+        // (1268 - 16) / 2, as before the large-screen layouts.
+        expect(a.width, moreOrLessEquals(626));
+        expect(x.width, moreOrLessEquals(626));
+        expect(x.top, equals(a.top));
+        expect(b.left, equals(a.left));
+        expect(b.top, greaterThan(a.bottom));
+      });
     });
 
     testWidgets('keeps one column alive while the other loads', (tester) async {

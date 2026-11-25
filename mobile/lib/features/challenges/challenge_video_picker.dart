@@ -6,6 +6,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show VideoEvent;
 import 'package:openvine/features/challenges/challenge_video_tile.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
+
+/// Padding around the candidates.
+const double _gridPadding = 16;
 
 /// Single selection is local; only Continue requests a fresh consent review.
 class ChallengeVideoPicker extends StatefulWidget {
@@ -60,7 +64,10 @@ class _ChallengeVideoPickerState extends State<ChallengeVideoPicker> {
                 constraints.maxWidth < 360 ||
                     MediaQuery.textScalerOf(context).scale(16) > 24
                 ? 1
-                : 2;
+                : context.adaptiveLayout.gridColumns(
+                    compact: 2,
+                    width: constraints.maxWidth - _gridPadding * 2,
+                  );
             return CustomScrollView(
               slivers: [
                 if (widget.busy)
@@ -80,7 +87,7 @@ class _ChallengeVideoPickerState extends State<ChallengeVideoPicker> {
                     ),
                   ),
                 SliverPadding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(_gridPadding),
                   sliver: SliverList.builder(
                     itemCount: (widget.videos.length / columns).ceil(),
                     itemBuilder: (context, row) => Padding(

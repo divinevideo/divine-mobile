@@ -13,6 +13,8 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -20,6 +22,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
@@ -27,6 +30,7 @@ import 'package:openvine/widgets/profile/profile_lists_grid.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../helpers/large_screen_layout.dart';
 import '../../helpers/test_provider_overrides.dart';
 
 class _MockCuratedListService extends Mock implements CuratedListService {
@@ -108,55 +112,62 @@ void main() {
       pushedExtra = null;
     });
 
-    Widget buildSubject({ThemeData? theme, Override? hydrationOverride}) =>
-        testProviderScope(
-          additionalOverrides: [
-            curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
-            hydrationOverride ??
-                myListsWithThumbnailsProvider.overrideWith(
-                  (ref) async => mockListService.myLists,
-                ),
-          ],
-          child: BlocProvider<PeopleListsBloc>.value(
-            value: peopleBloc,
-            child: MaterialApp.router(
-              theme: theme,
-              localizationsDelegates: appLocalizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              routerConfig: GoRouter(
-                initialLocation: '/',
-                routes: [
-                  GoRoute(
-                    path: '/',
-                    builder: (_, _) => const Scaffold(body: ProfileListsGrid()),
-                  ),
-                  GoRoute(
-                    path: CreatePeopleListPage.path,
-                    builder: (_, _) {
-                      pushedRoute = CreatePeopleListPage.path;
-                      return const Scaffold(body: Text('create people'));
-                    },
-                  ),
-                  GoRoute(
-                    path: '/people-lists/:listId',
-                    builder: (_, state) {
-                      pushedRoute = state.uri.path;
-                      return const Scaffold(body: Text('members'));
-                    },
-                  ),
-                  GoRoute(
-                    path: '/list/:listId',
-                    builder: (_, state) {
-                      pushedRoute = state.uri.toString();
-                      pushedExtra = state.extra;
-                      return const Scaffold(body: Text('video list'));
-                    },
-                  ),
-                ],
-              ),
+    Widget buildSubject({
+      ThemeData? theme,
+      Override? hydrationOverride,
+      bool largeScreenLayout = false,
+    }) => testProviderScope(
+      additionalOverrides: [
+        curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
+        hydrationOverride ??
+            myListsWithThumbnailsProvider.overrideWith(
+              (ref) async => mockListService.myLists,
             ),
+        isFeatureEnabledProvider(
+          FeatureFlag.largeScreenLayout,
+        ).overrideWithValue(largeScreenLayout),
+      ],
+      child: BlocProvider<PeopleListsBloc>.value(
+        value: peopleBloc,
+        child: MaterialApp.router(
+          theme: theme,
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => AdaptiveLayoutScope(child: child!),
+          routerConfig: GoRouter(
+            initialLocation: '/',
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (_, _) => const Scaffold(body: ProfileListsGrid()),
+              ),
+              GoRoute(
+                path: CreatePeopleListPage.path,
+                builder: (_, _) {
+                  pushedRoute = CreatePeopleListPage.path;
+                  return const Scaffold(body: Text('create people'));
+                },
+              ),
+              GoRoute(
+                path: '/people-lists/:listId',
+                builder: (_, state) {
+                  pushedRoute = state.uri.path;
+                  return const Scaffold(body: Text('members'));
+                },
+              ),
+              GoRoute(
+                path: '/list/:listId',
+                builder: (_, state) {
+                  pushedRoute = state.uri.toString();
+                  pushedExtra = state.extra;
+                  return const Scaffold(body: Text('video list'));
+                },
+              ),
+            ],
           ),
-        );
+        ),
+      ),
+    );
 
     final l10n = lookupAppLocalizations(const Locale('en'));
 
@@ -235,6 +246,27 @@ void main() {
         expect(oldest.dx, newest.dx);
         expect(oldest.dy, greaterThan(newest.dy));
         expect(find.text(l10n.profileListsEmpty), findsNothing);
+      });
+
+      testWidgets('fits more cards in a row on a wide window', (tester) async {
+        setTestWindowSize(tester, 1000);
+        when(() => mockListService.myLists).thenReturn([
+          _videoList('old', createdAt: DateTime(2026)),
+          _videoList('new', createdAt: DateTime(2026, 3)),
+        ]);
+        when(() => peopleBloc.state).thenReturn(
+          readyPeople([_peopleList('mid', createdAt: DateTime(2026, 2))]),
+        );
+        await tester.pumpWidget(buildSubject(largeScreenLayout: true));
+        await tester.pumpAndSettle();
+
+        // 968 pt between the padding crosses two breakpoints: 4 columns.
+        final newest = tester.getTopLeft(find.text('Video new'));
+        final middle = tester.getTopLeft(find.text('People mid'));
+        final oldest = tester.getTopLeft(find.text('Video old'));
+        expect([middle.dy, oldest.dy], everyElement(equals(newest.dy)));
+        expect(newest.dx, lessThan(middle.dx));
+        expect(middle.dx, lessThan(oldest.dx));
       });
 
       testWidgets('keeps an owned list visible before it has any videos', (

@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart';
+import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/blocs/list_search/list_search_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
@@ -19,8 +19,10 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../../helpers/go_router.dart';
+import '../../../helpers/large_screen_layout.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
 class _MockListSearchBloc extends MockBloc<ListSearchEvent, ListSearchState>
@@ -234,6 +236,124 @@ void main() {
         );
       },
     );
+
+    group('preview row', () {
+      List<CuratedListSearchResult> videoLists(int count) => [
+        for (var i = 0; i < count; i++)
+          CuratedListSearchResult(
+            testList.copyWith(id: 'video$i', name: 'Video $i'),
+          ),
+      ];
+      List<PeopleListSearchResult> peopleLists(int count) => [
+        for (var i = 0; i < count; i++)
+          PeopleListSearchResult(
+            ownerPubkey: _authorOne,
+            list: UserList(
+              id: 'people$i',
+              name: 'People $i',
+              pubkeys: const [],
+              createdAt: now,
+              updatedAt: now,
+            ),
+          ),
+      ];
+
+      Future<void> pumpPreview(
+        WidgetTester tester, {
+        required double width,
+        required bool largeScreenLayout,
+        required ListSearchState state,
+      }) async {
+        when(() => mockBloc.state).thenReturn(state);
+        setTestWindowSize(tester, width);
+        await tester.pumpWidget(
+          largeScreenLayoutApp(
+            enabled: largeScreenLayout,
+            overrides: getStandardTestOverrides(),
+            home: Scaffold(
+              body: BlocProvider<ListSearchBloc>.value(
+                value: mockBloc,
+                child: const CustomScrollView(slivers: [ListsSection()]),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+      }
+
+      final results = ListSearchState(
+        status: ListSearchStatus.success,
+        query: 'test',
+        videoResults: videoLists(3),
+        peopleResults: peopleLists(3),
+      );
+
+      testWidgets('shows one video and one people list on a phone', (
+        tester,
+      ) async {
+        await pumpPreview(
+          tester,
+          width: 402,
+          largeScreenLayout: true,
+          state: results,
+        );
+
+        expect(find.byType(DivineListThumbnail), findsNWidgets(2));
+        expect(find.text('Video 0'), findsOneWidget);
+        expect(find.text('People 0'), findsOneWidget);
+      });
+
+      testWidgets('fills a wider row half with each source', (tester) async {
+        // 1000 pt less the side padding crosses two breakpoints: 4 columns.
+        await pumpPreview(
+          tester,
+          width: 1000,
+          largeScreenLayout: true,
+          state: results,
+        );
+
+        final cards = find.byType(DivineListThumbnail);
+        expect(cards, findsNWidgets(4));
+        for (final name in ['Video 0', 'Video 1', 'People 0', 'People 1']) {
+          expect(find.text(name), findsOneWidget);
+        }
+        // (968 - 3 gaps of 12) / 4.
+        expect(tester.getSize(cards.first).width, moreOrLessEquals(233));
+      });
+
+      testWidgets('keeps the two-card row with the flag off', (tester) async {
+        await pumpPreview(
+          tester,
+          width: 1000,
+          largeScreenLayout: false,
+          state: results,
+        );
+
+        final cards = find.byType(DivineListThumbnail);
+        expect(cards, findsNWidgets(2));
+        // (968 - 12) / 2.
+        expect(tester.getSize(cards.first).width, moreOrLessEquals(478));
+      });
+
+      testWidgets('loads with one silhouette per column of the row', (
+        tester,
+      ) async {
+        await pumpPreview(
+          tester,
+          width: 1000,
+          largeScreenLayout: true,
+          state: const ListSearchState(status: ListSearchStatus.loading),
+        );
+
+        expect(
+          find.descendant(
+            of: find.bySubtype<Skeletonizer>(),
+            matching: find.byType(AspectRatio),
+          ),
+          findsNWidgets(4),
+        );
+      });
+    });
 
     group('showAll: true (dedicated tab)', () {
       testWidgets(
