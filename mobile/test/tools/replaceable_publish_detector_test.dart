@@ -1,5 +1,5 @@
 // ABOUTME: Tests the detector behind check_replaceable_base_reads.sh (#11317).
-// ABOUTME: Pins which publish shapes count and what a readCurrentVersion clears.
+// ABOUTME: Pins which publish shapes count and what a base read clears.
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -348,6 +348,90 @@ Future<void> publish(NostrClient client, Signer signer, String pubkey) async {
 
         expect(_keys(violations), ['lib/mute_list.dart\t10000']);
       });
+    });
+
+    group('newestVideoRevision', () {
+      const republishOwnKind = '''
+Future<void> republish(Signer signer, VideoEvent video) async {
+  final latest = await newestVideoRevision(read, video, logName: 'x');
+  await signer.createAndSignEvent(
+    kind: latest!.kind,
+    content: '',
+    tags: const [],
+  );
+}
+''';
+
+      test('clears a Kind 34236 publish in the same file', () {
+        final violations = findReplaceablePublishViolations({
+          'lib/video_edit.dart': '''
+Future<void> republish(Signer signer, VideoEvent video) async {
+  await newestVideoRevision(read, video, logName: 'x');
+  await signer.createAndSignEvent(kind: 34236, content: '', tags: const []);
+}
+''',
+        });
+
+        expect(violations, isEmpty);
+      });
+
+      test('clears a Kind 34235 publish in the same file', () {
+        final violations = findReplaceablePublishViolations({
+          'lib/video_edit.dart': '''
+Future<void> republish(Signer signer, VideoEvent video) async {
+  await newestVideoRevision(read, video, logName: 'x');
+  await signer.createAndSignEvent(kind: 34235, content: '', tags: const []);
+}
+''',
+        });
+
+        expect(violations, isEmpty);
+      });
+
+      test('clears a publish of the unresolved kind the video carries', () {
+        final violations = findReplaceablePublishViolations({
+          'lib/video_edit.dart': republishOwnKind,
+        });
+
+        expect(violations, isEmpty);
+      });
+
+      test('reports the same publishes without the call', () {
+        final violations = findReplaceablePublishViolations({
+          'lib/video_edit.dart': '''
+Future<void> republish(Signer signer, Event latest) async {
+  await signer.createAndSignEvent(kind: 34236, content: '', tags: const []);
+  await signer.createAndSignEvent(
+    kind: latest.kind,
+    content: '',
+    tags: const [],
+  );
+}
+''',
+        });
+
+        expect(_keys(violations), [
+          'lib/video_edit.dart\t34236',
+          'lib/video_edit.dart\t?',
+        ]);
+      });
+
+      for (final kind in [10002, 30000]) {
+        test('does not clear a Kind $kind publish in the same file', () {
+          final violations = findReplaceablePublishViolations({
+            'lib/video_edit.dart':
+                '''
+Future<void> republish(Signer signer, VideoEvent video) async {
+  await newestVideoRevision(read, video, logName: 'x');
+  await signer.createAndSignEvent(kind: 34236, content: '', tags: const []);
+  await signer.createAndSignEvent(kind: $kind, content: '', tags: const []);
+}
+''',
+          });
+
+          expect(_keys(violations), ['lib/video_edit.dart\t$kind']);
+        });
+      }
     });
   });
 }

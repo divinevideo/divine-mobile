@@ -23,9 +23,7 @@ lib/services/content_reporting_service.dart	? # review: signs a queued report wh
 lib/services/corrupted_video_repair_service.dart	34236 # fixed site: one-time repair republishes own kind 34236 events from a requireAllRelaysSettled scan and skips an incomplete one
 lib/services/curated_list_relay_gateway.dart	30005 # fixed site: the settled read sits in curated_list_relay_snapshot_reader.dart; the readCurrentVersion call has to sit here, where the list is signed (#11317)
 lib/services/scheduled_post_coordinator.dart	? # review: re-signs a held scheduled video with a new created_at, keeping the kind and body it was scheduled with; reads no relay
-lib/services/video_event_publisher.dart	34236 # open: #11250 (republishWithSubtitles; the direct-upload publish of this kind is a new address)
 lib/services/video_event_publisher.dart	39307 # open: #9003 / #11251 (subtitle track)
-lib/services/video_event_publisher.dart	? # open: #11250 (republishWithAudioReuse keeps the existing 34235/34236 kind)
 packages/account_state_repository/lib/src/account_state_repository.dart	30078 # fixed site: merges encrypted kind 30078 account state from a requireAllRelaysSettled read and refuses an incomplete one
 packages/badge_repository/lib/src/badge_repository.dart	10008 # fixed site: settled read, migrate to readCurrentVersion (#11317)
 packages/badge_repository/lib/src/badge_repository.dart	30009 # open: #8999 / #11249 (badge definition)

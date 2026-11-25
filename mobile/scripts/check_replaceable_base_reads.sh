@@ -11,6 +11,10 @@
 # reports found / absent / failed, so a publisher that reads its base through
 # it cannot build on a partial answer.
 #
+# Video republishes (Kinds 34235, 34236 and the unresolved `?` they keep) read
+# their base through newestVideoRevision instead, by maintainer ruling: REST
+# first, no relay gates the read (baseReadingCalls in the detector).
+#
 # Detector: scripts/lib/replaceable_publish_detector.dart, a Dart AST over
 # mobile/lib and mobile/packages/*/lib. A publish site is createAndSignEvent,
 # a call through a signer typedef shaped like it, Event(pubkey, kind, ...), or
@@ -39,7 +43,7 @@ BASELINE_REPO_PATH="${REPLACEABLE_BASE_READS_BASELINE_REPO_PATH:-mobile/scripts/
 BASE_REF="${REPLACEABLE_BASE_READS_BASE_REF:-origin/main}"
 ALLOW_NO_BASE="${REPLACEABLE_BASE_READS_ALLOW_NO_BASE:-0}"
 ALLOW_NO_BASE_VAR="REPLACEABLE_BASE_READS_ALLOW_NO_BASE"
-NEW_HINT="This file publishes a replaceable kind without reading it through NostrClient.readCurrentVersion. Build the replacement only on CurrentVersionFound or CurrentVersionAbsent, and publish nothing on CurrentVersionFailed (#11317)."
+NEW_HINT="This file publishes a replaceable kind without reading it through NostrClient.readCurrentVersion. Build the replacement only on CurrentVersionFound or CurrentVersionAbsent, and publish nothing on CurrentVersionFailed (#11317). A video republish reads its base through newestVideoRevision instead."
 STALE_HINT="A publisher now reads its kind through readCurrentVersion, or stopped publishing it."
 FOOTER="Replaceable publishers without a settled base read are frozen and may only
 decrease. Read the kind through NostrClient.readCurrentVersion in the file that
