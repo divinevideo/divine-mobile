@@ -8,4 +8,5 @@ export 'src/curated_list_converter.dart';
 export 'src/curated_list_draft_reconciler.dart';
 export 'src/curated_list_publish_clock.dart';
 export 'src/curated_list_repository.dart';
+export 'src/curated_list_search_result.dart';
 export 'src/curated_list_video.dart';

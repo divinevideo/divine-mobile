@@ -5364,6 +5364,150 @@ void main() {
       });
     });
 
+    group('searchLists', () {
+      Uri requestedUri() =>
+          verify(
+                () => mockHttpClient.get(
+                  captureAny(),
+                  headers: any(named: 'headers'),
+                ),
+              ).captured.single
+              as Uri;
+
+      void answer(String body, [int status = 200]) {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response(body, status));
+      }
+
+      test('asks the v2 list search and keeps its ranking', () async {
+        answer(
+          '{"data": [ '
+          '{"kind": 30005, "pubkey": "$testPubkey", "d_tag": "music", '
+          '"title": "Music", "item_count": 12, "updated_at": 1764330677}, '
+          '{"kind": 30005, "pubkey": "$testPubkey", "d_tag": "musicians", '
+          '"title": "Musicians", "item_count": 3, "updated_at": 1779334404} '
+          '], "pagination": {"next_cursor": "o:2", "has_more": true}}',
+        );
+
+        final page = await client.searchLists(
+          query: '  music  ',
+          kind: PublicListKind.videos,
+          limit: 2,
+        );
+
+        expect(page.cards.map((card) => card.dTag), ['music', 'musicians']);
+        expect(page.cards.first.itemCount, 12);
+        expect(page.nextCursor, 'o:2');
+        final uri = requestedUri();
+        expect(uri.path, '/api/v2/search/lists');
+        expect(uri.queryParameters, {
+          'q': 'music',
+          'kind': '30005',
+          'limit': '2',
+        });
+      });
+
+      test('searches both kinds a page at a time', () async {
+        answer('{"data": [], "pagination": {"has_more": false}}');
+
+        final page = await client.searchLists(query: 'cats', cursor: 'o:25');
+
+        expect(page.cards, isEmpty);
+        expect(requestedUri().queryParameters, {
+          'q': 'cats',
+          'limit': '25',
+          'cursor': 'o:25',
+        });
+      });
+
+      test('treats an empty cursor as the first page', () async {
+        answer('{"data": []}');
+
+        await client.searchLists(query: 'cats', cursor: '');
+
+        expect(requestedUri().queryParameters, isNot(contains('cursor')));
+      });
+
+      test('refuses a page size the server does not take', () {
+        for (final limit in [0, FunnelcakeApiClient.maxListSearchLimit + 1]) {
+          expect(
+            () => client.searchLists(query: 'cats', limit: limit),
+            throwsArgumentError,
+            reason: '$limit',
+          );
+        }
+      });
+
+      test('throws FunnelcakeNotConfiguredException when not available', () {
+        final emptyClient = FunnelcakeApiClient(
+          baseUrl: '',
+          httpClient: mockHttpClient,
+        );
+
+        expect(
+          () => emptyClient.searchLists(query: 'cats'),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+
+        emptyClient.dispose();
+      });
+
+      test('throws a FunnelcakeException for a blank query', () {
+        expect(
+          () => client.searchLists(query: '   '),
+          throwsA(
+            isA<FunnelcakeException>().having(
+              (e) => e.message,
+              'message',
+              'Search query cannot be empty',
+            ),
+          ),
+        );
+        verifyNever(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        );
+      });
+
+      test('throws FunnelcakeApiException for a rejected request', () {
+        answer('{"error": "q is required"}', 400);
+
+        expect(
+          () => client.searchLists(query: 'cats'),
+          throwsA(
+            isA<FunnelcakeApiException>().having(
+              (e) => e.statusCode,
+              'statusCode',
+              400,
+            ),
+          ),
+        );
+      });
+
+      test('throws FunnelcakeTimeoutException on timeout', () {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenThrow(TimeoutException('slow'));
+
+        expect(
+          () => client.searchLists(query: 'cats'),
+          throwsA(isA<FunnelcakeTimeoutException>()),
+        );
+      });
+
+      test('wraps a malformed body in a FunnelcakeException', () async {
+        for (final body in const ['[]', 'not json', '{"data": "nope"}']) {
+          answer(body);
+
+          await expectLater(
+            () => client.searchLists(query: 'cats'),
+            throwsA(isA<FunnelcakeException>()),
+            reason: body,
+          );
+        }
+      });
+    });
+
     group('listSounds', () {
       Uri requestedUri() =>
           verify(

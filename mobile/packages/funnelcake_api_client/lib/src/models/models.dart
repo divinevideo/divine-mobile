@@ -6,6 +6,7 @@ export 'featured_tab_videos_response.dart';
 export 'notification_activity_update.dart';
 export 'notification_response.dart';
 export 'poll_vote_tally.dart';
+export 'public_list_card.dart';
 export 'recent_videos_response.dart';
 export 'relay_notification.dart';
 export 'sound_search_response.dart';

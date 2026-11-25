@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:clock/clock.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:hive_ce/hive_ce.dart';
 import 'package:mocktail/mocktail.dart';
@@ -3404,6 +3405,16 @@ void main() {
         );
         final api = _MockFunnelcakeApiClient();
         when(() => api.isAvailable).thenReturn(true);
+        // The list index is down, so the relays are searched.
+        when(
+          () => api.searchLists(
+            query: any(named: 'query'),
+            kind: any(named: 'kind'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenThrow(
+          const FunnelcakeApiException(message: 'down', statusCode: 503),
+        );
         // Neither owner has posted; only the viewer's own list is kept, and
         // the viewer is not even asked about.
         when(
@@ -4025,6 +4036,243 @@ void main() {
             timeout: any(named: 'timeout'),
           ),
         ).called(1);
+      });
+    });
+
+    group('searchPublicLists with the list index', () {
+      const secondOwner =
+          '6666666666666666666666666666666666666666666666666666666666666666';
+
+      late _MockNostrClient client;
+      late _MockFunnelcakeApiClient api;
+
+      PublicListCard card(
+        String dTag, {
+        String title = 'Crew',
+        String description = '',
+        String pubkey = _ownerPubkey,
+        int memberCount = 2,
+        List<String> members = const [_memberA, _memberB],
+        int kind = 30000,
+      }) => PublicListCard(
+        kind: kind,
+        pubkey: pubkey,
+        dTag: dTag,
+        title: title,
+        description: description,
+        itemCount: memberCount,
+        memberCount: memberCount,
+        members: members,
+        updatedAt: DateTime.utc(2026, 11, 13),
+      );
+
+      void answerIndex(List<PublicListCard> cards) {
+        when(
+          () => api.searchLists(
+            query: any(named: 'query'),
+            kind: any(named: 'kind'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => ListSearchResponse(cards: cards));
+      }
+
+      void answerPosted(Set<String> posted) {
+        when(() => api.getBulkProfiles(any())).thenAnswer(
+          (invocation) async => BulkProfilesResponse(
+            profiles: {
+              for (final pubkey
+                  in invocation.positionalArguments.single as List<String>)
+                pubkey: divineProfile(
+                  pubkey,
+                  videos: posted.contains(pubkey) ? 1 : 0,
+                ),
+            },
+          ),
+        );
+      }
+
+      void verifyNoRelayRead() => verifyNever(
+        () => client.queryEventsDetailed(
+          any(),
+          tempRelays: any(named: 'tempRelays'),
+          relayTypes: any(named: 'relayTypes'),
+          useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          timeout: any(named: 'timeout'),
+        ),
+      );
+
+      setUp(() {
+        client = _MockNostrClient();
+        api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+        answerPosted({_ownerPubkey, secondOwner});
+      });
+
+      test(
+        'answers from the index in its order, with every member counted, '
+        'without reading relays',
+        () async {
+          answerIndex([
+            card('crew', memberCount: 32),
+            card(
+              'crew',
+              title: 'Crew too',
+              description: 'Friends',
+              pubkey: secondOwner,
+              members: const [_memberC],
+              memberCount: 1,
+            ),
+          ]);
+          final repository = buildRepository(
+            nostrClient: client,
+            funnelcakeApiClient: api,
+          );
+
+          final results = await repository
+              .searchPublicLists('  crew ')
+              .toList();
+
+          final found = results.single;
+          expect(found.map((r) => r.ownerPubkey), [_ownerPubkey, secondOwner]);
+          expect(found.map((r) => r.memberCount), [32, 1]);
+          expect(found.first.list.pubkeys, [_memberA, _memberB]);
+          expect(found.first.list.description, isNull);
+          expect(found.last.list.name, 'Crew too');
+          expect(found.last.list.description, 'Friends');
+          expect(found.last.list.updatedAt, DateTime.utc(2026, 11, 13));
+          verify(
+            () => api.searchLists(
+              query: 'crew',
+              kind: PublicListKind.people,
+              limit: 50,
+            ),
+          ).called(1);
+          verifyNoRelayRead();
+        },
+      );
+
+      test(
+        'filters the index results as it filters relay results',
+        () async {
+          answerIndex([
+            card('empty', memberCount: 0, members: const []),
+            card('videos', kind: 30005),
+            card(Nip51PeopleListCodec.blockedDTag),
+            card('mute'),
+            card('hidden-by-config'),
+            card('blocked', pubkey: _blockedOwnerPubkey),
+            card('never-posted', pubkey: _memberA),
+            card('untitled', title: ''),
+            card('untitled', title: 'Repeated'),
+          ]);
+          final repository = buildRepository(
+            nostrClient: client,
+            funnelcakeApiClient: api,
+            blockFilter: (owner) => owner == _blockedOwnerPubkey,
+            additionalExcludedPublicDTags: const {'hidden-by-config'},
+          );
+
+          final results = await repository
+              .searchPublicLists('crew', viewerPubkey: secondOwner)
+              .toList();
+
+          expect(results.single.single.list.id, 'untitled');
+          expect(results.single.single.list.name, 'untitled');
+          verifyNoRelayRead();
+        },
+      );
+
+      test('asks no more of the index than one page holds', () async {
+        answerIndex([]);
+        final repository = buildRepository(
+          nostrClient: client,
+          funnelcakeApiClient: api,
+        );
+
+        final results = await repository
+            .searchPublicLists('crew', limit: 500)
+            .toList();
+
+        expect(results, isEmpty);
+        verify(
+          () => api.searchLists(
+            query: 'crew',
+            kind: PublicListKind.people,
+            limit: FunnelcakeApiClient.maxListSearchLimit,
+          ),
+        ).called(1);
+        verifyNoRelayRead();
+      });
+
+      test('searches the relays when the index fails', () async {
+        when(
+          () => api.searchLists(
+            query: any(named: 'query'),
+            kind: any(named: 'kind'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenThrow(
+          const FunnelcakeApiException(message: 'down', statusCode: 503),
+        );
+        final repository = buildRepository(
+          nostrClient: client,
+          funnelcakeApiClient: api,
+        );
+
+        await repository.searchPublicLists('crew').toList();
+
+        verify(
+          () => client.queryEvents(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            useCache: any(named: 'useCache'),
+            timeout: kPublicPeopleListsRelayReadTimeout,
+          ),
+        ).called(1);
+      });
+
+      test('searches the relays once the index outlasts its budget', () {
+        fakeAsync((async) {
+          when(
+            () => api.searchLists(
+              query: any(named: 'query'),
+              kind: any(named: 'kind'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer((_) => Completer<ListSearchResponse>().future);
+          final repository = buildRepository(
+            nostrClient: client,
+            funnelcakeApiClient: api,
+          );
+          var done = false;
+          repository
+              .searchPublicLists('crew')
+              .listen(
+                (_) {},
+                onDone: () => done = true,
+              );
+
+          async.elapse(
+            kPeopleListSearchIndexTimeout - const Duration(seconds: 1),
+          );
+          expect(done, isFalse);
+          verifyNoRelayRead();
+
+          async.elapse(const Duration(seconds: 1));
+
+          expect(done, isTrue);
+          verify(
+            () => client.queryEvents(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              useCache: any(named: 'useCache'),
+              timeout: kPublicPeopleListsRelayReadTimeout,
+            ),
+          ).called(1);
+        });
       });
     });
 

@@ -4,6 +4,7 @@
 // ABOUTME: peopleListSearch feature flag is enabled (injected via BLoC),
 // ABOUTME: people lists (kind 30000).
 
+import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
@@ -185,7 +186,7 @@ class _ResultsGrid extends StatelessWidget {
     required this.showAll,
   });
 
-  final List<CuratedList> videoResults;
+  final List<CuratedListSearchResult> videoResults;
   final List<PeopleListSearchResult> peopleResults;
   final bool showAll;
 
@@ -205,11 +206,11 @@ class _ResultsGrid extends StatelessWidget {
           ),
           delegate: SliverChildBuilderDelegate((context, index) {
             if (index < videoResults.length) {
-              final list = videoResults[index];
+              final result = videoResults[index];
               return _ListCard(
-                key: ValueKey(list.authorScopedId),
-                curatedList: list,
-                onTap: () => _navigateToCuratedList(context, list),
+                key: ValueKey(result.list.authorScopedId),
+                result: result,
+                onTap: () => _navigateToCuratedList(context, result),
               );
             }
             final peopleResult = peopleResults[index - videoResults.length];
@@ -238,8 +239,8 @@ class _ResultsGrid extends StatelessWidget {
             if (previewVideo != null)
               Expanded(
                 child: _ListCard(
-                  key: ValueKey(previewVideo.authorScopedId),
-                  curatedList: previewVideo,
+                  key: ValueKey(previewVideo.list.authorScopedId),
+                  result: previewVideo,
                   onTap: () => _navigateToCuratedList(context, previewVideo),
                 ),
               ),
@@ -263,17 +264,21 @@ class _ResultsGrid extends StatelessWidget {
 /// Card widget for a curated video list result.
 class _ListCard extends StatelessWidget {
   const _ListCard({
-    required this.curatedList,
+    required this.result,
     required this.onTap,
     super.key,
   });
 
-  final CuratedList curatedList;
+  final CuratedListSearchResult result;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return DivineListThumbnail.videos(curatedList: curatedList, onTap: onTap);
+    return DivineListThumbnail.videos(
+      curatedList: result.list,
+      videoCount: result.itemCount,
+      onTap: onTap,
+    );
   }
 }
 
@@ -289,6 +294,7 @@ class _PeopleListCard extends StatelessWidget {
     return DivineListThumbnail.people(
       userList: result.list,
       showMemberIdentities: false,
+      memberCount: result.memberCount,
       onTap: onTap,
     );
   }
@@ -427,13 +433,19 @@ void _navigateToPeopleList(
   );
 }
 
-void _navigateToCuratedList(BuildContext context, CuratedList list) {
+void _navigateToCuratedList(
+  BuildContext context,
+  CuratedListSearchResult result,
+) {
+  final list = result.list;
   final author = list.pubkey;
+  // A search index summary holds no video references, so the screen loads
+  // the list by its address instead of showing it empty.
   final extra = CuratedListRouteExtra(
     listName: list.name,
-    videoIds: list.videoEventIds,
+    videoIds: result.isComplete ? list.videoEventIds : null,
     authorPubkey: author,
-    list: list,
+    list: result.isComplete ? list : null,
   );
   final route = author == null
       ? CuratedListFeedRouteData(listId: list.id, $extra: extra)

@@ -81,7 +81,7 @@ void main() {
       ).thenAnswer((_) async => const <String>[]);
       when(
         () => mockCuratedListRepository.searchAllLists(any()),
-      ).thenAnswer((_) => Stream.value(const <CuratedList>[]));
+      ).thenAnswer((_) => Stream.value(const <CuratedListSearchResult>[]));
       when(
         () => mockPeopleListsRepository.searchPublicLists(any()),
       ).thenAnswer((_) => Stream.value(const <PeopleListSearchResult>[]));

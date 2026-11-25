@@ -21,6 +21,9 @@ const Set<int> _nip71AddressableVideoKinds = {
 /// - Metadata tags: title, description, image, thumbnail, playorder
 /// - Collaboration tags: collaborative, collaborator
 abstract final class CuratedListConverter {
+  /// The name of a list whose event has neither a title nor public content.
+  static const untitledListName = 'Untitled List';
+
   /// Selects the newest revision of each author's d-tag before decoding.
   /// Equal timestamps use the lowest event ID, as for Nostr replaceable events.
   static List<Event> latestRevisions(List<Event> events) {
@@ -154,7 +157,7 @@ abstract final class CuratedListConverter {
       final contentFirstLine = isPrivate ? '' : event.content.split('\n').first;
       final name =
           title ??
-          (contentFirstLine.isNotEmpty ? contentFirstLine : 'Untitled List');
+          (contentFirstLine.isNotEmpty ? contentFirstLine : untitledListName);
 
       final timestamp = DateTime.fromMillisecondsSinceEpoch(
         event.createdAt * 1000,
