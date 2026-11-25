@@ -9,8 +9,8 @@ description: |
   stale or different data than the API, (5) "completely different datasets" despite
   same table names and schemas. Root cause: querying the wrong cluster's database.
 author: Claude Code
-version: 1.0.0
-date: 2026-03-02
+version: 1.1.0
+date: 2026-11-25
 ---
 
 # Multi-Cluster API Data Mismatch
@@ -55,28 +55,13 @@ kubectl config use-context <production-context-name>
 ```
 
 ### Step 4: Verify the database connection
-```bash
-# Check what database the API actually connects to
-kubectl get secret -n <namespace> <db-credentials> -o jsonpath='{.data.DATABASE_URL}' | base64 -d
-# Production might use managed services (ClickHouse Cloud, Cloud SQL)
-# POC might use in-cluster pods
-```
 
-### Step 5: Also check for ExternalSecrets when updating secrets
-If secrets are managed by ExternalSecrets operator:
-```bash
-# Check if ExternalSecrets manages the secret
-kubectl get externalsecret -n <namespace>
-
-# If yes, update the SOURCE (e.g., GCP Secret Manager), not the k8s secret
-gcloud secrets versions add <secret-name> --project=<project> --data-file=-
-
-# Force sync after updating
-kubectl annotate externalsecret <name> -n <namespace> force-sync=$(date +%s) --overwrite
-
-# Verify the k8s secret updated
-kubectl get secret <name> -n <namespace> -o jsonpath='{.data.<key>}' | base64 -d
-```
+Compare the serving workload's database environment bindings with the connection
+references in its GitOps configuration. For Funnelcake, trace the
+`CLICKHOUSE_URL` binding to its configured endpoint and verify the environment
+and database name. Use Secret and ExternalSecret references for this comparison.
+Inspect endpoint and database metadata through the approved read-only access
+path if those details aren't visible in configuration.
 
 ## Verification
 After switching to the correct cluster:
@@ -91,33 +76,28 @@ After switching to the correct cluster:
 | API video count ~21k, DB count ~20k | Similar but not identical = different datasets |
 | Latest DB record is days old | API is receiving writes on a different cluster |
 | No ingress/gateway routes match the public domain | Traffic routes elsewhere |
-| Managed DB URL (e.g., ClickHouse Cloud) vs in-cluster pod | Production vs POC architecture |
+| Different database cluster or endpoint per environment | Production vs POC/staging architecture |
 | API pod logs show only health checks, no real traffic | Real traffic goes to another cluster |
 
 ## Example
+
+If the production API returns a video missing from your ClickHouse query, use the
+video's full hex event ID from the response as `EVENT_ID`. Set `PRODUCTION_CONTEXT`,
+`CLICKHOUSE_NAMESPACE`, and `CLICKHOUSE_POD` to the verified production values:
+
 ```bash
-# You query POC ClickHouse and find 20,371 videos, latest from Feb 26
-# But the API at relay.divine.video returns videos from today
-# The API returns a video with d_tag that doesn't exist in your ClickHouse
-
-# Fix: switch to production
-kubectl config use-context connectgateway_dv-platform-prod_...
-
-# Now query production ClickHouse Cloud
-CH_URL=$(kubectl get secret -n funnelcake funnelcake-clickhouse-credentials \
-  -o jsonpath='{.data.CLICKHOUSE_URL}' | base64 -d)
-# → https://z1hzyismdt.us-central1.gcp.clickhouse.cloud:8443
-# (managed service, not in-cluster pod)
-
-# Query returns 21,221 videos with latest from minutes ago — matches the API
+kubectl --context "$PRODUCTION_CONTEXT" -n "$CLICKHOUSE_NAMESPACE" exec "$CLICKHOUSE_POD" -- \
+  clickhouse-client --param_event_id="$EVENT_ID" \
+  --query 'SELECT id, created_at FROM nostr.videos_by_id_data WHERE id = {event_id:FixedString(64)} LIMIT 1'
 ```
 
+A returned row confirms the video exists in that cluster. Compare the result
+with the same lookup in the cluster you originally queried.
+
 ## Notes
-- Production often uses managed database services (ClickHouse Cloud, Cloud SQL)
-  while POC/staging use in-cluster pods — same schemas, different data
+- Production and POC/staging run separate database instances (such as separate
+  in-cluster ClickHouse deployments or managed services like Cloud SQL) — same
+  schemas, different data
 - The similar-but-not-identical record counts are the most misleading symptom
 - Always check `max(created_at)` or `max(indexed_at)` — if it's days old on a
   live service, you're querying the wrong instance
-- When updating k8s secrets in production, check for ExternalSecrets first —
-  manual `kubectl create secret` will be immediately overwritten by the operator
-  syncing from GCP Secret Manager / AWS Secrets Manager / Vault
