@@ -214,6 +214,27 @@ void main() {
           buildSharedDatabasePath(directSupport),
         );
       });
+
+      test('does not look above a lookalike outside Containers', () {
+        final lookalikeSupport = p.join(
+          tempRoot.path,
+          'Library',
+          'NotContainers',
+          bundleId,
+          'Data',
+          'Library',
+          'Application Support',
+        );
+        final lookalikeBase = p.join(lookalikeSupport, bundleId);
+        prepareDatabaseFile(
+          buildSharedDatabasePath(lookalikeSupport),
+        ).writeAsBytesSync([1]);
+
+        expect(
+          resolveMacOsSharedDatabasePath(lookalikeBase),
+          buildSharedDatabasePath(lookalikeBase),
+        );
+      });
     });
   });
 
