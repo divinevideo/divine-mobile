@@ -16,6 +16,8 @@ import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/route_extra_codec.dart';
+import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
@@ -453,7 +455,7 @@ void main() {
     );
 
     testWidgets(
-      'shared playback emits no clip, viewer or impression analytics',
+      'restored message playback emits no clip, viewer or impression analytics',
       (tester) async {
         final controller = _stubController(isPlaying: true);
         await tester.pumpWidget(
@@ -465,7 +467,7 @@ void main() {
             isActive: true,
             clock: () => now,
             trafficSource: ViewTrafficSource.share,
-            fromMessage: true,
+            fromMessage: _restoreVideoOrigin(fromMessage: true),
           ),
         );
         now = now.add(const Duration(seconds: 16));
@@ -492,6 +494,7 @@ void main() {
             isActive: true,
             clock: () => now,
             trafficSource: ViewTrafficSource.share,
+            fromMessage: _restoreVideoOrigin(fromMessage: false),
           ),
         );
         now = now.add(const Duration(seconds: 16));
@@ -1341,6 +1344,14 @@ void main() {
       await controller.close();
     });
   });
+}
+
+bool _restoreVideoOrigin({required bool fromMessage}) {
+  final before = RouteExtraCodec().encode(
+    VideoDetailRouteExtra(fromMessage: fromMessage),
+  );
+  final after = RouteExtraCodec().decode(before) as VideoDetailRouteExtra?;
+  return after?.fromMessage ?? false;
 }
 
 Widget _buildTracker({

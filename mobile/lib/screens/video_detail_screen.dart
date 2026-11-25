@@ -31,31 +31,8 @@ import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/takeover_close_button.dart';
 import 'package:openvine/widgets/tv_static_message_screen.dart';
 
-class VideoDetailRouteExtra {
-  const VideoDetailRouteExtra({
-    this.autoOpenComments = false,
-    this.fallbackVideoIds = const [],
-    this.initialVideo,
-    this.dmReplyContext,
-    this.fromMessage = false,
-    this.focusCommentId,
-  });
-
-  final bool autoOpenComments;
-  final List<String> fallbackVideoIds;
-  final VideoEvent? initialVideo;
-
-  /// The comment the comments sheet [autoOpenComments] opens scrolls to,
-  /// such as the one a tapped reply sticker replies to.
-  final String? focusCommentId;
-
-  /// Present when the reel was opened from a DM thread — drives the in-player
-  /// reply/reaction bar. Null for feed/profile opens.
-  final DmReplyContext? dmReplyContext;
-
-  /// The user opened this clip from a private message.
-  final bool fromMessage;
-}
+export 'package:openvine/router/routes/route_extras.dart'
+    show VideoDetailRouteExtra;
 
 class VideoDetailScreen extends ConsumerWidget {
   /// Route name for this screen.

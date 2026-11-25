@@ -10,6 +10,9 @@ import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/empty_match_back_button_dispatcher.dart';
+import 'package:openvine/router/route_extra_codec.dart';
+import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -92,9 +95,10 @@ class RestorationSafeRouteInformationParser
         context,
       );
     }
+    final history = _restoreVideoOrigins(routeInformation);
     try {
       return _delegate.parseRouteInformationWithDependencies(
-        routeInformation,
+        history.information,
         context,
       );
     } catch (error, stackTrace) {
@@ -114,10 +118,66 @@ class RestorationSafeRouteInformationParser
         ),
       );
       return _delegate.parseRouteInformationWithDependencies(
-        RouteInformation(uri: routeInformation.uri),
+        RouteInformation(
+          uri: routeInformation.uri,
+          state: history.privateFallback
+              ? RouteInformationState.go(
+                  extra: const VideoDetailRouteExtra(fromMessage: true),
+                )
+              : null,
+        ),
         context,
       );
     }
+  }
+
+  // The extra codec sees only its payload. The saved go_router match list
+  // identifies which expired legacy references came from /video/:id and
+  // retains the imperative stack used by Back.
+  static ({RouteInformation information, bool privateFallback})
+  _restoreVideoOrigins(
+    RouteInformation information,
+  ) {
+    var privateFallback = false;
+    Object? restore(Object? node) {
+      if (node is! Map<Object?, Object?>) return node;
+      var updated = node;
+      if (node
+          case {
+            'location': final String location,
+            'state': final Map<Object?, Object?> extra,
+          }
+          when extra['codec'] == 'custom') {
+        final uri = Uri.tryParse(location);
+        if (uri != null &&
+            uri.pathSegments.length == 2 &&
+            '/${uri.pathSegments.first}' == RoutePaths.videoDetailBase &&
+            uri.pathSegments.last.isNotEmpty) {
+          final encoded = extra['encoded'];
+          final safe = RouteExtraCodec.protectLegacyVideoReference(encoded);
+          if (!identical(encoded, safe)) {
+            updated = {
+              ...updated,
+              'state': {...extra, 'encoded': safe},
+            };
+          }
+          if (uri.path == information.uri.path) {
+            privateFallback = RouteExtraCodec.hasPrivateVideoOrigin(safe);
+          }
+        }
+      }
+      if (node['imperativeMatches'] case final List<Object?> pushed) {
+        final matches = pushed.map(restore).toList();
+        updated = {...updated, 'imperativeMatches': matches};
+      }
+      return updated;
+    }
+
+    final state = restore(information.state);
+    return (
+      information: RouteInformation(uri: information.uri, state: state),
+      privateFallback: privateFallback,
+    );
   }
 
   @override

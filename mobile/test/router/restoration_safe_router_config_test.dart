@@ -9,6 +9,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/router/restoration_safe_router_config.dart';
+import 'package:openvine/router/route_extra_codec.dart';
+import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class _RecordingCrashReporter implements CrashReporter {
@@ -95,6 +97,128 @@ Future<RouteInformation> _savedStateFromRetiredLocation(
 
 void main() {
   group(RestorationSafeRouteInformationParser, () {
+    for (final scenario in [
+      (
+        name: 'received video',
+        path: '/video/clip',
+        extra: const VideoDetailRouteExtra(fromMessage: true),
+        private: true,
+      ),
+      (
+        name: 'public video',
+        path: '/video/clip',
+        extra: const VideoDetailRouteExtra(),
+        private: false,
+      ),
+      (
+        name: 'public link without an extra',
+        path: '/video/clip',
+        extra: null,
+        private: false,
+      ),
+      (
+        name: 'expired opaque video reference',
+        path: '/video/clip',
+        extra: Object(),
+        private: true,
+      ),
+      (
+        name: 'unrelated expired reference',
+        path: '/other',
+        extra: Object(),
+        private: false,
+      ),
+    ]) {
+      testWidgets('fresh router restores ${scenario.name} and Back', (
+        tester,
+      ) async {
+        GoRouter makeRouter() => GoRouter(
+          initialLocation: '/thread',
+          extraCodec: RouteExtraCodec(),
+          routes: [
+            GoRoute(path: '/thread', builder: (_, _) => const Text('thread')),
+            GoRoute(
+              path: '/video/:id',
+              builder: (_, state) {
+                final extra = state.extra;
+                return Text(
+                  extra is VideoDetailRouteExtra && extra.fromMessage
+                      ? 'private video'
+                      : 'public video',
+                );
+              },
+            ),
+            GoRoute(
+              path: '/other',
+              builder: (_, state) =>
+                  Text(state.extra == null ? 'lost extra' : 'live extra'),
+            ),
+          ],
+        );
+        final first = makeRouter();
+        addTearDown(first.dispose);
+        await tester.pumpWidget(
+          MaterialApp.router(routerConfig: restorationSafeRouterConfig(first)),
+        );
+        await tester.pumpAndSettle();
+        unawaited(first.push<void>(scenario.path, extra: scenario.extra));
+        await tester.pumpAndSettle();
+        final saved = first.routeInformationParser.restoreRouteInformation(
+          first.routerDelegate.currentConfiguration,
+        )!;
+        final fresh = makeRouter();
+        addTearDown(fresh.dispose);
+        final config = restorationSafeRouterConfig(fresh);
+        await tester.pumpWidget(
+          MaterialApp.router(key: UniqueKey(), routerConfig: config),
+        );
+        await tester.pumpAndSettle();
+        final context = tester.element(find.byType(Navigator).first);
+        final matches = await config.routeInformationParser!
+            .parseRouteInformationWithDependencies(saved, context);
+        await fresh.routerDelegate.setNewRoutePath(matches);
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            scenario.path == '/other'
+                ? 'lost extra'
+                : scenario.private
+                ? 'private video'
+                : 'public video',
+          ),
+          findsOneWidget,
+        );
+        fresh.pop();
+        await tester.pumpAndSettle();
+        expect(find.text('thread'), findsOneWidget);
+
+        if (scenario.path == '/video/clip') {
+          // A broken sibling match makes the guard fall back to the URI.
+          // The surviving video still has its own privacy boundary.
+          final envelope = saved.state! as Map<Object?, Object?>;
+          final stack = envelope['imperativeMatches']! as List<Object?>;
+          final bad = RouteInformation(
+            uri: Uri.parse(scenario.path),
+            state: {
+              ...envelope,
+              'imperativeMatches': [
+                ...stack,
+                {'location': '/bad', 'state': false},
+              ],
+            },
+          );
+          final recovered = await config.routeInformationParser!
+              .parseRouteInformationWithDependencies(bad, context);
+          await fresh.routerDelegate.setNewRoutePath(recovered);
+          await tester.pumpAndSettle();
+          expect(
+            find.text(scenario.private ? 'private video' : 'public video'),
+            findsOneWidget,
+          );
+        }
+      });
+    }
+
     group('parseRouteInformationWithDependencies', () {
       testWidgets('recovers when the saved root location no longer resolves', (
         tester,
