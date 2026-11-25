@@ -1540,7 +1540,8 @@ void main() {
     );
 
     test(
-      'falls back when a cursor reached while filtering seen videos is rejected',
+      'falls back when a cursor reached while filtering seen videos is '
+      'rejected',
       () async {
         when(
           () => mockFunnelcake.getRecommendations(

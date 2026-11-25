@@ -4291,13 +4291,12 @@ class VideosRepository {
         break;
       }
 
-      final oldestTimestamp = popular
-          .map((video) => video.createdAt)
-          .reduce(min);
-      final candidateNextUntil =
-          pageUntil != null && oldestTimestamp >= pageUntil
-          ? pageUntil - 1
-          : oldestTimestamp - 1;
+      // Funnelcake switches from ranking to recency on timestamp requests.
+      // Start that walk at the catalog head, since every ranked item could
+      // be an archive clip. Subsequent pages advance on their own timestamps.
+      final candidateNextUntil = pageUntil == null
+          ? DateTime.now().millisecondsSinceEpoch ~/ 1000 + 1
+          : min(pageUntil, popular.map((v) => v.createdAt).reduce(min)) - 1;
       nextUntil = candidateNextUntil > 0 ? candidateNextUntil : null;
 
       _appendUniqueVideos(

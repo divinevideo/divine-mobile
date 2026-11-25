@@ -15396,22 +15396,22 @@ void main() {
       );
 
       test(
-        'exposes popular fallback with a continuation cursor and advances '
-        'pages',
+        'starts chronological fallback at the head after an archive-only page',
         () async {
-          final firstPopular = _createVideoStats(
-            id: 'popular-continuation-1',
-            pubkey: 'popular-pubkey',
-            dTag: 'popular-dtag-1',
-            videoUrl: 'https://example.com/popular-1.mp4',
-            createdAt: 1700000100,
-          );
+          const nextVideoTimestamp = 1700000050;
           final secondPopular = _createVideoStats(
             id: 'popular-continuation-2',
             pubkey: 'popular-pubkey-2',
             dTag: 'popular-dtag-2',
             videoUrl: 'https://example.com/popular-2.mp4',
-            createdAt: 1700000050,
+            createdAt: nextVideoTimestamp,
+          );
+          final classic = _createVideoStats(
+            id: 'popular-archive',
+            pubkey: 'archive-pubkey',
+            dTag: 'archive-dtag',
+            videoUrl: 'https://example.com/archive.mp4',
+            createdAt: 1400000000,
           );
           when(
             () => mockFunnelcakeClient.getWatchingVideos(
@@ -15420,7 +15420,8 @@ void main() {
             ),
           ).thenAnswer((invocation) async {
             final before = invocation.namedArguments[#before] as int?;
-            return before == null ? [firstPopular] : [secondPopular];
+            if (before == null) return [classic];
+            return before > nextVideoTimestamp ? [secondPopular] : [];
           });
           final repo = VideosRepository(
             nostrClient: mockNostrClient,
@@ -15430,7 +15431,7 @@ void main() {
             userPubkey: null,
             limit: 10,
           );
-          expect(firstPage.videos.single.id, 'popular-continuation-1');
+          expect(firstPage.videos.single.id, 'popular-archive');
           expect(firstPage.paginationCursor, isNotNull);
           expect(firstPage.hasMore, isTrue);
 
@@ -15450,7 +15451,10 @@ void main() {
           verify(
             () => mockFunnelcakeClient.getWatchingVideos(
               limit: 10,
-              before: 1700000099,
+              before: any(
+                named: 'before',
+                that: allOf(isNotNull, greaterThan(nextVideoTimestamp)),
+              ),
             ),
           ).called(1);
           verifyNever(
@@ -15693,7 +15697,10 @@ void main() {
           verify(
             () => mockFunnelcakeClient.getWatchingVideos(
               limit: 10,
-              before: 1700000499,
+              before: any(
+                named: 'before',
+                that: allOf(isNotNull, greaterThan(1700000500)),
+              ),
             ),
           ).called(1);
         },
@@ -15932,7 +15939,7 @@ void main() {
           );
           expect(page2.videos.single.id, 'popular-page-1');
           expect(page2.hasMore, isTrue);
-          expect(page2.paginationCursor, 'recommended-popular:1700000499');
+          expect(page2.paginationCursor, startsWith('recommended-popular:'));
 
           final page3 = await repo.getRecommendedVideos(
             userPubkey: 'user-pubkey',
@@ -15947,7 +15954,10 @@ void main() {
           verify(
             () => mockFunnelcakeClient.getWatchingVideos(
               limit: 10,
-              before: 1700000499,
+              before: any(
+                named: 'before',
+                that: allOf(isNotNull, greaterThan(1700000500)),
+              ),
             ),
           ).called(1);
         },
