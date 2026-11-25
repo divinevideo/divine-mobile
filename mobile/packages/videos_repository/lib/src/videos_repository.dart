@@ -4112,8 +4112,9 @@ class VideosRepository {
 
     // Fallback continuation retries recommendations with a fresh cursor first
     // so the feed recovers personalized ranking once a transient failure
-    // clears; if recommendations still fail or return nothing unseen, it
-    // advances into the next popular page via `effectiveUntil`.
+    // clears; if recommendations still fail, return nothing unseen, or come
+    // back terminal, it advances into the next popular page via
+    // `effectiveUntil`.
     final recommendationCursor = isFallbackContinuation
         ? null
         : (cursor ?? until?.toString());
@@ -4175,6 +4176,22 @@ class VideosRepository {
       );
     }
 
+    final isTerminalPage =
+        result.hasMore != true || result.paginationCursor == null;
+    // A retry that comes back terminal is the page the viewer already saw, so
+    // replaying it would loop; advance into popular from the cursor instead.
+    if (isFallbackContinuation && isTerminalPage) {
+      return _popularVideosInsteadOfRecommendations(
+        reason: 'recommendations retry returned a terminal page',
+        limit: limit,
+        until: effectiveUntil,
+        skipCache: true,
+        revalidate: revalidate,
+        preferredLanguages: preferredLanguages,
+        viewerCountry: viewerCountry,
+      );
+    }
+
     _lastRecommendedSeedVideoId = result.videos.last.id;
     if (isFirstPage) {
       _recommendationSessionSeed = requestSeed;
@@ -4183,8 +4200,7 @@ class VideosRepository {
     // Even if an older server reports a terminal page with no next cursor,
     // keep For You paginated via a fallback continuation cursor so the viewer
     // never hits a dead end.
-    final continuousResult =
-        (result.hasMore == true && result.paginationCursor != null)
+    final continuousResult = !isTerminalPage
         ? result
         : HomeFeedResult(
             videos: result.videos,
