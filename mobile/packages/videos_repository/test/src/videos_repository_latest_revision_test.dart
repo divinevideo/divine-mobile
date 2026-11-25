@@ -340,7 +340,7 @@ void main() {
         test('logs that its revision predates the floor', () async {
           final stale = revision(content: 'stale for log', createdAt: 999);
           stubFunnelcake(() async => stale);
-          stubRelays([]);
+          stubRelays([revision(content: 'older for log', createdAt: 998)]);
 
           await fetch();
 
@@ -352,7 +352,12 @@ void main() {
             messages,
             allOf(
               contains(contains('predates ${opened.id}')),
-              contains(contains('no relay returned a newer one')),
+              contains(
+                allOf(
+                  contains('no relay returned a newer one'),
+                  contains('relay revisions: 1'),
+                ),
+              ),
             ),
           );
         });
@@ -466,6 +471,49 @@ void main() {
           );
           expect(entry.level, LogLevel.warning);
           expect(entry.stackTrace, isNotNull);
+        });
+
+        group('which source settled a read that found no revision', () {
+          String noRevisionMessage() => LogCaptureService()
+              .getRecentLogs()
+              .singleWhere(
+                (entry) =>
+                    entry.message.startsWith('No revision of 34236:$pubkey:'),
+              )
+              .message;
+
+          test('as absent after a 404', () async {
+            stubFunnelcake(() async => null);
+            stubRelays([], endedBy: QueryEnd.settledEarly);
+
+            await fetch();
+
+            expect(
+              noRevisionMessage(),
+              allOf(
+                contains('so it is absent'),
+                contains('Funnelcake answered that it holds none'),
+                contains('ended by settledEarly'),
+              ),
+            );
+          });
+
+          test('as unknown after a failed request', () async {
+            stubFunnelcake(
+              () async => throw const FunnelcakeException('unavailable'),
+            );
+            stubRelays([], endedBy: QueryEnd.settledEarly);
+
+            await fetch();
+
+            expect(
+              noRevisionMessage(),
+              allOf(
+                contains('so it is unknown'),
+                contains('Funnelcake gave none'),
+              ),
+            );
+          });
         });
       });
 

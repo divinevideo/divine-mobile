@@ -2221,8 +2221,10 @@ class VideosRepository {
     // A Funnelcake revision older than the floor still competes, so a live
     // video never reads as absent, which callers treat as a deletion.
     var newest = revision;
+    var relayRevisions = 0;
     for (final event in read.events) {
       if (!_isSignedRevisionAt(event, address)) continue;
+      relayRevisions++;
       if (newest == null ||
           event.createdAt > newest.createdAt ||
           (event.createdAt == newest.createdAt &&
@@ -2235,7 +2237,8 @@ class VideosRepository {
         identical(newest, revision)
             ? 'Newest revision of ${address.toAString()} is still '
                   "Funnelcake's ${newest.id}: no relay returned a newer one "
-                  '(read ${read.endedBy.name})'
+                  '(relay revisions: $relayRevisions, read '
+                  '${read.endedBy.name})'
             : 'Newest revision of ${address.toAString()} from the relays: '
                   '${newest.id} (read ${read.endedBy.name})',
         name: 'VideosRepository',
@@ -2246,7 +2249,16 @@ class VideosRepository {
     // Funnelcake's lookup hides deleted videos, so its 404 is how a deletion
     // reads. With no relay revision either, a held copy must not be built on
     // just because one relay did not finish: that would bring it back.
-    return read.isComplete || saysMissing
+    final absent = read.isComplete || saysMissing;
+    Log.info(
+      'No revision of ${address.toAString()} was read, so it is '
+      '${absent ? 'absent' : 'unknown'}: Funnelcake '
+      '${saysMissing ? 'answered that it holds none' : 'gave none'}, and '
+      'the relay read ended by ${read.endedBy.name}',
+      name: 'VideosRepository',
+      category: LogCategory.video,
+    );
+    return absent
         ? const LatestVideoRevisionAbsent()
         : const LatestVideoRevisionUnknown();
   }
