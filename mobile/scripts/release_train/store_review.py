@@ -9,12 +9,13 @@ import subprocess
 from xml.parsers.expat import ExpatError
 
 from release_train.providers import ProviderError
-from release_train.release_notes import ROOT, SHA, production_build
+from release_train.release_notes import ROOT, SHA, _live_versions, production_build
 
 APPLE = 'https://developer.apple.com/app-store/review/guidelines/'
 PLAY = 'https://support.google.com/googleplay/android-developer/answer/9859455'
 PLAY_UGC = 'https://support.google.com/googleplay/android-developer/answer/9876937'
 IOS_PLIST = 'mobile/ios/Runner/Info.plist'
+MACOS_PLIST = 'mobile/macos/Runner/Info.plist'
 IOS_PROJECT = 'mobile/ios/Runner.xcodeproj/project.pbxproj'
 # Release builds take their Flutter version, and with it Android's targetSdk, from here.
 CODEMAGIC = 'codemagic.yaml'
@@ -104,14 +105,51 @@ def require_ancestor(base, source):
         raise ProviderError(COMPARE_FAILED)
 
 
-def ios_plist(commit):
+def _read_plist(commit, path):
     try:
-        data = plistlib.loads(git('show', f'{commit}:{IOS_PLIST}'))
+        data = plistlib.loads(git('show', f'{commit}:{path}'))
     except (ProviderError, plistlib.InvalidFileException, ExpatError, ValueError, OverflowError):
         data = None
     if not isinstance(data, dict):
-        raise ProviderError(f'cannot read {IOS_PLIST} at {commit}.')
+        raise ProviderError(f'cannot read {path} at {commit}.')
     return data
+
+
+def ios_plist(commit):
+    return _read_plist(commit, IOS_PLIST)
+
+
+def macos_plist(commit):
+    return _read_plist(commit, MACOS_PLIST)
+
+
+def macos_findings(base, source, paths, *, dependencies_changed):
+    plist = macos_plist(source)
+    findings = []
+    if MACOS_PLIST in paths:
+        previous = macos_plist(base)
+        relevant = {
+            'ITSAppUsesNonExemptEncryption', 'NSAppTransportSecurity',
+            'CFBundleURLTypes', 'LSApplicationCategoryType',
+        }
+        purpose_strings = {
+            key for key in plist.keys() | previous.keys()
+            if isinstance(key, str) and key.endswith('UsageDescription')
+        }
+        if any(plist.get(key) != previous.get(key) for key in relevant | purpose_strings):
+            findings.append(
+                'Verify macOS permission prompts, sign-in, App Transport Security, '
+                f'category and export declarations as applicable. {APPLE}'
+            )
+    if any(path.endswith('/InfoPlist.strings') for path in paths):
+        findings.append(f'Verify the localized macOS permission prompts explain the app’s actual use. {APPLE}')
+    if (dependencies_changed or 'mobile/macos/Podfile' in paths
+            or any(path.endswith(('.xcprivacy', '.entitlements')) for path in paths)):
+        findings.append(
+            'Check macOS privacy manifests and entitlements (including App Sandbox), '
+            f'including any a dependency or Flutter upgrade adds, against the app and App Store Connect disclosures. {APPLE}'
+        )
+    return findings
 
 
 def ios_findings(base, source, paths, *, dependencies_changed):
@@ -167,10 +205,12 @@ def ios_findings(base, source, paths, *, dependencies_changed):
 def findings_for(platform, base, source):
     require_ancestor(base, source)
     changed = git('diff', '--no-renames', '--name-only', '-z', base, source, '--', 'mobile')
-    excluded = (
-        'mobile/macos/', 'mobile/windows/', 'mobile/linux/', 'mobile/web/',
-        'mobile/android/' if platform == 'ios' else 'mobile/ios/',
-    )
+    other_platforms = {
+        'ios': ('mobile/macos/', 'mobile/android/'),
+        'macos': ('mobile/ios/', 'mobile/android/'),
+        'android': ('mobile/macos/', 'mobile/ios/'),
+    }.get(platform, ('mobile/macos/', 'mobile/ios/'))
+    excluded = ('mobile/windows/', 'mobile/linux/', 'mobile/web/') + other_platforms
     paths = {
         path for path in changed.decode('utf-8', errors='surrogateescape').split('\0')
         if path and not path.startswith(excluded)
@@ -182,10 +222,12 @@ def findings_for(platform, base, source):
         'diff', '--name-only', '--no-renames', '-G', '(FLUTTER_VERSION|flutter):',
         base, source, '--', CODEMAGIC,
     ))
-    findings = (
-        ios_findings(base, source, paths, dependencies_changed=dependencies_changed)
-        if platform == 'ios' else []
-    )
+    if platform == 'ios':
+        findings = ios_findings(base, source, paths, dependencies_changed=dependencies_changed)
+    elif platform == 'macos':
+        findings = macos_findings(base, source, paths, dependencies_changed=dependencies_changed)
+    else:
+        findings = []
     if platform == 'android' and (dependencies_changed or any(
         (path.endswith('/AndroidManifest.xml') and not any(
             f'/src/{source_set}/' in path for source_set in ('debug', 'profile', 'androidTest')
@@ -201,7 +243,7 @@ def findings_for(platform, base, source):
             'Check the release bundle’s merged permissions, target API, Play '
             f'listing and App content declarations. {PLAY}'
         )
-    policy = APPLE if platform == 'ios' else PLAY_UGC
+    policy = APPLE if platform in {'ios', 'macos'} else PLAY_UGC
     if any(path.startswith(MODERATION_PATHS) for path in paths):
         findings.append(
             'Test the changed moderation flows on the candidate, including filtering '
@@ -209,7 +251,7 @@ def findings_for(platform, base, source):
             f'abusive users. {policy}'
         )
     if any(path.startswith(ACCESS_PATHS) for path in paths):
-        policy = APPLE if platform == 'ios' else PLAY
+        policy = APPLE if platform in {'ios', 'macos'} else PLAY
         findings.append(
             'Verify reviewer access, sign-in, account deletion, consent and '
             f'legal/support links as affected by this change. {policy}'
@@ -224,13 +266,29 @@ def check_candidate(action, snapshot, approvals):
     if not SHA.fullmatch(source or ''):
         raise ProviderError('candidate source provenance is missing. Verify the store build identity.')
     label = f"{build['version']}+{build['number']} ({source})"
+    platform_data = snapshot.get(platform, {})
     try:
-        baseline = production_build(platform, snapshot.get(platform, {}))
-        number = baseline.get('number')
-        if type(number) is not int or number < 1:
-            raise ProviderError('published build number is missing. Reconcile release provenance.')
-        label += f" against production {baseline['version']}+{number} ({baseline['sha']})"
-        findings = findings_for(platform, baseline['sha'], source)
+        if (
+            platform == 'macos'
+            and isinstance(platform_data.get('versions'), list)
+            and not _live_versions(platform_data)
+        ):
+            macos_plist(source)
+            baseline_key = None
+            label += ' (initial Mac App Store release)'
+            findings = [
+                'Initial Mac App Store release has no live macOS production baseline. '
+                'Verify macOS entitlements, App Sandbox, privacy manifest, permission prompts, '
+                f'moderation/account flows and Mac App Store listing/screenshots. {APPLE}'
+            ]
+        else:
+            baseline = production_build(platform, platform_data)
+            number = baseline.get('number')
+            if type(number) is not int or number < 1:
+                raise ProviderError('published build number is missing. Reconcile release provenance.')
+            baseline_key = [baseline['version'], number, baseline['sha'], baseline.get('id')]
+            label += f" against production {baseline['version']}+{number} ({baseline['sha']})"
+            findings = findings_for(platform, baseline['sha'], source)
     except ProviderError as error:
         raise ProviderError(f'{label}: {error}') from None
     if not findings:
@@ -238,7 +296,7 @@ def check_candidate(action, snapshot, approvals):
     digest = hashlib.sha256(json.dumps([
         platform,
         [build['version'], build['number'], source, build.get('id')],
-        [baseline['version'], number, baseline['sha'], baseline.get('id')],
+        baseline_key,
         findings,
     ]).encode()).hexdigest()
     token = f'{platform}-{digest}'

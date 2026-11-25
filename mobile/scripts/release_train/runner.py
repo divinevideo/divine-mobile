@@ -936,7 +936,7 @@ class Runtime:
                 continue
             try:
                 if platform in APPLE_PLATFORMS:
-                    if self.apple is None:
+                    if getattr(self, "apple", None) is None:
                         # Assign only once the groups validate, so a failed
                         # iOS pass cannot leave macOS an unvalidated client.
                         group = (

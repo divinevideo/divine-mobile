@@ -22,10 +22,16 @@ if str(TESTS_DIR) not in sys.path:
 
 from allocate_build_identity import allocate_build
 from record_macos_provenance import record_provenance
-from release_train.coordinator import DAY, HOUR, plan_tick
+from release_train.coordinator import (
+    DAY,
+    HOUR,
+    PRODUCTION_INTERVAL,
+    TESTFLIGHT_INTERVAL,
+    plan_tick,
+)
 from release_train.providers import Apple
 from release_train.release_notes import ReleaseNotesError, ensure_bundle
-from release_train.runner import Runtime
+from release_train.runner import Runtime, execute_plan, reconcile_operations
 from release_train_fakes import release_notes_bundle
 
 SHA_OLD = "a" * 40
@@ -417,6 +423,172 @@ class MacosReleaseTrainTest(unittest.TestCase):
         workflow_text = (ROOT / ".github/workflows/release_train.yml").read_text(encoding="utf-8")
         self.assertIn("vars.RELEASE_TRAIN_MACOS != '' && vars.RELEASE_TRAIN_MACOS != 'off'", workflow_text)
         self.assertIn("RELEASE_TRAIN_MACOS: ${{ vars.RELEASE_TRAIN_MACOS }}", workflow_text)
+
+    def test_macos_obeys_12h_build_and_testflight_cadence_and_48h_app_store_spacing_independently_of_ios(self):
+        now = 3_000_000
+        macos_build = {
+            "id": "mb1",
+            "number": 912,
+            "version": "1.0.37",
+            "sha": SHA_OLD,
+            "valid": True,
+            "ci_verified": True,
+            "public": False,
+            "public_complete": False,
+            "groups": [],
+            "external": "READY_FOR_BETA_SUBMISSION",
+        }
+        snapshot = {
+            "now": now,
+            "ci_passed": True,
+            "candidate": SHA_NEW,
+            "changes": {"ios": False, "macos": True, "android": False},
+            "cm": [],
+            "ios": {},
+            "macos": {
+                "group_valid": True,
+                "builds": [macos_build],
+                "versions": [
+                    {"id": "mv1", "version": "1.0.0", "state": "PREPARE_FOR_SUBMISSION", "build_id": None}
+                ],
+                "submissions": [],
+                "review_submissions": [],
+            },
+            "android": {},
+        }
+        # Recent iOS build/public-beta/app-store operations must NOT throttle macOS.
+        ios_only_state = {
+            "last_build_started": {"ios": now - 60},
+            "app_store_submissions": [now - 60],
+            "operations": {
+                "public-beta:ios:10": {
+                    "action": {"kind": "public-beta", "platform": "ios", "build": {"id": "ib10", "number": 10}},
+                    "started_at": now - 60,
+                    "cadence_at": now - 60,
+                    "status": "done",
+                },
+                "app-store:ios:10": {
+                    "action": {"kind": "app-store", "platform": "ios", "build": {"id": "ib10", "number": 10}},
+                    "started_at": now - 60,
+                    "status": "done",
+                },
+            },
+        }
+        plan = plan_tick(snapshot, ios_only_state, {"ios": "off", "macos": "app-store", "android": "off"})
+        self.assertEqual(
+            {(a["platform"], a["kind"]) for a in plan["actions"]},
+            {("macos", "build"), ("macos", "public-beta"), ("macos", "app-store")},
+        )
+
+        # macOS itself respects 12h build + TestFlight cadence and 48h App Store spacing.
+        macos_recent_state = {
+            "last_build_started": {"macos": now - (TESTFLIGHT_INTERVAL - 1)},
+            "macos_app_store_submissions": [now - (PRODUCTION_INTERVAL - 1)],
+            "operations": {
+                "public-beta:macos:911": {
+                    "action": {"kind": "public-beta", "platform": "macos", "build": {"id": "mb911", "number": 911}},
+                    "started_at": now - (TESTFLIGHT_INTERVAL - 1),
+                    "cadence_at": now - (TESTFLIGHT_INTERVAL - 1),
+                    "status": "done",
+                },
+            },
+        }
+        throttled = plan_tick(snapshot, macos_recent_state, {"ios": "off", "macos": "app-store", "android": "off"})
+        self.assertEqual(throttled["actions"], [])
+        self.assertTrue(any("macos public: wait twelve hours" in r for r in throttled["reasons"]))
+        self.assertTrue(any("macos app-store: wait 48 hours" in r for r in throttled["reasons"]))
+
+        # Once 12h elapses, build & public-beta unlock while app-store waits for 48h.
+        macos_recent_state["last_build_started"]["macos"] = now - TESTFLIGHT_INTERVAL
+        macos_recent_state["operations"]["public-beta:macos:911"]["cadence_at"] = now - TESTFLIGHT_INTERVAL
+        macos_recent_state["operations"]["public-beta:macos:911"]["started_at"] = now - TESTFLIGHT_INTERVAL
+        halfway = plan_tick(snapshot, macos_recent_state, {"ios": "off", "macos": "app-store", "android": "off"})
+        self.assertEqual(
+            {(a["platform"], a["kind"]) for a in halfway["actions"]},
+            {("macos", "build"), ("macos", "public-beta")},
+        )
+
+    def test_macos_reconcile_and_execute_record_per_platform_cadence_and_rejection_prompt(self):
+        now = 4_000_000
+        # reconcile_operations uses snapshot["macos"]["observed_at"] for macOS public-beta cadence.
+        state = {
+            "operations": {
+                "public-beta:macos:912": {
+                    "action": {"kind": "public-beta", "platform": "macos", "build": {"id": "mb1", "number": 912}},
+                    "started_at": now - 100,
+                    "status": "started",
+                }
+            }
+        }
+        snap = {
+            "now": now,
+            "ios": {},
+            "macos": {
+                "group_valid": True,
+                "observed_at": now + 5,
+                "builds": [
+                    {
+                        "id": "mb1",
+                        "number": 912,
+                        "public": True,
+                        "public_complete": True,
+                        "external": "READY_FOR_BETA_TESTING",
+                    }
+                ],
+                "versions": [
+                    {"id": "mv1", "version": "1.0.37", "state": "REJECTED", "build_id": "mb1"}
+                ],
+                "submissions": [],
+                "review_submissions": [],
+            },
+        }
+        reconcile_operations(state, snap)
+        self.assertEqual(state["operations"]["public-beta:macos:912"]["status"], "done")
+        self.assertEqual(state["operations"]["public-beta:macos:912"]["cadence_at"], now + 5)
+
+        # App Review rejection hold names macos-version:<id> and links APPLE_REVIEW_RESPONSE.md.
+        rej_plan = plan_tick(snap, state, {"ios": "off", "macos": "app-store", "android": "off"})
+        self.assertTrue(
+            any(
+                "macos app-store: rejection hold for 1.0.37" in r
+                and "macos-version:mv1" in r
+                and "APPLE_REVIEW_RESPONSE.md#replying-to-a-rejection" in r
+                for r in rej_plan["reasons"]
+            )
+        )
+
+        # Runtime.execute records macos_app_store_submissions using math.ceil(time.time()).
+        class FakeApple:
+            def submit_store(self, *args, **kwargs):
+                return "mv-sub"
+
+        class FakeStore:
+            def save(self, s):
+                pass
+
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {}
+        runtime.ledger = MemoryLedger()
+        runtime.apple = FakeApple()
+        runtime.refresh_store_authorization = lambda platform: None
+        runtime.claim = lambda build, channel: None
+        runtime.deploy = lambda env, build, status, s: None
+        exec_state = {}
+        exec_plan = {
+            "actions": [
+                {
+                    "kind": "app-store",
+                    "platform": "macos",
+                    "build": {"id": "mb1", "number": 912, "version": "1.0.37", "sha": SHA_NEW},
+                    "release_notes": release_notes_bundle("macos", SHA_NEW),
+                }
+            ]
+        }
+        with patch("release_train.runner.time.time", return_value=now + 10.2):
+            execute_plan(exec_plan, exec_state, snap, FakeStore(), runtime)
+        self.assertEqual(exec_plan.get("errors", []), [])
+        self.assertEqual(exec_state["macos_app_store_submissions"], [now + 11])
+        self.assertNotIn("app_store_submissions", exec_state)
 
 
 if __name__ == "__main__":
