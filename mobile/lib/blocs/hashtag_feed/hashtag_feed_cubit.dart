@@ -35,8 +35,9 @@ class HashtagFeedCubit extends Cubit<HashtagFeedState> {
   final List<VideoEvent> Function(List<VideoEvent>) _filterVideos;
   int _request = 0;
 
-  /// Keeps the reel in the order it opened. Ranked pages can otherwise land
-  /// ahead of the current video when the viewer is on a relay-only result.
+  /// Emits the reel without reordering it, so a new page never lands ahead of
+  /// the video being watched. A refresh can return fewer pages than the reel
+  /// holds; videos it no longer returns stay unless the filters now hide them.
   Stream<List<VideoEvent>> watchPlaybackVideos({
     required List<VideoEvent> initialVideos,
     required List<VideoEvent> Function(List<VideoEvent>) visibleVideos,
@@ -48,9 +49,17 @@ class HashtagFeedCubit extends Cubit<HashtagFeedState> {
         for (final video in visibleVideos(state.videos))
           _playbackKey(video): video,
       };
+      final missing = [
+        for (final video in playback)
+          if (!latest.containsKey(_playbackKey(video))) video,
+      ];
+      final allowed = {
+        for (final video in _filterVideos(missing)) _playbackKey(video): video,
+      };
       return playback = [
         for (final video in playback)
-          if (latest.remove(_playbackKey(video)) case final VideoEvent kept)
+          if (latest.remove(_playbackKey(video)) ?? allowed[_playbackKey(video)]
+              case final VideoEvent kept)
             kept,
         ...latest.values,
       ];

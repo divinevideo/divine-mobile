@@ -65,7 +65,8 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
       fetchPage: (cursor) => ref
           .read(videosRepositoryProvider)
           .getHashtagFeedVideos(hashtag: hashtag, cursor: cursor),
-      filterVideos: _applyFeedFilters,
+      // The reel can re-filter after this screen unmounts, when ref is gone.
+      filterVideos: (videos) => mounted ? _applyFeedFilters(videos) : videos,
     );
     _feed = feed;
     WidgetsBinding.instance.addPostFrameCallback((_) {

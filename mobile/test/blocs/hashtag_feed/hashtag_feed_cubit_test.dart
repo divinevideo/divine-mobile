@@ -111,5 +111,61 @@ void main() {
       expect(cubit.state.nextCursor, 'o:80');
       expect(cubit.state.isLoading, isFalse);
     });
+
+    group('watchPlaybackVideos', () {
+      Future<(HashtagFeedCubit, StreamIterator<List<VideoEvent>>)> twoPages({
+        required Set<String> hidden,
+      }) async {
+        List<VideoEvent> visible(List<VideoEvent> videos) => [
+          for (final video in videos)
+            if (!hidden.contains(video.id)) video,
+        ];
+        final cubit = HashtagFeedCubit(
+          fetchPage: (cursor) async => cursor == null
+              ? HashtagFeedVideosResult.success([
+                  _video('first'),
+                ], nextCursor: 'o:50')
+              : HashtagFeedVideosResult.success([_video('next')]),
+          filterVideos: visible,
+        );
+        addTearDown(cubit.close);
+        await cubit.refresh();
+        final snapshots = StreamIterator(
+          cubit.watchPlaybackVideos(
+            initialVideos: visible(cubit.state.videos),
+            visibleVideos: visible,
+          ),
+        );
+        addTearDown(snapshots.cancel);
+        expect(await snapshots.moveNext(), isTrue);
+        final loaded = snapshots.moveNext();
+        await cubit.loadMore();
+        expect(await loaded, isTrue);
+        expect(snapshots.current.map((video) => video.id), ['first', 'next']);
+        return (cubit, snapshots);
+      }
+
+      test('keeps later pages in the reel when the feed refreshes', () async {
+        final (cubit, snapshots) = await twoPages(hidden: {});
+
+        final refreshed = snapshots.moveNext();
+        await cubit.refresh();
+        expect(await refreshed, isTrue);
+
+        expect(snapshots.current.map((video) => video.id), ['first', 'next']);
+      });
+
+      test('drops a reel video the filters now hide', () async {
+        final hidden = <String>{};
+        final (cubit, snapshots) = await twoPages(hidden: hidden);
+
+        hidden.add('next');
+        final refreshed = snapshots.moveNext();
+        await cubit.refresh();
+        expect(await refreshed, isTrue);
+
+        expect(snapshots.current.map((video) => video.id), ['first']);
+      });
+    });
   });
 }
