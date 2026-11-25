@@ -55,27 +55,13 @@ kubectl config use-context <production-context-name>
 ```
 
 ### Step 4: Verify the database connection
-```bash
-# Check what database the API actually connects to
-kubectl get secret -n <namespace> <db-credentials> -o jsonpath='{.data.DATABASE_URL}' | base64 -d
-# Production and non-production clusters connect to separate database instances (in-cluster or managed, e.g., Cloud SQL)
-```
 
-### Step 5: Also check for ExternalSecrets when updating secrets
-If secrets are managed by ExternalSecrets operator:
-```bash
-# Check if ExternalSecrets manages the secret
-kubectl get externalsecret -n <namespace>
-
-# If yes, update the SOURCE (e.g., GCP Secret Manager), not the k8s secret
-gcloud secrets versions add <secret-name> --project=<project> --data-file=-
-
-# Force sync after updating
-kubectl annotate externalsecret <name> -n <namespace> force-sync=$(date +%s) --overwrite
-
-# Verify the k8s secret updated
-kubectl get secret <name> -n <namespace> -o jsonpath='{.data.<key>}' | base64 -d
-```
+Compare the serving workload's database environment bindings with the connection
+references in its GitOps configuration. For Funnelcake, trace the
+`CLICKHOUSE_URL` binding to its configured endpoint and verify the environment
+and database name. Use Secret and ExternalSecret references for this comparison.
+Inspect endpoint and database metadata through the approved read-only access
+path if those details aren't visible in configuration.
 
 ## Verification
 After switching to the correct cluster:
@@ -115,6 +101,3 @@ with the same lookup in the cluster you originally queried.
 - The similar-but-not-identical record counts are the most misleading symptom
 - Always check `max(created_at)` or `max(indexed_at)` — if it's days old on a
   live service, you're querying the wrong instance
-- When updating k8s secrets in production, check for ExternalSecrets first —
-  manual `kubectl create secret` will be immediately overwritten by the operator
-  syncing from GCP Secret Manager / AWS Secrets Manager / Vault
