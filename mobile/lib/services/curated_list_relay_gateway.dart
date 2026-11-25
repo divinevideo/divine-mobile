@@ -179,7 +179,7 @@ class CuratedListRelayGateway {
   }
 
   String _privateItemPlaintext(CuratedList list) {
-    return jsonEncode(CuratedListConverter.toItemTags(list));
+    return jsonEncode(CuratedListConverter.toSealedTags(list));
   }
 
   bool privateItemPayloadFits(CuratedList list) =>

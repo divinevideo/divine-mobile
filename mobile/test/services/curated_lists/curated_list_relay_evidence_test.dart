@@ -223,6 +223,40 @@ void main() {
     );
 
     test(
+      'a sealed non-video item decodes, an unknown record stays opaque',
+      () async {
+        final incoming = await event();
+        await evidence.observe(incoming);
+        expect(
+          evidence.decoded(
+            incoming,
+            const UnsealedItemTags.unsealed(
+              [
+                ['e', _video],
+                ['future', 'item'],
+              ],
+              hasCompleteItemSnapshot: true,
+            ),
+          ),
+          isFalse,
+        );
+        expect(
+          evidence.decoded(
+            incoming,
+            const UnsealedItemTags.unsealed(
+              [
+                ['e', _video],
+                ['p', _video],
+              ],
+              hasCompleteItemSnapshot: true,
+            ),
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test(
       'older and empty readbacks cannot retire a newer opaque revision',
       () async {
         final older = await event();

@@ -681,6 +681,24 @@ void main() {
         expect(cubit.state.canSubmit, isFalse);
       });
 
+      test('a series is not offered', () {
+        stubLists([
+          _list('plain'),
+          _list('episodes', videoEventIds: [_videoId]).copyWith(
+            preservedTags: const [
+              ['series', 'true'],
+            ],
+          ),
+        ]);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+
+        expect(cubit.state.lists.map((list) => list.id), ['plain']);
+        expect(cubit.state.memberListIds, isEmpty);
+        cubit.toggled('episodes');
+        expect(cubit.state.selectedListIds, isEmpty);
+      });
+
       test(
         'revalidates ownership of a selected coordinate before writing',
         () async {

@@ -128,8 +128,11 @@ class CuratedDefaultPublicationAuthority {
         CuratedListConverter.isEncryptedItemPayload(event.content)) {
       return;
     }
+    // A sealed non-video NIP-51 item is kept by the decoder, not dropped.
     final tags = items.status == UnsealItemTagsStatus.unsealed
         ? items.tags
+              ?.where((tag) => !CuratedListConverter.isNonVideoItemTag(tag))
+              .toList()
         : event.tags
               .where(
                 (tag) => tag.isNotEmpty && (tag[0] == 'e' || tag[0] == 'a'),
@@ -205,7 +208,7 @@ class CuratedDefaultPublicationAuthority {
       if (target.isPublic)
         target.description
       else
-        CuratedListConverter.toItemTags(target),
+        CuratedListConverter.toSealedTags(target),
     ]);
   }
 

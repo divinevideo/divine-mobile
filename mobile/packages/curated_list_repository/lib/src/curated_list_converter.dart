@@ -4,6 +4,7 @@
 
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' show Event, NIP04, NIP44V2;
 
@@ -13,6 +14,44 @@ const Set<int> _nip71AddressableVideoKinds = {
   NIP71VideoKinds.addressableShortVideo,
 };
 
+/// Tag names this converter writes itself, so an incoming one is never kept
+/// beside the app's own. `a` is only the app's when it names a video.
+///
+/// `client` is listed because the signing path adds Divine's client tag only
+/// when an event has none: keeping another app's would credit it with the
+/// edit and leave Divine's out.
+const Set<String> _ownTagNames = {
+  'd',
+  'title',
+  'description',
+  'image',
+  'thumbnail',
+  'playorder',
+  't',
+  'e',
+  'collaborative',
+  'collaborator',
+  'client',
+};
+
+/// NIP-51 item tag names other than the `e` and `a` tags a video set uses
+/// for its videos: people, URLs, words, emoji, relays and groups.
+const Set<String> _nonVideoItemTagNames = {
+  'p',
+  'r',
+  'word',
+  'emoji',
+  'relay',
+  'group',
+};
+
+/// NIP-51 tag names that reference an item rather than describe the list.
+///
+/// A private list seals these with its videos: written in the clear they would
+/// reveal what the list holds, and an `a` or `e` tag there would make readers
+/// take the list for a public one.
+const Set<String> _itemTagNames = {'a', 'e', ..._nonVideoItemTagNames};
+
 /// Utility for converting between Nostr events and [CuratedList] models.
 ///
 /// Handles NIP-51 kind 30005 event parsing, including:
@@ -20,6 +59,10 @@ const Set<int> _nip71AddressableVideoKinds = {
 /// - `a` tags for addressable video references (NIP-71 kinds)
 /// - Metadata tags: title, description, image, thumbnail, playorder
 /// - Collaboration tags: collaborative, collaborator
+///
+/// Any other tag is kept on [CuratedList.preservedTags] or
+/// [CuratedList.preservedPrivateTags] and written back on publish, so an edit
+/// from this app does not drop what another client wrote on the same list.
 abstract final class CuratedListConverter {
   /// The name of a list whose event has neither a title nor public content.
   static const untitledListName = 'Untitled List';
@@ -60,6 +103,10 @@ abstract final class CuratedListConverter {
     final collaborative = local.isCollaborative || relay.isCollaborative;
     final privacyConflict = !isPublic && collaborative;
     final isCollaborative = collaborative && !privacyConflict;
+    final preservedPrivateTags = _unionTags(
+      preferred.preservedPrivateTags,
+      other.preservedPrivateTags,
+    );
     return preferred.copyWith(
       pubkey: relay.pubkey,
       videoEventIds: items.toList(growable: false),
@@ -80,8 +127,31 @@ abstract final class CuratedListConverter {
         if (relay.isPublic && !isPublic && relay.nostrEventId != null)
           relay.nostrEventId!,
       }.toList(growable: false),
+      // A tag either copy sealed stays sealed.
+      preservedTags: [
+        for (final tag in _unionTags(
+          preferred.preservedTags,
+          other.preservedTags,
+        ))
+          if (!_containsTag(preservedPrivateTags, tag)) tag,
+      ],
+      preservedPrivateTags: preservedPrivateTags,
     );
   }
+
+  static List<List<String>> _unionTags(
+    List<List<String>> first,
+    List<List<String>> second,
+  ) => [
+    ...first,
+    for (final tag in second)
+      if (!_containsTag(first, tag)) tag,
+  ];
+
+  static bool _containsTag(List<List<String>> tags, List<String> tag) =>
+      tags.any((candidate) => _tagEquality.equals(candidate, tag));
+
+  static const _tagEquality = ListEquality<String>();
 
   /// Parses a Nostr [Event] into a [CuratedList].
   ///
@@ -111,6 +181,8 @@ abstract final class CuratedListConverter {
       final videoEventIds = <String>[];
       var isCollaborative = false;
       final allowedCollaborators = <String>[];
+      final preservedTags = <List<String>>[];
+      final preservedPrivateTags = <List<String>>[];
 
       final eventTags = event.tags
           .map((dynamic tag) => (tag as List<dynamic>).cast<String>())
@@ -121,8 +193,18 @@ abstract final class CuratedListConverter {
               _hasSealedItemShape(eventTags, event.content));
       final rawTags = [...eventTags, ...?privateTags];
 
-      for (final tag in rawTags) {
+      for (final (index, tag) in rawTags.indexed) {
         if (tag.isEmpty) continue;
+
+        // Only videos are read from the sealed part. Anything else there
+        // stays sealed and unread, so a private tag never reaches the clear.
+        final sealed = index >= eventTags.length;
+        if (sealed ? !_isVideoItemTag(tag) : _isPreservedTag(tag)) {
+          (sealed ? preservedPrivateTags : preservedTags).add(
+            List.unmodifiable(tag),
+          );
+          continue;
+        }
 
         switch (tag[0]) {
           case 'title':
@@ -182,11 +264,58 @@ abstract final class CuratedListConverter {
         playOrder: playOrderStr != null
             ? PlayOrderExtension.fromString(playOrderStr)
             : PlayOrder.chronological,
+        preservedTags: preservedTags,
+        preservedPrivateTags: preservedPrivateTags,
       );
     } on Object catch (_) {
       return null;
     }
   }
+
+  static bool _isVideoItemTag(List<String> tag) =>
+      tag[0] == 'e' ||
+      (tag[0] == 'a' && tag.length > 1 && _isAddressableVideoReference(tag[1]));
+
+  static bool _isPreservedTag(List<String> tag) =>
+      !_ownTagNames.contains(tag[0]) && !_isVideoItemTag(tag);
+
+  static bool _isItemTag(List<String> tag) => _itemTagNames.contains(tag[0]);
+
+  /// Whether [tag] is a NIP-51 item that is not a video: a person, URL, word,
+  /// emoji, relay or group.
+  ///
+  /// [fromEvent] keeps such an item on the list unread, sealed when it came
+  /// sealed, and a private list seals it again on publish. So a sealed one is
+  /// not dropped, unlike a record of a kind this app does not know.
+  static bool isNonVideoItemTag(List<String> tag) =>
+      tag.isNotEmpty && _nonVideoItemTagNames.contains(tag[0]);
+
+  /// The preserved tags [list] publishes in the clear: all of them for a
+  /// public list, only those describing the list for a private one.
+  ///
+  /// A public list leaves out sealed tags named like the app's own, such as
+  /// a sealed `title`: written beside the app's they would replace them.
+  static List<List<String>> _clearPreservedTags(CuratedList list) =>
+      list.isPublic
+      ? [
+          ...list.preservedTags,
+          for (final tag in list.preservedPrivateTags)
+            if (!_ownTagNames.contains(tag[0])) tag,
+        ]
+      : [
+          for (final tag in list.preservedTags)
+            if (!_isItemTag(tag)) tag,
+        ];
+
+  /// The preserved tags a private [list] seals beside its videos.
+  static List<List<String>> _sealedPreservedTags(CuratedList list) =>
+      list.isPublic
+      ? const []
+      : [
+          for (final tag in list.preservedTags)
+            if (_isItemTag(tag)) tag,
+          ...list.preservedPrivateTags,
+        ];
 
   static bool _hasSealedItemShape(List<List<String>> tags, String content) {
     if (!isEncryptedItemPayload(content)) return false;
@@ -228,28 +357,35 @@ abstract final class CuratedListConverter {
   ///
   /// Returns a list of tag arrays suitable for creating a kind 30005
   /// event, with every video reference in the public tags. A private list
-  /// publishes [toPublicMetadataTags] instead and carries [toItemTags]
-  /// encrypted in the event content.
+  /// publishes [toPrivateMetadataTags] instead and carries [toSealedTags]
+  /// encrypted in the event content. For a private list this is everything
+  /// it publishes, sealed or not, in one list: that is how copies compare.
   static List<List<String>> toEventTags(CuratedList list) => [
     ...toPublicMetadataTags(list),
     ...toItemTags(list),
+    ..._sealedPreservedTags(list),
   ];
 
-  /// The tags describing [list] itself, without any video reference.
+  /// The tags describing [list] itself, without any video reference,
+  /// followed by the [CuratedList.preservedTags] it publishes in the clear.
   ///
   /// These stay readable on a relay even for a private list: NIP-51 hides a
   /// list's items, not the fact that the list exists or what it is called.
-  static List<List<String>> toPublicMetadataTags(CuratedList list) {
-    return _toMetadataTags(list, includeThumbnail: true);
-  }
+  static List<List<String>> toPublicMetadataTags(CuratedList list) => [
+    ..._toMetadataTags(list, includeThumbnail: true),
+    ..._clearPreservedTags(list),
+  ];
 
   /// Public metadata for a private list, excluding item-derived fields.
   ///
   /// A thumbnail is itself a video reference, so publishing it beside an
-  /// encrypted item set would reveal one member of the private list.
-  static List<List<String>> toPrivateMetadataTags(CuratedList list) {
-    return _toMetadataTags(list, includeThumbnail: false);
-  }
+  /// encrypted item set would reveal one member of the private list. For the
+  /// same reason, preserved tags that reference an item go into
+  /// [toSealedTags] instead.
+  static List<List<String>> toPrivateMetadataTags(CuratedList list) => [
+    ..._toMetadataTags(list, includeThumbnail: false),
+    ..._clearPreservedTags(list),
+  ];
 
   static List<List<String>> _toMetadataTags(
     CuratedList list, {
@@ -293,10 +429,10 @@ abstract final class CuratedListConverter {
   /// A private list is sealed with a SINGLE NIP-44 encryption — unlike NIP-17,
   /// which encrypts twice — and this client writes only the 2-byte u16 length
   /// prefix, so the sealed plaintext cannot exceed
-  /// [NIP44V2.maxU16PlaintextSize]. Lives beside [toItemTags] because it
+  /// [NIP44V2.maxU16PlaintextSize]. Lives beside [toSealedTags] because it
   /// measures exactly what that produces (#7331).
   static bool privateItemPayloadFits(CuratedList list) {
-    return utf8.encode(jsonEncode(toItemTags(list))).length <=
+    return utf8.encode(jsonEncode(toSealedTags(list))).length <=
         NIP44V2.maxU16PlaintextSize;
   }
 
@@ -320,13 +456,21 @@ abstract final class CuratedListConverter {
   /// The video-reference tags for [list].
   ///
   /// For a private list these are JSON-encoded and NIP-44 encrypted into the
-  /// event content instead of being published as tags.
+  /// event content instead of being published as tags, with the preserved
+  /// tags it seals: see [toSealedTags].
   static List<List<String>> toItemTags(CuratedList list) => [
     for (final videoReference in list.videoEventIds)
       if (_isAddressableVideoReference(videoReference))
         ['a', videoReference]
       else
         ['e', videoReference],
+  ];
+
+  /// The tags a private [list] encrypts into its event content: its videos,
+  /// then the preserved tags that must not be published in the clear.
+  static List<List<String>> toSealedTags(CuratedList list) => [
+    ...toItemTags(list),
+    ..._sealedPreservedTags(list),
   ];
 
   /// Extracts the `d` tag value from an [event].

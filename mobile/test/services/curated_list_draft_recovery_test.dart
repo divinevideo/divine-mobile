@@ -770,6 +770,82 @@ void main() {
       expect(publishedVideos(), [firstVideo, remoteVideo]);
     });
 
+    group('tags only the relay copy has', () {
+      const preserved = [
+        ['series', 'true'],
+        ['L', 'video.divine'],
+        ['l', 'series', 'video.divine'],
+      ];
+      final person = 'e' * 64;
+
+      setUp(() async {
+        remote = await signedCuratedListFixture(
+          cached.copyWith(
+            videoEventIds: [firstVideo, remoteVideo],
+            updatedAt: cached.updatedAt.add(const Duration(seconds: 10)),
+            preservedTags: [
+              ...preserved,
+              ['p', person],
+            ],
+          ),
+          LocalNostrSigner('1'.padLeft(64, '0')),
+        );
+      });
+
+      final edits = <String, Future<bool> Function(CuratedListService)>{
+        'renaming': (service) =>
+            service.updateList(listId: 'playlist', name: 'New name'),
+        'describing': (service) =>
+            service.updateList(listId: 'playlist', description: 'Episodes'),
+        'adding': (service) => service.addVideoToList('playlist', addedVideo),
+        'removing': (service) =>
+            service.removeVideoFromList('playlist', firstVideo),
+        'reordering': (service) =>
+            service.reorderVideos('playlist', [remoteVideo, firstVideo]),
+      };
+      for (final MapEntry(key: name, value: edit) in edits.entries) {
+        test('survive $name', () async {
+          expect(await edit(service), isTrue);
+
+          final tags = published.single.tags;
+          expect(
+            tags,
+            containsAllInOrder([
+              ...preserved,
+              ['p', person],
+            ]),
+          );
+          expect(tags.where((tag) => tag.first == 'series'), hasLength(1));
+          expect(
+            tags.indexWhere((tag) => tag.first == 'series'),
+            greaterThan(tags.indexWhere((tag) => tag.first == 'playorder')),
+          );
+        });
+      }
+
+      test(
+        'stay public when the list is made private, people sealed',
+        () async {
+          expect(
+            await service.updateList(listId: cached.id, isPublic: false),
+            isTrue,
+          );
+
+          final event = published.firstWhere((event) => event.kind == 30005);
+          expect(event.tags, containsAllInOrder(preserved));
+          expect(event.tags.any((tag) => tag.first == 'p'), isFalse);
+          final sealed = await LocalNostrSigner(
+            '1'.padLeft(64, '0'),
+          ).nip44Decrypt(signedListFixtureOwner, event.content);
+          expect(jsonDecode(sealed!), [
+            ['e', firstVideo],
+            ['e', remoteVideo],
+            ['p', person],
+          ]);
+        },
+      );
+    });
+
     test(
       'collaborator edits preserve people added on another device',
       () async {
