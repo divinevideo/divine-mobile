@@ -18,6 +18,9 @@ import 'relay_status.dart';
 /// was sent, and the publish's deadline. See [Relay.savePublish].
 typedef SavedPublish = ({List<dynamic> message, DateTime deadline});
 
+/// Publishes a relay holds, by event id; see [Relay.takeSavedPublishes].
+typedef SavedPublishes = Map<String, SavedPublish>;
+
 enum WriteAccess { readOnly, writeOnly, readWrite, nothing }
 
 abstract class Relay {
@@ -495,11 +498,14 @@ abstract class Relay {
   /// Stops holding the publish of [eventId]; returns whether it was held.
   bool forgetPublish(String eventId) => _publishes.remove(eventId) != null;
 
+  /// Whether this relay holds a publish it has not answered yet.
+  bool get holdsPublishes => _publishes.isNotEmpty;
+
   /// Removes and returns every publish this relay is holding.
   ///
   /// For a relay object leaving the pool: the object that replaces it under
   /// the same url sends them on its own socket.
-  Map<String, SavedPublish> takeSavedPublishes() {
+  SavedPublishes takeSavedPublishes() {
     final saved = {
       for (final MapEntry(:key, :value) in _publishes.entries)
         key: value.publish,

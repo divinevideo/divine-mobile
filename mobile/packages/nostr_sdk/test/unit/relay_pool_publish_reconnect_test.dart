@@ -13,6 +13,7 @@ import '../support/fake_web_socket.dart';
 const _key = '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
 const _url = 'wss://relay.example';
 const _otherUrl = 'wss://other.example';
+const _tempUrl = 'wss://inbox.example';
 const _timeout = Duration(seconds: 15);
 
 /// When the socket is replaced or drops, measured from the publish.
@@ -44,9 +45,7 @@ List<String> _published(FakeWebSocketChannel channel) => [
 
 class _Rig {
   _Rig(this.async, {List<String> urls = const [_url]}) {
-    nostr = Nostr(LocalNostrSigner(_key), [], (url) {
-      throw StateError('no temp relays in this test: $url');
-    });
+    nostr = Nostr(LocalNostrSigner(_key), [], _relay);
     unawaited(nostr.refreshPublicKey());
     for (final url in urls) {
       unawaited(pool.add(_relay(url), autoSubscribe: true));
@@ -90,6 +89,15 @@ class _Rig {
   /// The relay accepting [note] on [channel].
   void accept(FakeWebSocketChannel channel, Event note) =>
       deliver(channel, ['OK', note.id, true, '']);
+
+  /// The relay on [channel] challenging for NIP-42, and accepting the AUTH
+  /// event the pool answers with when [accepted].
+  void challenge(FakeWebSocketChannel channel, {bool accepted = true}) {
+    deliver(channel, ['AUTH', 'challenge']);
+    if (!accepted) return;
+    final auth = _sent(channel, 'AUTH').last[1] as Map<String, dynamic>;
+    deliver(channel, ['OK', auth['id'], true, '']);
+  }
 }
 
 class _Publish {
@@ -97,7 +105,12 @@ class _Publish {
   Duration? tookFor;
 }
 
-_Publish _startPublish(_Rig rig, Event note, {Duration timeout = _timeout}) {
+_Publish _startPublish(
+  _Rig rig,
+  Event note, {
+  Duration timeout = _timeout,
+  String? tempRelay,
+}) {
   final publish = _Publish();
   final started = rig.async.elapsed;
   unawaited(
@@ -106,6 +119,8 @@ _Publish _startPublish(_Rig rig, Event note, {Duration timeout = _timeout}) {
           ['EVENT', note.toJson()],
           eventId: note.id,
           timeout: timeout,
+          targetRelays: tempRelay == null ? null : [tempRelay],
+          tempRelays: tempRelay == null ? null : [tempRelay],
         )
         .then((outcome) {
           publish
@@ -239,6 +254,99 @@ void main() {
           rig.accept(fresh, note);
           async.elapse(_timeout);
           expect(publish.outcome!.acceptedBy, [_url]);
+        });
+      });
+    });
+
+    group('relay that requires NIP-42', () {
+      test('sends a publish already re-sent after AUTH again once the next '
+          'socket authenticates', () {
+        fakeAsync((async) {
+          final rig = _Rig(async);
+          final note = _note();
+          final publish = _startPublish(rig, note);
+          final first = rig.socket;
+          rig
+            ..deliver(first, ['OK', note.id, false, 'auth-required: auth'])
+            ..challenge(first);
+          expect(_published(first), [note.id, note.id]);
+
+          async.elapse(_reconnectAt);
+          rig.replace();
+          final second = rig.socket;
+          rig.challenge(second);
+          expect(_published(second), [note.id]);
+
+          rig.accept(second, note);
+          async.elapse(_timeout);
+          expect(publish.outcome!.acceptedBy, [_url]);
+        });
+      });
+
+      test('sends a publish written to trigger the challenge again on the '
+          'next socket', () {
+        fakeAsync((async) {
+          final rig = _Rig(async);
+          rig.challenge(rig.socket, accepted: false);
+          final note = _note();
+          final publish = _startPublish(rig, note);
+          expect(_published(rig.socket), [note.id]);
+
+          async.elapse(_reconnectAt);
+          unawaited(rig.socket.closeFromRemote());
+          async.elapse(_answerDelay);
+          expect(rig.sockets, hasLength(2));
+          expect(_published(rig.socket), [note.id]);
+
+          rig.accept(rig.socket, note);
+          async.elapse(_timeout);
+          expect(publish.outcome!.acceptedBy, [_url]);
+        });
+      });
+    });
+
+    group('temp relay', () {
+      test('sends the publish again when its socket reconnects', () {
+        fakeAsync((async) {
+          final rig = _Rig(async);
+          final note = _note();
+          final publish = _startPublish(rig, note, tempRelay: _tempUrl);
+          final inbox = rig.factoryOf(_tempUrl);
+          expect(_published(inbox.lastChannel!), [note.id]);
+
+          async.elapse(_reconnectAt);
+          unawaited(inbox.lastChannel!.closeFromRemote());
+          async.elapse(_answerDelay);
+          expect(inbox.createdChannels, hasLength(2));
+          expect(_published(inbox.lastChannel!), [note.id]);
+
+          rig.accept(inbox.lastChannel!, note);
+          async.elapse(_timeout);
+          expect(publish.outcome!.acceptedBy, [_tempUrl]);
+        });
+      });
+
+      test('hands the publish to the temp relay that replaces it', () {
+        fakeAsync((async) {
+          final rig = _Rig(async);
+          final note = _note();
+          final publish = _startPublish(rig, note, tempRelay: _tempUrl);
+          final inbox = rig.factoryOf(_tempUrl);
+          final replaced = rig.pool.checkAndGenTempRelay(_tempUrl);
+
+          async.elapse(_reconnectAt);
+          inbox.readyError = Exception('connection refused');
+          unawaited(inbox.lastChannel!.closeFromRemote());
+          async.flushMicrotasks();
+          inbox.readyError = null;
+          final replacement = rig.pool.checkAndGenTempRelay(_tempUrl);
+          async.flushMicrotasks();
+          expect(replacement, isNot(same(replaced)));
+          expect(_published(inbox.lastChannel!), [note.id]);
+
+          rig.accept(inbox.lastChannel!, note);
+          async.elapse(_timeout);
+          expect(publish.outcome!.acceptedBy, [_tempUrl]);
         });
       });
     });

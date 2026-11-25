@@ -61,7 +61,7 @@ class _OrphanedRequests {
 
   /// Awaited publishes written to the removed object that it never answered,
   /// by event id (#11446).
-  final Map<String, SavedPublish> publishes;
+  final SavedPublishes publishes;
 }
 
 class RelayPool {
@@ -688,6 +688,15 @@ class RelayPool {
     )[relay.url] = retry;
   }
 
+  /// Lets a publish already re-sent after AUTH on an earlier socket of
+  /// [relayUrl] be re-sent once more after the next socket authenticates: the
+  /// previous socket took its `OK` with it (#11446).
+  void _allowAuthRetryOnNewSocket(String relayUrl) {
+    for (final retries in _authRequiredPublishRetries.values) {
+      retries[relayUrl]?.resent = false;
+    }
+  }
+
   void _removeAuthRequiredPublish(String eventId, String relayUrl) {
     final retriesForEvent = _authRequiredPublishRetries[eventId];
     if (retriesForEvent == null) return;
@@ -897,8 +906,9 @@ class RelayPool {
   /// a fresh socket, and the query's outcome judges [relay] on its own answer
   /// in place of the object it replaces. A COUNT is queued to go out the same
   /// way, and so is an awaited publish the old socket never answered
-  /// (#11446). Until the dial ends, [relay] counts as able to answer them and
-  /// is not judged silent.
+  /// (#11446). Until the dial ends, [relay] counts as able to answer the
+  /// queries and is not judged silent; a publish keeps its settle window, so a
+  /// sibling relay that answered can still settle it first.
   _OrphanedRequests? _takeOverOrphanedRequests(Relay relay) {
     final orphans = _orphanedRequests.remove(relay.url);
     if (orphans == null) return null;
@@ -906,12 +916,7 @@ class RelayPool {
       relay.saveQuery(query);
       _queryOutcomes[query.id]?.recordTakeover(relay);
     }
-    for (final MapEntry(key: eventId, value: publish)
-        in orphans.publishes.entries) {
-      if (_pendingPublishes[eventId]?.isAwaiting(relay.url) ?? false) {
-        relay.adoptPublish(eventId, publish);
-      }
-    }
+    orphans.publishes.forEach(relay.adoptPublish);
     for (final count in orphans.counts) {
       final request = count.request;
       if (request == null) {
@@ -2030,6 +2035,7 @@ class RelayPool {
       _queriesParkedForAuth.remove(relay.url);
       _queriesHeldAfterEose.remove(relay.url);
       _authRejected.remove(relay.url);
+      _allowAuthRetryOnNewSocket(relay.url);
       _moveAuthEpochOn(relay.url);
       _settleQueriesBlockedBy(relay);
       _recheckStoredEventsPhasesOf(relay);
@@ -4271,13 +4277,16 @@ class RelayPool {
   ///
   /// Registers a [PublishTracker] keyed on the event id. The returned future
   /// completes when either:
-  ///  * every relay the fan-out reached has responded (accept or reject), OR
+  ///  * every relay the fan-out reached has responded (accept or reject) or
+  ///    left the pool with no socket to answer on, OR
   ///  * [PublishTracker.settleWindow] elapses after the first response, OR
   ///  * [timeout] elapses.
   ///
   /// It does **not** complete on the first acceptance. A publish that one
-  /// relay accepts and another rejects must report both, and nothing in this
-  /// client republishes to the relays that did not accept.
+  /// relay accepts and another rejects must report both, and once it settles
+  /// nothing in this client republishes to the relays that did not accept.
+  /// Until then, an `EVENT` is sent again on a relay's new socket when the one
+  /// it went out on is replaced or reconnects.
   ///
   /// Relays that were targeted but could not be written to are reported in
   /// [PublishOutcome.unreachableTargets]. Callers should inspect
@@ -4459,8 +4468,10 @@ class RelayPool {
 
   Relay checkAndGenTempRelay(String addr) {
     var tempRelay = _tempRelays[addr];
+    SavedPublishes? heldByReplaced;
     if (tempRelay != null && _shouldReplaceTempRelay(tempRelay)) {
       _tempRelays.remove(addr);
+      heldByReplaced = tempRelay.takeSavedPublishes();
       unawaited(tempRelay.disconnect());
       tempRelay.dispose();
       // The replacement is a different socket, so nothing the pool concluded
@@ -4471,6 +4482,7 @@ class RelayPool {
     }
     if (tempRelay == null) {
       tempRelay = tempRelayGener(addr);
+      heldByReplaced?.forEach(tempRelay.adoptPublish);
       tempRelay.onMessage = _onEvent;
       // Temp relays serve one-shot queries like any other relay, so they need
       // the same drop-releases-the-query sweep [add] wires up.
@@ -4537,6 +4549,10 @@ class RelayPool {
         relay.pendingAuthedMessages.isNotEmpty) {
       return false;
     }
+
+    // A publish written but not yet answered is resent when the socket comes
+    // back, which reaping would cancel (#11446).
+    if (relay.holdsPublishes) return false;
 
     // A relay that failed to connect, or has since dropped, is doing nothing
     // for anyone. [RelayBase.isSilentSince] deliberately answers false for a

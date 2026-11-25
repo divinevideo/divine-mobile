@@ -151,7 +151,7 @@ class PublishOutcome {
 /// Completion waits for **every** relay the publish reached, so the outcome
 /// describes what the relays actually said rather than whichever answered
 /// first. It resolves when:
-///  * every reached relay has answered, or
+///  * every reached relay has answered or been lost (see [onRelayLost]), or
 ///  * [settleWindow] elapses after the first answer, counted no earlier than
 ///    the [setReachable] call that reports the fan-out's target set, or
 ///  * [timeout] elapses — deferred until [setReachable] arrives, and by at

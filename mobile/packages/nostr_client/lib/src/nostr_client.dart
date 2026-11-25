@@ -872,7 +872,8 @@ class NostrClient {
   /// ## When the future completes
   ///
   /// Whichever of these happens first:
-  ///  * every relay the fan-out reached has answered, or
+  ///  * every relay the fan-out reached has answered or was lost with no
+  ///    socket left to answer on, or
   ///  * a short settle window elapses after the first answer, or
   ///  * [timeout] elapses.
   ///
@@ -897,8 +898,10 @@ class NostrClient {
   /// acceptance, never a durability guarantee. Do not surface it to a user as
   /// "saved".
   ///
-  /// Nothing in this client republishes to relays that did not accept, so a
-  /// partial publish stays partial. That makes
+  /// Nothing in this client republishes to relays that did not accept once
+  /// the publish has settled, so a partial publish stays partial. Before it
+  /// settles, an `EVENT` is sent again on a relay's new socket when the one it
+  /// went out on is replaced or reconnects. That makes
   /// [PublishOutcome.acceptedByAll] a poor gate for anything the user is
   /// waiting on: one pool member that is down, wedged, or refusing blocks it
   /// on every attempt, and the pool keeps relays it never managed to connect
