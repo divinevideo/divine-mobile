@@ -124,8 +124,9 @@ final class CommentComposerState extends Equatable {
   /// Text content of the edit input buffer.
   final String editInputText;
 
-  /// Advances when the bloc deliberately replaces a draft. Typing leaves it
-  /// alone so a delayed draft update cannot interrupt an edit in the field.
+  /// Advances on `copyWith(replaceDraft: true)` and never on typing, so a late
+  /// echo of typed text cannot reset the field's text or cursor. Reply and
+  /// edit switches reach the field through their ids instead.
   final int draftRevision;
 
   /// Draft currently visible in the composer.
@@ -165,7 +166,8 @@ final class CommentComposerState extends Equatable {
 
   /// Returns a copy with input/reply/edit state and outbox optionally updated.
   ///
-  /// Pass `replaceDraft: true` to sync a programmatic draft change to the field.
+  /// Pass `replaceDraft: true` when the bloc rewrites a draft itself, so the
+  /// field picks up the change.
   /// Pass `clearError: true` to clear [error] explicitly. `clearOutbox: true`
   /// clears the outbox (used by the [ComposerOutboxConsumed] handler).
   CommentComposerState copyWith({
