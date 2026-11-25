@@ -199,8 +199,9 @@ class _ResponsesSticker extends ConsumerWidget {
           curation != null &&
           curation != state.curation) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!context.mounted || cubit.isClosed || cubit.state != state)
+          if (!context.mounted || cubit.isClosed || cubit.state != state) {
             return;
+          }
           final latest = ref.read(provider).value;
           if (latest == null || latest == state.curation) return;
           runDetached(

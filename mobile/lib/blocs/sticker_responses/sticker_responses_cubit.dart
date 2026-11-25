@@ -92,13 +92,13 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
             videoAddress: address,
             limit: feedLimit,
           ),
-          if (address != null)
-            knownCuration == null
-                ? _repository.fetchCuration(
-                    creatorPubkey: _video.pubkey,
-                    videoAddress: address,
-                  )
-                : Future.value(knownCuration),
+          if (address != null && knownCuration != null)
+            Future.value(knownCuration)
+          else if (address != null)
+            _repository.fetchCuration(
+              creatorPubkey: _video.pubkey,
+              videoAddress: address,
+            ),
         ]);
         final replies = results.first as VideoResponses;
         if (results.length > 1) curation = results[1] as RepliesCuration;
