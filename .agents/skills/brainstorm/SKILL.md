@@ -91,8 +91,9 @@ create a branch or a worktree for it.
    - What we don't know (open questions, unknowns)
    - Constraints that apply
 
-6. **Ask the user** one targeted question to validate understanding before
-   proceeding. Prefer multiple-choice format:
+6. **Ask the user** one targeted question if the framing would change the
+   approaches you explore. Continue research that the answer would not
+   affect. Prefer multiple-choice format:
    > "Before I explore approaches, is this the right framing?
    > 1. [Restatement A]
    > 2. [Restatement B]
@@ -130,8 +131,9 @@ For each approach:
 - **Right-size.** Match architecture to actual complexity. A simple feature
   does not need a new package.
 
-Present approaches as a comparison to the user. Ask one follow-up question:
-> "Which direction resonates, or should I explore a different angle?"
+Present the approaches to the user. Ask a follow-up question if their
+preference changes the recommendation. When feedback is unavailable, make a
+provisional recommendation and record the outstanding decision.
 
 ### Phase 3: Converge
 
