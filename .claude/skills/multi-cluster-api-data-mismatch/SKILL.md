@@ -94,20 +94,19 @@ After switching to the correct cluster:
 | API pod logs show only health checks, no real traffic | Real traffic goes to another cluster |
 
 ## Example
+
+If the production API returns a video missing from your ClickHouse query, use the
+video's full hex event ID from the response as `EVENT_ID`. Set `PRODUCTION_CONTEXT`,
+`CLICKHOUSE_NAMESPACE`, and `CLICKHOUSE_POD` to the verified production values:
+
 ```bash
-# You query POC ClickHouse and find 20,371 videos, latest from Feb 26
-# But the API at relay.divine.video returns videos from today
-# The API returns a video with d_tag that doesn't exist in your ClickHouse
-
-# Fix: switch to production
-kubectl config use-context <production-context-name>
-
-# Now query the production ClickHouse service/pod in the production cluster
-kubectl exec -n <namespace> <production-clickhouse-pod> -- \
-  clickhouse-client --query "SELECT count(), max(created_at) FROM nostr.events"
-
-# Query returns 21,221 videos with latest from minutes ago — matches the API
+kubectl --context "$PRODUCTION_CONTEXT" -n "$CLICKHOUSE_NAMESPACE" exec "$CLICKHOUSE_POD" -- \
+  clickhouse-client --param_event_id="$EVENT_ID" \
+  --query 'SELECT id, created_at FROM nostr.videos_by_id_data WHERE id = {event_id:FixedString(64)} LIMIT 1'
 ```
+
+A returned row confirms the video exists in that cluster. Compare the result
+with the same lookup in the cluster you originally queried.
 
 ## Notes
 - Production and POC/staging run separate database instances (such as separate
