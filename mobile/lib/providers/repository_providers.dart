@@ -79,6 +79,7 @@ import 'package:poll_repository/poll_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:video_responses_repository/video_responses_repository.dart';
 
@@ -1130,6 +1131,19 @@ FeedTuningRepository feedTuningRepository(Ref ref) {
   );
 }
 
+List<String> _cachedFollowingPubkeysForAccount(
+  SharedPreferences prefs,
+  String owner,
+) {
+  final cached = prefs.getString(FollowingCacheRecord.storageKey(owner));
+  if (cached == null) return const [];
+  try {
+    return FollowingCacheRecord.decode(cached).pubkeys;
+  } on Object {
+    return const [];
+  }
+}
+
 @Riverpod(keepAlive: true)
 DmRepository dmRepository(Ref ref) {
   final nostrService = ref.watch(nostrServiceProvider);
@@ -1161,31 +1175,22 @@ DmRepository dmRepository(Ref ref) {
     watchWrapAudience: (owner) {
       final blocks = ref.read(contentBlocklistRepositoryProvider);
       final follows = ref.read(followRepositoryProvider);
-      final Stream<List<String>?> followingStream;
-      if (follows.isInitialized) {
-        followingStream = follows.followingStream.startWith(
-          follows.followingPubkeys,
-        );
-      } else {
+      if (!follows.isInitialized) {
         unawaited(follows.initialize());
-        followingStream = follows.initialized
-            .asStream()
-            .switchMap<List<String>?>(
-              (_) => follows.followingStream.startWith(
-                follows.followingPubkeys,
-              ),
-            )
-            .startWith(null);
       }
+      final initialFollowing =
+          follows.isInitialized || follows.followingPubkeys.isNotEmpty
+          ? follows.followingPubkeys
+          : _cachedFollowingPubkeysForAccount(prefs, owner);
       return Rx.combineLatest2(
         blocks.stateStream.startWith(blocks.currentState),
-        followingStream,
+        follows.followingStream.startWith(initialFollowing),
         (_, following) {
           final hidden = blocks.dmHiddenPubkeysForAccount(owner);
           if (hidden == null || nostrService.publicKey != owner) return null;
           return (
             hidden: hidden.map((key) => key.toLowerCase()).toSet(),
-            followed: following?.map((key) => key.toLowerCase()).toSet(),
+            followed: following.map((key) => key.toLowerCase()).toSet(),
             supportPubkey: kModerationPubkeyHex,
           );
         },

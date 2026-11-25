@@ -12,11 +12,11 @@ void main() {
   late AppDatabase db;
   late DmRepository repo;
   var hidden = <String>{};
-  Set<String>? followed = <String>{};
+  var followed = <String>{};
   setUp(() {
     db = AppDatabase.test(NativeDatabase.memory());
     hidden = {};
-    followed = <String>{};
+    followed = {};
     repo = DmRepository(
       nostrClient: _Nostr(),
       userPubkey: 'owner',
@@ -137,60 +137,6 @@ void main() {
           expect(await lookup(wrap), isA<DmWrapSuppressed>());
         }
         expect(await lookup('unknown'), isA<DmWrapPending>());
-      },
-    );
-    test(
-      'waits for an initialized follow list when request '
-      'classification depends on it',
-      () async {
-        followed = null;
-        await message();
-        expect(await lookup('original'), isA<DmWrapPending>());
-
-        await db.directMessagesDao.insertMessage(
-          id: 'replied-rumor',
-          ownerPubkey: 'owner',
-          senderPubkey: 'peer',
-          conversationId: 'replied-room',
-          giftWrapId: 'replied-wrap',
-          content: 'Reply thread',
-          createdAt: 100,
-        );
-        await db.conversationsDao.upsertConversation(
-          id: 'replied-room',
-          ownerPubkey: 'owner',
-          participantPubkeys: '["owner","peer"]',
-          createdAt: 100,
-          isGroup: false,
-          currentUserHasSent: true,
-        );
-        final replied = await lookup('replied-wrap') as DmWrapFound;
-        expect(replied.isRequest, isFalse);
-
-        await db.directMessagesDao.insertMessage(
-          id: 'support-rumor',
-          ownerPubkey: 'owner',
-          senderPubkey: 'support',
-          conversationId: 'support-room',
-          giftWrapId: 'support-wrap',
-          content: 'Notice',
-          createdAt: 100,
-        );
-        await db.conversationsDao.upsertConversation(
-          id: 'support-room',
-          ownerPubkey: 'owner',
-          participantPubkeys: '["owner","support"]',
-          createdAt: 100,
-          isGroup: false,
-        );
-        final support = await lookup('support-wrap') as DmWrapFound;
-        expect(support.isRequest, isFalse);
-
-        expect(await lookup('original'), isA<DmWrapPending>());
-
-        followed = {'peer'};
-        final resolved = await lookup('original') as DmWrapFound;
-        expect(resolved.isRequest, isFalse);
       },
     );
   });
