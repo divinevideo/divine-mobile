@@ -9,21 +9,16 @@ import WatchConnectivity
 ///
 /// The latest state goes out twice: as the session's application context,
 /// which the Watch reads whenever it next opens, and as a message when the
-/// Watch app is on screen, which arrives at once.
+/// Watch app is on screen, which arrives at once. Each state carries its
+/// revision, and only a press made on the latest one reaches the recorder.
 final class WatchRemoteLink: NSObject, WCSessionDelegate {
-    /// Keys and values shared with the Watch app's `PhoneRecorderLink`.
+    /// Keys shared with the Watch app's `PhoneRecorderLink`.
     enum Wire {
         static let available = "available"
-        static let command = "command"
-    }
-
-    enum Action: String {
-        case start = "watchStart"
-        case stop = "watchStop"
     }
 
     private let session: WCSession?
-    private let onShutterAction: (Action) -> Void
+    private let onShutterAction: (WatchShutterGate.Action) -> Void
     private let onWatchRemoteChanged: ([String: Any]?) -> Void
     private let onWatchAppChanged: (Bool) -> Void
 
@@ -31,19 +26,22 @@ final class WatchRemoteLink: NSObject, WCSessionDelegate {
     /// queue.
     private(set) var hasWatchApp = false
 
+    /// Numbers the states in `payload`. Only touched on the main queue.
+    private var gate: WatchShutterGate
+
     /// What the Watch should show. Only touched on the main queue.
-    private var payload: [String: Any] = [Wire.available: false]
+    private var payload: [String: Any]
 
     /// - Parameters:
     ///   - onShutterAction: Called on the main queue when the Watch's
-    ///     shutter is tapped.
+    ///     shutter is tapped on the state published last.
     ///   - onWatchRemoteChanged: Called on the main queue with the recorder
     ///     state a Watch remote can show, or `nil` when the recorder is closed
     ///     or no paired Watch has the app.
     ///   - onWatchAppChanged: Called on the main queue when a paired Watch
     ///     gains or loses the Watch app.
     init(
-        onShutterAction: @escaping (Action) -> Void,
+        onShutterAction: @escaping (WatchShutterGate.Action) -> Void,
         onWatchRemoteChanged: @escaping ([String: Any]?) -> Void,
         onWatchAppChanged: @escaping (Bool) -> Void
     ) {
@@ -51,6 +49,12 @@ final class WatchRemoteLink: NSObject, WCSessionDelegate {
         self.onShutterAction = onShutterAction
         self.onWatchRemoteChanged = onWatchRemoteChanged
         self.onWatchAppChanged = onWatchAppChanged
+        let gate = WatchShutterGate(nowMs: WatchRemoteLink.nowMs())
+        self.gate = gate
+        self.payload = [
+            Wire.available: false,
+            WatchShutterGate.Wire.revision: gate.revision,
+        ]
         super.init()
     }
 
@@ -70,7 +74,12 @@ final class WatchRemoteLink: NSObject, WCSessionDelegate {
         } else {
             payload = [Wire.available: false]
         }
+        payload[WatchShutterGate.Wire.revision] = gate.advance(nowMs: Self.nowMs())
         send()
+    }
+
+    private static func nowMs() -> Int64 {
+        Int64(Date().timeIntervalSince1970 * 1000)
     }
 
     private func send() {
@@ -94,10 +103,19 @@ final class WatchRemoteLink: NSObject, WCSessionDelegate {
     }
 
     private func handle(message: [String: Any]) {
-        guard let command = message[Wire.command] as? String,
-              let action = Action(rawValue: command) else { return }
         DispatchQueue.main.async { [weak self] in
-            self?.onShutterAction(action)
+            guard let self else { return }
+            guard let action = self.gate.action(for: message) else {
+                DivineCameraLog.shared.debug(
+                    "Watch press ignored: "
+                        + "\(message[WatchShutterGate.Wire.command] ?? "no action") on revision "
+                        + "\(message[WatchShutterGate.Wire.revision] ?? "none"), "
+                        + "the recorder is at \(self.gate.revision)",
+                    name: "DivineCamera.WatchRemote"
+                )
+                return
+            }
+            self.onShutterAction(action)
         }
     }
 

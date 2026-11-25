@@ -19,6 +19,7 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
     static let shutterActive = "shutterActive"
     static let shutterEnabled = "shutterEnabled"
     static let stillShutterCount = "stillShutterCount"
+    static let revision = "revision"
     static let command = "command"
     static let startRecording = "watchStart"
     static let stopRecording = "watchStop"
@@ -46,6 +47,10 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
 
   /// Asks the iPhone to start or stop a take. What the recorder then does
   /// comes back as a new `recorder`.
+  ///
+  /// The press names the state it was made on. The iPhone drops it once the
+  /// recorder has published a newer one, so a Stop shown for one take cannot
+  /// stop the next.
   func toggleRecording() {
     guard let recorder, recorder.isShutterEnabled, !isShutterPending else { return }
     guard session.isReachable else {
@@ -58,9 +63,14 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
     pendingStop = recorder.isShutterActive
     pendingStillShutterCount = recorder.stillShutterCount
     isShutterPending = true
-    let command = pendingStop ? Wire.stopRecording : Wire.startRecording
+    var message: [String: Any] = [
+      Wire.command: pendingStop ? Wire.stopRecording : Wire.startRecording,
+    ]
+    if let revision = recorder.revision {
+      message[Wire.revision] = revision
+    }
     session.sendMessage(
-      [Wire.command: command],
+      message,
       replyHandler: nil,
       errorHandler: { [weak self] _ in
         DispatchQueue.main.async {
@@ -109,6 +119,7 @@ final class PhoneRecorderLink: NSObject, ObservableObject, WCSessionDelegate {
     if let stillShutterCount = payload[Wire.stillShutterCount] as? Int {
       snapshot.stillShutterCount = stillShutterCount
     }
+    snapshot.revision = (payload[Wire.revision] as? NSNumber)?.int64Value
     return snapshot
   }
 

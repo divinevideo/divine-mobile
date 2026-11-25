@@ -336,6 +336,56 @@ final class MediaSessionScopePolicyTests: XCTestCase {
   }
 }
 
+/// An Apple Watch press names the revision of the recorder state the Watch
+/// showed, and `WatchShutterGate` drops a press made on any other state.
+/// Without it, a Stop the Watch still showed for a finished take would stop
+/// the next one.
+final class WatchShutterGateTests: XCTestCase {
+  func testAdmitsAPressOnTheLatestState() {
+    var gate = WatchShutterGate(nowMs: 1_000)
+    let revision = gate.advance(nowMs: 2_000)
+
+    XCTAssertEqual(gate.action(for: ["command": "watchStop", "revision": revision]), .stop)
+    XCTAssertEqual(gate.action(for: ["command": "watchStart", "revision": revision]), .start)
+  }
+
+  func testDropsAStopShownForTheTakeBefore() {
+    var gate = WatchShutterGate(nowMs: 1_000)
+    let firstTakeRunning = gate.advance(nowMs: 2_000)
+    _ = gate.advance(nowMs: 3_000)  // The first take ended.
+    _ = gate.advance(nowMs: 4_000)  // The next one is running.
+
+    XCTAssertNil(gate.action(for: ["command": "watchStop", "revision": firstTakeRunning]))
+  }
+
+  func testDropsAPressThatNamesNoState() {
+    let gate = WatchShutterGate(nowMs: 1_000)
+
+    XCTAssertNil(gate.action(for: ["command": "watchStop"]))
+  }
+
+  func testDropsAnythingButAWatchAction() {
+    let gate = WatchShutterGate(nowMs: 1_000)
+
+    XCTAssertNil(gate.action(for: ["command": "volumeUp", "revision": gate.revision]))
+    XCTAssertNil(gate.action(for: ["revision": gate.revision]))
+    XCTAssertNil(gate.action(for: ["command": "watchStop", "revision": "1000"]))
+  }
+
+  // A restarted app must not number its states the way the run before did, or
+  // a press on a state the Watch still shows from that run would pass.
+  func testStartsFromTheClock() {
+    XCTAssertEqual(WatchShutterGate(nowMs: 1_800_000_000_000).revision, 1_800_000_000_000)
+  }
+
+  func testRevisionsKeepRisingWhenTheClockDoesNot() {
+    var gate = WatchShutterGate(nowMs: 5_000)
+
+    XCTAssertEqual(gate.advance(nowMs: 4_000), 5_001)
+    XCTAssertEqual(gate.advance(nowMs: 9_000), 9_000)
+  }
+}
+
 /// Divine passes every ProofMode option as false (see `AppDelegate`), and the
 /// network fields must then stay out of the signed proof (#9073). Upstream
 /// LibProofMode records them whatever the options say, so this fails if a
