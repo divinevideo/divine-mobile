@@ -56,19 +56,24 @@ void main() {
       await tester.pumpWidget(
         Directionality(
           textDirection: TextDirection.ltr,
-          child: Column(
+          // Nothing around the listener rejects the scroll for it, so only
+          // its own bounds keep it out.
+          child: Stack(
             children: [
-              SizedBox(
+              Positioned.fill(
+                child: Listener(
+                  behavior: HitTestBehavior.opaque,
+                  onPointerSignal: (event) => bid(event, 'below'),
+                ),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
                 height: 100,
                 child: PriorityPointerSignalListener(
                   onPointerSignal: (event) => bid(event, 'priority'),
                   child: const SizedBox.expand(),
-                ),
-              ),
-              Expanded(
-                child: Listener(
-                  behavior: HitTestBehavior.opaque,
-                  onPointerSignal: (event) => bid(event, 'below'),
                 ),
               ),
             ],

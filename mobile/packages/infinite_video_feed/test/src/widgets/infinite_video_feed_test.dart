@@ -4702,6 +4702,35 @@ void main() {
 
         expect(key.currentState!.currentIndex, equals(2));
       });
+
+      testWidgets('steps from the video on screen after another move', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+        unawaited(key.currentState!.nextPage());
+        await tester.pumpAndSettle();
+        unawaited(key.currentState!.animateToPage(0));
+        await tester.pumpAndSettle();
+
+        unawaited(key.currentState!.nextPage());
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+      });
+
+      testWidgets('a step back during two steps on moves back from their '
+          'target', (tester) async {
+        await pumpFeed(tester);
+
+        unawaited(key.currentState!.nextPage());
+        await tester.pump(const Duration(milliseconds: 60));
+        unawaited(key.currentState!.nextPage());
+        await tester.pump(const Duration(milliseconds: 60));
+        unawaited(key.currentState!.previousPage());
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+      });
     });
 
     group('pointer scroll', () {
@@ -4782,7 +4811,8 @@ void main() {
       ) async {
         await pumpFeed(tester);
 
-        await scroll(tester, const Offset(0, 40));
+        // A slow notch in a browser on macOS reports only about 4 pixels.
+        await scroll(tester, const Offset(0, 4));
         await tester.pumpAndSettle();
 
         expect(key.currentState!.currentIndex, equals(1));

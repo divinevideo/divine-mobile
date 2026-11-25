@@ -46,11 +46,15 @@ void main() {
       expect(find.text('Feed'), findsOneWidget);
     });
 
-    testWidgets('leaves the first screen open', (tester) async {
+    testWidgets('leaves the first screen open and the key unhandled', (
+      tester,
+    ) async {
       await pumpApp(tester);
 
-      await pressEscape(tester);
+      final handled = await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
 
+      expect(handled, isFalse);
       expect(find.text('Feed'), findsOneWidget);
     });
 

@@ -357,6 +357,21 @@ void main() {
       await unmount(tester);
     });
 
+    testWidgets('Space pauses the video paged to, not the one before', (
+      tester,
+    ) async {
+      await pumpFeed(tester, [_makeVideo(0), _makeVideo(1)]);
+      await press(tester, LogicalKeyboardKey.arrowDown);
+      final plays = harness.countCalls('play');
+      final pauses = harness.countCalls('pause');
+
+      await press(tester, LogicalKeyboardKey.space);
+
+      expect(harness.countCalls('pause'), equals(pauses + 1));
+      expect(harness.countCalls('play'), equals(plays));
+      await unmount(tester);
+    });
+
     testWidgets('Space does not start a video behind a content warning', (
       tester,
     ) async {
