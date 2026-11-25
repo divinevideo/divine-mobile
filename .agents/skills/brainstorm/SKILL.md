@@ -65,8 +65,8 @@ create a branch or a worktree for it.
      plan that already exists changes what is left to brainstorm
    - Use `Grep` and `Glob` for related features, models, BLoCs, repositories
    - Check `mobile/docs/` and `docs/` for existing design docs on the topic
-   - Check `tasks/brainstorm_*` and `mobile/docs/brainstorm/` for previous
-     brainstorms on related topics
+   - Check `tasks/brainstorm_*`, `~/.claude/brainstorms/<repository-name>/`,
+     and `mobile/docs/brainstorm/` for previous brainstorms
    - Check `tasks/lessons.md`, if you keep one, for relevant past mistakes or
      insights
 
@@ -162,14 +162,17 @@ Present approaches as a comparison to the user. Ask one follow-up question:
 
 ## Output Document
 
-After convergence, save the brainstorm where git cannot pick it up:
+After convergence, choose the actual note path
+`tasks/brainstorm_<issue-number-or-topic-slug>.md` from the repository root.
+Set `note_path` to that path and run `git check-ignore -q -- "$note_path"`.
+Use it only if the command succeeds. Create `tasks/` if it does not exist.
 
-1. Run `git check-ignore -q tasks/brainstorm.md && echo ignored`.
-2. If it prints `ignored`, write
-   `tasks/brainstorm_<issue-number-or-topic-slug>.md`. Create `tasks/` if it
-   does not exist.
-3. If it prints nothing, write
-   `~/.claude/brainstorms/<repository-name>/YYYY-MM-DD-<topic-slug>.md`.
+Otherwise, use
+`~/.claude/brainstorms/<repository-name>/YYYY-MM-DD-<topic-slug>.md`.
+Include the issue number in the slug for issue-specific notes.
+
+Preserve existing notes. If the chosen filename already exists, add a unique
+suffix and check the new path again before writing it inside the repository.
 
 Never write the document under a tracked folder such as `docs/`. Tell the user
 the path.
