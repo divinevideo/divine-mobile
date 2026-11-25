@@ -15630,6 +15630,7 @@ void main() {
         'continues paging popular fallback when recommendations retry still '
         'times out',
         () async {
+          const thirdTimestamp = 1700000299;
           final firstPopular = _createVideoStats(
             id: 'popular-page-1',
             pubkey: 'popular-pubkey-1',
@@ -15643,6 +15644,13 @@ void main() {
             dTag: 'popular-dtag-2',
             videoUrl: 'https://example.com/popular-2.mp4',
             createdAt: 1700000300,
+          );
+          final thirdPopular = _createVideoStats(
+            id: 'popular-page-3',
+            pubkey: 'popular-pubkey-3',
+            dTag: 'popular-dtag-3',
+            videoUrl: 'https://example.com/popular-3.mp4',
+            createdAt: thirdTimestamp,
           );
 
           when(
@@ -15669,7 +15677,9 @@ void main() {
             ),
           ).thenAnswer((invocation) async {
             final before = invocation.namedArguments[#before] as int?;
-            return before == null ? [firstPopular] : [secondPopular];
+            if (before == null) return [firstPopular];
+            if (before > 1700000300) return [secondPopular];
+            return before > thirdTimestamp ? [thirdPopular] : [];
           });
 
           final repo = VideosRepository(
@@ -15694,6 +15704,12 @@ void main() {
           expect(page2.hasMore, isTrue);
           expect(page2.paginationCursor, isNotNull);
           expect(page2.paginationCursor, isNot(page1.paginationCursor));
+          final page3 = await repo.getRecommendedVideos(
+            userPubkey: 'user-pubkey',
+            limit: 10,
+            cursor: page2.paginationCursor,
+          );
+          expect(page3.videos.single.id, 'popular-page-3');
           verify(
             () => mockFunnelcakeClient.getWatchingVideos(
               limit: 10,
@@ -15948,7 +15964,7 @@ void main() {
           );
           expect(page3.videos.single.id, 'popular-page-2');
           expect(page3.hasMore, isTrue);
-          expect(page3.paginationCursor, 'recommended-popular:1700000299');
+          expect(page3.paginationCursor, 'recommended-popular:1700000300');
 
           expect(recommendationCalls, equals(1));
           verify(
