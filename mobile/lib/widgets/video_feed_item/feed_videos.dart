@@ -1507,6 +1507,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
                               controller: widget.controller!,
                               shouldPortraitExpand: widget.shouldPortraitExpand,
                               isActive: widget.isActive && widget.isFeedActive,
+                              isCurrent: widget.isActive,
                               isAddYoursSeries: widget.isAddYoursSeries,
                               onVoteStarted: widget.onSuppressAutoAdvance,
                             ),

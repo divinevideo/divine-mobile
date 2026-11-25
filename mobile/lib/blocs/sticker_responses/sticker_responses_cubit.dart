@@ -1,6 +1,7 @@
 // ABOUTME: Reads who joined an Add yours or replied to a video for its sticker,
 // ABOUTME: filtered like any feed, without the replies its creator hid.
 
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:equatable/equatable.dart';
@@ -72,66 +73,53 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
   /// The most responses read, enough for the feed a tap opens.
   static const int feedLimit = 50;
 
-  /// Reads the responses.
+  ({VideoResponses replies, StickerAnswerers answerers})? _replySnapshot;
+  RepliesCuration? _curation;
+  final _fetchedPins = <String, VideoEvent>{};
+  final _pinReads = <String, Future<VideoEvent?>>{};
+  int _curationRevision = 0;
+
+  /// Reads the responses and the rules for showing them.
   Future<void> load() async {
     emit(state.copyWith(status: StickerResponsesStatus.loading));
     try {
-      final address = _video.addressableId;
-      final VideoResponses responses;
-      var curation = const RepliesCuration();
-      String? chainRoot;
-      VideoEvent? seriesStart;
-      // Whoever started the chain an Add yours counts owns who may answer it.
-      var owner = _video.pubkey;
-      var audience = _region.audience;
       if (_region.kind == VideoStickerKind.replies) {
-        final results = await Future.wait<Object>([
-          _repository.fetchReplies(
-            videoId: _video.id,
-            videoAddress: address,
-            limit: feedLimit,
-          ),
-          if (address != null)
-            _repository.fetchCuration(
-              creatorPubkey: _video.pubkey,
-              videoAddress: address,
-            ),
-        ]);
-        final replies = results.first as VideoResponses;
-        if (results.length > 1) curation = results[1] as RepliesCuration;
-        responses = await _withPinned(replies, curation);
+        await _loadReplies();
+        return;
+      }
+      final hashtag = _region.promptHashtag;
+      // Answers cite the chain by the key Divine always gave it.
+      final chainAddress = _video.divineAddress;
+      final chain = chainAddress == null || hashtag == null
+          ? null
+          : await _chain(chainAddress, hashtag);
+      // Whoever started the chain an Add yours counts owns who may answer it.
+      final owner = chain?.read.split(':')[1] ?? _video.pubkey;
+      var audience = _region.audience;
+      final VideoResponses responses;
+      VideoEvent? seriesStart;
+      if (chain == null || hashtag == null) {
+        responses = const VideoResponses();
       } else {
-        final hashtag = _region.promptHashtag;
-        // Answers cite the chain by the key Divine always gave it.
-        final chainAddress = _video.divineAddress;
-        final chain = chainAddress == null || hashtag == null
-            ? null
-            : await _chain(chainAddress, hashtag);
-        chainRoot = chain?.join;
-        if (chain != null) owner = chain.read.split(':')[1];
-        if (chain == null || hashtag == null) {
-          responses = const VideoResponses();
-        } else {
-          final first = chain.first;
-          audience = _stricter(
-            audience,
-            _chainAudience(first, chain.read, hashtag),
+        final first = chain.first;
+        audience = _stricter(
+          audience,
+          _chainAudience(first, chain.read, hashtag),
+        );
+        if (_isSeries(audience)) {
+          responses = await _repository.fetchSeriesBy(
+            chainRoot: chain.read,
+            hashtag: hashtag,
+            author: owner,
           );
-          if (_isSeries(audience)) {
-            responses = await _repository.fetchSeriesBy(
-              chainRoot: chain.read,
-              hashtag: hashtag,
-              author: owner,
-            );
-            seriesStart = first;
-          } else {
-            responses = await _repository.fetchJoined(
-              chainRoot: chain.read,
-              hashtag: hashtag,
-              limit: feedLimit,
-              filter: _filter,
-            );
-          }
+          seriesStart = first;
+        } else {
+          responses = await _repository.fetchJoined(
+            chainRoot: chain.read,
+            hashtag: hashtag,
+            limit: feedLimit,
+            filter: _filter,
+          );
         }
       }
       final answerers = await StickerAnswerers.read(
@@ -142,43 +130,118 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
       );
       _emitShown(
         responses,
-        curation,
+        const RepliesCuration(),
         answerers: answerers,
-        chainRoot: chainRoot,
+        chainRoot: chain?.join,
         seriesStart: seriesStart,
       );
     } catch (error, stackTrace) {
+      if (isClosed) return;
       addError(error, stackTrace);
       emitIfOpen(state.copyWith(status: StickerResponsesStatus.failure));
     }
   }
 
-  /// [replies] with the reply the creator pinned, read on its own when it is
-  /// older than those read: it shows first whatever its age. It is counted
-  /// among [replies] already.
-  Future<VideoResponses> _withPinned(
-    VideoResponses replies,
-    RepliesCuration curation,
-  ) async {
+  Future<void> _loadReplies() async {
+    final address = _video.addressableId;
+    final results = await Future.wait<Object>([
+      _repository.fetchReplies(
+        videoId: _video.id,
+        videoAddress: address,
+        limit: feedLimit,
+      ),
+      if (address != null)
+        _repository.fetchCuration(
+          creatorPubkey: _video.pubkey,
+          videoAddress: address,
+        ),
+    ]);
+    final replies = results.first as VideoResponses;
+    final curation = results.length > 1
+        ? results[1] as RepliesCuration
+        : const RepliesCuration();
+    final answerers = await StickerAnswerers.read(
+      _followRepository,
+      audience: _region.audience,
+      owner: _video.pubkey,
+      viewer: _viewer,
+    );
+    if (isClosed) return;
+    _replySnapshot = (replies: replies, answerers: answerers);
+    // The initial relay read is required before displaying replies. An edit
+    // observed while it was in flight takes precedence once it succeeds.
+    await _showReplies(_curation ??= curation, waitForPin: true);
+  }
+
+  /// Applies the latest accepted edit to the replies already read.
+  Future<void> applyCuration(RepliesCuration curation) async {
+    if (isClosed || _curation == curation) return;
+    _curation = curation;
+    await _showReplies(curation);
+  }
+
+  Future<void> _showReplies(
+    RepliesCuration curation, {
+    bool waitForPin = false,
+  }) async {
+    final snapshot = _replySnapshot;
+    if (snapshot == null) return;
+    final (:replies, :answerers) = snapshot;
+    final revision = ++_curationRevision;
     final pinnedId = curation.pinnedId;
     if (pinnedId == null ||
         replies.videos.any(
           (reply) =>
               RepliesCuration.keyOf(reply) == pinnedId || reply.id == pinnedId,
         )) {
-      return replies;
+      _emitShown(replies, curation, answerers: answerers);
+      return;
     }
-    final pinned = await _repository.fetchReply(
+    var pinned = _fetchedPins[pinnedId];
+    if (pinned == null) {
+      // Apply hides immediately. An older pin can join the current replies
+      // once it arrives, without blanking the previews in the meantime.
+      if (!waitForPin) _emitShown(replies, curation, answerers: answerers);
+      try {
+        pinned = await _fetchPin(pinnedId);
+      } catch (error, stackTrace) {
+        if (isClosed || revision != _curationRevision) return;
+        addError(error, stackTrace);
+      }
+      if (isClosed || revision != _curationRevision) return;
+    }
+    _emitShown(
+      pinned == null
+          ? replies
+          : VideoResponses(
+              // The pin is already among the total replies counted.
+              total: replies.total,
+              videos: [...replies.videos, pinned],
+              totalIsAtLeast: replies.totalIsAtLeast,
+            ),
+      curation,
+      answerers: answerers,
+    );
+  }
+
+  Future<VideoEvent?> _fetchPin(String pinnedId) async {
+    final read = _pinReads.putIfAbsent(
       pinnedId,
-      videoId: _video.id,
-      videoAddress: _video.addressableId,
+      () => _repository.fetchReply(
+        pinnedId,
+        videoId: _video.id,
+        videoAddress: _video.addressableId,
+      ),
     );
-    if (pinned == null) return replies;
-    return VideoResponses(
-      total: replies.total,
-      videos: [...replies.videos, pinned],
-      totalIsAtLeast: replies.totalIsAtLeast,
-    );
+    try {
+      final pinned = await read;
+      if (pinned != null) _fetchedPins[pinnedId] = pinned;
+      return pinned;
+    } finally {
+      if (identical(_pinReads[pinnedId], read)) {
+        unawaited(_pinReads.remove(pinnedId));
+      }
+    }
   }
 
   /// The first video of the chain the Add yours on the video at [address]
