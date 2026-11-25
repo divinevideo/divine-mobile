@@ -6,6 +6,7 @@ import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -207,6 +208,83 @@ void main() {
           ),
         );
         verifyNever(() => funnelcake.getVideoEvent(any()));
+      });
+
+      group('logs', () {
+        /// Captured entries whose message names [eventId], a value unique to
+        /// the test that logged it.
+        List<LogEntry> logsNaming(String eventId) => LogCaptureService()
+            .getRecentLogs()
+            .where((entry) => entry.message.contains(eventId))
+            .toList();
+
+        Future<void> fetch() => withFunnelcake().fetchLatestVideoRevision(
+          '34236:$pubkey:$_dTag',
+        );
+
+        test('which source the revision came from', () async {
+          final fromApi = revision(content: 'from Funnelcake');
+          stubFunnelcake(() async => fromApi);
+          await fetch();
+
+          final onRelay = revision(content: 'from a relay');
+          stubFunnelcake(() async => null);
+          stubRelays([onRelay], endedBy: QueryEnd.settledEarly);
+          await fetch();
+
+          expect(
+            logsNaming(fromApi.id).single.message,
+            contains('from Funnelcake'),
+          );
+          expect(
+            logsNaming(onRelay.id).single.message,
+            allOf(contains('from the relays'), contains('settledEarly')),
+          );
+        });
+
+        test('a revision at the address that fails its checks as a '
+            'warning', () async {
+          final tampered = Event.fromJson({
+            ...revision().toJson(),
+            'content': 'changed after signing',
+          });
+          stubFunnelcake(() async => tampered);
+          stubRelays([revision(content: 'relay copy')]);
+
+          await fetch();
+
+          final entry = logsNaming(tampered.id).single;
+          expect(entry.level, LogLevel.warning);
+          expect(entry.message, contains(pubkeyForLogs(pubkey)));
+        });
+
+        test("another author's video at the d tag without a warning", () async {
+          final otherKey = generatePrivateKey();
+          final theirs = revision(
+            author: getPublicKey(otherKey),
+            signingKey: otherKey,
+          );
+          stubFunnelcake(() async => theirs);
+          stubRelays([revision(content: 'relay copy')]);
+
+          await fetch();
+
+          expect(logsNaming(theirs.id).single.level, LogLevel.info);
+        });
+
+        test('a failed request with its error and stack trace', () async {
+          final marker = 'unavailable ${generatePrivateKey()}';
+          stubFunnelcake(() async => throw FunnelcakeException(marker));
+          stubRelays([revision(content: 'relay copy')]);
+
+          await fetch();
+
+          final entry = LogCaptureService().getRecentLogs().singleWhere(
+            (entry) => entry.error?.contains(marker) ?? false,
+          );
+          expect(entry.level, LogLevel.warning);
+          expect(entry.stackTrace, isNotNull);
+        });
       });
 
       group('when no relay returns a revision and the relay read did not '

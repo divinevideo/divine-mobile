@@ -2192,7 +2192,15 @@ class VideosRepository {
         newest = event;
       }
     }
-    if (newest != null) return LatestVideoRevisionFound(newest);
+    if (newest != null) {
+      Log.info(
+        'Newest revision of ${address.toAString()} from the relays: '
+        '${newest.id} (read ${read.endedBy.name})',
+        name: 'VideosRepository',
+        category: LogCategory.video,
+      );
+      return LatestVideoRevisionFound(newest);
+    }
     // Funnelcake's lookup hides deleted videos, so its 404 is how a deletion
     // reads. With no relay revision either, a held copy must not be built on
     // just because one relay did not finish: that would bring it back.
@@ -2215,14 +2223,46 @@ class VideosRepository {
       final event = await client.getVideoEvent(address.dTag);
       if (event == null) return (revision: null, saysMissing: true);
       if (_isSignedRevisionAt(event, address)) {
+        Log.info(
+          'Newest revision of ${address.toAString()} from Funnelcake: '
+          '${event.id}',
+          name: 'VideosRepository',
+          category: LogCategory.video,
+        );
         return (revision: event, saysMissing: false);
       }
-    } on Exception catch (error) {
+      // The d-tag lookup is not scoped by author, so another author's video
+      // is expected; a revision at this address that fails the id or
+      // signature check points at Funnelcake itself.
+      final atAddress =
+          event.kind == address.kind &&
+          event.pubkey == address.pubkey &&
+          event.dTagValue == address.dTag;
+      final message =
+          'Funnelcake answered ${address.toAString()} with ${event.id} by '
+          '${pubkeyForLogs(event.pubkey)}, which is not a signed revision '
+          'there; asking the relays';
+      if (atAddress) {
+        Log.warning(
+          message,
+          name: 'VideosRepository',
+          category: LogCategory.video,
+        );
+      } else {
+        Log.info(
+          message,
+          name: 'VideosRepository',
+          category: LogCategory.video,
+        );
+      }
+    } on Exception catch (error, stackTrace) {
       Log.warning(
         'Funnelcake could not answer the newest revision of '
-        '${address.toAString()}; asking the relays: $error',
+        '${address.toAString()}; asking the relays',
         name: 'VideosRepository',
         category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
       );
     }
     return (revision: null, saysMissing: false);
