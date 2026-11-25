@@ -198,13 +198,17 @@ def bundle_for_native(bundle):
     return compact
 
 
+def _live_versions(data):
+    return [
+        v
+        for v in data.get("versions", [])
+        if v.get("state") in {"READY_FOR_SALE", "READY_FOR_DISTRIBUTION"}
+    ]
+
+
 def production_build(platform, data):
     if platform in {"ios", "macos"}:
-        live = [
-            v
-            for v in data.get("versions", [])
-            if v.get("state") in {"READY_FOR_SALE", "READY_FOR_DISTRIBUTION"}
-        ]
+        live = _live_versions(data)
         if not live:
             raise ReleaseNotesError("No numbered production App Store release found")
         version = max(live, key=lambda v: parse_version(v["version"]))
@@ -630,14 +634,12 @@ def _ensure_bundle(platform, source_sha, data=None, *, env, ledger):
     if candidates:
         return _validate_bundle(ledger.read_json(candidates[0]), source_sha, platform)
     data = data if data is not None else _production_data(platform, env, ledger)
-    try:
-        baseline = production_baseline(platform, data)
-    except ReleaseNotesError:
-        if platform != "macos":
-            raise
+    if platform == "macos" and not _live_versions(data):
         # Before macOS has its own live Mac App Store version, anchor release
         # notes against the live iOS baseline sharing the same marketing train.
         baseline = production_baseline("ios", _production_data("ios", env, ledger))
+    else:
+        baseline = production_baseline(platform, data)
     _check_ancestry(baseline["sha"], source_sha)
     path = bundle_path(platform, source_sha, baseline["sha"])
     if path in ledger.paths():

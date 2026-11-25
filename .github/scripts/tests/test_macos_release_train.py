@@ -24,7 +24,7 @@ from allocate_build_identity import allocate_build
 from record_macos_provenance import record_provenance
 from release_train.coordinator import DAY, HOUR, plan_tick
 from release_train.providers import Apple
-from release_train.release_notes import ensure_bundle
+from release_train.release_notes import ReleaseNotesError, ensure_bundle
 from release_train.runner import Runtime
 from release_train_fakes import release_notes_bundle
 
@@ -397,6 +397,21 @@ class MacosReleaseTrainTest(unittest.TestCase):
         mock_prod.assert_called_once_with("ios", {}, ledger)
         self.assertEqual(bundle["platform"], "macos")
         self.assertEqual(bundle["baseline"], {"version": "1.0.36", "sha": SHA_OLD})
+
+    def test_release_notes_macos_live_legacy_version_without_provenance_does_not_fall_back(self):
+        live_legacy = {
+            "versions": [{"id": "mv1", "version": "1.0.37", "state": "READY_FOR_SALE", "build_id": "mb911"}],
+            "builds": [{"id": "mb911", "version": "1.0.37", "sha": None, "legacy": True}],
+        }
+        with (
+            patch("release_train.release_notes._production_data") as mock_prod,
+            patch("release_train.release_notes._check_ancestry"),
+            patch("release_train.release_notes._generate") as mock_generate,
+        ):
+            with self.assertRaisesRegex(ReleaseNotesError, "missing verified source provenance"):
+                ensure_bundle("macos", SHA_NEW, data=live_legacy, env={}, ledger=MemoryLedger())
+        mock_prod.assert_not_called()
+        mock_generate.assert_not_called()
 
     def test_release_train_workflow_wires_release_train_macos_variable(self):
         workflow_text = (ROOT / ".github/workflows/release_train.yml").read_text(encoding="utf-8")
