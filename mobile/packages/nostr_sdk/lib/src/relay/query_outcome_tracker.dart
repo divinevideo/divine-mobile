@@ -112,14 +112,14 @@ class QueryOutcomeTracker {
   /// took, and will ask for it again on a new socket (#11343).
   ///
   /// The new socket answers the whole request afresh, so what the old one
-  /// sent is forgotten rather than counted twice; whether the url took the
-  /// `REQ` carries over. From here on only [relay] reports for its url: a
-  /// write still in flight on the old object must not hand the tally back.
+  /// sent is forgotten rather than counted twice. Taking the saved query over
+  /// commits [relay] to answering it (`tookReq = true`), even if the old
+  /// object's write was still in flight. From here on only [relay] reports
+  /// for its url: a write still in flight on the old object must not hand the
+  /// tally back.
   void recordTakeover(Relay relay) {
-    final tookReq = _tallies[relay.url]?.tookReq;
     _takenOverBy[relay.url] = relay;
-    _tallies[relay.url] = _RelayTally(relay, _filters.length)
-      ..tookReq = tookReq;
+    _tallies[relay.url] = _RelayTally(relay, _filters.length)..tookReq = true;
   }
 
   /// Records whether [relay] took the `REQ` the fan-out wrote to it.

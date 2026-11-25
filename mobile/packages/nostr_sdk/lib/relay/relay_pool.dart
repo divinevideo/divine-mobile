@@ -1099,19 +1099,14 @@ class RelayPool {
   void remove(String url, {int relayType = RelayType.normal}) {
     log('Removing $url');
     final removed = switch (relayType) {
-      RelayType.normal => _relays[url],
-      RelayType.cache => _cacheRelays[url],
+      RelayType.normal => _relays.remove(url),
+      RelayType.cache => _cacheRelays.remove(url),
       _ => null,
     };
-    if (removed != null) _orphanRequestsOf(removed);
-    if (relayType == RelayType.normal) {
-      _relays[url]?.disconnect();
-      _relays[url]?.dispose();
-      _relays.remove(url);
-    } else if (relayType == RelayType.cache) {
-      _cacheRelays[url]?.disconnect();
-      _cacheRelays[url]?.dispose();
-      _cacheRelays.remove(url);
+    if (removed != null) {
+      _orphanRequestsOf(removed);
+      removed.disconnect();
+      removed.dispose();
     }
     _forgetRelayBookkeeping(url);
     // After the caller's synchronous follow-up, so a reconnect that re-adds
@@ -1966,6 +1961,7 @@ class RelayPool {
     final previous = relay.relayStatusCallback;
     relay.relayStatusCallback = () {
       previous?.call();
+      if (!_holdsRelay(relay)) return;
       if (relay.relayStatus.connected == ClientConnected.connected) {
         _lastHeardAt[relay] = _monotonic.elapsed;
       }
@@ -2873,6 +2869,13 @@ class RelayPool {
       // at once, and a completion that runs while its CLOSE is in flight
       // would otherwise find this relay gone without an answer.
       if (relay.checkQuery(subId)) {
+        if (!_holdsRelay(relay)) {
+          // A removed/replaced relay kept its queries only so already-received
+          // events still verifying reach the caller. Its late EOSE must not
+          // arm settlement against the replacement or pollute URL auth state.
+          relay.discardQuery(subId);
+          return;
+        }
         _queryOutcomes[subId]?.recordEose(relay, json);
         if (_eoseAsksForAuth(relay, json)) {
           _holdQueryForAuth(relay, subId);
@@ -3267,6 +3270,14 @@ class RelayPool {
           dropsRequest: true,
         );
         _maybeFireLiveEose(subscriptionId);
+        return;
+      }
+
+      // A removed/replaced relay kept its queries only so already-received
+      // events still verifying reach the caller. Its late CLOSED must not
+      // arm settlement against the replacement or pollute URL auth state.
+      if (relay.checkQuery(subscriptionId) && !_holdsRelay(relay)) {
+        relay.discardQuery(subscriptionId);
         return;
       }
 

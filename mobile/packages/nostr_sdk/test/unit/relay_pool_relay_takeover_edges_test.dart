@@ -13,7 +13,8 @@ const _a = 'wss://a.example';
 const _b = 'wss://b.example';
 
 /// A relay that reports `connecting` for [dial], then answers every REQ with
-/// [events], one every [every] from [first], and EOSE when [eose] is set.
+/// [events], one every [every] from [first], and EOSE when [eose] is set or
+/// CLOSED when [closeReason] is set.
 class _Relay extends Relay {
   _Relay(
     String url, {
@@ -21,6 +22,7 @@ class _Relay extends Relay {
     this.first = Duration.zero,
     this.every = Duration.zero,
     this.eose = false,
+    this.closeReason,
     this.dial = Duration.zero,
     this.connects = true,
     this.reqWriteTakes = Duration.zero,
@@ -30,6 +32,7 @@ class _Relay extends Relay {
   final Duration first;
   final Duration every;
   final bool eose;
+  final String? closeReason;
   final Duration dial;
   final bool connects;
 
@@ -100,7 +103,11 @@ class _Relay extends Relay {
         );
         at += every;
       }
-      if (eose) _timers.add(Timer(at, () => _deliver(['EOSE', subId])));
+      if (closeReason != null) {
+        _timers.add(Timer(at, () => _deliver(['CLOSED', subId, closeReason!])));
+      } else if (eose) {
+        _timers.add(Timer(at, () => _deliver(['EOSE', subId])));
+      }
     }
     return true;
   }
@@ -347,6 +354,172 @@ void main() {
         expect(rig.result?.endedBy, QueryEnd.complete);
         expect(rig.result?.events, hasLength(6));
         expect(rig.result?.possiblyCapped, isFalse);
+      });
+    });
+
+    test('a silent replacement after an in-flight REQ takeover still hits '
+        'silentRelayTimeout', () {
+      fakeAsync((async) {
+        final old = _Relay(_a, reqWriteTakes: const Duration(seconds: 2))
+          ..relayStatus.alwaysAuth = true;
+        final rig = _Rig(async, [old])
+          ..read(
+            full: true,
+            silentRelayTimeout: const Duration(seconds: 10),
+            timeout: const Duration(seconds: 60),
+          );
+        async.elapse(const Duration(milliseconds: 500));
+
+        final replacement = _Relay(_a);
+        rig.replace(_a, replacement);
+        async.elapse(const Duration(seconds: 30));
+
+        expect(replacement.reqs, ['page']);
+        expect(rig.result?.endedBy, QueryEnd.deadline);
+        expect(rig.tookFor, lessThan(const Duration(seconds: 12)));
+        expect(
+          rig.messages,
+          contains(contains('silent: $_a sent nothing for 10000ms')),
+        );
+      });
+    });
+
+    test('a failed replacement after an in-flight REQ takeover reports '
+        'socketDropped', () {
+      fakeAsync((async) {
+        final old = _Relay(_a, reqWriteTakes: const Duration(seconds: 2))
+          ..relayStatus.alwaysAuth = true;
+        final rig = _Rig(async, [old])
+          ..read(full: true, timeout: const Duration(seconds: 60));
+        async.elapse(const Duration(milliseconds: 500));
+
+        rig.replace(_a, _Relay(_a, connects: false));
+        async.elapse(const Duration(seconds: 2));
+
+        expect(rig.result?.endedBy, QueryEnd.socketDropped);
+        expect(rig.tookFor, const Duration(seconds: 2));
+      });
+    });
+
+    test('a late EOSE from the replaced relay behind a verifying event does '
+        'not cut short the replacement on a default read', () {
+      fakeAsync((async) {
+        final events = _events(3);
+        final old = _Relay(_a, events: [events.first], eose: true);
+        final rig = _Rig(async, [old])
+          ..nostr.relayPool.eventVerifyWorker = _SlowWorker(
+            const Duration(milliseconds: 100),
+          )
+          ..read(full: false, timeout: const Duration(seconds: 10));
+        async.elapse(const Duration(milliseconds: 10));
+
+        rig.replace(
+          _a,
+          _Relay(
+            _a,
+            events: events,
+            first: const Duration(seconds: 3),
+            eose: true,
+          ),
+        );
+        async.elapse(const Duration(seconds: 10));
+
+        expect(rig.result?.endedBy, QueryEnd.complete);
+        expect(rig.result?.events, hasLength(3));
+        expect(rig.tookFor, lessThan(const Duration(seconds: 4)));
+      });
+    });
+
+    test('a late CLOSED from the replaced relay behind a verifying event does '
+        'not cut short the replacement on a default read', () {
+      fakeAsync((async) {
+        final events = _events(3);
+        final old = _Relay(
+          _a,
+          events: [events.first],
+          closeReason: 'shutting-down',
+        );
+        final rig = _Rig(async, [old])
+          ..nostr.relayPool.eventVerifyWorker = _SlowWorker(
+            const Duration(milliseconds: 100),
+          )
+          ..read(full: false, timeout: const Duration(seconds: 10));
+        async.elapse(const Duration(milliseconds: 10));
+
+        rig.replace(
+          _a,
+          _Relay(
+            _a,
+            events: events,
+            first: const Duration(seconds: 3),
+            eose: true,
+          ),
+        );
+        async.elapse(const Duration(seconds: 10));
+
+        expect(rig.result?.endedBy, QueryEnd.complete);
+        expect(rig.result?.events, hasLength(3));
+      });
+    });
+
+    test('a late auth-required CLOSED from the replaced relay does not shut '
+        'the replacement auth gate', () {
+      fakeAsync((async) {
+        final events = _events(3);
+        final old = _Relay(
+          _a,
+          events: [events.first],
+          closeReason: 'auth-required: sign in',
+        );
+        final sibling = _Relay(
+          _b,
+          first: const Duration(milliseconds: 200),
+          eose: true,
+        );
+        final rig = _Rig(async, [old, sibling])
+          ..nostr.relayPool.eventVerifyWorker = _SlowWorker(
+            const Duration(milliseconds: 100),
+          )
+          ..read(full: false, timeout: const Duration(seconds: 10));
+        async.elapse(const Duration(milliseconds: 10));
+
+        final replacement = _Relay(
+          _a,
+          events: events,
+          first: const Duration(milliseconds: 500),
+          eose: true,
+        )..relayStatus.alwaysAuth = true;
+        rig.replace(_a, replacement);
+        async.elapse(const Duration(seconds: 10));
+
+        expect(rig.result?.endedBy, QueryEnd.complete);
+        expect(rig.result?.events, hasLength(3));
+      });
+    });
+
+    test('replacing a relay after a sibling already answered does not end '
+        'the read before the replacement takes over', () {
+      fakeAsync((async) {
+        final events = _events(3);
+        final rig = _Rig(async, [
+          _Relay(_a),
+          _Relay(_b, events: [events.first], eose: true),
+        ])..read(full: false, timeout: const Duration(seconds: 10));
+        async.elapse(const Duration(milliseconds: 200));
+
+        rig.replace(
+          _a,
+          _Relay(
+            _a,
+            events: events,
+            first: const Duration(milliseconds: 200),
+            eose: true,
+          ),
+        );
+        async.elapse(const Duration(seconds: 5));
+
+        expect(rig.result?.endedBy, QueryEnd.complete);
+        expect(rig.result?.events, hasLength(3));
       });
     });
   });
