@@ -15630,7 +15630,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Trimitem un link de confirmare la noua adresă și la cea din contul tău. E-mailul se schimbă după ce confirmi din ambele.';
+      'Îți vom trimite un link la noua adresă. Dacă ai deja o adresă de e-mail în cont, îți vom trimite un link și acolo.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15650,18 +15650,18 @@ class AppLocalizationsRo extends AppLocalizations {
   String get changeEmailWrongPassword => 'Asta nu e parola ta.';
 
   @override
-  String get changeEmailSubmit => 'Trimite linkurile de confirmare';
+  String get changeEmailSubmit => 'Cere confirmarea';
 
   @override
-  String get changeEmailSentTitle => 'Două linkuri sunt pe drum';
+  String get changeEmailSentTitle => 'Verifică-ți e-mailul';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Confirmă din $email și din adresa contului tău. E-mailul se schimbă după ce le faci pe amândouă.';
+    return 'Deschide linkul primit la $email. Dacă ai deja o adresă de e-mail în cont, deschide și linkul primit acolo.';
   }
 
   @override
-  String get changeEmailSentExpiry => 'Linkurile expiră după 24 de ore.';
+  String get changeEmailSentExpiry => 'Fiecare link expiră după 24 de ore.';
 
   @override
   String get changeEmailSentDone => 'Am înțeles';
@@ -17496,7 +17496,8 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get emailConfirmationResendSent => 'Trimis. Verifică-ți inboxul.';
+  String get emailConfirmationResendSent =>
+      'Confirmare solicitată. Verifică-ți căsuța de e-mail.';
 
   @override
   String get emailConfirmationResendFailed =>

@@ -25704,7 +25704,7 @@ abstract class AppLocalizations {
   /// No description provided for @changeEmailSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'We\'ll email a confirmation link to your new address and to the one on your account. Your email changes once you confirm from both.'**
+  /// **'We\'ll send a link to your new address. If there\'s already an email on your account, we\'ll send a link there too.'**
   String get changeEmailSubtitle;
 
   /// Shows the email address currently on the account.
@@ -25740,25 +25740,25 @@ abstract class AppLocalizations {
   /// No description provided for @changeEmailSubmit.
   ///
   /// In en, this message translates to:
-  /// **'Send confirmation links'**
+  /// **'Request confirmation'**
   String get changeEmailSubmit;
 
   /// No description provided for @changeEmailSentTitle.
   ///
   /// In en, this message translates to:
-  /// **'Two links are on their way'**
+  /// **'Check your email'**
   String get changeEmailSentTitle;
 
   /// Confirmation copy after an email change was requested; {email} is the new address.
   ///
   /// In en, this message translates to:
-  /// **'Confirm from {email} and from the address on your account. Your email switches once both are done.'**
+  /// **'Open the link at {email}. If there\'s already an email on your account, open the link there too.'**
   String changeEmailSentMessage(String email);
 
   /// No description provided for @changeEmailSentExpiry.
   ///
   /// In en, this message translates to:
-  /// **'The links stop working after 24 hours.'**
+  /// **'Each link expires after 24 hours.'**
   String get changeEmailSentExpiry;
 
   /// No description provided for @changeEmailSentDone.
@@ -28744,7 +28744,7 @@ abstract class AppLocalizations {
   /// Pop-up after a new email confirmation link was requested.
   ///
   /// In en, this message translates to:
-  /// **'Sent. Check your inbox.'**
+  /// **'Confirmation requested. Check your inbox.'**
   String get emailConfirmationResendSent;
 
   /// Pop-up when requesting a new email confirmation link failed.

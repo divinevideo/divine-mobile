@@ -15688,7 +15688,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'మేము మీ కొత్త చిరునామాకు మరియు మీ ఖాతాలో ఉన్నదానికి నిర్ధారణ లింక్‌ను ఇమెయిల్ చేస్తాము. మీరు రెండింటి నుండి నిర్ధారించిన తర్వాత మీ ఇమెయిల్ మారుతుంది.';
+      'మీ కొత్త ఇమెయిల్ చిరునామాకు లింక్ పంపుతాం. మీ ఖాతాలో ఇప్పటికే ఇమెయిల్ చిరునామా ఉంటే, దానికీ లింక్ పంపుతాం.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15708,19 +15708,19 @@ class AppLocalizationsTe extends AppLocalizations {
   String get changeEmailWrongPassword => 'అది మీ పాస్‌వర్డ్ కాదు.';
 
   @override
-  String get changeEmailSubmit => 'నిర్ధారణ లింక్‌లను పంపండి';
+  String get changeEmailSubmit => 'నిర్ధారణ కోరండి';
 
   @override
-  String get changeEmailSentTitle => 'రెండు లింక్‌లు అందుబాటులో ఉన్నాయి';
+  String get changeEmailSentTitle => 'మీ ఇమెయిల్ చూడండి';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'నుండి నిర్ధారించండి $emailమరియు మీ ఖాతాలోని చిరునామా నుండి. రెండూ పూర్తయిన తర్వాత మీ ఇమెయిల్ స్విచ్ అవుతుంది.';
+    return '$emailకు వచ్చిన లింక్ తెరవండి. మీ ఖాతాలో ఇప్పటికే ఇమెయిల్ చిరునామా ఉంటే, దానికి వచ్చిన లింక్ కూడా తెరవండి.';
   }
 
   @override
   String get changeEmailSentExpiry =>
-      'లింక్‌లు 24 గంటల తర్వాత పని చేయడం ఆగిపోతాయి.';
+      'ప్రతి లింక్ గడువు 24 గంటల తర్వాత ముగుస్తుంది.';
 
   @override
   String get changeEmailSentDone => 'అర్థమైంది';
@@ -17546,7 +17546,8 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get emailConfirmationResendSent => 'పంపాము. మీ ఇన్‌బాక్స్‌ని చూడండి.';
+  String get emailConfirmationResendSent =>
+      'నిర్ధారణ అభ్యర్థన అందింది. మీ ఇన్‌బాక్స్ చూడండి.';
 
   @override
   String get emailConfirmationResendFailed =>

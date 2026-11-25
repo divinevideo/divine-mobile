@@ -14423,7 +14423,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get changePasswordSuccess => '密码已更改。';
 
   @override
-  String get changeEmailSubtitle => '我们会向新地址和账号上的地址各发一封确认邮件。两边都确认后邮箱才会更改。';
+  String get changeEmailSubtitle => '我们会向你的新邮箱发送链接。如果你的账号已绑定邮箱，我们也会向那个邮箱发送链接。';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -14443,18 +14443,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get changeEmailWrongPassword => '这不是你的密码。';
 
   @override
-  String get changeEmailSubmit => '发送确认链接';
+  String get changeEmailSubmit => '请求确认';
 
   @override
-  String get changeEmailSentTitle => '两封确认邮件已在路上';
+  String get changeEmailSentTitle => '查看你的邮箱';
 
   @override
   String changeEmailSentMessage(String email) {
-    return '请在 $email 和账号上的地址两边都确认。两边都完成后邮箱就会切换。';
+    return '打开 $email 收到的链接。如果你的账号已绑定邮箱，也请打开那个邮箱收到的链接。';
   }
 
   @override
-  String get changeEmailSentExpiry => '链接 24 小时后失效。';
+  String get changeEmailSentExpiry => '每条链接在 24 小时后失效。';
 
   @override
   String get changeEmailSentDone => '知道了';
@@ -16177,7 +16177,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get emailConfirmationResendSent => '已发送，去收件箱看看吧。';
+  String get emailConfirmationResendSent => '已请求确认。请查看你的收件箱。';
 
   @override
   String get emailConfirmationResendFailed => '这封没发出去，稍后再试试。';

@@ -15630,7 +15630,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Wyślemy link potwierdzający na nowy adres i na ten z twojego konta. E-mail zmieni się, gdy potwierdzisz z obu.';
+      'Wyślemy link na twój nowy adres e-mail. Jeśli na twoim koncie jest już adres e-mail, tam też wyślemy link.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15650,19 +15650,18 @@ class AppLocalizationsPl extends AppLocalizations {
   String get changeEmailWrongPassword => 'To nie jest twoje hasło.';
 
   @override
-  String get changeEmailSubmit => 'Wyślij linki potwierdzające';
+  String get changeEmailSubmit => 'Poproś o potwierdzenie';
 
   @override
-  String get changeEmailSentTitle => 'Dwa linki są w drodze';
+  String get changeEmailSentTitle => 'Sprawdź pocztę';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Potwierdź z $email i z adresu na twoim koncie. E-mail zmieni się, gdy zrobisz oba.';
+    return 'Otwórz link wysłany na $email. Jeśli na twoim koncie jest już adres e-mail, otwórz też link wysłany na ten adres.';
   }
 
   @override
-  String get changeEmailSentExpiry =>
-      'Linki przestają działać po 24 godzinach.';
+  String get changeEmailSentExpiry => 'Każdy link wygasa po 24 godzinach.';
 
   @override
   String get changeEmailSentDone => 'Jasne';
@@ -17513,7 +17512,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get emailConfirmationResendSent =>
-      'Wysłane. Sprawdź skrzynkę odbiorczą.';
+      'Prośba o potwierdzenie przyjęta. Sprawdź skrzynkę odbiorczą.';
 
   @override
   String get emailConfirmationResendFailed =>

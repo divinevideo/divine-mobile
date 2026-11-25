@@ -15504,7 +15504,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Wir schicken einen Bestätigungslink an deine neue Adresse und an die in deinem Konto. Deine E-Mail ändert sich, sobald du beide bestätigst.';
+      'Wir schicken einen Link an deine neue Adresse. Wenn in deinem Konto schon eine E-Mail-Adresse hinterlegt ist, schicken wir auch dorthin einen Link.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15525,18 +15525,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get changeEmailWrongPassword => 'Das ist nicht dein Passwort.';
 
   @override
-  String get changeEmailSubmit => 'Bestätigungslinks senden';
+  String get changeEmailSubmit => 'Bestätigung anfordern';
 
   @override
-  String get changeEmailSentTitle => 'Zwei Links sind unterwegs';
+  String get changeEmailSentTitle => 'Schau in dein Postfach';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Bestätige über $email und über die Adresse in deinem Konto. Deine E-Mail wechselt, sobald beides erledigt ist.';
+    return 'Öffne den Link in $email. Wenn in deinem Konto schon eine E-Mail-Adresse hinterlegt ist, öffne auch den Link dort.';
   }
 
   @override
-  String get changeEmailSentExpiry => 'Die Links laufen nach 24 Stunden ab.';
+  String get changeEmailSentExpiry => 'Jeder Link läuft nach 24 Stunden ab.';
 
   @override
   String get changeEmailSentDone => 'Alles klar';
@@ -17369,7 +17369,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get emailConfirmationResendSent =>
-      'Gesendet. Schau in deinen Posteingang.';
+      'Bestätigung angefordert. Schau in dein Postfach.';
 
   @override
   String get emailConfirmationResendFailed =>

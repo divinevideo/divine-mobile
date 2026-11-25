@@ -15459,7 +15459,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Magpapadala kami ng confirmation link sa bago mong address at sa nasa account mo. Magbabago ang email mo kapag na-confirm mo pareho.';
+      'Magpapadala kami ng link sa bago mong email address. Kung may email address na sa account mo, magpapadala rin kami ng link doon.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15479,19 +15479,19 @@ class AppLocalizationsFil extends AppLocalizations {
   String get changeEmailWrongPassword => 'Hindi \'yan ang password mo.';
 
   @override
-  String get changeEmailSubmit => 'Ipadala ang mga confirmation link';
+  String get changeEmailSubmit => 'I-request ang confirmation';
 
   @override
-  String get changeEmailSentTitle => 'Papunta na ang dalawang link';
+  String get changeEmailSentTitle => 'Tingnan ang email mo';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'I-confirm mula sa $email at mula sa address na nasa account mo. Magpapalit ang email mo kapag tapos na pareho.';
+    return 'Buksan ang link sa $email. Kung may email address na sa account mo, buksan din ang link doon.';
   }
 
   @override
   String get changeEmailSentExpiry =>
-      'Titigil gumana ang mga link pagkatapos ng 24 oras.';
+      'Mag-e-expire ang bawat link pagkalipas ng 24 na oras.';
 
   @override
   String get changeEmailSentDone => 'Sige';
@@ -17314,7 +17314,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get emailConfirmationResendSent =>
-      'Naipadala na. Tingnan ang inbox mo.';
+      'Na-request na ang confirmation. Tingnan ang inbox mo.';
 
   @override
   String get emailConfirmationResendFailed =>

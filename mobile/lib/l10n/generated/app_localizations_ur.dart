@@ -15318,7 +15318,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'ہم آپ کے نئے پتے اور اکاؤنٹ والے پتے، دونوں پر تصدیقی لنک بھیجیں گے۔ دونوں سے تصدیق کے بعد آپ کی ای میل بدل جائے گی۔';
+      'ہم آپ کے نئے ای میل پتے پر ایک لنک بھیجیں گے۔ اگر آپ کے اکاؤنٹ میں پہلے سے کوئی ای میل پتہ ہے تو ہم وہاں بھی ایک لنک بھیجیں گے۔';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15338,19 +15338,19 @@ class AppLocalizationsUr extends AppLocalizations {
   String get changeEmailWrongPassword => 'یہ آپ کا پاس ورڈ نہیں ہے۔';
 
   @override
-  String get changeEmailSubmit => 'تصدیقی لنک بھیجیں';
+  String get changeEmailSubmit => 'تصدیق کی درخواست کریں';
 
   @override
-  String get changeEmailSentTitle => 'دو لنک بھیج دیے گئے ہیں';
+  String get changeEmailSentTitle => 'اپنی ای میل دیکھیں';
 
   @override
   String changeEmailSentMessage(String email) {
-    return '$email سے اور اپنے اکاؤنٹ والے پتے سے تصدیق کریں۔ دونوں مکمل ہونے پر ای میل بدل جائے گی۔';
+    return '$email پر موصول ہونے والا لنک کھولیں۔ اگر آپ کے اکاؤنٹ میں پہلے سے کوئی ای میل پتہ ہے تو وہاں موصول ہونے والا لنک بھی کھولیں۔';
   }
 
   @override
   String get changeEmailSentExpiry =>
-      'لنک 24 گھنٹے بعد کام کرنا بند کر دیتے ہیں۔';
+      'ہر لنک کی میعاد 24 گھنٹے بعد ختم ہو جاتی ہے۔';
 
   @override
   String get changeEmailSentDone => 'سمجھ گیا';
@@ -17164,7 +17164,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get emailConfirmationResendSent =>
-      'بھیج دی گئی۔ اپنا ان باکس چیک کریں۔';
+      'تصدیق کی درخواست موصول ہوئی۔ اپنا ان باکس دیکھیں۔';
 
   @override
   String get emailConfirmationResendFailed =>

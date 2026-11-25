@@ -12477,7 +12477,7 @@
   "changePasswordCurrentLabel": "Current password",
   "changePasswordWrongCurrent": "That's not your current password.",
   "changePasswordSuccess": "Password changed.",
-  "changeEmailSubtitle": "We'll email a confirmation link to your new address and to the one on your account. Your email changes once you confirm from both.",
+  "changeEmailSubtitle": "We'll send a link to your new address. If there's already an email on your account, we'll send a link there too.",
   "changeEmailCurrentAddress": "On your account: {email}",
   "@changeEmailCurrentAddress": {
     "description": "Shows the email address currently on the account.",
@@ -12491,9 +12491,9 @@
   "changeEmailPasswordLabel": "Your password",
   "changeEmailSameAsCurrent": "That's already your email address.",
   "changeEmailWrongPassword": "That's not your password.",
-  "changeEmailSubmit": "Send confirmation links",
-  "changeEmailSentTitle": "Two links are on their way",
-  "changeEmailSentMessage": "Confirm from {email} and from the address on your account. Your email switches once both are done.",
+  "changeEmailSubmit": "Request confirmation",
+  "changeEmailSentTitle": "Check your email",
+  "changeEmailSentMessage": "Open the link at {email}. If there's already an email on your account, open the link there too.",
   "@changeEmailSentMessage": {
     "description": "Confirmation copy after an email change was requested; {email} is the new address.",
     "placeholders": {
@@ -12502,7 +12502,7 @@
       }
     }
   },
-  "changeEmailSentExpiry": "The links stop working after 24 hours.",
+  "changeEmailSentExpiry": "Each link expires after 24 hours.",
   "changeEmailSentDone": "Got it",
   "searchUserVideoCount": "{count, plural, =1{{formattedCount} video} other{{formattedCount} videos}}",
   "@searchUserVideoCount": {
@@ -14597,7 +14597,7 @@
       }
     }
   },
-  "emailConfirmationResendSent": "Sent. Check your inbox.",
+  "emailConfirmationResendSent": "Confirmation requested. Check your inbox.",
   "@emailConfirmationResendSent": {
     "description": "Pop-up after a new email confirmation link was requested."
   },

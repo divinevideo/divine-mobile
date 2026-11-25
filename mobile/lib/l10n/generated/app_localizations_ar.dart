@@ -15331,7 +15331,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'سنرسل رابط تأكيد إلى عنوانك الجديد وإلى العنوان المسجّل في حسابك. يتغيّر بريدك بعد التأكيد من الاثنين.';
+      'سنرسل رابطًا إلى عنوان البريد الإلكتروني الجديد. إذا كان هناك عنوان بريد مرتبط بالحساب، فسنرسل رابطًا إليه أيضًا.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15351,18 +15351,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get changeEmailWrongPassword => 'هذه ليست كلمة السر.';
 
   @override
-  String get changeEmailSubmit => 'إرسال روابط التأكيد';
+  String get changeEmailSubmit => 'طلب التأكيد';
 
   @override
-  String get changeEmailSentTitle => 'رابطان في الطريق';
+  String get changeEmailSentTitle => 'التحقق من البريد الإلكتروني';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'أكّد من $email ومن العنوان المسجّل في حسابك. يتبدّل بريدك بعد إتمام الاثنين.';
+    return 'يُرجى فتح الرابط في $email. إذا كان هناك عنوان بريد مرتبط بالحساب، فيُرجى فتح الرابط فيه أيضًا.';
   }
 
   @override
-  String get changeEmailSentExpiry => 'تتوقف الروابط عن العمل بعد 24 ساعة.';
+  String get changeEmailSentExpiry => 'تنتهي صلاحية كل رابط بعد 24 ساعة.';
 
   @override
   String get changeEmailSentDone => 'فهمت';
@@ -17198,7 +17198,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get emailConfirmationResendSent =>
-      'تم الإرسال. الرسالة في صندوق الوارد.';
+      'تم استلام طلب التأكيد. يُرجى التحقق من البريد الوارد.';
 
   @override
   String get emailConfirmationResendFailed =>

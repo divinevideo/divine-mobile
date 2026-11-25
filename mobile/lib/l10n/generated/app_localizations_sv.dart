@@ -15336,7 +15336,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Vi mejlar en bekräftelselänk till din nya adress och till den på kontot. E-postadressen byts när du bekräftat från båda.';
+      'Vi skickar en länk till din nya adress. Om du redan har en e-postadress på kontot skickar vi en länk dit också.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15356,19 +15356,19 @@ class AppLocalizationsSv extends AppLocalizations {
   String get changeEmailWrongPassword => 'Det är inte ditt lösenord.';
 
   @override
-  String get changeEmailSubmit => 'Skicka bekräftelselänkar';
+  String get changeEmailSubmit => 'Begär bekräftelse';
 
   @override
-  String get changeEmailSentTitle => 'Två länkar är på väg';
+  String get changeEmailSentTitle => 'Kolla din e-post';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Bekräfta från $email och från adressen på ditt konto. E-posten byts när båda är klara.';
+    return 'Öppna länken som kom till $email. Om du redan har en e-postadress på kontot, öppna länken där också.';
   }
 
   @override
   String get changeEmailSentExpiry =>
-      'Länkarna slutar fungera efter 24 timmar.';
+      'Varje länk upphör att gälla efter 24 timmar.';
 
   @override
   String get changeEmailSentDone => 'Okej';
@@ -17183,7 +17183,8 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get emailConfirmationResendSent => 'Skickat. Kolla din inkorg.';
+  String get emailConfirmationResendSent =>
+      'Bekräftelse begärd. Kolla din inkorg.';
 
   @override
   String get emailConfirmationResendFailed =>

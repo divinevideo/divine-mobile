@@ -14601,7 +14601,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      '新しいアドレスと、アカウントに登録中のアドレスの両方に確認リンクを送ります。両方で確認するとメールアドレスが変わります。';
+      '新しいメールアドレスにリンクを送ります。アカウントにすでにメールアドレスが登録されている場合は、そのアドレスにもリンクを送ります。';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -14621,18 +14621,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String get changeEmailWrongPassword => 'パスワードが違います。';
 
   @override
-  String get changeEmailSubmit => '確認リンクを送る';
+  String get changeEmailSubmit => '確認をリクエスト';
 
   @override
-  String get changeEmailSentTitle => '確認リンクを2通送りました';
+  String get changeEmailSentTitle => 'メールをご確認ください';
 
   @override
   String changeEmailSentMessage(String email) {
-    return '$email と、アカウントに登録中のアドレスの両方で確認してください。両方が終わるとメールアドレスが切り替わります。';
+    return '$email に届いたリンクを開いてください。アカウントにすでにメールアドレスが登録されている場合は、そのアドレスに届いたリンクも開いてください。';
   }
 
   @override
-  String get changeEmailSentExpiry => 'リンクは24時間で使えなくなります。';
+  String get changeEmailSentExpiry => '各リンクは24時間で無効になります。';
 
   @override
   String get changeEmailSentDone => 'わかりました';
@@ -16375,7 +16375,7 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get emailConfirmationResendSent => '送信しました。受信トレイを確認してください。';
+  String get emailConfirmationResendSent => '確認リクエストを受け付けました。受信トレイをご確認ください。';
 
   @override
   String get emailConfirmationResendFailed => '送信できませんでした。少し時間をおいてもう一度お試しください。';

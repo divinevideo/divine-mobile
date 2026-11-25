@@ -15260,7 +15260,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Chúng tôi gửi liên kết xác nhận tới địa chỉ mới và tới địa chỉ trong tài khoản của bạn. Email sẽ đổi khi bạn xác nhận ở cả hai.';
+      'Bọn mình sẽ gửi một liên kết đến địa chỉ email mới của bạn. Nếu tài khoản của bạn đã có địa chỉ email, bọn mình cũng sẽ gửi một liên kết đến đó.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15280,18 +15280,18 @@ class AppLocalizationsVi extends AppLocalizations {
   String get changeEmailWrongPassword => 'Đó không phải mật khẩu của bạn.';
 
   @override
-  String get changeEmailSubmit => 'Gửi liên kết xác nhận';
+  String get changeEmailSubmit => 'Yêu cầu xác nhận';
 
   @override
-  String get changeEmailSentTitle => 'Hai liên kết đang trên đường tới';
+  String get changeEmailSentTitle => 'Kiểm tra email của bạn';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Xác nhận từ $email và từ địa chỉ trong tài khoản của bạn. Email đổi khi xong cả hai.';
+    return 'Mở liên kết được gửi đến $email. Nếu tài khoản của bạn đã có địa chỉ email, hãy mở cả liên kết được gửi đến đó.';
   }
 
   @override
-  String get changeEmailSentExpiry => 'Liên kết hết hạn sau 24 giờ.';
+  String get changeEmailSentExpiry => 'Mỗi liên kết hết hạn sau 24 giờ.';
 
   @override
   String get changeEmailSentDone => 'Đã hiểu';
@@ -17104,7 +17104,8 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get emailConfirmationResendSent => 'Đã gửi. Kiểm tra hộp thư nhé.';
+  String get emailConfirmationResendSent =>
+      'Đã yêu cầu xác nhận. Hãy kiểm tra hộp thư đến.';
 
   @override
   String get emailConfirmationResendFailed =>

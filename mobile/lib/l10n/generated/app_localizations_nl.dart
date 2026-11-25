@@ -15403,7 +15403,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'We sturen een bevestigingslink naar je nieuwe adres en naar dat van je account. Je e-mail verandert zodra je beide bevestigt.';
+      'We sturen een link naar je nieuwe e-mailadres. Als er al een e-mailadres aan je account is gekoppeld, sturen we daar ook een link naartoe.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15423,18 +15423,18 @@ class AppLocalizationsNl extends AppLocalizations {
   String get changeEmailWrongPassword => 'Dat is niet je wachtwoord.';
 
   @override
-  String get changeEmailSubmit => 'Bevestigingslinks sturen';
+  String get changeEmailSubmit => 'Bevestiging aanvragen';
 
   @override
-  String get changeEmailSentTitle => 'Er zijn twee links onderweg';
+  String get changeEmailSentTitle => 'Check je e-mail';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Bevestig vanaf $email en vanaf het adres op je account. Je e-mail wisselt zodra beide gedaan zijn.';
+    return 'Open de link die je op $email hebt ontvangen. Als er al een e-mailadres aan je account is gekoppeld, open dan ook de link die je daar hebt ontvangen.';
   }
 
   @override
-  String get changeEmailSentExpiry => 'De links werken 24 uur.';
+  String get changeEmailSentExpiry => 'Elke link verloopt na 24 uur.';
 
   @override
   String get changeEmailSentDone => 'Duidelijk';
@@ -17256,7 +17256,8 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String get emailConfirmationResendSent => 'Verstuurd. Check je inbox.';
+  String get emailConfirmationResendSent =>
+      'Bevestiging aangevraagd. Check je inbox.';
 
   @override
   String get emailConfirmationResendFailed =>

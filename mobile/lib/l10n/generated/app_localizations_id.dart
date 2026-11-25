@@ -15213,7 +15213,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Kami mengirim tautan konfirmasi ke alamat barumu dan ke alamat di akunmu. Emailmu berubah setelah kamu konfirmasi dari keduanya.';
+      'Kami akan mengirim tautan ke alamat email barumu. Kalau sudah ada email di akunmu, kami juga akan mengirim tautan ke sana.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15233,18 +15233,18 @@ class AppLocalizationsId extends AppLocalizations {
   String get changeEmailWrongPassword => 'Itu bukan kata sandimu.';
 
   @override
-  String get changeEmailSubmit => 'Kirim tautan konfirmasi';
+  String get changeEmailSubmit => 'Minta konfirmasi';
 
   @override
-  String get changeEmailSentTitle => 'Dua tautan sedang dikirim';
+  String get changeEmailSentTitle => 'Cek emailmu';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Konfirmasi dari $email dan dari alamat di akunmu. Emailmu berganti setelah keduanya selesai.';
+    return 'Buka tautan di $email. Kalau sudah ada email di akunmu, buka juga tautan di sana.';
   }
 
   @override
-  String get changeEmailSentExpiry => 'Tautan berhenti berlaku setelah 24 jam.';
+  String get changeEmailSentExpiry => 'Setiap tautan berlaku selama 24 jam.';
 
   @override
   String get changeEmailSentDone => 'Oke';
@@ -17053,7 +17053,8 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get emailConfirmationResendSent => 'Terkirim. Cek kotak masukmu.';
+  String get emailConfirmationResendSent =>
+      'Konfirmasi sudah diminta. Cek kotak masukmu.';
 
   @override
   String get emailConfirmationResendFailed =>

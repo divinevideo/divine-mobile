@@ -14620,7 +14620,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      '새 주소와 계정에 등록된 주소로 확인 링크를 보냅니다. 둘 다 확인하면 이메일이 바뀌어요.';
+      '새 이메일 주소로 링크를 보내 드려요. 계정에 이미 이메일 주소가 등록되어 있으면 그 주소로도 링크를 보내 드려요.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -14640,18 +14640,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get changeEmailWrongPassword => '비밀번호가 아니에요.';
 
   @override
-  String get changeEmailSubmit => '확인 링크 보내기';
+  String get changeEmailSubmit => '확인 요청';
 
   @override
-  String get changeEmailSentTitle => '링크 두 통을 보냈어요';
+  String get changeEmailSentTitle => '이메일을 확인해 주세요';
 
   @override
   String changeEmailSentMessage(String email) {
-    return '$email과 계정에 등록된 주소에서 확인해 주세요. 둘 다 끝나면 이메일이 바뀝니다.';
+    return '$email에 도착한 링크를 열어 주세요. 계정에 이미 이메일 주소가 등록되어 있으면 그 주소에 도착한 링크도 열어 주세요.';
   }
 
   @override
-  String get changeEmailSentExpiry => '링크는 24시간 뒤에 만료돼요.';
+  String get changeEmailSentExpiry => '각 링크는 24시간 후에 만료돼요.';
 
   @override
   String get changeEmailSentDone => '알겠어요';
@@ -16394,7 +16394,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get emailConfirmationResendSent => '보냈어요. 받은 편지함을 확인해주세요.';
+  String get emailConfirmationResendSent => '확인을 요청했어요. 받은편지함을 확인해 주세요.';
 
   @override
   String get emailConfirmationResendFailed => '보내지 못했어요. 잠시 후 다시 시도해주세요.';

@@ -14952,7 +14952,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'ወደ አዲሱ አድራሻህ እና በመለያህ ላይ ወዳለው አድራሻ የማረጋገጫ ማገናኛ እንልካለን። ከሁለቱም ስታረጋግጥ ኢሜይልህ ይቀየራል።';
+      'ወደ አዲሱ ኢሜይል አድራሻዎ አገናኝ እንልካለን። በመለያዎ ላይ ኢሜይል ካለ፣ ወደዚያም እንልካለን።';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -14972,18 +14972,18 @@ class AppLocalizationsAm extends AppLocalizations {
   String get changeEmailWrongPassword => 'ይህ የይለፍ ቃልህ አይደለም።';
 
   @override
-  String get changeEmailSubmit => 'የማረጋገጫ ማገናኛዎችን ላክ';
+  String get changeEmailSubmit => 'ማረጋገጫ መጠየቅ';
 
   @override
-  String get changeEmailSentTitle => 'ሁለት ማገናኛዎች በመንገድ ላይ ናቸው';
+  String get changeEmailSentTitle => 'ኢሜይልዎን ይመልከቱ';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'ከ$email እና በመለያህ ላይ ካለው አድራሻ አረጋግጥ። ሁለቱም ሲጠናቀቁ ኢሜይልህ ይቀየራል።';
+    return 'በ$email የደረሰውን አገናኝ ይክፈቱ። በመለያዎ ላይ ኢሜይል ካለ፣ እዚያ የደረሰውንም አገናኝ ይክፈቱ።';
   }
 
   @override
-  String get changeEmailSentExpiry => 'ማገናኛዎቹ ከ24 ሰዓት በኋላ አይሠሩም።';
+  String get changeEmailSentExpiry => 'የእያንዳንዱ አገናኝ ጊዜ ከ24 ሰዓት በኋላ ያበቃል።';
 
   @override
   String get changeEmailSentDone => 'ገባኝ';
@@ -16751,7 +16751,8 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get emailConfirmationResendSent => 'ተልኳል። የገቢ መልእክት ሳጥንዎን ይመልከቱ።';
+  String get emailConfirmationResendSent =>
+      'የማረጋገጫ ጥያቄዎን ተቀብለናል። ኢሜይልዎን ይመልከቱ።';
 
   @override
   String get emailConfirmationResendFailed =>

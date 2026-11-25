@@ -15410,7 +15410,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'We\'ll email a confirmation link to your new address and to the one on your account. Your email changes once you confirm from both.';
+      'We\'ll send a link to your new address. If there\'s already an email on your account, we\'ll send a link there too.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15430,18 +15430,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changeEmailWrongPassword => 'That\'s not your password.';
 
   @override
-  String get changeEmailSubmit => 'Send confirmation links';
+  String get changeEmailSubmit => 'Request confirmation';
 
   @override
-  String get changeEmailSentTitle => 'Two links are on their way';
+  String get changeEmailSentTitle => 'Check your email';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Confirm from $email and from the address on your account. Your email switches once both are done.';
+    return 'Open the link at $email. If there\'s already an email on your account, open the link there too.';
   }
 
   @override
-  String get changeEmailSentExpiry => 'The links stop working after 24 hours.';
+  String get changeEmailSentExpiry => 'Each link expires after 24 hours.';
 
   @override
   String get changeEmailSentDone => 'Got it';
@@ -17283,7 +17283,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get emailConfirmationResendSent => 'Sent. Check your inbox.';
+  String get emailConfirmationResendSent =>
+      'Confirmation requested. Check your inbox.';
 
   @override
   String get emailConfirmationResendFailed =>

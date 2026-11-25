@@ -15312,7 +15312,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Kami hantar pautan pengesahan ke alamat baharu anda dan ke alamat dalam akaun anda. E-mel anda bertukar sebaik anda sahkan kedua-duanya.';
+      'Kami akan menghantar pautan ke alamat e-mel baharu anda. Jika akaun anda sudah mempunyai alamat e-mel, kami juga akan menghantar pautan ke alamat itu.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15332,18 +15332,19 @@ class AppLocalizationsMs extends AppLocalizations {
   String get changeEmailWrongPassword => 'Itu bukan kata laluan anda.';
 
   @override
-  String get changeEmailSubmit => 'Hantar pautan pengesahan';
+  String get changeEmailSubmit => 'Minta pengesahan';
 
   @override
-  String get changeEmailSentTitle => 'Dua pautan dalam perjalanan';
+  String get changeEmailSentTitle => 'Semak e-mel anda';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Sahkan dari $email dan dari alamat dalam akaun anda. E-mel anda bertukar sebaik kedua-duanya selesai.';
+    return 'Buka pautan di $email. Jika akaun anda sudah mempunyai alamat e-mel, buka juga pautan di alamat itu.';
   }
 
   @override
-  String get changeEmailSentExpiry => 'Pautan tamat selepas 24 jam.';
+  String get changeEmailSentExpiry =>
+      'Setiap pautan tamat tempoh selepas 24 jam.';
 
   @override
   String get changeEmailSentDone => 'Faham';
@@ -17162,7 +17163,8 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
-  String get emailConfirmationResendSent => 'Dihantar. Semak peti masuk anda.';
+  String get emailConfirmationResendSent =>
+      'Pengesahan diminta. Semak peti masuk anda.';
 
   @override
   String get emailConfirmationResendFailed =>

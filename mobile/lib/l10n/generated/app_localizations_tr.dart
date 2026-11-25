@@ -15247,7 +15247,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Yeni adresine ve hesabındaki adrese birer onay bağlantısı yolluyoruz. E-postan ikisini de onaylayınca değişir.';
+      'Yeni e-posta adresine bir bağlantı göndereceğiz. Hesabında zaten bir e-posta adresi varsa oraya da bağlantı göndereceğiz.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15267,19 +15267,19 @@ class AppLocalizationsTr extends AppLocalizations {
   String get changeEmailWrongPassword => 'Bu senin şifren değil.';
 
   @override
-  String get changeEmailSubmit => 'Onay bağlantılarını gönder';
+  String get changeEmailSubmit => 'Onay iste';
 
   @override
-  String get changeEmailSentTitle => 'İki bağlantı yolda';
+  String get changeEmailSentTitle => 'E-postanı kontrol et';
 
   @override
   String changeEmailSentMessage(String email) {
-    return '$email adresinden ve hesabındaki adresten onayla. İkisi de bitince e-postan değişir.';
+    return '$email adresine gelen bağlantıyı aç. Hesabında zaten bir e-posta adresi varsa oraya gelen bağlantıyı da aç.';
   }
 
   @override
   String get changeEmailSentExpiry =>
-      'Bağlantılar 24 saat sonra geçersiz olur.';
+      'Her bağlantının süresi 24 saat sonra dolar.';
 
   @override
   String get changeEmailSentDone => 'Anladım';
@@ -17087,7 +17087,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get emailConfirmationResendSent =>
-      'Gönderildi. Gelen kutunu kontrol et.';
+      'Onay istendi. Gelen kutunu kontrol et.';
 
   @override
   String get emailConfirmationResendFailed =>

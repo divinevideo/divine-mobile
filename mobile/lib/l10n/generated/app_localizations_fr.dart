@@ -15565,7 +15565,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'On envoie un lien de confirmation à ta nouvelle adresse et à celle de ton compte. Ton e-mail change une fois les deux confirmés.';
+      'On t’enverra un lien à ta nouvelle adresse. Si une adresse e-mail est déjà associée à ton compte, on y enverra aussi un lien.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15585,19 +15585,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get changeEmailWrongPassword => 'Ce n\'est pas ton mot de passe.';
 
   @override
-  String get changeEmailSubmit => 'Envoyer les liens de confirmation';
+  String get changeEmailSubmit => 'Demander la confirmation';
 
   @override
-  String get changeEmailSentTitle => 'Deux liens sont en route';
+  String get changeEmailSentTitle => 'Vérifie ta boîte mail';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Confirme depuis $email et depuis l\'adresse de ton compte. Ton e-mail change une fois les deux faits.';
+    return 'Ouvre le lien reçu à l’adresse $email. Si une adresse e-mail est déjà associée à ton compte, ouvre aussi le lien reçu à cette adresse.';
   }
 
   @override
-  String get changeEmailSentExpiry =>
-      'Les liens expirent au bout de 24 heures.';
+  String get changeEmailSentExpiry => 'Chaque lien expire après 24 heures.';
 
   @override
   String get changeEmailSentDone => 'Compris';
@@ -17438,7 +17437,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get emailConfirmationResendSent =>
-      'Envoyé. Jette un œil à ta boîte de réception.';
+      'Confirmation demandée. Vérifie ta boîte mail.';
 
   @override
   String get emailConfirmationResendFailed =>
