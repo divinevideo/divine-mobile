@@ -55,14 +55,19 @@ class PendingVideoBubble extends StatelessWidget {
       OutgoingVideoDmPhase.publishing => l10n.dmPendingVideoSending,
       OutgoingVideoDmPhase.sent => null,
       OutgoingVideoDmPhase.failed => switch (entry.failure) {
+        OutgoingVideoDmFailure.tooLarge when entry.isDraft =>
+          l10n.libraryDraftShareTooLarge,
         OutgoingVideoDmFailure.tooLarge => l10n.dmVideoTooLarge(
           '$videoDmMaxMegabytes',
         ),
         OutgoingVideoDmFailure.clipNotVerified => l10n.dmClipSendNotVerified,
-        OutgoingVideoDmFailure.failed || null => l10n.dmVideoSendFailed,
+        OutgoingVideoDmFailure.failed || null =>
+          entry.isDraft ? l10n.libraryDraftShareFailed : l10n.dmVideoSendFailed,
       },
     };
-    final semanticsLabel = isFailed
+    final semanticsLabel = entry.isDraft
+        ? null
+        : isFailed
         ? l10n.dmPendingVideoFailedSemantics
         : isUploading
         ? l10n.dmPendingVideoSemantics(percent)
@@ -90,12 +95,18 @@ class PendingVideoBubble extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   spacing: 8,
                   children: [
-                    ExcludeSemantics(child: _PendingCard(entry: entry)),
+                    if (entry.isDraft) ...[
+                      _StatusText(l10n.dmSharedDraft),
+                      if (entry.draftTitle case final title?
+                          when title.trim().isNotEmpty)
+                        _DraftTitle(title.trim()),
+                    ] else
+                      ExcludeSemantics(child: _PendingCard(entry: entry)),
                     // A failure's line says why it failed, which the label
                     // does not; in flight the label already reads it.
                     if (statusText != null)
                       ExcludeSemantics(
-                        excluding: !isFailed,
+                        excluding: !entry.isDraft && !isFailed,
                         child: _StatusText(statusText),
                       ),
                   ],
@@ -205,6 +216,24 @@ class _StatusText extends StatelessWidget {
       style: VineTheme.labelMediumFont(
         color: context.vineColors.onSurfaceMuted,
       ),
+    );
+  }
+}
+
+/// The title of a draft being sent, as its chat card will show it.
+class _DraftTitle extends StatelessWidget {
+  const _DraftTitle(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      textAlign: TextAlign.end,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: VineTheme.titleSmallFont(color: context.vineColors.primaryText),
     );
   }
 }

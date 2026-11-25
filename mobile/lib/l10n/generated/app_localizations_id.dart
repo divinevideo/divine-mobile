@@ -7065,6 +7065,36 @@ class AppLocalizationsId extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplikat';
 
   @override
+  String get libraryDraftActionShare => 'Bagikan draf';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Kirim draf yang bisa diedit ke $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Kamu membagikan klip asli dan riwayat edit. Penerima bisa melihat bagian yang kamu potong, mengedit salinannya, mempostingnya, atau mengirimkannya kembali.';
+
+  @override
+  String get libraryDraftShareFailed => 'Draf tidak dapat dikirim.';
+
+  @override
+  String get libraryDraftShareTooLarge => 'Draf terlalu besar untuk dikirim.';
+
+  @override
+  String get dmSharedDraft => 'Draf yang dibagikan';
+
+  @override
+  String get dmOpenDraft => 'Impor dan edit';
+
+  @override
+  String get dmDraftImportFailed => 'Draf tidak dapat diimpor.';
+
+  @override
+  String get libraryDraftSent => 'Draf terkirim';
+
+  @override
   String get libraryDraftActionDelete => 'Hapus draf';
 
   @override

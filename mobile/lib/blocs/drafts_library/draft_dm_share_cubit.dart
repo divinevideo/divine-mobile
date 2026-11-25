@@ -1,0 +1,147 @@
+// ABOUTME: Exports a saved draft and queues it for one recipient.
+
+import 'dart:io';
+
+import 'package:dm_repository/dm_repository.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/services/dm_video_encryption.dart';
+import 'package:openvine/services/video_dm_outbox.dart';
+import 'package:unified_logger/unified_logger.dart';
+
+enum DraftDmShareState {
+  idle,
+  preparing,
+  queued,
+  failed,
+  tooLarge,
+  blocked,
+  recipientBlockedByUs,
+  retiredRecipient,
+  accountChanged,
+}
+
+/// Prepares an editable project for the active account's DM outbox.
+class DraftDmShareCubit extends Cubit<DraftDmShareState>
+    with CloseGuardedEmit<DraftDmShareState> {
+  DraftDmShareCubit({
+    required this.senderPubkey,
+    required this.recipientPubkey,
+    required Future<DivineVideoDraft?> Function(String) loadDraft,
+    required Future<File> Function(DivineVideoDraft) exportDraft,
+    required Future<String?> Function(DivineVideoDraft) readCoverBlurhash,
+    required bool Function() ownsSession,
+    required DmSendPolicy sendPolicy,
+    required bool Function(String) isBlocked,
+    required VideoDmOutbox outbox,
+  }) : _loadDraft = loadDraft,
+       _exportDraft = exportDraft,
+       _readCoverBlurhash = readCoverBlurhash,
+       _ownsSession = ownsSession,
+       _sendPolicy = sendPolicy,
+       _isBlocked = isBlocked,
+       _outbox = outbox,
+       super(DraftDmShareState.idle);
+
+  final String senderPubkey;
+  final String recipientPubkey;
+  final Future<DivineVideoDraft?> Function(String) _loadDraft;
+  final Future<File> Function(DivineVideoDraft) _exportDraft;
+  final Future<String?> Function(DivineVideoDraft) _readCoverBlurhash;
+  final bool Function() _ownsSession;
+  final DmSendPolicy _sendPolicy;
+  final bool Function(String) _isBlocked;
+  final VideoDmOutbox _outbox;
+
+  String get conversationId =>
+      DmRepository.computeConversationId([senderPubkey, recipientPubkey]);
+
+  Future<void> send(String draftId) async {
+    if (isClosed ||
+        state == DraftDmShareState.preparing ||
+        state == DraftDmShareState.queued) {
+      return;
+    }
+    emitIfOpen(DraftDmShareState.preparing);
+
+    File? bundle;
+    try {
+      if (!_checkSession() || !await _checkRecipient()) return;
+      final draft = await _loadDraft(draftId);
+      if (!_checkSession()) return;
+      if (draft == null) {
+        emitIfOpen(DraftDmShareState.failed);
+        return;
+      }
+
+      // Never throws, so it cannot surface unhandled if the export fails.
+      final coverBlurhash = _readCoverBlurhash(draft);
+      bundle = await _exportDraft(draft);
+      final blurhash = await coverBlurhash;
+
+      if (!_checkSession() || !await _checkRecipient() || !_checkSession()) {
+        return;
+      }
+      _outbox.sendDraft(
+        conversationId: conversationId,
+        recipientPubkey: recipientPubkey,
+        file: bundle,
+        title: draft.title,
+        blurhash: blurhash,
+      );
+      bundle = null;
+      emitIfOpen(DraftDmShareState.queued);
+    } on DmVideoTooLargeException {
+      if (_checkSession()) emitIfOpen(DraftDmShareState.tooLarge);
+    } on Object catch (error, stackTrace) {
+      Log.warning(
+        'Could not export an editable draft for a DM',
+        name: 'DraftDmShareCubit',
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      if (_checkSession()) emitIfOpen(DraftDmShareState.failed);
+    } finally {
+      if (bundle != null) {
+        try {
+          if (bundle.existsSync()) await bundle.delete();
+        } on FileSystemException catch (error) {
+          Log.warning(
+            'Could not delete an abandoned draft package',
+            name: 'DraftDmShareCubit',
+            category: LogCategory.video,
+            error: error,
+          );
+        }
+      }
+    }
+  }
+
+  bool _checkSession() {
+    if (isClosed) return false;
+    if (_ownsSession()) return true;
+    emitIfOpen(DraftDmShareState.accountChanged);
+    return false;
+  }
+
+  Future<bool> _checkRecipient() async {
+    final decision = await _sendPolicy(recipientPubkey);
+    if (!_checkSession()) return false;
+    if (_isBlocked(recipientPubkey)) {
+      emitIfOpen(DraftDmShareState.recipientBlockedByUs);
+      return false;
+    }
+    switch (decision) {
+      case DmSendPolicyDecision.allowed:
+        return true;
+      case DmSendPolicyDecision.terminallyBlockedRetain:
+        emitIfOpen(DraftDmShareState.retiredRecipient);
+      case DmSendPolicyDecision.terminallyBlockedDiscard:
+      case DmSendPolicyDecision.temporarilyBlocked:
+        emitIfOpen(DraftDmShareState.blocked);
+    }
+    return false;
+  }
+}

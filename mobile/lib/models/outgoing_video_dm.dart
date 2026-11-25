@@ -79,6 +79,9 @@ class OutgoingVideoDm extends Equatable {
     this.uploadProgress,
     this.failure,
     this.rumorEventId,
+    this.isDraft = false,
+    this.draftTitle,
+    this.draftBlurhash,
   });
 
   /// Local id, stable for the entry's life.
@@ -117,6 +120,17 @@ class OutgoingVideoDm extends Equatable {
   /// The id of the sent message's row; set when [phase] is sent.
   final String? rumorEventId;
 
+  /// Whether the file is an editable video project.
+  final bool isDraft;
+
+  /// The draft's title, sent so the chat card can name it; null for a video
+  /// or an untitled draft.
+  final String? draftTitle;
+
+  /// A blurhash of the draft's cover, sent as the message's preview; null for
+  /// a video, whose preview is read from the file while it uploads.
+  final String? draftBlurhash;
+
   /// Whether retrying could succeed: a too-large file or a rejected clip
   /// would fail again the same way.
   bool get canRetry =>
@@ -146,6 +160,9 @@ class OutgoingVideoDm extends Equatable {
         : this.uploadProgress,
     failure: failure != null ? failure() : this.failure,
     rumorEventId: rumorEventId != null ? rumorEventId() : this.rumorEventId,
+    isDraft: isDraft,
+    draftTitle: draftTitle,
+    draftBlurhash: draftBlurhash,
   );
 
   @override
@@ -162,6 +179,9 @@ class OutgoingVideoDm extends Equatable {
     uploadProgress,
     failure,
     rumorEventId,
+    isDraft,
+    draftTitle,
+    draftBlurhash,
   ];
 }
 
@@ -174,10 +194,14 @@ class VideoDmSendOutcome extends Equatable {
     required this.status,
     required this.sentCount,
     required this.total,
+    this.isDraft = false,
   });
 
   /// The chat this result belongs to, used to suppress an on-screen toast.
   final String conversationId;
+
+  /// Whether the send was for an editable video project.
+  final bool isDraft;
 
   /// The peer used to resolve the chat's display name in the UI layer.
   final String recipientPubkey;
@@ -202,5 +226,6 @@ class VideoDmSendOutcome extends Equatable {
     status,
     sentCount,
     total,
+    isDraft,
   ];
 }

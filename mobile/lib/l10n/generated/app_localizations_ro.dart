@@ -7324,6 +7324,37 @@ class AppLocalizationsRo extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplică';
 
   @override
+  String get libraryDraftActionShare => 'Distribuie ciorna';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Trimiți o ciornă editabilă către $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Trimiți clipurile originale și istoricul editărilor. Cine le primește poate vedea ce ai tăiat, își poate edita copia, o poate publica sau ți-o poate trimite înapoi.';
+
+  @override
+  String get libraryDraftShareFailed => 'Ciorna nu a putut fi trimisă.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'Ciorna este prea mare pentru a fi trimisă.';
+
+  @override
+  String get dmSharedDraft => 'Ciornă distribuită';
+
+  @override
+  String get dmOpenDraft => 'Importă și editează';
+
+  @override
+  String get dmDraftImportFailed => 'Ciorna nu a putut fi importată.';
+
+  @override
+  String get libraryDraftSent => 'Ciornă trimisă';
+
+  @override
   String get libraryDraftActionDelete => 'Șterge ciorna';
 
   @override

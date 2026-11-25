@@ -7230,6 +7230,38 @@ class AppLocalizationsIt extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Duplica';
 
   @override
+  String get libraryDraftActionShare => 'Condividi bozza';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Inviare una bozza modificabile a $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Condividi le clip originali e la cronologia delle modifiche. Chi le riceve può vedere le parti tagliate, modificare la propria copia, pubblicarla o rimandartela.';
+
+  @override
+  String get libraryDraftShareFailed =>
+      'Non è stato possibile inviare la bozza.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'La bozza è troppo grande per essere inviata.';
+
+  @override
+  String get dmSharedDraft => 'Bozza condivisa';
+
+  @override
+  String get dmOpenDraft => 'Importa e modifica';
+
+  @override
+  String get dmDraftImportFailed => 'Non è stato possibile importare la bozza.';
+
+  @override
+  String get libraryDraftSent => 'Bozza inviata';
+
+  @override
   String get libraryDraftActionDelete => 'Elimina bozza';
 
   @override

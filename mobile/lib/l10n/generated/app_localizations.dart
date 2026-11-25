@@ -12055,6 +12055,60 @@ abstract class AppLocalizations {
   /// **'Duplicate'**
   String get libraryDraftActionDuplicate;
 
+  /// No description provided for @libraryDraftActionShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share draft'**
+  String get libraryDraftActionShare;
+
+  /// Confirmation before sending an editable draft project in a one-to-one DM.
+  ///
+  /// In en, this message translates to:
+  /// **'Send an editable draft to {name}?'**
+  String libraryDraftShareConfirm(String name);
+
+  /// No description provided for @libraryDraftShareNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'You’re sharing the original clips and edit history. They can see what you cut, edit their copy, post it, or send it back.'**
+  String get libraryDraftShareNotice;
+
+  /// No description provided for @libraryDraftShareFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t send the draft.'**
+  String get libraryDraftShareFailed;
+
+  /// No description provided for @libraryDraftShareTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'The draft is too large to send.'**
+  String get libraryDraftShareTooLarge;
+
+  /// No description provided for @dmSharedDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared draft'**
+  String get dmSharedDraft;
+
+  /// No description provided for @dmOpenDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Import and edit'**
+  String get dmOpenDraft;
+
+  /// No description provided for @dmDraftImportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t import the draft.'**
+  String get dmDraftImportFailed;
+
+  /// No description provided for @libraryDraftSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft sent'**
+  String get libraryDraftSent;
+
   /// No description provided for @libraryDraftActionDelete.
   ///
   /// In en, this message translates to:

@@ -82,10 +82,7 @@ String toPortableAudioPath(String path) => _belowAudioRoot(path) ?? path;
 /// path escapes upward out of app audio storage, and reclaim deletes the raw
 /// path. Nothing writes such a path today, so this only keeps the delete
 /// bound honest if one ever reaches the stored `localFilePath`.
-bool isDraftLocalAudioPath(String path) {
-  final relative = _belowAudioRoot(path);
-  return relative != null && !p.split(relative).contains('..');
-}
+bool isDraftLocalAudioPath(String path) => _belowAudioRoot(path) != null;
 
 /// Absolute path for a persisted audio [path], rooted at [documentsPath].
 ///
@@ -138,16 +135,29 @@ Map<String, dynamic> resolveAudioPaths(
 /// documents directory, so a file placed in a `voice_over_recordings/` folder
 /// anywhere else would also be rebased onto documents on load. Nothing writes
 /// any of these names outside the documents directory today.
+///
+/// A network or asset address is never a file this device wrote, whatever
+/// its path says, and a `..` below the root climbs back out of app audio
+/// storage. Neither has a tail, so a draft received from someone else cannot
+/// name one to reach a file of the recipient's.
 String? _belowAudioRoot(String path) {
-  if (path.isEmpty) return null;
+  if (path.isEmpty || _hasNonFileScheme(path)) return null;
   final segments = p.split(path);
   // Stop at the second-to-last segment: a match needs a file below the root.
   for (var i = segments.length - 2; i >= 0; i--) {
     if (_audioRootDirNames.contains(segments[i])) {
-      return p.joinAll(segments.sublist(i));
+      final tail = segments.sublist(i);
+      return tail.contains('..') ? null : p.joinAll(tail);
     }
   }
   return null;
+}
+
+/// Whether [path] is a URI whose scheme is not `file`, such as `https:` or
+/// `asset:`. A one-letter scheme is a Windows drive, not a URI.
+bool _hasNonFileScheme(String path) {
+  final scheme = Uri.tryParse(path)?.scheme ?? '';
+  return scheme.length > 1 && scheme != 'file';
 }
 
 /// Keys of a persisted [AudioEvent] map that can hold an on-disk path: the
@@ -171,8 +181,8 @@ Object? _rewriteAudioUrls(
   Object? node,
   String Function(String path) transform,
 ) => rewriteJsonMaps(node, (map) {
-  final isDraftLocal = _isDraftLocalAudio(map);
-  if (!isDraftLocal && !_playsProcessedCopy(map)) return null;
+  final isDraftLocal = isDraftLocalAudioJson(map);
+  if (!isDraftLocal && !playsProcessedCopyJson(map)) return null;
   Map<String, dynamic>? rewritten;
   for (final key in _audioPathKeys) {
     final path = map[key];
@@ -186,21 +196,23 @@ Object? _rewriteAudioUrls(
   return rewritten;
 });
 
-/// Whether [node] is a draft-local audio event.
+/// Whether [node] is a draft-local audio event, whose paths load rebased onto
+/// the documents directory.
 ///
 /// Mirrors [AudioEvent.isDraftLocalAudio] against a raw map: the persisted
 /// tree is walked without deserializing, so a malformed audio entry is
 /// skipped rather than throwing. Keep the predicate in step.
-bool _isDraftLocalAudio(Map<Object?, Object?> node) {
+bool isDraftLocalAudioJson(Map<Object?, Object?> node) {
   final id = node['id'];
   return id is String && _draftLocalMarkers.any((m) => id.startsWith('${m}_'));
 }
 
-/// Whether [node] is an audio event playing a processed copy of its sound.
+/// Whether [node] is an audio event playing a processed copy of its sound,
+/// whose local paths load rebased onto the documents directory.
 ///
 /// Mirrors [AudioEvent.playsProcessedCopy] against a raw map, like
-/// [_isDraftLocalAudio].
-bool _playsProcessedCopy(Map<Object?, Object?> node) {
+/// [isDraftLocalAudioJson].
+bool playsProcessedCopyJson(Map<Object?, Object?> node) {
   final original = node['originalUrl'];
   return original is String && original.isNotEmpty;
 }

@@ -7103,6 +7103,36 @@ class AppLocalizationsVi extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Nhân bản';
 
   @override
+  String get libraryDraftActionShare => 'Chia sẻ bản nháp';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Gửi bản nháp có thể chỉnh sửa cho $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Bạn đang chia sẻ các clip gốc và lịch sử chỉnh sửa. Người nhận có thể xem những đoạn bạn đã cắt, chỉnh sửa bản sao của họ, đăng hoặc gửi lại cho bạn.';
+
+  @override
+  String get libraryDraftShareFailed => 'Không thể gửi bản nháp.';
+
+  @override
+  String get libraryDraftShareTooLarge => 'Bản nháp quá lớn để gửi.';
+
+  @override
+  String get dmSharedDraft => 'Bản nháp đã chia sẻ';
+
+  @override
+  String get dmOpenDraft => 'Nhập và chỉnh sửa';
+
+  @override
+  String get dmDraftImportFailed => 'Không thể nhập bản nháp.';
+
+  @override
+  String get libraryDraftSent => 'Đã gửi bản nháp';
+
+  @override
   String get libraryDraftActionDelete => 'Xóa bản nháp';
 
   @override

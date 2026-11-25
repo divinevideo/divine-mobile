@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show UserProfile;
 import 'package:openvine/blocs/drafts_library/drafts_library_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
@@ -16,14 +17,33 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/draft_summary.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/services/video_dm_outbox.dart';
 import 'package:openvine/widgets/library/drafts_tab.dart';
 import 'package:openvine/widgets/library/empty_library_state.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
+import '../../helpers/test_provider_overrides.dart';
+
 class _MockDraftsLibraryBloc
     extends MockBloc<DraftsLibraryEvent, DraftsLibraryState>
     implements DraftsLibraryBloc {}
+
+class _MockOutbox extends Mock implements VideoDmOutbox {}
+
+class _TestNostrSession extends NostrSession {
+  @override
+  NostrSessionReadiness build() =>
+      const NostrSessionReadiness.identityKnown(pubkey: _senderPubkey);
+}
+
+const _senderPubkey =
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const _recipientPubkey =
+    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
 class _RecordingPublisher extends VideoPublishNotifier {
   final published = <DivineVideoDraft>[];
@@ -240,6 +260,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text(en.libraryDraftActionPost), findsOneWidget);
+        expect(find.text(en.libraryDraftActionShare), findsOneWidget);
         expect(find.text(en.libraryDraftActionEdit), findsOneWidget);
         expect(find.text(en.libraryDraftActionDelete), findsOneWidget);
       });
@@ -309,6 +330,72 @@ void main() {
         expect(publisher.published, isEmpty);
         expect(find.text(en.commonSomethingWentWrong), findsOneWidget);
       });
+    });
+
+    testWidgets('choosing a person requires confirmation before sending', (
+      tester,
+    ) async {
+      final outbox = _MockOutbox();
+      final profiles = createMockProfileRepository();
+      when(
+        profiles.watchVanishedPubkeys,
+      ).thenAnswer((_) => const Stream<Set<String>>.empty());
+      final contact = UserProfile(
+        pubkey: _recipientPubkey,
+        displayName: 'Casey',
+        rawData: const {},
+        createdAt: DateTime.utc(2026),
+        eventId: _recipientPubkey,
+      );
+      when(
+        () => profiles.getCachedProfile(pubkey: _recipientPubkey),
+      ).thenAnswer((_) async => contact);
+      when(
+        () => mockBloc.state,
+      ).thenReturn(DraftsLibraryLoaded(drafts: [createDraft(id: 'draft1')]));
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          theme: VineTheme.theme,
+          mockAuthService: createMockAuthService(
+            currentPublicKeyHex: _senderPubkey,
+          ),
+          mockProfileRepository: profiles,
+          mockFollowRepository: createMockFollowRepository(
+            followingPubkeys: [_recipientPubkey],
+          ),
+          additionalOverrides: [
+            nostrSessionProvider.overrideWith(_TestNostrSession.new),
+            isDmRestrictedProvider.overrideWithValue(false),
+            videoDmOutboxProvider.overrideWithValue(outbox),
+          ],
+          home: Scaffold(
+            body: BlocProvider<DraftsLibraryBloc>.value(
+              value: mockBloc,
+              child: const DraftsTab(showRecordButton: false),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(en.libraryDraftActionShare));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Casey'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(en.libraryDraftShareConfirm('Casey')), findsOneWidget);
+      expect(find.text(en.libraryDraftShareNotice), findsOneWidget);
+      verifyNever(() => mockBloc.loadDraftForShare('draft1'));
+      verifyZeroInteractions(outbox);
+
+      await tester.tap(find.text(en.commonCancel));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Test Draft'), findsOneWidget);
+      verifyNever(() => mockBloc.loadDraftForShare('draft1'));
+      verifyZeroInteractions(outbox);
     });
 
     group('duplicate action', () {

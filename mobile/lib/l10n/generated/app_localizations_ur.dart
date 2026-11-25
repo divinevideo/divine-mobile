@@ -7150,6 +7150,36 @@ class AppLocalizationsUr extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'نقل کریں';
 
   @override
+  String get libraryDraftActionShare => 'مسودہ شیئر کریں';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'کیا $name کو قابلِ تدوین مسودہ بھیجنا ہے؟';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'اصل کلپس اور ترمیم کی سرگزشت بھی شیئر ہوتی ہے۔ وصول کنندہ کٹے ہوئے حصے دیکھ سکتا ہے اور اپنی کاپی میں ترمیم کر کے اسے پوسٹ کر سکتا ہے یا واپس بھیج سکتا ہے۔';
+
+  @override
+  String get libraryDraftShareFailed => 'مسودہ بھیجا نہیں جا سکا۔';
+
+  @override
+  String get libraryDraftShareTooLarge => 'مسودہ بھیجنے کے لیے بہت بڑا ہے۔';
+
+  @override
+  String get dmSharedDraft => 'شیئر کیا گیا مسودہ';
+
+  @override
+  String get dmOpenDraft => 'درآمد کریں اور ترمیم کریں';
+
+  @override
+  String get dmDraftImportFailed => 'مسودہ درآمد نہیں ہو سکا۔';
+
+  @override
+  String get libraryDraftSent => 'مسودہ بھیج دیا گیا';
+
+  @override
   String get libraryDraftActionDelete => 'مسودہ حذف کریں';
 
   @override

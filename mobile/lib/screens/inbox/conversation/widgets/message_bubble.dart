@@ -200,6 +200,7 @@ class MessageBubble extends StatefulWidget {
     this.sharedVideoRef,
     this.quotedVideoRef,
     this.fileMetadata,
+    this.draftAttachment,
     this.isClip = false,
     this.encryptedVideoFramePath,
     this.encryptedVideoHold,
@@ -273,6 +274,9 @@ class MessageBubble extends StatefulWidget {
   /// [DmFileMetadata.isVideo] is true the bubble renders an
   /// [EncryptedVideoCard] instead of text. Null for text messages.
   final DmFileMetadata? fileMetadata;
+
+  /// The card for an encrypted editing project.
+  final Widget? draftAttachment;
 
   /// Whether the encrypted video is a clip the sender shared from their
   /// library. Labels the [EncryptedVideoCard].
@@ -395,7 +399,8 @@ class _MessageBubbleState extends State<MessageBubble> {
     final hasEncryptedVideo = fileMetadata?.isVideo == true;
     // Both media cards share the neutral frame, the card-width cap, and the
     // standalone grouping.
-    final hasMediaCard = hasVideo || hasEncryptedVideo;
+    final hasMediaCard =
+        hasVideo || hasEncryptedVideo || widget.draftAttachment != null;
     // A sent media card sits on the neutral frame, so being sent does not say
     // what is behind the text.
     final isOnSentFill = isSent && !hasMediaCard;
@@ -565,7 +570,9 @@ class _MessageBubbleState extends State<MessageBubble> {
                                   ),
                                 ),
                               ),
-                            if (hasEncryptedVideo) ...[
+                            if (widget.draftAttachment case final attachment?)
+                              attachment
+                            else if (hasEncryptedVideo) ...[
                               // Tap opens the decrypt-and-play page; a failed
                               // own send keeps the outer resend affordance as
                               // the only tap target.

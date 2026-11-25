@@ -7181,6 +7181,38 @@ class AppLocalizationsNl extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'Dupliceren';
 
   @override
+  String get libraryDraftActionShare => 'Concept delen';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Een bewerkbaar concept naar $name sturen?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Je deelt de originele clips en de bewerkingsgeschiedenis. De ontvanger kan zien wat je hebt weggeknipt en kan de eigen kopie bewerken, plaatsen of terugsturen.';
+
+  @override
+  String get libraryDraftShareFailed =>
+      'Het concept kon niet worden verstuurd.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'Het concept is te groot om te versturen.';
+
+  @override
+  String get dmSharedDraft => 'Gedeeld concept';
+
+  @override
+  String get dmOpenDraft => 'Importeren en bewerken';
+
+  @override
+  String get dmDraftImportFailed => 'Het concept kon niet worden geïmporteerd.';
+
+  @override
+  String get libraryDraftSent => 'Concept verstuurd';
+
+  @override
   String get libraryDraftActionDelete => 'Concept verwijderen';
 
   @override

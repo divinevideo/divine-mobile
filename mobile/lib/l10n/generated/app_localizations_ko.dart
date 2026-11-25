@@ -6800,6 +6800,36 @@ class AppLocalizationsKo extends AppLocalizations {
   String get libraryDraftActionDuplicate => '복제';
 
   @override
+  String get libraryDraftActionShare => '초안 공유';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return '$name님에게 편집 가능한 초안을 보낼까요?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      '원본 클립과 편집 기록을 공유해요. 상대방은 잘라낸 부분을 볼 수 있고, 자기 사본을 편집하거나 게시하거나 다시 보낼 수 있어요.';
+
+  @override
+  String get libraryDraftShareFailed => '초안을 보내지 못했어요.';
+
+  @override
+  String get libraryDraftShareTooLarge => '초안이 너무 커서 보낼 수 없어요.';
+
+  @override
+  String get dmSharedDraft => '공유된 초안';
+
+  @override
+  String get dmOpenDraft => '가져와서 편집';
+
+  @override
+  String get dmDraftImportFailed => '초안을 가져오지 못했어요.';
+
+  @override
+  String get libraryDraftSent => '초안을 보냈어요';
+
+  @override
   String get libraryDraftActionDelete => '임시 저장 삭제';
 
   @override

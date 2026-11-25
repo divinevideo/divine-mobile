@@ -7357,6 +7357,37 @@ class AppLocalizationsTe extends AppLocalizations {
   String get libraryDraftActionDuplicate => 'నకిలీ';
 
   @override
+  String get libraryDraftActionShare => 'డ్రాఫ్ట్ షేర్ చేయి';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return '$nameకు ఎడిట్ చేయగల డ్రాఫ్ట్ పంపాలా?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'అసలు క్లిప్‌లు, ఎడిటింగ్ చరిత్ర రెండూ షేర్ అవుతాయి. అందుకున్నవారు మీరు కత్తిరించిన భాగాలను చూడవచ్చు. తమ కాపీని ఎడిట్ చేయవచ్చు, పోస్ట్ చేయవచ్చు లేదా తిరిగి పంపవచ్చు.';
+
+  @override
+  String get libraryDraftShareFailed => 'డ్రాఫ్ట్ పంపలేకపోయాం.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'డ్రాఫ్ట్ పంపడానికి చాలా పెద్దగా ఉంది.';
+
+  @override
+  String get dmSharedDraft => 'షేర్ చేసిన డ్రాఫ్ట్';
+
+  @override
+  String get dmOpenDraft => 'ఇంపోర్ట్ చేసి ఎడిట్ చేయి';
+
+  @override
+  String get dmDraftImportFailed => 'డ్రాఫ్ట్ ఇంపోర్ట్ చేయలేకపోయాం.';
+
+  @override
+  String get libraryDraftSent => 'డ్రాఫ్ట్ పంపాం';
+
+  @override
   String get libraryDraftActionDelete => 'డ్రాఫ్ట్‌ను తొలగించండి';
 
   @override
