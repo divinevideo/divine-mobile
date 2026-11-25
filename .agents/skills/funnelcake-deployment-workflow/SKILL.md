@@ -37,6 +37,9 @@ Read the authoritative documentation in the `divine-funnelcake` repository befor
 - **Migrations use `funnelcake-migrate` over HTTP (port 8123).** Schema migrations run as
   an ArgoCD sync hook using `funnelcake-migrate` with HTTP(S) `CLICKHOUSE_URL` (port 8123)
   and `FUNNELCAKE_MIGRATIONS_TARGET=replicated`.
+- **Single-statement `RENAME TABLE` still required.** Self-hosted `Replicated` databases in
+  production also reject multi-table renames in a single query (Code 48); split each rename
+  into its own statement (see `docs/migration-best-practices.md` for `replicated` mode rules).
 - **Retired paths (do not use):**
   - Manual `kubectl apply` of `golang-migrate` / `database/entrypoint.sh` migration Jobs.
   - ClickHouse Cloud native-TLS mode (`CLICKHOUSE_URL` forcing port 9440) and the legacy
