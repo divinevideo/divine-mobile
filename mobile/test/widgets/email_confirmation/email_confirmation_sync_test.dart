@@ -36,7 +36,8 @@ void main() {
       when(() => cubit.state).thenReturn(const EmailConfirmationState());
       when(() => cubit.loadFor(any())).thenAnswer((_) async {});
       when(() => cubit.refresh()).thenAnswer((_) async {});
-      when(cubit.markUnconfirmedByKeycast).thenAnswer((_) async {});
+      when(() => cubit.markUnconfirmedByKeycast(any()))
+          .thenAnswer((_) async {});
       authService = _MockAuthService();
       authStates = StreamController<AuthState>.broadcast();
       addTearDown(authStates.close);
@@ -86,6 +87,7 @@ void main() {
       final rpc = KeycastRpc(
         nostrApi: 'https://login.divine.video/api/nostr',
         accessToken: 'token',
+        owner: _account,
         httpClient: MockClient(
           (_) async => http.Response(
             '{"error":"limit","code":"UNCONFIRMED_RATE_LIMITED"}',
@@ -99,7 +101,7 @@ void main() {
       );
       await tester.pump();
 
-      verify(cubit.reportCapReached).called(1);
+      verify(() => cubit.reportCapReached(_account)).called(1);
     });
 
     testWidgets('forgets the account on sign-out', (tester) async {

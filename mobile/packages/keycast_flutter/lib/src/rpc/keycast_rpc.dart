@@ -23,6 +23,7 @@ class KeycastRpc implements NostrSigner, GiftWrapBatchUnwrapper {
   KeycastRpc({
     required this.nostrApi,
     required String accessToken,
+    this.owner,
     http.Client? httpClient,
     http.Client Function()? httpClientFactory,
     TokenRefreshCallback? onTokenRefresh,
@@ -47,6 +48,7 @@ class KeycastRpc implements NostrSigner, GiftWrapBatchUnwrapper {
     return KeycastRpc(
       nostrApi: config.nostrApiUrl,
       accessToken: session.accessToken!,
+      owner: session.userPubkey,
       onTokenRefresh: onTokenRefresh,
       requestTimeout: requestTimeout,
       batchRequestTimeout: batchRequestTimeout,
@@ -111,6 +113,12 @@ class KeycastRpc implements NostrSigner, GiftWrapBatchUnwrapper {
   static const Duration defaultBatchRequestTimeout = Duration(seconds: 30);
 
   final String nostrApi;
+
+  /// Public key (hex) of the account this signer signs for, when known. It is
+  /// reported with each [KeycastPolicyRefusal] so the refusal reaches that
+  /// account, not whichever one is signed in by the time it arrives.
+  final String? owner;
+
   String _accessToken;
   final http.Client Function() _clientFactory;
   http.Client _client;
@@ -220,6 +228,7 @@ class KeycastRpc implements NostrSigner, GiftWrapBatchUnwrapper {
         body: response.body,
         retryAfterHeader: response.headers['retry-after'],
         method: method,
+        owner: owner,
       );
       if (refusal != null) throw refusal;
       final message = 'HTTP ${response.statusCode}: ${response.body}';

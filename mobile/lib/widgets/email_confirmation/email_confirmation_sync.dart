@@ -61,13 +61,13 @@ class _EmailConfirmationSyncState extends ConsumerState<EmailConfirmationSync> {
     switch (refusal.kind) {
       case KeycastPolicyRefusalKind.emailNotConfirmed:
         runDetached(
-          cubit.markUnconfirmedByKeycast(),
+          cubit.markUnconfirmedByKeycast(refusal.owner),
           'lock after Keycast refused a DM',
           logName: 'EmailConfirmationSync',
           category: LogCategory.auth,
         );
       case KeycastPolicyRefusalKind.unconfirmedRateLimited:
-        cubit.reportCapReached();
+        cubit.reportCapReached(refusal.owner);
     }
   }
 

@@ -69,15 +69,19 @@ class EmailConfirmationCubit extends Cubit<EmailConfirmationState>
     await _repository.remember(account, confirmation);
   }
 
-  /// Keycast refused to sign a direct message because it sees this account's
-  /// email as unconfirmed.
+  /// Keycast refused to sign a direct message for [refusedAccount] because it
+  /// sees that account's email as unconfirmed.
   ///
   /// Keycast is the authority, so the account locks again even if the app
-  /// had it as confirmed, and then re-checks.
-  Future<void> markUnconfirmedByKeycast() async {
+  /// had it as confirmed, and then re-checks. A refusal naming another
+  /// account is dropped: it arrived after a switch. A signer built from a
+  /// session that was not yet bound to its account names nobody, and its
+  /// refusal is taken as the signed-in account's.
+  Future<void> markUnconfirmedByKeycast(String? refusedAccount) async {
     final account = state.account;
     final email = state.email;
     if (account == null) return;
+    if (refusedAccount != null && refusedAccount != account) return;
     if (email != null && !state.isUnconfirmed) {
       final confirmation = EmailConfirmation.unconfirmed(email);
       emitIfOpen(
@@ -92,10 +96,15 @@ class EmailConfirmationCubit extends Cubit<EmailConfirmationState>
     await refresh();
   }
 
-  /// Keycast refused a post, comment or report because this account used up
-  /// the hourly allowance that applies until it confirms its email.
-  void reportCapReached() {
-    if (state.account == null) return;
+  /// Keycast refused a post, comment or report because [refusedAccount] used
+  /// up the hourly allowance that applies until it confirms its email.
+  ///
+  /// Dropped when [refusedAccount] names another account, as for
+  /// [markUnconfirmedByKeycast].
+  void reportCapReached(String? refusedAccount) {
+    final account = state.account;
+    if (account == null) return;
+    if (refusedAccount != null && refusedAccount != account) return;
     emitIfOpen(state.copyWith(capRefusals: state.capRefusals + 1));
   }
 

@@ -228,7 +228,7 @@ void main() {
         },
         build: buildCubit,
         seed: () => _confirmed,
-        act: (cubit) => cubit.markUnconfirmedByKeycast(),
+        act: (cubit) => cubit.markUnconfirmedByKeycast(_account),
         expect: () => const [_unconfirmed],
         verify: (_) => verify(
           () => repository.remember(
@@ -238,10 +238,40 @@ void main() {
         ).called(1),
       );
 
+      // A refusal can arrive after the account that triggered it was swapped
+      // out. Acting on it would lock, and cache a verdict for, the account
+      // that switched in.
+      blocTest<EmailConfirmationCubit, EmailConfirmationState>(
+        "ignores a refusal of another account's signer",
+        build: buildCubit,
+        seed: () => _confirmed,
+        act: (cubit) => cubit.markUnconfirmedByKeycast(_otherAccount),
+        expect: () => const <EmailConfirmationState>[],
+        verify: (_) {
+          verifyNever(() => repository.remember(any(), any()));
+          verifyNever(() => repository.fetchStatus(any()));
+        },
+      );
+
+      // A signer built from a session not yet bound to its account cannot
+      // name it; its refusal still locks the signed-in account.
+      blocTest<EmailConfirmationCubit, EmailConfirmationState>(
+        'takes a refusal that names no account as the signed-in one',
+        setUp: () {
+          when(
+            () => repository.fetchStatus(any()),
+          ).thenAnswer((_) async => const EmailConfirmation.unknown());
+        },
+        build: buildCubit,
+        seed: () => _confirmed,
+        act: (cubit) => cubit.markUnconfirmedByKeycast(null),
+        expect: () => const [_unconfirmed],
+      );
+
       blocTest<EmailConfirmationCubit, EmailConfirmationState>(
         'does nothing with no signed-in account',
         build: buildCubit,
-        act: (cubit) => cubit.markUnconfirmedByKeycast(),
+        act: (cubit) => cubit.markUnconfirmedByKeycast(_account),
         expect: () => const <EmailConfirmationState>[],
         verify: (_) => verifyNever(() => repository.fetchStatus(any())),
       );
@@ -249,12 +279,20 @@ void main() {
 
     group('reportCapReached', () {
       blocTest<EmailConfirmationCubit, EmailConfirmationState>(
+        "ignores a cap on another account's signer",
+        build: buildCubit,
+        seed: () => _unconfirmed,
+        act: (cubit) => cubit.reportCapReached(_otherAccount),
+        expect: () => const <EmailConfirmationState>[],
+      );
+
+      blocTest<EmailConfirmationCubit, EmailConfirmationState>(
         'counts each refusal so every one can be explained',
         build: buildCubit,
         seed: () => _unconfirmed,
         act: (cubit) => cubit
-          ..reportCapReached()
-          ..reportCapReached(),
+          ..reportCapReached(_account)
+          ..reportCapReached(_account),
         expect: () => [
           _unconfirmed.copyWith(capRefusals: 1),
           _unconfirmed.copyWith(capRefusals: 2),

@@ -19,9 +19,14 @@ enum KeycastPolicyRefusalKind {
 
 /// One signing refusal from Keycast.
 class KeycastPolicyRefusal {
-  const KeycastPolicyRefusal(this.kind, {this.retryAfter});
+  const KeycastPolicyRefusal(this.kind, {this.owner, this.retryAfter});
 
   final KeycastPolicyRefusalKind kind;
+
+  /// Public key (hex) of the account whose signer was refused, or null when
+  /// the signer was not told its owner. A refusal can arrive after another
+  /// account has signed in, so this is what ties it to the right account.
+  final String? owner;
 
   /// How long until the allowance frees up, when Keycast said.
   final Duration? retryAfter;
@@ -65,6 +70,7 @@ abstract final class KeycastPolicyRefusals {
     required String body,
     required String? retryAfterHeader,
     required String method,
+    String? owner,
   }) {
     final Object? decoded;
     try {
@@ -80,8 +86,9 @@ abstract final class KeycastPolicyRefusals {
     switch (code) {
       case 'EMAIL_NOT_CONFIRMED':
         _controller.add(
-          const KeycastPolicyRefusal(
+          KeycastPolicyRefusal(
             KeycastPolicyRefusalKind.emailNotConfirmed,
+            owner: owner,
           ),
         );
         return EmailNotConfirmedException(message, method: method);
@@ -91,6 +98,7 @@ abstract final class KeycastPolicyRefusals {
         _controller.add(
           KeycastPolicyRefusal(
             KeycastPolicyRefusalKind.unconfirmedRateLimited,
+            owner: owner,
             retryAfter: retryAfter,
           ),
         );

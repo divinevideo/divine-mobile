@@ -551,6 +551,53 @@ void main() {
         );
       });
 
+      test('a refusal names the account whose signer was refused', () async {
+        mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'error': 'Confirm your email to send direct messages.',
+              'code': 'EMAIL_NOT_CONFIRMED',
+            }),
+            403,
+          );
+        });
+        final rpc = KeycastRpc(
+          nostrApi: 'https://login.divine.video/api/nostr',
+          accessToken: 'test_token',
+          httpClient: mockClient,
+          owner: 'owner-pubkey',
+        );
+        final reported = KeycastPolicyRefusals.stream.first;
+
+        await expectLater(
+          rpc.getPublicKey,
+          throwsA(isA<EmailNotConfirmedException>()),
+        );
+        expect((await reported).owner, 'owner-pubkey');
+      });
+
+      test(
+        "a signer built from a session refuses in its owner's name",
+        () async {
+          const config = OAuthConfig(
+            serverUrl: 'https://login.divine.video',
+            clientId: 'test',
+            redirectUri: 'divine://callback',
+          );
+          final session = KeycastSession(
+            bunkerUrl: 'bunker://test',
+            accessToken: 'valid_token',
+            expiresAt: DateTime.now().add(const Duration(hours: 1)),
+            userPubkey: 'session-owner',
+          );
+
+          expect(
+            KeycastRpc.fromSession(config, session).owner,
+            'session-owner',
+          );
+        },
+      );
+
       test('another 403 stays a plain RpcException', () async {
         mockClient = MockClient((request) async {
           return http.Response(
