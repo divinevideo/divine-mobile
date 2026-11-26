@@ -637,9 +637,11 @@ class VideoStats {
   /// takedowns are separate server decisions refreshed at action time.
   final bool archiveAudioReuseEnabled;
 
-  /// The address of the series this video is an episode of, as Funnelcake
-  /// read it from the video's tags. It is the only source for rows that
-  /// leave the tags out; [toVideoEvent] checks it the same way as a tag.
+  /// The address of the series this video says it is an episode of, as
+  /// Funnelcake read it from the video's tags.
+  ///
+  /// [toVideoEvent] passes it ahead of the tags and checks it the same way as
+  /// a tag. It is the only source for rows that leave the tags out.
   final String? series;
 
   /// Deprecated alias for [moderationLabels].

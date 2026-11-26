@@ -1090,14 +1090,15 @@ class VideoEvent {
   /// Kept as its own field for the same reason as [linkUrls].
   final List<VideoStickerRegion> stickerRegions;
 
-  /// The address of the series this video is an episode of,
-  /// `30005:<creator pubkey>:<series d-tag>`, or null when it is not one.
+  /// The address of the series this video says it is an episode of,
+  /// `30005:<creator pubkey>:<series d-tag>`, or null when it names none.
   ///
-  /// Read from the `a` tag marked [videoSeriesTagMarker], or given by an API
-  /// row whose tags were left out, and kept as its own field for the same
-  /// reason as [linkUrls]. Only a well-formed address of a list by the
-  /// video's own author counts. Whether that list exists, is marked as a
-  /// series and holds this video is left to whoever shows the series.
+  /// A usable address passed in wins, as an API row whose tags were left out
+  /// must pass one; otherwise it is read from the `a` tag marked
+  /// [videoSeriesTagMarker]. It is kept as its own field for the same reason
+  /// as [linkUrls]. Only a well-formed address of a list by the video's own
+  /// author counts. Whether that list exists, is marked as a series and holds
+  /// this video is left to whoever shows the series.
   final String? seriesCoordinate;
 
   static final _seriesListAddress = RegExp(

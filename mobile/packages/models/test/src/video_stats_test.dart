@@ -2680,6 +2680,33 @@ void main() {
         expect(stats.toVideoEvent().seriesCoordinate, isNull);
       });
 
+      test('prefers the series the row names over its tags', () {
+        final stats = VideoStats.fromJson(
+          row(
+            seriesField: series,
+            tags: [
+              ['a', '30005:$author:another-story', '', videoSeriesTagMarker],
+            ],
+          ),
+        );
+
+        expect(stats.toVideoEvent().seriesCoordinate, equals(series));
+      });
+
+      test("reads the tags when the row names someone else's list", () {
+        // An API row can name another creator's list; the tags still name ours.
+        final stats = VideoStats.fromJson(
+          row(
+            seriesField: '30005:${'d' * 64}:their-story',
+            tags: [
+              ['a', series, '', videoSeriesTagMarker],
+            ],
+          ),
+        );
+
+        expect(stats.toVideoEvent().seriesCoordinate, equals(series));
+      });
+
       test('has no series when the row names none', () {
         final stats = VideoStats.fromJson(row(seriesField: 42));
 
