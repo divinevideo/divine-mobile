@@ -3976,14 +3976,22 @@ void main() {
             id: 'reaction_later',
             targetEventId: eventId,
             authorPubkey: 'liker_b_pubkey_1234567890abcdef',
+            tags: [
+              ['a', aTag],
+            ],
           );
           var settled = false;
           when(() => mockNostrClient.readEvents(any())).thenAnswer(
-            (_) async => QueryResult(
-              events: <Event>[reaction, if (settled) laterReaction],
-              endedBy: settled ? QueryEnd.complete : QueryEnd.settledEarly,
-              answeredNetworkRelayCount: 1,
-            ),
+            (invocation) async {
+              final filters =
+                  invocation.positionalArguments.single as List<Filter>;
+              if (filters.single.e != null) return _answered([reaction]);
+              return QueryResult(
+                events: <Event>[if (settled) laterReaction],
+                endedBy: settled ? QueryEnd.complete : QueryEnd.settledEarly,
+                answeredNetworkRelayCount: 1,
+              );
+            },
           );
           when(
             () => mockNostrClient.queryEvents(any()),

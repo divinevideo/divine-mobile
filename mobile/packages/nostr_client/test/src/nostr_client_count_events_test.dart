@@ -97,8 +97,8 @@ void main() {
         expect(count, equals(4));
         expect(budgets, hasLength(2));
         expect(budgets.first, equals(const Duration(seconds: 5)));
-        expect(budgets.last, lessThanOrEqualTo(const Duration(seconds: 3)));
-      });
+        expect(budgets.last, equals(const Duration(seconds: 3)));
+      }, initialTime: DateTime.utc(2000));
     });
   });
 }
