@@ -58,6 +58,7 @@ class VideoStats {
     this.isVerifiedArchive = false,
     this.isArchiveVerificationUnknown = false,
     this.archiveAudioReuseEnabled = false,
+    this.series,
     List<String> moderationLabels = const [],
     @Deprecated('Use moderationLabels') List<String>? contentLabels,
   }) : moderationLabels = contentLabels ?? moderationLabels;
@@ -487,6 +488,7 @@ class VideoStats {
           json['verified_archive'] != true &&
           json['archive_provenance_available'] != true,
       archiveAudioReuseEnabled: json['archive_audio_reuse_enabled'] == true,
+      series: json['series'] is String ? json['series'] as String : null,
     );
   }
 
@@ -635,6 +637,11 @@ class VideoStats {
   /// takedowns are separate server decisions refreshed at action time.
   final bool archiveAudioReuseEnabled;
 
+  /// The address of the series this video is an episode of, as Funnelcake
+  /// read it from the video's tags. It is the only source for rows that
+  /// leave the tags out; [toVideoEvent] checks it the same way as a tag.
+  final String? series;
+
   /// Deprecated alias for [moderationLabels].
   @Deprecated('Use moderationLabels')
   List<String> get contentLabels => moderationLabels;
@@ -737,6 +744,7 @@ class VideoStats {
       isArchiveVerificationUnknown: isArchiveVerificationUnknown,
       archiveAudioReuseEnabled: archiveAudioReuseEnabled,
       nostrEventTags: eventTags,
+      seriesCoordinate: series,
       rawTags: {
         ...rawTags,
         // Note: Do NOT inject engagement `loops` here — rawTags['loops']

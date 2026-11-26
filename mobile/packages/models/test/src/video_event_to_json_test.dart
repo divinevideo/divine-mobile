@@ -126,6 +126,7 @@ VideoEvent _fullVideo() => VideoEvent(
   archiveAudioReuseEnabled: true,
   eventKind: 34236,
   sourceRelay: 'wss://relay.divine.video',
+  seriesCoordinate: '30005:$_pubkey:our-story',
 );
 
 const _expectedKeys = <String>{
@@ -190,6 +191,7 @@ const _expectedKeys = <String>{
   'archiveAudioReuseEnabled',
   'eventKind',
   'sourceRelay',
+  'seriesCoordinate',
 };
 
 const _excludedDerivedGetters = <String>{
@@ -426,6 +428,7 @@ void main() {
       expect(restored.proofSummary, equals(original.proofSummary));
       expect(restored.isVerifiedArchive, isTrue);
       expect(restored.archiveAudioReuseEnabled, isTrue);
+      expect(restored.seriesCoordinate, equals('30005:$_pubkey:our-story'));
     });
 
     test('round-trips an archive check the server could not make', () {
