@@ -50,6 +50,8 @@ constexpr uint32_t kTickIntervalMs = 50;
 constexpr uint32_t kTicksPerStateEvent = 4;
 constexpr uint32_t kSetClipsTimeoutMs = 10000;
 constexpr uint32_t kSeekTimeoutMs = 500;
+// Optional trim discovery shares this budget across every clip and read.
+constexpr auto kTrackEndTrimBudget = std::chrono::seconds(1);
 // A clip has to start this far into its source before its first reported
 // position can tell whether Windows counts positions from the source start.
 constexpr int64_t kPositionModeProbeMs = 500;
@@ -232,15 +234,17 @@ bool WantsCommonTrackEnd(const ClipSpec& clip) {
 }
 
 // The trims trimToCommonTrackEnd asks for. Blocks on file and network reads.
-std::vector<ClipTrim> CommonTrackEndTrims(const std::string& log_target,
-                                          const std::vector<ClipSpec>& clips) {
+std::vector<ClipTrim> CommonTrackEndTrims(
+    const std::string& log_target, const std::vector<ClipSpec>& clips,
+    std::chrono::steady_clock::time_point deadline) {
   std::vector<ClipTrim> trims;
   for (size_t i = 0; i < clips.size(); ++i) {
+    if (std::chrono::steady_clock::now() >= deadline) break;
     const ClipSpec& clip = clips[i];
     if (!WantsCommonTrackEnd(clip)) continue;
     std::optional<TrackEnds> ends;
     try {
-      ends = ReadTrackEnds(clip.uri, clip.http_headers);
+      ends = ReadTrackEnds(clip.uri, clip.http_headers, deadline);
     } catch (const TrackEndsUnavailable& error) {
       NativeLog::Warning(kLoadLog, log_target + ": clip " + std::to_string(i) +
                                        " plays untrimmed, its track ends "
@@ -262,14 +266,15 @@ std::vector<ClipTrim> CommonTrackEndTrims(const std::string& log_target,
 // the extra reads overlap it rather than follow it. The future never blocks
 // in its destructor, unlike std::async's.
 std::future<std::vector<ClipTrim>> StartCommonTrackEndTrims(
-    std::string log_target, std::vector<ClipSpec> clips) {
+    std::string log_target, std::vector<ClipSpec> clips,
+    std::chrono::steady_clock::time_point deadline) {
   auto promise = std::make_shared<std::promise<std::vector<ClipTrim>>>();
   std::future<std::vector<ClipTrim>> trims = promise->get_future();
-  std::thread([promise, log_target = std::move(log_target),
+  std::thread([promise, deadline, log_target = std::move(log_target),
                clips = std::move(clips)]() {
     winrt::init_apartment(winrt::apartment_type::multi_threaded);
     try {
-      promise->set_value(CommonTrackEndTrims(log_target, clips));
+      promise->set_value(CommonTrackEndTrims(log_target, clips, deadline));
     } catch (...) {
       // A clip whose tracks cannot be read plays untrimmed.
       promise->set_value({});
@@ -291,9 +296,10 @@ winrt::fire_and_forget LoadSources(
     std::function<void(std::vector<MediaSource>, std::vector<ClipTrim>)>
         on_ready,
     std::function<void(int32_t, std::string)> on_failed) {
+  const auto trim_deadline = std::chrono::steady_clock::now() + kTrackEndTrimBudget;
   std::future<std::vector<ClipTrim>> pending_trims;
   if (std::any_of(clips.begin(), clips.end(), WantsCommonTrackEnd)) {
-    pending_trims = StartCommonTrackEndTrims(log_target, clips);
+    pending_trims = StartCommonTrackEndTrims(log_target, clips, trim_deadline);
   }
   std::vector<MediaSource> sources;
   for (const ClipSpec& clip : clips) {
@@ -315,7 +321,9 @@ winrt::fire_and_forget LoadSources(
   if (pending_trims.valid()) {
     // Waiting for the reads blocks, which the platform thread must not.
     co_await winrt::resume_background();
-    trims = pending_trims.get();
+    if (pending_trims.wait_until(trim_deadline) == std::future_status::ready) {
+      trims = pending_trims.get();
+    }
   }
   PlatformThread::Post([weak, on_ready, sources = std::move(sources),
                         trims = std::move(trims)]() {
@@ -984,6 +992,11 @@ void VideoPlayerInstance::Stop() {
 }
 
 void VideoPlayerInstance::SeekTo(int64_t global_ms, Result result) {
+  SeekToLocation(timeline_.Locate(global_ms), std::move(result));
+}
+
+void VideoPlayerInstance::SeekToLocation(const Timeline::Location& location,
+                                         Result result) {
   if (pending_seek_result_) ResolveSeek();
   if (!player_ || !list_ || timeline_.empty()) {
     if (result) result->Success();
@@ -1001,7 +1014,6 @@ void VideoPlayerInstance::SeekTo(int64_t global_ms, Result result) {
   const bool was_completed = completed_;
   completed_ = false;
   position_probe_armed_ = false;
-  const Timeline::Location location = timeline_.Locate(global_ms);
   pending_seek_ = PendingSeek{location.index, location.source_ms};
   target_global_ms_ = timeline_.ToGlobal(location.index, location.source_ms);
   if (location.index != current_index_ && location.index < items_.size()) {
@@ -1053,7 +1065,10 @@ void VideoPlayerInstance::SetLooping(bool looping) {
 
 void VideoPlayerInstance::JumpToClip(int64_t index) {
   if (index < 0 || static_cast<size_t>(index) >= timeline_.size()) return;
-  SeekTo(timeline_.Offset(static_cast<size_t>(index)), nullptr);
+  const auto clip_index = static_cast<size_t>(index);
+  // Earlier clips may not have known durations yet. The index is exact even
+  // when their global offsets cannot tell those clips apart.
+  SeekToLocation({clip_index, timeline_.clip(clip_index).start_ms}, nullptr);
 }
 
 void VideoPlayerInstance::SetAudioTracks(const EncodableList& tracks) {

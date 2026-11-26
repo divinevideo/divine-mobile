@@ -1,6 +1,7 @@
 #ifndef DIVINE_VIDEO_PLAYER_TRACK_ENDS_H_
 #define DIVINE_VIDEO_PLAYER_TRACK_ENDS_H_
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <map>
@@ -33,10 +34,11 @@ std::optional<TrackEnds> ParseMoov(const uint8_t* data, size_t size);
 
 // Reads the track ends of a local MP4 or an http(s) one, fetching only its
 // boxes up to and including moov with Range requests that carry `headers`.
-// Blocks; call it off the platform thread. Answers are cached per URI;
-// a failed read throws TrackEndsUnavailable instead.
+// Remote reads share the given deadline. Blocks; call off the platform thread.
+// Answers are cached per URI; a failed read throws TrackEndsUnavailable.
 std::optional<TrackEnds> ReadTrackEnds(
-    const std::string& uri, const std::map<std::string, std::string>& headers);
+    const std::string& uri, const std::map<std::string, std::string>& headers,
+    std::chrono::steady_clock::time_point deadline);
 
 // The [start, end) of a clip that trimToCommonTrackEnd plays, as the Apple
 // player computes it and within Android's bounds: a clip that starts at 0

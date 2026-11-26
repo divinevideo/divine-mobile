@@ -83,8 +83,9 @@ class VideoPlayerInstance
   void Play();
   void Pause();
   void Stop();
-  // `result` may be null when the seek is internal, as for jumpToClip.
   void SeekTo(int64_t global_ms, Result result);
+  // `result` may be null for an internal seek such as jumpToClip.
+  void SeekToLocation(const Timeline::Location& location, Result result);
   void SetVolume(double volume);
   void SetClipVolumes(const flutter::EncodableList& volumes);
   void SetClipEqualizers(const flutter::EncodableList& equalizers);

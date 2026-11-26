@@ -32,9 +32,6 @@ constexpr uint64_t kMaxMoovBytes = 32ull * 1024 * 1024;
 // Top-level boxes read before giving up on finding moov.
 constexpr int kMaxTopLevelBoxes = 16;
 constexpr size_t kCacheLimit = 256;
-// A request that has not finished by then counts as failed, as a stalled
-// chunk download does in remote_media.cpp.
-constexpr auto kRequestTimeout = std::chrono::seconds(8);
 
 uint32_t ReadU32(const uint8_t* p) {
   return (uint32_t{p[0]} << 24) | (uint32_t{p[1]} << 16) |
@@ -204,8 +201,7 @@ std::optional<TrackEnds> ReadLocal(const std::wstring& path) {
   });
 }
 
-// Blocks until `operation` completes, sharing the request's deadline across
-// headers and every body read.
+// Blocks until `operation` completes or the shared trim deadline expires.
 template <typename Operation>
 auto GetBefore(const Operation& operation,
                std::chrono::steady_clock::time_point deadline) {
@@ -221,7 +217,8 @@ auto GetBefore(const Operation& operation,
 }
 
 std::optional<TrackEnds> ReadRemote(
-    const std::string& uri, const std::map<std::string, std::string>& headers) {
+    const std::string& uri, const std::map<std::string, std::string>& headers,
+    std::chrono::steady_clock::time_point deadline) {
   using winrt::Windows::Web::Http::HttpClient;
   using winrt::Windows::Web::Http::HttpMethod;
   using winrt::Windows::Web::Http::HttpRequestMessage;
@@ -237,13 +234,15 @@ std::optional<TrackEnds> ReadRemote(
   constexpr uint32_t kFirstRead = 256 * 1024;
   std::vector<uint8_t> head;
   const auto fetch = [&](uint64_t offset, uint32_t size) {
+    if (std::chrono::steady_clock::now() >= deadline) {
+      throw TrackEndsUnavailable("track trim budget expired");
+    }
     HttpRequestMessage request(HttpMethod::Get(), target);
     request.Headers().TryAppendWithoutValidation(
         L"Range", L"bytes=" + winrt::to_hstring(offset) + L"-" +
                       winrt::to_hstring(offset + size - 1));
     // Headers first: a server that ignores Range answers 200 with the whole
     // file, which is not worth downloading for its boxes.
-    const auto deadline = std::chrono::steady_clock::now() + kRequestTimeout;
     auto response = GetBefore(
         client.SendRequestAsync(
             request,
@@ -344,7 +343,8 @@ std::optional<TrackEnds> ParseMoov(const uint8_t* data, size_t size) {
 }
 
 std::optional<TrackEnds> ReadTrackEnds(
-    const std::string& uri, const std::map<std::string, std::string>& headers) {
+    const std::string& uri, const std::map<std::string, std::string>& headers,
+    std::chrono::steady_clock::time_point deadline) {
   {
     std::lock_guard<std::mutex> lock(g_cache_mutex);
     const auto it = g_cache.find(uri);
@@ -356,7 +356,7 @@ std::optional<TrackEnds> ReadTrackEnds(
   std::optional<TrackEnds> ends;
   try {
     if (lower.rfind("http://", 0) == 0 || lower.rfind("https://", 0) == 0) {
-      ends = ReadRemote(uri, headers);
+      ends = ReadRemote(uri, headers, deadline);
     } else if (lower.find("://") == std::string::npos ||
                lower.rfind("file://", 0) == 0) {
       ends = ReadLocal(PathFromUri(uri));
