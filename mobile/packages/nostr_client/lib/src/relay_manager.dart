@@ -874,9 +874,10 @@ class RelayManager {
       _relayPool.remove(url);
 
       // Add to pool and connect – autoSubscribe resends the live
-      // subscriptions, and the pool hands the new relay the one-shot reads
-      // and COUNTs the old one was still answering, so its socket asks for
-      // them again instead of leaving them to their callers' timeouts.
+      // subscriptions, and the pool hands the new relay the one-shot reads,
+      // COUNTs and awaited publishes the old one was still answering, so its
+      // socket asks for them again instead of leaving them to their callers'
+      // timeouts.
       final success = await _relayPool.add(relay, autoSubscribe: true);
       _log(
         'Connect ${success ? 'succeeded' : 'failed'}',
