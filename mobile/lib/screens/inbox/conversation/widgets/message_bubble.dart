@@ -1092,8 +1092,10 @@ class _VideoLinkPreview extends ConsumerWidget {
     // Re-key on the dependencies' identity: videosRepositoryProvider yields a
     // fresh instance when filter/aspect/host preferences change, and a bare
     // ref.read inside create: would keep the stale one for the cubit's life.
-    // The blocklist version rebuilds the card so a newly hidden video goes.
+    // The blocklist and deletion versions rebuild the card so a newly hidden
+    // or deleted video updates in place.
     ref.watch(blocklistVersionProvider);
+    ref.watch(videoDeletionVersionProvider);
     final videoService = ref.watch(videoEventServiceProvider);
     final authService = ref.watch(authServiceProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
@@ -1259,6 +1261,7 @@ class _QuotedVideoPreview extends ConsumerWidget {
     );
     if (target == null) return const SizedBox.shrink();
     ref.watch(blocklistVersionProvider);
+    ref.watch(videoDeletionVersionProvider);
     final videoService = ref.watch(videoEventServiceProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
     return BlocProvider(

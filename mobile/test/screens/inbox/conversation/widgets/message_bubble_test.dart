@@ -45,6 +45,26 @@ class _HidingVideoEventService extends VisibleTestVideoEventService {
   bool shouldHideVideo(VideoEvent video) => true;
 }
 
+/// Emits a live deletion signal for videos marked deleted after mount.
+class _DeletingVideoEventService extends VisibleTestVideoEventService {
+  final _removedIds = StreamController<String>.broadcast();
+  final _deletedIds = <String>{};
+
+  @override
+  Stream<String> get removedVideoIds => _removedIds.stream;
+
+  @override
+  bool isVideoEventKnownDeleted(VideoEvent video) =>
+      _deletedIds.contains(video.id);
+
+  void markDeleted(String videoId) {
+    _deletedIds.add(videoId);
+    _removedIds.add(videoId);
+  }
+
+  Future<void> close() => _removedIds.close();
+}
+
 Finder _divineIcon(DivineIconName icon) => find.byWidgetPredicate(
   (widget) => widget is DivineIcon && widget.icon == icon,
 );
@@ -2486,6 +2506,42 @@ void main() {
         expect(find.byType(VideoThumbnailWidget), findsNothing);
       });
 
+      testWidgets(
+        'switches to the unavailable card when the video is deleted while '
+        'mounted',
+        (tester) async {
+          final videoEventService = _DeletingVideoEventService();
+          addTearDown(videoEventService.close);
+
+          when(
+            () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+              'abc123',
+              fallbackRouteIds: any(named: 'fallbackRouteIds'),
+            ),
+          ).thenAnswer((_) async => testVideo);
+
+          await tester.pumpWidget(
+            buildWithVideoMessage(
+              message: 'https://divine.video/video/abc123',
+              videoEventService: videoEventService,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+
+          videoEventService.markDeleted(testVideo.id);
+          await tester.pump();
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(AppLocalizationsEn().notificationsVideoUnavailable),
+            findsOneWidget,
+          );
+          expect(find.byType(VideoThumbnailWidget), findsNothing);
+        },
+      );
+
       testWidgets('shows the unavailable card when video not found', (
         tester,
       ) async {
@@ -3025,8 +3081,10 @@ void main() {
         required String message,
         DmSharedVideoRef? quotedVideoRef,
         VoidCallback? onDoubleTap,
+        MockVideoEventService? videoEventService,
       }) => testMaterialApp(
-        mockVideoEventService: VisibleTestVideoEventService(),
+        mockVideoEventService:
+            videoEventService ?? VisibleTestVideoEventService(),
         home: Scaffold(
           body: MessageBubble(
             message: message,
@@ -3040,6 +3098,43 @@ void main() {
         additionalOverrides: [
           videosRepositoryProvider.overrideWithValue(mockVideosRepository),
         ],
+      );
+
+      testWidgets(
+        'switches the quoted preview to unavailable when the video is '
+        'deleted while mounted',
+        (tester) async {
+          final videoEventService = _DeletingVideoEventService();
+          addTearDown(videoEventService.close);
+
+          when(
+            () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+              _testCoordinate,
+              fallbackRouteIds: any(named: 'fallbackRouteIds'),
+            ),
+          ).thenAnswer((_) async => testVideo);
+
+          await tester.pumpWidget(
+            buildWithQuotedReply(
+              message: 'love this one',
+              quotedVideoRef: quotedRef,
+              videoEventService: videoEventService,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+
+          videoEventService.markDeleted(testVideo.id);
+          await tester.pump();
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(AppLocalizationsEn().notificationsVideoUnavailable),
+            findsOneWidget,
+          );
+          expect(find.byType(VideoThumbnailWidget), findsNothing);
+        },
       );
 
       testWidgets(
