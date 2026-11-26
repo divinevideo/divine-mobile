@@ -3,6 +3,13 @@
 
 import 'package:nostr_sdk/nostr_sdk.dart';
 
+/// The revision a caller about to replace a video opened: its Nostr
+/// `created_at` and event id. A read given it asks the relays before
+/// returning a Divine REST answer older than this under NIP-01 ordering, and
+/// still returns that answer when no relay has a newer one. See
+/// `VideosRepository.fetchLatestVideoRevision`.
+typedef VideoRevisionFloor = ({int createdAt, String id});
+
 /// What reading a video address returned, for a caller about to replace it:
 /// Divine's REST API first, then the relays. See
 /// `VideosRepository.fetchLatestVideoRevision`.
@@ -11,7 +18,9 @@ sealed class LatestVideoRevision {
   const LatestVideoRevision();
 }
 
-/// [event] is the newest signed revision the read returned.
+/// [event] is the newest signed revision the read returned. It can be older
+/// than the [VideoRevisionFloor] the read was given, so compare it with the
+/// opened revision before building on it.
 final class LatestVideoRevisionFound extends LatestVideoRevision {
   /// The read returned [event] as the newest revision.
   const LatestVideoRevisionFound(this.event);

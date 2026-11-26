@@ -1,6 +1,9 @@
 // ABOUTME: Verifies that a video republish reads its exact video address from
 // ABOUTME: Funnelcake first, then falls back to relays without gating on them.
 
+import 'dart:async';
+
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
@@ -190,6 +193,176 @@ void main() {
         });
       });
 
+      group('when it does not answer', () {
+        late Event onRelay;
+
+        setUp(() {
+          onRelay = revision(content: 'relay copy');
+          stubRelays([onRelay]);
+          // A request that never completes, as a hung API leaves it.
+          stubFunnelcake(() => Completer<Event?>().future);
+        });
+
+        test('waits up to three seconds before asking the relays', () {
+          fakeAsync((async) {
+            LatestVideoRevision? result;
+            unawaited(
+              withFunnelcake()
+                  .fetchLatestVideoRevision('34236:$pubkey:$_dTag')
+                  .then((value) => result = value),
+            );
+
+            async.elapse(const Duration(milliseconds: 2999));
+            expect(result, isNull);
+            verifyNever(readRelays);
+
+            async.elapse(const Duration(milliseconds: 1));
+            expect(
+              result,
+              isA<LatestVideoRevisionFound>().having(
+                (r) => r.event,
+                'event',
+                same(onRelay),
+              ),
+            );
+            verify(readRelays).called(1);
+          });
+        });
+
+        test('reports unknown, not absent, when no relay completes', () {
+          stubRelays([], endedBy: QueryEnd.settledEarly);
+          fakeAsync((async) {
+            LatestVideoRevision? result;
+            unawaited(
+              withFunnelcake()
+                  .fetchLatestVideoRevision('34236:$pubkey:$_dTag')
+                  .then((value) => result = value),
+            );
+
+            async.elapse(const Duration(seconds: 3));
+            expect(result, isA<LatestVideoRevisionUnknown>());
+          });
+        });
+      });
+
+      group('given the revision the caller opened as a floor', () {
+        late Event opened;
+
+        setUp(() {
+          opened = revision(content: 'opened');
+        });
+
+        Future<LatestVideoRevision> fetch({VideoRevisionFloor? floor}) =>
+            withFunnelcake().fetchLatestVideoRevision(
+              '34236:$pubkey:$_dTag',
+              notOlderThan:
+                  floor ?? (createdAt: opened.createdAt, id: opened.id),
+            );
+
+        Matcher found(Event event) => isA<LatestVideoRevisionFound>().having(
+          (r) => r.event,
+          'event',
+          same(event),
+        );
+
+        test('returns its revision without asking the relays when it is the '
+            'opened one', () async {
+          stubFunnelcake(() async => opened);
+
+          expect(await fetch(), found(opened));
+          verifyZeroInteractions(nostr);
+        });
+
+        test('returns its revision without asking the relays when it is '
+            'newer', () async {
+          final newer = revision(content: 'newer', createdAt: 1001);
+          stubFunnelcake(() async => newer);
+
+          expect(await fetch(), found(newer));
+          verifyZeroInteractions(nostr);
+        });
+
+        group('asks the relays when its revision predates the floor', () {
+          late Event stale;
+
+          setUp(() {
+            stale = revision(content: 'stale', createdAt: 999);
+            stubFunnelcake(() async => stale);
+          });
+
+          test('and returns the opened revision a relay holds', () async {
+            stubRelays([opened]);
+
+            expect(await fetch(), found(opened));
+            verify(readRelays).called(1);
+          });
+
+          test('and returns a newer revision a relay holds', () async {
+            final newer = revision(content: 'newer', createdAt: 1002);
+            stubRelays([opened, newer]);
+
+            expect(await fetch(), found(newer));
+          });
+
+          // The caller compares it with the floor and falls back to the copy
+          // it holds; reporting absent would read as a deletion.
+          for (final endedBy in [QueryEnd.complete, QueryEnd.settledEarly]) {
+            test('and returns its revision when no relay returns one, the '
+                'read ending by ${endedBy.name}', () async {
+              stubRelays([], endedBy: endedBy);
+
+              expect(await fetch(), found(stale));
+            });
+          }
+
+          test('and returns its revision over an older relay one', () async {
+            stubRelays([revision(content: 'oldest', createdAt: 998)]);
+
+            expect(await fetch(), found(stale));
+          });
+
+          test('by the lowest id at an equal created_at', () async {
+            final newer = revision(content: 'newer', createdAt: 1001);
+            stubRelays([newer]);
+            final tied = revision(content: 'tied');
+            stubFunnelcake(() async => tied);
+            // An id below every hex id puts the tied revision after it.
+            final floorId = '0' * 64;
+
+            expect(
+              await fetch(floor: (createdAt: 1000, id: floorId)),
+              found(newer),
+            );
+            verify(readRelays).called(1);
+          });
+        });
+
+        test('logs that its revision predates the floor', () async {
+          final stale = revision(content: 'stale for log', createdAt: 999);
+          stubFunnelcake(() async => stale);
+          stubRelays([revision(content: 'older for log', createdAt: 998)]);
+
+          await fetch();
+
+          final messages = LogCaptureService()
+              .getRecentLogs()
+              .map((entry) => entry.message)
+              .where((message) => message.contains(stale.id));
+          expect(
+            messages,
+            allOf(
+              contains(contains('predates ${opened.id}')),
+              contains(
+                allOf(
+                  contains('no relay returned a newer one'),
+                  contains('relay revisions: 1'),
+                ),
+              ),
+            ),
+          );
+        });
+      });
+
       test(
         'lets a programming error surface instead of asking the relays',
         () async {
@@ -298,6 +471,49 @@ void main() {
           );
           expect(entry.level, LogLevel.warning);
           expect(entry.stackTrace, isNotNull);
+        });
+
+        group('which source settled a read that found no revision', () {
+          String noRevisionMessage() => LogCaptureService()
+              .getRecentLogs()
+              .singleWhere(
+                (entry) =>
+                    entry.message.startsWith('No revision of 34236:$pubkey:'),
+              )
+              .message;
+
+          test('as absent after a 404', () async {
+            stubFunnelcake(() async => null);
+            stubRelays([], endedBy: QueryEnd.settledEarly);
+
+            await fetch();
+
+            expect(
+              noRevisionMessage(),
+              allOf(
+                contains('so it is absent'),
+                contains('Funnelcake answered that it holds none'),
+                contains('ended by settledEarly'),
+              ),
+            );
+          });
+
+          test('as unknown after a failed request', () async {
+            stubFunnelcake(
+              () async => throw const FunnelcakeException('unavailable'),
+            );
+            stubRelays([], endedBy: QueryEnd.settledEarly);
+
+            await fetch();
+
+            expect(
+              noRevisionMessage(),
+              allOf(
+                contains('so it is unknown'),
+                contains('Funnelcake gave none'),
+              ),
+            );
+          });
         });
       });
 

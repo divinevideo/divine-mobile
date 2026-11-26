@@ -72,7 +72,10 @@ void main() {
 
       final videosRepository = _MockVideosRepository();
       when(
-        () => videosRepository.fetchLatestVideoRevision(any()),
+        () => videosRepository.fetchLatestVideoRevision(
+          any(),
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
       ).thenAnswer((_) async => const LatestVideoRevisionUnknown());
       final personalEventCache = _MockPersonalEventCacheService();
       when(() => personalEventCache.getEventById(held.id)).thenReturn(held);
@@ -162,6 +165,7 @@ void main() {
       verify(
         () => videosRepository.fetchLatestVideoRevision(
           '34236:$owner:video-d-tag',
+          notOlderThan: any(named: 'notOlderThan'),
         ),
       ).called(1);
       verify(() => personalEventCache.getEventById(held.id)).called(1);
