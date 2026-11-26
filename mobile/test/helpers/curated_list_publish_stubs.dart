@@ -142,7 +142,7 @@ Iterable<Event> _noListEvents() => const [];
 
 /// What `NostrClient.readCurrentVersion` answers, for the address [read]
 /// asked about, when every relay answered with [events]: the newest version
-/// by `created_at`, then the lowest id.
+/// by `created_at`, then the lowest id. Signatures are not checked.
 CurrentVersionRead currentVersionOf(Iterable<Event> events, Invocation read) {
   final kind = read.namedArguments[#kind] as int;
   final pubkey = read.namedArguments[#pubkey] as String;

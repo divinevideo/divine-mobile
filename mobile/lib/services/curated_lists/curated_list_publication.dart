@@ -16,6 +16,18 @@ extension CuratedListPublication on CuratedListService {
     // Creating a new coordinate has no cached replacement to reconcile.
     // Signed-out drafts stay local and never publish over relay data.
     if (list == null) return true;
+    // readCurrentVersion refuses an empty d tag, so this list's current
+    // version can never be read: refuse every change, deletion included,
+    // rather than keep a draft that can never be sent.
+    if (list.id.isEmpty) {
+      Log.warning(
+        'Not changing a list with an empty d tag: its current version '
+        'cannot be read',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
+      return false;
+    }
     if (owner == null) {
       if (allowOfflineDraft && _canStageOfflineDraft(list)) {
         _offlineListOperations.add(listId);
@@ -143,7 +155,7 @@ extension CuratedListPublication on CuratedListService {
     return false;
   }
 
-  /// Publishes owned lists that have never reached a relay or need retry.
+  /// Publishes owned lists with a readable coordinate that need backup or retry.
   ///
   /// Before private lists were published, they existed only in
   /// SharedPreferences and died with the device; the same is true of any list
@@ -159,6 +171,7 @@ extension CuratedListPublication on CuratedListService {
     final stranded = _lists
         .where(
           (list) =>
+              list.id.isNotEmpty &&
               !list.hasRelayConflict &&
               !_inFlightListPublications.contains(list.authorScopedId) &&
               _relayEvidence.allows(list) &&

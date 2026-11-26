@@ -1179,6 +1179,124 @@ void main() {
           isTrue,
         );
       });
+
+      test('a list made private seals only what the sealed check reads back, '
+          'and keeps every other item tag in the clear', () {
+        const shapes = <(List<String>, {bool sealed})>[
+          (['p'], sealed: false),
+          (['p', ''], sealed: false),
+          (['p', person], sealed: true),
+          (['p', person, 'wss://relay.example', 'petname'], sealed: true),
+          (['p', '', 'wss://relay.example', 'petname'], sealed: true),
+          (['word'], sealed: false),
+          (['word', ''], sealed: false),
+          (['word', 'secret'], sealed: true),
+          (['r', ''], sealed: false),
+          (['r', 'https://example.com'], sealed: true),
+          (['emoji'], sealed: false),
+          (['emoji', 'smile', 'https://example.com/smile.png'], sealed: true),
+          (['emoji', '', 'https://example.com/secret.png'], sealed: true),
+          (['relay'], sealed: false),
+          (['relay', 'wss://relay.example'], sealed: true),
+          (['group', ''], sealed: false),
+          (['group', 'abc'], sealed: true),
+          (['a', '30023:$person:some-article'], sealed: true),
+        ];
+        for (final (tag, :sealed) in shapes) {
+          expect(
+            CuratedListConverter.hasFullyKnownItemTags([tag]),
+            isTrue,
+            reason: '$tag passes the public check',
+          );
+          final list = privateList(
+            preservedTags: [tag],
+          ).copyWith(videoEventIds: const []);
+          final sealedTags = CuratedListConverter.toSealedTags(list);
+          final clearTags = CuratedListConverter.toPrivateMetadataTags(list);
+
+          expect(
+            sealed ? sealedTags : clearTags,
+            contains(equals(tag)),
+            reason: '$tag is ${sealed ? 'sealed' : 'kept in the clear'}',
+          );
+          expect(
+            sealed ? clearTags : sealedTags,
+            isNot(contains(equals(tag))),
+            reason: '$tag is published once',
+          );
+          expect(
+            CuratedListConverter.hasFullyKnownItemTags(
+              sealedTags,
+              isSealed: true,
+            ),
+            isTrue,
+            reason: 'sealing $tag keeps the revision readable',
+          );
+        }
+      });
+
+      test('a private list seals and reads back an item whose first field '
+          'is empty and another is not', () {
+        const tag = ['emoji', '', 'https://example.com/secret.png'];
+        final list = privateList(
+          preservedTags: const [tag],
+        ).copyWith(videoEventIds: const []);
+        final sealedTags = CuratedListConverter.toSealedTags(list);
+        final clearTags = CuratedListConverter.toPrivateMetadataTags(list);
+
+        expect(clearTags, isNot(contains(equals(tag))));
+        expect(
+          CuratedListConverter.hasFullyKnownItemTags(
+            sealedTags,
+            isSealed: true,
+          ),
+          isTrue,
+        );
+        final read = CuratedListConverter.fromEvent(
+          _makeEvent(tags: clearTags, content: _sealedPayload),
+          privateTags: sealedTags,
+          isPrivateEvent: true,
+        )!;
+        expect(read.preservedTags, isEmpty);
+        expect(read.preservedPrivateTags, [tag]);
+      });
+
+      test('reads nothing but videos from the sealed part, even its first '
+          'record', () {
+        final list = CuratedListConverter.fromEvent(
+          _makeEvent(
+            tags: [
+              ['d', 'my-list'],
+              ['title', 'My List'],
+            ],
+            content: _sealedPayload,
+          ),
+          privateTags: const [
+            ['t', 'secret'],
+            ['e', person],
+          ],
+          isPrivateEvent: true,
+        )!;
+
+        expect(list.tags, isEmpty);
+        expect(list.videoEventIds, [person]);
+        expect(list.preservedPrivateTags, [
+          ['t', 'secret'],
+        ]);
+      });
+
+      test('toEventTags includes the sealed tags of a private list', () {
+        final list = privateList(
+          preservedPrivateTags: const [
+            ['p', person],
+          ],
+        );
+
+        expect(
+          CuratedListConverter.toEventTags(list),
+          contains(equals(['p', person])),
+        );
+      });
     });
 
     group('extractDTag', () {

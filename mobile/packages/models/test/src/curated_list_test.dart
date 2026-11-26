@@ -411,6 +411,10 @@ void main() {
           stored,
           isNot(equals(stored.copyWith(preservedPrivateTags: const []))),
         );
+        expect(
+          stored,
+          isNot(equals(stored.copyWith(preservedTags: const []))),
+        );
       });
 
       test('an edit draft keeps them in both snapshots', () {

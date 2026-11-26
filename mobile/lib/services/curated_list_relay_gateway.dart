@@ -110,6 +110,10 @@ class CuratedListRelayGateway {
   /// (#11317). The snapshot carries the newest version, or no event when no
   /// relay holds one; a failed read, or [cancelled] completing first, is
   /// incomplete and carries none.
+  ///
+  /// [timeout] bounds each of up to two reads, so a call can take twice as
+  /// long. Throws [ArgumentError] when [listId] is empty or [ownerPubkey] is
+  /// not lowercase hex.
   Future<CuratedListRelaySnapshot> readOwnedListForMutation(
     String ownerPubkey,
     String listId, {
@@ -141,7 +145,8 @@ class CuratedListRelayGateway {
     };
   }
 
-  /// NIP-44 encrypts [list]'s item tags to their owner.
+  /// NIP-44 encrypts [list]'s sealed tags to their owner: its videos and the
+  /// preserved tags it keeps private.
   ///
   /// Encrypting to our own pubkey is what makes a list readable on our other
   /// devices and opaque to everyone else, including the relay storing it.

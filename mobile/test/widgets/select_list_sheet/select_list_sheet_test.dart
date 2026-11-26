@@ -571,10 +571,18 @@ void main() {
           expect(find.byType(SelectListSheetBody), findsNothing);
           expect(cubit.state.status, SelectListStatus.editing);
           verifyNever(
-            () => service.addVideoToList(any(), any(), allowSeries: false),
+            () => service.addVideoToList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
           verifyNever(
-            () => service.removeVideoFromList(any(), any(), allowSeries: false),
+            () => service.removeVideoFromList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
           verifyNever(() => service.retryListSync(any()));
         },
@@ -620,10 +628,18 @@ void main() {
         await tester.tap(saveButton());
         await tester.pumpAndSettle();
         verifyNever(
-          () => service.addVideoToList(any(), any(), allowSeries: false),
+          () => service.addVideoToList(
+            any(),
+            any(),
+            allowSeries: any(named: 'allowSeries'),
+          ),
         );
         verifyNever(
-          () => service.removeVideoFromList(any(), any(), allowSeries: false),
+          () => service.removeVideoFromList(
+            any(),
+            any(),
+            allowSeries: any(named: 'allowSeries'),
+          ),
         );
       });
 
@@ -680,10 +696,18 @@ void main() {
           await tester.tap(saveButton());
           await tester.pumpAndSettle();
           verifyNever(
-            () => service.addVideoToList(any(), any(), allowSeries: false),
+            () => service.addVideoToList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
           verifyNever(
-            () => replacement.addVideoToList(any(), any(), allowSeries: false),
+            () => replacement.addVideoToList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
         },
       );
@@ -713,10 +737,18 @@ void main() {
         await tester.tap(saveButton());
         await tester.pumpAndSettle();
         verifyNever(
-          () => service.addVideoToList(any(), any(), allowSeries: false),
+          () => service.addVideoToList(
+            any(),
+            any(),
+            allowSeries: any(named: 'allowSeries'),
+          ),
         );
         verifyNever(
-          () => replacement.addVideoToList(any(), any(), allowSeries: false),
+          () => replacement.addVideoToList(
+            any(),
+            any(),
+            allowSeries: any(named: 'allowSeries'),
+          ),
         );
       });
 
@@ -889,10 +921,18 @@ void main() {
         expect(rowChecks(), findsOneWidget);
 
         verifyNever(
-          () => service.addVideoToList(any(), any(), allowSeries: false),
+          () => service.addVideoToList(
+            any(),
+            any(),
+            allowSeries: any(named: 'allowSeries'),
+          ),
         );
         verifyNever(
-          () => service.removeVideoFromList(any(), any(), allowSeries: false),
+          () => service.removeVideoFromList(
+            any(),
+            any(),
+            allowSeries: any(named: 'allowSeries'),
+          ),
         );
       });
 
@@ -1084,10 +1124,18 @@ void main() {
 
         expect(find.byType(SelectListSheetBody), findsNothing);
         verifyNever(
-          () => service.addVideoToList(any(), any(), allowSeries: false),
+          () => service.addVideoToList(
+            any(),
+            any(),
+            allowSeries: any(named: 'allowSeries'),
+          ),
         );
         verifyNever(
-          () => service.removeVideoFromList(any(), any(), allowSeries: false),
+          () => service.removeVideoFromList(
+            any(),
+            any(),
+            allowSeries: any(named: 'allowSeries'),
+          ),
         );
       });
 
@@ -1187,10 +1235,18 @@ void main() {
           expect(rowChecks(), findsOneWidget);
           verify(() => service.retryListSync(pending.authorScopedId)).called(1);
           verifyNever(
-            () => service.addVideoToList(any(), any(), allowSeries: false),
+            () => service.addVideoToList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
           verifyNever(
-            () => service.removeVideoFromList(any(), any(), allowSeries: false),
+            () => service.removeVideoFromList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
         },
       );
@@ -1238,10 +1294,18 @@ void main() {
           expect(rowChecks(), findsOneWidget);
           verify(() => service.retryListSync(pending.authorScopedId)).called(1);
           verifyNever(
-            () => service.addVideoToList(any(), any(), allowSeries: false),
+            () => service.addVideoToList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
           verifyNever(
-            () => service.removeVideoFromList(any(), any(), allowSeries: false),
+            () => service.removeVideoFromList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
         },
       );
@@ -1289,10 +1353,18 @@ void main() {
             () => service.retryListSync(ordinary.authorScopedId),
           ).called(1);
           verifyNever(
-            () => service.addVideoToList(any(), any(), allowSeries: false),
+            () => service.addVideoToList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
           verifyNever(
-            () => service.removeVideoFromList(any(), any(), allowSeries: false),
+            () => service.removeVideoFromList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
         },
       );
@@ -1318,10 +1390,18 @@ void main() {
           expect(find.text(l10n.listUpdateFailed), findsOneWidget);
           verify(() => service.retryListSync(pending.authorScopedId)).called(1);
           verifyNever(
-            () => service.addVideoToList(any(), any(), allowSeries: false),
+            () => service.addVideoToList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
           verifyNever(
-            () => service.removeVideoFromList(any(), any(), allowSeries: false),
+            () => service.removeVideoFromList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
         },
       );
@@ -1376,10 +1456,18 @@ void main() {
           expect(rowChecks(), findsNothing);
           verify(() => service.retryListSync(winner.authorScopedId)).called(1);
           verifyNever(
-            () => service.addVideoToList(any(), any(), allowSeries: false),
+            () => service.addVideoToList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
           verifyNever(
-            () => service.removeVideoFromList(any(), any(), allowSeries: false),
+            () => service.removeVideoFromList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
         },
       );
@@ -1459,13 +1547,17 @@ void main() {
                 () => service.retryListSync(pending.authorScopedId),
               ).called(1);
               verifyNever(
-                () => service.addVideoToList(any(), any(), allowSeries: false),
+                () => service.addVideoToList(
+                  any(),
+                  any(),
+                  allowSeries: any(named: 'allowSeries'),
+                ),
               );
               verifyNever(
                 () => service.removeVideoFromList(
                   any(),
                   any(),
-                  allowSeries: false,
+                  allowSeries: any(named: 'allowSeries'),
                 ),
               );
             },
@@ -1510,11 +1602,18 @@ void main() {
             expect(rowChecks(), findsOneWidget);
             verifyNever(() => service.retryListSync(any()));
             verifyNever(
-              () => service.addVideoToList(any(), any(), allowSeries: false),
+              () => service.addVideoToList(
+                any(),
+                any(),
+                allowSeries: any(named: 'allowSeries'),
+              ),
             );
             verifyNever(
-              () =>
-                  service.removeVideoFromList(any(), any(), allowSeries: false),
+              () => service.removeVideoFromList(
+                any(),
+                any(),
+                allowSeries: any(named: 'allowSeries'),
+              ),
             );
           },
         );
@@ -1691,7 +1790,11 @@ void main() {
 
         expect(find.byType(SelectListSheetBody), findsNothing);
         verifyNever(
-          () => service.addVideoToList(any(), any(), allowSeries: false),
+          () => service.addVideoToList(
+            any(),
+            any(),
+            allowSeries: any(named: 'allowSeries'),
+          ),
         );
       });
 
@@ -1867,7 +1970,11 @@ void main() {
             ),
           ).called(1);
           verifyNever(
-            () => service.removeVideoFromList(any(), any(), allowSeries: false),
+            () => service.removeVideoFromList(
+              any(),
+              any(),
+              allowSeries: any(named: 'allowSeries'),
+            ),
           );
         },
       );

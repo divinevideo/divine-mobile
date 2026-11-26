@@ -867,6 +867,103 @@ void main() {
       );
     });
 
+    test(
+      'a removal through Add to list is refused once the list is a series',
+      () async {
+        remote = await signedCuratedListFixture(
+          cached.copyWith(
+            updatedAt: cached.updatedAt.add(const Duration(seconds: 10)),
+            preservedTags: const [
+              ['series', 'true'],
+            ],
+          ),
+          LocalNostrSigner('1'.padLeft(64, '0')),
+        );
+
+        expect(
+          await service.removeVideoFromList(
+            cached.id,
+            firstVideo,
+            allowSeries: false,
+          ),
+          isFalse,
+        );
+        expect(service.getListById(cached.id)!.videoEventIds, [firstVideo]);
+        expect(published, isEmpty);
+      },
+    );
+
+    group('a list whose d tag is empty', () {
+      setUp(() async {
+        await reopen(cached.copyWith(id: ''));
+        // As the real client does: readCurrentVersion refuses an empty d tag.
+        when(
+          () => client.readCurrentVersion(
+            kind: 30005,
+            pubkey: any(named: 'pubkey'),
+            dTag: '',
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenThrow(ArgumentError.value('', 'dTag'));
+      });
+
+      test(
+        'retains its saved draft without stopping other startup backups',
+        () async {
+          final baseline = cached.copyWith(id: '');
+          final edited = baseline.copyWith(name: 'Saved edit');
+          final pending = edited.copyWith(
+            pendingRepublish: true,
+            localEditDraft: CuratedListEditDraft(
+              baseline: baseline,
+              desired: edited,
+            ),
+          );
+          final unpublished = cached.copyWith(clearNostrEventId: true);
+          await prefs.setString(
+            CuratedListService.listsStorageKey,
+            jsonEncode([pending.toJson(), unpublished.toJson()]),
+          );
+          restart();
+          when(
+            () => client.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer((i) => completedOwnedListSnapshot(i, []));
+          answer(
+            () async => (events: <Event>[], timedOut: false, noRelays: false),
+          );
+
+          await service.fetchUserListsFromRelays(force: true);
+
+          expect(
+            published.single.tags,
+            contains(equals(['d', unpublished.id])),
+          );
+          expect(service.getListById(baseline.authorScopedId), pending);
+        },
+      );
+
+      test('an edit is refused before the read and keeps no draft', () async {
+        expect(await service.addVideoToList('', addedVideo), isFalse);
+
+        final row = service.getListById('')!;
+        expect(row.videoEventIds, [firstVideo]);
+        expect(row.localEditDraft, isNull);
+        expect(published, isEmpty);
+        verifyNever(
+          () => client.readCurrentVersion(
+            kind: any(named: 'kind'),
+            pubkey: any(named: 'pubkey'),
+            dTag: '',
+            timeout: any(named: 'timeout'),
+          ),
+        );
+      });
+    });
+
     group('tags only the relay copy has', () {
       const preserved = [
         ['series', 'true'],
