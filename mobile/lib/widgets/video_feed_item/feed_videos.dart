@@ -23,6 +23,7 @@ import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart'
     show ViewTrafficSource;
 import 'package:openvine/providers/analytics_providers.dart';
@@ -44,8 +45,10 @@ import 'package:openvine/services/haptic_service.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/video_moderation_status_service.dart';
 import 'package:openvine/ui/adaptive_layout.dart';
+import 'package:openvine/ui/feed_keyboard_shortcuts.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/scroll_driven_opacity.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/divine_video_metrics_tracker.dart';
 import 'package:openvine/widgets/video_feed_item/blurred_video_backdrop.dart';
 import 'package:openvine/widgets/video_feed_item/content_warning_helpers.dart';
@@ -91,6 +94,7 @@ class FeedVideos extends ConsumerStatefulWidget {
   const FeedVideos({
     required this.videos,
     required this.onNearEnd,
+    this.onForwardBoundary,
     this.contextTitle,
     this.currentIndex = 0,
     this.scrollPhysics,
@@ -113,6 +117,9 @@ class FeedVideos extends ConsumerStatefulWidget {
 
   final List<VideoEvent> videos;
   final VoidCallback onNearEnd;
+
+  /// Requests more videos when desktop paging reaches the last loaded item.
+  final VoidCallback? onForwardBoundary;
   final int currentIndex;
   final ScrollPhysics? scrollPhysics;
 
@@ -190,6 +197,9 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
   final _feedKey = GlobalKey<InfiniteVideoFeedState>();
   bool _routeAllowsPlayback = true;
   bool _requestedPageForDrag = false;
+
+  /// How Space plays or pauses the video on screen; see [_PlaybackToggles].
+  final _playbackToggles = _PlaybackToggles();
 
   /// Feed index of each completed loop of the active video, for the
   /// reactions overlay that appears after a video's first loop.
@@ -391,6 +401,33 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
     setState(() => _routeAllowsPlayback = true);
   }
 
+  void _showPreviousVideo() {
+    final feed = _feedKey.currentState;
+    if (feed != null) unawaited(feed.previousPage());
+  }
+
+  void _showNextVideo() {
+    final feed = _feedKey.currentState;
+    if (feed != null) unawaited(feed.nextPage());
+  }
+
+  void _togglePlayback() {
+    final feed = _feedKey.currentState;
+    if (feed != null) _playbackToggles.toggle(feed.currentIndex);
+  }
+
+  void _toggleMute() {
+    final volume = context.read<VideoVolumeCubit>();
+    final wasMuted = volume.state.isMuted;
+    volume.toggleMute();
+    announceDetached(
+      context,
+      wasMuted ? context.l10n.videoPlayerUnmute : context.l10n.videoPlayerMute,
+      description: 'announce mute toggle',
+      logName: 'FeedVideos',
+    );
+  }
+
   void _suppressAutoAdvance() => _autoAdvanceCubit.suppressForInteraction();
 
   void _resumeAutoAdvanceAfterSwipe() => _autoAdvanceCubit.resumeAfterSwipe();
@@ -531,245 +568,255 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
           },
         ),
       ],
-      child: InfiniteVideoFeed(
-        key: _feedKey,
-        videos: widget.videos,
+      child: FeedKeyboardShortcuts(
         isActive: isFeedActive,
-        // On web, each live HtmlElementView <video> splits the CanvasKit
-        // layer tree into an extra WebGL overlay surface and triggers shader
-        // recompilation during swipes. Initialize only the active video's
-        // player, not its neighbours'.
-        keepPreviousAlive: !kIsWeb,
-        keepNextAlive: !kIsWeb,
-        releaseNeighboursWhenInactive:
-            widget.releaseNeighboursWhenInactive && !focusOnlyPause,
-        releaseCurrentWhenInactive: codecHeavySurfaceActive,
-        // mediaCacheProvider is a keepAlive singleton; identity is stable for
-        // the app lifetime, so ref.read is safe here. See
-        // .claude/rules/state_management.md → "Bridging Riverpod-provided
-        // dependencies into BlocProvider" → exception #1.
-        cache: ref.read(mediaCacheProvider),
-        urlResolver: (video) => video.getOptimalVideoUrlForPlatform(),
-        preferB2Original: preferB2Original,
-        bunnyPlaybackSelector: nativeBunny && !preferB2Original
-            ? bunnySelector?.select
-            : null,
-        bunnyPlaybackPaths: preferBunny && nativeBunny
-            ? _bunnyPlaybackPaths
-            : const {},
-        initialIndex: widget.currentIndex,
-        scrollPhysics: widget.loadMoreOnEndSwipe
-            ? const AlwaysScrollableScrollPhysics()
-            : widget.scrollPhysics,
-        onNearEnd: widget.onNearEnd,
-        prefetchOnMount: widget.prefetchOnMount,
-        initialVolume: context.read<VideoVolumeCubit>().state.volume,
-        onVolumeChanged: context
-            .read<VideoVolumeCubit>()
-            .onPlaybackVolumeChanged,
-        onActiveVideoChanged: (video, index) {
-          // The comments panel beside the feed (wide landscape windows)
-          // follows only the video it was opened for, also while it is
-          // hidden by a narrow window.
-          CommentsPanelScope.closeUnlessShowing(context, video.id);
-          _resumeAutoAdvanceAfterSwipe();
-          if (_analyticsSessionBoundary !=
-              _consumptionAnalytics.sessionBoundary) {
-            _resetSeenVideos();
-          }
-          final isProgrammaticActivation =
-              index == _activeIndex || index == _programmaticActivationIndex;
-          if (index == _programmaticActivationIndex) {
-            _programmaticActivationIndex = null;
-          }
-          _activeIndex = index;
-          if (!isProgrammaticActivation && _seenVideoIds.add(video.id)) {
-            unawaited(
-              _consumptionAnalytics.feedDepthReached(
-                trafficSource: _trafficSourceFor(video),
-                feedSessionId: _feedSessionId,
-                depth: _seenVideoIds.length,
-                sourceDetail: widget.sourceDetail,
-              ),
-            );
-          }
-          widget.onActiveVideoChanged?.call(video, index);
-        },
-        // Nothing in the feed plays longer than a Vine, not even a 60s file a
-        // foreign Nostr client points at. The cap is a native clip end, so the
-        // loop point stays in the platform player and the join stays seamless
-        // (#5544, #6421).
-        maxPlaybackDuration: AppConstants.maxFeedPlaybackDuration,
-        onVideoLoopCompleted: _handleVideoLoopCompleted,
-        shouldPortraitExpand: fillsViewport,
-        canAutoPlay: _canAutoPlayVideo,
-        videoBuilder: (context, child, index, controller) {
-          if (index < 0 || index >= widget.videos.length) {
-            return const SizedBox.shrink();
-          }
-          final video = widget.videos[index];
-          final aspectRatio = backdropAspectRatio(video.width, video.height);
-          return VideoTileTransitionTarget(
-            // The loading layer above is the same widget type, and goes at
-            // the first frame: unkeyed, the page would hand its element to
-            // this layer and rebuild the player from scratch.
-            key: const ValueKey('video-layer'),
-            videoId: video.id,
-            aspectRatio: aspectRatio,
-            coversViewport: videoCoversFeedViewport(
+        onPreviousVideo: _showPreviousVideo,
+        onNextVideo: _showNextVideo,
+        onTogglePlayback: _togglePlayback,
+        onToggleMute: _toggleMute,
+        child: InfiniteVideoFeed(
+          key: _feedKey,
+          videos: widget.videos,
+          isActive: isFeedActive,
+          // On web, each live HtmlElementView <video> splits the CanvasKit
+          // layer tree into an extra WebGL overlay surface and triggers shader
+          // recompilation during swipes. Initialize only the active video's
+          // player, not its neighbours'.
+          keepPreviousAlive: !kIsWeb,
+          keepNextAlive: !kIsWeb,
+          releaseNeighboursWhenInactive:
+              widget.releaseNeighboursWhenInactive && !focusOnlyPause,
+          releaseCurrentWhenInactive: codecHeavySurfaceActive,
+          // mediaCacheProvider is a keepAlive singleton; identity is stable for
+          // the app lifetime, so ref.read is safe here. See
+          // .claude/rules/state_management.md → "Bridging Riverpod-provided
+          // dependencies into BlocProvider" → exception #1.
+          cache: ref.read(mediaCacheProvider),
+          urlResolver: (video) => video.getOptimalVideoUrlForPlatform(),
+          preferB2Original: preferB2Original,
+          bunnyPlaybackSelector: nativeBunny && !preferB2Original
+              ? bunnySelector?.select
+              : null,
+          bunnyPlaybackPaths: preferBunny && nativeBunny
+              ? _bunnyPlaybackPaths
+              : const {},
+          initialIndex: widget.currentIndex,
+          scrollPhysics: widget.loadMoreOnEndSwipe
+              ? const AlwaysScrollableScrollPhysics()
+              : widget.scrollPhysics,
+          onNearEnd: widget.onNearEnd,
+          onForwardBoundary: widget.onForwardBoundary,
+          prefetchOnMount: widget.prefetchOnMount,
+          initialVolume: context.read<VideoVolumeCubit>().state.volume,
+          onVolumeChanged: context
+              .read<VideoVolumeCubit>()
+              .onPlaybackVolumeChanged,
+          onActiveVideoChanged: (video, index) {
+            // The comments panel beside the feed (wide landscape windows)
+            // follows only the video it was opened for, also while it is
+            // hidden by a narrow window.
+            CommentsPanelScope.closeUnlessShowing(context, video.id);
+            _resumeAutoAdvanceAfterSwipe();
+            if (_analyticsSessionBoundary !=
+                _consumptionAnalytics.sessionBoundary) {
+              _resetSeenVideos();
+            }
+            final isProgrammaticActivation =
+                index == _activeIndex || index == _programmaticActivationIndex;
+            if (index == _programmaticActivationIndex) {
+              _programmaticActivationIndex = null;
+            }
+            _activeIndex = index;
+            if (!isProgrammaticActivation && _seenVideoIds.add(video.id)) {
+              unawaited(
+                _consumptionAnalytics.feedDepthReached(
+                  trafficSource: _trafficSourceFor(video),
+                  feedSessionId: _feedSessionId,
+                  depth: _seenVideoIds.length,
+                  sourceDetail: widget.sourceDetail,
+                ),
+              );
+            }
+            widget.onActiveVideoChanged?.call(video, index);
+          },
+          // Nothing in the feed plays longer than a Vine, not even a 60s file a
+          // foreign Nostr client points at. The cap is a native clip end, so the
+          // loop point stays in the platform player and the join stays seamless
+          // (#5544, #6421).
+          maxPlaybackDuration: AppConstants.maxFeedPlaybackDuration,
+          onVideoLoopCompleted: _handleVideoLoopCompleted,
+          shouldPortraitExpand: fillsViewport,
+          canAutoPlay: _canAutoPlayVideo,
+          videoBuilder: (context, child, index, controller) {
+            if (index < 0 || index >= widget.videos.length) {
+              return const SizedBox.shrink();
+            }
+            final video = widget.videos[index];
+            final aspectRatio = backdropAspectRatio(video.width, video.height);
+            return VideoTileTransitionTarget(
+              // The loading layer above is the same widget type, and goes at
+              // the first frame: unkeyed, the page would hand its element to
+              // this layer and rebuild the player from scratch.
+              key: const ValueKey('video-layer'),
+              videoId: video.id,
               aspectRatio: aspectRatio,
-              shouldPortraitExpand: fillsViewport,
-            ),
-            showsVideo: true,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                _LetterboxBackdrop(
-                  video: video,
-                  shouldPortraitExpand: fillsViewport,
-                ),
-                child,
-              ],
-            ),
-          );
-        },
-        loadingBuilder:
-            (
-              context,
-              index, {
-              required bool isSquare,
-              required bool hasSourceFailure,
-            }) {
-              if (index < 0 || index >= widget.videos.length) {
-                return const SizedBox.shrink();
-              }
-              final video = widget.videos[index];
-              final aspectRatio = backdropAspectRatio(
-                video.width,
-                video.height,
-              );
-              return VideoTileTransitionTarget(
-                key: const ValueKey('loading-layer'),
-                videoId: video.id,
+              coversViewport: videoCoversFeedViewport(
                 aspectRatio: aspectRatio,
-                coversViewport: videoCoversFeedViewport(
-                  aspectRatio: aspectRatio,
-                  shouldPortraitExpand: fillsViewport,
-                ),
-                child: _FeedLoadingOrRestrictedOverlay(
-                  video: video,
-                  index: index,
-                  feedMode: widget.contextTitle,
-                  // The feed only knows a video is square once its player has
-                  // read the stream. Until then the dimension tags already say
-                  // so, and the poster must sit where the video will, rather
-                  // than fill the screen and jump into its band on first frame.
-                  isSquare: isSquare || aspectRatio == 1,
-                  shouldPortraitExpand: fillsViewport,
-                  hasSourceFailure: hasSourceFailure,
-                  onSkip: () => _skipPooledVideoAt(index),
-                ),
-              );
-            },
-        errorBuilder: (context, index, onRetry, errorType) {
-          if (index < 0 || index >= widget.videos.length) {
-            return const SizedBox.shrink();
-          }
-          final video = widget.videos[index];
-          final cubit = context.read<VideoPlaybackStatusCubit>();
-
-          // Dedupe at the call site so `errorBuilder` rebuilds don't
-          // schedule a post-frame callback every frame. See
-          // _lastReportedError doc above.
-          if (_lastReportedError[video.id] != errorType) {
-            _lastReportedError[video.id] = errorType;
-            // Capture the status eagerly so the post-frame callback doesn't
-            // walk the ancestor tree on a potentially-deactivated element.
-            final playbackStatus = playbackStatusFromError(
-              errorType,
-              isModerationSource:
-                  VideoModerationStatusService.shouldCheckModeration(
-                    video.videoUrl,
-                  ),
-            );
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              cubit.report(video.id, playbackStatus);
-            });
-          }
-          // Mirror the BoxFit logic of VideoLoadingPlaceholder /
-          // VideoItemWidget so the error thumbnail respects the same
-          // square / portrait-expand rules as the live video.
-          final width = video.width;
-          final height = video.height;
-          final isSquare = width != null && height != null && width == height;
-          return VerifyingAwareVideoErrorOverlay(
-            video: video,
-            index: index,
-            resolveSha256: VideoModerationStatusService.resolveSha256,
-            onRetry: () {
-              _lastReportedError.remove(video.id);
-              cubit.report(video.id, PlaybackStatus.ready);
-              onRetry();
-            },
-            onSkip: () => _skipPooledVideoAt(index),
-            retryPlayback: (httpHeaders) =>
-                _retryPooledVideoAt(index, httpHeaders),
-            errorType: errorType,
-            shouldPortraitExpand: fillsViewport,
-            isSquare: isSquare,
-          );
-        },
-        overlayBuilder: (context, index, controller, {required bool isActive}) {
-          if (index < 0 || index >= widget.videos.length) {
-            return const SizedBox.shrink();
-          }
-          final video = widget.videos[index];
-          return BlocProvider(
-            key: ValueKey((video.id, videosRepository)),
-            create: (_) => VideoLoopsCubit(
-              video: video,
-              videosRepository: videosRepository,
-            ),
-            child: Builder(
-              builder: (context) => DivineVideoMetricsTracker(
-                loopCounts: context.read<VideoLoopsCubit>(),
-                video: video,
-                controller: controller,
-                isActive: isActive,
-                isFeedVisible: isFeedActive,
-                position: index,
-                trafficSource: _trafficSourceFor(video),
-                sourceDetail: widget.sourceDetail,
-                child: _Overlay(
-                  isAddYoursSeries: widget.isAddYoursSeries,
-                  controller: controller,
-                  video: video,
-                  index: index,
-                  isActive: isActive,
-                  isFeedActive: isFeedActive,
-                  contextTitle: widget.contextTitle,
-                  contentWarningRevealed: _revealedContentWarningVideoIds
-                      .contains(
-                        video.id,
-                      ),
-                  onContentWarningRevealed: () =>
-                      _revealContentWarning(video.id),
-                  loopCompletions: _loopCompletions.stream
-                      .where((loopedIndex) => loopedIndex == index)
-                      .map((_) {}),
-                  onSuppressAutoAdvance: _suppressAutoAdvance,
-                  onResumeAutoAdvance: _resumeAutoAdvanceAfterSwipe,
-                  onSkipToNextVideo: () => _skipPooledVideoAt(index),
-                  onAutomaticSkipToNextVideo: () =>
-                      unawaited(_animateToPage(index + 1)),
-                  shouldPortraitExpand: fillsViewport,
-                  showTopScrim: widget.showTopScrim,
-                ),
+                shouldPortraitExpand: fillsViewport,
               ),
-            ),
-          );
-        },
+              showsVideo: true,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _LetterboxBackdrop(
+                    video: video,
+                    shouldPortraitExpand: fillsViewport,
+                  ),
+                  child,
+                ],
+              ),
+            );
+          },
+          loadingBuilder:
+              (
+                context,
+                index, {
+                required bool isSquare,
+                required bool hasSourceFailure,
+              }) {
+                if (index < 0 || index >= widget.videos.length) {
+                  return const SizedBox.shrink();
+                }
+                final video = widget.videos[index];
+                final aspectRatio = backdropAspectRatio(
+                  video.width,
+                  video.height,
+                );
+                return VideoTileTransitionTarget(
+                  key: const ValueKey('loading-layer'),
+                  videoId: video.id,
+                  aspectRatio: aspectRatio,
+                  coversViewport: videoCoversFeedViewport(
+                    aspectRatio: aspectRatio,
+                    shouldPortraitExpand: fillsViewport,
+                  ),
+                  child: _FeedLoadingOrRestrictedOverlay(
+                    video: video,
+                    index: index,
+                    feedMode: widget.contextTitle,
+                    // The feed only knows a video is square once its player has
+                    // read the stream. Until then the dimension tags already say
+                    // so, and the poster must sit where the video will, rather
+                    // than fill the screen and jump into its band on first frame.
+                    isSquare: isSquare || aspectRatio == 1,
+                    shouldPortraitExpand: fillsViewport,
+                    hasSourceFailure: hasSourceFailure,
+                    onSkip: () => _skipPooledVideoAt(index),
+                  ),
+                );
+              },
+          errorBuilder: (context, index, onRetry, errorType) {
+            if (index < 0 || index >= widget.videos.length) {
+              return const SizedBox.shrink();
+            }
+            final video = widget.videos[index];
+            final cubit = context.read<VideoPlaybackStatusCubit>();
+
+            // Dedupe at the call site so `errorBuilder` rebuilds don't
+            // schedule a post-frame callback every frame. See
+            // _lastReportedError doc above.
+            if (_lastReportedError[video.id] != errorType) {
+              _lastReportedError[video.id] = errorType;
+              // Capture the status eagerly so the post-frame callback doesn't
+              // walk the ancestor tree on a potentially-deactivated element.
+              final playbackStatus = playbackStatusFromError(
+                errorType,
+                isModerationSource:
+                    VideoModerationStatusService.shouldCheckModeration(
+                      video.videoUrl,
+                    ),
+              );
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                cubit.report(video.id, playbackStatus);
+              });
+            }
+            // Mirror the BoxFit logic of VideoLoadingPlaceholder /
+            // VideoItemWidget so the error thumbnail respects the same
+            // square / portrait-expand rules as the live video.
+            final width = video.width;
+            final height = video.height;
+            final isSquare = width != null && height != null && width == height;
+            return VerifyingAwareVideoErrorOverlay(
+              video: video,
+              index: index,
+              resolveSha256: VideoModerationStatusService.resolveSha256,
+              onRetry: () {
+                _lastReportedError.remove(video.id);
+                cubit.report(video.id, PlaybackStatus.ready);
+                onRetry();
+              },
+              onSkip: () => _skipPooledVideoAt(index),
+              retryPlayback: (httpHeaders) =>
+                  _retryPooledVideoAt(index, httpHeaders),
+              errorType: errorType,
+              shouldPortraitExpand: fillsViewport,
+              isSquare: isSquare,
+            );
+          },
+          overlayBuilder:
+              (context, index, controller, {required bool isActive}) {
+                if (index < 0 || index >= widget.videos.length) {
+                  return const SizedBox.shrink();
+                }
+                final video = widget.videos[index];
+                return BlocProvider(
+                  key: ValueKey((video.id, videosRepository)),
+                  create: (_) => VideoLoopsCubit(
+                    video: video,
+                    videosRepository: videosRepository,
+                  ),
+                  child: Builder(
+                    builder: (context) => DivineVideoMetricsTracker(
+                      loopCounts: context.read<VideoLoopsCubit>(),
+                      video: video,
+                      controller: controller,
+                      isActive: isActive,
+                      isFeedVisible: isFeedActive,
+                      position: index,
+                      trafficSource: _trafficSourceFor(video),
+                      sourceDetail: widget.sourceDetail,
+                      child: _Overlay(
+                        isAddYoursSeries: widget.isAddYoursSeries,
+                        controller: controller,
+                        video: video,
+                        index: index,
+                        isActive: isActive,
+                        isFeedActive: isFeedActive,
+                        contextTitle: widget.contextTitle,
+                        contentWarningRevealed: _revealedContentWarningVideoIds
+                            .contains(
+                              video.id,
+                            ),
+                        onContentWarningRevealed: () =>
+                            _revealContentWarning(video.id),
+                        loopCompletions: _loopCompletions.stream
+                            .where((loopedIndex) => loopedIndex == index)
+                            .map((_) {}),
+                        onSuppressAutoAdvance: _suppressAutoAdvance,
+                        onResumeAutoAdvance: _resumeAutoAdvanceAfterSwipe,
+                        onSkipToNextVideo: () => _skipPooledVideoAt(index),
+                        onAutomaticSkipToNextVideo: () =>
+                            unawaited(_animateToPage(index + 1)),
+                        shouldPortraitExpand: fillsViewport,
+                        showTopScrim: widget.showTopScrim,
+                        playbackToggles: _playbackToggles,
+                      ),
+                    ),
+                  ),
+                );
+              },
+        ),
       ),
     );
     return NotificationListener<ScrollNotification>(
@@ -794,6 +841,7 @@ class _Overlay extends ConsumerStatefulWidget {
     required this.shouldPortraitExpand,
     required this.showTopScrim,
     required this.loopCompletions,
+    required this.playbackToggles,
     this.onSuppressAutoAdvance,
     this.onResumeAutoAdvance,
     this.isAddYoursSeries = false,
@@ -841,6 +889,10 @@ class _Overlay extends ConsumerStatefulWidget {
   /// Called when a tap resumes playback, so Auto can be lifted out of the
   /// suppression a preceding pause applied.
   final VoidCallback? onResumeAutoAdvance;
+
+  /// Where this item offers its play/pause to the Space key while it shows a
+  /// player that a tap would play or pause.
+  final _PlaybackToggles playbackToggles;
 
   @override
   ConsumerState<_Overlay> createState() => __OverlayState();
@@ -1219,6 +1271,11 @@ class __OverlayState extends ConsumerState<_Overlay> {
       _clearPinnedImmersive();
       return;
     }
+    _togglePlayback();
+  }
+
+  /// Plays or pauses this item's video, for a tap on it or the Space key.
+  void _togglePlayback() {
     final controller = widget.controller;
     if (controller == null) return;
     switch (resolvePlayerTapAction(controller.state.status)) {
@@ -1527,18 +1584,28 @@ class __OverlayState extends ConsumerState<_Overlay> {
                                 _handleImmersivePointerEnd(event.pointer),
                             onPointerCancel: (event) =>
                                 _handleImmersivePointerEnd(event.pointer),
-                            child: _PinAwareGestureSurface(
-                              interactiveReady: interactiveReady,
-                              isOwnVideo: isOwnVideo,
-                              onTap: _handlePlayerTap,
-                              onDoubleTapDown: (details) =>
-                                  _handleDoubleTapLike(
-                                    context,
-                                    details,
-                                    isOwnVideo: isOwnVideo,
-                                  ),
-                              onLongPressStart: _enterImmersive,
-                              onRestoreChrome: _handleRestoreTap,
+                            child: _SpaceTogglesPlayback(
+                              playbackToggles: widget.playbackToggles,
+                              index: widget.index,
+                              // Space plays or pauses only while a tap on the
+                              // video would. Unlike a tap, it does so also
+                              // while the chrome is pinned: a keyboard user
+                              // has no tap to restore the chrome first.
+                              enabled: interactiveReady,
+                              onToggle: _togglePlayback,
+                              child: _PinAwareGestureSurface(
+                                interactiveReady: interactiveReady,
+                                isOwnVideo: isOwnVideo,
+                                onTap: _handlePlayerTap,
+                                onDoubleTapDown: (details) =>
+                                    _handleDoubleTapLike(
+                                      context,
+                                      details,
+                                      isOwnVideo: isOwnVideo,
+                                    ),
+                                onLongPressStart: _enterImmersive,
+                                onRestoreChrome: _handleRestoreTap,
+                              ),
                             ),
                           ),
                         ),
@@ -1638,6 +1705,79 @@ class __OverlayState extends ConsumerState<_Overlay> {
         );
     }
   }
+}
+
+/// The play/pause of each feed item whose video a tap would play or pause, by
+/// feed index, so the Space key can do the same for the video on screen.
+///
+/// An item under a content warning, or one that is unavailable or restricted,
+/// has no entry, so Space cannot start a video the viewer has not chosen to
+/// see.
+class _PlaybackToggles {
+  final _byIndex = <int, VoidCallback>{};
+
+  void register(int index, VoidCallback toggle) => _byIndex[index] = toggle;
+
+  void unregister(int index, VoidCallback toggle) {
+    if (_byIndex[index] == toggle) _byIndex.remove(index);
+  }
+
+  /// Plays or pauses the item at [index], if it offers to.
+  void toggle(int index) => _byIndex[index]?.call();
+}
+
+/// Offers [onToggle] to [playbackToggles] for [index] while [enabled] and
+/// mounted.
+class _SpaceTogglesPlayback extends StatefulWidget {
+  const _SpaceTogglesPlayback({
+    required this.playbackToggles,
+    required this.index,
+    required this.enabled,
+    required this.onToggle,
+    required this.child,
+  });
+
+  final _PlaybackToggles playbackToggles;
+  final int index;
+  final bool enabled;
+  final VoidCallback onToggle;
+  final Widget child;
+
+  @override
+  State<_SpaceTogglesPlayback> createState() => _SpaceTogglesPlaybackState();
+}
+
+class _SpaceTogglesPlaybackState extends State<_SpaceTogglesPlayback> {
+  @override
+  void initState() {
+    super.initState();
+    _register(widget);
+  }
+
+  @override
+  void didUpdateWidget(_SpaceTogglesPlayback oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _unregister(oldWidget);
+    _register(widget);
+  }
+
+  @override
+  void dispose() {
+    _unregister(widget);
+    super.dispose();
+  }
+
+  void _register(_SpaceTogglesPlayback toggle) {
+    if (toggle.enabled) {
+      toggle.playbackToggles.register(toggle.index, toggle.onToggle);
+    }
+  }
+
+  void _unregister(_SpaceTogglesPlayback toggle) =>
+      toggle.playbackToggles.unregister(toggle.index, toggle.onToggle);
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// [PlayerGestureSurface] that offers the restore tap only while the chrome is

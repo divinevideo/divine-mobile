@@ -6607,5 +6607,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Düzen",
+  "menuBarUndo": "Geri al",
+  "menuBarRedo": "Yinele",
+  "menuBarCut": "Kes",
+  "menuBarCopy": "Kopyala",
+  "menuBarPaste": "Yapıştır",
+  "menuBarSelectAll": "Tümünü seç",
+  "menuBarView": "Görüntü",
+  "menuBarVideo": "Video",
+  "menuBarPreviousVideo": "Önceki video",
+  "menuBarNextVideo": "Sonraki video",
+  "menuBarPlayPause": "Oynat/duraklat",
+  "menuBarMute": "Sessize al",
+  "menuBarUnmute": "Sesi aç",
+  "menuBarWindow": "Pencere",
+  "menuBarHelp": "Yardım"
 }

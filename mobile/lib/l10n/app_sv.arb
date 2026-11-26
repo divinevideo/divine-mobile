@@ -6607,5 +6607,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Redigera",
+  "menuBarUndo": "Ångra",
+  "menuBarRedo": "Gör om",
+  "menuBarCut": "Klipp ut",
+  "menuBarCopy": "Kopiera",
+  "menuBarPaste": "Klistra in",
+  "menuBarSelectAll": "Markera allt",
+  "menuBarView": "Innehåll",
+  "menuBarVideo": "Video",
+  "menuBarPreviousVideo": "Föregående video",
+  "menuBarNextVideo": "Nästa video",
+  "menuBarPlayPause": "Spela upp/pausa",
+  "menuBarMute": "Stäng av ljudet",
+  "menuBarUnmute": "Slå på ljudet",
+  "menuBarWindow": "Fönster",
+  "menuBarHelp": "Hjälp"
 }

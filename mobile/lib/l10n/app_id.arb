@@ -6607,5 +6607,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Edit",
+  "menuBarUndo": "Urungkan",
+  "menuBarRedo": "Ulangi",
+  "menuBarCut": "Potong",
+  "menuBarCopy": "Salin",
+  "menuBarPaste": "Tempel",
+  "menuBarSelectAll": "Pilih Semua",
+  "menuBarView": "Tampilan",
+  "menuBarVideo": "Video",
+  "menuBarPreviousVideo": "Video Sebelumnya",
+  "menuBarNextVideo": "Video Berikutnya",
+  "menuBarPlayPause": "Putar/Jeda",
+  "menuBarMute": "Bisukan",
+  "menuBarUnmute": "Aktifkan Suara",
+  "menuBarWindow": "Jendela",
+  "menuBarHelp": "Bantuan"
 }

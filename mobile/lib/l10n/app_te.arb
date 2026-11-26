@@ -9523,5 +9523,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "సవరణ",
+  "menuBarUndo": "అన్డు",
+  "menuBarRedo": "పునరావృతం",
+  "menuBarCut": "కత్తిరించండి",
+  "menuBarCopy": "కాపీ",
+  "menuBarPaste": "అతికించండి",
+  "menuBarSelectAll": "అన్నీ ఎంచుకోండి",
+  "menuBarView": "వీక్షణ",
+  "menuBarVideo": "వీడియో",
+  "menuBarPreviousVideo": "మునుపటి వీడియో",
+  "menuBarNextVideo": "తదుపరి వీడియో",
+  "menuBarPlayPause": "ప్లే/పాజ్",
+  "menuBarMute": "మ్యూట్ చేయండి",
+  "menuBarUnmute": "అన్‌మ్యూట్ చేయండి",
+  "menuBarWindow": "విండో",
+  "menuBarHelp": "సహాయం"
 }

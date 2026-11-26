@@ -16085,4 +16085,52 @@ class AppLocalizationsZh extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return '$badgeName的视频';
   }
+
+  @override
+  String get menuBarEdit => '编辑';
+
+  @override
+  String get menuBarUndo => '撤销';
+
+  @override
+  String get menuBarRedo => '重做';
+
+  @override
+  String get menuBarCut => '剪切';
+
+  @override
+  String get menuBarCopy => '拷贝';
+
+  @override
+  String get menuBarPaste => '粘贴';
+
+  @override
+  String get menuBarSelectAll => '全选';
+
+  @override
+  String get menuBarView => '显示';
+
+  @override
+  String get menuBarVideo => '视频';
+
+  @override
+  String get menuBarPreviousVideo => '上一个视频';
+
+  @override
+  String get menuBarNextVideo => '下一个视频';
+
+  @override
+  String get menuBarPlayPause => '播放/暂停';
+
+  @override
+  String get menuBarMute => '静音';
+
+  @override
+  String get menuBarUnmute => '取消静音';
+
+  @override
+  String get menuBarWindow => '窗口';
+
+  @override
+  String get menuBarHelp => '帮助';
 }

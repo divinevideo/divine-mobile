@@ -17219,4 +17219,52 @@ class AppLocalizationsFil extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Mga video mula sa $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Edit';
+
+  @override
+  String get menuBarUndo => 'I-undo';
+
+  @override
+  String get menuBarRedo => 'I-redo';
+
+  @override
+  String get menuBarCut => 'I-cut';
+
+  @override
+  String get menuBarCopy => 'Kopyahin';
+
+  @override
+  String get menuBarPaste => 'I-paste';
+
+  @override
+  String get menuBarSelectAll => 'Piliin Lahat';
+
+  @override
+  String get menuBarView => 'View';
+
+  @override
+  String get menuBarVideo => 'Video';
+
+  @override
+  String get menuBarPreviousVideo => 'Nakaraang Video';
+
+  @override
+  String get menuBarNextVideo => 'Susunod na Video';
+
+  @override
+  String get menuBarPlayPause => 'I-play/I-pause';
+
+  @override
+  String get menuBarMute => 'I-mute';
+
+  @override
+  String get menuBarUnmute => 'I-unmute';
+
+  @override
+  String get menuBarWindow => 'Window';
+
+  @override
+  String get menuBarHelp => 'Tulong';
 }

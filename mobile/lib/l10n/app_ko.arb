@@ -6160,5 +6160,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "편집",
+  "menuBarUndo": "실행 취소",
+  "menuBarRedo": "실행 복귀",
+  "menuBarCut": "오려두기",
+  "menuBarCopy": "복사하기",
+  "menuBarPaste": "붙여넣기",
+  "menuBarSelectAll": "전체 선택",
+  "menuBarView": "보기",
+  "menuBarVideo": "동영상",
+  "menuBarPreviousVideo": "이전 동영상",
+  "menuBarNextVideo": "다음 동영상",
+  "menuBarPlayPause": "재생/일시 정지",
+  "menuBarMute": "음소거",
+  "menuBarUnmute": "음소거 해제",
+  "menuBarWindow": "윈도우",
+  "menuBarHelp": "도움말"
 }

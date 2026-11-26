@@ -17225,4 +17225,52 @@ class AppLocalizationsBg extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Видеоклипове от $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Редакция';
+
+  @override
+  String get menuBarUndo => 'Отмени';
+
+  @override
+  String get menuBarRedo => 'Повтори';
+
+  @override
+  String get menuBarCut => 'Изрежи';
+
+  @override
+  String get menuBarCopy => 'Копирай';
+
+  @override
+  String get menuBarPaste => 'Постави';
+
+  @override
+  String get menuBarSelectAll => 'Избери всичко';
+
+  @override
+  String get menuBarView => 'Изглед';
+
+  @override
+  String get menuBarVideo => 'Видео';
+
+  @override
+  String get menuBarPreviousVideo => 'Предишно видео';
+
+  @override
+  String get menuBarNextVideo => 'Следващо видео';
+
+  @override
+  String get menuBarPlayPause => 'Пусни/пауза';
+
+  @override
+  String get menuBarMute => 'Без звук';
+
+  @override
+  String get menuBarUnmute => 'Включи звука';
+
+  @override
+  String get menuBarWindow => 'Прозорец';
+
+  @override
+  String get menuBarHelp => 'Помощ';
 }

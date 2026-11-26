@@ -9,6 +9,13 @@ import 'package:flutter/foundation.dart'
         kIsWeb,
         setEquals,
         visibleForTesting;
+import 'package:flutter/gestures.dart'
+    show
+        GestureBinding,
+        PointerDeviceKind,
+        PointerScrollEvent,
+        PointerSignalEvent;
+import 'package:flutter/services.dart' show HardwareKeyboard;
 import 'package:flutter/widgets.dart';
 import 'package:infinite_video_feed/src/models/builders.dart';
 import 'package:infinite_video_feed/src/models/feed_first_frame_metric.dart';
@@ -21,11 +28,13 @@ import 'package:infinite_video_feed/src/services/derivative_failure_cache.dart';
 import 'package:infinite_video_feed/src/services/disk_prefetcher.dart';
 import 'package:infinite_video_feed/src/services/load_watchdog.dart';
 import 'package:infinite_video_feed/src/services/playback_source_registry.dart';
+import 'package:infinite_video_feed/src/services/pointer_scroll_pager.dart';
 import 'package:infinite_video_feed/src/services/stale_playback_detector.dart';
 import 'package:infinite_video_feed/src/utils/canonical_divine_url.dart';
 import 'package:infinite_video_feed/src/utils/playback_failure_log.dart';
 import 'package:infinite_video_feed/src/utils/playback_sources.dart';
 import 'package:infinite_video_feed/src/utils/source_loader.dart';
+import 'package:infinite_video_feed/src/widgets/priority_pointer_signal_listener.dart';
 import 'package:infinite_video_feed/src/widgets/video_item.dart';
 import 'package:media_cache/media_cache.dart';
 import 'package:models/models.dart';
@@ -71,6 +80,7 @@ class InfiniteVideoFeed extends StatefulWidget {
     this.maxPlaybackDuration,
     this.onActiveVideoChanged,
     this.onNearEnd,
+    this.onForwardBoundary,
     this.nearEndThreshold = 15,
     this.prefetchOnMount = false,
     this.onVideoLoopCompleted,
@@ -278,6 +288,12 @@ class InfiniteVideoFeed extends StatefulWidget {
   /// Called when the user is near the end of the list.
   final VoidCallback? onNearEnd;
 
+  /// Handles a wheel scroll or next-page action past the last video.
+  ///
+  /// Supply this while more videos can be requested. With no handler, a
+  /// forward wheel scroll at the boundary is left to the enclosing scrollable.
+  final VoidCallback? onForwardBoundary;
+
   /// How many videos from the end should trigger [onNearEnd].
   final int nearEndThreshold;
 
@@ -362,9 +378,12 @@ class InfiniteVideoFeed extends StatefulWidget {
 /// failover, slow-load detection, stalled-playback recovery, and
 /// per-controller stream subscriptions.
 ///
-/// Exposes [pauseActive], [resumeActive], [animateToPage], and
-/// [currentIndex] for owning widgets that need to drive the feed
-/// imperatively.
+/// Exposes [pauseActive], [resumeActive], [animateToPage], [nextPage],
+/// [previousPage] and [currentIndex] for owning widgets that need to drive the
+/// feed imperatively.
+///
+/// A mouse wheel notch, or a trackpad swipe a browser reports as wheel events,
+/// moves exactly one video (see [PointerScrollPager]).
 class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   static const _logName = 'InfiniteVideoFeed';
   static const _loopEndThreshold = Duration(seconds: 1);
@@ -372,7 +391,20 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   static const _pageJumpDuration = Duration(milliseconds: 300);
   static const Cubic _pageJumpCurve = Curves.easeInOut;
 
+  /// How far a trackpad swipe reported as wheel events has to scroll before it
+  /// moves a video, so a small, accidental trackpad movement does not.
+  ///
+  /// A mouse wheel notch moves a video however small its delta: a slow notch
+  /// in a browser on macOS reports only about 4 pixels.
+  static const _trackpadScrollStepThreshold = 40.0;
+
   late final PageController _pageController;
+  final _pointerScrollPager = PointerScrollPager();
+
+  /// The page a [nextPage] or [previousPage] animation is heading for, so a
+  /// second key press during the animation moves on from there rather than
+  /// repeating the step it is still finishing.
+  int? _stepTargetIndex;
 
   /// One revision counter per page index; the page's subtree listens to it.
   ///
@@ -565,6 +597,98 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       duration: _pageJumpDuration,
       curve: _pageJumpCurve,
     );
+  }
+
+  /// Animates to the next video, or calls [InfiniteVideoFeed.onForwardBoundary]
+  /// when already on the last one.
+  Future<void> nextPage() => _stepPage(1);
+
+  /// Animates to the previous video. Does nothing on the first one.
+  Future<void> previousPage() => _stepPage(-1);
+
+  Future<void> _stepPage(int step) async {
+    final from = _stepTargetIndex ?? _currentIndex;
+    final target = _clampIndex(from + step);
+    if (target == from) {
+      if (step > 0 && from == _currentIndex && widget.videos.isNotEmpty) {
+        widget.onForwardBoundary?.call();
+      }
+      return;
+    }
+    _stepTargetIndex = target;
+    try {
+      await animateToPage(target);
+    } finally {
+      if (_stepTargetIndex == target) _stepTargetIndex = null;
+    }
+  }
+
+  /// Claims wheel and browser trackpad scrolls before the nested page view.
+  ///
+  /// The page view would apply raw deltas and cut short an ongoing animation.
+  /// The enclosing scrollable can handle input when the feed is at a true end.
+  void _onPointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    final modifiers = ScrollConfiguration.of(context).pointerAxisModifiers;
+    final scrollsAcross =
+        event.kind == PointerDeviceKind.mouse &&
+        HardwareKeyboard.instance.logicalKeysPressed.any(modifiers.contains);
+    final Offset(:dx, :dy) = event.scrollDelta;
+    final (along, across) = widget.scrollDirection == Axis.vertical
+        ? (dy, dx)
+        : (dx, dy);
+    final position = _pageController.position;
+    final acceptsOffset = position.physics.shouldAcceptUserOffset(position);
+    final direction = axisDirectionIsReversed(position.axisDirection) ? -1 : 1;
+    final delta = !scrollsAcross && along.abs() > across.abs()
+        ? along * direction
+        : 0.0;
+    if (delta == 0) {
+      // Keep the burst together even when some of it goes sideways. A
+      // Scrollable can still bid on one component of the rejected delta.
+      _pointerScrollPager.observe(event.timeStamp);
+      final nativeDelta = (scrollsAcross ? across : along) * direction;
+      final target = (position.pixels + nativeDelta).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      );
+      if (acceptsOffset && nativeDelta != 0 && target != position.pixels) {
+        // Block the native PageView fallback. Raw listeners, including
+        // horizontal feed tuning, still see the event before it resolves.
+        GestureBinding.instance.pointerSignalResolver.register(
+          event,
+          (rejected) => rejected.respond(allowPlatformDefault: true),
+        );
+      }
+      return;
+    }
+
+    final atEnd = delta < 0
+        ? position.pixels <= position.minScrollExtent
+        : position.pixels >= position.maxScrollExtent;
+    if (!acceptsOffset ||
+        (atEnd && (delta < 0 || widget.onForwardBoundary == null))) {
+      _pointerScrollPager.observe(event.timeStamp);
+      return;
+    }
+    GestureBinding.instance.pointerSignalResolver.register(
+      event,
+      (_) => _onPointerScroll(event, delta),
+    );
+  }
+
+  void _onPointerScroll(PointerScrollEvent scroll, double delta) {
+    final step = _pointerScrollPager.add(
+      delta,
+      timeStamp: scroll.timeStamp,
+      threshold: scroll.kind == PointerDeviceKind.trackpad
+          ? _trackpadScrollStepThreshold
+          : 0,
+      canStep: !_pageController.position.isScrollingNotifier.value,
+    );
+    // Keeps a browser from also scrolling the page the app is embedded in.
+    scroll.respond(allowPlatformDefault: false);
+    if (step != 0) unawaited(_stepPage(step));
   }
 
   /// Activates [index] without waiting for a scroll animation.
@@ -2459,16 +2583,19 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   @override
   Widget build(BuildContext context) {
-    return PageView.builder(
-      allowImplicitScrolling: true,
-      controller: _pageController,
-      physics: widget.scrollPhysics,
-      scrollDirection: widget.scrollDirection,
-      onPageChanged: _onPageChanged,
-      itemCount: widget.videos.length,
-      itemBuilder: (context, index) => ValueListenableBuilder<int>(
-        valueListenable: _pageRevision(index),
-        builder: (context, _, _) => _buildPage(context, index),
+    return PriorityPointerSignalListener(
+      onPointerSignal: _onPointerSignal,
+      child: PageView.builder(
+        allowImplicitScrolling: true,
+        controller: _pageController,
+        physics: widget.scrollPhysics,
+        scrollDirection: widget.scrollDirection,
+        onPageChanged: _onPageChanged,
+        itemCount: widget.videos.length,
+        itemBuilder: (context, index) => ValueListenableBuilder<int>(
+          valueListenable: _pageRevision(index),
+          builder: (context, _, _) => _buildPage(context, index),
+        ),
       ),
     );
   }

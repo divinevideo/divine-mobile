@@ -7900,5 +7900,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Sửa",
+  "menuBarUndo": "Hoàn tác",
+  "menuBarRedo": "Làm lại",
+  "menuBarCut": "Cắt",
+  "menuBarCopy": "Sao chép",
+  "menuBarPaste": "Dán",
+  "menuBarSelectAll": "Chọn tất cả",
+  "menuBarView": "Xem",
+  "menuBarVideo": "Video",
+  "menuBarPreviousVideo": "Video trước",
+  "menuBarNextVideo": "Video tiếp theo",
+  "menuBarPlayPause": "Phát/Tạm dừng",
+  "menuBarMute": "Tắt tiếng",
+  "menuBarUnmute": "Bật tiếng",
+  "menuBarWindow": "Cửa sổ",
+  "menuBarHelp": "Trợ giúp"
 }

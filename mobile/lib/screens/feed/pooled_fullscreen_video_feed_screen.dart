@@ -597,17 +597,21 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
     }
     // Clamping physics reports an overscroll; bouncing physics reports a
     // scroll update beyond the end. Only user drags request another page.
-    final swipingPastEnd = isFeedEndSwipe(notification);
-    final state = context.read<FullscreenFeedBloc>().state;
-    if (swipingPastEnd &&
-        !_requestedPageForDrag &&
-        state.canLoadMore &&
-        !state.isLoadingMore &&
-        state.currentIndex == state.videos.length - 1) {
-      _requestedPageForDrag = true;
-      _triggerLoadMore();
+    if (isFeedEndSwipe(notification) && !_requestedPageForDrag) {
+      _requestedPageForDrag = _requestAtForwardBoundary();
     }
     return false;
+  }
+
+  bool _requestAtForwardBoundary() {
+    final state = context.read<FullscreenFeedBloc>().state;
+    if (!state.canLoadMore ||
+        state.isLoadingMore ||
+        state.currentIndex != state.videos.length - 1) {
+      return false;
+    }
+    _triggerLoadMore();
+    return true;
   }
 
   ViewTrafficSource _trafficSourceForVideo(VideoEvent video) {
@@ -1070,6 +1074,12 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                                                 scrollPhysics:
                                                     widget.loadMoreOnEndSwipe
                                                     ? const AlwaysScrollableScrollPhysics()
+                                                    : null,
+                                                onForwardBoundary:
+                                                    widget.loadMoreOnEndSwipe &&
+                                                        state.canLoadMore &&
+                                                        !state.isLoadingMore
+                                                    ? _requestAtForwardBoundary
                                                     : null,
                                                 hasMore: state.canLoadMore,
                                                 isLoadingMore:

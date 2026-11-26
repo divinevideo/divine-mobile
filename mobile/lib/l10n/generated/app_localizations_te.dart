@@ -17452,4 +17452,52 @@ class AppLocalizationsTe extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return '$badgeName వీడియోలు';
   }
+
+  @override
+  String get menuBarEdit => 'సవరణ';
+
+  @override
+  String get menuBarUndo => 'అన్డు';
+
+  @override
+  String get menuBarRedo => 'పునరావృతం';
+
+  @override
+  String get menuBarCut => 'కత్తిరించండి';
+
+  @override
+  String get menuBarCopy => 'కాపీ';
+
+  @override
+  String get menuBarPaste => 'అతికించండి';
+
+  @override
+  String get menuBarSelectAll => 'అన్నీ ఎంచుకోండి';
+
+  @override
+  String get menuBarView => 'వీక్షణ';
+
+  @override
+  String get menuBarVideo => 'వీడియో';
+
+  @override
+  String get menuBarPreviousVideo => 'మునుపటి వీడియో';
+
+  @override
+  String get menuBarNextVideo => 'తదుపరి వీడియో';
+
+  @override
+  String get menuBarPlayPause => 'ప్లే/పాజ్';
+
+  @override
+  String get menuBarMute => 'మ్యూట్ చేయండి';
+
+  @override
+  String get menuBarUnmute => 'అన్‌మ్యూట్ చేయండి';
+
+  @override
+  String get menuBarWindow => 'విండో';
+
+  @override
+  String get menuBarHelp => 'సహాయం';
 }

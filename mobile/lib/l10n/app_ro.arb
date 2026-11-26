@@ -6607,5 +6607,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Editare",
+  "menuBarUndo": "Anulează",
+  "menuBarRedo": "Refă",
+  "menuBarCut": "Decupează",
+  "menuBarCopy": "Copiază",
+  "menuBarPaste": "Lipește",
+  "menuBarSelectAll": "Selectează tot",
+  "menuBarView": "Afișare",
+  "menuBarVideo": "Videoclip",
+  "menuBarPreviousVideo": "Videoclipul anterior",
+  "menuBarNextVideo": "Videoclipul următor",
+  "menuBarPlayPause": "Redă/pauză",
+  "menuBarMute": "Dezactivează sunetul",
+  "menuBarUnmute": "Activează sunetul",
+  "menuBarWindow": "Fereastră",
+  "menuBarHelp": "Ajutor"
 }

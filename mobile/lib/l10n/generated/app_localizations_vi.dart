@@ -17012,4 +17012,52 @@ class AppLocalizationsVi extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Video từ $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Sửa';
+
+  @override
+  String get menuBarUndo => 'Hoàn tác';
+
+  @override
+  String get menuBarRedo => 'Làm lại';
+
+  @override
+  String get menuBarCut => 'Cắt';
+
+  @override
+  String get menuBarCopy => 'Sao chép';
+
+  @override
+  String get menuBarPaste => 'Dán';
+
+  @override
+  String get menuBarSelectAll => 'Chọn tất cả';
+
+  @override
+  String get menuBarView => 'Xem';
+
+  @override
+  String get menuBarVideo => 'Video';
+
+  @override
+  String get menuBarPreviousVideo => 'Video trước';
+
+  @override
+  String get menuBarNextVideo => 'Video tiếp theo';
+
+  @override
+  String get menuBarPlayPause => 'Phát/Tạm dừng';
+
+  @override
+  String get menuBarMute => 'Tắt tiếng';
+
+  @override
+  String get menuBarUnmute => 'Bật tiếng';
+
+  @override
+  String get menuBarWindow => 'Cửa sổ';
+
+  @override
+  String get menuBarHelp => 'Trợ giúp';
 }

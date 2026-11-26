@@ -16993,4 +16993,52 @@ class AppLocalizationsTr extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return '$badgeName videoları';
   }
+
+  @override
+  String get menuBarEdit => 'Düzen';
+
+  @override
+  String get menuBarUndo => 'Geri al';
+
+  @override
+  String get menuBarRedo => 'Yinele';
+
+  @override
+  String get menuBarCut => 'Kes';
+
+  @override
+  String get menuBarCopy => 'Kopyala';
+
+  @override
+  String get menuBarPaste => 'Yapıştır';
+
+  @override
+  String get menuBarSelectAll => 'Tümünü seç';
+
+  @override
+  String get menuBarView => 'Görüntü';
+
+  @override
+  String get menuBarVideo => 'Video';
+
+  @override
+  String get menuBarPreviousVideo => 'Önceki video';
+
+  @override
+  String get menuBarNextVideo => 'Sonraki video';
+
+  @override
+  String get menuBarPlayPause => 'Oynat/duraklat';
+
+  @override
+  String get menuBarMute => 'Sessize al';
+
+  @override
+  String get menuBarUnmute => 'Sesi aç';
+
+  @override
+  String get menuBarWindow => 'Pencere';
+
+  @override
+  String get menuBarHelp => 'Yardım';
 }

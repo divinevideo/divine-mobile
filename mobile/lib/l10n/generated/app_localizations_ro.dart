@@ -17402,4 +17402,52 @@ class AppLocalizationsRo extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Videoclipuri de la $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Editare';
+
+  @override
+  String get menuBarUndo => 'Anulează';
+
+  @override
+  String get menuBarRedo => 'Refă';
+
+  @override
+  String get menuBarCut => 'Decupează';
+
+  @override
+  String get menuBarCopy => 'Copiază';
+
+  @override
+  String get menuBarPaste => 'Lipește';
+
+  @override
+  String get menuBarSelectAll => 'Selectează tot';
+
+  @override
+  String get menuBarView => 'Afișare';
+
+  @override
+  String get menuBarVideo => 'Videoclip';
+
+  @override
+  String get menuBarPreviousVideo => 'Videoclipul anterior';
+
+  @override
+  String get menuBarNextVideo => 'Videoclipul următor';
+
+  @override
+  String get menuBarPlayPause => 'Redă/pauză';
+
+  @override
+  String get menuBarMute => 'Dezactivează sunetul';
+
+  @override
+  String get menuBarUnmute => 'Activează sunetul';
+
+  @override
+  String get menuBarWindow => 'Fereastră';
+
+  @override
+  String get menuBarHelp => 'Ajutor';
 }

@@ -6607,5 +6607,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Wijzig",
+  "menuBarUndo": "Herstel",
+  "menuBarRedo": "Opnieuw",
+  "menuBarCut": "Knip",
+  "menuBarCopy": "Kopieer",
+  "menuBarPaste": "Plak",
+  "menuBarSelectAll": "Selecteer alles",
+  "menuBarView": "Weergave",
+  "menuBarVideo": "Video",
+  "menuBarPreviousVideo": "Vorige video",
+  "menuBarNextVideo": "Volgende video",
+  "menuBarPlayPause": "Afspelen/pauzeren",
+  "menuBarMute": "Dempen",
+  "menuBarUnmute": "Geluid inschakelen",
+  "menuBarWindow": "Venster",
+  "menuBarHelp": "Help"
 }

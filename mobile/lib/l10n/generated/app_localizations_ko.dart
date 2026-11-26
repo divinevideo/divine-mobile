@@ -16302,4 +16302,52 @@ class AppLocalizationsKo extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return '$badgeName의 동영상';
   }
+
+  @override
+  String get menuBarEdit => '편집';
+
+  @override
+  String get menuBarUndo => '실행 취소';
+
+  @override
+  String get menuBarRedo => '실행 복귀';
+
+  @override
+  String get menuBarCut => '오려두기';
+
+  @override
+  String get menuBarCopy => '복사하기';
+
+  @override
+  String get menuBarPaste => '붙여넣기';
+
+  @override
+  String get menuBarSelectAll => '전체 선택';
+
+  @override
+  String get menuBarView => '보기';
+
+  @override
+  String get menuBarVideo => '동영상';
+
+  @override
+  String get menuBarPreviousVideo => '이전 동영상';
+
+  @override
+  String get menuBarNextVideo => '다음 동영상';
+
+  @override
+  String get menuBarPlayPause => '재생/일시 정지';
+
+  @override
+  String get menuBarMute => '음소거';
+
+  @override
+  String get menuBarUnmute => '음소거 해제';
+
+  @override
+  String get menuBarWindow => '윈도우';
+
+  @override
+  String get menuBarHelp => '도움말';
 }
