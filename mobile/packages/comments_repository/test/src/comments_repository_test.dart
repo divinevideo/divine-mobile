@@ -2177,6 +2177,48 @@ void main() {
         );
       });
 
+      test(
+        'returns a count a relay did not settle without caching it',
+        () async {
+          var calls = 0;
+          when(() => mockNostrClient.countEvents(any())).thenAnswer((_) async {
+            calls++;
+            return calls == 1
+                ? const CountResult(count: 2, isComplete: false)
+                : const CountResult(count: 6, isComplete: true);
+          });
+
+          expect(await repository.getCommentsCount(testRootEventId), equals(2));
+          expect(await repository.getCommentsCount(testRootEventId), equals(6));
+          expect(await repository.getCommentsCount(testRootEventId), equals(6));
+          verify(() => mockNostrClient.countEvents(any())).called(2);
+        },
+      );
+
+      test(
+        'does not cache when one of the E and A counts is incomplete',
+        () async {
+          const addressableId = '34236:$testRootAuthorPubkey:video-dtag';
+          var calls = 0;
+          when(() => mockNostrClient.countEvents(any())).thenAnswer((_) async {
+            calls++;
+            return CountResult(count: 4, isComplete: calls != 2);
+          });
+
+          final first = await repository.getCommentsCount(
+            testRootEventId,
+            rootAddressableId: addressableId,
+          );
+          await repository.getCommentsCount(
+            testRootEventId,
+            rootAddressableId: addressableId,
+          );
+
+          expect(first, equals(4));
+          verify(() => mockNostrClient.countEvents(any())).called(4);
+        },
+      );
+
       test('returns null and caches nothing when no relay answered', () async {
         when(() => mockNostrClient.countEvents(any())).thenThrow(
           const CountUnavailableException('No relay responded to COUNT'),
@@ -2202,8 +2244,9 @@ void main() {
           when(() => mockNostrClient.countEvents(any())).thenAnswer((_) async {
             callCount++;
             // The E count answers and the A count does not.
-            if (callCount.isOdd)
+            if (callCount.isOdd) {
               return const CountResult(isComplete: true, count: 5);
+            }
             throw const CountUnavailableException(
               'No relay responded to COUNT',
             );
