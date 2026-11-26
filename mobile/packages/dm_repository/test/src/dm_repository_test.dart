@@ -1202,6 +1202,24 @@ void main() {
       });
     }
 
+    /// The sender's own copy of a group send lands. A group publishes one copy
+    /// for every member after their sends (#10016).
+    void stubOwnCopyPublishes() =>
+        when(
+          () => mockMessageService.publishSelfWrap(
+            rumorEvent: any(named: 'rumorEvent'),
+            targetRelays: any(named: 'targetRelays'),
+            prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+          ),
+        ).thenAnswer((inv) async {
+          final rumor = inv.namedArguments[#rumorEvent] as Event;
+          return NIP17SendResult.success(
+            rumorEventId: rumor.id,
+            messageEventId: rumor.id,
+            recipientPubkey: _validPubkeyA,
+          );
+        });
+
     // -----------------------------------------------------------------
     // Static helpers
     // -----------------------------------------------------------------
@@ -27262,6 +27280,7 @@ void main() {
 
     group('sendGroupMessage - success', () {
       setUp(stubSendPolicyPermitsEveryone);
+      setUp(stubOwnCopyPublishes);
 
       void stubDaoInserts() {
         when(
@@ -27598,6 +27617,7 @@ void main() {
 
     group('sendSharedVideoGroup', () {
       setUp(stubSendPolicyPermitsEveryone);
+      setUp(stubOwnCopyPublishes);
 
       void stubDaoInserts() {
         when(
@@ -29771,6 +29791,7 @@ void main() {
 
     group('sendGroupMessage with outgoing_dms queue wired in', () {
       setUp(stubSendPolicyPermitsEveryone);
+      setUp(stubOwnCopyPublishes);
 
       setUp(stubNoMessageForSendBatch);
 
@@ -30188,13 +30209,11 @@ void main() {
         },
       );
 
-      /// Answers every member's send as delivered. The first send that is not
-      /// handed a copy callback reports [firstOwnCopyLands]; a send handed one
-      /// publishes no copy of its own, as the real service does (#10016).
-      /// Returns, per recipient, whether its send was handed the callback.
-      Map<String, bool> stubDeliveredMembers({
-        required bool firstOwnCopyLands,
-      }) {
+      /// Answers every member's send as delivered, the way the real service
+      /// answers a send handed the copy callback: it hands its copy over and
+      /// publishes none (#10016). The batch's one copy then [ownCopyLands] or
+      /// not. Returns, per recipient, whether its send was handed the callback.
+      Map<String, bool> stubDeliveredMembers({required bool ownCopyLands}) {
         final handedOver = <String, bool>{};
         when(
           () => mockMessageService.sendRumor(
@@ -30218,17 +30237,40 @@ void main() {
             rumorEventId: 'rumor-$recipient',
             messageEventId: 'wrap-$recipient',
             recipientPubkey: recipient,
-            selfWrapPublished: callback == null && firstOwnCopyLands,
+            selfWrapPublished: callback == null,
           );
         });
+        when(
+          () => mockMessageService.publishSelfWrap(
+            rumorEvent: any(named: 'rumorEvent'),
+            targetRelays: any(named: 'targetRelays'),
+            prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+          ),
+        ).thenAnswer(
+          (_) async => ownCopyLands
+              ? NIP17SendResult.success(
+                  rumorEventId: 'rumor',
+                  messageEventId: 'rumor',
+                  recipientPubkey: _validPubkeyA,
+                )
+              : const NIP17SendResult.failure('own copy not published'),
+        );
         return handedOver;
       }
 
+      int ownCopyPublishes() => verify(
+        () => mockMessageService.publishSelfWrap(
+          rumorEvent: any(named: 'rumorEvent'),
+          targetRelays: any(named: 'targetRelays'),
+          prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+        ),
+      ).callCount;
+
       test(
-        "deletes every delivered member's row when the first member's send "
-        "publishes the batch's one own copy (#10016)",
+        "deletes every delivered member's row when the batch's one own copy "
+        'lands after their sends (#10016)',
         () async {
-          final handedOver = stubDeliveredMembers(firstOwnCopyLands: true);
+          final handedOver = stubDeliveredMembers(ownCopyLands: true);
 
           final repository = createRepository(
             outgoingDmsDao: mockOutgoingDmsDao,
@@ -30239,7 +30281,8 @@ void main() {
             content: 'group delivery',
           );
 
-          expect(handedOver, {_validPubkeyB: false, _validPubkeyC: true});
+          expect(handedOver, {_validPubkeyB: true, _validPubkeyC: true});
+          expect(ownCopyPublishes(), 1);
           expect(results.every((r) => r.success), isTrue);
           expect(results.every((r) => r.selfWrapPublished ?? false), isTrue);
           final captured = verify(
@@ -30262,7 +30305,7 @@ void main() {
         'keeps every delivered member as recipient sent + self failed when '
         "the batch's one own copy fails, so recovery publishes only that copy",
         () async {
-          final handedOver = stubDeliveredMembers(firstOwnCopyLands: false);
+          stubDeliveredMembers(ownCopyLands: false);
 
           final repository = createRepository(
             outgoingDmsDao: mockOutgoingDmsDao,
@@ -30274,8 +30317,8 @@ void main() {
           );
 
           expect(
-            handedOver,
-            {_validPubkeyB: false, _validPubkeyC: true},
+            ownCopyPublishes(),
+            1,
             reason: 'one failed copy is not tried again for each member',
           );
           expect(results.every((r) => r.success), isTrue);
@@ -31142,6 +31185,17 @@ void main() {
               recipientPubkey: recipient,
               selfWrapPublished: false,
             ),
+          );
+          // The batch's one own copy does not land either (#10016).
+          when(
+            () => mockMessageService.publishSelfWrap(
+              rumorEvent: any(named: 'rumorEvent'),
+              targetRelays: any(named: 'targetRelays'),
+              prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                const NIP17SendResult.failure('own copy not published'),
           );
 
           final repository = createRepository(

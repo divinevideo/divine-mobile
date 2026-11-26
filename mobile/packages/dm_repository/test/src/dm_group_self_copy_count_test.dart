@@ -455,6 +455,36 @@ void main() {
         }
       }
 
+      test("publishes one own copy when a member's retry overlaps the group "
+          'send', () async {
+        final others = members.take(3).toList();
+        Future<NIP17SendResult>? retry;
+        onRecipientPublish = (wrap) {
+          final toFirst = wrap.tags.any(
+            (tag) => tag.length >= 2 && tag[0] == 'p' && tag[1] == others[0],
+          );
+          if (!toFirst || retry != null) return;
+          // The sweep re-drives the second member's row while the first
+          // member's send is still on the wire.
+          retry = () async {
+            final row = (await queueRows()).firstWhere(
+              (row) => row.recipientPubkey == others[1],
+            );
+            return repository.recoverFullSend(rumorId: row.id);
+          }();
+        };
+
+        await sendToRoom(others);
+        expect(retry, isNotNull, reason: 'precondition: the retry overlapped');
+        await retry;
+
+        for (final member in others) {
+          expect(wrapsTo(member), isNotEmpty, reason: 'member $member');
+        }
+        expect(wrapsTo(owner), hasLength(1));
+        expect(await queueRows(), isEmpty);
+      });
+
       test('replays a failed own copy once for the whole batch', () async {
         ownCopiesPublish = false;
         await sendToRoom(members.take(3).toList());

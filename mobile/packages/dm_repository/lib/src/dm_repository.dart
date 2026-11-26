@@ -9882,13 +9882,8 @@ class DmRepository {
 
   /// Make sure group send [row]'s batch has its one own copy before [row]
   /// counts as delivered, publishing it now unless [row] or another member's
-  /// row already records it (#10016).
-  ///
-  /// A row that already records the copy returns success without publishing.
-  /// Once this attempt publishes it, the other members' rows record it too:
-  /// one already delivered is done and goes, one still waiting is marked so
-  /// its delivery publishes none. Joined under one key per batch, so two
-  /// members' retries racing each other publish it once.
+  /// row already records it (#10016). A row that records it returns success
+  /// without publishing; see [_publishBatchOwnCopy] for the rest.
   Future<NIP17SendResult> _ensureBatchOwnCopy({
     required OutgoingDmsDao dao,
     required OutgoingDm row,
@@ -9900,20 +9895,54 @@ class DmRepository {
     if (row.selfWrapStatus == OutgoingWrapStatus.sent) {
       return Future.value(_batchOwnCopyRecorded(rumor));
     }
-    final generation = _resetGeneration;
+    return _publishBatchOwnCopy(
+      dao: dao,
+      conversationId: row.conversationId,
+      ownerPubkey: row.ownerPubkey,
+      sendBatchId: sendBatchId,
+      rumor: rumor,
+      selfWrapRelays: selfWrapRelays,
+      generation: _resetGeneration,
+      prebuiltSelfWrap: prebuiltSelfWrap,
+      callerRowId: row.id,
+    );
+  }
+
+  /// Publish the one own copy of group send [sendBatchId], unless one of its
+  /// rows already records it (#10016).
+  ///
+  /// The group send and a replay of a member's row both publish through here,
+  /// joined under one key per batch, so they share one publish rather than
+  /// make two. Once the copy lands every other row of the batch records it:
+  /// one already delivered is done and goes, one still waiting is marked so
+  /// its delivery publishes none. [callerRowId] is left to its caller, which
+  /// finalizes it. A session that ended meanwhile publishes nothing: the
+  /// message service may already be the next account's.
+  Future<NIP17SendResult> _publishBatchOwnCopy({
+    required OutgoingDmsDao dao,
+    required String conversationId,
+    required String ownerPubkey,
+    required String sendBatchId,
+    required Event rumor,
+    required List<String>? selfWrapRelays,
+    required int generation,
+    Event? prebuiltSelfWrap,
+    String? callerRowId,
+  }) {
     return _joinOrStartRecovery('self-batch:$sendBatchId', () async {
-      final siblings = await _batchSiblings(
-        dao: dao,
-        row: row,
-        sendBatchId: sendBatchId,
-      );
-      // An account switch during the read replaces the message service, which
-      // would wrap this account's rumor as the next one's. The row stays
-      // queued for its own session.
-      if (_ingestSessionEnded(row.ownerPubkey, generation)) {
-        return _queuedForDelivery(row.id);
+      final others = [
+        for (final row in await _batchRows(
+          dao: dao,
+          conversationId: conversationId,
+          ownerPubkey: ownerPubkey,
+          sendBatchId: sendBatchId,
+        ))
+          if (row.id != callerRowId) row,
+      ];
+      if (_ingestSessionEnded(ownerPubkey, generation)) {
+        return _queuedForDelivery(callerRowId ?? rumor.id);
       }
-      if (siblings.any((s) => s.selfWrapStatus == OutgoingWrapStatus.sent)) {
+      if (others.any((row) => row.selfWrapStatus == OutgoingWrapStatus.sent)) {
         return _batchOwnCopyRecorded(rumor);
       }
       final published = await _messageService!.publishSelfWrap(
@@ -9923,23 +9952,23 @@ class DmRepository {
       );
       if (!published.success) return published;
       try {
-        for (final sibling in siblings) {
-          if (sibling.recipientWrapStatus == OutgoingWrapStatus.sent) {
-            await dao.deleteById(sibling.id);
+        for (final row in others) {
+          if (row.recipientWrapStatus == OutgoingWrapStatus.sent) {
+            await dao.deleteById(row.id);
           } else {
             await dao.markSelfWrapStatus(
-              id: sibling.id,
+              id: row.id,
               status: OutgoingWrapStatus.sent,
               eventId: published.messageEventId,
             );
           }
         }
       } on Object catch (e) {
-        // A sibling left unmarked replays the copy once more; this member's
-        // delivery stands either way.
+        // A row left unmarked replays the copy once more; the delivery stands
+        // either way.
         Log.warning(
-          'Could not record the own copy of rumor ${rumor.id} on the other '
-          'rows of batch $sendBatchId: $e',
+          'Could not record the own copy of rumor ${rumor.id} on the rows of '
+          'batch $sendBatchId: $e',
           category: LogCategory.system,
         );
       }
@@ -9947,25 +9976,26 @@ class DmRepository {
     });
   }
 
-  /// The other queue rows of [row]'s group send [sendBatchId]. A read that
-  /// fails finds none, so the caller publishes the copy rather than leave
-  /// this member's delivery without one.
-  Future<List<OutgoingDm>> _batchSiblings({
+  /// The queue rows of group send [sendBatchId]. A read that fails finds none,
+  /// so the caller publishes the copy rather than leave a delivery without
+  /// one.
+  Future<List<OutgoingDm>> _batchRows({
     required OutgoingDmsDao dao,
-    required OutgoingDm row,
+    required String conversationId,
+    required String ownerPubkey,
     required String sendBatchId,
   }) async {
     try {
       return [
-        for (final other in await dao.getForConversation(
-          conversationId: row.conversationId,
-          ownerPubkey: row.ownerPubkey,
+        for (final row in await dao.getForConversation(
+          conversationId: conversationId,
+          ownerPubkey: ownerPubkey,
         ))
-          if (other.sendBatchId == sendBatchId && other.id != row.id) other,
+          if (row.sendBatchId == sendBatchId) row,
       ];
     } on Object catch (e) {
       Log.warning(
-        'Could not read the other rows of batch $sendBatchId: $e',
+        'Could not read the rows of batch $sendBatchId: $e',
         category: LogCategory.system,
       );
       return const [];
@@ -10574,10 +10604,10 @@ class DmRepository {
   /// `sent` + self `failed` so the recovery path can replay only the
   /// missing self-wrap without re-delivering to recipients).
   ///
-  /// The sender's own copy is published once for the batch, by the first
-  /// member's send that delivers, not once per member (#10016). Its outcome
-  /// is every delivered member's `selfWrapPublished`, and a member still
-  /// waiting keeps a row that records it.
+  /// The sender's own copy is published once for the batch, after every
+  /// member's send and once any member has the message, not once per member
+  /// (#10016). Its outcome is every delivered member's `selfWrapPublished`,
+  /// and a member still waiting keeps a row that records it.
   ///
   /// Each failure that leaves a row behind carries that row's
   /// [NIP17SendResult.queuedRumorId], so a caller retries by re-driving the
@@ -10943,11 +10973,9 @@ class DmRepository {
     // one underlying attempt twice, and a five-retry budget then covered four
     // attempts (#8619). Only the durable handle is stamped for these.
     final joinedRecovery = <int>{};
-    // The batch's one own copy (#10016): the first member's send that delivers
-    // publishes it, and every later send hands its copy over. `null` until a
-    // send has tried; each member's send used to publish its own, N - 1
-    // copies of one rumor.
-    bool? ownCopyPublished;
+    // The copy the signer built beside a member's wrap, for the batch's one
+    // own copy published after every member (#10016).
+    Event? prebuiltOwnCopy;
     for (var i = 0; i < recipientPubkeys.length; i++) {
       if (_disposed || _resetGeneration != generation) {
         return [for (final id in queueIds) _queuedForDelivery(id)];
@@ -11016,7 +11044,6 @@ class DmRepository {
           final held =
               outgoingDao != null &&
               inbox?.state == DmInboxResolution.unreadable;
-          final triesOwnCopy = !held && ownCopyPublished == null;
           final published = await _sendRumorWithTimeout(
             rumor: groupRumor,
             recipientPubkey: pubkey,
@@ -11027,15 +11054,10 @@ class DmRepository {
             selfWrapTargetRelays: selfWrapRelays,
             awaitRecipientOk: true,
             withholdSelfWrap: held,
-            onSelfWrapDue: triesOwnCopy
-                ? null
-                : (_) {
-                    // The batch already tried its own copy (#10016).
-                  },
+            // Each member's send used to publish its own, N - 1 copies of one
+            // rumor; the batch publishes one below (#10016).
+            onSelfWrapDue: (wrap) => prebuiltOwnCopy ??= wrap,
           );
-          if (triesOwnCopy && published.success) {
-            ownCopyPublished = published.selfWrapPublished;
-          }
           // Kept while this key is held: the finalize pass below runs only
           // after every sibling has published, and a retry of this row in
           // between would otherwise build a second wrap (#8441).
@@ -11094,9 +11116,33 @@ class DmRepository {
       results.add(result);
     }
 
-    // Every delivered member carries the batch's one own-copy outcome: the
-    // sends that handed their copy over cannot report it themselves.
-    final batchHasOwnCopy = ownCopyPublished ?? false;
+    if (_disposed || _resetGeneration != generation) {
+      return [for (final id in queueIds) _queuedForDelivery(id)];
+    }
+    // One own copy for the whole batch once any member has the message, the
+    // moment it is stored locally below. A replay of a member's row publishes
+    // through the same joined path, so the two share one copy (#10016).
+    final batchHasOwnCopy =
+        results.any((r) => r.success) &&
+        (await (outgoingDao == null
+                ? _messageService!.publishSelfWrap(
+                    rumorEvent: groupRumor,
+                    targetRelays: selfWrapRelays,
+                    prebuiltSelfWrap: prebuiltOwnCopy,
+                  )
+                : _publishBatchOwnCopy(
+                    dao: outgoingDao,
+                    conversationId: conversationId,
+                    ownerPubkey: owner,
+                    sendBatchId: sendBatchId,
+                    rumor: groupRumor,
+                    selfWrapRelays: selfWrapRelays,
+                    generation: generation,
+                    prebuiltSelfWrap: prebuiltOwnCopy,
+                  )))
+            .success;
+    // Every delivered member carries that outcome: their sends handed the
+    // copy over, so they cannot report it themselves.
     for (var i = 0; i < results.length; i++) {
       final result = results[i];
       if (result is NIP17SendSuccess && !joinedRecovery.contains(i)) {
