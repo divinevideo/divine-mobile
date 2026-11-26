@@ -12,8 +12,9 @@ import 'package:material_ui/material_ui.dart';
 /// `tools/process_divine_sticker.dart` turns a generator original into the
 /// shipped file.
 ///
-/// The OpenMoji SVGs in `assets/stickers/` are a separate set that only the
-/// video editor's sticker picker draws from; no variant here uses them.
+/// The video editor's sticker picker offers every variant. The OpenMoji SVGs
+/// in `assets/stickers/` are the set it offered before; they stay bundled only
+/// so drafts made with them still show them, and no variant here uses them.
 enum DivineStickerName {
   acRemote('ac_remote'),
 
