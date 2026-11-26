@@ -56,7 +56,10 @@ class _TogetherView extends StatelessWidget {
             );
           case .failed:
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.collabRoomCreateFailed)),
+              DivineSnackbarContainer.snackBar(
+                l10n.collabRoomCreateFailed,
+                materialStyle: true,
+              ),
             );
           case .idle:
           case .creating:

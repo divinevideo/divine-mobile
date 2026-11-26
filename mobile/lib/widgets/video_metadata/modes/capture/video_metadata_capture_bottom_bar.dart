@@ -31,23 +31,17 @@ class VideoMetadataCaptureBottomBar extends ConsumerWidget {
   }) {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     scaffoldMessenger.showSnackBar(
-      SnackBar(
-        padding: EdgeInsets.zero,
-        backgroundColor: VineTheme.transparent,
-        elevation: 0,
-        behavior: SnackBarBehavior.floating,
+      DivineSnackbarContainer.snackBar(
+        label,
         duration: const Duration(seconds: 5),
-        content: DivineSnackbarContainer(
-          label: label,
-          error: error,
-          actionLabel: actionLabel,
-          onActionPressed: onActionPressed != null
-              ? () {
-                  onActionPressed();
-                  scaffoldMessenger.hideCurrentSnackBar();
-                }
-              : null,
-        ),
+        error: error,
+        actionLabel: actionLabel,
+        onActionPressed: onActionPressed != null
+            ? () {
+                onActionPressed();
+                scaffoldMessenger.hideCurrentSnackBar();
+              }
+            : null,
       ),
     );
   }

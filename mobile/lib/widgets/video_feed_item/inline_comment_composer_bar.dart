@@ -136,8 +136,9 @@ class _InlineCommentComposerBarState extends State<InlineCommentComposerBar> {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(
-            SnackBar(
-              content: Text(message),
+            DivineSnackbarContainer.snackBar(
+              message,
+              materialStyle: true,
               behavior: SnackBarBehavior.floating,
             ),
           );

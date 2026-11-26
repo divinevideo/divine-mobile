@@ -128,8 +128,9 @@ class _MyFollowingView extends ConsumerWidget {
           }
           if (state.status == MyFollowingStatus.toggleFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(context.l10n.followersUpdateFollowFailed),
+              DivineSnackbarContainer.snackBar(
+                context.l10n.followersUpdateFollowFailed,
+                materialStyle: true,
               ),
             );
           }

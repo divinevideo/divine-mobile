@@ -1551,6 +1551,12 @@ class VineTheme {
       primaryColor: vineGreen,
       colorScheme: scheme,
       progressIndicatorTheme: ProgressIndicatorThemeData(color: scheme.primary),
+      dialogTheme: const DialogThemeData(
+        constraints: BoxConstraints(minWidth: 280, maxWidth: 560),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        constraints: BoxConstraints(maxWidth: 640),
+      ),
       scaffoldBackgroundColor: colors.background,
       extensions: <ThemeExtension<dynamic>>[colors],
       appBarTheme: AppBarTheme(

@@ -1292,7 +1292,12 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
           if (context.mounted) {
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(SnackBar(content: Text(blockConfirmation)));
+            ).showSnackBar(
+              DivineSnackbarContainer.snackBar(
+                blockConfirmation,
+                materialStyle: true,
+              ),
+            );
           }
 
         case ConversationAction.remove:
@@ -1322,11 +1327,17 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
             switch (outcome) {
               case RemoveConversationOutcome.removed:
                 messenger.showSnackBar(
-                  SnackBar(content: Text(removedText)),
+                  DivineSnackbarContainer.snackBar(
+                    removedText,
+                    materialStyle: true,
+                  ),
                 );
               case RemoveConversationOutcome.refused:
                 messenger.showSnackBar(
-                  SnackBar(content: Text(refusedText)),
+                  DivineSnackbarContainer.snackBar(
+                    refusedText,
+                    materialStyle: true,
+                  ),
                 );
               case RemoveConversationOutcome.failed:
                 // Silence here reads as a mistap: the dialog closes and the

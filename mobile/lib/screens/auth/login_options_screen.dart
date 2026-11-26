@@ -253,13 +253,11 @@ class _SignInContentState extends ConsumerState<_SignInContent> {
         context.go(RoutePaths.root);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result.failureReason == AuthFailureReason.accountCleanupFailed
-                  ? context.l10n.authAccountCleanupFailed
-                  : result.errorMessage ??
-                        context.l10n.authNip07ConnectionFailed,
-            ),
+          DivineSnackbarContainer.snackBar(
+            result.failureReason == AuthFailureReason.accountCleanupFailed
+                ? context.l10n.authAccountCleanupFailed
+                : result.errorMessage ?? context.l10n.authNip07ConnectionFailed,
+            materialStyle: true,
             backgroundColor: VineTheme.error,
           ),
         );
@@ -277,8 +275,9 @@ class _SignInContentState extends ConsumerState<_SignInContent> {
     if (!isInstalled) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.authAmberNotInstalled),
+        DivineSnackbarContainer.snackBar(
+          context.l10n.authAmberNotInstalled,
+          materialStyle: true,
           backgroundColor: VineTheme.error,
         ),
       );
@@ -297,13 +296,11 @@ class _SignInContentState extends ConsumerState<_SignInContent> {
         context.go(RoutePaths.root);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result.failureReason == AuthFailureReason.accountCleanupFailed
-                  ? context.l10n.authAccountCleanupFailed
-                  : result.errorMessage ??
-                        context.l10n.authAmberConnectionFailed,
-            ),
+          DivineSnackbarContainer.snackBar(
+            result.failureReason == AuthFailureReason.accountCleanupFailed
+                ? context.l10n.authAccountCleanupFailed
+                : result.errorMessage ?? context.l10n.authAmberConnectionFailed,
+            materialStyle: true,
             backgroundColor: VineTheme.error,
           ),
         );
@@ -327,15 +324,9 @@ class _SignInContentState extends ConsumerState<_SignInContent> {
       onResetAccepted: () {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              padding: EdgeInsets.zero,
-              backgroundColor: VineTheme.transparent,
-              elevation: 0,
-              behavior: SnackBarBehavior.floating,
+            DivineSnackbarContainer.snackBar(
+              context.l10n.authPasswordResetSent,
               duration: const Duration(seconds: 3),
-              content: DivineSnackbarContainer(
-                label: context.l10n.authPasswordResetSent,
-              ),
             ),
           );
         }

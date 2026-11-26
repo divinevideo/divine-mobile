@@ -96,7 +96,10 @@ class _CollabRoomPartPageState extends ConsumerState<CollabRoomPartPage> {
               _returnToRoom(context);
             case CollabRoomPartStatus.failed:
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(context.l10n.collabRoomPartSendFailed)),
+                DivineSnackbarContainer.snackBar(
+                  context.l10n.collabRoomPartSendFailed,
+                  materialStyle: true,
+                ),
               );
             case CollabRoomPartStatus.idle:
             case CollabRoomPartStatus.sending:

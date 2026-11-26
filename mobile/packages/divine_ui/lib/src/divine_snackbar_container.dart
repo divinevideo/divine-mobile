@@ -22,8 +22,13 @@ class DivineSnackbarContainer extends StatelessWidget {
   });
 
   /// Returns a fully styled [SnackBar] wrapping a [DivineSnackbarContainer].
+  ///
+  /// Use [materialStyle] for a message that needs to retain Material's
+  /// presentation, including its [action] and explicit [messageStyle].
+  /// [DivineSnackbarTheme] caps the outer snackbar on wide windows.
+  /// [content] can replace the message when a banner updates while visible.
   static SnackBar snackBar(
-    String message, {
+    String? message, {
     bool error = false,
     Color? backgroundColor,
     String? actionLabel,
@@ -35,25 +40,42 @@ class DivineSnackbarContainer extends StatelessWidget {
     Duration? duration,
     EdgeInsetsGeometry? margin,
     EdgeInsetsGeometry? padding,
-  }) => SnackBar(
-    duration: duration ?? const Duration(seconds: 4),
-    backgroundColor: VineTheme.transparent,
-    elevation: 0,
-    padding: padding ?? EdgeInsets.zero,
-    behavior: SnackBarBehavior.floating,
-    margin: margin,
-    content: DivineSnackbarContainer(
-      label: message,
-      error: error,
-      backgroundColor: backgroundColor,
-      actionLabel: actionLabel,
-      onActionPressed: onActionPressed,
-      secondaryActionLabel: secondaryActionLabel,
-      onSecondaryActionPressed: onSecondaryActionPressed,
-      onDismissPressed: onDismissPressed,
-      dismissSemanticLabel: dismissSemanticLabel,
-    ),
-  );
+    bool materialStyle = false,
+    TextStyle? messageStyle,
+    SnackBarAction? action,
+    SnackBarBehavior? behavior,
+    VoidCallback? onVisible,
+    bool? persist,
+    Widget? content,
+  }) {
+    assert(message != null || content != null, 'Provide a message or content.');
+    return SnackBar(
+      duration: duration ?? const Duration(seconds: 4),
+      backgroundColor: materialStyle ? backgroundColor : VineTheme.transparent,
+      elevation: materialStyle ? null : 0,
+      padding: padding ?? (materialStyle ? null : EdgeInsets.zero),
+      behavior: behavior ?? (materialStyle ? null : SnackBarBehavior.floating),
+      margin: margin,
+      action: action,
+      onVisible: onVisible,
+      persist: persist,
+      content:
+          content ??
+          (materialStyle
+              ? Text(message!, style: messageStyle)
+              : DivineSnackbarContainer(
+                  label: message!,
+                  error: error,
+                  backgroundColor: backgroundColor,
+                  actionLabel: actionLabel,
+                  onActionPressed: onActionPressed,
+                  secondaryActionLabel: secondaryActionLabel,
+                  onSecondaryActionPressed: onSecondaryActionPressed,
+                  onDismissPressed: onDismissPressed,
+                  dismissSemanticLabel: dismissSemanticLabel,
+                )),
+    );
+  }
 
   /// Widest the banner grows before it stops tracking the screen
   /// (`component/snackbar/max-width`). Wider viewports centre it instead.
@@ -295,6 +317,33 @@ class DivineSnackbarContainer extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Caps the Material snackbar surface, including actions, on wide windows.
+///
+/// On compact windows the inherited behavior and insets apply. Keeping the
+/// width in the theme lets a snackbar adapt while the window is resized.
+class DivineSnackbarTheme extends StatelessWidget {
+  /// Creates a responsive snackbar theme.
+  const DivineSnackbarTheme({required this.child, super.key});
+
+  /// The subtree whose scaffolds display snackbars.
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = SnackBarTheme.of(context);
+    final wide = MediaQuery.widthOf(context) > DivineSnackbarContainer.maxWidth;
+    return SnackBarTheme(
+      data: wide
+          ? theme.copyWith(
+              behavior: SnackBarBehavior.floating,
+              width: DivineSnackbarContainer.maxWidth,
+            )
+          : theme,
+      child: child,
     );
   }
 }

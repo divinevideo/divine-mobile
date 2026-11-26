@@ -1,6 +1,7 @@
 // ABOUTME: Test setup for the large-screen layouts: a test window of a given
 // ABOUTME: width and an app with the Large Screen Layout flag on or off
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -43,7 +44,9 @@ Widget largeScreenLayoutApp({
     localizationsDelegates: appLocalizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     theme: theme,
-    builder: (context, child) => AdaptiveLayoutScope(child: child!),
+    builder: (context, child) => AdaptiveLayoutScope(
+      child: DivineSnackbarTheme(child: child!),
+    ),
     home: home,
   ),
 );

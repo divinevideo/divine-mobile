@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart'
     show CollaboratorInviteRetrySummary;
 import 'package:flutter/foundation.dart';
@@ -877,8 +878,9 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
     if (messenger == null) return;
 
     messenger.showSnackBar(
-      SnackBar(
-        content: Text(message),
+      DivineSnackbarContainer.snackBar(
+        message,
+        materialStyle: true,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 6),
       ),
@@ -896,8 +898,9 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
     if (messenger == null) return;
 
     messenger.showSnackBar(
-      SnackBar(
-        content: Text(targetContext.l10n.publishAudioReuseDegradedWarning),
+      DivineSnackbarContainer.snackBar(
+        targetContext.l10n.publishAudioReuseDegradedWarning,
+        materialStyle: true,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 8),
       ),
@@ -923,8 +926,9 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
     if (l10n == null || messenger == null) return;
 
     messenger.showSnackBar(
-      SnackBar(
-        content: Text(collaboratorInviteWarningMessage(l10n, warnings.length)),
+      DivineSnackbarContainer.snackBar(
+        collaboratorInviteWarningMessage(l10n, warnings.length),
+        materialStyle: true,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 8),
         action: SnackBarAction(
@@ -961,8 +965,9 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
         : null;
     if (repository == null) {
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.profileCollaboratorInviteRetryUnavailable),
+        DivineSnackbarContainer.snackBar(
+          l10n.profileCollaboratorInviteRetryUnavailable,
+          materialStyle: true,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -977,7 +982,11 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
     );
     final message = collaboratorInviteRetryResultMessage(l10n, summary);
     messenger.showSnackBar(
-      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      DivineSnackbarContainer.snackBar(
+        message,
+        materialStyle: true,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 

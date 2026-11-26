@@ -1,11 +1,12 @@
 // ABOUTME: The camera flows a collaborative room starts: filming your part,
 // ABOUTME: and posting the finished video with everyone as collaborators
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:material_ui/material_ui.dart' show ScaffoldMessenger, SnackBar;
+import 'package:material_ui/material_ui.dart' show ScaffoldMessenger;
 import 'package:openvine/collab_room/collab_room_layout.dart';
 import 'package:openvine/collab_room/collab_room_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -38,12 +39,11 @@ Future<bool> keepUnfinishedCameraSession(
   if (!context.mounted) return false;
   final kept = outcome == DraftSaveOutcome.saved;
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(
-        kept
-            ? context.l10n.uploadFailureSheetSavedToDraftsSnackbar
-            : context.l10n.videoMetadataFailedToSaveSnackbar,
-      ),
+    DivineSnackbarContainer.snackBar(
+      kept
+          ? context.l10n.uploadFailureSheetSavedToDraftsSnackbar
+          : context.l10n.videoMetadataFailedToSaveSnackbar,
+      materialStyle: true,
     ),
   );
   return kept;

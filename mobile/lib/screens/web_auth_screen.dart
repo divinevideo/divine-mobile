@@ -86,8 +86,9 @@ class _WebAuthScreenState extends ConsumerState<WebAuthScreen>
           final scaffoldMessenger = ScaffoldMessenger.of(context);
 
           scaffoldMessenger.showSnackBar(
-            SnackBar(
-              content: Text(context.l10n.webAuthNotSupportedSecureMode),
+            DivineSnackbarContainer.snackBar(
+              context.l10n.webAuthNotSupportedSecureMode,
+              materialStyle: true,
               backgroundColor: VineTheme.error,
             ),
           );
@@ -101,8 +102,9 @@ class _WebAuthScreenState extends ConsumerState<WebAuthScreen>
         );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(context.l10n.commonSomethingWentWrong),
+            DivineSnackbarContainer.snackBar(
+              context.l10n.commonSomethingWentWrong,
+              materialStyle: true,
               backgroundColor: VineTheme.error,
             ),
           );

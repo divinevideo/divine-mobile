@@ -376,12 +376,11 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          removed
-              ? context.l10n.soundsRemovedFromLibrary
-              : context.l10n.soundsRemoveFailed,
-        ),
+      DivineSnackbarContainer.snackBar(
+        removed
+            ? context.l10n.soundsRemovedFromLibrary
+            : context.l10n.soundsRemoveFailed,
+        materialStyle: true,
         duration: const Duration(seconds: 2),
       ),
     );

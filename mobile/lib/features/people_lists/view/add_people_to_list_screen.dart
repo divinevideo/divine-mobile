@@ -215,8 +215,9 @@ class _AddPeopleToListViewState extends State<AddPeopleToListView> {
           current.status == PeopleListsStatus.failure,
       listener: (context, state) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.peopleListsMembershipUpdateFailed),
+          DivineSnackbarContainer.snackBar(
+            context.l10n.peopleListsMembershipUpdateFailed,
+            materialStyle: true,
           ),
         );
       },

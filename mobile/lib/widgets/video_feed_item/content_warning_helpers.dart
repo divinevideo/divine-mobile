@@ -49,7 +49,10 @@ Future<void> hideContentWarningsLikeThese({
   if (matchedLabels.isEmpty) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(context.l10n.contentWarningNoFilterYet)),
+      DivineSnackbarContainer.snackBar(
+        context.l10n.contentWarningNoFilterYet,
+        materialStyle: true,
+      ),
     );
     return;
   }
@@ -60,7 +63,10 @@ Future<void> hideContentWarningsLikeThese({
 
   if (!context.mounted) return;
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(context.l10n.contentWarningHiddenConfirmation)),
+    DivineSnackbarContainer.snackBar(
+      context.l10n.contentWarningHiddenConfirmation,
+      materialStyle: true,
+    ),
   );
 }
 

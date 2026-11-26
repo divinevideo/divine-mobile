@@ -808,8 +808,9 @@ class _AudioSelectionBottomSheetState
     ScaffoldMessenger.of(context)
       ..removeCurrentSnackBar()
       ..showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.soundReuseUnavailable),
+        DivineSnackbarContainer.snackBar(
+          context.l10n.soundReuseUnavailable,
+          materialStyle: true,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -853,15 +854,16 @@ class _AudioSelectionBottomSheetState
       if (!mounted) return;
       final l10n = context.l10n;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(switch (e.reason) {
+        DivineSnackbarContainer.snackBar(
+          switch (e.reason) {
             LocalAudioImportFailureReason.unsupportedType =>
               l10n.soundsImportUnsupportedFormat,
             LocalAudioImportFailureReason.unreadableSource ||
             LocalAudioImportFailureReason.copyFailed ||
             LocalAudioImportFailureReason.decodeFailed =>
               l10n.soundsImportUnreadable,
-          }),
+          },
+          materialStyle: true,
         ),
       );
     } catch (e, s) {
@@ -875,7 +877,10 @@ class _AudioSelectionBottomSheetState
       _reportImportFailure();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.videoEditorAudioImportFailed)),
+        DivineSnackbarContainer.snackBar(
+          context.l10n.videoEditorAudioImportFailed,
+          materialStyle: true,
+        ),
       );
     }
   }

@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -11,6 +12,7 @@ import 'package:openvine/widgets/upload_progress_dialog.dart';
 import 'package:upload_repository/upload_repository.dart';
 
 import '../helpers/go_router.dart';
+import '../helpers/large_screen_layout.dart';
 
 // Simple mock that only implements getUpload
 class MockUploadManager {
@@ -24,6 +26,43 @@ class MockUploadManager {
 void main() {
   group('UploadProgressDialog', () {
     final l10n = lookupAppLocalizations(const Locale('en'));
+
+    for (final (windowWidth, dialogWidth) in [
+      (1440.0, 560.0),
+      (390.0, 310.0),
+    ]) {
+      testWidgets('sizes the upload dialog in a $windowWidth pt window', (
+        tester,
+      ) async {
+        setTestWindowSize(tester, windowWidth);
+        final upload = PendingUpload.create(
+          localVideoPath: '/test/video.mp4',
+          nostrPubkey: 'test_pubkey',
+        ).copyWith(status: UploadStatus.uploading, uploadProgress: 0.5);
+        await tester.pumpWidget(
+          largeScreenLayoutApp(
+            enabled: true,
+            theme: VineTheme.theme,
+            home: Scaffold(
+              body: UploadProgressDialog(
+                uploadId: upload.id,
+                uploadManager: MockUploadManager(mockUpload: upload),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final surface = find
+            .descendant(
+              of: find.byType(Dialog),
+              matching: find.byType(Material),
+            )
+            .first;
+        expect(tester.getSize(surface).width, dialogWidth);
+      });
+    }
+
     testWidgets('displays current upload progress percentage', (
       WidgetTester tester,
     ) async {

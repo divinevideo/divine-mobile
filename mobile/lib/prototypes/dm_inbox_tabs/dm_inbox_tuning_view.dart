@@ -63,18 +63,18 @@ class _DmInboxTuningViewState extends State<DmInboxTuningView> {
   void _applyRecipe(String name) {
     _update(_recipes[name]!);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$name applied. Review the sliders before saving.'),
+      DivineSnackbarContainer.snackBar(
+        '$name applied. Review the sliders before saving.',
+        materialStyle: true,
       ),
     );
   }
 
   void _shareRecipe() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Share preview: settings only — never messages, contacts, or account data.',
-        ),
+      DivineSnackbarContainer.snackBar(
+        'Share preview: settings only — never messages, contacts, or account data.',
+        materialStyle: true,
       ),
     );
   }

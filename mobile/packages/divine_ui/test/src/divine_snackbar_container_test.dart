@@ -32,7 +32,80 @@ double _viewportFor(double labelWidth, double actionWidth) =>
     labelWidth + math.max(72, actionWidth) + 4 + 16 + 16;
 
 void main() {
+  group(DivineSnackbarTheme, () {
+    testWidgets('caps a Material snackbar as the window widens', (
+      tester,
+    ) async {
+      tester.view
+        ..devicePixelRatio = 1
+        ..physicalSize = const Size(390, 900);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final messenger = GlobalKey<ScaffoldMessengerState>();
+      await tester.pumpWidget(
+        MaterialApp(
+          scaffoldMessengerKey: messenger,
+          builder: (context, child) => DivineSnackbarTheme(child: child!),
+          home: const Scaffold(),
+        ),
+      );
+      var actionCount = 0;
+      var shownCount = 0;
+      const messageStyle = TextStyle(fontWeight: FontWeight.bold);
+      final snackbar = DivineSnackbarContainer.snackBar(
+        'Could not save',
+        materialStyle: true,
+        messageStyle: messageStyle,
+        backgroundColor: VineTheme.error,
+        duration: const Duration(seconds: 2),
+        action: SnackBarAction(label: 'Retry', onPressed: () => actionCount++),
+        onVisible: () => shownCount++,
+      );
+      final controller = messenger.currentState!.showSnackBar(snackbar);
+      await tester.pumpAndSettle();
+      final finder = find
+          .descendant(
+            of: find.byType(SnackBar),
+            matching: find.byType(Material),
+          )
+          .first;
+      expect(tester.getSize(finder).width, 390);
+      expect(
+        tester.widget<Text>(find.text('Could not save')).style,
+        messageStyle,
+      );
+      expect(snackbar.backgroundColor, VineTheme.error);
+      expect(snackbar.duration, const Duration(seconds: 2));
+      expect(shownCount, 1);
+
+      tester.view.physicalSize = const Size(1440, 900);
+      await tester.pumpAndSettle();
+      expect(tester.getSize(finder).width, 480);
+      expect(tester.getCenter(finder).dx, 720);
+      expect(shownCount, 1);
+
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+      expect(actionCount, 1);
+      expect(await controller.closed, SnackBarClosedReason.action);
+    });
+  });
+
   group('DivineSnackbarContainer', () {
+    test('can keep dynamic content visible until dismissed', () {
+      const content = Text('Updating');
+      final snackbar = DivineSnackbarContainer.snackBar(
+        null,
+        content: content,
+        persist: true,
+        behavior: SnackBarBehavior.floating,
+      );
+
+      expect(snackbar.content, same(content));
+      expect(snackbar.persist, isTrue);
+      expect(snackbar.behavior, SnackBarBehavior.floating);
+    });
+
     Widget buildTestWidget({
       required String label,
       bool error = false,

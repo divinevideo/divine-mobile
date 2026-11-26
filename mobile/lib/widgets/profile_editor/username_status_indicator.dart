@@ -325,8 +325,9 @@ class _UsernameReservedDialogState extends State<UsernameReservedDialog> {
     if (created) {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.profileSetupSupportRequestSent),
+        DivineSnackbarContainer.snackBar(
+          context.l10n.profileSetupSupportRequestSent,
+          materialStyle: true,
           backgroundColor: VineTheme.vineGreen,
         ),
       );
@@ -341,8 +342,9 @@ class _UsernameReservedDialogState extends State<UsernameReservedDialog> {
       );
       if (!launched && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.profileSetupCouldntOpenEmail),
+          DivineSnackbarContainer.snackBar(
+            context.l10n.profileSetupCouldntOpenEmail,
+            materialStyle: true,
           ),
         );
       }

@@ -33,8 +33,9 @@ class CameraFAB extends ConsumerWidget {
           } else {
             if (scaffoldContext.mounted) {
               ScaffoldMessenger.of(scaffoldContext).showSnackBar(
-                SnackBar(
-                  content: Text(scaffoldContext.l10n.cameraAgeRestriction),
+                DivineSnackbarContainer.snackBar(
+                  scaffoldContext.l10n.cameraAgeRestriction,
+                  materialStyle: true,
                   backgroundColor: VineTheme.error,
                 ),
               );

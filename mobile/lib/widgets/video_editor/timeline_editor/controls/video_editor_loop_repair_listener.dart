@@ -318,8 +318,9 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
       category: LogCategory.ui,
     );
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
+      DivineSnackbarContainer.snackBar(
+        message,
+        materialStyle: true,
         action: undo
             ? SnackBarAction(
                 label: context.l10n.videoEditorUndoSemanticLabel,

@@ -1,6 +1,7 @@
 // ABOUTME: Opens the share sheet on a list's web link and reports a failure
 // ABOUTME: in a snackbar, for the video-list and people-list screens alike.
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -41,7 +42,12 @@ Future<void> shareListLink(
     if (context.mounted &&
         messenger.mounted &&
         (originRoute?.isCurrent ?? true)) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.listShareFailed)));
+      messenger.showSnackBar(
+        DivineSnackbarContainer.snackBar(
+          l10n.listShareFailed,
+          materialStyle: true,
+        ),
+      );
     }
   }
 }

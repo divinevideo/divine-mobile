@@ -190,17 +190,19 @@ class SubtitleEditorView extends StatelessWidget {
               logName: 'SubtitleEditorScreen',
             );
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.subtitleEditorSaveSuccess)),
+              DivineSnackbarContainer.snackBar(
+                l10n.subtitleEditorSaveSuccess,
+                materialStyle: true,
+              ),
             );
             context.pop(state.updatedVideo);
           } else if (state.status == SubtitleEditorStatus.failure) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.cues.isEmpty
-                      ? l10n.subtitleEditorLoadError
-                      : l10n.subtitleEditorSaveError,
-                ),
+              DivineSnackbarContainer.snackBar(
+                state.cues.isEmpty
+                    ? l10n.subtitleEditorLoadError
+                    : l10n.subtitleEditorSaveError,
+                materialStyle: true,
               ),
             );
           }

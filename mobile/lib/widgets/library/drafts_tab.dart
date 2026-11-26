@@ -91,11 +91,9 @@ class _DraftsList extends ConsumerWidget {
         };
         if (label == null) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: VineTheme.transparent,
-            elevation: 0,
-            behavior: SnackBarBehavior.floating,
-            content: DivineSnackbarContainer(label: label),
+          DivineSnackbarContainer.snackBar(
+            label,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
           ),
         );
       },
@@ -297,13 +295,9 @@ class _DraftsList extends ConsumerWidget {
     if (!context.mounted) return;
     if (fullDraft == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: VineTheme.transparent,
-          elevation: 0,
-          behavior: SnackBarBehavior.floating,
-          content: DivineSnackbarContainer(
-            label: context.l10n.commonSomethingWentWrong,
-          ),
+        DivineSnackbarContainer.snackBar(
+          context.l10n.commonSomethingWentWrong,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
         ),
       );
       return;

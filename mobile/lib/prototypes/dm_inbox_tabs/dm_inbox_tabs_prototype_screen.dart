@@ -93,7 +93,12 @@ class _DmInboxTabsPrototypeViewState extends State<_DmInboxTabsPrototypeView>
   void _showMessage(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+      ..showSnackBar(
+        DivineSnackbarContainer.snackBar(
+          message,
+          materialStyle: true,
+        ),
+      );
   }
 
   Future<void> _reply(DmConversation conversation) async {

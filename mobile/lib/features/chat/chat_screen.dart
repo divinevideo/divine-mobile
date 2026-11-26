@@ -126,13 +126,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.reportReceivedThankYou)),
+          DivineSnackbarContainer.snackBar(
+            context.l10n.reportReceivedThankYou,
+            materialStyle: true,
+          ),
         );
       }
     } on Object {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(context.l10n.reportFailed)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          DivineSnackbarContainer.snackBar(
+            context.l10n.reportFailed,
+            materialStyle: true,
+          ),
+        );
       }
     }
   }

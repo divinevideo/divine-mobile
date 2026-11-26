@@ -90,7 +90,10 @@ class CommunitySuggestView extends StatelessWidget {
           Navigator.of(context).maybePop();
         } else if (state.status == CommunitySuggestStatus.failure) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.l10n.communitySuggestFailure)),
+            DivineSnackbarContainer.snackBar(
+              context.l10n.communitySuggestFailure,
+              materialStyle: true,
+            ),
           );
         }
       },

@@ -732,8 +732,9 @@ Future<void> _showAddRelayDialog(BuildContext context) async {
       );
     case AddRelayOutcome.addedConnectionPending:
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.relaySettingsFailedToConnectCheck),
+        DivineSnackbarContainer.snackBar(
+          l10n.relaySettingsFailedToConnectCheck,
+          materialStyle: true,
           backgroundColor: VineTheme.warning,
         ),
       );
@@ -895,8 +896,9 @@ Future<void> _restoreDefaultRelay(BuildContext context) async {
       );
     case RestoreDefaultRelayOutcome.restoredConnectionPending:
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.relaySettingsFailedToConnectCheck),
+        DivineSnackbarContainer.snackBar(
+          l10n.relaySettingsFailedToConnectCheck,
+          materialStyle: true,
           backgroundColor: VineTheme.warning,
         ),
       );
@@ -951,7 +953,11 @@ void _showError(ScaffoldMessengerState messenger, String message) {
 
 void _showWarning(ScaffoldMessengerState messenger, String message) {
   messenger.showSnackBar(
-    SnackBar(content: Text(message), backgroundColor: VineTheme.warning),
+    DivineSnackbarContainer.snackBar(
+      message,
+      materialStyle: true,
+      backgroundColor: VineTheme.warning,
+    ),
   );
 }
 

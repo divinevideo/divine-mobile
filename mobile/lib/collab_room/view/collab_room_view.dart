@@ -166,7 +166,10 @@ class _RoomListeners extends ConsumerWidget {
 
   static void _showSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      DivineSnackbarContainer.snackBar(
+        message,
+        materialStyle: true,
+      ),
     );
   }
 }

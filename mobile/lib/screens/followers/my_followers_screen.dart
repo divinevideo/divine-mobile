@@ -145,8 +145,9 @@ class _MyFollowersView extends ConsumerWidget {
                 previous.status != MyFollowingStatus.toggleFailure,
             listener: (context, state) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(context.l10n.followersUpdateFollowFailed),
+                DivineSnackbarContainer.snackBar(
+                  context.l10n.followersUpdateFollowFailed,
+                  materialStyle: true,
                 ),
               );
             },

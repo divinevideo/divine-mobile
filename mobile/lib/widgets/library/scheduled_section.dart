@@ -126,11 +126,9 @@ class ScheduledSectionSliver extends StatelessWidget {
           const DraftsLibraryLoadRequested(),
         );
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: VineTheme.transparent,
-            elevation: 0,
-            behavior: SnackBarBehavior.floating,
-            content: DivineSnackbarContainer(label: label),
+          DivineSnackbarContainer.snackBar(
+            label,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
           ),
         );
       },

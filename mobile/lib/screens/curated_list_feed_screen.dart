@@ -373,8 +373,9 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       logName: 'CuratedListFeedScreen',
     );
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
+      DivineSnackbarContainer.snackBar(
+        message,
+        materialStyle: true,
         backgroundColor: failed ? VineTheme.error : VineTheme.vineGreen,
       ),
     );
@@ -584,7 +585,11 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         logName: 'CuratedListFeedScreen',
       );
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: VineTheme.error),
+        DivineSnackbarContainer.snackBar(
+          message,
+          materialStyle: true,
+          backgroundColor: VineTheme.error,
+        ),
       );
       return;
     }
@@ -598,7 +603,11 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: VineTheme.vineGreen),
+      DivineSnackbarContainer.snackBar(
+        message,
+        materialStyle: true,
+        backgroundColor: VineTheme.vineGreen,
+      ),
     );
 
     if (context.canPop()) {
@@ -670,8 +679,9 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
 
   void _showSubscriptionFailure() {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.l10n.discoverListsFailedToUpdateSubscription),
+      DivineSnackbarContainer.snackBar(
+        context.l10n.discoverListsFailedToUpdateSubscription,
+        materialStyle: true,
         backgroundColor: VineTheme.likeRed,
       ),
     );

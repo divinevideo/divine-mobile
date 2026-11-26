@@ -269,10 +269,11 @@ bool _showPublishSuccess(
   }
 
   messenger.showSnackBar(
-    SnackBar(
-      content: Text(
-        l10n.uploadPublishedCountMessage(count),
-        style: VineTheme.bodyMediumFont(color: navContext.vineColors.onNav),
+    DivineSnackbarContainer.snackBar(
+      l10n.uploadPublishedCountMessage(count),
+      materialStyle: true,
+      messageStyle: VineTheme.bodyMediumFont(
+        color: navContext.vineColors.onNav,
       ),
       backgroundColor: navContext.vineColors.nav,
       behavior: SnackBarBehavior.floating,

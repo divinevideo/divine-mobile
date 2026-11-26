@@ -1003,7 +1003,12 @@ class _CommentsScreenBody extends StatelessWidget {
   final ScrollController sheetScrollController;
 
   void _snack(BuildContext ctx, String message) {
-    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(ctx).showSnackBar(
+      DivineSnackbarContainer.snackBar(
+        message,
+        materialStyle: true,
+      ),
+    );
   }
 
   @override

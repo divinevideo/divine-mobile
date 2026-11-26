@@ -288,8 +288,9 @@ class _NostrConnectScreenState extends ConsumerState<NostrConnectScreen> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.l10n.authUrlCopied),
+      DivineSnackbarContainer.snackBar(
+        context.l10n.authUrlCopied,
+        materialStyle: true,
         duration: const Duration(seconds: 2),
       ),
     );
@@ -389,8 +390,9 @@ class _NostrConnectScreenState extends ConsumerState<NostrConnectScreen> {
     if (!NostrRemoteSignerInfo.isBunkerUrl(result)) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.authInvalidBunkerUrl),
+        DivineSnackbarContainer.snackBar(
+          context.l10n.authInvalidBunkerUrl,
+          materialStyle: true,
           backgroundColor: VineTheme.error,
         ),
       );

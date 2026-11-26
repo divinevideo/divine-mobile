@@ -205,10 +205,9 @@ class AppCompositionRoot extends ConsumerWidget {
               final errorCode = state.errorCode;
               if (messenger != null && errorCode != null) {
                 messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      context.l10n.emailVerificationErrorMessage(errorCode),
-                    ),
+                  DivineSnackbarContainer.snackBar(
+                    context.l10n.emailVerificationErrorMessage(errorCode),
+                    materialStyle: true,
                     backgroundColor: VineTheme.error,
                     behavior: SnackBarBehavior.floating,
                     duration: const Duration(seconds: 5),

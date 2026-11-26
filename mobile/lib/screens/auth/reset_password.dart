@@ -108,7 +108,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
         if (!mounted) return;
         context.pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.authPasswordResetSuccess)),
+          DivineSnackbarContainer.snackBar(
+            context.l10n.authPasswordResetSuccess,
+            materialStyle: true,
+          ),
         );
       } else {
         setState(() {

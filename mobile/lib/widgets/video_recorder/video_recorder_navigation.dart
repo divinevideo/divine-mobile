@@ -397,8 +397,9 @@ Future<bool> _ensureAuthenticatedForRecorderExit(
   final showedRestoreSnackbar = authGate.isRestoring;
   if (showedRestoreSnackbar && context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.l10n.authSigningYouIn),
+      DivineSnackbarContainer.snackBar(
+        context.l10n.authSigningYouIn,
+        materialStyle: true,
         duration: authGate.restoreTimeout,
       ),
     );
@@ -423,12 +424,11 @@ Future<bool> _ensureAuthenticatedForRecorderExit(
 
   final saved = outcome == DraftSaveOutcome.saved;
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(
-        saved
-            ? context.l10n.uploadFailureSheetSavedToDraftsSnackbar
-            : context.l10n.videoMetadataFailedToSaveSnackbar,
-      ),
+    DivineSnackbarContainer.snackBar(
+      saved
+          ? context.l10n.uploadFailureSheetSavedToDraftsSnackbar
+          : context.l10n.videoMetadataFailedToSaveSnackbar,
+      materialStyle: true,
     ),
   );
 

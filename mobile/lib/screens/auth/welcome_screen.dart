@@ -164,29 +164,33 @@ class _WelcomeView extends ConsumerWidget {
             const AccountDeletionRecoveryRouteData().go(context);
           case WelcomeStatus.sessionExpired:
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(context.l10n.authSessionExpired),
+              DivineSnackbarContainer.snackBar(
+                context.l10n.authSessionExpired,
+                materialStyle: true,
                 backgroundColor: VineTheme.error,
               ),
             );
           case WelcomeStatus.accountRestoreFailed:
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(context.l10n.authAccountRestoreFailed),
+              DivineSnackbarContainer.snackBar(
+                context.l10n.authAccountRestoreFailed,
+                materialStyle: true,
                 backgroundColor: VineTheme.error,
               ),
             );
           case WelcomeStatus.accountCleanupFailed:
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(context.l10n.authAccountCleanupFailed),
+              DivineSnackbarContainer.snackBar(
+                context.l10n.authAccountCleanupFailed,
+                materialStyle: true,
                 backgroundColor: VineTheme.error,
               ),
             );
           case WelcomeStatus.error:
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(context.l10n.authSignInFailed),
+              DivineSnackbarContainer.snackBar(
+                context.l10n.authSignInFailed,
+                materialStyle: true,
                 backgroundColor: VineTheme.error,
               ),
             );

@@ -99,7 +99,11 @@ class _UserListPeopleScreenState extends State<UserListPeopleScreen> {
           logName: 'UserListPeopleScreen',
         );
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: VineTheme.error),
+          DivineSnackbarContainer.snackBar(
+            message,
+            materialStyle: true,
+            backgroundColor: VineTheme.error,
+          ),
         );
       case PeopleListsOperationResult.succeeded:
         announceDetached(
@@ -810,7 +814,11 @@ class _FollowPeopleListButton extends StatelessWidget {
           logName: 'FollowPeopleListButton',
         );
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: VineTheme.error),
+          DivineSnackbarContainer.snackBar(
+            message,
+            materialStyle: true,
+            backgroundColor: VineTheme.error,
+          ),
         );
       },
       builder: (context, state) {

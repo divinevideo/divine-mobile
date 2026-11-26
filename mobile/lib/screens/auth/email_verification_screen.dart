@@ -444,8 +444,9 @@ class _EmailVerificationScreenState
     }
     // Show feedback message before redirecting to login
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.l10n.authEmailVerifiedLogin),
+      DivineSnackbarContainer.snackBar(
+        context.l10n.authEmailVerifiedLogin,
+        materialStyle: true,
         backgroundColor: VineTheme.vineGreen,
         duration: const Duration(seconds: 3),
       ),

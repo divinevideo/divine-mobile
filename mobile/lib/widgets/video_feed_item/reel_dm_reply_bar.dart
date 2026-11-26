@@ -432,8 +432,9 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
     _announce(context.l10n.dmSendTooLongMessage);
     _closeRetrySnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.l10n.dmSendTooLongMessage),
+      DivineSnackbarContainer.snackBar(
+        context.l10n.dmSendTooLongMessage,
+        materialStyle: true,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -451,8 +452,9 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
     }
     _announce(context.l10n.dmReelReplyFailed);
     _showRetrySnackBar(
-      (markVisible) => SnackBar(
-        content: Text(context.l10n.dmReelReplyFailed),
+      (markVisible) => DivineSnackbarContainer.snackBar(
+        context.l10n.dmReelReplyFailed,
+        materialStyle: true,
         behavior: SnackBarBehavior.floating,
         onVisible: markVisible,
         action: SnackBarAction(
@@ -513,8 +515,9 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
     ).location;
     final participantPubkeys = List<String>.of(_ctx.participantPubkeys);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
+      DivineSnackbarContainer.snackBar(
+        message,
+        materialStyle: true,
         behavior: SnackBarBehavior.floating,
         action: router == null
             ? null

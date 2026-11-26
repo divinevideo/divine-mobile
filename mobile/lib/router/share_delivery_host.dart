@@ -93,12 +93,9 @@ class _ShareDeliveryHostState extends ConsumerState<ShareDeliveryHost> {
     late final ScaffoldFeatureController<SnackBar, SnackBarClosedReason>
     controller;
     controller = messenger.showSnackBar(
-      SnackBar(
+      DivineSnackbarContainer.snackBar(
+        null,
         persist: true,
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: VineTheme.transparent,
-        elevation: 0,
-        padding: EdgeInsets.zero,
         onVisible: () {
           if (!mounted || !identical(_banner, controller)) return;
           _visible = true;

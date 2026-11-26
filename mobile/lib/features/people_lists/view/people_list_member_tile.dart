@@ -63,12 +63,18 @@ class PeopleListMemberTile extends ConsumerWidget {
       if (!messenger.mounted) return;
       if (owner == null || owner != bloc.state.activeOwnerPubkey) {
         messenger.showSnackBar(
-          SnackBar(content: Text(l10n.peopleListsSessionChanged)),
+          DivineSnackbarContainer.snackBar(
+            l10n.peopleListsSessionChanged,
+            materialStyle: true,
+          ),
         );
         return;
       }
       messenger.showSnackBar(
-        SnackBar(content: Text(l10n.profileSetupSavingButton)),
+        DivineSnackbarContainer.snackBar(
+          l10n.profileSetupSavingButton,
+          materialStyle: true,
+        ),
       );
       final result = await bloc.submit(
         remove
@@ -83,12 +89,16 @@ class PeopleListMemberTile extends ConsumerWidget {
         ..removeCurrentSnackBar();
       if (result == PeopleListsOperationResult.cancelled) {
         messenger.showSnackBar(
-          SnackBar(content: Text(l10n.peopleListsSessionChanged)),
+          DivineSnackbarContainer.snackBar(
+            l10n.peopleListsSessionChanged,
+            materialStyle: true,
+          ),
         );
       } else if (result == PeopleListsOperationResult.failed) {
         messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.listUpdateFailed),
+          DivineSnackbarContainer.snackBar(
+            l10n.listUpdateFailed,
+            materialStyle: true,
             action: SnackBarAction(
               label: l10n.peopleListsAddPeopleRetry,
               onPressed: () => publish(remove: remove),
@@ -97,8 +107,9 @@ class PeopleListMemberTile extends ConsumerWidget {
         );
       } else if (remove) {
         messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.peopleListsRemovedFromList(displayName)),
+          DivineSnackbarContainer.snackBar(
+            l10n.peopleListsRemovedFromList(displayName),
+            materialStyle: true,
             action: SnackBarAction(
               label: l10n.peopleListsUndo,
               onPressed: () => publish(remove: false),

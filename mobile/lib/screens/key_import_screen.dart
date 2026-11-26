@@ -301,12 +301,11 @@ class _KeyImportScreenState extends ConsumerState<KeyImportScreen> {
         });
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result.failureReason == AuthFailureReason.accountCleanupFailed
-                  ? context.l10n.authAccountCleanupFailed
-                  : context.l10n.keyImportFailedToImport,
-            ),
+          DivineSnackbarContainer.snackBar(
+            result.failureReason == AuthFailureReason.accountCleanupFailed
+                ? context.l10n.authAccountCleanupFailed
+                : context.l10n.keyImportFailedToImport,
+            materialStyle: true,
             backgroundColor: VineTheme.error,
           ),
         );
@@ -319,8 +318,9 @@ class _KeyImportScreenState extends ConsumerState<KeyImportScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.keyImportFailedToImport),
+          DivineSnackbarContainer.snackBar(
+            context.l10n.keyImportFailedToImport,
+            materialStyle: true,
             backgroundColor: VineTheme.error,
           ),
         );

@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -73,8 +74,9 @@ Future<void> startAccountDeletionFlow({
       unawaited(monitor!.resume(pendingDeletion.attempt));
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.l10n.accountDeletionOtherAccountPending),
+      DivineSnackbarContainer.snackBar(
+        context.l10n.accountDeletionOtherAccountPending,
+        materialStyle: true,
         duration: _blockedDeleteSnackBarDuration,
         action: offerSupport
             ? SnackBarAction(

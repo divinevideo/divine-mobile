@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/gestures.dart'
     show LongPressGestureRecognizer, kDoubleTapTimeout;
@@ -78,6 +79,7 @@ import 'package:openvine/widgets/video_tile_transition/video_tile_transition_tar
 import 'package:reposts_repository/reposts_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/large_screen_layout.dart';
 import '../../helpers/recording_consumption_analytics.dart';
 import '../../helpers/test_provider_overrides.dart';
 
@@ -367,6 +369,7 @@ Future<ProviderContainer> _pumpFeedVideos(
   _MockRepostsRepository? repostsRepository,
   MockAuthService? authService,
   bool isActive = true,
+  bool largeScreenLayout = false,
   bool appForeground = true,
   bool releaseNeighboursWhenInactive = false,
   bool hasMore = false,
@@ -466,31 +469,34 @@ Future<ProviderContainer> _pumpFeedVideos(
   container.read(appForegroundProvider.notifier).setForeground(appForeground);
   if (providerContainer == null) addTearDown(container.dispose);
 
+  final home = MultiBlocProvider(
+    providers: [
+      if (codecHeavySurfaceCubit != null)
+        BlocProvider<CodecHeavySurfaceCubit>.value(
+          value: codecHeavySurfaceCubit,
+        ),
+      BlocProvider<FeedAutoAdvanceCubit>.value(value: mockAutoAdvanceCubit),
+      BlocProvider<VideoPlaybackStatusCubit>.value(value: mockPlaybackCubit),
+      BlocProvider<VideoVolumeCubit>.value(value: mockVolumeCubit),
+      BlocProvider<FeedImmersiveCubit>.value(value: immersiveCubit),
+    ],
+    child: Scaffold(body: body),
+  );
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: MaterialApp(
-        navigatorObservers: navigatorObservers,
-        localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: MultiBlocProvider(
-          providers: [
-            if (codecHeavySurfaceCubit != null)
-              BlocProvider<CodecHeavySurfaceCubit>.value(
-                value: codecHeavySurfaceCubit,
-              ),
-            BlocProvider<FeedAutoAdvanceCubit>.value(
-              value: mockAutoAdvanceCubit,
+      child: largeScreenLayout
+          ? largeScreenLayoutApp(
+              enabled: true,
+              theme: VineTheme.theme,
+              home: home,
+            )
+          : MaterialApp(
+              navigatorObservers: navigatorObservers,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: home,
             ),
-            BlocProvider<VideoPlaybackStatusCubit>.value(
-              value: mockPlaybackCubit,
-            ),
-            BlocProvider<VideoVolumeCubit>.value(value: mockVolumeCubit),
-            BlocProvider<FeedImmersiveCubit>.value(value: immersiveCubit),
-          ],
-          child: Scaffold(body: body),
-        ),
-      ),
     ),
   );
   // InfiniteVideoFeed starts a first-frame grace timer for the initial item.
@@ -824,6 +830,40 @@ void main() {
   // Overlay mode switching via VideoPlaybackStatusCubit
   // -------------------------------------------------------------------------
   group('overlay mode switching', () {
+    for (final (windowWidth, dialogWidth) in [
+      (1440.0, 560.0),
+      (390.0, 310.0),
+    ]) {
+      testWidgets('sizes the content warning details at $windowWidth pt', (
+        tester,
+      ) async {
+        setTestWindowSize(tester, windowWidth);
+        await _pumpFeedVideos(
+          tester,
+          videos: [
+            _makeVideo(contentWarningLabels: ['nudity']),
+          ],
+          authService: _viewerAuthService(),
+          largeScreenLayout: true,
+        );
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.contentWarningNudity).hitTestable());
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.text(l10n.contentWarningDetailsTitle), findsOneWidget);
+        final surface = find
+            .descendant(
+              of: find.byType(Dialog),
+              matching: find.byType(Material),
+            )
+            .first;
+        expect(tester.getSize(surface).width, dialogWidth);
+      });
+    }
+
     testWidgets(
       'shows $ModeratedContentOverlay for forbidden playback status',
       (tester) async {

@@ -710,8 +710,9 @@ class _PendingCollaboratorInviteBanner extends ConsumerWidget {
               };
               if (message == null) return;
               messenger.showSnackBar(
-                SnackBar(
-                  content: Text(message),
+                DivineSnackbarContainer.snackBar(
+                  message,
+                  materialStyle: true,
                   behavior: SnackBarBehavior.floating,
                 ),
               );

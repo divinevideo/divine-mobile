@@ -112,7 +112,10 @@ class _AnalyticsConsentTile extends StatelessWidget {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(
-            SnackBar(content: Text(context.l10n.privacySettingsSaveFailed)),
+            DivineSnackbarContainer.snackBar(
+              context.l10n.privacySettingsSaveFailed,
+              materialStyle: true,
+            ),
           );
       },
       child: DivineSwitchTile(

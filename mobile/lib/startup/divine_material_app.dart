@@ -92,10 +92,12 @@ class DivineMaterialApp extends ConsumerWidget {
             child: DatabaseCorruptionGate(
               child: AppReviewCoordinator(
                 child: AdaptiveLayoutScope(
-                  child: EyedropperSources(
-                    child: ShareDeliveryHost(
-                      child: BackOnEscape(
-                        child: child ?? const SizedBox.shrink(),
+                  child: DivineSnackbarTheme(
+                    child: EyedropperSources(
+                      child: ShareDeliveryHost(
+                        child: BackOnEscape(
+                          child: child ?? const SizedBox.shrink(),
+                        ),
                       ),
                     ),
                   ),

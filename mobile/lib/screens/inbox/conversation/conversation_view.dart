@@ -2137,7 +2137,10 @@ class _MessageList extends StatelessWidget {
       messageId: messageId,
       highlightColor: context.vineColors.primaryContainer,
       onUnavailable: () => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.dmNotificationMessageUnavailable)),
+        DivineSnackbarContainer.snackBar(
+          context.l10n.dmNotificationMessageUnavailable,
+          materialStyle: true,
+        ),
       ),
       itemCount: pendingCount + messages.length,
       findChildIndexCallback: (key) {

@@ -94,8 +94,9 @@ class _ImageAttachmentPickerState extends State<ImageAttachmentPicker> {
     if (sanitized.isEmpty) {
       if (stripFailed) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.bugReportUploadFailed),
+          DivineSnackbarContainer.snackBar(
+            context.l10n.bugReportUploadFailed,
+            materialStyle: true,
             backgroundColor: VineTheme.error,
           ),
         );
@@ -127,8 +128,9 @@ class _ImageAttachmentPickerState extends State<ImageAttachmentPicker> {
     );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.l10n.bugReportUploadFailed),
+      DivineSnackbarContainer.snackBar(
+        context.l10n.bugReportUploadFailed,
+        materialStyle: true,
         backgroundColor: VineTheme.error,
       ),
     );

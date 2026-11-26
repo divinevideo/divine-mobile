@@ -469,8 +469,9 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                     previous.status != VideoFeedStatus.failure,
                 listener: (context, state) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(context.l10n.feedFailedToLoadVideos),
+                    DivineSnackbarContainer.snackBar(
+                      context.l10n.feedFailedToLoadVideos,
+                      materialStyle: true,
                       action: SnackBarAction(
                         label: context.l10n.commonRetry,
                         onPressed: () => context.read<VideoFeedBloc>().add(
