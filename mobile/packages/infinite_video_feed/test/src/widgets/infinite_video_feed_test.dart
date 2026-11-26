@@ -198,8 +198,11 @@ VideoEvent _makeVideo(String id, {String? videoUrl}) => VideoEvent(
   videoUrl: videoUrl ?? 'https://example.com/$id.m3u8',
 );
 
-Widget _wrapFeed(InfiniteVideoFeed feed) => Directionality(
-  textDirection: TextDirection.ltr,
+Widget _wrapFeed(
+  InfiniteVideoFeed feed, {
+  TextDirection textDirection = TextDirection.ltr,
+}) => Directionality(
+  textDirection: textDirection,
   child: MediaQuery(data: const MediaQueryData(), child: feed),
 );
 
@@ -4768,17 +4771,22 @@ void main() {
         GlobalKey<InfiniteVideoFeedState>? feedKey,
         int videoCount = 3,
         ScrollPhysics? scrollPhysics,
+        Axis scrollDirection = Axis.vertical,
+        TextDirection textDirection = TextDirection.ltr,
         VoidCallback? onForwardBoundary,
+        void Function(PointerSignalEvent)? onPointerSignal,
       }) async {
         key = feedKey ?? GlobalKey<InfiniteVideoFeedState>();
         otherHandlerGotScroll = false;
         await tester.pumpWidget(
           Listener(
-            onPointerSignal: (event) =>
-                GestureBinding.instance.pointerSignalResolver.register(
-                  event,
-                  (_) => otherHandlerGotScroll = true,
-                ),
+            onPointerSignal: (event) {
+              onPointerSignal?.call(event);
+              GestureBinding.instance.pointerSignalResolver.register(
+                event,
+                (_) => otherHandlerGotScroll = true,
+              );
+            },
             child: _wrapFeed(
               InfiniteVideoFeed(
                 key: key,
@@ -4787,8 +4795,10 @@ void main() {
                 prefetchCount: 0,
                 initialIndex: initialIndex,
                 scrollPhysics: scrollPhysics,
+                scrollDirection: scrollDirection,
                 onForwardBoundary: onForwardBoundary,
               ),
+              textDirection: textDirection,
             ),
           ),
         );
@@ -4901,13 +4911,72 @@ void main() {
         expect(key.currentState!.currentIndex, equals(1));
       });
 
-      testWidgets('a scroll mostly sideways is left alone', (tester) async {
+      testWidgets('a sideways-dominant scroll reaches tuning without moving '
+          'the page', (tester) async {
+        Offset? observedDelta;
+        await pumpFeedInsideOtherScrollHandler(
+          tester,
+          onPointerSignal: (event) {
+            if (event is PointerScrollEvent) observedDelta = event.scrollDelta;
+          },
+        );
+
+        const delta = Offset(150, 120);
+        bool? allowedPlatformDefault;
+        await tester.sendEventToBinding(
+          PointerScrollEvent(
+            position: tester.getCenter(find.byType(PageView)),
+            scrollDelta: delta,
+            onRespond: ({required allowPlatformDefault}) =>
+                allowedPlatformDefault = allowPlatformDefault,
+          ),
+        );
+
+        expect(observedDelta, equals(delta));
+        expect(otherHandlerGotScroll, isFalse);
+        expect(allowedPlatformDefault, isTrue);
+        expect(page(tester), equals(0));
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, equals(0));
+      });
+
+      testWidgets('a mixed-axis trackpad burst advances only one page', (
+        tester,
+      ) async {
         await pumpFeed(tester);
 
-        await scroll(tester, const Offset(40, 10));
+        for (var i = 0; i <= 40; i++) {
+          await scroll(
+            tester,
+            i < 4 || i == 40 ? const Offset(0, 12) : const Offset(150, 120),
+            atMs: i * 16,
+            kind: PointerDeviceKind.trackpad,
+          );
+          await tester.pump(const Duration(milliseconds: 16));
+        }
         await tester.pumpAndSettle();
 
-        expect(key.currentState!.currentIndex, equals(0));
+        expect(key.currentState!.currentIndex, equals(1));
+        expect(page(tester), equals(1));
+      });
+
+      testWidgets('pure sideways packets keep a trackpad burst together', (
+        tester,
+      ) async {
+        await pumpFeed(tester);
+
+        for (var i = 0; i <= 40; i++) {
+          await scroll(
+            tester,
+            i < 4 || i == 40 ? const Offset(0, 40) : const Offset(150, 0),
+            atMs: i * 16,
+            kind: PointerDeviceKind.trackpad,
+          );
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
       });
 
       testWidgets('a horizontal feed pages with sideways scrolls', (
@@ -4921,6 +4990,37 @@ void main() {
         expect(key.currentState!.currentIndex, equals(1));
       });
 
+      testWidgets('a horizontal wheel moves forward in RTL', (tester) async {
+        await pumpFeedInsideOtherScrollHandler(
+          tester,
+          scrollDirection: Axis.horizontal,
+          textDirection: TextDirection.rtl,
+        );
+
+        await scroll(tester, const Offset(-40, 0));
+        await tester.pumpAndSettle();
+
+        expect(key.currentState!.currentIndex, equals(1));
+        expect(page(tester), equals(1));
+        expect(otherHandlerGotScroll, isFalse);
+      });
+
+      testWidgets('a horizontal wheel at the RTL forward boundary is left to '
+          'others', (tester) async {
+        await pumpFeedInsideOtherScrollHandler(
+          tester,
+          initialIndex: 2,
+          scrollDirection: Axis.horizontal,
+          textDirection: TextDirection.rtl,
+        );
+
+        await scroll(tester, const Offset(-40, 0));
+        await tester.pumpAndSettle();
+
+        expect(otherHandlerGotScroll, isTrue);
+        expect(key.currentState!.currentIndex, equals(2));
+      });
+
       testWidgets('a scroll up on the first video is left to others', (
         tester,
       ) async {
@@ -4931,6 +5031,35 @@ void main() {
 
         expect(otherHandlerGotScroll, isTrue);
         expect(key.currentState!.currentIndex, equals(0));
+      });
+
+      testWidgets('a sideways-dominant scroll out of the feed is left to '
+          'others', (tester) async {
+        await pumpFeedInsideOtherScrollHandler(tester);
+
+        await scroll(tester, const Offset(150, -120));
+
+        expect(otherHandlerGotScroll, isTrue);
+        expect(page(tester), equals(0));
+      });
+
+      testWidgets('a rejected horizontal scroll respects RTL boundaries', (
+        tester,
+      ) async {
+        await pumpFeedInsideOtherScrollHandler(
+          tester,
+          scrollDirection: Axis.horizontal,
+          textDirection: TextDirection.rtl,
+        );
+
+        await scroll(tester, const Offset(120, 150));
+        expect(otherHandlerGotScroll, isTrue);
+        expect(page(tester), equals(0));
+
+        otherHandlerGotScroll = false;
+        await scroll(tester, const Offset(-120, 150));
+        expect(otherHandlerGotScroll, isFalse);
+        expect(page(tester), equals(0));
       });
 
       testWidgets('a scroll down on the last video is left to others', (
@@ -5046,10 +5175,11 @@ void main() {
         await pumpFeed(tester);
 
         await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-        await scroll(tester, const Offset(0, 40));
+        await scroll(tester, const Offset(90, 40));
         await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-        await tester.pumpAndSettle();
 
+        expect(page(tester), equals(0));
+        await tester.pumpAndSettle();
         expect(key.currentState!.currentIndex, equals(0));
       });
 

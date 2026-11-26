@@ -623,37 +623,63 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     }
   }
 
-  /// Claims a wheel or browser trackpad scroll that would page the feed.
+  /// Claims wheel and browser trackpad scrolls before the nested page view.
   ///
-  /// The feed bids before the page view's own scrollable (see
-  /// [PriorityPointerSignalListener]), which would otherwise move the page by
-  /// the delta and snap it back, and would cut short a page animation still
-  /// under way. A scroll the feed cannot follow or use to request another
-  /// page is left to whatever else wants it.
+  /// The page view would apply raw deltas and cut short an ongoing animation.
+  /// The enclosing scrollable can handle input when the feed is at a true end.
   void _onPointerSignal(PointerSignalEvent event) {
     if (event is! PointerScrollEvent) return;
-    final delta = _pageAxisDelta(event);
-    if (delta == 0) return;
+    final modifiers = ScrollConfiguration.of(context).pointerAxisModifiers;
+    final scrollsAcross =
+        event.kind == PointerDeviceKind.mouse &&
+        HardwareKeyboard.instance.logicalKeysPressed.any(modifiers.contains);
+    final Offset(:dx, :dy) = event.scrollDelta;
+    final (along, across) = widget.scrollDirection == Axis.vertical
+        ? (dy, dx)
+        : (dx, dy);
     final position = _pageController.position;
+    final acceptsOffset = position.physics.shouldAcceptUserOffset(position);
+    final direction = axisDirectionIsReversed(position.axisDirection) ? -1 : 1;
+    final delta = !scrollsAcross && along.abs() > across.abs()
+        ? along * direction
+        : 0.0;
+    if (delta == 0) {
+      // Keep the burst together even when some of it goes sideways. A
+      // Scrollable can still bid on one component of the rejected delta.
+      _pointerScrollPager.observe(event.timeStamp);
+      final nativeDelta = (scrollsAcross ? across : along) * direction;
+      final target = (position.pixels + nativeDelta).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      );
+      if (acceptsOffset && nativeDelta != 0 && target != position.pixels) {
+        // Block the native PageView fallback. Raw listeners, including
+        // horizontal feed tuning, still see the event before it resolves.
+        GestureBinding.instance.pointerSignalResolver.register(
+          event,
+          (rejected) => rejected.respond(allowPlatformDefault: true),
+        );
+      }
+      return;
+    }
+
     final atEnd = delta < 0
         ? position.pixels <= position.minScrollExtent
         : position.pixels >= position.maxScrollExtent;
-    if (!position.physics.shouldAcceptUserOffset(position) ||
+    if (!acceptsOffset ||
         (atEnd && (delta < 0 || widget.onForwardBoundary == null))) {
-      // Keep tracking momentum, but let the enclosing scrollable take it.
       _pointerScrollPager.observe(event.timeStamp);
       return;
     }
     GestureBinding.instance.pointerSignalResolver.register(
       event,
-      _onPointerScroll,
+      (_) => _onPointerScroll(event, delta),
     );
   }
 
-  void _onPointerScroll(PointerSignalEvent event) {
-    final scroll = event as PointerScrollEvent;
+  void _onPointerScroll(PointerScrollEvent scroll, double delta) {
     final step = _pointerScrollPager.add(
-      _pageAxisDelta(scroll),
+      delta,
       timeStamp: scroll.timeStamp,
       threshold: scroll.kind == PointerDeviceKind.trackpad
           ? _trackpadScrollStepThreshold
@@ -663,25 +689,6 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     // Keeps a browser from also scrolling the page the app is embedded in.
     scroll.respond(allowPlatformDefault: false);
     if (step != 0) unawaited(_stepPage(step));
-  }
-
-  /// The part of [event]'s scroll along the feed, or `0` when the scroll goes
-  /// mostly across it, which belongs to a sideways gesture such as the app's
-  /// swipe to tune the feed.
-  ///
-  /// A mouse wheel turned with an axis modifier such as Shift held scrolls
-  /// sideways, as it does in any other scrollable.
-  double _pageAxisDelta(PointerScrollEvent event) {
-    final modifiers = ScrollConfiguration.of(context).pointerAxisModifiers;
-    final scrollsAcross =
-        event.kind == PointerDeviceKind.mouse &&
-        HardwareKeyboard.instance.logicalKeysPressed.any(modifiers.contains);
-    if (scrollsAcross) return 0;
-    final Offset(:dx, :dy) = event.scrollDelta;
-    final (along, across) = widget.scrollDirection == Axis.vertical
-        ? (dy, dx)
-        : (dx, dy);
-    return along.abs() > across.abs() ? along : 0;
   }
 
   /// Activates [index] without waiting for a scroll animation.
