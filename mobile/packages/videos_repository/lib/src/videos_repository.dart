@@ -304,6 +304,7 @@ class VideosRepository {
     SeenVideoLookup? seenVideoLookup,
     String? Function()? viewerPubkey,
     bool classicRecommendationsEnabled = false,
+    bool Function()? classicRecommendationsAllowed,
     String? Function()? classicViewerPubkey,
     Object? Function()? classicContextKey,
     Random? random,
@@ -319,6 +320,7 @@ class VideosRepository {
        _seenVideoLookup = seenVideoLookup,
        _viewerPubkey = viewerPubkey,
        _classicRecommendationsEnabled = classicRecommendationsEnabled,
+       _classicRecommendationsAllowed = classicRecommendationsAllowed,
        _classicViewerPubkey = classicViewerPubkey,
        _classicContextKey = classicContextKey,
        _random = random ?? Random();
@@ -361,6 +363,11 @@ class VideosRepository {
   Object? _classicBrowsingContext;
   bool _classicBrowsingViewerInitialized = false;
   final bool _classicRecommendationsEnabled;
+
+  /// Per-read account gate for private Classics recommendations, evaluated on
+  /// every read so a status change never requires rebuilding the repository.
+  /// When it returns false the read uses the archive path.
+  final bool Function()? _classicRecommendationsAllowed;
   final String? Function()? _classicViewerPubkey;
   final Object? Function()? _classicContextKey;
 
@@ -1513,7 +1520,8 @@ class VideosRepository {
       );
     }
     final api = _funnelcakeApiClient;
-    if (api == null || !api.isAvailable) {
+    final allowed = _classicRecommendationsAllowed?.call() ?? true;
+    if (api == null || !api.isAvailable || !allowed) {
       return _getClassicArchiveVideos(
         limit: request.limit,
         skipCache: skipArchiveCache,
@@ -1570,7 +1578,8 @@ class VideosRepository {
   /// Fetches a stable Classics browsing selection.
   ///
   /// The application opts into private recommendations with
-  /// `classicRecommendationsEnabled`.
+  /// `classicRecommendationsEnabled`, and `classicRecommendationsAllowed`
+  /// can keep an individual account on the archive path per read.
   /// Its viewer callback must respect consent.
   /// A refresh rotates the browsing seed; cursor pages retain server order.
   /// Older/disabled servers use the bounded, shuffled archive reader below.
@@ -1582,7 +1591,8 @@ class VideosRepository {
     String? cursor,
     bool skipCache = false,
   }) async {
-    if (!_classicRecommendationsEnabled) {
+    if (!_classicRecommendationsEnabled ||
+        !(_classicRecommendationsAllowed?.call() ?? true)) {
       return _getClassicArchiveVideos(
         limit: limit,
         cursor: cursor,

@@ -1,17 +1,28 @@
-// ABOUTME: Build switch for adaptive Classics recommendations.
-// ABOUTME: One definition so every call site agrees on the default.
+// ABOUTME: Build switch and per-account gate for adaptive Classics.
+// ABOUTME: One definition so every call site agrees on when it is active.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 
-/// Whether Classics reads the private recommendation endpoint and adapts to
-/// viewing feedback. Off restores the archive-only Classics feed and grid.
+/// Whether this build ships Adaptive Classics, which reads the private
+/// recommendation endpoint and adapts to viewing feedback.
 ///
-/// Opt in with `--dart-define=ADAPTIVE_CLASSICS_ENABLED=true`.
+/// On by default. Build with `--dart-define=ADAPTIVE_CLASSICS_ENABLED=false`
+/// to restore the archive-only Classics feed and grid. The Funnelcake
+/// `CLASSIC_RECOMMENDATIONS_ENABLED` flag is the operational off switch:
+/// when it is off the endpoint fails and the app falls back to the archive.
 const bool adaptiveClassicsEnabled = bool.fromEnvironment(
   'ADAPTIVE_CLASSICS_ENABLED',
+  defaultValue: true,
 );
 
-/// Provides the build flag to each Classics entry point.
-final adaptiveClassicsEnabledProvider = Provider<bool>(
-  (ref) => adaptiveClassicsEnabled,
-);
+/// Whether Adaptive Classics is active for the current account.
+///
+/// Requires the build switch and a fresh, authenticated confirmation that the
+/// account is not a protected minor. Protected, pending, unknown and
+/// unavailable status stay on the archive path. Usage-data consent separately
+/// gates the viewer identity and feedback each request carries.
+final adaptiveClassicsEnabledProvider = Provider<bool>((ref) {
+  if (!adaptiveClassicsEnabled) return false;
+  return ref.watch(confirmedNotProtectedMinorProvider);
+});

@@ -300,6 +300,61 @@ void main() {
     );
 
     test(
+      'an account the gate rejects reads the archive for browsing and playback',
+      () async {
+        final nostr = _Nostr();
+        when(() => nostr.publicKey).thenReturn('');
+        var allowed = false;
+        final repository = VideosRepository(
+          nostrClient: nostr,
+          funnelcakeApiClient: api,
+          classicRecommendationsEnabled: true,
+          classicRecommendationsAllowed: () => allowed,
+        );
+        var archiveReads = 0;
+        when(
+          () => api.getClassicVines(
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+          ),
+        ).thenAnswer((_) async {
+          archiveReads++;
+          return [_stats(1)];
+        });
+        when(
+          () => api.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              RecommendationsResponse(videos: [_stats(2)], source: 'mixed'),
+        );
+
+        await repository.getClassicVideos(skipCache: true);
+        await repository.getClassicRecommendations(request: request);
+        expect(archiveReads, greaterThan(0));
+        verifyNever(
+          () => api.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        );
+
+        // The gate is read per request: once the account is confirmed, the
+        // same repository uses the endpoint without being rebuilt.
+        allowed = true;
+        await repository.getClassicRecommendations(request: request);
+        verify(
+          () => api.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).called(1);
+      },
+    );
+
+    test(
       'browsing rejects an old reply and rotates seed across privacy toggles',
       () async {
         var generation = 0;

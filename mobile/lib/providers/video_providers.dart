@@ -1070,7 +1070,12 @@ VideosRepository videosRepository(Ref ref) {
           authService.currentPublicKeyHex ?? nostrClient.publicKey,
     ),
     funnelcakeApiClient: funnelcakeClient,
-    classicRecommendationsEnabled: ref.watch(adaptiveClassicsEnabledProvider),
+    // The build switch is fixed for the process; the account gate is read per
+    // request so resolving protected-minor status never rebuilds this
+    // repository (and resets its feeds) after cold start.
+    classicRecommendationsEnabled: adaptiveClassicsEnabled,
+    classicRecommendationsAllowed: () =>
+        ref.mounted && ref.read(adaptiveClassicsEnabledProvider),
     // These run per read, after this provider may have rebuilt. A replaced
     // repository's Ref can no longer read providers, so it reports no viewer
     // and a context that never matches: its reads end as superseded.

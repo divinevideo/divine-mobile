@@ -147,6 +147,22 @@ final isProtectedMinorProvider = Provider<bool>((ref) {
   return store.isProtectedMinorFor(pubkey);
 });
 
+/// Whether the current account is freshly confirmed as not a protected minor.
+///
+/// Features that personalize from private viewing data require this positive
+/// signal. Unlike [isProtectedMinorProvider], an unauthenticated session, a
+/// loading or failed lookup, an unknown status (for example a non-OAuth signer
+/// session with no Keycast token) and a protected status all read as `false`,
+/// so callers fail closed until an authenticated Keycast check says otherwise.
+final confirmedNotProtectedMinorProvider = Provider<bool>((ref) {
+  final authState = ref.watch(currentAuthStateProvider);
+  final trusted = trustedProtectedMinorStatus(
+    authenticated: authState == AuthState.authenticated,
+    live: ref.watch(protectedMinorStatusProvider),
+  );
+  return trusted?.kind == ProtectedMinorStatusKind.notProtected;
+});
+
 /// Whether a Keycast-backed protected-minor verdict can apply to the current
 /// account. Returns `true` only for OAuth-authenticated accounts and for
 /// accounts that have previously been marked as Keycast-custodial.
