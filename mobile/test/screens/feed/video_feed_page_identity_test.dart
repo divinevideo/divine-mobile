@@ -16,8 +16,10 @@ import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit
 import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/models/protected_minor_status.dart';
 import 'package:openvine/observability/screen_frame_trace.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/services/age_verification_service.dart';
@@ -763,6 +765,86 @@ void main() {
           requests.last.$1.recentInteractions.map((i) => i.videoId),
           contains(_removalVideo('2').id),
         );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.runAsync(pumpEventQueue);
+      },
+    );
+
+    testWidgets(
+      'Home attaches and detaches its adaptive Classics session as '
+      'protected-minor status resolves without rebuilding Home',
+      (tester) async {
+        var pendingStatus = Completer<ProtectedMinorStatus>();
+        final analytics = _ConsentingAnalytics();
+        final home = await _mountSafetyPolicyHome(
+          tester,
+          overrides: [
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+            protectedMinorStatusProvider.overrideWith(
+              (ref) => pendingStatus.future,
+            ),
+            analyticsServiceProvider.overrideWith((ref) {
+              ref.onDispose(analytics.dispose);
+              return analytics;
+            }),
+          ],
+        );
+        final requests = _stubClassicRecommendations(home.videos);
+        var archiveCalls = 0;
+        when(
+          () => home.videos.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer((_) async {
+          archiveCalls++;
+          return HomeFeedResult(videos: [_removalVideo('1')], hasMore: false);
+        });
+
+        // Cold start resolves after Home is already mounted: must not rebuild
+        // VideoFeedBloc, and Classics must now use ClassicFeedSession.
+        pendingStatus.complete(ProtectedMinorStatus.notProtected());
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+        expect(
+          tester.element(find.byType(VideoFeedView)).read<VideoFeedBloc>(),
+          same(home.originalFeed),
+        );
+
+        home.originalFeed.add(
+          const VideoFeedSourceChanged(VideoFeedSource.classic()),
+        );
+        await tester.runAsync(pumpEventQueue);
+        expect(requests, isNotEmpty);
+        expect(archiveCalls, 0);
+
+        // Mid-session flip to protected detaches ClassicFeedSession without
+        // rebuilding Home; refreshing Classics uses the archive path.
+        // Assert bloc transitions without pumping frames while Classics has
+        // videos (FeedVideos needs no native media harness here).
+        requests.clear();
+        pendingStatus = Completer<ProtectedMinorStatus>()
+          ..complete(ProtectedMinorStatus.protected());
+        home.container.invalidate(protectedMinorStatusProvider);
+        await tester.runAsync(
+          () => home.container.read(protectedMinorStatusProvider.future),
+        );
+        expect(
+          home.container.read(adaptiveClassicsEnabledProvider),
+          isFalse,
+        );
+        await tester.runAsync(pumpEventQueue);
+        expect(
+          tester.element(find.byType(VideoFeedView)).read<VideoFeedBloc>(),
+          same(home.originalFeed),
+        );
+
+        home.originalFeed.add(const VideoFeedRefreshRequested());
+        await tester.runAsync(pumpEventQueue);
+        expect(requests, isEmpty);
+        expect(archiveCalls, 1);
+
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.runAsync(pumpEventQueue);
       },

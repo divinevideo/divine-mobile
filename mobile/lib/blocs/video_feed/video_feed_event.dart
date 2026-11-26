@@ -327,3 +327,13 @@ final class VideoFeedVisibilityChanged extends VideoFeedEvent {
   @override
   List<Object?> get props => [visible];
 }
+
+/// Adaptive Classics account gate opened or closed for this Home feed.
+final class _VideoFeedAdaptiveClassicsChanged extends VideoFeedEvent {
+  const _VideoFeedAdaptiveClassicsChanged(this.enabled);
+
+  final bool enabled;
+
+  @override
+  List<Object?> get props => [enabled];
+}

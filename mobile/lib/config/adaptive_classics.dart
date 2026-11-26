@@ -3,6 +3,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/providers/provider_identity_stream.dart';
 
 /// Whether this build ships Adaptive Classics, which reads the private
 /// recommendation endpoint and adapts to viewing feedback.
@@ -26,3 +27,9 @@ final adaptiveClassicsEnabledProvider = Provider<bool>((ref) {
   if (!adaptiveClassicsEnabled) return false;
   return ref.watch(confirmedNotProtectedMinorProvider);
 });
+
+/// Seeded stream of [adaptiveClassicsEnabledProvider] transitions so Home's
+/// [VideoFeedBloc] can attach or detach its adaptive Classics session when
+/// protected-minor status resolves or changes, without resetting the feed.
+final Provider<Stream<bool>> adaptiveClassicsEnabledStreamProvider =
+    identityStreamOf<bool>(adaptiveClassicsEnabledProvider);

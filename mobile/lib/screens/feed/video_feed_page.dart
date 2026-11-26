@@ -93,7 +93,6 @@ class VideoFeedPage extends ConsumerWidget {
       isFeatureEnabledProvider(FeatureFlag.clientSeenFiltering),
     );
     final videosRepository = ref.watch(videosRepositoryProvider);
-    final useAdaptiveClassics = ref.watch(adaptiveClassicsEnabledProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final hashtagRepository = ref.watch(hashtagSubscriptionRepositoryProvider);
     final curatedListRepository = ref.watch(curatedListRepositoryProvider);
@@ -149,12 +148,26 @@ class VideoFeedPage extends ConsumerWidget {
                   ),
                   unavailableFilter: unavailabilityGate.isVideoBroken,
                   unavailableVideoIds: unavailabilityGate.markedVideoIds,
-                  classicSession: useAdaptiveClassics
+                  classicSession:
+                      adaptiveClassicsEnabled &&
+                          ref.read(adaptiveClassicsEnabledProvider)
                       ? _homeClassicSession(
                           ref,
                           viewerPubkey,
                           isUnavailable: unavailabilityGate.isVideoBroken,
                         )
+                      : null,
+                  createClassicSession: adaptiveClassicsEnabled
+                      ? () => ref.context.mounted
+                            ? _homeClassicSession(
+                                ref,
+                                viewerPubkey,
+                                isUnavailable: unavailabilityGate.isVideoBroken,
+                              )
+                            : null
+                      : null,
+                  adaptiveClassicsEnabledStream: adaptiveClassicsEnabled
+                      ? ref.read(adaptiveClassicsEnabledStreamProvider)
                       : null,
                   followRepository: followRepository,
                   curatedListRepository: curatedListRepository,
@@ -842,6 +855,8 @@ ClassicFeedSession _homeClassicSession(
   required bool Function(String videoId) isUnavailable,
 }) {
   var analytics = ref.read(analyticsServiceProvider);
+  bool isAdaptiveAllowed() =>
+      ref.context.mounted && ref.read(adaptiveClassicsEnabledProvider);
   return ClassicFeedSession(
     loadPage: (request) {
       final requestAnalytics = analytics;
@@ -853,11 +868,13 @@ ClassicFeedSession _homeClassicSession(
             request: request,
             userPubkey: allowed ? viewerPubkey : null,
             isCurrent: () =>
+                isAdaptiveAllowed() &&
                 contextId == requestAnalytics.privacyGeneration &&
                 allowed == requestAnalytics.initializedAnalyticsConsent,
           );
     },
-    canPersonalize: () => analytics.initializedAnalyticsConsent,
+    canPersonalize: () =>
+        isAdaptiveAllowed() && analytics.initializedAnalyticsConsent,
     // Each listener tracks the current service; transforms of the identity
     // stream are single-subscription, so one chain per listener.
     feedback: ref
