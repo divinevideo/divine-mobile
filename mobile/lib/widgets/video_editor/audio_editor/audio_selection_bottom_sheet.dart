@@ -2141,9 +2141,16 @@ class _PrefetchedRowState extends State<_PrefetchedRow> {
   }
 
   void _prefetch() {
-    final url = widget.sound.url;
-    if (url == null || widget.sound.isLocalImport) return;
-    widget.audioService.prefetch(url, sizeBytes: widget.sound.fileSize);
+    final sound = widget.sound;
+    final url = sound.url;
+    if (url == null || sound.isLocalImport) return;
+    // Like a cover, a sound is fetched before a tap only from Divine's
+    // servers or the song catalog: another host would learn who scrolled
+    // past it.
+    if (!SoundCover.isScreenedHost(url) && !sound.isExternalProviderSound) {
+      return;
+    }
+    widget.audioService.prefetch(url, sizeBytes: sound.fileSize);
   }
 
   @override

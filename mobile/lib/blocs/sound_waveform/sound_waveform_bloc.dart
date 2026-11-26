@@ -104,7 +104,7 @@ class SoundWaveformBloc extends Bloc<SoundWaveformEvent, SoundWaveformState> {
         final cache = _remoteAudioCache;
         if (cache == null) return EditorVideo.network(event.path);
         // The editor would download a URL again on every read; the cache
-        // keeps the file a preview or an earlier screen already fetched.
+        // downloads it once and keeps it for the next read.
         return EditorVideo.file(await cache.fileFor(Uri.parse(event.path)));
     }
   }

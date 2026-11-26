@@ -125,7 +125,8 @@ class RemoteAudioCache {
   ///
   /// A CDN edge that has not served a sound yet fetches it from the origin
   /// first, which takes about half a second longer than an edge that has.
-  /// Never throws: a failure only means the sound is fetched cold later.
+  /// A network or server failure is not thrown: it only means the sound is
+  /// fetched cold later. A [uri] with no host throws [ArgumentError].
   Future<void> warm(Uri uri) async {
     final client = _httpClientFactory()..connectionTimeout = connectionTimeout;
     try {

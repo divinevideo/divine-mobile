@@ -824,8 +824,8 @@ class _WaveformRevealAnimation extends StatelessWidget {
   final bool reduceMotion;
   final Widget Function(double revealedFraction, double peak) builder;
 
-  /// About as long as the editor takes to read the next piece, so the edge
-  /// keeps moving between pieces instead of stopping at each.
+  /// Several times the shortest gap between the waveforms the bloc emits
+  /// while reading, so the edge glides between them instead of stepping.
   static const _revealDuration = Duration(milliseconds: 200);
   static const _rescaleDuration = Duration(milliseconds: 300);
 

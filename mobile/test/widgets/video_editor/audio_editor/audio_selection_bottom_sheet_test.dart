@@ -1430,10 +1430,15 @@ void main() {
         final kick = _createTestAudioEvent(
           id: 'kick',
           title: 'Big Kick',
+          url: 'https://media.divine.video/kick',
+        ).copyWith(fileSize: 4523);
+        final elsewhere = _createTestAudioEvent(
+          id: 'elsewhere',
+          title: 'Hosted Elsewhere',
         ).copyWith(fileSize: 4523);
         await tester.pumpWidget(
           buildWidget(
-            trendingSoundsAsync: AsyncValue.data([kick]),
+            trendingSoundsAsync: AsyncValue.data([kick, elsewhere]),
             audioService: audioService,
           ),
         );
@@ -1444,9 +1449,16 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Big Kick'), findsOneWidget);
+        expect(find.text('Hosted Elsewhere'), findsOneWidget);
         verify(
           () => audioService.prefetch(kick.url!, sizeBytes: 4523),
         ).called(greaterThanOrEqualTo(1));
+        verifyNever(
+          () => audioService.prefetch(
+            elsewhere.url!,
+            sizeBytes: any(named: 'sizeBytes'),
+          ),
+        );
         verifyNever(
           () => audioService.loadAudio(
             any(),

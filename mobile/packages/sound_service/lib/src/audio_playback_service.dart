@@ -86,6 +86,21 @@ class AudioPlaybackService {
   /// load started gives way instead of replacing the later one's audio.
   int _loadGeneration = 0;
 
+  /// The URL of the audio loaded as a stream, or `null` when the player
+  /// holds anything else.
+  String? _streamedUrl;
+
+  /// URLs whose stream failed while it played; they load through the
+  /// download from then on.
+  final _unstreamable = <String>{};
+
+  /// Reports playback failures, which just_audio sends as events rather
+  /// than as errors of [play]; listened to once something is streamed.
+  StreamSubscription<PlayerException>? _errorSubscription;
+
+  /// Ends the [play] call waiting for the audio when playback fails.
+  Completer<void>? _playFailure;
+
   /// The last successfully loaded audio source identifier.
   /// Used to reload the source when a "Loading interrupted" error occurs.
   ({_SourceType type, Object value})? _lastSource;
@@ -230,6 +245,7 @@ class AudioPlaybackService {
   }) async {
     if (_isDisposed) return null;
     final generation = ++_loadGeneration;
+    _streamedUrl = null;
     final completer = _loadCompleter = Completer<void>();
     try {
       Duration? loadedDuration;
@@ -247,11 +263,15 @@ class AudioPlaybackService {
         final streamUri = streamUnlessCached ? _uncachedRemoteUri(url) : null;
         var loaded = false;
         if (streamUri != null) {
+          _errorSubscription ??= _audioPlayer.errorStream.listen(
+            _onPlaybackError,
+          );
           try {
             loadedDuration = await _audioPlayer.setAudioSource(
               AudioSource.uri(streamUri),
             );
             loaded = true;
+            _streamedUrl = url;
           } on PlayerException catch (e) {
             // A server that ignores byte ranges, which AVFoundation needs to
             // stream, still serves the whole file for the download.
@@ -293,6 +313,7 @@ class AudioPlaybackService {
   Future<Duration?> loadAudioFromFile(String filePath) async {
     if (_isDisposed) return null;
     ++_loadGeneration;
+    _streamedUrl = null;
     final completer = _loadCompleter = Completer<void>();
     try {
       final loadedDuration = await _audioPlayer.setFilePath(filePath);
@@ -326,6 +347,7 @@ class AudioPlaybackService {
   Future<Duration?> setAudioSource(AudioSourceConfig config) async {
     if (_isDisposed) return null;
     final generation = ++_loadGeneration;
+    _streamedUrl = null;
     final completer = _loadCompleter = Completer<void>();
     try {
       final UriAudioSource child;
@@ -377,7 +399,7 @@ class AudioPlaybackService {
     }
     // A sound [prefetch] is downloading is small and nearly there, so its
     // file starts sooner than a stream would.
-    if (cache.isDownloading(uri)) return null;
+    if (cache.isDownloading(uri) || _unstreamable.contains(url)) return null;
     return cache.cachedFileFor(uri) == null ? uri : null;
   }
 
@@ -386,8 +408,27 @@ class AudioPlaybackService {
   /// larger one is warmed on the CDN. Call it for the sounds a list shows.
   /// Does nothing on the web.
   void prefetch(String url, {int? sizeBytes}) {
-    if (_isDisposed) return;
-    _prefetcher?.prefetch(Uri.parse(url), sizeBytes: sizeBytes);
+    final uri = Uri.tryParse(url);
+    if (_isDisposed || uri == null) return;
+    _prefetcher?.prefetch(uri, sizeBytes: sizeBytes);
+  }
+
+  /// A failure while the player played or loaded.
+  ///
+  /// A stream that breaks off partway, a dropped connection or a server
+  /// error on a later range request, reaches only this stream. On iOS the
+  /// player then goes idle and never answers the [play] call waiting for the
+  /// audio, so that call is ended here, with the error.
+  void _onPlaybackError(PlayerException error) {
+    final url = _streamedUrl;
+    if (url != null) _unstreamable.add(url);
+    Log.warning(
+      'Playback failed${url == null ? '' : ' while streaming $url'}: $error',
+      name: 'AudioPlaybackService',
+      category: LogCategory.video,
+    );
+    final failure = _playFailure;
+    if (failure != null && !failure.isCompleted) failure.completeError(error);
   }
 
   /// The player source for a network [uri].
@@ -427,17 +468,22 @@ class AudioPlaybackService {
     if (identical(_loadCompleter, completer)) _loadCompleter = null;
   }
 
-  /// Starts audio playback.
+  /// Starts audio playback, and completes once it stops: paused, stopped or
+  /// at the end of the audio.
   ///
   /// If audio is currently loading, waits for the load to complete first.
   /// On transient "Loading interrupted" errors, reloads the source and
   /// retries once.
+  ///
+  /// Throws the [PlayerException] of a failure while it plays, such as a
+  /// stream that breaks off partway.
   Future<void> play() async {
     if (_isDisposed) return;
     await _loadCompleter?.future;
     if (_isDisposed) return;
+    final failure = _playFailure = Completer<void>();
     try {
-      await _audioPlayer.play();
+      await Future.any<void>([_audioPlayer.play(), failure.future]);
       Log.debug('Started audio playback', name: 'AudioPlaybackService');
     } catch (e) {
       if (_isLoadingInterrupted(e)) {
@@ -457,6 +503,8 @@ class AudioPlaybackService {
         category: LogCategory.video,
       );
       rethrow;
+    } finally {
+      if (identical(_playFailure, failure)) _playFailure = null;
     }
   }
 
@@ -629,6 +677,7 @@ class AudioPlaybackService {
 
     _isDisposed = true;
     _prefetcher?.dispose();
+    await _errorSubscription?.cancel();
     await _endSubscription?.cancel();
     await _deviceChangeSubscription?.cancel();
     await _headphonesConnectedSubject.close();

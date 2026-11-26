@@ -976,10 +976,16 @@ void main() {
     const soundUrl = 'https://example.com/sound';
     late _MockAudioPlayer mockPlayer;
     late _MockAudioSessionWrapper mockSessionWrapper;
+    late StreamController<PlayerException> playbackErrors;
 
     setUp(() {
       mockPlayer = _MockAudioPlayer();
       mockSessionWrapper = _MockAudioSessionWrapper();
+      playbackErrors = StreamController<PlayerException>.broadcast();
+      addTearDown(playbackErrors.close);
+      when(
+        () => mockPlayer.errorStream,
+      ).thenAnswer((_) => playbackErrors.stream);
       when(() => mockPlayer.dispose()).thenAnswer((_) async {});
       when(
         () => mockSessionWrapper.getDevices(),
@@ -1223,6 +1229,85 @@ void main() {
               ).captured.single
               as UriAudioSource;
       expect(source.uri, Uri.parse(soundUrl));
+    });
+
+    // just_audio reports a stream that breaks off as an event, not as an
+    // error of play, and on iOS never answers the play call afterwards.
+    test('play ends with the error when a stream breaks off', () async {
+      when(
+        () => mockPlayer.setAudioSource(any()),
+      ).thenAnswer((_) async => const Duration(seconds: 204));
+      when(() => mockPlayer.play()).thenAnswer((_) => Completer<void>().future);
+      final service = serviceWith(_FakeRemoteAudioCache());
+      await service.loadAudio(soundUrl, streamUnlessCached: true);
+
+      final playing = service.play();
+      await pumpEventQueue();
+      playbackErrors.add(PlayerException(-1004, 'Connection lost', 0));
+
+      await expectLater(playing, throwsA(isA<PlayerException>()));
+    });
+
+    test('a sound whose stream broke off loads through the download '
+        'next time', () async {
+      when(
+        () => mockPlayer.setAudioSource(any()),
+      ).thenAnswer((_) async => const Duration(seconds: 204));
+      final cache = _FakeRemoteAudioCache();
+      final service = serviceWith(cache);
+      await service.loadAudio(soundUrl, streamUnlessCached: true);
+      playbackErrors.add(PlayerException(-1004, 'Connection lost', 0));
+      await pumpEventQueue();
+
+      await service.loadAudio(soundUrl, streamUnlessCached: true);
+
+      final sources = verify(
+        () => mockPlayer.setAudioSource(captureAny()),
+      ).captured.cast<UriAudioSource>();
+      expect(sources.map((source) => source.uri), [
+        Uri.parse(soundUrl),
+        Uri.file(_cachedFileFor(soundUrl).path),
+      ]);
+      expect(cache.requested, [Uri.parse(soundUrl)]);
+    });
+
+    test('a failure while a downloaded file plays keeps streaming', () async {
+      when(
+        () => mockPlayer.setAudioSource(any()),
+      ).thenAnswer((_) async => const Duration(seconds: 3));
+      when(
+        () => mockPlayer.setFilePath(any()),
+      ).thenAnswer((_) async => const Duration(seconds: 3));
+      final service = serviceWith(_FakeRemoteAudioCache());
+      await service.loadAudio(soundUrl, streamUnlessCached: true);
+      await service.loadAudioFromFile('/imported.m4a');
+      playbackErrors.add(PlayerException(0, 'Source error', 0));
+      await pumpEventQueue();
+
+      await service.loadAudio(soundUrl, streamUnlessCached: true);
+
+      final sources = verify(
+        () => mockPlayer.setAudioSource(captureAny()),
+      ).captured.cast<UriAudioSource>();
+      expect(sources.map((source) => source.uri), [
+        Uri.parse(soundUrl),
+        Uri.parse(soundUrl),
+      ]);
+    });
+
+    test('prefetch ignores a URL it cannot read', () {
+      final prefetcher = _RecordingPrefetcher();
+      final service = AudioPlaybackService(
+        audioPlayer: mockPlayer,
+        audioSessionWrapper: mockSessionWrapper,
+        remoteAudioCache: _FakeRemoteAudioCache(),
+        remoteAudioPrefetcher: prefetcher,
+      );
+      addTearDown(service.dispose);
+
+      service.prefetch('https://example.com:port/sound');
+
+      expect(prefetcher.asked, isEmpty);
     });
 
     test('prefetch hands a remote sound and its size to the prefetcher', () {

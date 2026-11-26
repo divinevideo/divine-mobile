@@ -13,8 +13,8 @@ import 'package:sound_service/src/remote_audio_cache.dart';
 /// edge in front of the server ready to serve it.
 ///
 /// Sounds are readied a few at a time, the one asked for last first: in a
-/// list that is the row that came on screen last, and rows scrolled past
-/// while they waited are dropped.
+/// list that is the row built last. Once more than [maxWaiting] wait, the
+/// oldest, usually rows already scrolled past, are dropped.
 class RemoteAudioPrefetcher {
   /// Creates a [RemoteAudioPrefetcher] that downloads into [cache].
   RemoteAudioPrefetcher({
@@ -45,10 +45,11 @@ class RemoteAudioPrefetcher {
 
   /// Readies the sound at [uri], whose file is [sizeBytes] long when known.
   ///
-  /// Does nothing for a sound that is not http(s), was asked for before, or
-  /// is in the cache already.
+  /// Does nothing for a sound that is not http(s) with a host, was asked
+  /// for before, or is in the cache already.
   void prefetch(Uri uri, {int? sizeBytes}) {
     if (_closed || (uri.scheme != 'http' && uri.scheme != 'https')) return;
+    if (uri.host.isEmpty) return;
     if (_cache.cachedFileFor(uri) != null || !_asked.add(uri)) return;
     _waiting.add((uri: uri, sizeBytes: sizeBytes));
     if (_waiting.length > maxWaiting) _asked.remove(_waiting.removeAt(0).uri);

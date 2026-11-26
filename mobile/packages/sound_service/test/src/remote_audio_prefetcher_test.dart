@@ -82,12 +82,13 @@ void main() {
         expect(cache.downloads, [_sound(1)]);
       });
 
-      test('skips a sound the cache keeps, and local sounds', () async {
+      test('skips a sound the cache keeps, local sounds and no host', () async {
         cache.kept.add(_sound(1));
         prefetcher
           ..prefetch(_sound(1), sizeBytes: 800)
           ..prefetch(Uri.parse('asset://assets/sounds/bruh.mp3'))
-          ..prefetch(Uri.file('/imports/song.m4a'));
+          ..prefetch(Uri.file('/imports/song.m4a'))
+          ..prefetch(Uri.parse('https:///sound'), sizeBytes: 800);
         await pumpEventQueue();
 
         expect(cache.downloads, isEmpty);

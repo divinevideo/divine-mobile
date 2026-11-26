@@ -267,7 +267,7 @@ void main() {
       );
 
       // Handed the URL, the editor downloads the sound again on every read;
-      // a preview or an earlier screen usually has its file already.
+      // the cache downloads it once and keeps it.
       blocTest<SoundWaveformBloc, SoundWaveformState>(
         'reads a network sound from the file the cache keeps for it',
         build: buildBloc,
