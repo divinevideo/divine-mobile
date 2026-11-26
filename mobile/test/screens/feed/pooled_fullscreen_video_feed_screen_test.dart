@@ -2110,7 +2110,7 @@ void main() {
         },
       );
 
-      testWidgets('passes nearEndThreshold of 10 to InfiniteVideoFeed', (
+      testWidgets('passes nearEndThreshold of 15 to InfiniteVideoFeed', (
         tester,
       ) async {
         final videos = createTestVideos();
@@ -2125,7 +2125,7 @@ void main() {
           ),
         );
 
-        expect(nativeFeed(tester).nearEndThreshold, equals(10));
+        expect(nativeFeed(tester).nearEndThreshold, equals(15));
       });
 
       testWidgets(

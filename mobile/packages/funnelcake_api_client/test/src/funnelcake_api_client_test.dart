@@ -6456,6 +6456,23 @@ void main() {
           expect(result.nextCursor, equals('opaque-1'));
         },
       );
+
+      test('includes seed_video_id query param when provided', () async {
+        Uri? capturedUri;
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((invocation) async {
+          capturedUri = invocation.positionalArguments.first as Uri;
+          return http.Response('{"videos":[],"source":"personalized"}', 200);
+        });
+
+        await client.getRecommendations(
+          pubkey: testPubkey,
+          seedVideoId: 'seed-vid-123',
+        );
+
+        expect(capturedUri?.queryParameters['seed_video_id'], 'seed-vid-123');
+      });
     }); // end group('getRecommendations')
 
     group('getBulkProfiles', () {

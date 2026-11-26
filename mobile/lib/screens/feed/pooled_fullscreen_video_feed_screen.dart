@@ -597,15 +597,7 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
     }
     // Clamping physics reports an overscroll; bouncing physics reports a
     // scroll update beyond the end. Only user drags request another page.
-    final swipingPastEnd = switch (notification) {
-      OverscrollNotification(:final overscroll, :final dragDetails) =>
-        dragDetails != null && overscroll > 0,
-      ScrollUpdateNotification(:final scrollDelta, :final dragDetails) =>
-        dragDetails != null &&
-            (scrollDelta ?? 0) > 0 &&
-            notification.metrics.pixels > notification.metrics.maxScrollExtent,
-      _ => false,
-    };
+    final swipingPastEnd = isFeedEndSwipe(notification);
     final state = context.read<FullscreenFeedBloc>().state;
     if (swipingPastEnd &&
         !_requestedPageForDrag &&

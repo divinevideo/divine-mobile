@@ -71,7 +71,8 @@ class InfiniteVideoFeed extends StatefulWidget {
     this.maxPlaybackDuration,
     this.onActiveVideoChanged,
     this.onNearEnd,
-    this.nearEndThreshold = 10,
+    this.nearEndThreshold = 15,
+    this.prefetchOnMount = false,
     this.onVideoLoopCompleted,
     this.onVideoStalled,
     this.slowLoadThreshold = const Duration(seconds: 8),
@@ -279,6 +280,9 @@ class InfiniteVideoFeed extends StatefulWidget {
 
   /// How many videos from the end should trigger [onNearEnd].
   final int nearEndThreshold;
+
+  /// Whether to check [onNearEnd] when the opening list mounts.
+  final bool prefetchOnMount;
 
   /// Called each time the active video completes a loop.
   ///
@@ -630,6 +634,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
     _beginFirstFrameMeasurement(_currentIndex);
     unawaited(_onIndexChanged(_currentIndex));
+    if (widget.prefetchOnMount) _scheduleNearEndCheckIfNeeded();
   }
 
   @override
@@ -678,6 +683,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           .toList()
           .forEach(_disposeAt);
       unawaited(_onIndexChanged(_currentIndex));
+      if (widget.videos.length != oldWidget.videos.length) {
+        _scheduleNearEndCheckIfNeeded();
+      }
       return;
     }
 
@@ -723,6 +731,24 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     });
 
     unawaited(_onIndexChanged(_currentIndex));
+    if (widget.videos.length != oldWidget.videos.length) {
+      _scheduleNearEndCheckIfNeeded();
+    }
+  }
+
+  /// Requests the next page after frame commit when the opening or updated
+  /// list leaves at most [InfiniteVideoFeed.nearEndThreshold] videos ahead.
+  void _scheduleNearEndCheckIfNeeded() {
+    if (widget.onNearEnd == null || widget.videos.isEmpty) return;
+    final distanceFromEnd = widget.videos.length - _currentIndex - 1;
+    if (distanceFromEnd > widget.nearEndThreshold) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.videos.isEmpty) return;
+      final remaining = widget.videos.length - _currentIndex - 1;
+      if (remaining <= widget.nearEndThreshold) {
+        widget.onNearEnd?.call();
+      }
+    });
   }
 
   String? _resolvedSourceFor(

@@ -1418,42 +1418,127 @@ void main() {
         expect(pageView.childrenDelegate, isA<SliverChildBuilderDelegate>());
       });
 
-      testWidgets('calls onNearEnd when near the end of list', (tester) async {
-        var nearEndCalled = false;
-        final key = GlobalKey<InfiniteVideoFeedState>();
-        // Threshold >= list length: the feed is always "near the end".
-        // We verify the callback wiring by calling _onPageChanged indirectly
-        // via the page controller listener without triggering a native
-        // platform-view scroll that requires an initialized controller.
-        final videos = List.generate(3, (i) => _makeVideo('v$i'));
+      testWidgets(
+        'requests more when the opening page contains only one video',
+        (tester) async {
+          var nearEndCalls = 0;
 
-        await tester.pumpWidget(
-          _wrapFeed(
-            InfiniteVideoFeed(
-              key: key,
-              videos: videos,
-              cache: cache,
-              nearEndThreshold: 5,
-              onNearEnd: () => nearEndCalled = true,
-              preloadGracePeriod: Duration.zero,
-              prefetchCount: 0,
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo('only-video')],
+                cache: cache,
+                onNearEnd: () => nearEndCalls++,
+                prefetchOnMount: true,
+                preloadGracePeriod: Duration.zero,
+                prefetchCount: 0,
+              ),
             ),
-          ),
-        );
+          );
 
-        // Calling onNearEnd happens inside _onPageChanged. We can verify the
-        // widget accepts the callback and the state is correctly set up by
-        // checking that 3 videos with threshold 5 satisfies distance ≤
-        // threshold for index 0: distance = 3 - 0 - 1 = 2 ≤ 5.
-        // Rather than scrolling (which requires initialized native
-        // controllers), we assert the widget accepted nearEndThreshold
-        // correctly by checking that currentIndex is 0 and
-        // videos.length-1 ≤ nearEndThreshold.
-        expect(key.currentState!.currentIndex, equals(0));
-        expect(videos.length - 0 - 1, lessThanOrEqualTo(5));
-        // Direct validation that the widget is set up to fire onNearEnd.
-        expect(nearEndCalled, isFalse); // Not yet (no page change fired).
-      });
+          expect(nearEndCalls, equals(1));
+        },
+      );
+
+      testWidgets(
+        'proactively triggers onNearEnd after list updates that remain near '
+        'end',
+        (tester) async {
+          var nearEndCalls = 0;
+          final key = GlobalKey<InfiniteVideoFeedState>();
+
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: List.generate(3, (i) => _makeVideo('v$i')),
+                cache: cache,
+                onNearEnd: () => nearEndCalls++,
+                preloadGracePeriod: Duration.zero,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          expect(nearEndCalls, equals(0));
+
+          // When a short page arrives (6 videos <= default threshold 15),
+          // InfiniteVideoFeed immediately schedules onNearEnd so the next page
+          // starts loading before the viewer reaches the end.
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: List.generate(6, (i) => _makeVideo('v$i')),
+                cache: cache,
+                onNearEnd: () => nearEndCalls++,
+                preloadGracePeriod: Duration.zero,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          await tester.pump();
+          expect(nearEndCalls, equals(1));
+
+          // Rebuilding with the same length (e.g. after a failed loadMore)
+          // must not spin-loop onNearEnd.
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: List.generate(6, (i) => _makeVideo('v$i')),
+                cache: cache,
+                onNearEnd: () => nearEndCalls++,
+                preloadGracePeriod: Duration.zero,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          await tester.pump();
+          expect(nearEndCalls, equals(1));
+        },
+      );
+
+      testWidgets(
+        'triggers onNearEnd after a full list replacement that remains near '
+        'end',
+        (tester) async {
+          var nearEndCalls = 0;
+          final key = GlobalKey<InfiniteVideoFeedState>();
+
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: List.generate(3, (i) => _makeVideo('v$i')),
+                cache: cache,
+                onNearEnd: () => nearEndCalls++,
+                preloadGracePeriod: Duration.zero,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          expect(nearEndCalls, equals(0));
+
+          // A replacement that changes the current video (a refreshed feed or
+          // a source switch) tears down and restarts at the initial index.
+          // A short replacement still leaves the viewer near the end, so the
+          // next page is requested without waiting for a swipe.
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: List.generate(6, (i) => _makeVideo('w$i')),
+                cache: cache,
+                onNearEnd: () => nearEndCalls++,
+                preloadGracePeriod: Duration.zero,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          await tester.pump();
+          expect(nearEndCalls, equals(1));
+        },
+      );
 
       testWidgets('calls onActiveVideoChanged on page change', (tester) async {
         final activeChanges = <int>[];
