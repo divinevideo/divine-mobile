@@ -37,7 +37,8 @@ import 'package:skeletonizer/skeletonizer.dart';
 ///
 /// Displays the sender's profile (avatar, name, NIP-05, stats),
 /// a "View profile" button, message count text, and two action buttons:
-/// "View messages" (accept) and "Decline and remove".
+/// "View messages" (accept) and "Decline and remove". A group request shows
+/// the room instead, with a row per member that opens their profile.
 class RequestPreviewView extends ConsumerWidget {
   const RequestPreviewView({this.subject, super.key});
 
