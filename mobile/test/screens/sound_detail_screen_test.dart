@@ -1573,6 +1573,66 @@ void main() {
         },
       );
 
+      testWidgets(
+        'picks the sound for the video instead of saving it when the sound '
+        'picker opened the page',
+        (tester) async {
+          final testSound = createTestAudioEvent(id: 'sound1');
+          SharedPreferences.setMockInitialValues({});
+          final sharedPreferences = await SharedPreferences.getInstance();
+
+          await tester.pumpWidget(
+            SavedSoundsScope(
+              service: SavedSoundsService(sharedPreferences),
+              mediaProbe: _NoopSavedSoundMediaProbe(),
+              child: ProviderScope(
+                overrides: [
+                  ..._testAudioReuseOverrides(),
+                  authServiceProvider.overrideWithValue(
+                    createMockAuthService(),
+                  ),
+                  sharedPreferencesProvider.overrideWithValue(
+                    sharedPreferences,
+                  ),
+                  soundUsageCountProvider(
+                    testSound.id,
+                  ).overrideWith((ref) => Future.value(0)),
+                  videosUsingSoundProvider(
+                    testSound.id,
+                  ).overrideWith((ref) => Future.value(<String>[])),
+                  audioPlaybackServiceProvider.overrideWithValue(
+                    mockAudioService,
+                  ),
+                ],
+                child: MockGoRouterProvider(
+                  goRouter: mockGoRouter,
+                  child: MaterialApp(
+                    localizationsDelegates: appLocalizationsDelegates,
+                    supportedLocales: AppLocalizations.supportedLocales,
+                    theme: VineTheme.theme,
+                    home: SoundDetailScreen(
+                      sound: testSound,
+                      choosesForVideo: true,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('Use Sound'));
+          await tester.pumpAndSettle();
+
+          verify(() => mockGoRouter.pop<Object>(true)).called(1);
+          expect(find.text('Saved to Sounds'), findsNothing);
+          expect(
+            SavedSoundsService(sharedPreferences).loadSavedSounds(),
+            isEmpty,
+          );
+        },
+      );
+
       testWidgets('Use Sound stops preview if playing', (tester) async {
         final testSound = createTestAudioEvent(id: 'sound1');
         SharedPreferences.setMockInitialValues({});

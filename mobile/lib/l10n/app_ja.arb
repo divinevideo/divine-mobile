@@ -2620,6 +2620,7 @@
   "videoEditorAudioUntitled": "タイトルなし",
   "videoEditorAudioUntitledSound": "タイトルなしのサウンド",
   "videoEditorAudioUseSound": "使う",
+  "videoEditorAudioOpenSoundDetails": "サウンドの詳細を開く",
   "videoEditorAudioFileMissing": "音声ファイルは端末に残っていません",
   "videoEditorVolumeLongPressHint": "すべてのトラックをミュートまたはミュート解除",
   "videoEditorClipSaveFailed": "クリップの保存に失敗しました",

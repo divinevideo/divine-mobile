@@ -13,9 +13,16 @@ import 'package:unified_logger/unified_logger.dart';
 /// Loader widget that fetches a sound by ID before displaying SoundDetailScreen.
 /// Used when navigating via deep link without the sound object.
 class SoundDetailLoader extends ConsumerWidget {
-  const SoundDetailLoader({required this.soundId, super.key});
+  const SoundDetailLoader({
+    required this.soundId,
+    this.choosesForVideo = false,
+    super.key,
+  });
 
   final String soundId;
+
+  /// See [SoundDetailScreen.choosesForVideo].
+  final bool choosesForVideo;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -35,7 +42,10 @@ class SoundDetailLoader extends ConsumerWidget {
             ),
           );
         }
-        return SoundDetailScreen(sound: sound);
+        return SoundDetailScreen(
+          sound: sound,
+          choosesForVideo: choosesForVideo,
+        );
       },
       loading: () => const BrandedLoadingScaffold(),
       error: (error, stack) {

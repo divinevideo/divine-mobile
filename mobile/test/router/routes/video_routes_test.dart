@@ -461,6 +461,15 @@ void main() {
         expect(location, equals('/video-editor?from=library'));
       });
 
+      test('a sound reads for', () {
+        final location = const SoundDetailRouteData(
+          id: 'stable_id',
+          purpose: SoundDetailScreen.chooseForVideoPurpose,
+        ).location;
+
+        expect(location, equals('/sound/stable_id?for=video'));
+      });
+
       test('the metadata screen reads mode', () {
         final location = VideoMetadataRouteData(
           mode: VideoRecorderMode.stopMotion.name,
@@ -949,7 +958,34 @@ void main() {
           ),
           isA<SoundDetailScreen>()
               .having((screen) => screen.sound, 'sound', same(sound))
-              .having((screen) => screen.sourceVideo, 'sourceVideo', isNull),
+              .having((screen) => screen.sourceVideo, 'sourceVideo', isNull)
+              .having(
+                (screen) => screen.choosesForVideo,
+                'choosesForVideo',
+                isFalse,
+              ),
+        );
+      });
+
+      test('a sound opened from the sound picker picks it for the video', () {
+        final sound = AudioEvent(id: _hexId, pubkey: _authorHex, createdAt: 1);
+
+        expect(
+          _build(
+            _videoRouter(),
+            const SoundDetailRouteData(
+              id: _hexId,
+              purpose: SoundDetailScreen.chooseForVideoPurpose,
+            ).location,
+            extra: sound,
+          ),
+          isA<SoundDetailScreen>()
+              .having((screen) => screen.sound, 'sound', same(sound))
+              .having(
+                (screen) => screen.choosesForVideo,
+                'choosesForVideo',
+                isTrue,
+              ),
         );
       });
 

@@ -11759,6 +11759,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorAudioUseSound => 'Използвай';
 
   @override
+  String get videoEditorAudioOpenSoundDetails =>
+      'Отвори подробностите за звука';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Аудиофайлът вече го няма на устройството';
 

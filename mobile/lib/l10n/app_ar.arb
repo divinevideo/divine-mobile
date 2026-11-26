@@ -2620,6 +2620,7 @@
   "videoEditorAudioUntitled": "بدون عنوان",
   "videoEditorAudioUntitledSound": "صوت بدون عنوان",
   "videoEditorAudioUseSound": "استخدام",
+  "videoEditorAudioOpenSoundDetails": "فتح تفاصيل الصوت",
   "videoEditorAudioFileMissing": "ملف الصوت لم يعد على هذا الجهاز",
   "videoEditorVolumeLongPressHint": "كتم صوت جميع المسارات أو إلغاء الكتم",
   "videoEditorClipSaveFailed": "فشل حفظ المقطع",

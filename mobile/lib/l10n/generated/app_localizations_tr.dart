@@ -11567,6 +11567,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorAudioUseSound => 'Kullan';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'Ses ayrıntılarını aç';
+
+  @override
   String get videoEditorAudioFileMissing => 'Ses dosyası artık cihazda yok';
 
   @override

@@ -11602,6 +11602,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorAudioUseSound => 'Dùng';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'Mở chi tiết âm thanh';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Tệp âm thanh không còn trên thiết bị';
 

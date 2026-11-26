@@ -5,6 +5,7 @@
 import 'dart:math';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/sound_cover.dart';
@@ -20,6 +21,8 @@ class SoundListTile extends StatelessWidget {
     required this.title,
     required this.colorSeed,
     required this.onTap,
+    this.onLongPress,
+    this.longPressLabel,
     this.duration,
     this.showsUnknownDuration = true,
     this.details = const [],
@@ -81,8 +84,18 @@ class SoundListTile extends StatelessWidget {
 
   final VoidCallback? onTap;
 
+  /// Runs on a long press, and on the screen-reader action [longPressLabel]
+  /// names, which a long press is hard to find without.
+  final VoidCallback? onLongPress;
+
+  /// What [onLongPress] does, offered to a screen reader as an action of the
+  /// row.
+  final String? longPressLabel;
+
   @override
   Widget build(BuildContext context) {
+    final onLongPress = this.onLongPress;
+    final longPressLabel = this.longPressLabel;
     final unavailableReason = this.unavailableReason;
     final isUnavailable = unavailableReason != null;
     final showsBars = isActive && !isUnavailable;
@@ -95,10 +108,11 @@ class SoundListTile extends StatelessWidget {
             showsUnknownDuration: showsUnknownDuration,
             details: details,
           );
-    return Padding(
+    final tile = Padding(
       padding: const .symmetric(vertical: 4),
       child: ListTile(
         onTap: onTap,
+        onLongPress: onLongPress,
         enabled: !isUnavailable,
         minTileHeight: 48,
         contentPadding: contentPadding,
@@ -141,6 +155,15 @@ class SoundListTile extends StatelessWidget {
           ),
         },
       ),
+    );
+    if (onLongPress == null || longPressLabel == null || isUnavailable) {
+      return tile;
+    }
+    return Semantics(
+      customSemanticsActions: {
+        CustomSemanticsAction(label: longPressLabel): onLongPress,
+      },
+      child: tile,
     );
   }
 }

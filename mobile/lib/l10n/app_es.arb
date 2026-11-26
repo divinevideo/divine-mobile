@@ -3330,6 +3330,7 @@
   "videoEditorAudioPausePreviewSemanticLabel": "Pausar vista previa",
   "videoEditorAudioUntitledSound": "Sonido sin título",
   "videoEditorAudioUseSound": "Usar",
+  "videoEditorAudioOpenSoundDetails": "Abrir detalles del sonido",
   "videoEditorAudioFileMissing": "El archivo de audio ya no está en el dispositivo",
   "videoEditorVolumeLongPressHint": "Silenciar o activar todas las pistas",
   "videoEditorAudioUntitled": "Sin título",

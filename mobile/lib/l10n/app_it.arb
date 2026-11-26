@@ -3322,6 +3322,7 @@
   "videoEditorAudioPausePreviewSemanticLabel": "Metti in pausa anteprima",
   "videoEditorAudioUntitledSound": "Suono senza titolo",
   "videoEditorAudioUseSound": "Usa",
+  "videoEditorAudioOpenSoundDetails": "Apri dettagli del suono",
   "videoEditorAudioFileMissing": "File audio non più su questo dispositivo",
   "videoEditorVolumeLongPressHint": "Silenzia o riattiva tutte le tracce",
   "videoEditorAudioUntitled": "Senza titolo",

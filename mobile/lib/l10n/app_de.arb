@@ -3322,6 +3322,7 @@
   "videoEditorAudioPausePreviewSemanticLabel": "Vorschau pausieren",
   "videoEditorAudioUntitledSound": "Unbenannter Sound",
   "videoEditorAudioUseSound": "Verwenden",
+  "videoEditorAudioOpenSoundDetails": "Sound-Details öffnen",
   "videoEditorAudioFileMissing": "Audiodatei nicht mehr auf dem Gerät",
   "videoEditorVolumeLongPressHint": "Alle Spuren stumm schalten oder aktivieren",
   "videoEditorAudioUntitled": "Unbenannt",

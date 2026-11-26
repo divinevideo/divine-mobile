@@ -2627,6 +2627,7 @@
   "videoEditorAudioUntitled": "Başlıksız",
   "videoEditorAudioUntitledSound": "Başlıksız ses",
   "videoEditorAudioUseSound": "Kullan",
+  "videoEditorAudioOpenSoundDetails": "Ses ayrıntılarını aç",
   "videoEditorAudioFileMissing": "Ses dosyası artık cihazda yok",
   "videoEditorVolumeLongPressHint": "Tüm parçaları sessize al veya aç",
   "videoEditorClipSaveFailed": "Klip kaydedilemedi",

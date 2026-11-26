@@ -11890,6 +11890,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorAudioUseSound => 'Folosește';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'Deschide detaliile sunetului';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Fișierul audio nu mai este pe dispozitiv';
 

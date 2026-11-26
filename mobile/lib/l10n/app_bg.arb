@@ -3563,6 +3563,7 @@
   "videoEditorAudioPausePreviewSemanticLabel": "Пауза на прегледа",
   "videoEditorAudioUntitledSound": "Звук без заглавие",
   "videoEditorAudioUseSound": "Използвай",
+  "videoEditorAudioOpenSoundDetails": "Отвори подробностите за звука",
   "videoEditorAudioFileMissing": "Аудиофайлът вече го няма на устройството",
   "videoEditorVolumeLongPressHint": "Заглуши или включи всички писти",
   "videoEditorAudioUntitled": "Без заглавие",

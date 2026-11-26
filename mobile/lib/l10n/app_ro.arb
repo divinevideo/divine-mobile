@@ -3322,6 +3322,7 @@
   "videoEditorAudioPausePreviewSemanticLabel": "Pune previzualizarea pe pauză",
   "videoEditorAudioUntitledSound": "Sunet fără titlu",
   "videoEditorAudioUseSound": "Folosește",
+  "videoEditorAudioOpenSoundDetails": "Deschide detaliile sunetului",
   "videoEditorAudioFileMissing": "Fișierul audio nu mai este pe dispozitiv",
   "videoEditorVolumeLongPressHint": "Dezactivați sau activați sunetul tuturor pistelor",
   "videoEditorAudioUntitled": "Fără titlu",

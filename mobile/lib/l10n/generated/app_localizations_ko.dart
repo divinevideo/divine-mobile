@@ -11126,6 +11126,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorAudioUseSound => '사용';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => '사운드 정보 열기';
+
+  @override
   String get videoEditorAudioFileMissing => '오디오 파일이 기기에 없어요';
 
   @override

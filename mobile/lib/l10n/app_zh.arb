@@ -5716,6 +5716,7 @@
   "videoEditorAudioPausePreviewSemanticLabel": "暂停预览",
   "videoEditorAudioUntitledSound": "未命名声音",
   "videoEditorAudioUseSound": "使用",
+  "videoEditorAudioOpenSoundDetails": "打开声音详情",
   "videoEditorAudioFileMissing": "音频文件已经不在这台设备上了",
   "videoEditorAudioUntitled": "未命名",
   "videoEditorAudioAddAudio": "添加音频",

@@ -11390,6 +11390,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorAudioUseSound => 'ተጠቀም';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'የድምፅ ዝርዝሮችን ይክፈቱ';
+
+  @override
   String get videoEditorAudioFileMissing => 'የድምፅ ፋይሉ በዚህ መሣሪያ ላይ የለም';
 
   @override

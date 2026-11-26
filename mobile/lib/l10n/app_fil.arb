@@ -2615,6 +2615,7 @@
   "videoEditorAudioPausePreviewSemanticLabel": "I-pause ang preview",
   "videoEditorAudioUntitledSound": "Walang pamagat na sound",
   "videoEditorAudioUseSound": "Gamitin",
+  "videoEditorAudioOpenSoundDetails": "Buksan ang mga detalye ng sound",
   "videoEditorAudioFileMissing": "Wala na sa device ang audio file",
   "videoEditorVolumeLongPressHint": "I-mute o i-unmute ang lahat ng track",
   "videoEditorAudioUntitled": "Walang Pamagat",

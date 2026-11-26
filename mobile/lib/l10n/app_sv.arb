@@ -3322,6 +3322,7 @@
   "videoEditorAudioPausePreviewSemanticLabel": "Pausa förhandsvisning",
   "videoEditorAudioUntitledSound": "Namnlöst ljud",
   "videoEditorAudioUseSound": "Använd",
+  "videoEditorAudioOpenSoundDetails": "Öppna ljuddetaljer",
   "videoEditorAudioFileMissing": "Ljudfilen finns inte kvar på enheten",
   "videoEditorVolumeLongPressHint": "Tysta eller slå på alla spår",
   "videoEditorAudioUntitled": "Namnlös",

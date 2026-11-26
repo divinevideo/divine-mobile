@@ -2627,6 +2627,7 @@
   "videoEditorAudioUntitled": "Tanpa judul",
   "videoEditorAudioUntitledSound": "Suara tanpa judul",
   "videoEditorAudioUseSound": "Gunakan",
+  "videoEditorAudioOpenSoundDetails": "Buka detail suara",
   "videoEditorAudioFileMissing": "File audio sudah tidak ada di perangkat",
   "videoEditorVolumeLongPressHint": "Bisukan atau aktifkan semua trek",
   "videoEditorClipSaveFailed": "Gagal menyimpan klip",

@@ -11741,6 +11741,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorAudioUseSound => 'Gamitin';
 
   @override
+  String get videoEditorAudioOpenSoundDetails =>
+      'Buksan ang mga detalye ng sound';
+
+  @override
   String get videoEditorAudioFileMissing => 'Wala na sa device ang audio file';
 
   @override

@@ -2173,6 +2173,7 @@
   "videoEditorAudioUntitled": "제목 없음",
   "videoEditorAudioUntitledSound": "제목 없는 사운드",
   "videoEditorAudioUseSound": "사용",
+  "videoEditorAudioOpenSoundDetails": "사운드 정보 열기",
   "videoEditorAudioFileMissing": "오디오 파일이 기기에 없어요",
   "videoEditorVolumeLongPressHint": "모든 트랙 음소거 또는 해제",
   "videoEditorClipSaveFailed": "클립 저장 실패",

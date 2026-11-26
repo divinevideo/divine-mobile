@@ -98,18 +98,37 @@ class SoundDetailScreen extends ConsumerStatefulWidget {
   /// Path pattern for this route.
   static const path = '/sound/:id';
 
+  /// Query parameter saying what the page was opened for.
+  static const purposeQueryParameter = 'for';
+
+  /// Value of [purposeQueryParameter] when the editor's sound picker opened
+  /// the page; see [choosesForVideo].
+  static const chooseForVideoPurpose = 'video';
+
   /// Creates a SoundDetailScreen.
   ///
   /// [sound] is the audio event to display.
   /// [sourceVideo] is optional — provided for original sounds to show
   /// the video this sound came from.
-  const SoundDetailScreen({required this.sound, this.sourceVideo, super.key});
+  const SoundDetailScreen({
+    required this.sound,
+    this.sourceVideo,
+    this.choosesForVideo = false,
+    super.key,
+  });
 
   /// The audio event to display details for.
   final AudioEvent sound;
 
   /// The source video for original sounds (when [AudioEvent.isOriginalSound]).
   final VideoEvent? sourceVideo;
+
+  /// Whether Use Sound picks [sound] for the video being edited, closing the
+  /// page with `true`, instead of saving it to My Sounds.
+  ///
+  /// The editor's sound picker opens the page this way, so a sound's credit
+  /// can be read before it is chosen.
+  final bool choosesForVideo;
 
   @override
   ConsumerState<SoundDetailScreen> createState() => _SoundDetailScreenState();
@@ -231,6 +250,12 @@ class _SoundDetailScreenState extends ConsumerState<SoundDetailScreen> {
   }
 
   void _onUseSound() {
+    if (widget.choosesForVideo) {
+      // The picker that pushed the page attaches the sound; leaving the page
+      // stops its preview.
+      context.safePop(result: true);
+      return;
+    }
     Log.info(
       'Saving sound to library: ${widget.sound.title} (${widget.sound.id})',
       name: 'SoundDetailScreen',
