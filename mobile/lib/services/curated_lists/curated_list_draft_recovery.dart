@@ -29,6 +29,11 @@ extension _CuratedListDraftRecovery on CuratedListService {
           }
           try {
             if (!allowSeries && getListById(listId)?.isSeries == true) {
+              Log.info(
+                'Not changing list $listId from Add to list: it is a series',
+                name: 'CuratedListService',
+                category: LogCategory.system,
+              );
               return cancelled;
             }
             return await operation();
@@ -339,7 +344,15 @@ extension _CuratedListDraftRecovery on CuratedListService {
           if (!_isCurrent(owner)) return false;
           notifyListeners();
           return _relayEvidence.allows(replacement);
-        } on Object {
+        } on Object catch (error, stackTrace) {
+          Log.warning(
+            'Not discarding local edits to list ${current.id}: '
+            'adopting the relay version failed (${error.runtimeType})',
+            name: 'CuratedListService',
+            category: LogCategory.system,
+            error: error,
+            stackTrace: stackTrace,
+          );
           return false;
         } finally {
           _relaySyncCancels.remove(cancel);
