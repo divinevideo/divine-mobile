@@ -232,7 +232,9 @@ void main() {
         expect(avatarIn(tester, l10n.inboxSupportRowTitle).imageUrl, isNull);
       });
 
-      testWidgets('a deleted account named for the state', (tester) async {
+      testWidgets('a deleted account without its name or identifier', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           buildSubject(
             [alice],
@@ -248,6 +250,7 @@ void main() {
 
         expect(find.text(l10n.profileDeletedAccountName), findsOneWidget);
         expect(find.text('Alice'), findsNothing);
+        expect(find.text(NostrKeyUtils.encodePubKey(alice)), findsNothing);
       });
     });
 

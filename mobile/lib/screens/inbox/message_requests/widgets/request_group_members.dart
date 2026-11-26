@@ -155,14 +155,15 @@ class _GroupMemberRow extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Text(
-                          identifier,
-                          style: VineTheme.bodySmallFont(
-                            color: context.vineColors.onSurfaceVariant,
+                        if (!isVanished)
+                          Text(
+                            identifier,
+                            style: VineTheme.bodySmallFont(
+                              color: context.vineColors.onSurfaceVariant,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
                       ],
                     ),
                   ),
