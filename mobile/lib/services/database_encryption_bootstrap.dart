@@ -105,10 +105,7 @@ class DatabaseEncryptionBootstrap {
            encryptedKeyMatches ??
            ((rawKeyHex) => encryptedDatabaseKeyDecrypts(rawKeyHex: rawKeyHex)),
        _hasAlternateDatabase =
-           hasAlternateDatabase ??
-           (() async =>
-               defaultTargetPlatform == TargetPlatform.macOS &&
-               await hasAlternateMacOsSharedDatabase());
+           hasAlternateDatabase ?? _hasAlternateDatabaseOnMac;
 
   /// Reads and writes [dbCipherKeyStorageKey] under the current options — on
   /// iOS `first_unlock`, see `appDbCipherKeyIosSecureStorageOptions`.
@@ -948,6 +945,10 @@ Future<bool> _shouldRecordBootstrapFailure(
 bool _isValidCipherKey(String value) =>
     RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(value);
 
+Future<bool> _hasAlternateDatabaseOnMac() async =>
+    defaultTargetPlatform == TargetPlatform.macOS &&
+    await hasAlternateMacOsSharedDatabase();
+
 const _sqliteCorrupt = 11;
 const _sqliteNotADb = 26;
 
@@ -1004,6 +1005,8 @@ bool shouldRepairLocalDatabaseCacheAfterBootstrapError(Object error) {
 /// this call leaves behind is encrypted under that key, so deleting it makes
 /// the backup permanently unreadable — while a retained key opens a fresh
 /// database just as well as a rotated one.
+/// On macOS, a second database in the same sandbox can still use the shared
+/// key, so the reset preserves the key whenever that database exists.
 ///
 /// [deleteDatabase] overrides that backup step. Callers that have proved the
 /// file is plaintext-shaped pass [deleteSharedDatabase] via
@@ -1012,14 +1015,18 @@ Future<void> resetEncryptedDatabaseCache({
   required FlutterSecureStorage secureStorage,
   required FlutterSecureStorage legacySecureStorage,
   bool deleteCipherKey = true,
+  @visibleForTesting Future<bool> Function()? hasAlternateDatabase,
   Future<void> Function()? deleteDatabase,
   Future<void> Function()? onDatabaseReset,
   DatabaseRecoveryOutcome? recoveryOutcome,
   Future<void> Function(DatabaseRecoveryOutcome outcome)?
   persistRecoveryOutcome,
 }) async {
+  final shouldDeleteCipherKey =
+      deleteCipherKey &&
+      !await (hasAlternateDatabase ?? _hasAlternateDatabaseOnMac)();
   await (deleteDatabase ?? backUpAndRemoveSharedDatabase)();
-  if (deleteCipherKey) {
+  if (shouldDeleteCipherKey) {
     // Delete auxiliary/legacy copies before the primary. A failed cleanup
     // must not leave a stale fallback as the only surviving key (#9389).
     await _deleteStoredCipherKey(
