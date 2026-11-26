@@ -937,6 +937,80 @@ void main() {
         expect(find.textContaining('CC BY 4.0'), findsOneWidget);
         expect(find.byType(DivineTextLink), findsNothing);
       });
+
+      group('edited note', () {
+        final edited =
+            ' · ${lookupAppLocalizations(const Locale('en')).soundCreditEdited}';
+
+        Future<void> pumpCredited(
+          WidgetTester tester, {
+          required String licenseName,
+          required String description,
+        }) async {
+          final testSound = createTestAudioEvent(id: 'sound1').copyWith(
+            creatorName: 'Kevin MacLeod (incompetech.com)',
+            licenseName: licenseName,
+            description: description,
+          );
+          await tester.pumpWidget(
+            createTestWidget(
+              child: SoundDetailScreen(sound: testSound),
+              overrides: [
+                soundUsageCountProvider(
+                  testSound.id,
+                ).overrideWith((ref) => Future.value(0)),
+                videosUsingSoundProvider(
+                  testSound.id,
+                ).overrideWith((ref) => Future.value(<String>[])),
+                audioPlaybackServiceProvider.overrideWithValue(
+                  mockAudioService,
+                ),
+              ],
+            ),
+          );
+          await tester.pumpAndSettle();
+        }
+
+        testWidgets('says a CC BY sound was changed before it was shared', (
+          tester,
+        ) async {
+          await pumpCredited(
+            tester,
+            licenseName: 'CC BY 4.0',
+            description:
+                'Crypto\n${AudioEvent.editedLinePrefix}loudness normalized',
+          );
+
+          expect(find.textContaining('CC BY 4.0$edited'), findsOneWidget);
+        });
+
+        testWidgets('leaves it out for a sound shared as recorded', (
+          tester,
+        ) async {
+          await pumpCredited(
+            tester,
+            licenseName: 'CC BY 4.0',
+            description: 'Crypto\nCreated by Kevin MacLeod',
+          );
+
+          expect(find.textContaining('CC BY 4.0'), findsOneWidget);
+          expect(find.textContaining(edited), findsNothing);
+        });
+
+        testWidgets('leaves it out under a licence that asks for no credit', (
+          tester,
+        ) async {
+          await pumpCredited(
+            tester,
+            licenseName: 'CC0 1.0',
+            description:
+                'Switch 1\n${AudioEvent.editedLinePrefix}loudness normalized',
+          );
+
+          expect(find.textContaining('CC0 1.0'), findsOneWidget);
+          expect(find.textContaining(edited), findsNothing);
+        });
+      });
     });
 
     group('Action Buttons', () {

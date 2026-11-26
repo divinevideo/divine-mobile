@@ -22,6 +22,7 @@ AudioEvent _createTestAudio({
   String id = 'sound-id',
   String? title,
   String? source,
+  String? creatorName,
   double? duration = 65.0,
 }) {
   return AudioEvent(
@@ -31,6 +32,7 @@ AudioEvent _createTestAudio({
     url: 'https://example.com/$id.mp3',
     title: title,
     source: source,
+    creatorName: creatorName,
     duration: duration,
   );
 }
@@ -173,6 +175,25 @@ void main() {
         await tester.pump();
 
         expect(find.textContaining('Artist X'), findsOneWidget);
+      });
+
+      testWidgets('names the creator of a library sound, not its source link', (
+        tester,
+      ) async {
+        const source = 'https://example.com/sounds/crypto';
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudio(
+              title: 'Crypto',
+              source: source,
+              creatorName: 'Kevin MacLeod',
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.textContaining('Kevin MacLeod'), findsOneWidget);
+        expect(find.textContaining(source), findsNothing);
       });
     });
 

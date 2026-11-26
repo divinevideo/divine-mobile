@@ -77,6 +77,7 @@ void main() {
       );
       expect(sound.source, equals(candidate.sourcePage));
       expect(sound.allowsReuse, isTrue);
+      expect(sound.isChangedFromOriginal, isFalse);
       expect(
         sound.publicTags,
         equals(['music', 'humorous', 'bouncy', 'tuba', 'piano']),
@@ -153,6 +154,37 @@ void main() {
       );
 
       expect(sound.publicTags, equals(['voice']));
+    });
+
+    test('says the app should credit a changed file as edited', () {
+      final sound = _parse(
+        buildUnsignedSoundEvent(
+          candidate: _musicCandidate(),
+          record: _prepared(changes: const ['loudness normalized']),
+          blossomBase: 'https://media.example',
+          createdAt: 1700000000,
+          pubkey: _pubkey,
+        ),
+      );
+
+      expect(sound.isChangedFromOriginal, isTrue);
+    });
+
+    test('lists the creator rather than the source page', () {
+      final sound = _parse(
+        buildUnsignedSoundEvent(
+          candidate: _musicCandidate(),
+          record: _prepared(),
+          blossomBase: 'https://media.example',
+          createdAt: 1700000000,
+          pubkey: _pubkey,
+        ),
+      );
+
+      expect(
+        sound.sourceForDisplay,
+        equals('Kevin MacLeod (incompetech.com)'),
+      );
     });
 
     test('refuses a candidate that was not prepared', () {

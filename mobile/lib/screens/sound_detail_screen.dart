@@ -588,6 +588,10 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
                 pubkey: profileCreditPubkey,
                 profile: profileCreditProfile,
               );
+    // Divine's imported library changes most of its recordings before
+    // sharing them (loudness, edge silence, length) and says so in the
+    // event, which an Attribution licence asks the credit to repeat.
+    final isEdited = sound.requiresAttribution && sound.isChangedFromOriginal;
     // Matches the feed pill and the metadata sheet: a credited creator who is
     // not the signer means the signer only shared the sound. Bundled sounds
     // carry a marker pubkey rather than a real signer, so they are excluded
@@ -654,6 +658,7 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
                         license: _license,
                         licenseUrl: _licenseUrl,
                         sourceUrl: _sourceUrl,
+                        isEdited: isEdited,
                       )
                     else if (_artistName != null)
                       _AttributionInfo(
@@ -661,6 +666,7 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
                         license: _license,
                         licenseUrl: _licenseUrl,
                         sourceUrl: _sourceUrl,
+                        isEdited: isEdited,
                       ),
                     if (showsSeparatePublisher && publisherName != null)
                       _ProfileCreditLink(
@@ -822,12 +828,16 @@ class _ProfileAttributionInfo extends StatelessWidget {
     this.license,
     this.licenseUrl,
     this.sourceUrl,
+    this.isEdited = false,
   });
 
   final String text;
   final String pubkey;
   final String semanticsIdentifier;
   final String? license;
+
+  /// See [_AttributionInfo.isEdited].
+  final bool isEdited;
 
   /// Makes [license] a link to the licence text, as CC BY 4.0
   /// §3(a)(1)(C) asks where it is reasonably practicable.
@@ -859,6 +869,7 @@ class _ProfileAttributionInfo extends StatelessWidget {
               ),
             ] else
               TextSpan(text: ' · $license'),
+          if (isEdited) TextSpan(text: ' · ${context.l10n.soundCreditEdited}'),
           if (sourceUrl != null) ...[
             const TextSpan(text: ' · '),
             WidgetSpan(
@@ -916,10 +927,15 @@ class _AttributionInfo extends StatelessWidget {
     this.license,
     this.licenseUrl,
     this.sourceUrl,
+    this.isEdited = false,
   });
 
   final String artistName;
   final String? license;
+
+  /// Whether to say the sound was changed from the original recording, as
+  /// CC BY 4.0 §3(a)(1)(B) asks of whoever shares a changed copy.
+  final bool isEdited;
 
   /// Makes [license] a link to the licence text, as CC BY 4.0
   /// §3(a)(1)(C) asks where it is reasonably practicable.
@@ -943,6 +959,7 @@ class _AttributionInfo extends StatelessWidget {
               ),
             ] else
               TextSpan(text: ' · $license'),
+          if (isEdited) TextSpan(text: ' · ${context.l10n.soundCreditEdited}'),
           if (sourceUrl != null) ...[
             const TextSpan(text: ' · '),
             WidgetSpan(

@@ -16,6 +16,7 @@ AudioEvent _createTestAudioEvent({
   String? url,
   String? title,
   String? source,
+  String? creatorName,
   double? duration,
 }) {
   return AudioEvent(
@@ -25,6 +26,7 @@ AudioEvent _createTestAudioEvent({
     url: url ?? 'https://example.com/audio/$id.mp3',
     title: title,
     source: source,
+    creatorName: creatorName,
     duration: duration,
   );
 }
@@ -286,6 +288,27 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.textContaining('Artist Name'), findsOneWidget);
+      });
+
+      testWidgets('names the creator of a library sound, not its source link', (
+        tester,
+      ) async {
+        const source =
+            'https://incompetech.com/music/royalty-free/index.html?isrc=1';
+        final audio = _createTestAudioEvent(
+          title: 'Crypto',
+          duration: 60.0,
+          source: source,
+          creatorName: 'Kevin MacLeod (incompetech.com)',
+        );
+        await tester.pumpWidget(buildWidget(audio: audio));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining('Kevin MacLeod (incompetech.com)'),
+          findsOneWidget,
+        );
+        expect(find.textContaining(source), findsNothing);
       });
 
       testWidgets('renders ListTile', (tester) async {

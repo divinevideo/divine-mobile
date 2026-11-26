@@ -99,6 +99,8 @@ As in the table above, with these values:
 
 `content` holds the readable credit, in English, and a line `Edited: …` naming what preparing changed (edge silence trimmed, cut to the first 5 minutes with a fade-out, loudness normalized), as CC BY 4.0 asks for an adapted file. The encoded file carries the title, artist and credit in its own metadata too.
 
+The app reads that line, or `Excerpt of the original recording` (`AudioEvent.isChangedFromOriginal`), and the sound's page then says "edited" after a CC BY licence. The picker's lists and player bar and the editor's sound chip name the `creator` beside the title where `source` is only a link (`AudioEvent.sourceForDisplay`); the link stays on the sound's page as "View source". A video made with a CC BY sound carries its own credit line ending in "(edited)" (`soundCreditLine`).
+
 ### Importing
 
 `tools/import_free_sounds.dart` runs the import in five steps, from `mobile/`. Each keeps its state in the work directory and resumes where it stopped:
