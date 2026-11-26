@@ -30167,21 +30167,81 @@ void main() {
         },
       );
 
+      /// Answers every member's send as delivered. The first send that is not
+      /// handed a copy callback reports [firstOwnCopyLands]; a send handed one
+      /// publishes no copy of its own, as the real service does (#10016).
+      /// Returns, per recipient, whether its send was handed the callback.
+      Map<String, bool> stubDeliveredMembers({
+        required bool firstOwnCopyLands,
+      }) {
+        final handedOver = <String, bool>{};
+        when(
+          () => mockMessageService.sendRumor(
+            rumorEvent: any(named: 'rumorEvent'),
+            recipientPubkey: any(named: 'recipientPubkey'),
+            targetRelays: any(named: 'targetRelays'),
+            selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
+            recipientWrap: any(named: 'recipientWrap'),
+            publishRefusal: any(named: 'publishRefusal'),
+          ),
+        ).thenAnswer((inv) async {
+          final recipient = inv.namedArguments[#recipientPubkey] as String;
+          final callback =
+              inv.namedArguments[#onSelfWrapDue] as void Function(Event?)?;
+          handedOver[recipient] = callback != null;
+          callback?.call(null);
+          return NIP17SendResult.success(
+            rumorEventId: 'rumor-$recipient',
+            messageEventId: 'wrap-$recipient',
+            recipientPubkey: recipient,
+            selfWrapPublished: callback == null && firstOwnCopyLands,
+          );
+        });
+        return handedOver;
+      }
+
       test(
-        'marks recipient sent + self failed only for the recipients '
-        'whose self-wrap failed, deletes rows for fully-delivered ones',
+        "deletes every delivered member's row when the first member's send "
+        "publishes the batch's one own copy (#10016)",
         () async {
-          stubSendRumor((_, recipient) async {
-            return NIP17SendResult.success(
-              rumorEventId: 'rumor-$recipient',
-              messageEventId: 'wrap-$recipient',
-              recipientPubkey: recipient,
-              // First recipient (B) is fully delivered, second (C) is
-              // partial. The asymmetry pins "scope recovery to only the
-              // affected successful recipient sends" from #4102.
-              selfWrapPublished: recipient == _validPubkeyB,
-            );
-          });
+          final handedOver = stubDeliveredMembers(firstOwnCopyLands: true);
+
+          final repository = createRepository(
+            outgoingDmsDao: mockOutgoingDmsDao,
+          );
+
+          final results = await repository.sendGroupMessage(
+            recipientPubkeys: [_validPubkeyB, _validPubkeyC],
+            content: 'group delivery',
+          );
+
+          expect(handedOver, {_validPubkeyB: false, _validPubkeyC: true});
+          expect(results.every((r) => r.success), isTrue);
+          expect(results.every((r) => r.selfWrapPublished ?? false), isTrue);
+          final captured = verify(
+            () => mockOutgoingDmsDao.enqueue(captureAny()),
+          ).captured;
+          for (final row in captured.cast<OutgoingDm>()) {
+            verify(() => mockOutgoingDmsDao.deleteById(row.id)).called(1);
+          }
+          verifyNever(
+            () => mockOutgoingDmsDao.markSelfWrapStatus(
+              id: any(named: 'id'),
+              status: OutgoingWrapStatus.failed,
+              lastError: any(named: 'lastError'),
+            ),
+          );
+        },
+      );
+
+      test(
+        'keeps every delivered member as recipient sent + self failed when '
+        "the batch's one own copy fails, so recovery publishes only that copy",
+        () async {
+          final handedOver = stubDeliveredMembers(firstOwnCopyLands: false);
 
           final repository = createRepository(
             outgoingDmsDao: mockOutgoingDmsDao,
@@ -30192,36 +30252,37 @@ void main() {
             content: 'group partial delivery',
           );
 
-          expect(results, hasLength(2));
+          expect(
+            handedOver,
+            {_validPubkeyB: false, _validPubkeyC: true},
+            reason: 'one failed copy is not tried again for each member',
+          );
           expect(results.every((r) => r.success), isTrue);
-
+          expect(results.every((r) => r.selfWrapPublished == false), isTrue);
           final captured = verify(
             () => mockOutgoingDmsDao.enqueue(captureAny()),
           ).captured;
-          final enqueuedB = captured.first as OutgoingDm;
-          final enqueuedC = captured.last as OutgoingDm;
-
-          // Recipient B: full delivery → row deleted.
-          expect(results.first.queuedRumorId, isNull);
-          verify(() => mockOutgoingDmsDao.deleteById(enqueuedB.id)).called(1);
-          // Recipient C: partial → recipient sent + self failed, row
-          // preserved for recovery.
-          expect(results.last.queuedRumorId, equals(enqueuedC.id));
-          verify(
-            () => mockOutgoingDmsDao.markRecipientWrapStatus(
-              id: enqueuedC.id,
-              status: OutgoingWrapStatus.sent,
-              eventId: 'wrap-$_validPubkeyC',
-            ),
-          ).called(1);
-          verify(
-            () => mockOutgoingDmsDao.markSelfWrapStatus(
-              id: enqueuedC.id,
-              status: OutgoingWrapStatus.failed,
-              lastError: 'Recipient delivered, but self-wrap publish failed',
-            ),
-          ).called(1);
-          verifyNever(() => mockOutgoingDmsDao.deleteById(enqueuedC.id));
+          for (final row in captured.cast<OutgoingDm>()) {
+            verify(
+              () => mockOutgoingDmsDao.markRecipientWrapStatus(
+                id: row.id,
+                status: OutgoingWrapStatus.sent,
+                eventId: 'wrap-${row.recipientPubkey}',
+              ),
+            ).called(1);
+            verify(
+              () => mockOutgoingDmsDao.markSelfWrapStatus(
+                id: row.id,
+                status: OutgoingWrapStatus.failed,
+                lastError: 'Recipient delivered, but self-wrap publish failed',
+              ),
+            ).called(1);
+            verifyNever(() => mockOutgoingDmsDao.deleteById(row.id));
+          }
+          expect(
+            results.map((r) => r.queuedRumorId),
+            captured.cast<OutgoingDm>().map((row) => row.id),
+          );
         },
       );
 
