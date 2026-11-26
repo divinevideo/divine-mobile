@@ -50,7 +50,8 @@ const Set<String> _nonVideoItemTagNames = {
 ///
 /// A private list seals these with its videos: written in the clear they would
 /// reveal what the list holds, and an `a` or `e` tag there would make readers
-/// take the list for a public one.
+/// take the list for a public one. Any other item with no value, or an empty
+/// one, names nothing and stays in the clear; see `_isSealedItemTag`.
 const Set<String> _itemTagNames = {'a', 'e', ..._nonVideoItemTagNames};
 
 /// Utility for converting between Nostr events and [CuratedList] models.
@@ -58,12 +59,13 @@ const Set<String> _itemTagNames = {'a', 'e', ..._nonVideoItemTagNames};
 /// Handles NIP-51 kind 30005 event parsing, including:
 /// - `e` tags for event ID video references
 /// - `a` tags for addressable video references (NIP-71 kinds)
-/// - Metadata tags: title, description, image, thumbnail, playorder
+/// - Metadata tags: d, title, description, image, thumbnail, t, playorder
 /// - Collaboration tags: collaborative, collaborator
 ///
-/// Any other tag is kept on [CuratedList.preservedTags] or
-/// [CuratedList.preservedPrivateTags] and written back on publish, so an edit
-/// from this app does not drop what another client wrote on the same list.
+/// Every other tag except a clear `client` tag from another app is kept on
+/// [CuratedList.preservedTags] or [CuratedList.preservedPrivateTags] and
+/// written back on publish, so an edit from this app does not drop what
+/// another client wrote on the same list.
 abstract final class CuratedListConverter {
   /// The name of a list whose event has neither a title nor public content.
   static const untitledListName = 'Untitled List';
@@ -160,10 +162,11 @@ abstract final class CuratedListConverter {
   ///
   /// [privateTags] carries the item tags a caller decrypted out of
   /// [Event.content] for a NIP-51 private list. Passing them appends their
-  /// references to [CuratedList.videoEventIds]. When [isPrivateEvent] is not
-  /// supplied, a list is treated as private whenever it either has decrypted
-  /// private tags or has the NIP-51 sealed-item shape: item tags omitted from
-  /// public tags and non-empty content.
+  /// video references to [CuratedList.videoEventIds] and keeps every other
+  /// sealed tag, unread, on [CuratedList.preservedPrivateTags]. When
+  /// [isPrivateEvent] is not supplied, a list is treated as private whenever
+  /// it either has decrypted private tags or has the NIP-51 sealed-item shape:
+  /// no `e` or `a` tag in the clear and an encrypted payload as content.
   static CuratedList? fromEvent(
     Event event, {
     List<List<String>>? privateTags,
@@ -197,8 +200,8 @@ abstract final class CuratedListConverter {
       for (final (index, tag) in rawTags.indexed) {
         if (tag.isEmpty) continue;
 
-        // Only videos are read from the sealed part. Anything else there
-        // stays sealed and unread, so a private tag never reaches the clear.
+        // Only videos are read from the sealed part. The rest stays unread,
+        // so a sealed title or hashtag never becomes the list's public one.
         final sealed = index >= eventTags.length;
         if (sealed ? !_isVideoItemTag(tag) : _isPreservedTag(tag)) {
           (sealed ? preservedPrivateTags : preservedTags).add(
@@ -280,7 +283,16 @@ abstract final class CuratedListConverter {
   static bool _isPreservedTag(List<String> tag) =>
       !_ownTagNames.contains(tag[0]) && !_isVideoItemTag(tag);
 
-  static bool _isItemTag(List<String> tag) => _itemTagNames.contains(tag[0]);
+  /// Whether a private list seals [tag]. An `a` or `e` tag always is; any
+  /// other item only when the sealed branch of [hasFullyKnownItemTags] reads
+  /// it back, so a `p` or `word` whose value is empty, which names nothing,
+  /// stays in the clear with its other fields instead of leaving the private
+  /// revision unreadable everywhere.
+  static bool _isSealedItemTag(List<String> tag) =>
+      _itemTagNames.contains(tag.first) &&
+      (tag.first == 'a' ||
+          tag.first == 'e' ||
+          hasFullyKnownItemTags([tag], isSealed: true));
 
   /// Whether [tag] is a known non-video item, including a NIP-01 address
   /// reference to an addressable or replaceable non-video event.
@@ -330,11 +342,10 @@ abstract final class CuratedListConverter {
         };
       });
 
-  /// The preserved tags [list] publishes in the clear: all of them for a
-  /// public list, only those describing the list for a private one.
-  ///
-  /// A public list leaves out sealed tags named like the app's own, such as
-  /// a sealed `title`: written beside the app's they would replace them.
+  /// The preserved tags [list] publishes in the clear. A public list
+  /// publishes all of them except sealed ones named like the app's own, which
+  /// would add to or override the app's (a second title, an extra
+  /// collaborator); a private list only those it does not seal.
   static List<List<String>> _clearPreservedTags(CuratedList list) =>
       list.isPublic
       ? [
@@ -344,7 +355,7 @@ abstract final class CuratedListConverter {
         ]
       : [
           for (final tag in list.preservedTags)
-            if (!_isItemTag(tag)) tag,
+            if (!_isSealedItemTag(tag)) tag,
         ];
 
   /// The preserved tags a private [list] seals beside its videos.
@@ -353,7 +364,7 @@ abstract final class CuratedListConverter {
       ? const []
       : [
           for (final tag in list.preservedTags)
-            if (_isItemTag(tag)) tag,
+            if (_isSealedItemTag(tag)) tag,
           ...list.preservedPrivateTags,
         ];
 
@@ -398,8 +409,9 @@ abstract final class CuratedListConverter {
   /// Returns a list of tag arrays suitable for creating a kind 30005
   /// event, with every video reference in the public tags. A private list
   /// publishes [toPrivateMetadataTags] instead and carries [toSealedTags]
-  /// encrypted in the event content. For a private list this is everything
-  /// it publishes, sealed or not, in one list: that is how copies compare.
+  /// encrypted in the event content. For a private list this joins its clear
+  /// and sealed tags, plus a `thumbnail` it never publishes; copies are
+  /// compared on it.
   static List<List<String>> toEventTags(CuratedList list) => [
     ...toPublicMetadataTags(list),
     ...toItemTags(list),
@@ -407,7 +419,7 @@ abstract final class CuratedListConverter {
   ];
 
   /// The tags describing [list] itself, without any video reference,
-  /// followed by the [CuratedList.preservedTags] it publishes in the clear.
+  /// followed by the preserved tags it publishes in the clear.
   ///
   /// These stay readable on a relay even for a private list: NIP-51 hides a
   /// list's items, not the fact that the list exists or what it is called.
