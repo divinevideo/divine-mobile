@@ -42,6 +42,7 @@ OutgoingDm _row({
   DateTime? queuedAt,
   String? recipientWrapEventId,
   String? conversationId,
+  String? sendBatchId,
   String? unconfirmedRecipientWrapJson,
 }) {
   return OutgoingDm(
@@ -59,6 +60,7 @@ OutgoingDm _row({
     unconfirmedRecipientWrapJson: unconfirmedRecipientWrapJson,
     lastAttemptAt: lastAttemptAt,
     recipientWrapEventId: recipientWrapEventId,
+    sendBatchId: sendBatchId,
   );
 }
 
@@ -1039,6 +1041,49 @@ void main() {
     });
 
     group('per-row backoff', () {
+      test(
+        'backs off a failed sibling that was attempted while recovery '
+        'joined the group send',
+        () async {
+          final now = DateTime.utc(2026, 5, 10, 12);
+          final beforeReconnect = now.subtract(const Duration(minutes: 5));
+          final failedSiblings = [
+            for (final id in ['sibling-1', 'sibling-2'])
+              _row(
+                id: id,
+                recipient: OutgoingWrapStatus.failed,
+                self: OutgoingWrapStatus.failed,
+                lastAttemptAt: beforeReconnect,
+                sendBatchId: 'group-batch',
+              ),
+          ];
+          when(
+            () => dao.getRetryableForOwner(
+              ownerPubkey: _ownerPubkey,
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          ).thenAnswer((_) async => failedSiblings);
+          when(() => dao.getById('sibling-2')).thenAnswer(
+            (_) async => failedSiblings.last.copyWith(
+              retryCount: 1,
+              lastAttemptAt: now,
+            ),
+          );
+          when(
+            () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
+          ).thenAnswer((_) async => _successResult('sibling-1'));
+
+          await buildService(now: () => now).sweep();
+
+          verify(
+            () => dmRepository.recoverFullSend(rumorId: 'sibling-1'),
+          ).called(1);
+          verifyNever(
+            () => dmRepository.recoverFullSend(rumorId: 'sibling-2'),
+          );
+        },
+      );
+
       test(
         'skips a row whose lastAttemptAt + backoff is still in the future',
         () async {

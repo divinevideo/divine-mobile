@@ -379,9 +379,24 @@ class OutgoingDmRetryService {
       // must stay visible to the interrupted arm, or it is stranded forever
       // as a permanently sent-looking pending bubble.
       final dispatchedIds = <String>{};
+      final dispatchedBatchIds = <String>{};
 
-      for (final row in retryable) {
+      for (final candidate in retryable) {
         if (abortedNotReady) break;
+
+        // The offline pass can mark a still-queued group failed. The first
+        // full recovery on reconnect can join that send and settle its
+        // siblings, so use their current status and backoff (#8627).
+        final batchId = candidate.sendBatchId;
+        final row = batchId != null && dispatchedBatchIds.contains(batchId)
+            ? await _refreshSweepCandidate(candidate)
+            : candidate;
+        if (row == null ||
+            row.retryCount >= _retryConfig.maxRetries ||
+            (row.recipientWrapStatus != OutgoingWrapStatus.failed &&
+                row.selfWrapStatus != OutgoingWrapStatus.failed)) {
+          continue;
+        }
 
         // Per-row backoff check before any dispatch.
         final lastAttempt = row.lastAttemptAt;
@@ -473,6 +488,7 @@ class OutgoingDmRetryService {
           // re-publishing is safe even when the original publish
           // actually landed but the local persist failed.
           dispatchedIds.add(row.id);
+          if (batchId != null) dispatchedBatchIds.add(batchId);
           try {
             final result = await _dmRepository.recoverFullSend(
               rumorId: row.id,
@@ -567,11 +583,9 @@ class OutgoingDmRetryService {
           // sibling has settled. Re-read each remaining candidate by id to
           // apply its current backoff without rescanning the queue (#8627).
           final row = refreshRemaining
-              ? await _dao.getById(candidate.id)
+              ? await _refreshSweepCandidate(candidate)
               : candidate;
           if (row == null ||
-              row.ownerPubkey != candidate.ownerPubkey ||
-              row.environment != candidate.environment ||
               (row.recipientWrapStatus != OutgoingWrapStatus.pending &&
                   row.selfWrapStatus != OutgoingWrapStatus.pending)) {
             continue;
@@ -789,6 +803,17 @@ class OutgoingDmRetryService {
         if (_isInitialized) unawaited(sweep());
       }
     }
+  }
+
+  /// Reloads a row that was already selected in this account and environment.
+  Future<OutgoingDm?> _refreshSweepCandidate(OutgoingDm candidate) async {
+    final row = await _dao.getById(candidate.id);
+    if (row == null ||
+        row.ownerPubkey != candidate.ownerPubkey ||
+        row.environment != candidate.environment) {
+      return null;
+    }
+    return row;
   }
 
   void _onRetryTrigger() {
