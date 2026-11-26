@@ -121,7 +121,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
        super(const VideoFeedBlocState()) {
     on<VideoFeedStarted>(_onStarted);
     on<VideoFeedClassicsSessionChanged>(_onClassicsSessionChanged);
-    on<_VideoFeedAdaptiveClassicsChanged>(_onAdaptiveClassicsChanged);
+    on<_VideoFeedAdaptiveClassicsChanged>(
+      _onAdaptiveClassicsChanged,
+      transformer: sequential(),
+    );
     on<VideoFeedVisibilityChanged>((event, emit) {
       _isVisible = event.visible;
       _classicSession?.setActive(
@@ -129,11 +132,19 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
             event.visible && state.source.type == VideoFeedSourceType.classic,
       );
     });
-    _classicSessionSubscription = _classicSession?.stream.listen((snapshot) {
-      if (!_isClosing && !isClosed) {
-        add(VideoFeedClassicsSessionChanged(snapshot));
-      }
-    });
+    if (_classicSession case final initialSession?) {
+      _classicSessionSubscription = initialSession.stream.skip(1).listen((
+        snapshot,
+      ) {
+        if (!_isClosing &&
+            !isClosed &&
+            identical(_classicSession, initialSession)) {
+          add(
+            VideoFeedClassicsSessionChanged(snapshot, session: initialSession),
+          );
+        }
+      });
+    }
     _adaptiveClassicsSubscription = adaptiveClassicsEnabledStream?.listen(
       (enabled) {
         if (!_isClosing && !isClosed) {
@@ -240,12 +251,27 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   bool _adaptiveClassicsEnabled;
   bool _isVisible = true;
 
+  void _tryAttachClassicSession() {
+    if (_isClosing ||
+        isClosed ||
+        !_adaptiveClassicsEnabled ||
+        _classicSession != null ||
+        _createClassicSession == null) {
+      return;
+    }
+    _attachClassicSession(_createClassicSession());
+  }
+
   void _attachClassicSession(ClassicFeedSession? session) {
-    if (session == null || _isClosing || isClosed) return;
+    if (session == null) return;
+    if (_isClosing || isClosed) {
+      unawaited(session.dispose());
+      return;
+    }
     _classicSession = session;
-    _classicSessionSubscription = session.stream.listen((snapshot) {
-      if (!_isClosing && !isClosed) {
-        add(VideoFeedClassicsSessionChanged(snapshot));
+    _classicSessionSubscription = session.stream.skip(1).listen((snapshot) {
+      if (!_isClosing && !isClosed && identical(_classicSession, session)) {
+        add(VideoFeedClassicsSessionChanged(snapshot, session: session));
       }
     });
     session.setActive(
@@ -270,22 +296,22 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     if (event.enabled == _adaptiveClassicsEnabled) return;
     _adaptiveClassicsEnabled = event.enabled;
     if (!event.enabled) {
+      _paginationGeneration++;
       await _detachClassicSession();
-      if (state.source.type == VideoFeedSourceType.classic &&
+      if (!_adaptiveClassicsEnabled &&
+          state.source.type == VideoFeedSourceType.classic &&
           !_isClosing &&
           !emit.isDone) {
         emit(state.copyWith(clearPaginationCursor: true));
       }
       return;
     }
-    // If Home is already showing a loaded archive Classics slice, keep it
-    // stable until the user refreshes or re-enters Classics so playback does
-    // not jump mid-video. Otherwise attach the adaptive session immediately.
-    if (_classicSession == null &&
-        _createClassicSession != null &&
-        (state.source.type != VideoFeedSourceType.classic ||
-            state.videos.isEmpty)) {
-      _attachClassicSession(_createClassicSession());
+    // If Home is already loading or showing an archive Classics slice, keep it
+    // stable until the user refreshes or switches back into Classics so
+    // playback does not jump or blank mid-load.
+    if (state.source.type != VideoFeedSourceType.classic ||
+        (state.videos.isEmpty && state.status != VideoFeedStatus.loading)) {
+      _tryAttachClassicSession();
     }
   }
 
@@ -293,15 +319,19 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     VideoFeedClassicsSessionChanged event,
     Emitter<VideoFeedBlocState> emit,
   ) {
-    if (state.source.type != VideoFeedSourceType.classic ||
+    final classicSession = _classicSession;
+    if (!_adaptiveClassicsEnabled ||
+        classicSession == null ||
+        (event.session != null && !identical(event.session, classicSession)) ||
+        state.source.type != VideoFeedSourceType.classic ||
         state.status != VideoFeedStatus.success) {
       return;
     }
-    final snapshot = _classicSession?.state ?? event.snapshot;
+    final snapshot = classicSession.state;
     final videos = _withoutRemovedVideos(
       _removalRepository.applyContentPreferences(snapshot.videos),
       // The session keeps the playing prefix stable during live marks.
-      filterUnavailable: _classicSession == null,
+      filterUnavailable: false,
     );
     final activeKey = state.videos.isEmpty
         ? null
@@ -992,6 +1022,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       super.close(),
     ];
     _adaptiveClassicsSubscription = null;
+    _classicSessionSubscription = null;
+    _classicSession = null;
     _removalRepositorySubscription = null;
     _removedIdsSubscription = null;
     _replacedVideosSubscription = null;
@@ -1042,12 +1074,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         )) {
       return;
     }
-    if (source.type == VideoFeedSourceType.classic &&
-        _adaptiveClassicsEnabled &&
-        _classicSession == null &&
-        _createClassicSession != null) {
-      _attachClassicSession(_createClassicSession());
-    }
     _classicSession?.setActive(
       active: _isVisible && source.type == VideoFeedSourceType.classic,
     );
@@ -1086,6 +1112,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         await _modePreferences.persist(source);
       }
       return;
+    }
+
+    if (source.type == VideoFeedSourceType.classic) {
+      _tryAttachClassicSession();
+      _classicSession?.setActive(active: _isVisible);
     }
 
     final feedLoad = _feedTracker?.startFeedLoad(
@@ -1416,11 +1447,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     VideoFeedRefreshRequested event,
     Emitter<VideoFeedBlocState> emit,
   ) async {
-    if (state.source.type == VideoFeedSourceType.classic &&
-        _adaptiveClassicsEnabled &&
-        _classicSession == null &&
-        _createClassicSession != null) {
-      _attachClassicSession(_createClassicSession());
+    if (state.source.type == VideoFeedSourceType.classic) {
+      _tryAttachClassicSession();
     }
     _refreshFollowedPeopleLists();
     final feedLoad = _feedTracker?.startFeedLoad(
@@ -2153,12 +2181,32 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       // feed cache — which carries no TTL for the home, latest, and
       // recommended first-page entries — so the follow-up fetch answers
       // from the same entry it is meant to refresh.
-      final result = await _fetchVideosForSource(
+      var fetchedClassicSession = source.type == VideoFeedSourceType.classic
+          ? _classicSession
+          : null;
+      var result = await _fetchVideosForSource(
         source,
         skipCache: skipCache,
         revalidate: revalidate,
+        classicSession: fetchedClassicSession,
       );
       if (!canEmit()) return;
+
+      // If the adaptive session was detached while its initial load was in
+      // flight, ClassicFeedSession.dispose resolves to an empty page with its
+      // old opaque cursor. Retry on the current path (archive or replacement)
+      // rather than emitting an empty Classics feed.
+      if (fetchedClassicSession != null &&
+          !identical(fetchedClassicSession, _classicSession)) {
+        fetchedClassicSession = _classicSession;
+        result = await _fetchVideosForSource(
+          source,
+          skipCache: skipCache,
+          revalidate: revalidate,
+          classicSession: fetchedClassicSession,
+        );
+        if (!canEmit()) return;
+      }
 
       final validVideos = _withoutRemovedVideos(
         result.videos,
@@ -2177,11 +2225,16 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
               currentIndex: state.currentIndex,
             )
           : validVideos;
-      final classicSession = _classicSession;
+      final activeClassicSession =
+          fetchedClassicSession != null &&
+              identical(fetchedClassicSession, _classicSession)
+          ? fetchedClassicSession
+          : null;
       final displayedVideos =
-          source.type == VideoFeedSourceType.classic && classicSession != null
+          source.type == VideoFeedSourceType.classic &&
+              activeClassicSession != null
           ? _withoutRemovedVideos(
-              classicSession.state.videos,
+              activeClassicSession.state.videos,
               filterUnavailable: false,
             )
           : source.type == VideoFeedSourceType.newVideos
@@ -2198,8 +2251,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           videos: displayedVideos,
           currentIndex:
               source.type == VideoFeedSourceType.classic &&
-                  classicSession != null
-              ? classicSession.state.currentIndex
+                  activeClassicSession != null
+              ? activeClassicSession.state.currentIndex
               : state.currentIndex,
           coordination: state.coordination.copyWith(
             newVideosUntil: source.type == VideoFeedSourceType.newVideos
@@ -2470,6 +2523,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     bool skipCache = false,
     bool revalidate = false,
     int? paginationGeneration,
+    ClassicFeedSession? classicSession,
   }) => switch (source.type) {
     VideoFeedSourceType.forYou =>
       paginationCursor == null
@@ -2523,15 +2577,15 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     // `revalidate` does not either: the adaptive session keeps its own queue,
     // and the archive-only path's 15-minute first-page cache exists so
     // re-entry resumes the same opening.
-    VideoFeedSourceType.classic => switch (_classicSession) {
+    VideoFeedSourceType.classic => switch (classicSession ?? _classicSession) {
       null => _videosRepository.getClassicVideos(
         cursor: paginationCursor,
         skipCache: skipCache,
       ),
-      final classicSession =>
+      final session =>
         paginationCursor == null
-            ? classicSession.loadInitial(refresh: skipCache)
-            : classicSession.loadMore(),
+            ? session.loadInitial(refresh: skipCache)
+            : session.loadMore(),
     },
   };
 

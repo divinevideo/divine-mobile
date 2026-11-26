@@ -851,6 +851,166 @@ void main() {
     );
 
     testWidgets(
+      'Home Classics does not wipe an in-flight or active archive slice when '
+      'protected-minor confirmation lands or Classics is re-selected',
+      (tester) async {
+        final pendingStatus = Completer<ProtectedMinorStatus>();
+        final archiveReply = Completer<HomeFeedResult>();
+        final analytics = _ConsentingAnalytics();
+        final home = await _mountSafetyPolicyHome(
+          tester,
+          overrides: [
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+            protectedMinorStatusProvider.overrideWith(
+              (ref) => pendingStatus.future,
+            ),
+            analyticsServiceProvider.overrideWith((ref) {
+              ref.onDispose(analytics.dispose);
+              return analytics;
+            }),
+          ],
+        );
+        final requests = _stubClassicRecommendations(home.videos);
+        when(
+          () => home.videos.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer((_) => archiveReply.future);
+
+        // Switch to Classics while protected-minor status is still loading.
+        home.originalFeed.add(
+          const VideoFeedSourceChanged(VideoFeedSource.classic()),
+        );
+        await tester.runAsync(pumpEventQueue);
+        expect(home.originalFeed.state.status, VideoFeedStatus.loading);
+
+        // Keycast resolves notProtected mid-load: must NOT attach an unstarted
+        // session that blanks the archive result when it lands.
+        pendingStatus.complete(ProtectedMinorStatus.notProtected());
+        await tester.runAsync(
+          () => home.container.read(protectedMinorStatusProvider.future),
+        );
+        expect(home.container.read(adaptiveClassicsEnabledProvider), isTrue);
+        await tester.runAsync(pumpEventQueue);
+
+        archiveReply.complete(
+          HomeFeedResult(videos: [_removalVideo('1')], hasMore: true),
+        );
+        await tester.runAsync(pumpEventQueue);
+        expect(home.originalFeed.state.status, VideoFeedStatus.success);
+        expect(home.originalFeed.state.videos, [_removalVideo('1')]);
+        expect(requests, isEmpty);
+
+        // Re-selecting Classics from the mode sheet must stay a no-op and not
+        // overwrite the visible archive slice with an empty session seed.
+        home.originalFeed.add(
+          const VideoFeedSourceChanged(VideoFeedSource.classic()),
+        );
+        await tester.runAsync(pumpEventQueue);
+        expect(home.originalFeed.state.videos, [_removalVideo('1')]);
+        expect(requests, isEmpty);
+
+        // Explicit refresh now attaches the adaptive session cleanly.
+        home.originalFeed.add(const VideoFeedRefreshRequested());
+        await tester.runAsync(pumpEventQueue);
+        expect(requests, isNotEmpty);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.runAsync(pumpEventQueue);
+      },
+    );
+
+    testWidgets(
+      'Home Classics falls back to the archive when the account gate closes '
+      'mid-load',
+      (tester) async {
+        var pendingStatus = Completer<ProtectedMinorStatus>()
+          ..complete(ProtectedMinorStatus.notProtected());
+        final recommendationsReply = Completer<HomeFeedResult>();
+        final analytics = _ConsentingAnalytics();
+        final home = await _mountSafetyPolicyHome(
+          tester,
+          overrides: [
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+            protectedMinorStatusProvider.overrideWith(
+              (ref) => pendingStatus.future,
+            ),
+            analyticsServiceProvider.overrideWith((ref) {
+              ref.onDispose(analytics.dispose);
+              return analytics;
+            }),
+          ],
+        );
+        registerFallbackValue(
+          const ClassicRecommendationsRequest(seed: 'fallback'),
+        );
+        registerFallbackValue(<VideoEvent>[]);
+        when(() => home.videos.applyContentPreferences(any())).thenAnswer(
+          (call) => call.positionalArguments.single as List<VideoEvent>,
+        );
+        when(
+          () => home.videos.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+            isCurrent: any(named: 'isCurrent'),
+          ),
+        ).thenAnswer((_) => recommendationsReply.future);
+        when(
+          () => home.videos.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              HomeFeedResult(videos: [_removalVideo('9')], hasMore: false),
+        );
+
+        await tester.runAsync(
+          () => home.container.read(protectedMinorStatusProvider.future),
+        );
+        expect(home.container.read(adaptiveClassicsEnabledProvider), isTrue);
+        await tester.runAsync(pumpEventQueue);
+
+        // Start an adaptive Classics load, then close the gate mid-flight.
+        home.originalFeed.add(
+          const VideoFeedSourceChanged(VideoFeedSource.classic()),
+        );
+        await tester.runAsync(pumpEventQueue);
+
+        pendingStatus = Completer<ProtectedMinorStatus>()
+          ..complete(ProtectedMinorStatus.protected());
+        home.container.invalidate(protectedMinorStatusProvider);
+        await tester.runAsync(
+          () => home.container.read(protectedMinorStatusProvider.future),
+        );
+        expect(home.container.read(adaptiveClassicsEnabledProvider), isFalse);
+        await tester.runAsync(pumpEventQueue);
+
+        recommendationsReply.complete(
+          HomeFeedResult(
+            videos: [_removalVideo('2')],
+            paginationCursor: 'stale-opaque-cursor',
+            hasMore: true,
+            recommendationPageCount: 1,
+          ),
+        );
+        await tester.runAsync(pumpEventQueue);
+
+        // Must show the archive fallback, never an empty screen or stale
+        // adaptive cursor.
+        expect(home.originalFeed.state.status, VideoFeedStatus.success);
+        expect(home.originalFeed.state.videos, [_removalVideo('9')]);
+        expect(home.originalFeed.state.paginationCursor, isNull);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.runAsync(pumpEventQueue);
+      },
+    );
+
+    testWidgets(
       'legacy false flags preserve people sources and saved selection',
       (tester) async {
         await CacheSync.init(dao: _CacheDao());
