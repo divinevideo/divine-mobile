@@ -34,6 +34,7 @@ VideoEvent _video({
   int? nostrLikeCount,
   int? nostrCommentCount,
   int? nostrRepostCount,
+  String? seriesCoordinate,
 }) {
   return VideoEvent(
     id: id,
@@ -64,6 +65,7 @@ VideoEvent _video({
     nostrLikeCount: nostrLikeCount,
     nostrCommentCount: nostrCommentCount,
     nostrRepostCount: nostrRepostCount,
+    seriesCoordinate: seriesCoordinate,
   );
 }
 
@@ -264,6 +266,91 @@ void main() {
         merged.stickerRegions.map((region) => region.target),
         equals(['new']),
       );
+    });
+
+    group('seriesCoordinate', () {
+      final author = 'a' * 64;
+      final series = '30005:$author:our-story';
+
+      VideoEvent episode({
+        required String id,
+        required int createdAt,
+        List<List<String>> nostrEventTags = const [],
+        String? seriesCoordinate,
+      }) => _video(
+        id: id,
+        pubkey: author,
+        createdAt: createdAt,
+        vineId: 'episode-3',
+        nostrEventTags: nostrEventTags,
+        seriesCoordinate: seriesCoordinate,
+      );
+
+      test('keeps the series when neither copy carries tags', () {
+        // A snapshot and a compact REST row have no tags to read it from.
+        final snapshot = _snapshotOf(
+          episode(
+            id: 'nostr',
+            createdAt: 1000,
+            nostrEventTags: [
+              ['a', series, '', videoSeriesTagMarker],
+            ],
+          ),
+        );
+        expect(snapshot.nostrEventTags, isEmpty);
+
+        final merged = mergeProfileFeedVideos(
+          episode(id: 'rest', createdAt: 2000, seriesCoordinate: series),
+          snapshot,
+        );
+
+        expect(merged.seriesCoordinate, equals(series));
+      });
+
+      test('fills the series from a snapshot copy', () {
+        final snapshot = _snapshotOf(
+          episode(
+            id: 'nostr',
+            createdAt: 1000,
+            nostrEventTags: [
+              ['a', series, '', videoSeriesTagMarker],
+            ],
+          ),
+        );
+
+        final merged = mergeProfileFeedVideos(
+          episode(id: 'rest', createdAt: 2000),
+          snapshot,
+        );
+
+        expect(merged.seriesCoordinate, equals(series));
+      });
+
+      test('does not bring back a series the newer tags dropped', () {
+        final older = _snapshotOf(
+          episode(
+            id: 'original',
+            createdAt: 1000,
+            nostrEventTags: [
+              ['a', series, '', videoSeriesTagMarker],
+            ],
+          ),
+        );
+        expect(older.seriesCoordinate, equals(series));
+
+        final merged = mergeProfileFeedVideos(
+          episode(
+            id: 'edited',
+            createdAt: 2000,
+            nostrEventTags: const [
+              ['d', 'episode-3'],
+            ],
+          ),
+          older,
+        );
+
+        expect(merged.seriesCoordinate, isNull);
+      });
     });
 
     test('fills plural text-track refs from the secondary copy', () {

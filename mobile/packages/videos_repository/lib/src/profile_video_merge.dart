@@ -117,6 +117,11 @@ VideoEvent mergeProfileFeedVideos(VideoEvent existing, VideoEvent incoming) {
     stickerRegions: primary.stickerRegions.isNotEmpty
         ? primary.stickerRegions
         : secondary.stickerRegions,
+    // Only a primary copy without tags takes the other copy's series, so a
+    // series an edit removed from the tags cannot come back.
+    seriesCoordinate: primary.nostrEventTags.isNotEmpty
+        ? primary.seriesCoordinate
+        : primary.seriesCoordinate ?? secondary.seriesCoordinate,
     authorName: primary.authorName ?? secondary.authorName,
     authorAvatar: primary.authorAvatar ?? secondary.authorAvatar,
     nostrLikeCount: mergeNullableEngagementMax(

@@ -25,6 +25,7 @@ VideoEvent _video({
   List<String> categories = const [],
   List<String> moderationLabels = const [],
   ProofVerificationSummary? proofSummary,
+  String? seriesCoordinate,
 }) {
   return VideoEvent(
     id: id,
@@ -48,6 +49,7 @@ VideoEvent _video({
     categories: categories,
     moderationLabels: moderationLabels,
     proofSummary: proofSummary,
+    seriesCoordinate: seriesCoordinate,
   );
 }
 
@@ -198,6 +200,59 @@ void main() {
       expect(merged.single.categories, ['comedy']);
       expect(merged.single.moderationLabels, ['label']);
       expect(merged.single.proofSummary, current.proofSummary);
+    });
+
+    test('keeps the series of a copy enrichment passed through', () {
+      // A compact REST row names its series only through the API field, and
+      // enrichment returns the rows it could not fetch unchanged.
+      final author = 'a' * 64;
+      final series = '30005:$author:our-story';
+      final current = _video(
+        id: 'rest',
+        pubkey: author,
+        vineId: 'episode-3',
+        seriesCoordinate: series,
+      );
+      expect(current.nostrEventTags, isEmpty);
+
+      final merged = mergeProfileFeedEnrichment(
+        current: [current],
+        sourceKeys: {canonicalProfileFeedVideoKey(current)},
+        incoming: [current],
+        removeTombstones: (videos) => videos,
+      );
+
+      expect(merged.single.seriesCoordinate, equals(series));
+    });
+
+    test('does not bring back a series the current tags dropped', () {
+      final author = 'a' * 64;
+      final current = _video(
+        id: 'edited',
+        pubkey: author,
+        vineId: 'episode-3',
+        eventCreatedAt: 102,
+        nostrEventTags: const [
+          ['d', 'episode-3'],
+        ],
+      );
+      final enriched = _video(
+        id: 'original',
+        pubkey: author,
+        vineId: 'episode-3',
+        eventCreatedAt: 101,
+        seriesCoordinate: '30005:$author:our-story',
+      );
+      expect(enriched.seriesCoordinate, isNotNull);
+
+      final merged = mergeProfileFeedEnrichment(
+        current: [current],
+        sourceKeys: {canonicalProfileFeedVideoKey(current)},
+        incoming: [enriched],
+        removeTombstones: (videos) => videos,
+      );
+
+      expect(merged.single.seriesCoordinate, isNull);
     });
 
     test('keeps raw tags from a newer current event', () {
