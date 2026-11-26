@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/classics_feed/classics_feed_cubit.dart';
+import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
@@ -28,6 +29,8 @@ class ClassicsPlaybackPage extends ConsumerWidget {
     final repository = ref.watch(videosRepositoryProvider);
     final analytics = ref.watch(analyticsServiceProvider);
     final viewer = ref.watch(nostrSessionProvider.select((s) => s.pubkey));
+    bool isAdaptiveAllowed() =>
+        ref.context.mounted && ref.read(adaptiveClassicsEnabledProvider);
     return BlocProvider(
       key: ValueKey((viewer, repository, analytics, anchor.id)),
       create: (_) => ClassicsFeedCubit(
@@ -40,11 +43,13 @@ class ClassicsPlaybackPage extends ConsumerWidget {
               request: request,
               userPubkey: allowed ? viewer : null,
               isCurrent: () =>
+                  isAdaptiveAllowed() &&
                   contextId == analytics.privacyGeneration &&
                   allowed == analytics.initializedAnalyticsConsent,
             );
           },
-          canPersonalize: () => analytics.initializedAnalyticsConsent,
+          canPersonalize: () =>
+              isAdaptiveAllowed() && analytics.initializedAnalyticsConsent,
           feedback: analytics.recommendationFeedback,
           privacyChanges: analytics.privacyChanges,
           removedVideoIds: repository.removedVideoIds,

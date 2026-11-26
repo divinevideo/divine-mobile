@@ -1506,8 +1506,11 @@ class VideosRepository {
     required bool Function()? isCurrent,
     required bool skipArchiveCache,
   }) async {
-    void checkCurrent() {
-      if (isCurrent != null && !isCurrent()) {
+    bool isAllowed() => _classicRecommendationsAllowed?.call() ?? true;
+
+    void checkCurrent({bool checkAllowed = false}) {
+      if ((isCurrent != null && !isCurrent()) ||
+          (checkAllowed && !isAllowed())) {
         throw const FunnelcakeException('Classics request superseded');
       }
     }
@@ -1520,8 +1523,7 @@ class VideosRepository {
       );
     }
     final api = _funnelcakeApiClient;
-    final allowed = _classicRecommendationsAllowed?.call() ?? true;
-    if (api == null || !api.isAvailable || !allowed) {
+    if (api == null || !api.isAvailable || !isAllowed()) {
       return _getClassicArchiveVideos(
         limit: request.limit,
         skipCache: skipArchiveCache,
@@ -1534,7 +1536,7 @@ class VideosRepository {
         ? _classicsMaxPageFetches
         : maxSeenOnlyFeedPages;
     for (var page = 0; page < maxPages; page++) {
-      checkCurrent();
+      checkCurrent(checkAllowed: true);
       late final RecommendationsResponse response;
       try {
         response = await api.getClassicRecommendations(
@@ -1542,14 +1544,14 @@ class VideosRepository {
           userPubkey: userPubkey,
         );
       } on FunnelcakeException {
-        checkCurrent();
+        checkCurrent(checkAllowed: true);
         if (request.cursor != null) rethrow;
         return _getClassicArchiveVideos(
           limit: request.limit,
           skipCache: skipArchiveCache,
         );
       }
-      checkCurrent();
+      checkCurrent(checkAllowed: true);
       final videos = _withoutSeenVideos(
         _transformVideoStats(response.videos, sortByCreatedAt: false)
             .where(
@@ -1602,6 +1604,7 @@ class VideosRepository {
     final viewer = _classicViewerPubkey?.call();
     final contextKey = _classicContextKey?.call();
     bool isCurrent() =>
+        (_classicRecommendationsAllowed?.call() ?? true) &&
         viewer == _classicViewerPubkey?.call() &&
         contextKey == _classicContextKey?.call();
     final contextChanged =

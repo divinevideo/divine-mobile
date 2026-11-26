@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
@@ -351,6 +353,68 @@ void main() {
             userPubkey: any(named: 'userPubkey'),
           ),
         ).called(1);
+      },
+    );
+
+    test(
+      'closing the gate mid-flight supersedes recommendations and stops '
+      'top-up reads',
+      () async {
+        final nostr = _Nostr();
+        when(() => nostr.publicKey).thenReturn('');
+        var allowed = true;
+        final repository = VideosRepository(
+          nostrClient: nostr,
+          funnelcakeApiClient: api,
+          classicRecommendationsEnabled: true,
+          classicRecommendationsAllowed: () => allowed,
+        );
+        final firstReply = Completer<RecommendationsResponse>();
+        var calls = 0;
+        when(
+          () => api.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).thenAnswer((_) {
+          calls++;
+          return firstReply.future;
+        });
+
+        final inFlight = repository.getClassicRecommendations(request: request);
+        await pumpEventQueue();
+        expect(calls, 1);
+
+        allowed = false;
+        firstReply.complete(
+          RecommendationsResponse(
+            videos: [_stats(1, classic: false)],
+            source: 'mixed',
+            hasMore: true,
+            nextCursor: 'page-2',
+          ),
+        );
+
+        await expectLater(inFlight, throwsA(isA<FunnelcakeException>()));
+        expect(calls, 1);
+
+        // Browsing also supersedes when the gate closes with unchanged viewer.
+        allowed = true;
+        final browseReply = Completer<RecommendationsResponse>();
+        when(
+          () => api.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).thenAnswer((_) => browseReply.future);
+
+        final browseInFlight = repository.getClassicVideos();
+        await pumpEventQueue();
+        allowed = false;
+        browseReply.complete(
+          RecommendationsResponse(videos: [_stats(2)], source: 'mixed'),
+        );
+        await expectLater(browseInFlight, throwsA(isA<FunnelcakeException>()));
       },
     );
 
