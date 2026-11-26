@@ -307,10 +307,10 @@ void main() {
         expect(merged.seriesCoordinate, equals(series));
       });
 
-      test('fills the series from a snapshot copy', () {
+      test('fills the series from a snapshot of the same event', () {
         final snapshot = _snapshotOf(
           episode(
-            id: 'nostr',
+            id: 'episode',
             createdAt: 1000,
             nostrEventTags: [
               ['a', series, '', videoSeriesTagMarker],
@@ -319,11 +319,35 @@ void main() {
         );
 
         final merged = mergeProfileFeedVideos(
-          episode(id: 'rest', createdAt: 2000),
+          episode(id: 'episode', createdAt: 1000),
           snapshot,
         );
 
         expect(merged.seriesCoordinate, equals(series));
+      });
+
+      test('keeps a newer compact revision out of the old series', () {
+        final older = episode(
+          id: 'original',
+          createdAt: 1000,
+          nostrEventTags: [
+            ['d', 'episode-3'],
+            ['a', '34236:$author:clip', '', 'mention'],
+            ['a', series, '', videoSeriesTagMarker],
+          ],
+        );
+        final edited = episode(id: 'edited', createdAt: 2000);
+
+        for (final original in [older, _snapshotOf(older)]) {
+          final merged = mergeProfileFeedVideos(edited, original);
+
+          expect(merged.id, equals(edited.id));
+          expect(merged.seriesCoordinate, isNull);
+        }
+        expect(mergeProfileFeedVideos(edited, older).nostrEventTags, [
+          ['d', 'episode-3'],
+          ['a', '34236:$author:clip', '', 'mention'],
+        ]);
       });
 
       test('does not bring back a series the newer tags dropped', () {

@@ -52,6 +52,7 @@ VideoEvent _mergeEnrichmentIntoCurrent(
       enriched.eventCreatedAt! > current.eventCreatedAt!;
   final primary = enrichedIsNewer ? enriched : current;
   final secondary = enrichedIsNewer ? current : enriched;
+  final eventMetadata = mergeProfileVideoEventMetadata(primary, secondary);
 
   return primary.copyWith(
     publishedAt:
@@ -118,20 +119,14 @@ VideoEvent _mergeEnrichmentIntoCurrent(
                 primary.textTrackRefs.isNotEmpty
             ? null
             : secondary.textTrackContent),
-    nostrEventTags: primary.nostrEventTags.isNotEmpty
-        ? primary.nostrEventTags
-        : secondary.nostrEventTags,
+    nostrEventTags: eventMetadata.tags,
     linkUrls: primary.linkUrls.isNotEmpty
         ? primary.linkUrls
         : secondary.linkUrls,
     stickerRegions: primary.stickerRegions.isNotEmpty
         ? primary.stickerRegions
         : secondary.stickerRegions,
-    // Only a primary copy without tags takes the other copy's series, so a
-    // series an edit removed from the tags cannot come back.
-    seriesCoordinate: primary.nostrEventTags.isNotEmpty
-        ? primary.seriesCoordinate
-        : primary.seriesCoordinate ?? secondary.seriesCoordinate,
+    seriesCoordinate: eventMetadata.seriesCoordinate,
     authorName: primary.authorName ?? secondary.authorName,
     authorAvatar: primary.authorAvatar ?? secondary.authorAvatar,
     nostrLikeCount: mergeNullableEngagementMax(

@@ -255,6 +255,35 @@ void main() {
       expect(merged.single.seriesCoordinate, isNull);
     });
 
+    test('ignores a stale series when the current revision has no tags', () {
+      final author = 'a' * 64;
+      final current = _video(
+        id: 'edited',
+        pubkey: author,
+        vineId: 'episode-3',
+        eventCreatedAt: 102,
+      );
+      final enriched = _video(
+        id: 'original',
+        pubkey: author,
+        vineId: 'episode-3',
+        eventCreatedAt: 101,
+        nostrEventTags: [
+          ['d', 'episode-3'],
+          ['a', '30005:$author:our-story', '', videoSeriesTagMarker],
+        ],
+      );
+
+      final merged = mergeProfileFeedEnrichment(
+        current: [current],
+        sourceKeys: {canonicalProfileFeedVideoKey(current)},
+        incoming: [enriched],
+        removeTombstones: (videos) => videos,
+      );
+
+      expect(merged.single.seriesCoordinate, isNull);
+    });
+
     test('keeps raw tags from a newer current event', () {
       final current = _video(
         id: 'nostr-current',
