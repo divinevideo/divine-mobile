@@ -8558,7 +8558,7 @@ class DmRepository {
 
     // A group member's row replays the batch's one copy, not a copy of its
     // own: the other members' rows record it once it lands (#10016).
-    final batchId = _groupBatchOf(row);
+    final batchId = _groupBatchOf(row, rumor);
     final result = batchId == null
         ? await _messageService!.publishSelfWrap(
             rumorEvent: rumor,
@@ -8895,7 +8895,7 @@ class DmRepository {
     final pairParticipants = [owner, row.recipientPubkey]..sort();
     final isGroupRow =
         row.conversationId != computeConversationId(pairParticipants);
-    final batchId = _groupBatchOf(row);
+    final batchId = _groupBatchOf(row, rumor);
     if (isGroupRow && await _isLeftConversation(row.conversationId)) {
       await dao.deleteById(rumorId);
       return const NIP17SendResult.failure('group send cancelled by Leave');
@@ -9875,10 +9875,13 @@ class DmRepository {
   /// The send batch [row] belongs to when it is one member of a group send,
   /// whose members share one own copy (#10016); `null` for a one-to-one row
   /// and for a row queued before batches were labelled.
-  String? _groupBatchOf(OutgoingDm row) {
+  String? _groupBatchOf(OutgoingDm row, Event rumor) {
     final batchId = row.sendBatchId;
     if (batchId == null) return null;
-    final pair = [_userPubkey, row.recipientPubkey]..sort();
+    // The group entry point also accepts one recipient, whose conversation
+    // ID equals the pair's. Its per-member queue handle still identifies it.
+    if (row.id == _groupQueueId(rumor.id, row.recipientPubkey)) return batchId;
+    final pair = [row.ownerPubkey, row.recipientPubkey]..sort();
     return row.conversationId == computeConversationId(pair) ? null : batchId;
   }
 
@@ -10451,7 +10454,7 @@ class DmRepository {
       category: LogCategory.system,
     );
     // A group member's withheld copy is its batch's one copy (#10016).
-    final batchId = _groupBatchOf(row);
+    final batchId = _groupBatchOf(row, rumor);
     final selfCopy = batchId == null
         ? await _messageService!.publishSelfWrap(
             rumorEvent: rumor,

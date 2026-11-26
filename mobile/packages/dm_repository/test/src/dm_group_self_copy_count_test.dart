@@ -97,6 +97,7 @@ void main() {
     late Set<String> refusingRecipients;
     late Future<void> Function(String pubkey)? onInboxLookup;
     late FutureOr<void> Function(Event wrap)? onRecipientPublish;
+    late Future<void> Function()? onOwnCopyPublish;
     late _HookedOutgoingDmsDao outgoingDao;
     late DmRepository repository;
     late DmReactionsRepository reactions;
@@ -132,6 +133,7 @@ void main() {
       refusingRecipients = {};
       onInboxLookup = null;
       onRecipientPublish = null;
+      onOwnCopyPublish = null;
       outgoingDao = _HookedOutgoingDmsDao(db);
 
       when(() => nostrClient.connectedRelayCount).thenReturn(1);
@@ -226,6 +228,7 @@ void main() {
         if (!ownCopiesPublish) return const PublishFailed();
         final event = invocation.positionalArguments.first as Event;
         published.add(event);
+        await onOwnCopyPublish?.call();
         return PublishSuccess(event: event);
       });
 
@@ -489,6 +492,34 @@ void main() {
           await recover(row.id);
         }
       }
+
+      test(
+        'a single-recipient group retry joins the original own copy',
+        () async {
+          final peer = members.first;
+          final ownCopyStarted = Completer<void>();
+          final finishOwnCopy = Completer<void>();
+          onOwnCopyPublish = () async {
+            if (ownCopyStarted.isCompleted) return;
+            ownCopyStarted.complete();
+            await finishOwnCopy.future;
+          };
+
+          final original = sendToRoom([peer]);
+          await ownCopyStarted.future;
+          final row = (await queueRows()).single;
+          final retryOnWire = Completer<void>();
+          onRecipientPublish = (_) => retryOnWire.complete();
+          final retry = repository.recoverFullSend(rumorId: row.id);
+          await retryOnWire.future;
+
+          finishOwnCopy.complete();
+          expect((await original).single.success, isTrue);
+          expect((await retry).success, isTrue);
+          expect(wrapsTo(owner), hasLength(1));
+          expect(await queueRows(), isEmpty);
+        },
+      );
 
       test("publishes one own copy when a member's retry overlaps the group "
           'send', () async {
