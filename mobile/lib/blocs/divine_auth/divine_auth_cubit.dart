@@ -247,28 +247,19 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
 
     final pubkey = result.pubkey;
     final emailVerified = result.emailVerified;
-    if (pubkey != null && emailVerified != null) {
-      await _rememberConfirmation(
-        pubkey,
-        EmailConfirmation.fromSignIn(
-          email: email,
-          emailVerified: emailVerified,
-        ),
-      );
-    }
-
-    // Exchange code for tokens
-    await _exchangeCodeAndLogin(result.code!, verifier);
-  }
-
-  /// Records what Keycast just said about [pubkey]'s email before the session
-  /// starts, so the app knows an unconfirmed account is unconfirmed from its
-  /// first frame instead of waiting for a status check.
-  Future<void> _rememberConfirmation(
-    String pubkey,
-    EmailConfirmation confirmation,
-  ) async {
-    await _emailConfirmationRepository?.remember(pubkey, confirmation);
+    await _exchangeCodeAndLogin(
+      result.code!,
+      verifier,
+      confirmation: pubkey != null && emailVerified != null
+          ? (
+              pubkey,
+              EmailConfirmation.fromSignIn(
+                email: email,
+                emailVerified: emailVerified,
+              ),
+            )
+          : null,
+    );
   }
 
   /// Translates the client-layer [KeycastLoginFailure] into the UI-facing
@@ -345,11 +336,11 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
         name: 'DivineAuthCubit',
         category: LogCategory.auth,
       );
-      await _rememberConfirmation(
-        result.pubkey,
-        EmailConfirmation.unconfirmed(email),
+      await _exchangeCodeAndLogin(
+        result.code!,
+        verifier,
+        confirmation: (result.pubkey, EmailConfirmation.unconfirmed(email)),
       );
-      await _exchangeCodeAndLogin(result.code!, verifier);
       return;
     }
 
@@ -388,9 +379,11 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
     }
   }
 
-  Future<void> _exchangeCodeAndLogin(String code, String verifier) async {
-    // The form can also close while its confirmation cache write settles.
-    if (isClosed) return;
+  Future<void> _exchangeCodeAndLogin(
+    String code,
+    String verifier, {
+    required (String, EmailConfirmation)? confirmation,
+  }) async {
     try {
       Log.info(
         'Exchanging code for tokens',
@@ -408,6 +401,13 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       if (isClosed) return;
 
       final session = KeycastSession.fromTokenResponse(tokenResponse);
+
+      // A failed or abandoned exchange must leave the email cache alone.
+      // Seed it before activation so the first frame has the current status.
+      if (confirmation case (final pubkey, final status)) {
+        await _emailConfirmationRepository?.remember(pubkey, status);
+        if (isClosed) return;
+      }
 
       // Get the session and sign in
       await _authService.signInWithDivineOAuth(session);

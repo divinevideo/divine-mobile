@@ -1074,7 +1074,43 @@ void main() {
         }
 
         test(
-          'does not exchange a code after closing during a cache write',
+          'failed token exchange preserves the existing confirmation',
+          () async {
+            stubSuccessfulUnconfirmedSignIn();
+            const original = EmailConfirmation.confirmed(
+              'previous@example.com',
+            );
+            SharedPreferences.setMockInitialValues({});
+            final preferences = await SharedPreferences.getInstance();
+            final repository = EmailConfirmationRepository(
+              oauthClient: mockOAuth,
+              readAccessToken: (_) async => null,
+              preferences: preferences,
+            );
+            await repository.remember(pubkey, original);
+            when(
+              () => mockOAuth.exchangeCode(
+                code: testCode,
+                verifier: testVerifier,
+                persistSession: false,
+              ),
+            ).thenThrow(OAuthException('Token exchange failed'));
+            final cubit = buildCubit(emailConfirmationRepository: repository)
+              ..initialize(isSignIn: true)
+              ..updateEmail(testEmail)
+              ..updatePassword(testPassword);
+            addTearDown(cubit.close);
+
+            await cubit.submit();
+
+            await preferences.reload();
+            expect(repository.remembered(pubkey), original);
+            verifyNever(() => mockAuthService.signInWithDivineOAuth(any()));
+          },
+        );
+
+        test(
+          'does not activate the account after closing during a cache write',
           () async {
             stubSuccessfulUnconfirmedSignIn();
             final writing = Completer<void>();
@@ -1094,13 +1130,7 @@ void main() {
             written.complete();
             await submission;
 
-            verifyNever(
-              () => mockOAuth.exchangeCode(
-                code: any(named: 'code'),
-                verifier: any(named: 'verifier'),
-                persistSession: any(named: 'persistSession'),
-              ),
-            );
+            verifyNever(() => mockAuthService.signInWithDivineOAuth(any()));
           },
         );
 
@@ -1160,6 +1190,7 @@ void main() {
             expect(await oauth.getSession(), isNull);
             expect(await oauth.getAuthorizationHandle(), isNull);
             expect(await storage.read('keycast_refresh_token'), isNull);
+            verifyNever(() => confirmations.remember(any(), any()));
           },
         );
 
