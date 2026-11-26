@@ -276,17 +276,15 @@ void main() {
       registerFallbackValue(Duration.zero);
     });
 
-    setUp(() {
-      mockNostrClient = MockNostrClient();
-      mockLocalStorage = MockLikesLocalStorage();
-
+    void stubCountRetractionsFromQueryEvents() {
       // Translate older deletion fixtures into a settled retraction read.
       when(
         () => mockNostrClient.readEvents(
           any(
             that: predicate<List<Filter>>(
               (filters) =>
-                  filters.single.kinds?.singleOrNull == EventKind.eventDeletion,
+                  filters.singleOrNull?.kinds?.singleOrNull ==
+                  EventKind.eventDeletion,
             ),
           ),
           requireAllRelaysSettled: true,
@@ -298,6 +296,11 @@ void main() {
           ),
         ),
       );
+    }
+
+    setUp(() {
+      mockNostrClient = MockNostrClient();
+      mockLocalStorage = MockLikesLocalStorage();
 
       // Default mock behaviors
       when(() => mockNostrClient.publicKey).thenReturn(testUserPubkey);
@@ -3037,6 +3040,8 @@ void main() {
     });
 
     group('getLikeCount', () {
+      setUp(stubCountRetractionsFromQueryEvents);
+
       // The relays hold no like for these targets unless a test says
       // otherwise, so the check before publishing proves there is none
       // instead of failing on an unstubbed read.
@@ -3534,6 +3539,8 @@ void main() {
     });
 
     group('getLikeCounts', () {
+      setUp(stubCountRetractionsFromQueryEvents);
+
       test(
         'omits a plain ID when only the addressable query answered',
         () async {
@@ -6333,6 +6340,7 @@ void main() {
         });
 
         test('leaves getLikeCount on the relay resolver', () async {
+          stubCountRetractionsFromQueryEvents();
           stubLikers([likerA, likerB, likerC]);
           stubSettledReads([
             createReaction(id: 'reaction_a', authorPubkey: likerA),
@@ -8016,6 +8024,7 @@ void main() {
         'getLikeCounts credits a 34236 coordinate to the real Kind 34236 '
         'video, not to the alias of a 34235 video in the same batch',
         () async {
+          stubCountRetractionsFromQueryEvents();
           const shortVideoId = 'short_video_id_1234567890abcdef';
           const normalVideoId = 'normal_video_id_1234567890abcdef';
           final reactionOnOlderShortVersion = createMockReaction(
@@ -8047,6 +8056,7 @@ void main() {
       );
 
       test('getLikeCount counts a like tagged with the legacy key', () async {
+        stubCountRetractionsFromQueryEvents();
         const liker = 'liker_a_pubkey_1234567890abcdef';
         final legacyTaggedReaction = createMockReaction(
           id: 'reaction_legacy',
@@ -8156,6 +8166,7 @@ void main() {
         'a count cached under the old event id resolves for the new event '
         'id via the coordinate, without an extra relay query',
         () async {
+          stubCountRetractionsFromQueryEvents();
           final reaction = createMockReaction(
             id: 'liker_reaction',
             targetEventId: oldEventId,
