@@ -1389,6 +1389,26 @@ void main() {
     });
 
     group('getRepostCount', () {
+      test(
+        'returns a count another relay did not settle without caching it',
+        () async {
+          var calls = 0;
+          when(() => mockNostrClient.countEvents(any())).thenAnswer((_) async {
+            calls++;
+            return calls == 1
+                ? const CountResult(count: 3, isComplete: false)
+                : const CountResult(count: 7, isComplete: true);
+          });
+
+          final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+          expect(await repository.getRepostCount(testAddressableId), equals(3));
+          expect(await repository.getRepostCount(testAddressableId), equals(7));
+          expect(await repository.getRepostCount(testAddressableId), equals(7));
+          verify(() => mockNostrClient.countEvents(any())).called(2);
+        },
+      );
+
       test('returns null and caches nothing when no relay answered', () async {
         when(() => mockNostrClient.countEvents(any())).thenThrow(
           const CountUnavailableException('No relay responded to COUNT'),
