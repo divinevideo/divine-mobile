@@ -96,5 +96,28 @@ void main() {
         isNull,
       );
     });
+
+    test('keeps the series of a video without tags through a copy', () {
+      final restored = VideoEvent.fromJson(
+        video([
+          ['a', series, '', videoSeriesTagMarker],
+        ]).toJson(),
+      );
+      expect(restored.nostrEventTags, isEmpty);
+
+      expect(
+        restored.copyWith(title: 'Renamed').seriesCoordinate,
+        equals(series),
+      );
+      expect(
+        VideoEvent.createRepostEvent(
+          originalEvent: restored,
+          repostEventId: '2' * 64,
+          reposterPubkey: someoneElse,
+          repostedAt: DateTime.utc(2026, 11, 26),
+        ).seriesCoordinate,
+        equals(series),
+      );
+    });
   });
 }
