@@ -12863,6 +12863,7 @@ void main() {
             limit: any(named: 'limit'),
             offset: any(named: 'offset'),
             before: any(named: 'before'),
+            sort: any(named: 'sort'),
           ),
         ).thenAnswer(answer);
       }
@@ -13224,6 +13225,7 @@ void main() {
             () => api.getVideosByAuthors(
               authors: [memberKey(1), memberKey(2)],
               limit: 10,
+              sort: 'published',
             ),
           ).called(1);
           verifyNoRelayRead();
@@ -13260,30 +13262,43 @@ void main() {
           verifyNever(() => api.getBulkVideoStats(any()));
         });
 
-        test('asks for videos before the second after until', () async {
-          // Funnelcake's `before` is exclusive and `until` is inclusive, so
-          // the video at `until` itself stays in reach.
-          final api = availableApi();
-          answerApi(api, (_) async => pageOf([statsFor(1)]));
-          final repo = VideosRepository(
-            nostrClient: mockNostrClient,
-            funnelcakeApiClient: api,
-          );
+        test(
+          'keeps edited posts in reach of a publication-time page',
+          () async {
+            const until = 1704067300;
+            final edited = _createVideoStats(
+              id: videoIdFor(1),
+              pubkey: memberKey(1),
+              dTag: 'edited',
+              videoUrl: 'https://example.com/edited.mp4',
+              eventCreatedAt: until + 100,
+              createdAt: until + 100,
+              publishedAt: until,
+            );
+            final api = availableApi();
+            answerApi(api, (invocation) async {
+              final before = invocation.namedArguments[#before]! as int;
+              final timestamp = invocation.namedArguments[#sort] == 'published'
+                  ? edited.publishedAt!
+                  : edited.eventCreatedAt!;
+              return pageOf([if (timestamp < before) edited, statsFor(2)]);
+            });
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: api,
+            );
 
-          await repo.getVideosByAuthors(
-            authorPubkeys: [memberKey(1)],
-            until: 1704067200,
-          );
+            final videos = await repo.getVideosByAuthors(
+              authorPubkeys: [memberKey(1), memberKey(2)],
+              until: until,
+            );
 
-          verify(
-            () => api.getVideosByAuthors(
-              authors: any(named: 'authors'),
-              limit: any(named: 'limit'),
-              offset: any(named: 'offset'),
-              before: 1704067201,
-            ),
-          ).called(1);
-        });
+            expect(videos.map((video) => video.id), [
+              videoIdFor(1),
+              videoIdFor(2),
+            ]);
+          },
+        );
 
         test(
           'reads two hundred members per request, one request at a time, '
@@ -13355,11 +13370,13 @@ void main() {
               () => api.getVideosByAuthors(
                 authors: any(named: 'authors'),
                 limit: 100,
+                sort: 'published',
               ),
               () => api.getVideosByAuthors(
                 authors: any(named: 'authors'),
                 limit: 30,
                 offset: 100,
+                sort: 'published',
               ),
             ]);
           },
@@ -13388,6 +13405,7 @@ void main() {
                 authors: [mixedCase.toLowerCase(), memberKey(2)],
                 limit: any(named: 'limit'),
                 offset: any(named: 'offset'),
+                sort: 'published',
               ),
             ).called(1);
           },
@@ -13622,6 +13640,7 @@ void main() {
                 limit: any(named: 'limit'),
                 offset: any(named: 'offset'),
                 before: any(named: 'before'),
+                sort: any(named: 'sort'),
               ),
             );
           },

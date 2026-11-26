@@ -3634,6 +3634,8 @@ class VideosRepository {
       for (final pubkey in authorPubkeys)
         if (_hex64.hasMatch(pubkey)) pubkey.toLowerCase(),
     }.toList();
+    // The feed pages by publication time. Funnelcake's default sort and
+    // bound use revision time, which can jump ahead when a video is edited.
     // Funnelcake's `before` is exclusive, and `until` is inclusive.
     final before = until == null ? null : until + 1;
     final videos = <VideoEvent>[];
@@ -3655,6 +3657,7 @@ class VideosRepository {
           limit: min(limit - read, _membersFeedApiPageLimit),
           offset: read,
           before: before,
+          sort: 'published',
         );
         read += page.serverItemCount;
         serverItemCount += page.serverItemCount;
