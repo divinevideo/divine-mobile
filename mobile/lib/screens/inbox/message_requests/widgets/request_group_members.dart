@@ -26,21 +26,24 @@ class RequestGroupMembers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Semantics(
-          header: true,
-          child: Text(
-            context.l10n.messageRequestGroupMembersHeading,
-            style: VineTheme.titleSmallFont(
-              color: context.vineColors.onSurfaceVariant,
+    return Material(
+      type: MaterialType.transparency,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            header: true,
+            child: Text(
+              context.l10n.messageRequestGroupMembersHeading,
+              style: VineTheme.titleSmallFont(
+                color: context.vineColors.onSurfaceVariant,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        for (final pubkey in memberPubkeys) _GroupMemberRow(pubkey: pubkey),
-      ],
+          const SizedBox(height: 8),
+          for (final pubkey in memberPubkeys) _GroupMemberRow(pubkey: pubkey),
+        ],
+      ),
     );
   }
 }
@@ -117,8 +120,7 @@ class _GroupMemberRow extends ConsumerWidget {
       child: Semantics(
         button: true,
         onTapHint: context.l10n.messageRequestViewProfileButton,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
+        child: InkWell(
           onTap: () => OtherProfileRouteData(npub: npub).push<void>(context),
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 56),

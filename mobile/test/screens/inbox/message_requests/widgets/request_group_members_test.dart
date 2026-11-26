@@ -3,6 +3,7 @@
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -251,6 +252,41 @@ void main() {
     });
 
     group('interactions', () {
+      testWidgets('Tab and Enter open the focused member profile', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            [alice, bob],
+            overrides: [
+              for (final (pubkey, name) in [(alice, 'Alice'), (bob, 'Bob')])
+                userProfileReactiveProvider(pubkey).overrideWith(
+                  (ref) => Stream.value(profileOf(pubkey, name)),
+                ),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+
+        verify(
+          () => goRouter.push<void>(
+            any(that: contains(NostrKeyUtils.encodePubKey(bob))),
+          ),
+        ).called(1);
+        verifyNever(
+          () => goRouter.push<void>(
+            any(that: contains(NostrKeyUtils.encodePubKey(alice))),
+          ),
+        );
+      });
+
       testWidgets("tapping a row opens that member's profile", (tester) async {
         await tester.pumpWidget(
           buildSubject(
