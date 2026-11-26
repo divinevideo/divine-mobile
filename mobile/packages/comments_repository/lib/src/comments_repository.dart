@@ -590,10 +590,8 @@ class CommentsRepository {
           uppercaseA: [rootAddressableId],
         );
 
-        // Run both COUNT queries in parallel
-        // Note: This may over-count if a comment has both E and A tags,
-        // but that's rare and the count is still useful for UI purposes.
-        // For exact count, use loadComments which deduplicates.
+        // Run both COUNT queries in parallel. The larger count avoids
+        // counting overlapping tags twice, but can miss disjoint matches.
         final results = await Future.wait([
           _nostrClient.countEvents([filterByE]),
           _nostrClient.countEvents([filterByA]),

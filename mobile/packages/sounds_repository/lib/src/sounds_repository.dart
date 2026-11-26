@@ -117,9 +117,7 @@ class SoundsRepository {
   /// Default cap on the Divine library sounds one [fetchDivineSounds] pulls.
   static const int maxDivineSounds = 500;
 
-  /// Default cap on the video events one batched usage-count query pulls.
-  ///
-  /// Applies to the whole batch, not per sound.
+  /// Maximum video events read in one batch to find reused sounds.
   static const int maxBatchedUsageCountScan = 500;
 
   /// Default cap on the sounds one [searchSounds] tag query pulls.

@@ -5024,8 +5024,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     // Track addressable ID so the batch fetch can also query by 'a' tag.
     // This ensures reactions on any version of a replaced video (e.g. after a
     // metadata edit that changes the event ID) are included in the count.
-    // Preserve the addressable identity alongside the current event ID so the
-    // batch can count reactions across edited versions of the same video.
     final addressableId = videoEvent.addressableId;
     if (addressableId != null) {
       _pendingLikeCountAddressableIds[videoEvent.id] = addressableId;

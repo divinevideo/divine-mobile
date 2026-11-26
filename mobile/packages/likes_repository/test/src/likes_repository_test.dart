@@ -4183,7 +4183,7 @@ void main() {
 
         expect(counts[eventId1], equals(5));
         expect(counts[eventId2], equals(1));
-        // countEvents called once for getLikeCount; queryEvents once for batch
+        // countEvents called once for getLikeCount; readEvents once for batch
         verify(() => mockNostrClient.countEvents(any())).called(1);
         verify(() => mockNostrClient.readEvents(any())).called(1);
       });
