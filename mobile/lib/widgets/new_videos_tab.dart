@@ -106,11 +106,26 @@ class _NewVideosTabState extends ConsumerState<NewVideosTab> {
     // CRITICAL: Check hasValue FIRST before isLoading
     // Async providers can have both isLoading:true and hasValue:true during rebuilds
     if (newVideosAsync.hasValue && newVideosAsync.value != null) {
-      final allVideos = newVideosAsync.value!.videos;
+      final feedState = newVideosAsync.value!;
+      final allVideos = feedState.videos;
       // Filter out WebM videos on iOS/macOS (not supported by AVPlayer)
       final videos = allVideos
           .where((v) => v.isSupportedOnCurrentPlatform)
           .toList();
+      final exploreTabs = context.read<ExploreTabsCubit?>();
+
+      // A failed first page arrives as data carrying the error. With nothing
+      // to show, that is a load failure, not an empty feed, so it gets the
+      // error state and its pull-to-refresh retry.
+      if (videos.isEmpty && feedState.error != null) {
+        // Once per failed load, not on every rebuild.
+        if (_feedLoadStartTime != null) _trackErrorState(feedState.error);
+        exploreTabs?.reportFeedTabFailed(_exploreTabName);
+        return RefreshableFeedStateView(
+          onRefresh: _refreshNewVideos,
+          child: _NewVideosErrorState(error: feedState.error),
+        );
+      }
 
       Log.info(
         '✅ NewVinesTab: Data state - ${videos.length} videos '
@@ -139,20 +154,11 @@ class _NewVideosTabState extends ConsumerState<NewVideosTab> {
         _feedTracker.trackEmptyFeed(_feedName);
       }
 
-      // Get feed state for pagination info
-      final feedState = newVideosAsync.value!;
-      // A failed first page arrives as data carrying the error, shown as the
-      // empty grid.
-      final exploreTabs = context.read<ExploreTabsCubit?>();
-      if (videos.isEmpty && feedState.error != null) {
-        exploreTabs?.reportFeedTabFailed(_exploreTabName);
-      } else {
-        exploreTabs?.reportFeedTabShown(
-          _exploreTabName,
-          itemCount: videos.length,
-          hasMore: feedState.hasMoreContent,
-        );
-      }
+      exploreTabs?.reportFeedTabShown(
+        _exploreTabName,
+        itemCount: videos.length,
+        hasMore: feedState.hasMoreContent,
+      );
       return _NewVideosContent(
         feed: widget.feed,
         videos: videos,
