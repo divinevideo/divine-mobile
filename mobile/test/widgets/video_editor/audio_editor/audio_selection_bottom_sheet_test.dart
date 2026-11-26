@@ -1699,6 +1699,34 @@ void main() {
         ).called(1);
         verifyNever(audioService.play);
       });
+
+      testWidgets('previews another sound after coming back from a page', (
+        tester,
+      ) async {
+        final audioService = _stubbedAudioService();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            audioService: audioService,
+            routed: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Beta Song'));
+        await tester.pumpAndSettle();
+        await tester.tap(cardTitle('Beta Song'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Back from sound page'));
+        await tester.pumpAndSettle();
+        clearInteractions(audioService);
+
+        await tester.tap(find.text('Gamma Beat'));
+        await tester.pumpAndSettle();
+
+        verify(audioService.play).called(1);
+      });
     });
 
     group('Loading more', () {

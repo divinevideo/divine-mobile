@@ -84,8 +84,9 @@ class SoundListTile extends StatelessWidget {
 
   final VoidCallback? onTap;
 
-  /// Runs on a long press, and on the screen-reader action [longPressLabel]
-  /// names, which a long press is hard to find without.
+  /// Runs on a long press of an available row. With [longPressLabel] set, a
+  /// screen reader also offers it as an action, since a long press is hard
+  /// to find without one.
   final VoidCallback? onLongPress;
 
   /// What [onLongPress] does, offered to a screen reader as an action of the

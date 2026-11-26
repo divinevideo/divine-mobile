@@ -1633,6 +1633,155 @@ void main() {
         },
       );
 
+      testWidgets(
+        'saves the sound when nothing waits for it, as after a reload',
+        (tester) async {
+          when(() => mockGoRouter.canPop()).thenReturn(false);
+          final testSound = createTestAudioEvent(id: 'sound1');
+          SharedPreferences.setMockInitialValues({});
+          final sharedPreferences = await SharedPreferences.getInstance();
+
+          await tester.pumpWidget(
+            SavedSoundsScope(
+              service: SavedSoundsService(sharedPreferences),
+              mediaProbe: _NoopSavedSoundMediaProbe(),
+              child: ProviderScope(
+                overrides: [
+                  ..._testAudioReuseOverrides(),
+                  authServiceProvider.overrideWithValue(
+                    createMockAuthService(),
+                  ),
+                  sharedPreferencesProvider.overrideWithValue(
+                    sharedPreferences,
+                  ),
+                  soundUsageCountProvider(
+                    testSound.id,
+                  ).overrideWith((ref) => Future.value(0)),
+                  videosUsingSoundProvider(
+                    testSound.id,
+                  ).overrideWith((ref) => Future.value(<String>[])),
+                  audioPlaybackServiceProvider.overrideWithValue(
+                    mockAudioService,
+                  ),
+                ],
+                child: MockGoRouterProvider(
+                  goRouter: mockGoRouter,
+                  child: MaterialApp(
+                    localizationsDelegates: appLocalizationsDelegates,
+                    supportedLocales: AppLocalizations.supportedLocales,
+                    theme: VineTheme.theme,
+                    home: SoundDetailScreen(
+                      sound: testSound,
+                      choosesForVideo: true,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('Use Sound'));
+          await tester.pumpAndSettle();
+
+          verifyNever(() => mockGoRouter.go(any()));
+          expect(find.text('Saved to Sounds'), findsOneWidget);
+          expect(
+            SavedSoundsService(
+              sharedPreferences,
+            ).loadSavedSounds().map((sound) => sound.id),
+            [testSound.id],
+          );
+        },
+      );
+
+      testWidgets(
+        'starts no preview that finishes loading after Use Sound closed the '
+        'page',
+        (tester) async {
+          final testSound = createTestAudioEvent(id: 'sound1');
+          SharedPreferences.setMockInitialValues({});
+          final sharedPreferences = await SharedPreferences.getInstance();
+          final load = Completer<Duration?>();
+          when(
+            () => mockAudioService.loadAudio(any()),
+          ).thenAnswer((_) => load.future);
+          bool? chosen;
+          final router = GoRouter(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (context, _) => Scaffold(
+                  body: TextButton(
+                    onPressed: () async {
+                      chosen = await context.push<bool>('/sound');
+                    },
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+              GoRoute(
+                path: '/sound',
+                builder: (_, _) =>
+                    SoundDetailScreen(sound: testSound, choosesForVideo: true),
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+
+          await tester.pumpWidget(
+            SavedSoundsScope(
+              service: SavedSoundsService(sharedPreferences),
+              mediaProbe: _NoopSavedSoundMediaProbe(),
+              child: ProviderScope(
+                overrides: [
+                  ..._testAudioReuseOverrides(),
+                  authServiceProvider.overrideWithValue(
+                    createMockAuthService(),
+                  ),
+                  sharedPreferencesProvider.overrideWithValue(
+                    sharedPreferences,
+                  ),
+                  soundUsageCountProvider(
+                    testSound.id,
+                  ).overrideWith((ref) => Future.value(0)),
+                  videosUsingSoundProvider(
+                    testSound.id,
+                  ).overrideWith((ref) => Future.value(<String>[])),
+                  audioPlaybackServiceProvider.overrideWithValue(
+                    mockAudioService,
+                  ),
+                ],
+                child: MaterialApp.router(
+                  routerConfig: router,
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  theme: VineTheme.theme,
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('open'));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('Preview'));
+          await tester.pump();
+          verify(() => mockAudioService.loadAudio(any())).called(1);
+
+          await tester.tap(find.text('Use Sound'));
+          await tester.pumpAndSettle();
+          expect(find.byType(SoundDetailScreen), findsNothing);
+          expect(chosen, isTrue);
+
+          load.complete(const Duration(seconds: 6));
+          await tester.pump();
+          await tester.pump();
+
+          verifyNever(() => mockAudioService.play());
+        },
+      );
+
       testWidgets('Use Sound stops preview if playing', (tester) async {
         final testSound = createTestAudioEvent(id: 'sound1');
         SharedPreferences.setMockInitialValues({});

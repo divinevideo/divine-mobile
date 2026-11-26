@@ -819,7 +819,8 @@ class _AudioSelectionBottomSheetState
 
   /// Attaches [sound], chosen on its page, as Use does for the picked sound.
   Future<void> _chooseSound(AudioEvent sound) async {
-    // A long press opens a sound other than the picked one.
+    // A long-pressed row, or the card tapped while it fades out after an
+    // unpick, can be a sound other than the picked one.
     if (_selectedItem?.id != sound.id) {
       _pick = _Pick(
         soundId: sound.id,

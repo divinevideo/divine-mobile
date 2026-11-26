@@ -19865,7 +19865,7 @@ abstract class AppLocalizations {
   /// **'Use'**
   String get videoEditorAudioUseSound;
 
-  /// Screen-reader hint on the cover and title of the picked sound's card in the video editor's sound picker, and the screen-reader action on each sound row (also reached by a long press). Opens the sound's page with its creator, licence and source, where it can be chosen for the video.
+  /// Screen-reader hint on the cover and title of the picked sound's card in the video editor's sound picker, and the screen-reader action (also reached by a long press) on each sound row that has a page, which imported files and catalog songs whose licence forbids changes do not. Opens the sound's page with its creator, licence and source, where it can be chosen for the video.
   ///
   /// In en, this message translates to:
   /// **'Open sound details'**

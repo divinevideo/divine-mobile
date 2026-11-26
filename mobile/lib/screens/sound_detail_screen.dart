@@ -8,6 +8,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
@@ -213,12 +214,12 @@ class _SoundDetailScreenState extends ConsumerState<SoundDetailScreen> {
       );
 
       await audioService.loadAudio(widget.sound.url!);
-      if (mounted) {
-        setState(() {
-          _isPlayingPreview = true;
-          _isLoadingPreview = false;
-        });
-      }
+      // The page closed while the preview loaded; nothing would stop it.
+      if (!mounted) return;
+      setState(() {
+        _isPlayingPreview = true;
+        _isLoadingPreview = false;
+      });
       await audioService.play();
 
       if (mounted) {
@@ -250,9 +251,10 @@ class _SoundDetailScreenState extends ConsumerState<SoundDetailScreen> {
   }
 
   void _onUseSound() {
-    if (widget.choosesForVideo) {
-      // The picker that pushed the page attaches the sound; leaving the page
-      // stops its preview.
+    // Only the picker that pushed the page waits for the answer. A page
+    // reloaded on the web, or opened from a link, saves as usual.
+    if (widget.choosesForVideo && context.canPop()) {
+      // The picker attaches the sound; leaving the page stops its preview.
       context.safePop(result: true);
       return;
     }

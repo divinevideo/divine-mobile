@@ -9223,7 +9223,7 @@
   },
   "videoEditorAudioOpenSoundDetails": "Open sound details",
   "@videoEditorAudioOpenSoundDetails": {
-    "description": "Screen-reader hint on the cover and title of the picked sound's card in the video editor's sound picker, and the screen-reader action on each sound row (also reached by a long press). Opens the sound's page with its creator, licence and source, where it can be chosen for the video."
+    "description": "Screen-reader hint on the cover and title of the picked sound's card in the video editor's sound picker, and the screen-reader action (also reached by a long press) on each sound row that has a page, which imported files and catalog songs whose licence forbids changes do not. Opens the sound's page with its creator, licence and source, where it can be chosen for the video."
   },
   "videoEditorAudioFileMissing": "Audio file is gone from this device",
   "@videoEditorAudioFileMissing": {
