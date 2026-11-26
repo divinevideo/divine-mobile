@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Passer au compte {account} pour ouvrir ce message ?",
+  "notificationSettingsDirectMessages": "Messages privés",
+  "notificationSettingsDirectMessagesSubtitle": "Afficher une notification sans le nom de l’expéditeur ni le contenu du message.",
+  "dmNotificationMessageUnavailable": "Ce message est indisponible.",
   "@@locale": "fr",
   "videoEditorSocialStickerPoll": "Sondage",
   "videoEditorSocialStickerQuiz": "Quiz",
@@ -2244,6 +2248,15 @@
   "librarySortShortestClip": "Clip le plus court",
   "librarySortSquareFirst": "Carrés d'abord",
   "librarySortVerticalFirst": "Verticaux d'abord",
+  "libraryDraftActionShare": "Partager le brouillon",
+  "libraryDraftShareConfirm": "Envoyer un brouillon modifiable à {name} ?",
+  "libraryDraftShareNotice": "Tu partages les clips d’origine et l’historique des modifications. La personne pourra voir les passages coupés, modifier sa copie, la publier ou te la renvoyer.",
+  "libraryDraftShareFailed": "Impossible d’envoyer le brouillon.",
+  "libraryDraftShareTooLarge": "Le brouillon est trop volumineux pour être envoyé.",
+  "dmSharedDraft": "Brouillon partagé",
+  "dmOpenDraft": "Importer et modifier",
+  "dmDraftImportFailed": "Impossible d’importer le brouillon.",
+  "libraryDraftSent": "Brouillon envoyé",
   "libraryDraftActionDelete": "Supprimer le brouillon",
   "libraryDraftActionEdit": "Modifier",
   "libraryDraftActionPost": "Publier",
@@ -2253,6 +2266,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Échec de la duplication du brouillon",
   "libraryDraftInProgressBadge": "En cours",
   "libraryDraftActionDuplicate": "Dupliquer",
+  "libraryDraftActionConvertToClip": "Convertir en clip",
+  "libraryDraftConvertingToClip": "Conversion en clip...",
+  "libraryDraftConvertedToClipSnackbar": "Brouillon converti en clip",
+  "libraryDraftConvertToClipFailedSnackbar": "Échec de la conversion du brouillon",
+  "libraryDraftConvertOverlaysUnavailable": "Le texte et les stickers de ce brouillon n’ont pas pu être préparés. Ouvre-le dans l’éditeur, puis réessaie.",
   "libraryDraftCopyTitle": "{title} (copie {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {
@@ -6589,5 +6607,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Édition",
+  "menuBarUndo": "Annuler",
+  "menuBarRedo": "Rétablir",
+  "menuBarCut": "Couper",
+  "menuBarCopy": "Copier",
+  "menuBarPaste": "Coller",
+  "menuBarSelectAll": "Tout sélectionner",
+  "menuBarView": "Présentation",
+  "menuBarVideo": "Vidéo",
+  "menuBarPreviousVideo": "Vidéo précédente",
+  "menuBarNextVideo": "Vidéo suivante",
+  "menuBarPlayPause": "Lecture/Pause",
+  "menuBarMute": "Couper le son",
+  "menuBarUnmute": "Réactiver le son",
+  "menuBarWindow": "Fenêtre",
+  "menuBarHelp": "Aide"
 }

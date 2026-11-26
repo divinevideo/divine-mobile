@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Byt till {account} för att öppna det här meddelandet?",
+  "notificationSettingsDirectMessages": "Direktmeddelanden",
+  "notificationSettingsDirectMessagesSubtitle": "Visa en avisering utan avsändarens namn eller meddelandets innehåll.",
+  "dmNotificationMessageUnavailable": "Det här meddelandet är inte tillgängligt.",
   "@@locale": "sv",
   "videoEditorSocialStickerPoll": "Omröstning",
   "videoEditorSocialStickerQuiz": "Quiz",
@@ -2244,6 +2248,15 @@
   "librarySortShortestClip": "Kortaste klipp",
   "librarySortSquareFirst": "Kvadratiska först",
   "librarySortVerticalFirst": "Vertikala först",
+  "libraryDraftActionShare": "Dela utkast",
+  "libraryDraftShareConfirm": "Skicka ett redigerbart utkast till {name}?",
+  "libraryDraftShareNotice": "Du delar originalklippen och redigeringshistoriken. Mottagaren kan se vad du har klippt bort, redigera sin kopia, publicera den eller skicka tillbaka den.",
+  "libraryDraftShareFailed": "Det gick inte att skicka utkastet.",
+  "libraryDraftShareTooLarge": "Utkastet är för stort för att skicka.",
+  "dmSharedDraft": "Delat utkast",
+  "dmOpenDraft": "Importera och redigera",
+  "dmDraftImportFailed": "Det gick inte att importera utkastet.",
+  "libraryDraftSent": "Utkastet skickades",
   "libraryDraftActionDelete": "Ta bort utkast",
   "libraryDraftActionEdit": "Redigera",
   "libraryDraftActionPost": "Publicera",
@@ -2253,6 +2266,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Det gick inte att duplicera utkastet",
   "libraryDraftInProgressBadge": "Pågår",
   "libraryDraftActionDuplicate": "Duplicera",
+  "libraryDraftActionConvertToClip": "Gör om till klipp",
+  "libraryDraftConvertingToClip": "Gör om till klipp...",
+  "libraryDraftConvertedToClipSnackbar": "Utkastet har gjorts om till ett klipp",
+  "libraryDraftConvertToClipFailedSnackbar": "Det gick inte att göra om utkastet",
+  "libraryDraftConvertOverlaysUnavailable": "Texten och dekalerna i det här utkastet kunde inte förberedas. Öppna det i redigeraren och försök igen.",
   "libraryDraftCopyTitle": "{title} (kopia {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {
@@ -6589,5 +6607,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Redigera",
+  "menuBarUndo": "Ångra",
+  "menuBarRedo": "Gör om",
+  "menuBarCut": "Klipp ut",
+  "menuBarCopy": "Kopiera",
+  "menuBarPaste": "Klistra in",
+  "menuBarSelectAll": "Markera allt",
+  "menuBarView": "Innehåll",
+  "menuBarVideo": "Video",
+  "menuBarPreviousVideo": "Föregående video",
+  "menuBarNextVideo": "Nästa video",
+  "menuBarPlayPause": "Spela upp/pausa",
+  "menuBarMute": "Stäng av ljudet",
+  "menuBarUnmute": "Slå på ljudet",
+  "menuBarWindow": "Fönster",
+  "menuBarHelp": "Hjälp"
 }

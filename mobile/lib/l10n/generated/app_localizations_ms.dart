@@ -10,6 +10,21 @@ class AppLocalizationsMs extends AppLocalizations {
   AppLocalizationsMs([String locale = 'ms']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Tukar kepada $account untuk membuka mesej ini?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Mesej langsung';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Paparkan pemberitahuan tanpa nama pengirim atau kandungan mesej.';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'Mesej ini tidak tersedia.';
+
+  @override
   String get devOptionsClipRecovery => 'Pemulihan klip';
 
   @override
@@ -7144,6 +7159,52 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'Duplikasi';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'Tukar kepada klip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Menukar kepada klip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'Draf ditukar kepada klip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar => 'Gagal menukar draf';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Teks dan pelekat pada draf ini tidak dapat disediakan. Buka ia dalam penyunting, kemudian cuba lagi.';
+
+  @override
+  String get libraryDraftActionShare => 'Kongsi draf';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Hantar draf yang boleh diedit kepada $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Anda berkongsi klip asal dan sejarah suntingan. Penerima boleh melihat bahagian yang dipotong, menyunting salinannya, menyiarkannya atau menghantarnya semula.';
+
+  @override
+  String get libraryDraftShareFailed => 'Draf tidak dapat dihantar.';
+
+  @override
+  String get libraryDraftShareTooLarge => 'Draf terlalu besar untuk dihantar.';
+
+  @override
+  String get dmSharedDraft => 'Draf yang dikongsi';
+
+  @override
+  String get dmOpenDraft => 'Import dan edit';
+
+  @override
+  String get dmDraftImportFailed => 'Draf tidak dapat diimport.';
+
+  @override
+  String get libraryDraftSent => 'Draf dihantar';
 
   @override
   String get libraryDraftActionDelete => 'Padam draf';
@@ -17008,4 +17069,52 @@ class AppLocalizationsMs extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Video daripada $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Sunting';
+
+  @override
+  String get menuBarUndo => 'Buat Asal';
+
+  @override
+  String get menuBarRedo => 'Buat Semula';
+
+  @override
+  String get menuBarCut => 'Potong';
+
+  @override
+  String get menuBarCopy => 'Salin';
+
+  @override
+  String get menuBarPaste => 'Tampal';
+
+  @override
+  String get menuBarSelectAll => 'Pilih Semua';
+
+  @override
+  String get menuBarView => 'Paparan';
+
+  @override
+  String get menuBarVideo => 'Video';
+
+  @override
+  String get menuBarPreviousVideo => 'Video Sebelumnya';
+
+  @override
+  String get menuBarNextVideo => 'Video Seterusnya';
+
+  @override
+  String get menuBarPlayPause => 'Main/Jeda';
+
+  @override
+  String get menuBarMute => 'Senyapkan';
+
+  @override
+  String get menuBarUnmute => 'Nyahsenyap';
+
+  @override
+  String get menuBarWindow => 'Tetingkap';
+
+  @override
+  String get menuBarHelp => 'Bantuan';
 }

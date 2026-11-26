@@ -34,7 +34,7 @@ import 'package:openvine/utils/nostr_replacement_timestamp.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart'
-    show LatestVideoRevision;
+    show LatestVideoRevision, VideoRevisionFloor;
 
 /// Result returned by [VideoMetadataUpdateService.updateVideo].
 sealed class VideoUpdateResult {
@@ -271,7 +271,10 @@ class VideoMetadataUpdateService {
     required SignedEventRelayPublisher relayPublisher,
     required PersonalEventCacheService personalEventCache,
     required VideoEventService videoEventService,
-    required Future<LatestVideoRevision> Function(String addressableId)
+    required Future<LatestVideoRevision> Function(
+      String addressableId, {
+      VideoRevisionFloor? notOlderThan,
+    })
     readLatestRevision,
     required CollaboratorInviteService collaboratorInviteService,
   }) : _authService = authService,
@@ -290,17 +293,21 @@ class VideoMetadataUpdateService {
 
   /// Reads the newest revision at a video address, as
   /// `VideosRepository.fetchLatestVideoRevision` does.
-  final Future<LatestVideoRevision> Function(String addressableId)
+  final Future<LatestVideoRevision> Function(
+    String addressableId, {
+    VideoRevisionFloor? notOlderThan,
+  })
   _readLatestRevision;
   final CollaboratorInviteService _collaboratorInviteService;
 
   /// Re-publishes [originalVideo] with the metadata from [editorState].
   ///
   /// The replacement is built from the revision Divine's REST API returns,
-  /// or the newest a relay returns when the API has none, not from
-  /// [originalVideo], which is the one the editor
-  /// opened: another device may have replaced it since. A field the editor
-  /// left as it was seeded takes the newest revision's value. Pass
+  /// or the newest a relay returns when the API has none as new as
+  /// [originalVideo] and its Nostr timestamp is known, not from
+  /// [originalVideo], which is the one the editor opened: another device may
+  /// have replaced it since. A field the editor left as it was seeded takes
+  /// the newest revision's value. Pass
   /// [editorBaseline] when the screen has seen a newer revision since it
   /// seeded the form. When the read returns an older revision, or none and
   /// did not complete, the signed copy of the opened revision held in the

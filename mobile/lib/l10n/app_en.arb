@@ -1,4 +1,25 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Switch to {account} to open this message?",
+  "@dmNotificationSwitchAccountPrompt": {
+    "description": "Asks before switching to a known account to open its direct message.",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationSettingsDirectMessages": "Direct messages",
+  "@notificationSettingsDirectMessages": {
+    "description": "Account preference for generic direct-message push alerts."
+  },
+  "notificationSettingsDirectMessagesSubtitle": "Show a private alert without the sender’s name or message.",
+  "@notificationSettingsDirectMessagesSubtitle": {
+    "description": "Direct-message notification setting. Keep both the sender and message private in the notification."
+  },
+  "dmNotificationMessageUnavailable": "This message is unavailable.",
+  "@dmNotificationMessageUnavailable": {
+    "description": "Generic fallback when a tapped private message cannot be opened."
+  },
   "@@locale": "en",
   "devOptionsClipRecovery": "Clip Recovery",
   "@devOptionsClipRecovery": {
@@ -5187,6 +5208,44 @@
   "libraryDraftActionPost": "Post",
   "libraryDraftActionEdit": "Edit",
   "libraryDraftActionDuplicate": "Duplicate",
+  "libraryDraftActionConvertToClip": "Convert to clip",
+  "@libraryDraftActionConvertToClip": {
+    "description": "Draft options menu action that renders the draft into one clip in the Clips library. The draft itself is kept."
+  },
+  "libraryDraftConvertingToClip": "Converting to clip...",
+  "@libraryDraftConvertingToClip": {
+    "description": "Shown over the library while a draft is rendered into a clip."
+  },
+  "libraryDraftConvertedToClipSnackbar": "Draft converted to a clip",
+  "@libraryDraftConvertedToClipSnackbar": {
+    "description": "Snackbar after a draft was rendered into a new clip in the Clips library."
+  },
+  "libraryDraftConvertToClipFailedSnackbar": "Failed to convert draft",
+  "@libraryDraftConvertToClipFailedSnackbar": {
+    "description": "Snackbar when rendering a draft into a clip failed."
+  },
+  "libraryDraftConvertOverlaysUnavailable": "The text and stickers on this draft couldn’t be prepared. Open it in the editor, then try again.",
+  "@libraryDraftConvertOverlaysUnavailable": {
+    "description": "Snackbar when a draft's text and stickers could not be prepared for the clip render."
+  },
+  "libraryDraftActionShare": "Share draft",
+  "libraryDraftShareConfirm": "Send an editable draft to {name}?",
+  "libraryDraftShareNotice": "You’re sharing the original clips and edit history. They can see what you cut, edit their copy, post it, or send it back.",
+  "libraryDraftShareFailed": "Couldn’t send the draft.",
+  "libraryDraftShareTooLarge": "The draft is too large to send.",
+  "dmSharedDraft": "Shared draft",
+  "dmOpenDraft": "Import and edit",
+  "dmDraftImportFailed": "Couldn’t import the draft.",
+  "libraryDraftSent": "Draft sent",
+  "@libraryDraftShareConfirm": {
+    "description": "Confirmation before sending an editable draft project in a one-to-one DM.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Casey"
+      }
+    }
+  },
   "libraryDraftActionDelete": "Delete draft",
   "libraryDraftCopyTitle": "{title} (copy {number})",
   "@libraryDraftCopyTitle": {
@@ -14416,5 +14475,69 @@
         "type": "String"
       }
     }
+  },
+  "menuBarEdit": "Edit",
+  "@menuBarEdit": {
+    "description": "macOS menu bar: title of the Edit menu, as in other Mac apps."
+  },
+  "menuBarUndo": "Undo",
+  "@menuBarUndo": {
+    "description": "macOS menu bar: Edit menu item that undoes the last text edit."
+  },
+  "menuBarRedo": "Redo",
+  "@menuBarRedo": {
+    "description": "macOS menu bar: Edit menu item that redoes the last undone text edit."
+  },
+  "menuBarCut": "Cut",
+  "@menuBarCut": {
+    "description": "macOS menu bar: Edit menu item that cuts the selected text."
+  },
+  "menuBarCopy": "Copy",
+  "@menuBarCopy": {
+    "description": "macOS menu bar: Edit menu item that copies the selected text."
+  },
+  "menuBarPaste": "Paste",
+  "@menuBarPaste": {
+    "description": "macOS menu bar: Edit menu item that pastes text."
+  },
+  "menuBarSelectAll": "Select All",
+  "@menuBarSelectAll": {
+    "description": "macOS menu bar: Edit menu item that selects all text in the focused field."
+  },
+  "menuBarView": "View",
+  "@menuBarView": {
+    "description": "macOS menu bar: title of the View menu, which holds Enter Full Screen."
+  },
+  "menuBarVideo": "Video",
+  "@menuBarVideo": {
+    "description": "macOS menu bar: title of the menu with the video feed commands (previous, next, play/pause, mute, back)."
+  },
+  "menuBarPreviousVideo": "Previous Video",
+  "@menuBarPreviousVideo": {
+    "description": "macOS menu bar: Video menu item that moves the feed to the previous video (Up arrow)."
+  },
+  "menuBarNextVideo": "Next Video",
+  "@menuBarNextVideo": {
+    "description": "macOS menu bar: Video menu item that moves the feed to the next video (Down arrow)."
+  },
+  "menuBarPlayPause": "Play/Pause",
+  "@menuBarPlayPause": {
+    "description": "macOS menu bar: Video menu item that plays or pauses the current video (Space)."
+  },
+  "menuBarMute": "Mute",
+  "@menuBarMute": {
+    "description": "macOS menu bar: Video menu item that mutes feed playback (M). Shown while sound is on."
+  },
+  "menuBarUnmute": "Unmute",
+  "@menuBarUnmute": {
+    "description": "macOS menu bar: Video menu item that turns feed sound back on (M). Shown while muted."
+  },
+  "menuBarWindow": "Window",
+  "@menuBarWindow": {
+    "description": "macOS menu bar: title of the Window menu, as in other Mac apps."
+  },
+  "menuBarHelp": "Help",
+  "@menuBarHelp": {
+    "description": "macOS menu bar: title of the Help menu, as in other Mac apps."
   }
 }

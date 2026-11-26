@@ -251,24 +251,43 @@ mixin $NotificationsRouteData on GoRouteData {
 }
 
 mixin $InboxRouteData on GoRouteData {
-  static InboxRouteData _fromState(GoRouterState state) =>
-      const InboxRouteData();
+  static InboxRouteData _fromState(GoRouterState state) => InboxRouteData(
+    messages:
+        _$convertMapValue(
+          'messages',
+          state.uri.queryParameters,
+          _$boolConverter,
+        ) ??
+        false,
+    dmTap: state.uri.queryParameters['dmTap'],
+    $extra: state.extra as Object?,
+  );
+
+  InboxRouteData get _self => this as InboxRouteData;
 
   @override
-  String get location => GoRouteData.$location('/inbox');
+  String get location => GoRouteData.$location(
+    '/inbox',
+    queryParams: {
+      if (_self.messages != false) 'messages': _self.messages.toString(),
+      if (_self.dmTap != null) 'dmTap': _self.dmTap,
+    },
+  );
 
   @override
-  void go(BuildContext context) => context.go(location);
+  void go(BuildContext context) => context.go(location, extra: _self.$extra);
 
   @override
-  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+  Future<T?> push<T>(BuildContext context) =>
+      context.push<T>(location, extra: _self.$extra);
 
   @override
   void pushReplacement(BuildContext context) =>
-      context.pushReplacement(location);
+      context.pushReplacement(location, extra: _self.$extra);
 
   @override
-  void replace(BuildContext context) => context.replace(location);
+  void replace(BuildContext context) =>
+      context.replace(location, extra: _self.$extra);
 }
 
 mixin $ProfileUnavailablePinsRouteData on GoRouteData {
@@ -368,4 +387,24 @@ mixin $ProfileFeedRouteData on GoRouteData {
 
   @override
   void replace(BuildContext context) => context.replace(location);
+}
+
+T? _$convertMapValue<T>(
+  String key,
+  Map<String, String> map,
+  T? Function(String) converter,
+) {
+  final value = map[key];
+  return value == null ? null : converter(value);
+}
+
+bool _$boolConverter(String value) {
+  switch (value) {
+    case 'true':
+      return true;
+    case 'false':
+      return false;
+    default:
+      throw UnsupportedError('Cannot convert "$value" into a bool.');
+  }
 }

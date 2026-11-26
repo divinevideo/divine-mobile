@@ -10,6 +10,22 @@ class AppLocalizationsRo extends AppLocalizations {
   AppLocalizationsRo([String locale = 'ro']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Treci la contul $account pentru a deschide acest mesaj?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Mesaje directe';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Afișează o notificare fără numele expeditorului sau textul mesajului.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Acest mesaj nu este disponibil.';
+
+  @override
   String get devOptionsClipRecovery => 'Recuperare clipuri';
 
   @override
@@ -7322,6 +7338,55 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'Duplică';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'Transformă în clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Se transformă în clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Ciorna a fost transformată în clip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Nu s-a putut transforma ciorna';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Textul și stickerele din această ciornă nu au putut fi pregătite. Deschide-o în editor, apoi încearcă din nou.';
+
+  @override
+  String get libraryDraftActionShare => 'Distribuie ciorna';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Trimiți o ciornă editabilă către $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Trimiți clipurile originale și istoricul editărilor. Cine le primește poate vedea ce ai tăiat, își poate edita copia, o poate publica sau ți-o poate trimite înapoi.';
+
+  @override
+  String get libraryDraftShareFailed => 'Ciorna nu a putut fi trimisă.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'Ciorna este prea mare pentru a fi trimisă.';
+
+  @override
+  String get dmSharedDraft => 'Ciornă distribuită';
+
+  @override
+  String get dmOpenDraft => 'Importă și editează';
+
+  @override
+  String get dmDraftImportFailed => 'Ciorna nu a putut fi importată.';
+
+  @override
+  String get libraryDraftSent => 'Ciornă trimisă';
 
   @override
   String get libraryDraftActionDelete => 'Șterge ciorna';
@@ -17337,4 +17402,52 @@ class AppLocalizationsRo extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Videoclipuri de la $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Editare';
+
+  @override
+  String get menuBarUndo => 'Anulează';
+
+  @override
+  String get menuBarRedo => 'Refă';
+
+  @override
+  String get menuBarCut => 'Decupează';
+
+  @override
+  String get menuBarCopy => 'Copiază';
+
+  @override
+  String get menuBarPaste => 'Lipește';
+
+  @override
+  String get menuBarSelectAll => 'Selectează tot';
+
+  @override
+  String get menuBarView => 'Afișare';
+
+  @override
+  String get menuBarVideo => 'Videoclip';
+
+  @override
+  String get menuBarPreviousVideo => 'Videoclipul anterior';
+
+  @override
+  String get menuBarNextVideo => 'Videoclipul următor';
+
+  @override
+  String get menuBarPlayPause => 'Redă/pauză';
+
+  @override
+  String get menuBarMute => 'Dezactivează sunetul';
+
+  @override
+  String get menuBarUnmute => 'Activează sunetul';
+
+  @override
+  String get menuBarWindow => 'Fereastră';
+
+  @override
+  String get menuBarHelp => 'Ajutor';
 }

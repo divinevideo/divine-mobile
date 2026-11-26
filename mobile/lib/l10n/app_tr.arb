@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Bu mesajı açmak için {account} hesabına geçilsin mi?",
+  "notificationSettingsDirectMessages": "Özel mesajlar",
+  "notificationSettingsDirectMessagesSubtitle": "Gönderenin adını veya mesaj içeriğini göstermeden bildirim gönder.",
+  "dmNotificationMessageUnavailable": "Bu mesaj kullanılamıyor.",
   "@@locale": "tr",
   "videoEditorSocialStickerPoll": "Anket",
   "videoEditorSocialStickerQuiz": "Test",
@@ -2241,6 +2245,15 @@
   "librarySortShortestClip": "En kısa klip",
   "librarySortSquareFirst": "Önce kare",
   "librarySortVerticalFirst": "Önce dikey",
+  "libraryDraftActionShare": "Taslağı paylaş",
+  "libraryDraftShareConfirm": "{name} adlı hesaba düzenlenebilir taslak gönderilsin mi?",
+  "libraryDraftShareNotice": "Orijinal klipleri ve düzenleme geçmişini paylaşıyorsun. Alıcı kestiğin kısımları görebilir, kendi kopyasını düzenleyebilir, paylaşabilir veya sana geri gönderebilir.",
+  "libraryDraftShareFailed": "Taslak gönderilemedi.",
+  "libraryDraftShareTooLarge": "Taslak gönderilemeyecek kadar büyük.",
+  "dmSharedDraft": "Paylaşılan taslak",
+  "dmOpenDraft": "İçe aktar ve düzenle",
+  "dmDraftImportFailed": "Taslak içe aktarılamadı.",
+  "libraryDraftSent": "Taslak gönderildi",
   "libraryDraftActionDelete": "Taslağı sil",
   "libraryDraftActionEdit": "Düzenle",
   "libraryDraftActionPost": "Paylaş",
@@ -2250,6 +2263,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Taslak çoğaltılamadı",
   "libraryDraftInProgressBadge": "Devam ediyor",
   "libraryDraftActionDuplicate": "Çoğalt",
+  "libraryDraftActionConvertToClip": "Klibe dönüştür",
+  "libraryDraftConvertingToClip": "Klibe dönüştürülüyor...",
+  "libraryDraftConvertedToClipSnackbar": "Taslak klibe dönüştürüldü",
+  "libraryDraftConvertToClipFailedSnackbar": "Taslak dönüştürülemedi",
+  "libraryDraftConvertOverlaysUnavailable": "Bu taslaktaki yazı ve çıkartmalar hazırlanamadı. Düzenleyicide aç ve tekrar dene.",
   "libraryDraftCopyTitle": "{title} (kopya {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {
@@ -6589,5 +6607,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Düzen",
+  "menuBarUndo": "Geri al",
+  "menuBarRedo": "Yinele",
+  "menuBarCut": "Kes",
+  "menuBarCopy": "Kopyala",
+  "menuBarPaste": "Yapıştır",
+  "menuBarSelectAll": "Tümünü seç",
+  "menuBarView": "Görüntü",
+  "menuBarVideo": "Video",
+  "menuBarPreviousVideo": "Önceki video",
+  "menuBarNextVideo": "Sonraki video",
+  "menuBarPlayPause": "Oynat/duraklat",
+  "menuBarMute": "Sessize al",
+  "menuBarUnmute": "Sesi aç",
+  "menuBarWindow": "Pencere",
+  "menuBarHelp": "Yardım"
 }

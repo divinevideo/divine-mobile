@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Chuyển sang {account} để mở tin nhắn này?",
+  "notificationSettingsDirectMessages": "Tin nhắn trực tiếp",
+  "notificationSettingsDirectMessagesSubtitle": "Hiện thông báo mà không hiển thị tên người gửi hay nội dung tin nhắn.",
+  "dmNotificationMessageUnavailable": "Tin nhắn này không khả dụng.",
   "@@locale": "vi",
   "videoEditorSocialStickerPoll": "Bình chọn",
   "videoEditorSocialStickerQuiz": "Đố vui",
@@ -3495,6 +3499,20 @@
   "libraryDraftActionPost": "Đăng",
   "libraryDraftActionEdit": "Sửa",
   "libraryDraftActionDuplicate": "Nhân bản",
+  "libraryDraftActionConvertToClip": "Chuyển thành clip",
+  "libraryDraftConvertingToClip": "Đang chuyển thành clip...",
+  "libraryDraftConvertedToClipSnackbar": "Đã chuyển bản nháp thành clip",
+  "libraryDraftConvertToClipFailedSnackbar": "Không chuyển được bản nháp",
+  "libraryDraftConvertOverlaysUnavailable": "Không chuẩn bị được chữ và nhãn dán trên bản nháp này. Mở nó trong trình chỉnh sửa rồi thử lại.",
+  "libraryDraftActionShare": "Chia sẻ bản nháp",
+  "libraryDraftShareConfirm": "Gửi bản nháp có thể chỉnh sửa cho {name}?",
+  "libraryDraftShareNotice": "Bạn đang chia sẻ các clip gốc và lịch sử chỉnh sửa. Người nhận có thể xem những đoạn bạn đã cắt, chỉnh sửa bản sao của họ, đăng hoặc gửi lại cho bạn.",
+  "libraryDraftShareFailed": "Không thể gửi bản nháp.",
+  "libraryDraftShareTooLarge": "Bản nháp quá lớn để gửi.",
+  "dmSharedDraft": "Bản nháp đã chia sẻ",
+  "dmOpenDraft": "Nhập và chỉnh sửa",
+  "dmDraftImportFailed": "Không thể nhập bản nháp.",
+  "libraryDraftSent": "Đã gửi bản nháp",
   "libraryDraftActionDelete": "Xóa bản nháp",
   "libraryDraftCopyTitle": "{title} (bản sao {number})",
   "@libraryDraftCopyTitle": {
@@ -7882,5 +7900,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Sửa",
+  "menuBarUndo": "Hoàn tác",
+  "menuBarRedo": "Làm lại",
+  "menuBarCut": "Cắt",
+  "menuBarCopy": "Sao chép",
+  "menuBarPaste": "Dán",
+  "menuBarSelectAll": "Chọn tất cả",
+  "menuBarView": "Xem",
+  "menuBarVideo": "Video",
+  "menuBarPreviousVideo": "Video trước",
+  "menuBarNextVideo": "Video tiếp theo",
+  "menuBarPlayPause": "Phát/Tạm dừng",
+  "menuBarMute": "Tắt tiếng",
+  "menuBarUnmute": "Bật tiếng",
+  "menuBarWindow": "Cửa sổ",
+  "menuBarHelp": "Trợ giúp"
 }

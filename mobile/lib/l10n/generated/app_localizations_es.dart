@@ -10,6 +10,22 @@ class AppLocalizationsEs extends AppLocalizations {
   AppLocalizationsEs([String locale = 'es']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return '¿Cambiar a $account para abrir este mensaje?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Mensajes directos';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Muestra una notificación sin el nombre del remitente ni el texto del mensaje.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Este mensaje no está disponible.';
+
+  @override
   String get devOptionsClipRecovery => 'Recuperación de clips';
 
   @override
@@ -7216,6 +7232,55 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'Duplicar';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'Convertir en clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Convirtiendo en clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Borrador convertido en clip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'No se pudo convertir el borrador';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'No se pudieron preparar el texto y los stickers de este borrador. Abrilo en el editor y probá de nuevo.';
+
+  @override
+  String get libraryDraftActionShare => 'Compartir borrador';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return '¿Querés enviarle un borrador editable a $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Compartís los clips originales y el historial de edición. La otra persona puede ver lo que cortaste, editar su copia, publicarla o devolvértela.';
+
+  @override
+  String get libraryDraftShareFailed => 'No se pudo enviar el borrador.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'El borrador es demasiado grande para enviarlo.';
+
+  @override
+  String get dmSharedDraft => 'Borrador compartido';
+
+  @override
+  String get dmOpenDraft => 'Importar y editar';
+
+  @override
+  String get dmDraftImportFailed => 'No se pudo importar el borrador.';
+
+  @override
+  String get libraryDraftSent => 'Borrador enviado';
 
   @override
   String get libraryDraftActionDelete => 'Eliminar borrador';
@@ -17209,4 +17274,52 @@ class AppLocalizationsEs extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Vídeos de $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Edición';
+
+  @override
+  String get menuBarUndo => 'Deshacer';
+
+  @override
+  String get menuBarRedo => 'Rehacer';
+
+  @override
+  String get menuBarCut => 'Cortar';
+
+  @override
+  String get menuBarCopy => 'Copiar';
+
+  @override
+  String get menuBarPaste => 'Pegar';
+
+  @override
+  String get menuBarSelectAll => 'Seleccionar todo';
+
+  @override
+  String get menuBarView => 'Visualización';
+
+  @override
+  String get menuBarVideo => 'Video';
+
+  @override
+  String get menuBarPreviousVideo => 'Video anterior';
+
+  @override
+  String get menuBarNextVideo => 'Video siguiente';
+
+  @override
+  String get menuBarPlayPause => 'Reproducir/Pausar';
+
+  @override
+  String get menuBarMute => 'Silenciar';
+
+  @override
+  String get menuBarUnmute => 'Activar sonido';
+
+  @override
+  String get menuBarWindow => 'Ventana';
+
+  @override
+  String get menuBarHelp => 'Ayuda';
 }

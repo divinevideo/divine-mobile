@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Overschakelen naar {account} om dit bericht te openen?",
+  "notificationSettingsDirectMessages": "Privéberichten",
+  "notificationSettingsDirectMessagesSubtitle": "Toon een melding zonder de naam van de afzender of de tekst van het bericht.",
+  "dmNotificationMessageUnavailable": "Dit bericht is niet beschikbaar.",
   "@@locale": "nl",
   "videoEditorSocialStickerPoll": "Poll",
   "videoEditorSocialStickerQuiz": "Quiz",
@@ -2244,6 +2248,15 @@
   "librarySortShortestClip": "Kortste clip",
   "librarySortSquareFirst": "Vierkant eerst",
   "librarySortVerticalFirst": "Verticaal eerst",
+  "libraryDraftActionShare": "Concept delen",
+  "libraryDraftShareConfirm": "Een bewerkbaar concept naar {name} sturen?",
+  "libraryDraftShareNotice": "Je deelt de originele clips en de bewerkingsgeschiedenis. De ontvanger kan zien wat je hebt weggeknipt en kan de eigen kopie bewerken, plaatsen of terugsturen.",
+  "libraryDraftShareFailed": "Het concept kon niet worden verstuurd.",
+  "libraryDraftShareTooLarge": "Het concept is te groot om te versturen.",
+  "dmSharedDraft": "Gedeeld concept",
+  "dmOpenDraft": "Importeren en bewerken",
+  "dmDraftImportFailed": "Het concept kon niet worden geïmporteerd.",
+  "libraryDraftSent": "Concept verstuurd",
   "libraryDraftActionDelete": "Concept verwijderen",
   "libraryDraftActionEdit": "Bewerken",
   "libraryDraftActionPost": "Plaatsen",
@@ -2253,6 +2266,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Concept dupliceren mislukt",
   "libraryDraftInProgressBadge": "Bezig",
   "libraryDraftActionDuplicate": "Dupliceren",
+  "libraryDraftActionConvertToClip": "Omzetten naar clip",
+  "libraryDraftConvertingToClip": "Omzetten naar clip...",
+  "libraryDraftConvertedToClipSnackbar": "Concept omgezet naar clip",
+  "libraryDraftConvertToClipFailedSnackbar": "Concept omzetten mislukt",
+  "libraryDraftConvertOverlaysUnavailable": "De tekst en stickers van dit concept konden niet worden voorbereid. Open het in de editor en probeer het opnieuw.",
   "libraryDraftCopyTitle": "{title} (kopie {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {
@@ -6589,5 +6607,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Wijzig",
+  "menuBarUndo": "Herstel",
+  "menuBarRedo": "Opnieuw",
+  "menuBarCut": "Knip",
+  "menuBarCopy": "Kopieer",
+  "menuBarPaste": "Plak",
+  "menuBarSelectAll": "Selecteer alles",
+  "menuBarView": "Weergave",
+  "menuBarVideo": "Video",
+  "menuBarPreviousVideo": "Vorige video",
+  "menuBarNextVideo": "Volgende video",
+  "menuBarPlayPause": "Afspelen/pauzeren",
+  "menuBarMute": "Dempen",
+  "menuBarUnmute": "Geluid inschakelen",
+  "menuBarWindow": "Venster",
+  "menuBarHelp": "Help"
 }

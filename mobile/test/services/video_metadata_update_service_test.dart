@@ -181,7 +181,10 @@ void main() {
     File? newThumbnailFile,
   }) {
     when(
-      () => mockVideosRepository.fetchLatestVideoRevision(any()),
+      () => mockVideosRepository.fetchLatestVideoRevision(
+        any(),
+        notOlderThan: any(named: 'notOlderThan'),
+      ),
     ).thenAnswer(
       (_) async => LatestVideoRevisionFound(relayRevisionOf(originalVideo)),
     );
@@ -712,7 +715,10 @@ void main() {
           addressableDTag: 'video-d-tag',
         );
         when(
-          () => mockVideosRepository.fetchLatestVideoRevision(any()),
+          () => mockVideosRepository.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
         ).thenAnswer(
           (_) async => LatestVideoRevisionFound(
             Event.fromJson({
@@ -771,7 +777,10 @@ void main() {
         test('refuses to publish when the read $name and no copy of the '
             'opened revision is held', () async {
           when(
-            () => mockVideosRepository.fetchLatestVideoRevision(any()),
+            () => mockVideosRepository.fetchLatestVideoRevision(
+              any(),
+              notOlderThan: any(named: 'notOlderThan'),
+            ),
           ).thenAnswer((_) async => revision);
 
           final result = await service.updateVideo(
@@ -907,7 +916,10 @@ void main() {
 
       void relaysHold(Event event) {
         when(
-          () => mockVideosRepository.fetchLatestVideoRevision(any()),
+          () => mockVideosRepository.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
         ).thenAnswer((_) async => LatestVideoRevisionFound(event));
       }
 
@@ -923,6 +935,7 @@ void main() {
         verify(
           () => mockVideosRepository.fetchLatestVideoRevision(
             '34236:$_ownerPubkey:video-d-tag',
+            notOlderThan: any(named: 'notOlderThan'),
           ),
         ).called(1);
       });
@@ -1692,6 +1705,7 @@ void main() {
         verify(
           () => mockVideosRepository.fetchLatestVideoRevision(
             '34235:$_ownerPubkey:video-d-tag',
+            notOlderThan: any(named: 'notOlderThan'),
           ),
         ).called(1);
         verify(
@@ -1804,7 +1818,10 @@ void main() {
 
         test('builds from the signed opened copy the cache holds', () async {
           when(
-            () => mockVideosRepository.fetchLatestVideoRevision(any()),
+            () => mockVideosRepository.fetchLatestVideoRevision(
+              any(),
+              notOlderThan: any(named: 'notOlderThan'),
+            ),
           ).thenAnswer((_) async => const LatestVideoRevisionUnknown());
           when(
             () => mockPersonalEventCacheService.getEventById(held.id),
@@ -1825,7 +1842,10 @@ void main() {
             'when the read after it falls short', () async {
           var reads = 0;
           when(
-            () => mockVideosRepository.fetchLatestVideoRevision(any()),
+            () => mockVideosRepository.fetchLatestVideoRevision(
+              any(),
+              notOlderThan: any(named: 'notOlderThan'),
+            ),
           ).thenAnswer(
             (_) async => reads++ == 0
                 ? LatestVideoRevisionFound(held)
@@ -1879,7 +1899,10 @@ void main() {
           )..sign(privateKey);
           var reads = 0;
           when(
-            () => mockVideosRepository.fetchLatestVideoRevision(any()),
+            () => mockVideosRepository.fetchLatestVideoRevision(
+              any(),
+              notOlderThan: any(named: 'notOlderThan'),
+            ),
           ).thenAnswer(
             (_) async => reads++ == 0
                 ? LatestVideoRevisionFound(newer)
@@ -1918,7 +1941,10 @@ void main() {
 
         test('does not republish a video the read finds gone', () async {
           when(
-            () => mockVideosRepository.fetchLatestVideoRevision(any()),
+            () => mockVideosRepository.fetchLatestVideoRevision(
+              any(),
+              notOlderThan: any(named: 'notOlderThan'),
+            ),
           ).thenAnswer((_) async => const LatestVideoRevisionAbsent());
           when(
             () => mockPersonalEventCacheService.getEventById(held.id),

@@ -10,6 +10,21 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Switch to $account to open this message?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Direct messages';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Show a private alert without the sender’s name or message.';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'This message is unavailable.';
+
+  @override
   String get devOptionsClipRecovery => 'Clip Recovery';
 
   @override
@@ -7230,6 +7245,53 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'Duplicate';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'Convert to clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Converting to clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'Draft converted to a clip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Failed to convert draft';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'The text and stickers on this draft couldn’t be prepared. Open it in the editor, then try again.';
+
+  @override
+  String get libraryDraftActionShare => 'Share draft';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Send an editable draft to $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'You’re sharing the original clips and edit history. They can see what you cut, edit their copy, post it, or send it back.';
+
+  @override
+  String get libraryDraftShareFailed => 'Couldn’t send the draft.';
+
+  @override
+  String get libraryDraftShareTooLarge => 'The draft is too large to send.';
+
+  @override
+  String get dmSharedDraft => 'Shared draft';
+
+  @override
+  String get dmOpenDraft => 'Import and edit';
+
+  @override
+  String get dmDraftImportFailed => 'Couldn’t import the draft.';
+
+  @override
+  String get libraryDraftSent => 'Draft sent';
 
   @override
   String get libraryDraftActionDelete => 'Delete draft';
@@ -17128,4 +17190,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Videos from $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Edit';
+
+  @override
+  String get menuBarUndo => 'Undo';
+
+  @override
+  String get menuBarRedo => 'Redo';
+
+  @override
+  String get menuBarCut => 'Cut';
+
+  @override
+  String get menuBarCopy => 'Copy';
+
+  @override
+  String get menuBarPaste => 'Paste';
+
+  @override
+  String get menuBarSelectAll => 'Select All';
+
+  @override
+  String get menuBarView => 'View';
+
+  @override
+  String get menuBarVideo => 'Video';
+
+  @override
+  String get menuBarPreviousVideo => 'Previous Video';
+
+  @override
+  String get menuBarNextVideo => 'Next Video';
+
+  @override
+  String get menuBarPlayPause => 'Play/Pause';
+
+  @override
+  String get menuBarMute => 'Mute';
+
+  @override
+  String get menuBarUnmute => 'Unmute';
+
+  @override
+  String get menuBarWindow => 'Window';
+
+  @override
+  String get menuBarHelp => 'Help';
 }

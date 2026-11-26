@@ -24,7 +24,7 @@ Future<Event> signedCuratedListFixture(
       ? list.description ?? 'Curated video list: ${list.name}'
       : await signer.nip44Encrypt(
           owner,
-          jsonEncode(CuratedListConverter.toItemTags(list)),
+          jsonEncode(CuratedListConverter.toSealedTags(list)),
         );
   if (content == null) throw StateError('Fixture sealing failed');
   final event = Event(

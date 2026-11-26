@@ -25,6 +25,12 @@ import 'package:unified_logger/unified_logger.dart';
 AppLocalizations currentAppL10n(SharedPreferences prefs) =>
     lookupAppLocalizations(currentAppUiLocale(prefs));
 
+/// Loads foreground service copy using the active account's UI language.
+AppLocalizations appL10nForLanguage(String? languageCode) =>
+    lookupAppLocalizations(
+      _resolveAppUiLocale(languageCode == null ? null : Locale(languageCode)),
+    );
+
 /// Downloads the language the app UI renders in, so [currentAppL10n] returns
 /// it rather than the English fallback.
 ///

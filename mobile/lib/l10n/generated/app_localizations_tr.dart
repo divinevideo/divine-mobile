@@ -10,6 +10,21 @@ class AppLocalizationsTr extends AppLocalizations {
   AppLocalizationsTr([String locale = 'tr']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Bu mesajı açmak için $account hesabına geçilsin mi?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Özel mesajlar';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Gönderenin adını veya mesaj içeriğini göstermeden bildirim gönder.';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'Bu mesaj kullanılamıyor.';
+
+  @override
   String get devOptionsClipRecovery => 'Klip kurtarma';
 
   @override
@@ -7071,6 +7086,54 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'Çoğalt';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'Klibe dönüştür';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Klibe dönüştürülüyor...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'Taslak klibe dönüştürüldü';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Taslak dönüştürülemedi';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Bu taslaktaki yazı ve çıkartmalar hazırlanamadı. Düzenleyicide aç ve tekrar dene.';
+
+  @override
+  String get libraryDraftActionShare => 'Taslağı paylaş';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return '$name adlı hesaba düzenlenebilir taslak gönderilsin mi?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Orijinal klipleri ve düzenleme geçmişini paylaşıyorsun. Alıcı kestiğin kısımları görebilir, kendi kopyasını düzenleyebilir, paylaşabilir veya sana geri gönderebilir.';
+
+  @override
+  String get libraryDraftShareFailed => 'Taslak gönderilemedi.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'Taslak gönderilemeyecek kadar büyük.';
+
+  @override
+  String get dmSharedDraft => 'Paylaşılan taslak';
+
+  @override
+  String get dmOpenDraft => 'İçe aktar ve düzenle';
+
+  @override
+  String get dmDraftImportFailed => 'Taslak içe aktarılamadı.';
+
+  @override
+  String get libraryDraftSent => 'Taslak gönderildi';
 
   @override
   String get libraryDraftActionDelete => 'Taslağı sil';
@@ -16930,4 +16993,52 @@ class AppLocalizationsTr extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return '$badgeName videoları';
   }
+
+  @override
+  String get menuBarEdit => 'Düzen';
+
+  @override
+  String get menuBarUndo => 'Geri al';
+
+  @override
+  String get menuBarRedo => 'Yinele';
+
+  @override
+  String get menuBarCut => 'Kes';
+
+  @override
+  String get menuBarCopy => 'Kopyala';
+
+  @override
+  String get menuBarPaste => 'Yapıştır';
+
+  @override
+  String get menuBarSelectAll => 'Tümünü seç';
+
+  @override
+  String get menuBarView => 'Görüntü';
+
+  @override
+  String get menuBarVideo => 'Video';
+
+  @override
+  String get menuBarPreviousVideo => 'Önceki video';
+
+  @override
+  String get menuBarNextVideo => 'Sonraki video';
+
+  @override
+  String get menuBarPlayPause => 'Oynat/duraklat';
+
+  @override
+  String get menuBarMute => 'Sessize al';
+
+  @override
+  String get menuBarUnmute => 'Sesi aç';
+
+  @override
+  String get menuBarWindow => 'Pencere';
+
+  @override
+  String get menuBarHelp => 'Yardım';
 }

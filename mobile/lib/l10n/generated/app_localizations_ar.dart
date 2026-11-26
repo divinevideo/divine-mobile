@@ -10,6 +10,21 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'هل تريد التبديل إلى $account لفتح هذه الرسالة؟';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'الرسائل الخاصة';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'عرض تنبيه خاص دون اسم المرسِل أو نص الرسالة.';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'هذه الرسالة غير متاحة.';
+
+  @override
   String get devOptionsClipRecovery => 'استرداد المقاطع';
 
   @override
@@ -7147,6 +7162,53 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'تكرار';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'تحويل إلى مقطع';
+
+  @override
+  String get libraryDraftConvertingToClip => 'جاري التحويل إلى مقطع...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'تم تحويل المسودة إلى مقطع';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar => 'تعذّر تحويل المسودة';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'تعذّر تجهيز النص والملصقات في هذه المسودة. افتحها في المحرّر ثم حاول مرّة أخرى.';
+
+  @override
+  String get libraryDraftActionShare => 'مشاركة المسودة';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'هل تريد إرسال مسودة قابلة للتعديل إلى $name؟';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'يشمل الإرسال المقاطع الأصلية وسجل التعديلات. يمكن لمن يتلقى المسودة مشاهدة الأجزاء المحذوفة وتعديل النسخة أو نشرها أو إرسالها مجددًا.';
+
+  @override
+  String get libraryDraftShareFailed => 'تعذّر إرسال المسودة.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'حجم المسودة أكبر من الحد المسموح للإرسال.';
+
+  @override
+  String get dmSharedDraft => 'مسودة مشتركة';
+
+  @override
+  String get dmOpenDraft => 'استيراد وتعديل';
+
+  @override
+  String get dmDraftImportFailed => 'تعذّر استيراد المسودة.';
+
+  @override
+  String get libraryDraftSent => 'تم إرسال المسودة';
 
   @override
   String get libraryDraftActionDelete => 'حذف المسودة';
@@ -17042,4 +17104,52 @@ class AppLocalizationsAr extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'فيديوهات $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'تحرير';
+
+  @override
+  String get menuBarUndo => 'تراجع';
+
+  @override
+  String get menuBarRedo => 'إعادة';
+
+  @override
+  String get menuBarCut => 'قص';
+
+  @override
+  String get menuBarCopy => 'نسخ';
+
+  @override
+  String get menuBarPaste => 'لصق';
+
+  @override
+  String get menuBarSelectAll => 'تحديد الكل';
+
+  @override
+  String get menuBarView => 'عرض';
+
+  @override
+  String get menuBarVideo => 'فيديو';
+
+  @override
+  String get menuBarPreviousVideo => 'الفيديو السابق';
+
+  @override
+  String get menuBarNextVideo => 'الفيديو التالي';
+
+  @override
+  String get menuBarPlayPause => 'تشغيل/إيقاف مؤقت';
+
+  @override
+  String get menuBarMute => 'كتم الصوت';
+
+  @override
+  String get menuBarUnmute => 'إلغاء كتم الصوت';
+
+  @override
+  String get menuBarWindow => 'نافذة';
+
+  @override
+  String get menuBarHelp => 'مساعدة';
 }

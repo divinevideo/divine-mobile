@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 38** (see `app_database.dart`).
+**Version: 39** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -652,3 +652,14 @@ share sheet queued the send, so every attempt rechecks the current block and
 mute policy for its recipient. Rows queued before v38 get 0; recovery
 recognizes the share sheet's structured video citation on those older queued
 messages instead.
+
+## Version 39: verified alias for a second gift wrap
+
+Version 39 adds `processed_gift_wraps.verified_message_id` (nullable text): the
+inbound NIP-17 rumor a second gift wrap of the same message resolves to, so a
+DM push that names that wrap can open the message. It is written only when the
+identical rumor already exists for the same account, room and sender. Every
+upgraded ledger row, and every terminal outcome without a navigable message,
+keeps NULL and stays plain dedup evidence. The v32 ledger rebuild uses today's
+table definition, so `_withholdV39Columns` drops the column again for any
+historical target below 39. The column is in the `beforeOpen` repair probe.

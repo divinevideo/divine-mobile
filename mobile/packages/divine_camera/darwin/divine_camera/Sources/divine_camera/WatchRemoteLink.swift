@@ -9,21 +9,12 @@ import WatchConnectivity
 ///
 /// The latest state goes out twice: as the session's application context,
 /// which the Watch reads whenever it next opens, and as a message when the
-/// Watch app is on screen, which arrives at once.
+/// Watch app is on screen, which arrives at once. Each state carries its
+/// revision, and only a press made on the latest one goes on to Dart, which
+/// checks it against its own latest state (`WatchShutterGate`).
 final class WatchRemoteLink: NSObject, WCSessionDelegate {
-    /// Keys and values shared with the Watch app's `PhoneRecorderLink`.
-    enum Wire {
-        static let available = "available"
-        static let command = "command"
-    }
-
-    enum Action: String {
-        case start = "watchStart"
-        case stop = "watchStop"
-    }
-
     private let session: WCSession?
-    private let onShutterAction: (Action) -> Void
+    private let onShutterPress: ([String: Any]) -> Void
     private let onWatchRemoteChanged: ([String: Any]?) -> Void
     private let onWatchAppChanged: (Bool) -> Void
 
@@ -31,26 +22,33 @@ final class WatchRemoteLink: NSObject, WCSessionDelegate {
     /// queue.
     private(set) var hasWatchApp = false
 
+    /// Numbers the states in `payload`. Only touched on the main queue.
+    private var gate: WatchShutterGate
+
     /// What the Watch should show. Only touched on the main queue.
-    private var payload: [String: Any] = [Wire.available: false]
+    private var payload: [String: Any]
 
     /// - Parameters:
-    ///   - onShutterAction: Called on the main queue when the Watch's
-    ///     shutter is tapped.
+    ///   - onShutterPress: Called on the main queue, when the Watch's
+    ///     shutter is tapped on the state published last, with the
+    ///     `onRemoteRecordTrigger` arguments for Dart.
     ///   - onWatchRemoteChanged: Called on the main queue with the recorder
     ///     state a Watch remote can show, or `nil` when the recorder is closed
     ///     or no paired Watch has the app.
     ///   - onWatchAppChanged: Called on the main queue when a paired Watch
     ///     gains or loses the Watch app.
     init(
-        onShutterAction: @escaping (Action) -> Void,
+        onShutterPress: @escaping ([String: Any]) -> Void,
         onWatchRemoteChanged: @escaping ([String: Any]?) -> Void,
         onWatchAppChanged: @escaping (Bool) -> Void
     ) {
         self.session = WCSession.isSupported() ? WCSession.default : nil
-        self.onShutterAction = onShutterAction
+        self.onShutterPress = onShutterPress
         self.onWatchRemoteChanged = onWatchRemoteChanged
         self.onWatchAppChanged = onWatchAppChanged
+        let gate = WatchShutterGate(nowMs: WatchRemoteLink.nowMs())
+        self.gate = gate
+        self.payload = gate.closedPayload
         super.init()
     }
 
@@ -62,20 +60,17 @@ final class WatchRemoteLink: NSObject, WCSessionDelegate {
     /// Publishes the recorder's state, or that the recorder closed when
     /// `state` is `nil`. Call on the main queue.
     func update(state: [String: Any]?) {
-        if let state {
-            // A take that is not running arrives as NSNull, which a
-            // WatchConnectivity payload cannot carry.
-            payload = state.filter { !($0.value is NSNull) }
-            payload[Wire.available] = true
-        } else {
-            payload = [Wire.available: false]
-        }
+        payload = gate.publish(state, nowMs: Self.nowMs())
         send()
+    }
+
+    private static func nowMs() -> Int64 {
+        Int64(Date().timeIntervalSince1970 * 1000)
     }
 
     private func send() {
         guard let session, session.activationState == .activated else { return }
-        let isRecorderOpen = payload[Wire.available] as? Bool == true
+        let isRecorderOpen = payload[WatchShutterGate.Wire.available] as? Bool == true
         let hadWatchApp = hasWatchApp
         hasWatchApp = session.isPaired && session.isWatchAppInstalled
         if hasWatchApp != hadWatchApp {
@@ -94,10 +89,19 @@ final class WatchRemoteLink: NSObject, WCSessionDelegate {
     }
 
     private func handle(message: [String: Any]) {
-        guard let command = message[Wire.command] as? String,
-              let action = Action(rawValue: command) else { return }
         DispatchQueue.main.async { [weak self] in
-            self?.onShutterAction(action)
+            guard let self else { return }
+            guard let action = self.gate.action(for: message) else {
+                DivineCameraLog.shared.debug(
+                    "Watch press ignored: "
+                        + "\(message[WatchShutterGate.Wire.command] ?? "no action") on revision "
+                        + "\(message[WatchShutterGate.Wire.revision] ?? "none"), "
+                        + "the recorder is at \(self.gate.revision)",
+                    name: "DivineCamera.WatchRemote"
+                )
+                return
+            }
+            self.onShutterPress(self.gate.triggerArguments(for: action))
         }
     }
 

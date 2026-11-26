@@ -18032,8 +18032,25 @@ class $ProcessedGiftWrapsTable extends ProcessedGiftWraps
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _verifiedMessageIdMeta = const VerificationMeta(
+    'verifiedMessageId',
+  );
   @override
-  List<GeneratedColumn> get $columns => [giftWrapId, processedAt, ownerPubkey];
+  late final GeneratedColumn<String> verifiedMessageId =
+      GeneratedColumn<String>(
+        'verified_message_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    giftWrapId,
+    processedAt,
+    ownerPubkey,
+    verifiedMessageId,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -18077,6 +18094,15 @@ class $ProcessedGiftWrapsTable extends ProcessedGiftWraps
         ),
       );
     }
+    if (data.containsKey('verified_message_id')) {
+      context.handle(
+        _verifiedMessageIdMeta,
+        verifiedMessageId.isAcceptableOrUnknown(
+          data['verified_message_id']!,
+          _verifiedMessageIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -18098,6 +18124,10 @@ class $ProcessedGiftWrapsTable extends ProcessedGiftWraps
         DriftSqlType.string,
         data['${effectivePrefix}owner_pubkey'],
       )!,
+      verifiedMessageId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}verified_message_id'],
+      ),
     );
   }
 
@@ -18135,10 +18165,15 @@ class ProcessedGiftWrap extends DataClass
   /// `direct_messages` already uses, and rows written before v32 are backfilled
   /// to it. Cleanup and lookups treat it as the account's own.
   final String ownerPubkey;
+
+  /// Verified inbound rumor referenced by a second wrap for the same message.
+  /// Terminal outcomes without a navigable message keep this NULL.
+  final String? verifiedMessageId;
   const ProcessedGiftWrap({
     required this.giftWrapId,
     required this.processedAt,
     required this.ownerPubkey,
+    this.verifiedMessageId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -18146,6 +18181,9 @@ class ProcessedGiftWrap extends DataClass
     map['gift_wrap_id'] = Variable<String>(giftWrapId);
     map['processed_at'] = Variable<int>(processedAt);
     map['owner_pubkey'] = Variable<String>(ownerPubkey);
+    if (!nullToAbsent || verifiedMessageId != null) {
+      map['verified_message_id'] = Variable<String>(verifiedMessageId);
+    }
     return map;
   }
 
@@ -18154,6 +18192,9 @@ class ProcessedGiftWrap extends DataClass
       giftWrapId: Value(giftWrapId),
       processedAt: Value(processedAt),
       ownerPubkey: Value(ownerPubkey),
+      verifiedMessageId: verifiedMessageId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(verifiedMessageId),
     );
   }
 
@@ -18166,6 +18207,9 @@ class ProcessedGiftWrap extends DataClass
       giftWrapId: serializer.fromJson<String>(json['giftWrapId']),
       processedAt: serializer.fromJson<int>(json['processedAt']),
       ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
+      verifiedMessageId: serializer.fromJson<String?>(
+        json['verifiedMessageId'],
+      ),
     );
   }
   @override
@@ -18175,6 +18219,7 @@ class ProcessedGiftWrap extends DataClass
       'giftWrapId': serializer.toJson<String>(giftWrapId),
       'processedAt': serializer.toJson<int>(processedAt),
       'ownerPubkey': serializer.toJson<String>(ownerPubkey),
+      'verifiedMessageId': serializer.toJson<String?>(verifiedMessageId),
     };
   }
 
@@ -18182,10 +18227,14 @@ class ProcessedGiftWrap extends DataClass
     String? giftWrapId,
     int? processedAt,
     String? ownerPubkey,
+    Value<String?> verifiedMessageId = const Value.absent(),
   }) => ProcessedGiftWrap(
     giftWrapId: giftWrapId ?? this.giftWrapId,
     processedAt: processedAt ?? this.processedAt,
     ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+    verifiedMessageId: verifiedMessageId.present
+        ? verifiedMessageId.value
+        : this.verifiedMessageId,
   );
   ProcessedGiftWrap copyWithCompanion(ProcessedGiftWrapsCompanion data) {
     return ProcessedGiftWrap(
@@ -18198,6 +18247,9 @@ class ProcessedGiftWrap extends DataClass
       ownerPubkey: data.ownerPubkey.present
           ? data.ownerPubkey.value
           : this.ownerPubkey,
+      verifiedMessageId: data.verifiedMessageId.present
+          ? data.verifiedMessageId.value
+          : this.verifiedMessageId,
     );
   }
 
@@ -18206,37 +18258,43 @@ class ProcessedGiftWrap extends DataClass
     return (StringBuffer('ProcessedGiftWrap(')
           ..write('giftWrapId: $giftWrapId, ')
           ..write('processedAt: $processedAt, ')
-          ..write('ownerPubkey: $ownerPubkey')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('verifiedMessageId: $verifiedMessageId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(giftWrapId, processedAt, ownerPubkey);
+  int get hashCode =>
+      Object.hash(giftWrapId, processedAt, ownerPubkey, verifiedMessageId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is ProcessedGiftWrap &&
           other.giftWrapId == this.giftWrapId &&
           other.processedAt == this.processedAt &&
-          other.ownerPubkey == this.ownerPubkey);
+          other.ownerPubkey == this.ownerPubkey &&
+          other.verifiedMessageId == this.verifiedMessageId);
 }
 
 class ProcessedGiftWrapsCompanion extends UpdateCompanion<ProcessedGiftWrap> {
   final Value<String> giftWrapId;
   final Value<int> processedAt;
   final Value<String> ownerPubkey;
+  final Value<String?> verifiedMessageId;
   final Value<int> rowid;
   const ProcessedGiftWrapsCompanion({
     this.giftWrapId = const Value.absent(),
     this.processedAt = const Value.absent(),
     this.ownerPubkey = const Value.absent(),
+    this.verifiedMessageId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProcessedGiftWrapsCompanion.insert({
     required String giftWrapId,
     required int processedAt,
     this.ownerPubkey = const Value.absent(),
+    this.verifiedMessageId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : giftWrapId = Value(giftWrapId),
        processedAt = Value(processedAt);
@@ -18244,12 +18302,14 @@ class ProcessedGiftWrapsCompanion extends UpdateCompanion<ProcessedGiftWrap> {
     Expression<String>? giftWrapId,
     Expression<int>? processedAt,
     Expression<String>? ownerPubkey,
+    Expression<String>? verifiedMessageId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (giftWrapId != null) 'gift_wrap_id': giftWrapId,
       if (processedAt != null) 'processed_at': processedAt,
       if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
+      if (verifiedMessageId != null) 'verified_message_id': verifiedMessageId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -18258,12 +18318,14 @@ class ProcessedGiftWrapsCompanion extends UpdateCompanion<ProcessedGiftWrap> {
     Value<String>? giftWrapId,
     Value<int>? processedAt,
     Value<String>? ownerPubkey,
+    Value<String?>? verifiedMessageId,
     Value<int>? rowid,
   }) {
     return ProcessedGiftWrapsCompanion(
       giftWrapId: giftWrapId ?? this.giftWrapId,
       processedAt: processedAt ?? this.processedAt,
       ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+      verifiedMessageId: verifiedMessageId ?? this.verifiedMessageId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -18280,6 +18342,9 @@ class ProcessedGiftWrapsCompanion extends UpdateCompanion<ProcessedGiftWrap> {
     if (ownerPubkey.present) {
       map['owner_pubkey'] = Variable<String>(ownerPubkey.value);
     }
+    if (verifiedMessageId.present) {
+      map['verified_message_id'] = Variable<String>(verifiedMessageId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -18292,6 +18357,7 @@ class ProcessedGiftWrapsCompanion extends UpdateCompanion<ProcessedGiftWrap> {
           ..write('giftWrapId: $giftWrapId, ')
           ..write('processedAt: $processedAt, ')
           ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('verifiedMessageId: $verifiedMessageId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -33486,6 +33552,7 @@ typedef $$ProcessedGiftWrapsTableCreateCompanionBuilder =
       required String giftWrapId,
       required int processedAt,
       Value<String> ownerPubkey,
+      Value<String?> verifiedMessageId,
       Value<int> rowid,
     });
 typedef $$ProcessedGiftWrapsTableUpdateCompanionBuilder =
@@ -33493,6 +33560,7 @@ typedef $$ProcessedGiftWrapsTableUpdateCompanionBuilder =
       Value<String> giftWrapId,
       Value<int> processedAt,
       Value<String> ownerPubkey,
+      Value<String?> verifiedMessageId,
       Value<int> rowid,
     });
 
@@ -33517,6 +33585,11 @@ class $$ProcessedGiftWrapsTableFilterComposer
 
   ColumnFilters<String> get ownerPubkey => $composableBuilder(
     column: $table.ownerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get verifiedMessageId => $composableBuilder(
+    column: $table.verifiedMessageId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -33544,6 +33617,11 @@ class $$ProcessedGiftWrapsTableOrderingComposer
     column: $table.ownerPubkey,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get verifiedMessageId => $composableBuilder(
+    column: $table.verifiedMessageId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProcessedGiftWrapsTableAnnotationComposer
@@ -33567,6 +33645,11 @@ class $$ProcessedGiftWrapsTableAnnotationComposer
 
   GeneratedColumn<String> get ownerPubkey => $composableBuilder(
     column: $table.ownerPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get verifiedMessageId => $composableBuilder(
+    column: $table.verifiedMessageId,
     builder: (column) => column,
   );
 }
@@ -33614,11 +33697,13 @@ class $$ProcessedGiftWrapsTableTableManager
                 Value<String> giftWrapId = const Value.absent(),
                 Value<int> processedAt = const Value.absent(),
                 Value<String> ownerPubkey = const Value.absent(),
+                Value<String?> verifiedMessageId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProcessedGiftWrapsCompanion(
                 giftWrapId: giftWrapId,
                 processedAt: processedAt,
                 ownerPubkey: ownerPubkey,
+                verifiedMessageId: verifiedMessageId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -33626,11 +33711,13 @@ class $$ProcessedGiftWrapsTableTableManager
                 required String giftWrapId,
                 required int processedAt,
                 Value<String> ownerPubkey = const Value.absent(),
+                Value<String?> verifiedMessageId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProcessedGiftWrapsCompanion.insert(
                 giftWrapId: giftWrapId,
                 processedAt: processedAt,
                 ownerPubkey: ownerPubkey,
+                verifiedMessageId: verifiedMessageId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

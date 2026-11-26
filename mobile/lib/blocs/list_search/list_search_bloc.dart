@@ -21,7 +21,7 @@ sealed class _SearchResult {
 
 final class _VideoSearchResult extends _SearchResult {
   const _VideoSearchResult(this.lists);
-  final List<CuratedList> lists;
+  final List<CuratedListSearchResult> lists;
 }
 
 final class _PeopleSearchResult extends _SearchResult {

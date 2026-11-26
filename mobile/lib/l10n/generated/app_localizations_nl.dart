@@ -10,6 +10,22 @@ class AppLocalizationsNl extends AppLocalizations {
   AppLocalizationsNl([String locale = 'nl']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Overschakelen naar $account om dit bericht te openen?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Privéberichten';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Toon een melding zonder de naam van de afzender of de tekst van het bericht.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Dit bericht is niet beschikbaar.';
+
+  @override
   String get devOptionsClipRecovery => 'Clipherstel';
 
   @override
@@ -7179,6 +7195,55 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'Dupliceren';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'Omzetten naar clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Omzetten naar clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'Concept omgezet naar clip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Concept omzetten mislukt';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'De tekst en stickers van dit concept konden niet worden voorbereid. Open het in de editor en probeer het opnieuw.';
+
+  @override
+  String get libraryDraftActionShare => 'Concept delen';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Een bewerkbaar concept naar $name sturen?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Je deelt de originele clips en de bewerkingsgeschiedenis. De ontvanger kan zien wat je hebt weggeknipt en kan de eigen kopie bewerken, plaatsen of terugsturen.';
+
+  @override
+  String get libraryDraftShareFailed =>
+      'Het concept kon niet worden verstuurd.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'Het concept is te groot om te versturen.';
+
+  @override
+  String get dmSharedDraft => 'Gedeeld concept';
+
+  @override
+  String get dmOpenDraft => 'Importeren en bewerken';
+
+  @override
+  String get dmDraftImportFailed => 'Het concept kon niet worden geïmporteerd.';
+
+  @override
+  String get libraryDraftSent => 'Concept verstuurd';
 
   @override
   String get libraryDraftActionDelete => 'Concept verwijderen';
@@ -17098,4 +17163,52 @@ class AppLocalizationsNl extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Video’s van $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Wijzig';
+
+  @override
+  String get menuBarUndo => 'Herstel';
+
+  @override
+  String get menuBarRedo => 'Opnieuw';
+
+  @override
+  String get menuBarCut => 'Knip';
+
+  @override
+  String get menuBarCopy => 'Kopieer';
+
+  @override
+  String get menuBarPaste => 'Plak';
+
+  @override
+  String get menuBarSelectAll => 'Selecteer alles';
+
+  @override
+  String get menuBarView => 'Weergave';
+
+  @override
+  String get menuBarVideo => 'Video';
+
+  @override
+  String get menuBarPreviousVideo => 'Vorige video';
+
+  @override
+  String get menuBarNextVideo => 'Volgende video';
+
+  @override
+  String get menuBarPlayPause => 'Afspelen/pauzeren';
+
+  @override
+  String get menuBarMute => 'Dempen';
+
+  @override
+  String get menuBarUnmute => 'Geluid inschakelen';
+
+  @override
+  String get menuBarWindow => 'Venster';
+
+  @override
+  String get menuBarHelp => 'Help';
 }

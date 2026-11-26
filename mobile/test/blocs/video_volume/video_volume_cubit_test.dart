@@ -93,6 +93,23 @@ void main() {
       });
     });
 
+    group('toggleMute', () {
+      blocTest<VideoVolumeCubit, VideoVolumeState>(
+        'mutes while the sound is on',
+        build: buildCubit,
+        act: (cubit) => cubit.toggleMute(),
+        expect: () => const [VideoVolumeState(volume: 0)],
+      );
+
+      blocTest<VideoVolumeCubit, VideoVolumeState>(
+        'turns the sound back on while muted',
+        build: buildCubit,
+        seed: () => const VideoVolumeState(volume: 0, mutedBySystem: true),
+        act: (cubit) => cubit.toggleMute(),
+        expect: () => const [VideoVolumeState()],
+      );
+    });
+
     group('system volume bridge', () {
       blocTest<VideoVolumeCubit, VideoVolumeState>(
         'mutes when system volume drops to zero',

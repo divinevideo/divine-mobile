@@ -2632,7 +2632,7 @@ void _runMethodChannelTests() {
         expect(receivedTrigger, equals(RemoteRecordTrigger.volumeDown));
       });
 
-      group('a Wear OS press', () {
+      group('a watch press', () {
         const recorder = RemoteRecorderState(
           recorded: Duration.zero,
           budget: Duration(seconds: 6),
@@ -2669,17 +2669,33 @@ void _runMethodChannelTests() {
           expect(triggers, equals([RemoteRecordTrigger.watchStop]));
         });
 
-        // Native forwards a press it matched before it heard of the newer
-        // state: a Stop shown for one take must not stop the next.
+        // Native accepted the press before it heard of the recorder's next
+        // take: a Stop shown for one take must not stop the next.
         test('made on a state since replaced is dropped', () async {
           final triggers = <RemoteRecordTrigger>[];
           methodChannelImpl.onRemoteRecordTrigger = triggers.add;
           await methodChannelImpl.updateRemoteRecorderState(recorder);
-          final earlier =
+          final firstTake =
               (capturedCalls.single.arguments as Map)['stateId'] as int;
+          await methodChannelImpl.updateRemoteRecorderState(
+            const RemoteRecorderState(
+              recorded: Duration(seconds: 2),
+              budget: Duration(seconds: 6),
+              modeName: 'Capture',
+              isShutterActive: true,
+            ),
+          );
+
+          await press('watchStop', firstTake);
+
+          expect(triggers, isEmpty);
+        });
+
+        test('made on a closed recorder is dropped', () async {
+          final triggers = <RemoteRecordTrigger>[];
+          methodChannelImpl.onRemoteRecordTrigger = triggers.add;
           await methodChannelImpl.updateRemoteRecorderState(null);
 
-          await press('watchStop', earlier);
           await press('watchStart', null);
 
           expect(triggers, isEmpty);

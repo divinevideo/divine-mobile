@@ -34,6 +34,10 @@ struct RecorderSnapshot: Equatable {
   /// A still leaves `isShutterActive` unchanged, so this confirms completion.
   var stillShutterCount = 0
 
+  /// The iPhone's number for this state. A press names it, so the iPhone can
+  /// drop a press made on a state it has since left.
+  var revision: Int64?
+
   /// Whether recorded time is counting.
   var isRecording: Bool { activeTakeStartedAt != nil }
 

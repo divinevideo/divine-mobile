@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Да се превключи ли към {account}, за да се отвори това съобщение?",
+  "notificationSettingsDirectMessages": "Лични съобщения",
+  "notificationSettingsDirectMessagesSubtitle": "Показвай известие без името на подателя или текста на съобщението.",
+  "dmNotificationMessageUnavailable": "Това съобщение не е достъпно.",
   "@@locale": "bg",
   "videoEditorSocialStickerPoll": "Анкета",
   "videoEditorSocialStickerQuiz": "Куиз",
@@ -2501,6 +2505,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Не успяхме да дублираме черновата",
   "libraryDraftInProgressBadge": "В процес",
   "libraryDraftActionDuplicate": "Дублирай",
+  "libraryDraftActionConvertToClip": "Превърни в клип",
+  "libraryDraftConvertingToClip": "Превръща се в клип...",
+  "libraryDraftConvertedToClipSnackbar": "Черновата е превърната в клип",
+  "libraryDraftConvertToClipFailedSnackbar": "Не успяхме да превърнем черновата",
+  "libraryDraftConvertOverlaysUnavailable": "Текстът и стикерите в тази чернова не можаха да се подготвят. Отвори я в редактора и опитай пак.",
   "libraryDraftCopyTitle": "{title} (копие {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {
@@ -2515,6 +2524,15 @@
   "libraryDraftDeleteFailedSnackbar": "Не успяхме да изтрием черновата",
   "libraryDraftActionPost": "Публикувай",
   "libraryDraftActionEdit": "Редактиране",
+  "libraryDraftActionShare": "Сподели чернова",
+  "libraryDraftShareConfirm": "Да изпратим ли чернова за редактиране на {name}?",
+  "libraryDraftShareNotice": "Изпращаш оригиналните клипове и историята на редакциите. Получателят може да види изрязаните части, да редактира копието си, да го публикува или да ти го върне.",
+  "libraryDraftShareFailed": "Черновата не можа да се изпрати.",
+  "libraryDraftShareTooLarge": "Черновата е твърде голяма за изпращане.",
+  "dmSharedDraft": "Споделена чернова",
+  "dmOpenDraft": "Импортирай и редактирай",
+  "dmDraftImportFailed": "Черновата не можа да се импортира.",
+  "libraryDraftSent": "Черновата е изпратена",
   "libraryDraftActionDelete": "Изтрий черновата",
   "libraryDeleteDraftTitle": "Изтрий чернова",
   "libraryDeleteDraftMessage": "Сигурен ли си, че искаш да изтриеш „{title}“?",
@@ -6706,5 +6724,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Редакция",
+  "menuBarUndo": "Отмени",
+  "menuBarRedo": "Повтори",
+  "menuBarCut": "Изрежи",
+  "menuBarCopy": "Копирай",
+  "menuBarPaste": "Постави",
+  "menuBarSelectAll": "Избери всичко",
+  "menuBarView": "Изглед",
+  "menuBarVideo": "Видео",
+  "menuBarPreviousVideo": "Предишно видео",
+  "menuBarNextVideo": "Следващо видео",
+  "menuBarPlayPause": "Пусни/пауза",
+  "menuBarMute": "Без звук",
+  "menuBarUnmute": "Включи звука",
+  "menuBarWindow": "Прозорец",
+  "menuBarHelp": "Помощ"
 }

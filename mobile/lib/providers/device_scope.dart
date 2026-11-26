@@ -18,6 +18,7 @@ import 'package:openvine/providers/db_cipher_key_provider.dart';
 import 'package:openvine/providers/documents_path_provider.dart';
 import 'package:openvine/providers/feed_mode_persistence_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
+import 'package:openvine/providers/large_screen_orientation_provider.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
 import 'package:openvine/providers/player_cache_budget_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
@@ -76,6 +77,7 @@ class DeviceScope {
     this.databaseCorruptionService,
     this.installSource = InstallSource.sideload,
     this.shorebirdAvailable = false,
+    this.ignoresOrientationLockOnLargeScreens = false,
     this.playerCacheBudgetBytes = kDefaultCacheMaxSizeBytes,
     this.accountOverrides = const [],
     AccountStateWriteBarrier? accountStateWrites,
@@ -162,6 +164,10 @@ class DeviceScope {
   /// check constructs; `false` for a plain `flutter build` or `flutter run`.
   final bool shorebirdAvailable;
 
+  /// Whether the platform ignores the app's portrait lock on large displays,
+  /// asked once at startup; see [ignoresOrientationLockOnLargeScreensProvider].
+  final bool ignoresOrientationLockOnLargeScreens;
+
   /// The byte budget the Android player cache was created with at launch;
   /// see [playerCacheBudgetBytesProvider].
   final int playerCacheBudgetBytes;
@@ -188,6 +194,9 @@ class DeviceScope {
     ),
     installSourceProvider.overrideWithValue(installSource),
     shorebirdAvailableProvider.overrideWithValue(shorebirdAvailable),
+    ignoresOrientationLockOnLargeScreensProvider.overrideWithValue(
+      ignoresOrientationLockOnLargeScreens,
+    ),
     playerCacheBudgetBytesProvider.overrideWithValue(playerCacheBudgetBytes),
     startupPerformanceServiceProvider.overrideWithValue(startupPerformance),
     performanceMonitoringServiceProvider.overrideWithValue(

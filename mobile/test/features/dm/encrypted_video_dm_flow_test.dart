@@ -234,13 +234,14 @@ void main() {
             encryption.deleteGate.complete();
           }
         });
-        final result = await createSendService(encryption)
-            .sendVideo(
-              recipientPubkey: _recipientPubkey,
-              videoFile: videoFile,
-              mimeType: _mimeType,
-            )
+        final service = createSendService(encryption);
+        final uploaded = await service
+            .uploadVideo(videoFile: videoFile, mimeType: _mimeType)
             .timeout(const Duration(seconds: 10));
+        final result = await service.publishVideo(
+          recipientPubkey: _recipientPubkey,
+          uploaded: uploaded,
+        );
 
         expect(result.success, isTrue);
         expect(sent.ciphertext, isNotNull);
@@ -255,7 +256,7 @@ void main() {
         expect(sent.metadata!.decryptionKey, hasLength(64));
         expect(sent.metadata!.decryptionNonce, hasLength(24));
         expect(sent.metadata!.thumbnailUrl, isNull);
-        // Send returns before cleanup completes; observe the actual deletion.
+        // Upload returns before cleanup completes; observe the actual deletion.
         expect(encryption.ciphertextFile.deleteStarted, isTrue);
         expect(sent.ciphertextFile!.existsSync(), isTrue);
         encryption.deleteGate.complete();
@@ -313,10 +314,13 @@ void main() {
         // The gate starts open: this test only lets the detached ciphertext
         // delete finish before tearDown removes the temp directory it lives in.
         final encryption = _ObservedDmVideoEncryption()..deleteGate.complete();
-        final result = await createSendService(encryption).sendVideo(
+        final service = createSendService(encryption);
+        final result = await service.publishVideo(
           recipientPubkey: _recipientPubkey,
-          videoFile: videoFile,
-          mimeType: _mimeType,
+          uploaded: await service.uploadVideo(
+            videoFile: videoFile,
+            mimeType: _mimeType,
+          ),
         );
         expect(result.success, isTrue);
         expect(encryption.ciphertextFile.deleteStarted, isTrue);

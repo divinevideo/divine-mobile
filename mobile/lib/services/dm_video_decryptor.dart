@@ -113,8 +113,8 @@ class DmVideoDecryptor {
   /// stalled one, which reports no progress, still stops.
   final Duration _wantedCheckInterval;
 
-  /// Downloads, verifies, and decrypts [message]'s video, returning the
-  /// plaintext.
+  /// Downloads, verifies, and decrypts [message]'s video or editing project,
+  /// returning the plaintext. Projects require [editableDraft].
   ///
   /// The download is cut off past [maxBytes] of ciphertext, which defaults to
   /// [dmVideoMaxCiphertextBytes], and, when [timeLimit] is given, once it has
@@ -141,10 +141,16 @@ class DmVideoDecryptor {
     Duration? timeLimit,
     bool Function()? limitsApply,
     bool Function()? stillWanted,
+    bool editableDraft = false,
   }) async {
     final metadata = message.fileMetadata;
-    if (metadata == null || !metadata.isVideo) {
-      throw const DmVideoUnavailableException('message is not a video');
+    if (metadata == null ||
+        !(editableDraft ? metadata.isEditableDraft : metadata.isVideo)) {
+      throw DmVideoUnavailableException(
+        editableDraft
+            ? 'message is not an editing project'
+            : 'message is not a video',
+      );
     }
     if (!_hexKey.hasMatch(metadata.decryptionKey) ||
         !_hexNonce.hasMatch(metadata.decryptionNonce)) {

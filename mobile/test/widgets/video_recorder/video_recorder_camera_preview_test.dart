@@ -9,10 +9,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/video_recorder/camera_initialization_error.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/providers/large_screen_orientation_provider.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart';
 import 'package:openvine/widgets/video_recorder/preview/video_recorder_camera_preview.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_camera_placeholder.dart';
@@ -32,17 +36,25 @@ void main() {
       when(() => recorderBloc.state).thenReturn(const VideoRecorderBlocState());
     });
 
-    Widget buildSubject() {
+    Widget buildSubject({bool ignoresOrientationLock = false}) {
       return ProviderScope(
         overrides: [
           clipManagerProvider.overrideWith(_TestClipManagerNotifier.new),
+          isFeatureEnabledProvider(
+            FeatureFlag.largeScreenLayout,
+          ).overrideWithValue(false),
+          ignoresOrientationLockOnLargeScreensProvider.overrideWithValue(
+            ignoresOrientationLock,
+          ),
         ],
         child: BlocProvider<VideoRecorderBloc>.value(
           value: recorderBloc,
           child: const MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: VideoRecorderCameraPreview()),
+            home: AdaptiveLayoutScope(
+              child: Scaffold(body: VideoRecorderCameraPreview()),
+            ),
           ),
         ),
       );
@@ -56,6 +68,28 @@ void main() {
       await tester.pumpWidget(buildSubject());
 
       expect(find.byType(VideoRecorderCameraPreview), findsOneWidget);
+    });
+
+    testWidgets('shows the recorded frame in a narrow landscape window', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(560, 450);
+      tester.view.display.devicePixelRatio = 1;
+      tester.view.display.size = const Size(1280, 800);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.display.reset);
+
+      await tester.pumpWidget(buildSubject(ignoresOrientationLock: true));
+
+      final preview = find
+          .descendant(
+            of: find.byType(VideoRecorderCameraPreview),
+            matching: find.byType(AspectRatio),
+          )
+          .first;
+      expect(tester.getSize(preview).aspectRatio, closeTo(9 / 16, 0.001));
     });
 
     testWidgets('displays placeholder when camera not initialized', (

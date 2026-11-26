@@ -1063,9 +1063,10 @@ class VideoEventPublisher {
 
   /// Replaces only audio-sharing tags on a signed, addressable owner video,
   /// rebuilt from the revision Divine's REST API returns, or the newest a
-  /// relay returns when the API has none (#11250). The signed opened copy in
-  /// the personal event cache is used instead when the read returns an older
-  /// revision, or none and did not complete.
+  /// relay returns when the API has none as new as the opened one and the
+  /// opened one's Nostr timestamp is known (#11250). The signed opened copy
+  /// in the personal event cache is used instead when the read returns an
+  /// older revision, or none and did not complete.
   ///
   /// Throws [SoundReusePublicationException] if no revision can be built
   /// from (the read finds the video gone, or falls short and no signed copy
@@ -1161,10 +1162,12 @@ class VideoEventPublisher {
   /// Republish a video event with added text-track tags for subtitles.
   ///
   /// Rebuilds from the revision Divine's REST API returns, or the newest a
-  /// relay returns when the API has none, not from [existingEvent] itself
-  /// (#11250). The signed copy of [existingEvent] in the personal event
-  /// cache, or [readBeforeUpload], is used instead when the read returns an
-  /// older revision, or none and did not complete. Its caption tracks in [textTrackLang], and any that name no
+  /// relay returns when the API has none as new as [existingEvent] and its
+  /// Nostr timestamp is known, not from [existingEvent] itself (#11250). The
+  /// signed copy of [existingEvent] in the personal event cache, or
+  /// [readBeforeUpload], is used instead when the read returns an older
+  /// revision, or none and did not complete. Its
+  /// caption tracks in [textTrackLang], and any that name no
   /// language, are replaced by one tag per ref ([textTrackRef] followed by
   /// each entry in [extraTextTrackRefs]) for read-time redundancy; tracks in
   /// other languages and other kinds of track stay, unless they point at one

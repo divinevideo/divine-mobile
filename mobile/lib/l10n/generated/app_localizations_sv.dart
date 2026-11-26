@@ -10,6 +10,22 @@ class AppLocalizationsSv extends AppLocalizations {
   AppLocalizationsSv([String locale = 'sv']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Byt till $account för att öppna det här meddelandet?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Direktmeddelanden';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Visa en avisering utan avsändarens namn eller meddelandets innehåll.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Det här meddelandet är inte tillgängligt.';
+
+  @override
   String get devOptionsClipRecovery => 'Klippåterställning';
 
   @override
@@ -7138,6 +7154,55 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'Duplicera';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'Gör om till klipp';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Gör om till klipp...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Utkastet har gjorts om till ett klipp';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Det gick inte att göra om utkastet';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Texten och dekalerna i det här utkastet kunde inte förberedas. Öppna det i redigeraren och försök igen.';
+
+  @override
+  String get libraryDraftActionShare => 'Dela utkast';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Skicka ett redigerbart utkast till $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Du delar originalklippen och redigeringshistoriken. Mottagaren kan se vad du har klippt bort, redigera sin kopia, publicera den eller skicka tillbaka den.';
+
+  @override
+  String get libraryDraftShareFailed => 'Det gick inte att skicka utkastet.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'Utkastet är för stort för att skicka.';
+
+  @override
+  String get dmSharedDraft => 'Delat utkast';
+
+  @override
+  String get dmOpenDraft => 'Importera och redigera';
+
+  @override
+  String get dmDraftImportFailed => 'Det gick inte att importera utkastet.';
+
+  @override
+  String get libraryDraftSent => 'Utkastet skickades';
 
   @override
   String get libraryDraftActionDelete => 'Ta bort utkast';
@@ -17025,4 +17090,52 @@ class AppLocalizationsSv extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Videor från $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Redigera';
+
+  @override
+  String get menuBarUndo => 'Ångra';
+
+  @override
+  String get menuBarRedo => 'Gör om';
+
+  @override
+  String get menuBarCut => 'Klipp ut';
+
+  @override
+  String get menuBarCopy => 'Kopiera';
+
+  @override
+  String get menuBarPaste => 'Klistra in';
+
+  @override
+  String get menuBarSelectAll => 'Markera allt';
+
+  @override
+  String get menuBarView => 'Innehåll';
+
+  @override
+  String get menuBarVideo => 'Video';
+
+  @override
+  String get menuBarPreviousVideo => 'Föregående video';
+
+  @override
+  String get menuBarNextVideo => 'Nästa video';
+
+  @override
+  String get menuBarPlayPause => 'Spela upp/pausa';
+
+  @override
+  String get menuBarMute => 'Stäng av ljudet';
+
+  @override
+  String get menuBarUnmute => 'Slå på ljudet';
+
+  @override
+  String get menuBarWindow => 'Fönster';
+
+  @override
+  String get menuBarHelp => 'Hjälp';
 }

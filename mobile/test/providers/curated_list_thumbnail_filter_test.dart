@@ -149,6 +149,9 @@ class _Fixture {
       moderationLabels: serverLabels,
     );
     final api = _Api();
+    // These cases search the lists held locally, which the list index
+    // only stands aside for when it is unavailable.
+    when(() => api.isAvailable).thenReturn(false);
     when(() => api.getVideoStats(_event)).thenAnswer((_) {
       final pending = fixture.pending;
       return pending?.future ?? Future.value(relay ? null : fixture.stats);
@@ -294,7 +297,7 @@ void main() {
         );
         for (final emission
             in await repository.searchAllLists('dance').toList()) {
-          expect(emission.single.thumbnailUrls, isEmpty);
+          expect(emission.single.list.thumbnailUrls, isEmpty);
         }
         expect(
           await fixture.content.ageVerificationService.setAdultContentVerified(
@@ -310,7 +313,10 @@ void main() {
         expect((await fixture.read()).single.thumbnailUrls, [_thumbnail]);
         final refreshed = fixture.container.read(curatedListRepositoryProvider);
         expect(
-          (await refreshed.searchAllLists('dance').last).single.thumbnailUrls,
+          (await refreshed.searchAllLists('dance').last)
+              .single
+              .list
+              .thumbnailUrls,
           [_thumbnail],
         );
       },
@@ -330,7 +336,7 @@ void main() {
           );
           for (final emission
               in await repository.searchAllLists('dance').toList()) {
-            expect(emission.single.thumbnailUrls, isEmpty);
+            expect(emission.single.list.thumbnailUrls, isEmpty);
           }
           if (label == ContentLabel.nudity) {
             expect(
@@ -349,7 +355,10 @@ void main() {
             curatedListRepositoryProvider,
           );
           expect(
-            (await refreshed.searchAllLists('dance').last).single.thumbnailUrls,
+            (await refreshed.searchAllLists('dance').last)
+                .single
+                .list
+                .thumbnailUrls,
             [_thumbnail],
           );
         },
@@ -379,9 +388,9 @@ void main() {
           );
           final emissions = await repository.searchAllLists('dance').toList();
           expect(emissions, hasLength(4));
-          expect(emissions.first.single.thumbnailUrls, isEmpty);
+          expect(emissions.first.single.list.thumbnailUrls, isEmpty);
           for (final emission in emissions.skip(1)) {
-            expect(emission.single.thumbnailUrls, [_thumbnail]);
+            expect(emission.single.list.thumbnailUrls, [_thumbnail]);
           }
         },
       );
@@ -400,7 +409,7 @@ void main() {
             );
             for (final emission
                 in await repository.searchAllLists('dance').toList()) {
-              expect(emission.single.thumbnailUrls, isEmpty);
+              expect(emission.single.list.thumbnailUrls, isEmpty);
             }
           },
         );
@@ -423,7 +432,7 @@ void main() {
           );
           for (final emission
               in await repository.searchAllLists('dance').toList()) {
-            expect(emission.single.thumbnailUrls, isEmpty);
+            expect(emission.single.list.thumbnailUrls, isEmpty);
           }
           await fixture.content.setPreference(
             ContentLabel.flashingLights,
@@ -435,7 +444,10 @@ void main() {
             curatedListRepositoryProvider,
           );
           expect(
-            (await refreshed.searchAllLists('dance').last).single.thumbnailUrls,
+            (await refreshed.searchAllLists('dance').last)
+                .single
+                .list
+                .thumbnailUrls,
             [_thumbnail],
           );
         },
@@ -460,8 +472,8 @@ void main() {
             final emissions = await repository.searchAllLists('dance').toList();
             expect(emissions, hasLength(4));
             for (final emission in emissions) {
-              expect(emission.single.name, 'Dance');
-              expect(emission.single.thumbnailUrls, isEmpty);
+              expect(emission.single.list.name, 'Dance');
+              expect(emission.single.list.thumbnailUrls, isEmpty);
             }
           },
         );
@@ -478,7 +490,10 @@ void main() {
       expect((await fixture.read()).single.thumbnailUrls, isEmpty);
       final repository = fixture.container.read(curatedListRepositoryProvider);
       expect(
-        (await repository.searchAllLists('dance').last).single.thumbnailUrls,
+        (await repository.searchAllLists('dance').last)
+            .single
+            .list
+            .thumbnailUrls,
         isEmpty,
       );
     });

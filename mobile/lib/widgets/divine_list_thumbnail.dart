@@ -55,21 +55,26 @@ class DivineListThumbnail extends StatelessWidget {
   /// resolved: fan slots that could still fill shimmer instead of sitting
   /// as flat placeholders. Slots beyond the list's video count never fill
   /// and stay flat either way.
+  ///
+  /// [videoCount] is for a [curatedList] that does not hold its video
+  /// references, such as a search index summary; it defaults to the
+  /// references the list holds.
   DivineListThumbnail.videos({
     required CuratedList curatedList,
     required this.onTap,
     this.thumbnailsPending = false,
+    int? videoCount,
     super.key,
   }) : name = curatedList.name,
        description = curatedList.description,
        isPrivate = !curatedList.isPublic,
-       _count = curatedList.videoEventIds.length,
+       _count = videoCount ?? curatedList.videoEventIds.length,
        _kind = _ListKind.videos,
        _memberPubkeys = const [],
        _resolveDescriptionMentions = true,
        _media = DivineListMedia.videos(
          thumbnailUrls: curatedList.thumbnailUrls,
-         videoCount: curatedList.videoEventIds.length,
+         videoCount: videoCount ?? curatedList.videoEventIds.length,
          pending: thumbnailsPending,
        );
 
@@ -77,22 +82,28 @@ class DivineListThumbnail extends StatelessWidget {
   ///
   /// Public search keeps [showMemberIdentities] false and does not resolve
   /// member identities in its preview.
+  ///
+  /// [memberCount] is for a [userList] that holds a preview of its members,
+  /// such as a search index result; it defaults to the members the list
+  /// holds.
   DivineListThumbnail.people({
     required UserList userList,
     required this.onTap,
     bool showMemberIdentities = true,
+    int? memberCount,
     super.key,
   }) : name = userList.name,
        description = userList.description,
        isPrivate = false,
        thumbnailsPending = false,
-       _count = userList.pubkeys.length,
+       _count = memberCount ?? userList.pubkeys.length,
        _kind = _ListKind.people,
        _memberPubkeys = showMemberIdentities ? userList.pubkeys : const [],
        _resolveDescriptionMentions = showMemberIdentities,
        _media = DivineListMedia.people(
          memberPubkeys: userList.pubkeys,
          showMemberIdentities: showMemberIdentities,
+         memberCount: memberCount,
        );
 
   final String name;
@@ -201,14 +212,16 @@ class DivineListMedia extends StatelessWidget {
   /// The collage of up to three member avatars.
   ///
   /// Set [showMemberIdentities] false for public previews that keep identities
-  /// unresolved while preserving the actual member count.
+  /// unresolved while preserving the actual member count. [memberCount] is
+  /// for [memberPubkeys] that preview only some members.
   const DivineListMedia.people({
     required List<String> memberPubkeys,
     bool showMemberIdentities = true,
+    int? memberCount,
     this.showCount = true,
     super.key,
   }) : _thumbnailUrls = const [],
-       _count = memberPubkeys.length,
+       _count = memberCount ?? memberPubkeys.length,
        _pending = false,
        _memberPubkeys = showMemberIdentities ? memberPubkeys : const [],
        _kind = _ListKind.people;

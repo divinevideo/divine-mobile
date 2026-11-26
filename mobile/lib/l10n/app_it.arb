@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Passare a {account} per aprire questo messaggio?",
+  "notificationSettingsDirectMessages": "Messaggi diretti",
+  "notificationSettingsDirectMessagesSubtitle": "Mostra una notifica senza il nome del mittente o il testo del messaggio.",
+  "dmNotificationMessageUnavailable": "Questo messaggio non è disponibile.",
   "@@locale": "it",
   "videoEditorSocialStickerPoll": "Sondaggio",
   "videoEditorSocialStickerQuiz": "Quiz",
@@ -2244,6 +2248,15 @@
   "librarySortShortestClip": "Clip più corto",
   "librarySortSquareFirst": "Prima i quadrati",
   "librarySortVerticalFirst": "Prima i verticali",
+  "libraryDraftActionShare": "Condividi bozza",
+  "libraryDraftShareConfirm": "Inviare una bozza modificabile a {name}?",
+  "libraryDraftShareNotice": "Condividi le clip originali e la cronologia delle modifiche. Chi le riceve può vedere le parti tagliate, modificare la propria copia, pubblicarla o rimandartela.",
+  "libraryDraftShareFailed": "Non è stato possibile inviare la bozza.",
+  "libraryDraftShareTooLarge": "La bozza è troppo grande per essere inviata.",
+  "dmSharedDraft": "Bozza condivisa",
+  "dmOpenDraft": "Importa e modifica",
+  "dmDraftImportFailed": "Non è stato possibile importare la bozza.",
+  "libraryDraftSent": "Bozza inviata",
   "libraryDraftActionDelete": "Elimina bozza",
   "libraryDraftActionEdit": "Modifica",
   "libraryDraftActionPost": "Pubblica",
@@ -2253,6 +2266,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Duplicazione bozza non riuscita",
   "libraryDraftInProgressBadge": "In corso",
   "libraryDraftActionDuplicate": "Duplica",
+  "libraryDraftActionConvertToClip": "Converti in clip",
+  "libraryDraftConvertingToClip": "Conversione in clip...",
+  "libraryDraftConvertedToClipSnackbar": "Bozza convertita in clip",
+  "libraryDraftConvertToClipFailedSnackbar": "Conversione bozza non riuscita",
+  "libraryDraftConvertOverlaysUnavailable": "Non è stato possibile preparare testo e sticker di questa bozza. Aprila nell’editor e riprova.",
   "libraryDraftCopyTitle": "{title} (copia {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {
@@ -6589,5 +6607,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Composizione",
+  "menuBarUndo": "Annulla",
+  "menuBarRedo": "Ripristina",
+  "menuBarCut": "Taglia",
+  "menuBarCopy": "Copia",
+  "menuBarPaste": "Incolla",
+  "menuBarSelectAll": "Seleziona tutto",
+  "menuBarView": "Vista",
+  "menuBarVideo": "Video",
+  "menuBarPreviousVideo": "Video precedente",
+  "menuBarNextVideo": "Video successivo",
+  "menuBarPlayPause": "Riproduci/Pausa",
+  "menuBarMute": "Disattiva audio",
+  "menuBarUnmute": "Riattiva audio",
+  "menuBarWindow": "Finestra",
+  "menuBarHelp": "Aiuto"
 }

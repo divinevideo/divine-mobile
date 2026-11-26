@@ -10,6 +10,21 @@ class AppLocalizationsUr extends AppLocalizations {
   AppLocalizationsUr([String locale = 'ur']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'یہ پیغام کھولنے کے لیے $account پر سوئچ کریں؟';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'براہ راست پیغامات';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'بھیجنے والے کا نام یا پیغام کا متن دکھائے بغیر اطلاع دیں۔';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'یہ پیغام دستیاب نہیں ہے۔';
+
+  @override
   String get devOptionsClipRecovery => 'کلپ کی بازیابی';
 
   @override
@@ -7148,6 +7163,54 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'نقل کریں';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'کلپ میں تبدیل کریں';
+
+  @override
+  String get libraryDraftConvertingToClip => 'کلپ میں تبدیل ہو رہا ہے...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'مسودہ کلپ میں تبدیل ہو گیا';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'مسودہ تبدیل نہیں ہو سکا';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'اس مسودے کا ٹیکسٹ اور اسٹیکرز تیار نہیں ہو سکے۔ اسے ایڈیٹر میں کھولیں، پھر دوبارہ کوشش کریں۔';
+
+  @override
+  String get libraryDraftActionShare => 'مسودہ شیئر کریں';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'کیا $name کو قابلِ تدوین مسودہ بھیجنا ہے؟';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'اصل کلپس اور ترمیم کی سرگزشت بھی شیئر ہوتی ہے۔ وصول کنندہ کٹے ہوئے حصے دیکھ سکتا ہے اور اپنی کاپی میں ترمیم کر کے اسے پوسٹ کر سکتا ہے یا واپس بھیج سکتا ہے۔';
+
+  @override
+  String get libraryDraftShareFailed => 'مسودہ بھیجا نہیں جا سکا۔';
+
+  @override
+  String get libraryDraftShareTooLarge => 'مسودہ بھیجنے کے لیے بہت بڑا ہے۔';
+
+  @override
+  String get dmSharedDraft => 'شیئر کیا گیا مسودہ';
+
+  @override
+  String get dmOpenDraft => 'درآمد کریں اور ترمیم کریں';
+
+  @override
+  String get dmDraftImportFailed => 'مسودہ درآمد نہیں ہو سکا۔';
+
+  @override
+  String get libraryDraftSent => 'مسودہ بھیج دیا گیا';
 
   @override
   String get libraryDraftActionDelete => 'مسودہ حذف کریں';
@@ -17007,4 +17070,52 @@ class AppLocalizationsUr extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return '$badgeName کی ویڈیوز';
   }
+
+  @override
+  String get menuBarEdit => 'ترمیم';
+
+  @override
+  String get menuBarUndo => 'واپس کریں';
+
+  @override
+  String get menuBarRedo => 'دوبارہ کریں';
+
+  @override
+  String get menuBarCut => 'کاٹیں';
+
+  @override
+  String get menuBarCopy => 'کاپی کریں';
+
+  @override
+  String get menuBarPaste => 'چسپاں کریں';
+
+  @override
+  String get menuBarSelectAll => 'سب منتخب کریں';
+
+  @override
+  String get menuBarView => 'منظر';
+
+  @override
+  String get menuBarVideo => 'ویڈیو';
+
+  @override
+  String get menuBarPreviousVideo => 'پچھلی ویڈیو';
+
+  @override
+  String get menuBarNextVideo => 'اگلی ویڈیو';
+
+  @override
+  String get menuBarPlayPause => 'چلائیں/روکیں';
+
+  @override
+  String get menuBarMute => 'میوٹ کریں';
+
+  @override
+  String get menuBarUnmute => 'ان میوٹ کریں';
+
+  @override
+  String get menuBarWindow => 'ونڈو';
+
+  @override
+  String get menuBarHelp => 'مدد';
 }

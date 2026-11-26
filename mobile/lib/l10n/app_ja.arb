@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "このメッセージを開くために {account} に切り替えますか？",
+  "notificationSettingsDirectMessages": "ダイレクトメッセージ",
+  "notificationSettingsDirectMessagesSubtitle": "送信者の名前やメッセージの内容を含めずに通知します。",
+  "dmNotificationMessageUnavailable": "このメッセージは表示できません。",
   "@@locale": "ja",
   "videoEditorSocialStickerPoll": "アンケート",
   "videoEditorSocialStickerQuiz": "クイズ",
@@ -2234,6 +2238,15 @@
   "librarySortShortestClip": "短いクリップ順",
   "librarySortSquareFirst": "正方形を先に",
   "librarySortVerticalFirst": "縦長を先に",
+  "libraryDraftActionShare": "下書きを共有",
+  "libraryDraftShareConfirm": "編集できる下書きを{name}さんに送信しますか？",
+  "libraryDraftShareNotice": "元のクリップと編集履歴を共有します。受け取った相手はカットした部分も見ることができ、自分のコピーを編集、投稿したり、送り返したりできます。",
+  "libraryDraftShareFailed": "下書きを送信できませんでした。",
+  "libraryDraftShareTooLarge": "下書きが大きすぎて送信できません。",
+  "dmSharedDraft": "共有された下書き",
+  "dmOpenDraft": "インポートして編集",
+  "dmDraftImportFailed": "下書きをインポートできませんでした。",
+  "libraryDraftSent": "下書きを送信しました",
   "libraryDraftActionDelete": "下書きを削除",
   "libraryDraftActionEdit": "編集",
   "libraryDraftActionPost": "投稿",
@@ -2243,6 +2256,11 @@
   "libraryDraftDuplicateFailedSnackbar": "下書きを複製できませんでした",
   "libraryDraftInProgressBadge": "作業中",
   "libraryDraftActionDuplicate": "複製",
+  "libraryDraftActionConvertToClip": "クリップに変換",
+  "libraryDraftConvertingToClip": "クリップに変換しています…",
+  "libraryDraftConvertedToClipSnackbar": "下書きをクリップに変換しました",
+  "libraryDraftConvertToClipFailedSnackbar": "下書きを変換できませんでした",
+  "libraryDraftConvertOverlaysUnavailable": "この下書きのテキストとステッカーを準備できなかったよ。エディタで開いてから、もう一回試してみて。",
   "libraryDraftCopyTitle": "{title}（コピー {number}）",
   "@libraryDraftCopyTitle": {
     "placeholders": {
@@ -6589,5 +6607,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "編集",
+  "menuBarUndo": "取り消す",
+  "menuBarRedo": "やり直す",
+  "menuBarCut": "カット",
+  "menuBarCopy": "コピー",
+  "menuBarPaste": "ペースト",
+  "menuBarSelectAll": "すべてを選択",
+  "menuBarView": "表示",
+  "menuBarVideo": "動画",
+  "menuBarPreviousVideo": "前の動画",
+  "menuBarNextVideo": "次の動画",
+  "menuBarPlayPause": "再生/一時停止",
+  "menuBarMute": "ミュート",
+  "menuBarUnmute": "ミュートを解除",
+  "menuBarWindow": "ウインドウ",
+  "menuBarHelp": "ヘルプ"
 }

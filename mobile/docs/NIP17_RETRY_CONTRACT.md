@@ -57,10 +57,12 @@ the stored `rumor_event_json` and republish it verbatim:
 - `DmRepository.recoverSelfWrap` — replays the sender's cross-device copy
 
 Both preserve `id` and `created_at`, so a receiver collapses the retry on its
-rumor-id primary key. Every retry entry point routes through them — the
-background sweep, the red-bubble "resend", the partial-delivery self-wrap
-retry, and the inline reel-reply retry — and `outgoing_dm_retry_service.dart`
-contains no rumor-building call at all.
+rumor-id primary key. Every retry entry point for a queued send routes through
+them — the background sweep, the red-bubble "resend", the partial-delivery
+self-wrap retry, and the inline reel-reply retry — and
+`outgoing_dm_retry_service.dart` contains no rumor-building call at all. The
+video DM retry has no queue row and keeps the rumor id another way; see
+`sendFileMessage` below.
 
 Stated precisely: **Divine never re-mints a rumor it has stored.** Two paths do
 mint a fresh rumor for the same text, and neither is a retry of a stored one:
@@ -84,9 +86,20 @@ Two more paths build a rumor and are not retries of a stored one:
   gives a different one. It is retry-stable by construction rather than by
   replaying a stored row.
 - `sendFileMessage` (video DMs) has no queue row and builds the rumor inside
-  `sendPrivateMessage`. A second send encrypts the file again under a fresh key
+  `sendPrivateMessage`. A new send encrypts the file again under a fresh key
   and nonce (`dm_video_encryption.dart`), so its content and tags differ from
-  the first. It is a new message, not a re-mint of the old one.
+  any earlier send. It is a new message, not a re-mint of an old one. A retry
+  of a send whose upload finished (`VideoDmOutbox.retry`, #10436) is not a new
+  send: it publishes the same upload, so the same content and tags, and passes
+  back as `sendFileMessage(createdAt:)` the `created_at` the first attempt's
+  rumor was built with, which `onRumorCreatedAt` reported before that attempt
+  published or threw. The rumor id therefore does not change. The outbox keeps
+  that `created_at` in memory beside the upload, not in a stored row. A first
+  attempt that built no rumor, for example because the recipient's inbox could
+  not be read, gives the retry nothing to keep, so the retry builds the first
+  rumor. The `rumor created_at (#10436)` group in `dm_repository_test.dart`
+  unwraps both attempts' gift wraps with the recipient's key and pins the
+  same rumor id.
 
 One hop sits outside this repository. For a Keycast identity the rumor is
 wrapped by the `nip17_wrap_batch` RPC, which takes the client's whole rumor,
@@ -139,8 +152,10 @@ rumor") in three ways:
   non-conforming on day one.
 - **A rebuild with identical fields is allowed.** Divine's `enqueueSend`
   rebuilds its rumor from a caller-supplied key and timestamp rather than
-  replaying a stored row, and a library that cannot hand the rumor back can do
-  the same. What matters is that the `id` comes out the same, not how.
+  replaying a stored row, and the video DM retry rebuilds its rumor from the
+  same upload and the first attempt's `created_at`. A library that cannot hand
+  the rumor back can do the same. What matters is that the `id` comes out the
+  same, not how.
 - **The converse is stated.** Without it, "reuse the id" reads as "a repeat may
   share an id", and same-second identical sends would collapse. Divine's
   `batch` nonce exists for exactly that case (`_sendBatchTagKey`).

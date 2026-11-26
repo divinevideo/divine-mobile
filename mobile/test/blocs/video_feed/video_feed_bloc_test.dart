@@ -1463,6 +1463,43 @@ void main() {
         ],
       );
 
+      test(
+        'continues an empty opening For You page when it has a cursor',
+        () async {
+          when(
+            () => mockVideosRepository.getRecommendedVideos(
+              userPubkey: any(named: 'userPubkey'),
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer(
+            (_) async => const HomeFeedResult(
+              videos: [],
+              paginationCursor: 'older',
+              hasMore: true,
+            ),
+          );
+          when(
+            () => mockVideosRepository.getRecommendedVideos(
+              userPubkey: any(named: 'userPubkey'),
+              cursor: 'older',
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: [createTestVideo('older-video')],
+              hasMore: false,
+            ),
+          );
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+          bloc.add(const VideoFeedStarted());
+          await pumpEventQueue();
+
+          expect(bloc.state.videos.map((v) => v.id), ['older-video']);
+          expect(bloc.state.hasMore, isFalse);
+        },
+      );
+
       feedBlocTest(
         'restores saved following mode from SharedPreferences before loading',
         setUp: () async {
@@ -4560,6 +4597,66 @@ void main() {
             ),
           );
         },
+      );
+
+      feedBlocTest(
+        'continues For You pagination past a duplicate-only recovery page',
+        setUp: () {
+          when(
+            () => mockVideosRepository.getRecommendedVideos(
+              userPubkey: any(named: 'userPubkey'),
+              cursor: 'fallback-cursor',
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: [createTestVideo('already-queued')],
+              paginationCursor: 'next-recommendations',
+              hasMore: true,
+            ),
+          );
+          when(
+            () => mockVideosRepository.getRecommendedVideos(
+              userPubkey: any(named: 'userPubkey'),
+              cursor: 'next-recommendations',
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(
+              videos: [createTestVideo('discovered')],
+              paginationCursor: 'later-recommendations',
+              hasMore: true,
+            ),
+          );
+        },
+        build: createBloc,
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [createTestVideo('already-queued')],
+          paginationCursor: 'fallback-cursor',
+        ),
+        act: (bloc) => bloc.add(const VideoFeedLoadMoreRequested()),
+        skip: 1,
+        expect: () => [
+          isA<VideoFeedBlocState>()
+              .having((s) => s.isLoadingMore, 'isLoadingMore', true)
+              .having(
+                (s) => s.paginationCursor,
+                'paginationCursor',
+                'next-recommendations',
+              ),
+          isA<VideoFeedBlocState>()
+              .having((s) => s.isLoadingMore, 'isLoadingMore', false)
+              .having((s) => s.videos.map((v) => v.id), 'video IDs', [
+                'already-queued',
+                'discovered',
+              ])
+              .having(
+                (s) => s.paginationCursor,
+                'paginationCursor',
+                'later-recommendations',
+              ),
+        ],
       );
 
       feedBlocTest(

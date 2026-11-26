@@ -116,9 +116,8 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
   /// The trigger an `onRemoteRecordTrigger` call carries, or `null` when it
   /// carries none or is a watch press made on a state since replaced.
   ///
-  /// A volume key, Bluetooth button or Apple Watch tap arrives as the
-  /// trigger's name. A Wear OS press arrives with the number of the state it
-  /// was made on.
+  /// A volume key or Bluetooth button arrives as the trigger's name. A watch
+  /// press arrives with the number of the state it was made on.
   String? _currentTriggerType(Object? arguments) {
     switch (arguments) {
       case final String triggerType:

@@ -66,6 +66,7 @@ import 'package:openvine/startup/database_bootstrap_failure_app.dart';
 import 'package:openvine/startup/image_cache_budget.dart';
 import 'package:openvine/startup/startup_coordinator_factory.dart';
 import 'package:openvine/startup/window_size_constants.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/app_uptime.dart';
 import 'package:openvine/utils/cache_manager_flutter_error.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -756,6 +757,12 @@ Future<void> startOpenVineApp({
   // defaults on web/desktop/unsupported native shells (#6296).
   final installSource = await const InstallSourceService().resolve();
 
+  // Asked before the first frame, so a tablet that ignores the portrait lock
+  // (Android 16) starts in the large-screen layout instead of switching to it
+  // (#11471).
+  final ignoresOrientationLockOnLargeScreens =
+      await resolveIgnoresOrientationLockOnLargeScreens();
+
   // Resolved once here so synchronous readers can rebase persisted absolute
   // paths without awaiting: iOS rewrites the container path on every app
   // update, and the plugin lookup behind it is a Future.
@@ -785,6 +792,7 @@ Future<void> startOpenVineApp({
     // local release build for performance collection (#7302).
     shorebirdAvailable:
         (startupShorebirdUpdater ??= ShorebirdUpdater()).isAvailable,
+    ignoresOrientationLockOnLargeScreens: ignoresOrientationLockOnLargeScreens,
     playerCacheBudgetBytes: playerCacheBudgetBytes,
     accountOverrides: [
       // Screenshot mode: lead the 01_classics OG-Viner row with returning

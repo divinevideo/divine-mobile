@@ -86,6 +86,8 @@ class SelectListCubit extends Cubit<SelectListState>
       _openingOwnerPubkey.isNotEmpty &&
       _currentOwnerPubkey() == _openingOwnerPubkey;
 
+  /// The viewer's lists this sheet can add to. A series is left out: its
+  /// episodes are the creator's own videos, and this sheet adds any video.
   static List<CuratedList> _ownedLists(
     CuratedListService service,
     String? owner,
@@ -94,7 +96,9 @@ class SelectListCubit extends Cubit<SelectListState>
       : service
             .pickerListsForOwner(owner)
             .where(
-              (list) => list.pubkey == null || list.pubkey == owner,
+              (list) =>
+                  (list.pubkey == null || list.pubkey == owner) &&
+                  !list.isSeries,
             )
             .toList();
 
@@ -379,6 +383,7 @@ class SelectListCubit extends Cubit<SelectListState>
         final added = await service.addVideoToList(
           coordinate,
           _video.reference,
+          allowSeries: false,
         );
         if (!isSessionCurrent) return _sessionFailure();
         if (_writeInterrupted(epoch)) return null;
@@ -409,6 +414,7 @@ class SelectListCubit extends Cubit<SelectListState>
           final dropped = await service.removeVideoFromList(
             list.authorScopedId,
             reference,
+            allowSeries: false,
           );
           removed = removed && dropped;
           if (!isSessionCurrent) return _sessionFailure();

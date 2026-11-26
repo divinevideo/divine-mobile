@@ -16,6 +16,7 @@ export 'src/dm_send_policy.dart';
 export 'src/dm_subscription_ids.dart';
 export 'src/dm_sync_state.dart';
 export 'src/dm_verify_isolate.dart';
+export 'src/dm_wrap_lookup.dart';
 export 'src/gift_wrap_build_worker.dart';
 export 'src/nip17_message_service.dart'
     hide GiftWrapBuilder, IsolateGiftWrapBatchBuilder;

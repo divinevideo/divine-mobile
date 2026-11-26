@@ -303,6 +303,91 @@ void main() {
   });
 
   group(VideoFeedView, () {
+    testWidgets('can retry an empty For You page with a continuation', (
+      tester,
+    ) async {
+      whenListen(
+        videoFeedBloc,
+        const Stream<VideoFeedBlocState>.empty(),
+        initialState: const VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          source: VideoFeedSource.forYou(),
+          paginationCursor: 'continuation',
+        ),
+      );
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<VideoFeedBloc>.value(value: videoFeedBloc),
+              BlocProvider<VideoPlaybackStatusCubit>(
+                create: (_) => VideoPlaybackStatusCubit(),
+              ),
+              BlocProvider<VideoVolumeCubit>.value(value: videoVolumeCubit),
+            ],
+            child: const VideoFeedView(),
+          ),
+        ),
+      );
+      await tester.tap(find.widgetWithText(DivineButton, 'Retry'));
+
+      verify(
+        () => videoFeedBloc.add(const VideoFeedLoadMoreRequested()),
+      ).called(1);
+    });
+
+    testWidgets(
+      'prefetches and retries at the end of a one-video For You feed',
+      (
+        tester,
+      ) async {
+        final state = VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          source: const VideoFeedSource.forYou(),
+          videos: [createTestVideoEvent()],
+          paginationCursor: 'continuation',
+        );
+        whenListen(
+          videoFeedBloc,
+          const Stream<VideoFeedBlocState>.empty(),
+          initialState: state,
+        );
+
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: MultiBlocProvider(
+              providers: [
+                BlocProvider<VideoFeedBloc>.value(value: videoFeedBloc),
+                BlocProvider<VideoPlaybackStatusCubit>(
+                  create: (_) => VideoPlaybackStatusCubit(),
+                ),
+                BlocProvider<VideoVolumeCubit>.value(value: videoVolumeCubit),
+              ],
+              child: const VideoFeedView(),
+            ),
+          ),
+        );
+
+        verify(
+          () => videoFeedBloc.add(const VideoFeedLoadMoreRequested()),
+        ).called(1);
+
+        await tester.drag(
+          find.byType(InfiniteVideoFeed),
+          const Offset(0, -160),
+        );
+        await tester.pump();
+        verify(
+          () => videoFeedBloc.add(const VideoFeedLoadMoreRequested()),
+        ).called(1);
+
+        await tester.pump(const Duration(seconds: 3));
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+      },
+    );
+
     // Every home feed mode renders through this one page and reports
     // `source=home`, so the source detail is the only thing distinguishing
     // them in view_traffic_sources. Parameterised over the enum so a new feed

@@ -10,6 +10,21 @@ class AppLocalizationsKo extends AppLocalizations {
   AppLocalizationsKo([String locale = 'ko']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return '이 메시지를 열려면 $account 계정으로 전환할까요?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => '다이렉트 메시지';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      '보낸 사람의 이름과 메시지 내용을 숨기고 알림을 표시합니다.';
+
+  @override
+  String get dmNotificationMessageUnavailable => '이 메시지를 볼 수 없습니다.';
+
+  @override
   String get devOptionsClipRecovery => '클립 복구';
 
   @override
@@ -6798,6 +6813,52 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => '복제';
+
+  @override
+  String get libraryDraftActionConvertToClip => '클립으로 변환';
+
+  @override
+  String get libraryDraftConvertingToClip => '클립으로 변환 중...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => '임시 저장을 클립으로 변환했어요';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar => '임시 저장을 변환하지 못했어요';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      '이 초안의 텍스트와 스티커를 준비하지 못했어요. 편집기에서 연 다음 다시 시도해주세요.';
+
+  @override
+  String get libraryDraftActionShare => '초안 공유';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return '$name님에게 편집 가능한 초안을 보낼까요?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      '원본 클립과 편집 기록을 공유해요. 상대방은 잘라낸 부분을 볼 수 있고, 자기 사본을 편집하거나 게시하거나 다시 보낼 수 있어요.';
+
+  @override
+  String get libraryDraftShareFailed => '초안을 보내지 못했어요.';
+
+  @override
+  String get libraryDraftShareTooLarge => '초안이 너무 커서 보낼 수 없어요.';
+
+  @override
+  String get dmSharedDraft => '공유된 초안';
+
+  @override
+  String get dmOpenDraft => '가져와서 편집';
+
+  @override
+  String get dmDraftImportFailed => '초안을 가져오지 못했어요.';
+
+  @override
+  String get libraryDraftSent => '초안을 보냈어요';
 
   @override
   String get libraryDraftActionDelete => '임시 저장 삭제';
@@ -16241,4 +16302,52 @@ class AppLocalizationsKo extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return '$badgeName의 동영상';
   }
+
+  @override
+  String get menuBarEdit => '편집';
+
+  @override
+  String get menuBarUndo => '실행 취소';
+
+  @override
+  String get menuBarRedo => '실행 복귀';
+
+  @override
+  String get menuBarCut => '오려두기';
+
+  @override
+  String get menuBarCopy => '복사하기';
+
+  @override
+  String get menuBarPaste => '붙여넣기';
+
+  @override
+  String get menuBarSelectAll => '전체 선택';
+
+  @override
+  String get menuBarView => '보기';
+
+  @override
+  String get menuBarVideo => '동영상';
+
+  @override
+  String get menuBarPreviousVideo => '이전 동영상';
+
+  @override
+  String get menuBarNextVideo => '다음 동영상';
+
+  @override
+  String get menuBarPlayPause => '재생/일시 정지';
+
+  @override
+  String get menuBarMute => '음소거';
+
+  @override
+  String get menuBarUnmute => '음소거 해제';
+
+  @override
+  String get menuBarWindow => '윈도우';
+
+  @override
+  String get menuBarHelp => '도움말';
 }

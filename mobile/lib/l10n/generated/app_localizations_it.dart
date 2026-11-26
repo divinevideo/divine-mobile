@@ -10,6 +10,22 @@ class AppLocalizationsIt extends AppLocalizations {
   AppLocalizationsIt([String locale = 'it']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Passare a $account per aprire questo messaggio?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Messaggi diretti';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Mostra una notifica senza il nome del mittente o il testo del messaggio.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Questo messaggio non è disponibile.';
+
+  @override
   String get devOptionsClipRecovery => 'Recupero clip';
 
   @override
@@ -7228,6 +7244,55 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'Duplica';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'Converti in clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Conversione in clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'Bozza convertita in clip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Conversione bozza non riuscita';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Non è stato possibile preparare testo e sticker di questa bozza. Aprila nell’editor e riprova.';
+
+  @override
+  String get libraryDraftActionShare => 'Condividi bozza';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Inviare una bozza modificabile a $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Condividi le clip originali e la cronologia delle modifiche. Chi le riceve può vedere le parti tagliate, modificare la propria copia, pubblicarla o rimandartela.';
+
+  @override
+  String get libraryDraftShareFailed =>
+      'Non è stato possibile inviare la bozza.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'La bozza è troppo grande per essere inviata.';
+
+  @override
+  String get dmSharedDraft => 'Bozza condivisa';
+
+  @override
+  String get dmOpenDraft => 'Importa e modifica';
+
+  @override
+  String get dmDraftImportFailed => 'Non è stato possibile importare la bozza.';
+
+  @override
+  String get libraryDraftSent => 'Bozza inviata';
 
   @override
   String get libraryDraftActionDelete => 'Elimina bozza';
@@ -17229,4 +17294,52 @@ class AppLocalizationsIt extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Video di $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Composizione';
+
+  @override
+  String get menuBarUndo => 'Annulla';
+
+  @override
+  String get menuBarRedo => 'Ripristina';
+
+  @override
+  String get menuBarCut => 'Taglia';
+
+  @override
+  String get menuBarCopy => 'Copia';
+
+  @override
+  String get menuBarPaste => 'Incolla';
+
+  @override
+  String get menuBarSelectAll => 'Seleziona tutto';
+
+  @override
+  String get menuBarView => 'Vista';
+
+  @override
+  String get menuBarVideo => 'Video';
+
+  @override
+  String get menuBarPreviousVideo => 'Video precedente';
+
+  @override
+  String get menuBarNextVideo => 'Video successivo';
+
+  @override
+  String get menuBarPlayPause => 'Riproduci/Pausa';
+
+  @override
+  String get menuBarMute => 'Disattiva audio';
+
+  @override
+  String get menuBarUnmute => 'Riattiva audio';
+
+  @override
+  String get menuBarWindow => 'Finestra';
+
+  @override
+  String get menuBarHelp => 'Aiuto';
 }

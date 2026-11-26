@@ -10,6 +10,21 @@ class AppLocalizationsTe extends AppLocalizations {
   AppLocalizationsTe([String locale = 'te']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'ఈ సందేశాన్ని తెరవడానికి $account ఖాతాకు మారాలా?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'ప్రత్యక్ష సందేశాలు';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'పంపినవారి పేరు లేదా సందేశం చూపకుండా నోటిఫికేషన్ ఇవ్వండి.';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'ఈ సందేశం అందుబాటులో లేదు.';
+
+  @override
   String get devOptionsClipRecovery => 'క్లిప్ రికవరీ';
 
   @override
@@ -7355,6 +7370,55 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'నకిలీ';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'క్లిప్‌గా మార్చు';
+
+  @override
+  String get libraryDraftConvertingToClip => 'క్లిప్‌గా మారుస్తోంది...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'డ్రాఫ్ట్ క్లిప్‌గా మార్చబడింది';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'డ్రాఫ్ట్‌ను మార్చడంలో విఫలమైంది';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'ఈ డ్రాఫ్ట్‌లోని టెక్స్ట్ మరియు స్టిక్కర్‌లను సిద్ధం చేయడం సాధ్యపడలేదు. దాన్ని ఎడిటర్‌లో తెరిచి, ఆపై మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get libraryDraftActionShare => 'డ్రాఫ్ట్ షేర్ చేయి';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return '$nameకు ఎడిట్ చేయగల డ్రాఫ్ట్ పంపాలా?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'అసలు క్లిప్‌లు, ఎడిటింగ్ చరిత్ర రెండూ షేర్ అవుతాయి. అందుకున్నవారు మీరు కత్తిరించిన భాగాలను చూడవచ్చు. తమ కాపీని ఎడిట్ చేయవచ్చు, పోస్ట్ చేయవచ్చు లేదా తిరిగి పంపవచ్చు.';
+
+  @override
+  String get libraryDraftShareFailed => 'డ్రాఫ్ట్ పంపలేకపోయాం.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'డ్రాఫ్ట్ పంపడానికి చాలా పెద్దగా ఉంది.';
+
+  @override
+  String get dmSharedDraft => 'షేర్ చేసిన డ్రాఫ్ట్';
+
+  @override
+  String get dmOpenDraft => 'ఇంపోర్ట్ చేసి ఎడిట్ చేయి';
+
+  @override
+  String get dmDraftImportFailed => 'డ్రాఫ్ట్ ఇంపోర్ట్ చేయలేకపోయాం.';
+
+  @override
+  String get libraryDraftSent => 'డ్రాఫ్ట్ పంపాం';
 
   @override
   String get libraryDraftActionDelete => 'డ్రాఫ్ట్‌ను తొలగించండి';
@@ -17388,4 +17452,52 @@ class AppLocalizationsTe extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return '$badgeName వీడియోలు';
   }
+
+  @override
+  String get menuBarEdit => 'సవరణ';
+
+  @override
+  String get menuBarUndo => 'అన్డు';
+
+  @override
+  String get menuBarRedo => 'పునరావృతం';
+
+  @override
+  String get menuBarCut => 'కత్తిరించండి';
+
+  @override
+  String get menuBarCopy => 'కాపీ';
+
+  @override
+  String get menuBarPaste => 'అతికించండి';
+
+  @override
+  String get menuBarSelectAll => 'అన్నీ ఎంచుకోండి';
+
+  @override
+  String get menuBarView => 'వీక్షణ';
+
+  @override
+  String get menuBarVideo => 'వీడియో';
+
+  @override
+  String get menuBarPreviousVideo => 'మునుపటి వీడియో';
+
+  @override
+  String get menuBarNextVideo => 'తదుపరి వీడియో';
+
+  @override
+  String get menuBarPlayPause => 'ప్లే/పాజ్';
+
+  @override
+  String get menuBarMute => 'మ్యూట్ చేయండి';
+
+  @override
+  String get menuBarUnmute => 'అన్‌మ్యూట్ చేయండి';
+
+  @override
+  String get menuBarWindow => 'విండో';
+
+  @override
+  String get menuBarHelp => 'సహాయం';
 }

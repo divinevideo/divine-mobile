@@ -192,6 +192,7 @@ class _SearchResultsScope extends ConsumerWidget {
                       followRepository: followRepository,
                       rankingSignalsLoader: rankingSignalsLoader,
                       viewerPubkey: owner,
+                      clearResultsOnNewQuery: true,
                       initialState: snapshot,
                     );
                     final query = controller.text.trim();

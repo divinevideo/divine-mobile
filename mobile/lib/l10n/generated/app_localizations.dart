@@ -139,6 +139,30 @@ abstract class AppLocalizations {
     Locale('zh'),
   ];
 
+  /// Asks before switching to a known account to open its direct message.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to {account} to open this message?'**
+  String dmNotificationSwitchAccountPrompt(String account);
+
+  /// Account preference for generic direct-message push alerts.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct messages'**
+  String get notificationSettingsDirectMessages;
+
+  /// Direct-message notification setting. Keep both the sender and message private in the notification.
+  ///
+  /// In en, this message translates to:
+  /// **'Show a private alert without the sender’s name or message.'**
+  String get notificationSettingsDirectMessagesSubtitle;
+
+  /// Generic fallback when a tapped private message cannot be opened.
+  ///
+  /// In en, this message translates to:
+  /// **'This message is unavailable.'**
+  String get dmNotificationMessageUnavailable;
+
   /// Header of the Developer Options section that recovers clips the app can no longer show.
   ///
   /// In en, this message translates to:
@@ -12054,6 +12078,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Duplicate'**
   String get libraryDraftActionDuplicate;
+
+  /// Draft options menu action that renders the draft into one clip in the Clips library. The draft itself is kept.
+  ///
+  /// In en, this message translates to:
+  /// **'Convert to clip'**
+  String get libraryDraftActionConvertToClip;
+
+  /// Shown over the library while a draft is rendered into a clip.
+  ///
+  /// In en, this message translates to:
+  /// **'Converting to clip...'**
+  String get libraryDraftConvertingToClip;
+
+  /// Snackbar after a draft was rendered into a new clip in the Clips library.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft converted to a clip'**
+  String get libraryDraftConvertedToClipSnackbar;
+
+  /// Snackbar when rendering a draft into a clip failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to convert draft'**
+  String get libraryDraftConvertToClipFailedSnackbar;
+
+  /// Snackbar when a draft's text and stickers could not be prepared for the clip render.
+  ///
+  /// In en, this message translates to:
+  /// **'The text and stickers on this draft couldn’t be prepared. Open it in the editor, then try again.'**
+  String get libraryDraftConvertOverlaysUnavailable;
+
+  /// No description provided for @libraryDraftActionShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share draft'**
+  String get libraryDraftActionShare;
+
+  /// Confirmation before sending an editable draft project in a one-to-one DM.
+  ///
+  /// In en, this message translates to:
+  /// **'Send an editable draft to {name}?'**
+  String libraryDraftShareConfirm(String name);
+
+  /// No description provided for @libraryDraftShareNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'You’re sharing the original clips and edit history. They can see what you cut, edit their copy, post it, or send it back.'**
+  String get libraryDraftShareNotice;
+
+  /// No description provided for @libraryDraftShareFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t send the draft.'**
+  String get libraryDraftShareFailed;
+
+  /// No description provided for @libraryDraftShareTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'The draft is too large to send.'**
+  String get libraryDraftShareTooLarge;
+
+  /// No description provided for @dmSharedDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared draft'**
+  String get dmSharedDraft;
+
+  /// No description provided for @dmOpenDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Import and edit'**
+  String get dmOpenDraft;
+
+  /// No description provided for @dmDraftImportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t import the draft.'**
+  String get dmDraftImportFailed;
+
+  /// No description provided for @libraryDraftSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft sent'**
+  String get libraryDraftSent;
 
   /// No description provided for @libraryDraftActionDelete.
   ///
@@ -28464,6 +28572,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Videos from {badgeName}'**
   String badgeDiscoveryVideosLabel(String badgeName);
+
+  /// macOS menu bar: title of the Edit menu, as in other Mac apps.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get menuBarEdit;
+
+  /// macOS menu bar: Edit menu item that undoes the last text edit.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get menuBarUndo;
+
+  /// macOS menu bar: Edit menu item that redoes the last undone text edit.
+  ///
+  /// In en, this message translates to:
+  /// **'Redo'**
+  String get menuBarRedo;
+
+  /// macOS menu bar: Edit menu item that cuts the selected text.
+  ///
+  /// In en, this message translates to:
+  /// **'Cut'**
+  String get menuBarCut;
+
+  /// macOS menu bar: Edit menu item that copies the selected text.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get menuBarCopy;
+
+  /// macOS menu bar: Edit menu item that pastes text.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste'**
+  String get menuBarPaste;
+
+  /// macOS menu bar: Edit menu item that selects all text in the focused field.
+  ///
+  /// In en, this message translates to:
+  /// **'Select All'**
+  String get menuBarSelectAll;
+
+  /// macOS menu bar: title of the View menu, which holds Enter Full Screen.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get menuBarView;
+
+  /// macOS menu bar: title of the menu with the video feed commands (previous, next, play/pause, mute, back).
+  ///
+  /// In en, this message translates to:
+  /// **'Video'**
+  String get menuBarVideo;
+
+  /// macOS menu bar: Video menu item that moves the feed to the previous video (Up arrow).
+  ///
+  /// In en, this message translates to:
+  /// **'Previous Video'**
+  String get menuBarPreviousVideo;
+
+  /// macOS menu bar: Video menu item that moves the feed to the next video (Down arrow).
+  ///
+  /// In en, this message translates to:
+  /// **'Next Video'**
+  String get menuBarNextVideo;
+
+  /// macOS menu bar: Video menu item that plays or pauses the current video (Space).
+  ///
+  /// In en, this message translates to:
+  /// **'Play/Pause'**
+  String get menuBarPlayPause;
+
+  /// macOS menu bar: Video menu item that mutes feed playback (M). Shown while sound is on.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute'**
+  String get menuBarMute;
+
+  /// macOS menu bar: Video menu item that turns feed sound back on (M). Shown while muted.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute'**
+  String get menuBarUnmute;
+
+  /// macOS menu bar: title of the Window menu, as in other Mac apps.
+  ///
+  /// In en, this message translates to:
+  /// **'Window'**
+  String get menuBarWindow;
+
+  /// macOS menu bar: title of the Help menu, as in other Mac apps.
+  ///
+  /// In en, this message translates to:
+  /// **'Help'**
+  String get menuBarHelp;
 }
 
 class _AppLocalizationsDelegate

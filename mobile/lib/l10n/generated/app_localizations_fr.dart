@@ -10,6 +10,21 @@ class AppLocalizationsFr extends AppLocalizations {
   AppLocalizationsFr([String locale = 'fr']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Passer au compte $account pour ouvrir ce message ?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Messages privés';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Afficher une notification sans le nom de l’expéditeur ni le contenu du message.';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'Ce message est indisponible.';
+
+  @override
   String get devOptionsClipRecovery => 'Récupération de clips';
 
   @override
@@ -7250,6 +7265,55 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'Dupliquer';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'Convertir en clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Conversion en clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Brouillon converti en clip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Échec de la conversion du brouillon';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Le texte et les stickers de ce brouillon n’ont pas pu être préparés. Ouvre-le dans l’éditeur, puis réessaie.';
+
+  @override
+  String get libraryDraftActionShare => 'Partager le brouillon';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Envoyer un brouillon modifiable à $name ?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Tu partages les clips d’origine et l’historique des modifications. La personne pourra voir les passages coupés, modifier sa copie, la publier ou te la renvoyer.';
+
+  @override
+  String get libraryDraftShareFailed => 'Impossible d’envoyer le brouillon.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'Le brouillon est trop volumineux pour être envoyé.';
+
+  @override
+  String get dmSharedDraft => 'Brouillon partagé';
+
+  @override
+  String get dmOpenDraft => 'Importer et modifier';
+
+  @override
+  String get dmDraftImportFailed => 'Impossible d’importer le brouillon.';
+
+  @override
+  String get libraryDraftSent => 'Brouillon envoyé';
 
   @override
   String get libraryDraftActionDelete => 'Supprimer le brouillon';
@@ -17278,4 +17342,52 @@ class AppLocalizationsFr extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Vidéos de $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Édition';
+
+  @override
+  String get menuBarUndo => 'Annuler';
+
+  @override
+  String get menuBarRedo => 'Rétablir';
+
+  @override
+  String get menuBarCut => 'Couper';
+
+  @override
+  String get menuBarCopy => 'Copier';
+
+  @override
+  String get menuBarPaste => 'Coller';
+
+  @override
+  String get menuBarSelectAll => 'Tout sélectionner';
+
+  @override
+  String get menuBarView => 'Présentation';
+
+  @override
+  String get menuBarVideo => 'Vidéo';
+
+  @override
+  String get menuBarPreviousVideo => 'Vidéo précédente';
+
+  @override
+  String get menuBarNextVideo => 'Vidéo suivante';
+
+  @override
+  String get menuBarPlayPause => 'Lecture/Pause';
+
+  @override
+  String get menuBarMute => 'Couper le son';
+
+  @override
+  String get menuBarUnmute => 'Réactiver le son';
+
+  @override
+  String get menuBarWindow => 'Fenêtre';
+
+  @override
+  String get menuBarHelp => 'Aide';
 }

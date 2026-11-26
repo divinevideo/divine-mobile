@@ -15,6 +15,8 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/search_results/view/search_results_view.dart';
 import 'package:openvine/screens/search_results/widgets/widgets.dart';
 
+import '../../../helpers/test_provider_overrides.dart';
+
 class _MockSearchResultsFilterCubit extends MockCubit<SearchResultsFilter>
     implements SearchResultsFilterCubit {}
 
@@ -71,20 +73,22 @@ void main() {
     });
 
     Widget buildSubject() {
-      return MaterialApp(
-        localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: MultiBlocProvider(
-          providers: [
-            BlocProvider<SearchResultsFilterCubit>.value(
-              value: mockFilterCubit,
-            ),
-            BlocProvider<VideoSearchBloc>.value(value: mockVideoBloc),
-            BlocProvider<UserSearchBloc>.value(value: mockUserBloc),
-            BlocProvider<HashtagSearchBloc>.value(value: mockHashtagBloc),
-            BlocProvider<ListSearchBloc>.value(value: mockListBloc),
-          ],
-          child: Scaffold(body: SearchResultsView(controller: controller)),
+      return testProviderScope(
+        child: MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<SearchResultsFilterCubit>.value(
+                value: mockFilterCubit,
+              ),
+              BlocProvider<VideoSearchBloc>.value(value: mockVideoBloc),
+              BlocProvider<UserSearchBloc>.value(value: mockUserBloc),
+              BlocProvider<HashtagSearchBloc>.value(value: mockHashtagBloc),
+              BlocProvider<ListSearchBloc>.value(value: mockListBloc),
+            ],
+            child: Scaffold(body: SearchResultsView(controller: controller)),
+          ),
         ),
       );
     }

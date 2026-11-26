@@ -10,6 +10,21 @@ class AppLocalizationsAm extends AppLocalizations {
   AppLocalizationsAm([String locale = 'am']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'ይህን መልዕክት ለመክፈት ወደ $account ይቀየር?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'የግል መልዕክቶች';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'የላኪውን ስም ወይም መልዕክቱን ሳያሳዩ የግል ማሳወቂያ ያሳዩ።';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'ይህ መልዕክት አይገኝም።';
+
+  @override
   String get devOptionsClipRecovery => 'የክሊፕ መልሶ ማግኛ';
 
   @override
@@ -6978,6 +6993,52 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'አባዛ';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'ወደ ክሊፕ ቀይር';
+
+  @override
+  String get libraryDraftConvertingToClip => 'ወደ ክሊፕ በመቀየር ላይ...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'ረቂቅ ወደ ክሊፕ ተቀይሯል።';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar => 'ረቂቅን መቀየር አልተሳካም።';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'የዚህ ረቂቅ ጽሑፍና ተለጣፊዎች ሊዘጋጁ አልቻሉም። በአራሚው ውስጥ ይክፈቱት፣ ከዚያ እንደገና ይሞክሩ።';
+
+  @override
+  String get libraryDraftActionShare => 'ረቂቅ አጋራ';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'ሊታረም የሚችል ረቂቅ ለ$name ይላክ?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'ዋናዎቹ ክሊፖችና የአርትዖት ታሪኩ ይላካሉ። ተቀባዩ የተቆረጡትን ክፍሎች ማየት፣ ቅጂውን ማርትዕ፣ መለጠፍ ወይም መልሶ መላክ ይችላል።';
+
+  @override
+  String get libraryDraftShareFailed => 'ረቂቁን መላክ አልተቻለም።';
+
+  @override
+  String get libraryDraftShareTooLarge => 'ረቂቁ ለመላክ በጣም ትልቅ ነው።';
+
+  @override
+  String get dmSharedDraft => 'የተጋራ ረቂቅ';
+
+  @override
+  String get dmOpenDraft => 'አስገባና አርም';
+
+  @override
+  String get dmDraftImportFailed => 'ረቂቁን ማስገባት አልተቻለም።';
+
+  @override
+  String get libraryDraftSent => 'ረቂቁ ተልኳል';
 
   @override
   String get libraryDraftActionDelete => 'ረቂቅ ሰርዝ';
@@ -16597,4 +16658,52 @@ class AppLocalizationsAm extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'የ$badgeName ቪዲዮዎች';
   }
+
+  @override
+  String get menuBarEdit => 'አርትዕ';
+
+  @override
+  String get menuBarUndo => 'ቀልብስ';
+
+  @override
+  String get menuBarRedo => 'ድገም';
+
+  @override
+  String get menuBarCut => 'ቁረጥ';
+
+  @override
+  String get menuBarCopy => 'ቅዳ';
+
+  @override
+  String get menuBarPaste => 'ለጥፍ';
+
+  @override
+  String get menuBarSelectAll => 'ሁሉንም ምረጥ';
+
+  @override
+  String get menuBarView => 'እይታ';
+
+  @override
+  String get menuBarVideo => 'ቪዲዮ';
+
+  @override
+  String get menuBarPreviousVideo => 'ቀዳሚ ቪዲዮ';
+
+  @override
+  String get menuBarNextVideo => 'ቀጣይ ቪዲዮ';
+
+  @override
+  String get menuBarPlayPause => 'አጫውት/ለአፍታ አቁም';
+
+  @override
+  String get menuBarMute => 'ድምጸ-ከል አድርግ';
+
+  @override
+  String get menuBarUnmute => 'ድምጸ-ከል አንሳ';
+
+  @override
+  String get menuBarWindow => 'መስኮት';
+
+  @override
+  String get menuBarHelp => 'እገዛ';
 }

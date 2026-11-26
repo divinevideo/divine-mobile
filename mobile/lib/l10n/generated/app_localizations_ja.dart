@@ -10,6 +10,21 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'このメッセージを開くために $account に切り替えますか？';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'ダイレクトメッセージ';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      '送信者の名前やメッセージの内容を含めずに通知します。';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'このメッセージは表示できません。';
+
+  @override
   String get devOptionsClipRecovery => 'クリップの復旧';
 
   @override
@@ -6772,6 +6787,52 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => '複製';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'クリップに変換';
+
+  @override
+  String get libraryDraftConvertingToClip => 'クリップに変換しています…';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => '下書きをクリップに変換しました';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar => '下書きを変換できませんでした';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'この下書きのテキストとステッカーを準備できなかったよ。エディタで開いてから、もう一回試してみて。';
+
+  @override
+  String get libraryDraftActionShare => '下書きを共有';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return '編集できる下書きを$nameさんに送信しますか？';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      '元のクリップと編集履歴を共有します。受け取った相手はカットした部分も見ることができ、自分のコピーを編集、投稿したり、送り返したりできます。';
+
+  @override
+  String get libraryDraftShareFailed => '下書きを送信できませんでした。';
+
+  @override
+  String get libraryDraftShareTooLarge => '下書きが大きすぎて送信できません。';
+
+  @override
+  String get dmSharedDraft => '共有された下書き';
+
+  @override
+  String get dmOpenDraft => 'インポートして編集';
+
+  @override
+  String get dmDraftImportFailed => '下書きをインポートできませんでした。';
+
+  @override
+  String get libraryDraftSent => '下書きを送信しました';
 
   @override
   String get libraryDraftActionDelete => '下書きを削除';
@@ -16222,4 +16283,52 @@ class AppLocalizationsJa extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return '$badgeNameの動画';
   }
+
+  @override
+  String get menuBarEdit => '編集';
+
+  @override
+  String get menuBarUndo => '取り消す';
+
+  @override
+  String get menuBarRedo => 'やり直す';
+
+  @override
+  String get menuBarCut => 'カット';
+
+  @override
+  String get menuBarCopy => 'コピー';
+
+  @override
+  String get menuBarPaste => 'ペースト';
+
+  @override
+  String get menuBarSelectAll => 'すべてを選択';
+
+  @override
+  String get menuBarView => '表示';
+
+  @override
+  String get menuBarVideo => '動画';
+
+  @override
+  String get menuBarPreviousVideo => '前の動画';
+
+  @override
+  String get menuBarNextVideo => '次の動画';
+
+  @override
+  String get menuBarPlayPause => '再生/一時停止';
+
+  @override
+  String get menuBarMute => 'ミュート';
+
+  @override
+  String get menuBarUnmute => 'ミュートを解除';
+
+  @override
+  String get menuBarWindow => 'ウインドウ';
+
+  @override
+  String get menuBarHelp => 'ヘルプ';
 }

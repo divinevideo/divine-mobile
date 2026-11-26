@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Beralih ke {account} untuk membuka pesan ini?",
+  "notificationSettingsDirectMessages": "Pesan langsung",
+  "notificationSettingsDirectMessagesSubtitle": "Tampilkan notifikasi tanpa nama pengirim atau isi pesan.",
+  "dmNotificationMessageUnavailable": "Pesan ini tidak tersedia.",
   "@@locale": "id",
   "videoEditorSocialStickerPoll": "Polling",
   "videoEditorSocialStickerQuiz": "Kuis",
@@ -2241,6 +2245,15 @@
   "librarySortShortestClip": "Klip terpendek",
   "librarySortSquareFirst": "Persegi terlebih dahulu",
   "librarySortVerticalFirst": "Vertikal terlebih dahulu",
+  "libraryDraftActionShare": "Bagikan draf",
+  "libraryDraftShareConfirm": "Kirim draf yang bisa diedit ke {name}?",
+  "libraryDraftShareNotice": "Kamu membagikan klip asli dan riwayat edit. Penerima bisa melihat bagian yang kamu potong, mengedit salinannya, mempostingnya, atau mengirimkannya kembali.",
+  "libraryDraftShareFailed": "Draf tidak dapat dikirim.",
+  "libraryDraftShareTooLarge": "Draf terlalu besar untuk dikirim.",
+  "dmSharedDraft": "Draf yang dibagikan",
+  "dmOpenDraft": "Impor dan edit",
+  "dmDraftImportFailed": "Draf tidak dapat diimpor.",
+  "libraryDraftSent": "Draf terkirim",
   "libraryDraftActionDelete": "Hapus draf",
   "libraryDraftActionEdit": "Edit",
   "libraryDraftActionPost": "Posting",
@@ -2250,6 +2263,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Gagal menduplikat draf",
   "libraryDraftInProgressBadge": "Sedang berjalan",
   "libraryDraftActionDuplicate": "Duplikat",
+  "libraryDraftActionConvertToClip": "Ubah jadi klip",
+  "libraryDraftConvertingToClip": "Mengubah jadi klip...",
+  "libraryDraftConvertedToClipSnackbar": "Draf diubah jadi klip",
+  "libraryDraftConvertToClipFailedSnackbar": "Gagal mengubah draf",
+  "libraryDraftConvertOverlaysUnavailable": "Teks dan stiker di draf ini tidak bisa disiapkan. Buka di editor, lalu coba lagi.",
   "libraryDraftCopyTitle": "{title} (salinan {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {
@@ -6589,5 +6607,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Edit",
+  "menuBarUndo": "Urungkan",
+  "menuBarRedo": "Ulangi",
+  "menuBarCut": "Potong",
+  "menuBarCopy": "Salin",
+  "menuBarPaste": "Tempel",
+  "menuBarSelectAll": "Pilih Semua",
+  "menuBarView": "Tampilan",
+  "menuBarVideo": "Video",
+  "menuBarPreviousVideo": "Video Sebelumnya",
+  "menuBarNextVideo": "Video Berikutnya",
+  "menuBarPlayPause": "Putar/Jeda",
+  "menuBarMute": "Bisukan",
+  "menuBarUnmute": "Aktifkan Suara",
+  "menuBarWindow": "Jendela",
+  "menuBarHelp": "Bantuan"
 }

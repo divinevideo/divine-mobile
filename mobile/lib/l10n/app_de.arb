@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Zu {account} wechseln, um diese Nachricht zu öffnen?",
+  "notificationSettingsDirectMessages": "Direktnachrichten",
+  "notificationSettingsDirectMessagesSubtitle": "Zeige eine Benachrichtigung ohne Absendernamen oder Nachrichtentext.",
+  "dmNotificationMessageUnavailable": "Diese Nachricht ist nicht verfügbar.",
   "@@locale": "de",
   "videoEditorSocialStickerPoll": "Umfrage",
   "videoEditorSocialStickerQuiz": "Quiz",
@@ -2244,6 +2248,15 @@
   "libraryDisplayOptionsLabel": "Sortierung & Rastergröße",
   "libraryMoreActionsSemanticLabel": "Weitere Bibliotheksaktionen",
   "libraryGridSizeColumns": "{count, plural, one{1 Spalte} other{{count} Spalten}}",
+  "libraryDraftActionShare": "Entwurf teilen",
+  "libraryDraftShareConfirm": "Bearbeitbaren Entwurf an {name} senden?",
+  "libraryDraftShareNotice": "Du teilst die Originalclips und den Bearbeitungsverlauf. Die andere Person kann herausgeschnittene Stellen sehen, ihre Kopie bearbeiten, posten oder zurückschicken.",
+  "libraryDraftShareFailed": "Der Entwurf konnte nicht gesendet werden.",
+  "libraryDraftShareTooLarge": "Der Entwurf ist zu groß zum Senden.",
+  "dmSharedDraft": "Geteilter Entwurf",
+  "dmOpenDraft": "Importieren und bearbeiten",
+  "dmDraftImportFailed": "Der Entwurf konnte nicht importiert werden.",
+  "libraryDraftSent": "Entwurf gesendet",
   "libraryDraftActionDelete": "Entwurf löschen",
   "libraryDraftActionEdit": "Bearbeiten",
   "libraryDraftActionPost": "Posten",
@@ -2253,6 +2266,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Entwurf konnte nicht dupliziert werden",
   "libraryDraftInProgressBadge": "In Arbeit",
   "libraryDraftActionDuplicate": "Duplizieren",
+  "libraryDraftActionConvertToClip": "In Clip umwandeln",
+  "libraryDraftConvertingToClip": "Wird in einen Clip umgewandelt …",
+  "libraryDraftConvertedToClipSnackbar": "Entwurf in Clip umgewandelt",
+  "libraryDraftConvertToClipFailedSnackbar": "Entwurf konnte nicht umgewandelt werden",
+  "libraryDraftConvertOverlaysUnavailable": "Text und Sticker dieses Entwurfs konnten nicht vorbereitet werden. Öffne ihn im Editor und versuche es dann erneut.",
   "libraryDraftCopyTitle": "{title} (Kopie {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {
@@ -6589,5 +6607,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Bearbeiten",
+  "menuBarUndo": "Rückgängig",
+  "menuBarRedo": "Wiederholen",
+  "menuBarCut": "Ausschneiden",
+  "menuBarCopy": "Kopieren",
+  "menuBarPaste": "Einsetzen",
+  "menuBarSelectAll": "Alles auswählen",
+  "menuBarView": "Darstellung",
+  "menuBarVideo": "Video",
+  "menuBarPreviousVideo": "Vorheriges Video",
+  "menuBarNextVideo": "Nächstes Video",
+  "menuBarPlayPause": "Abspielen/Pausieren",
+  "menuBarMute": "Stummschalten",
+  "menuBarUnmute": "Ton einschalten",
+  "menuBarWindow": "Fenster",
+  "menuBarHelp": "Hilfe"
 }

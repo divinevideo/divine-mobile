@@ -93,6 +93,7 @@ class MainActivity : FlutterFragmentActivity() {
         private const val INSTALL_SOURCE_TAG = "OpenVineInstallSource"
         private const val DEVICE_MEMORY_CHANNEL = "divine/device_memory"
         private const val DEVICE_STORAGE_CHANNEL = "divine/device_storage"
+        private const val LARGE_SCREEN_LAYOUT_CHANNEL = "divine/large_screen_layout"
     }
 
     private var navigationChannel: MethodChannel? = null
@@ -134,6 +135,10 @@ class MainActivity : FlutterFragmentActivity() {
 
         // Disk capacity and free space, which size the media caches.
         setupDeviceStorageChannel(flutterEngine)
+
+        // Whether the system ignores the portrait lock on large displays,
+        // which turns on the large-screen layouts there (#11471).
+        setupLargeScreenLayoutChannel(flutterEngine)
 
         // Set up NIP-55 Android Signer plugin
         nostrSignerPlugin = NostrSignerPlugin(this, flutterEngine)
@@ -287,6 +292,26 @@ class MainActivity : FlutterFragmentActivity() {
             }
         }
         Log.d(INSTALL_SOURCE_TAG, "Install source channel registered")
+    }
+
+    private fun setupLargeScreenLayoutChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            LARGE_SCREEN_LAYOUT_CHANNEL,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                // Android 16 ignores the orientation, resizability and
+                // aspect-ratio restrictions of apps that target API 36 on
+                // displays at least 600 dp across, so the manifest's
+                // portrait lock no longer holds there. Dart checks the
+                // display size, which changes as a foldable folds.
+                "ignoresOrientationLockOnLargeScreens" -> result.success(
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA &&
+                        applicationInfo.targetSdkVersion >= Build.VERSION_CODES.BAKLAVA,
+                )
+                else -> result.notImplemented()
+            }
+        }
     }
 
     private fun setupDeviceMemoryChannel(flutterEngine: FlutterEngine) {

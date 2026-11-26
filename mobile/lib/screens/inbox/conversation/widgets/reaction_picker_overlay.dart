@@ -80,6 +80,7 @@ class ReactionPickerOverlay {
     bool deleteForEveryone = true,
     bool isVideoShare = false,
     bool isEncryptedVideo = false,
+    bool isEditableDraft = false,
     bool canAddToClips = false,
     SenderBlockOption? senderBlock,
     List<String> emojis = kDefaultDmReactionEmojis,
@@ -122,6 +123,7 @@ class ReactionPickerOverlay {
                   deleteForEveryone: deleteForEveryone,
                   isVideoShare: isVideoShare,
                   isEncryptedVideo: isEncryptedVideo,
+                  isEditableDraft: isEditableDraft,
                   canAddToClips: canAddToClips,
                   senderBlock: senderBlock,
                   onSelected: (action) => sheetContext.popModalIfMounted(
@@ -255,6 +257,7 @@ class _ActionList extends StatelessWidget {
     required this.deleteForEveryone,
     required this.isVideoShare,
     required this.isEncryptedVideo,
+    required this.isEditableDraft,
     required this.canAddToClips,
     required this.senderBlock,
     required this.onSelected,
@@ -272,6 +275,7 @@ class _ActionList extends StatelessWidget {
   /// Whether the message is a received encrypted (kind 15) video DM. Offers
   /// Play and Save (decrypt-then-save) instead of the shared-reel URL actions.
   final bool isEncryptedVideo;
+  final bool isEditableDraft;
 
   /// Whether adding the received encrypted video to the viewer's own clips
   /// is offered. The C2PA check decides whether it is accepted.
@@ -288,7 +292,7 @@ class _ActionList extends StatelessWidget {
       // An encrypted video's content is its ciphertext URL, which the card
       // deliberately never renders; copying it would put that URL on the
       // clipboard, so the tile is withheld.
-      if (!isEncryptedVideo)
+      if (!isEncryptedVideo && !isEditableDraft)
         _ActionTile(
           icon: DivineIconName.copy,
           label: l10n.dmMessageActionCopyText,

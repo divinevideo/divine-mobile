@@ -15,6 +15,8 @@ OutgoingVideoDm _entry({
   OutgoingVideoDmPhase phase = OutgoingVideoDmPhase.queued,
   double? uploadProgress,
   OutgoingVideoDmFailure? failure,
+  bool isDraft = false,
+  String? draftTitle,
   Uint8List? frame,
 }) => OutgoingVideoDm(
   id: 'entry',
@@ -26,6 +28,8 @@ OutgoingVideoDm _entry({
   uploadProgress: uploadProgress,
   failure: failure,
   frame: frame,
+  isDraft: isDraft,
+  draftTitle: draftTitle,
 );
 
 Widget _host(
@@ -414,6 +418,47 @@ void main() {
 
       Finder bySemanticsLabelContaining(String text) =>
           find.bySemanticsLabel(RegExp(RegExp.escape(text)));
+
+      testWidgets('a draft upload announces the draft and its progress', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          _host(
+            _entry(
+              phase: OutgoingVideoDmPhase.uploading,
+              uploadProgress: 0.42,
+              isDraft: true,
+            ),
+          ),
+        );
+        expect(bySemanticsLabelContaining(l10n.dmSharedDraft), findsOneWidget);
+        expect(
+          bySemanticsLabelContaining(l10n.dmPendingVideoUploading('42%')),
+          findsOneWidget,
+        );
+        expect(
+          bySemanticsLabelContaining(l10n.dmPendingVideoSemantics('42%')),
+          findsNothing,
+        );
+        handle.dispose();
+      });
+
+      testWidgets("a draft upload shows the draft's title", (tester) async {
+        await tester.pumpWidget(
+          _host(
+            _entry(
+              phase: OutgoingVideoDmPhase.uploading,
+              uploadProgress: 0.42,
+              isDraft: true,
+              draftTitle: ' Beach cut ',
+            ),
+          ),
+        );
+
+        expect(find.text(l10n.dmSharedDraft), findsOneWidget);
+        expect(find.text('Beach cut'), findsOneWidget);
+      });
 
       for (final (failure, reason) in [
         (OutgoingVideoDmFailure.failed, l10n.dmVideoSendFailed),

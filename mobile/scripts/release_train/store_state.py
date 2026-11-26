@@ -12,8 +12,8 @@ _ASCII_DIGITS = re.compile(r"[0-9]+")
 _STABLE_TAG = re.compile(r"refs/tags/(\d+\.\d+\.\d+)", re.ASCII)
 
 
-def ios_submitted_versions(app_store_versions: list) -> list[Version]:
-    if not isinstance(app_store_versions, list) or not app_store_versions:
+def ios_submitted_versions(app_store_versions: list, *, allow_empty: bool = False) -> list[Version]:
+    if not isinstance(app_store_versions, list) or (not allow_empty and not app_store_versions):
         raise ValueError("App Store versions lookup returned no entries")
     versions = []
     for entry in app_store_versions:

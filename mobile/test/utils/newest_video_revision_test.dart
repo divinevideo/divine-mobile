@@ -2,10 +2,13 @@
 // ABOUTME: opened revision as its floor and fallback, and none when deleted.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show VideoEvent;
+import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:nostr_sdk/nostr_sdk.dart' show generatePrivateKey, getPublicKey;
+import 'package:nostr_sdk/nostr_sdk.dart'
+    show Filter, QueryEnd, QueryResult, generatePrivateKey, getPublicKey;
 import 'package:openvine/utils/newest_video_revision.dart';
 import 'package:videos_repository/videos_repository.dart'
     show
@@ -16,6 +19,10 @@ import 'package:videos_repository/videos_repository.dart'
         VideosRepository;
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
+
+class _MockNostrClient extends Mock implements NostrClient {}
+
+class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
 
 const _owner =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -34,6 +41,10 @@ VideoEvent _video({int? eventKind}) => VideoEvent(
 void main() {
   group(newestVideoRevision, () {
     late _MockVideosRepository repository;
+
+    setUpAll(() {
+      registerFallbackValue(<Filter>[]);
+    });
 
     setUp(() {
       repository = _MockVideosRepository();
@@ -67,7 +78,10 @@ void main() {
         expect(opened.addressableId, isNull);
         expect(opened.stableId, 'my-video');
         when(
-          () => repository.fetchLatestVideoRevision(any()),
+          () => repository.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
         ).thenAnswer((_) async => LatestVideoRevisionFound(different));
 
         expect(
@@ -78,13 +92,21 @@ void main() {
           ),
           isNull,
         );
-        verifyNever(() => repository.fetchLatestVideoRevision(any()));
+        verifyNever(
+          () => repository.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
+        );
       },
     );
 
     test('asks for the address of the video', () async {
       when(
-        () => repository.fetchLatestVideoRevision(any()),
+        () => repository.fetchLatestVideoRevision(
+          any(),
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
       ).thenAnswer((_) async => const LatestVideoRevisionAbsent());
 
       await newestVideoRevision(
@@ -94,8 +116,92 @@ void main() {
       );
 
       verify(
-        () => repository.fetchLatestVideoRevision('34235:$_owner:my-video'),
+        () => repository.fetchLatestVideoRevision(
+          '34235:$_owner:my-video',
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
       ).called(1);
+    });
+
+    group('asks for a revision no older than', () {
+      setUp(() {
+        when(
+          () => repository.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
+        ).thenAnswer((_) async => const LatestVideoRevisionAbsent());
+      });
+
+      test('the opened revision when its timestamp is known', () async {
+        await newestVideoRevision(
+          repository.fetchLatestVideoRevision,
+          _video().copyWith(eventCreatedAt: 1700000005),
+          logName: 'test',
+        );
+
+        verify(
+          () => repository.fetchLatestVideoRevision(
+            '34236:$_owner:my-video',
+            notOlderThan: (createdAt: 1700000005, id: 'opened-id'),
+          ),
+        ).called(1);
+      });
+
+      test('nothing when the opened timestamp is unknown', () async {
+        await newestVideoRevision(
+          repository.fetchLatestVideoRevision,
+          _video(),
+          logName: 'test',
+        );
+
+        verify(
+          () => repository.fetchLatestVideoRevision('34236:$_owner:my-video'),
+        ).called(1);
+      });
+    });
+
+    // Funnelcake may not have indexed the opened revision yet, and this
+    // device may not hold it; the relays are asked before giving up.
+    test('returns the opened revision from the relays when Funnelcake answers '
+        'an older one and no copy is held', () async {
+      final privateKey = generatePrivateKey();
+      final owner = getPublicKey(privateKey);
+      Event signed(String content, int createdAt) => Event(
+        owner,
+        34236,
+        [
+          ['d', 'my-video'],
+        ],
+        content,
+        createdAt: createdAt,
+      )..sign(privateKey);
+      final stale = signed('not yet replaced', 1700000000);
+      final opened = signed('opened', 1700000005);
+      final nostr = _MockNostrClient();
+      final funnelcake = _MockFunnelcakeApiClient();
+      when(() => funnelcake.isAvailable).thenReturn(true);
+      when(
+        () => funnelcake.getVideoEvent('my-video'),
+      ).thenAnswer((_) async => stale);
+      when(
+        () => nostr.readEvents(any(), useCache: any(named: 'useCache')),
+      ).thenAnswer(
+        (_) async =>
+            QueryResult(events: [opened], endedBy: QueryEnd.settledEarly),
+      );
+
+      final result = await newestVideoRevision(
+        VideosRepository(
+          nostrClient: nostr,
+          funnelcakeApiClient: funnelcake,
+        ).fetchLatestVideoRevision,
+        VideoEvent.fromNostrEvent(opened),
+        logName: 'test',
+        cachedEvent: (_) => null,
+      );
+
+      expect(result, same(opened));
     });
 
     test('refuses an opened event with conflicting d tags', () async {
@@ -122,7 +228,10 @@ void main() {
         createdAt: 1700000001,
       );
       when(
-        () => repository.fetchLatestVideoRevision(any()),
+        () => repository.fetchLatestVideoRevision(
+          any(),
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
       ).thenAnswer((_) async => LatestVideoRevisionFound(different));
 
       expect(
@@ -133,7 +242,12 @@ void main() {
         ),
         isNull,
       );
-      verifyNever(() => repository.fetchLatestVideoRevision(any()));
+      verifyNever(
+        () => repository.fetchLatestVideoRevision(
+          any(),
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
+      );
     });
 
     test('refuses a relay revision with conflicting d tags', () async {
@@ -148,7 +262,10 @@ void main() {
         createdAt: 1700000001,
       );
       when(
-        () => repository.fetchLatestVideoRevision(any()),
+        () => repository.fetchLatestVideoRevision(
+          any(),
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
       ).thenAnswer((_) async => LatestVideoRevisionFound(ambiguous));
 
       expect(
@@ -163,7 +280,10 @@ void main() {
 
     test('treats a video with no kind as a short video', () async {
       when(
-        () => repository.fetchLatestVideoRevision(any()),
+        () => repository.fetchLatestVideoRevision(
+          any(),
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
       ).thenAnswer((_) async => const LatestVideoRevisionAbsent());
 
       await newestVideoRevision(
@@ -173,7 +293,10 @@ void main() {
       );
 
       verify(
-        () => repository.fetchLatestVideoRevision('34236:$_owner:my-video'),
+        () => repository.fetchLatestVideoRevision(
+          '34236:$_owner:my-video',
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
       ).called(1);
     });
 
@@ -182,7 +305,10 @@ void main() {
         ['d', 'my-video'],
       ], 'newest');
       when(
-        () => repository.fetchLatestVideoRevision(any()),
+        () => repository.fetchLatestVideoRevision(
+          any(),
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
       ).thenAnswer((_) async => LatestVideoRevisionFound(newest));
 
       final result = await newestVideoRevision(
@@ -205,7 +331,10 @@ void main() {
         createdAt: 1700000000,
       );
       when(
-        () => repository.fetchLatestVideoRevision(any()),
+        () => repository.fetchLatestVideoRevision(
+          any(),
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
       ).thenAnswer((_) async => LatestVideoRevisionFound(older));
 
       final opened = _video().copyWith(eventCreatedAt: 1700000001);
@@ -231,7 +360,10 @@ void main() {
 
       setUp(() {
         when(
-          () => repository.fetchLatestVideoRevision(any()),
+          () => repository.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
         ).thenAnswer((_) async => LatestVideoRevisionFound(sameSecond));
       });
 
@@ -270,7 +402,10 @@ void main() {
       'copy is held',
       () async {
         when(
-          () => repository.fetchLatestVideoRevision(any()),
+          () => repository.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
         ).thenAnswer((_) async => const LatestVideoRevisionUnknown());
 
         final result = await newestVideoRevision(
@@ -285,7 +420,10 @@ void main() {
 
     test('returns null when the read finds the video gone', () async {
       when(
-        () => repository.fetchLatestVideoRevision(any()),
+        () => repository.fetchLatestVideoRevision(
+          any(),
+          notOlderThan: any(named: 'notOlderThan'),
+        ),
       ).thenAnswer((_) async => const LatestVideoRevisionAbsent());
 
       final result = await newestVideoRevision(
@@ -327,7 +465,10 @@ void main() {
 
       void stubRevision(LatestVideoRevision revision) {
         when(
-          () => repository.fetchLatestVideoRevision(any()),
+          () => repository.fetchLatestVideoRevision(
+            any(),
+            notOlderThan: any(named: 'notOlderThan'),
+          ),
         ).thenAnswer((_) async => revision);
       }
 

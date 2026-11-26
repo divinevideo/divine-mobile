@@ -3,12 +3,50 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 import subprocess
 import time
 from typing import Protocol
 
 BOOTSTRAP_PATH = "allocations/bootstrap.json"
 _MAX_CONFLICT_RETRIES = 5
+ALLOWED_MACOS_DEFAULT_ENVS = frozenset({"PRODUCTION", "STAGING", "POC"})
+_SHA40_RE = re.compile(r"[0-9a-f]{40}")
+_SHA64_RE = re.compile(r"[0-9a-f]{64}")
+
+
+def validate_macos_provenance(
+    record: dict,
+    *,
+    expected_version: str | None,
+    expected_number: int,
+    expected_source: str | None = None,
+    require_production: bool = False,
+) -> str:
+    """Validate a macOS provenance record and return its verified DEFAULT_ENV."""
+    if not isinstance(record, dict):
+        raise ValueError("macOS provenance record must be a JSON object")
+    if not expected_version:
+        raise ValueError("macOS provenance expected_version missing")
+    if record.get("platform") != "macos":
+        raise ValueError("macOS provenance platform mismatch")
+    if record.get("release_version") != f"{expected_version}+{expected_number}":
+        raise ValueError("macOS provenance release_version mismatch")
+    source = record.get("build_source_commit")
+    if not _SHA40_RE.fullmatch(source or ""):
+        raise ValueError("macOS provenance has invalid build_source_commit")
+    if expected_source is not None and source != expected_source:
+        raise ValueError("macOS provenance build_source_commit mismatch")
+    if record.get("patchable") is not False:
+        raise ValueError("macOS provenance requires patchable=false")
+    if not _SHA64_RE.fullmatch(record.get("pkg_sha256") or ""):
+        raise ValueError("macOS provenance requires a 64-hex pkg_sha256")
+    default_env = record.get("default_env")
+    if default_env not in ALLOWED_MACOS_DEFAULT_ENVS:
+        raise ValueError(f"macOS provenance has invalid default_env: {default_env!r}")
+    if require_production and default_env != "PRODUCTION":
+        raise ValueError(f"macOS provenance default_env must be PRODUCTION, got {default_env!r}")
+    return default_env
 
 
 class LedgerError(RuntimeError):

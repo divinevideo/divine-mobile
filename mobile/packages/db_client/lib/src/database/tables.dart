@@ -1914,6 +1914,11 @@ class ProcessedGiftWraps extends Table {
   TextColumn get ownerPubkey =>
       text().withDefault(const Constant('')).named('owner_pubkey')();
 
+  /// Verified inbound rumor referenced by a second wrap for the same message.
+  /// Terminal outcomes without a navigable message keep this NULL.
+  TextColumn get verifiedMessageId =>
+      text().nullable().named('verified_message_id')();
+
   @override
   Set<Column> get primaryKey => {giftWrapId, ownerPubkey};
 }

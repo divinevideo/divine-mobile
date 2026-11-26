@@ -22,6 +22,8 @@ import 'package:unified_logger/unified_logger.dart' show LogCaptureService;
 
 class _MockDmVideoSendService extends Mock implements DmVideoSendService {}
 
+class _MockFile extends Mock implements File {}
+
 class _MockClipProvenanceVerifier extends Mock
     implements ClipProvenanceVerifier {}
 
@@ -45,25 +47,60 @@ class _RecordingCrashReporter implements CrashReporter {
   Future<void> setCustomKey(String key, Object value) async {}
 }
 
-/// One `sendVideo` call the test drives by hand.
+/// One send the test drives by hand: an `uploadVideo` call and the
+/// `publishVideo` call that follows it.
 class _PendingSend {
   _PendingSend({
     required this.videoFile,
     required this.mimeType,
-    required this.extraTags,
+    required this.blurhash,
     required this.onPhase,
     required this.onUploadProgress,
     required this.cancellation,
-  });
+  }) : upload = _uploadOf(videoFile.path);
 
   final DmVideoSendCancellation cancellation;
   final File videoFile;
   final String mimeType;
-  final List<List<String>> extraTags;
+  final String? blurhash;
   final void Function(DmVideoSendPhase phase)? onPhase;
   final void Function(double fraction)? onUploadProgress;
+
+  /// What the upload returns, distinct for every send.
+  final DmVideoUpload upload;
+
+  /// The result of the whole send. Completing it finishes the upload too,
+  /// then answers the publication with the same result.
   final Completer<NIP17SendResult> completer = Completer<NIP17SendResult>();
+
+  final Completer<void> _uploadFinished = Completer<void>();
+
+  /// Finishes the upload alone, leaving the publication that follows it
+  /// waiting on [completer].
+  void finishUpload() => _uploadFinished.complete();
+
+  /// Settles when the upload finishes, through [finishUpload] or [completer].
+  Future<DmVideoUpload> get uploaded =>
+      Future.any([_uploadFinished.future, completer.future]).then(
+        (_) => upload,
+      );
+
+  /// The extra tags the publication was given, once it ran.
+  List<List<String>>? publishedTags;
 }
+
+/// A finished upload of the video at [path]. Every call returns a new
+/// instance, so a test can tell one upload from another.
+DmVideoUpload _uploadOf(String path) => DmVideoUpload(
+  fileUrl: 'https://media.example/$path',
+  fileMetadata: const DmFileMetadata(
+    fileType: 'video/mp4',
+    encryptionAlgorithm: 'aes-gcm',
+    decryptionKey: 'key',
+    decryptionNonce: 'nonce',
+    fileHash: 'hash',
+  ),
+);
 
 const _recipientPubkey =
     '1111111111111111111111111111111111111111111111111111111111111111';
@@ -130,25 +167,49 @@ void main() {
     return created;
   }
 
-  Future<NIP17SendResult> anySendVideoOn(_MockDmVideoSendService mock) =>
-      mock.sendVideo(
-        recipientPubkey: any(named: 'recipientPubkey'),
+  Future<DmVideoUpload> anyUploadVideoOn(_MockDmVideoSendService mock) =>
+      mock.uploadVideo(
         videoFile: any(named: 'videoFile'),
         mimeType: any(named: 'mimeType'),
-        extraTags: any(named: 'extraTags'),
+        blurhash: any(named: 'blurhash'),
         onPhase: any(named: 'onPhase'),
         onUploadProgress: any(named: 'onUploadProgress'),
         cancellation: any(named: 'cancellation'),
       );
 
-  When<Future<NIP17SendResult>> whenSendVideo() =>
-      when(() => anySendVideoOn(service));
+  Future<NIP17SendResult> anyPublishVideoOn(_MockDmVideoSendService mock) =>
+      mock.publishVideo(
+        recipientPubkey: any(named: 'recipientPubkey'),
+        uploaded: any(named: 'uploaded'),
+        extraTags: any(named: 'extraTags'),
+        createdAt: any(named: 'createdAt'),
+        onRumorCreatedAt: any(named: 'onRumorCreatedAt'),
+        onPhase: any(named: 'onPhase'),
+        cancellation: any(named: 'cancellation'),
+      );
 
-  /// Answers every send at once: with [answer] for its path when given,
-  /// otherwise with a success. Records each path and its extra tags.
+  When<Future<DmVideoUpload>> whenUploadVideo() =>
+      when(() => anyUploadVideoOn(service));
+
+  When<Future<NIP17SendResult>> whenPublishVideo() =>
+      when(() => anyPublishVideoOn(service));
+
+  /// Answers every upload at once with a new [DmVideoUpload] of its path.
+  void stubAutoUpload() {
+    whenUploadVideo().thenAnswer(
+      (invocation) async =>
+          _uploadOf((invocation.namedArguments[#videoFile] as File).path),
+    );
+  }
+
+  /// Answers every upload and publication at once: each publication with
+  /// [answer] for its path when given, otherwise with a success. Records the
+  /// path and extra tags of each publication.
   void stubAutoSend([NIP17SendResult Function(String path)? answer]) {
-    whenSendVideo().thenAnswer((invocation) async {
-      final path = (invocation.namedArguments[#videoFile] as File).path;
+    stubAutoUpload();
+    whenPublishVideo().thenAnswer((invocation) async {
+      final uploaded = invocation.namedArguments[#uploaded] as DmVideoUpload;
+      final path = uploaded.fileUrl.replaceFirst('https://media.example/', '');
       sentPaths.add(path);
       sentTags.add(
         invocation.namedArguments[#extraTags] as List<List<String>>,
@@ -159,13 +220,13 @@ void main() {
   }
 
   void stubControlledSend() {
-    whenSendVideo().thenAnswer((invocation) {
+    whenUploadVideo().thenAnswer((invocation) {
       final send = _PendingSend(
         cancellation:
             invocation.namedArguments[#cancellation] as DmVideoSendCancellation,
         videoFile: invocation.namedArguments[#videoFile] as File,
         mimeType: invocation.namedArguments[#mimeType] as String,
-        extraTags: invocation.namedArguments[#extraTags] as List<List<String>>,
+        blurhash: invocation.namedArguments[#blurhash] as String?,
         onPhase:
             invocation.namedArguments[#onPhase]
                 as void Function(DmVideoSendPhase)?,
@@ -174,6 +235,19 @@ void main() {
                 as void Function(double)?,
       );
       sends.add(send);
+      return send.uploaded;
+    });
+    // Starts publication as the service does: past the point of
+    // cancellation, then reporting it.
+    whenPublishVideo().thenAnswer((invocation) {
+      final uploaded = invocation.namedArguments[#uploaded] as DmVideoUpload;
+      final send = sends.lastWhere((send) => identical(send.upload, uploaded));
+      send.publishedTags =
+          invocation.namedArguments[#extraTags] as List<List<String>>;
+      (invocation.namedArguments[#cancellation] as DmVideoSendCancellation?)
+          ?.beginPublication();
+      (invocation.namedArguments[#onPhase] as void Function(DmVideoSendPhase)?)
+          ?.call(DmVideoSendPhase.sending);
       return send.completer.future;
     });
   }
@@ -216,7 +290,9 @@ void main() {
       registerFallbackValue(File('/tmp/fallback.mp4'));
       registerFallbackValue((DmVideoSendPhase _) {});
       registerFallbackValue((double _) {});
+      registerFallbackValue((int _) {});
       registerFallbackValue(DmVideoSendCancellation()..finish());
+      registerFallbackValue(_uploadOf('/tmp/fallback.mp4'));
     });
 
     setUp(() {
@@ -226,6 +302,133 @@ void main() {
       sentTags = [];
       readFrame = (_) async => null;
       idCounter = 0;
+    });
+
+    test(
+      'keeps an owned draft package for retry and deletes it after send',
+      () async {
+        final file = _MockFile();
+        when(() => file.path).thenReturn('/v/project.divinedraft');
+        when(file.delete).thenAnswer((_) async => file);
+        stubControlledSend();
+        outbox = createOutbox();
+        final entries = recordConversation('c1');
+
+        outbox.sendDraft(
+          conversationId: 'c1',
+          recipientPubkey: _recipientPubkey,
+          file: file,
+        );
+        await pumpEventQueue();
+        sends.single.completer.completeError(
+          const DmVideoUploadFailed('server refused'),
+        );
+        await pumpEventQueue();
+        final failed = entries.last.single;
+        expect(failed.canRetry, isTrue);
+        verifyNever(file.delete);
+
+        outbox.retry(failed.id);
+        await pumpEventQueue();
+        expect(sends.last.videoFile.path, file.path);
+        expect(sends.last.mimeType, DmFileMetadata.editableDraftMimeType);
+        sends.last.completer.complete(_success('preview'));
+        await pumpEventQueue();
+
+        expect(entries.last.single.phase, OutgoingVideoDmPhase.sent);
+        verify(file.delete).called(1);
+      },
+    );
+
+    test("sends a draft's title tag and cover blurhash", () async {
+      final file = _MockFile();
+      when(() => file.path).thenReturn('/v/project.divinedraft');
+      when(file.delete).thenAnswer((_) async => file);
+      stubControlledSend();
+      outbox = createOutbox();
+      final entries = recordConversation('c1');
+
+      outbox.sendDraft(
+        conversationId: 'c1',
+        recipientPubkey: _recipientPubkey,
+        file: file,
+        title: '  Beach cut  ',
+        blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+      );
+      await pumpEventQueue();
+
+      expect(entries.last.single.draftTitle, '  Beach cut  ');
+      expect(sends.single.mimeType, DmFileMetadata.editableDraftMimeType);
+      expect(sends.single.blurhash, 'LEHV6nWB2yk8pyo0adR*.7kCMdnj');
+      sends.single.completer.complete(_success('draft'));
+      await pumpEventQueue();
+      expect(sends.single.publishedTags, [
+        ['title', 'Beach cut'],
+      ]);
+    });
+
+    test(
+      "republishes a draft's kept upload with its title tag on retry",
+      () async {
+        final file = _MockFile();
+        when(() => file.path).thenReturn('/v/project.divinedraft');
+        when(file.delete).thenAnswer((_) async => file);
+        var attempts = 0;
+        stubAutoSend(
+          (_) => attempts++ == 0
+              ? const NIP17SendResult.failure('offline')
+              : _success('draft'),
+        );
+        outbox = createOutbox();
+        final entries = recordConversation('c1');
+
+        outbox.sendDraft(
+          conversationId: 'c1',
+          recipientPubkey: _recipientPubkey,
+          file: file,
+          title: 'Beach cut',
+        );
+        await pumpEventQueue();
+        final failed = entries.last.single;
+        expect(failed.phase, OutgoingVideoDmPhase.failed);
+        verifyNever(file.delete);
+
+        outbox.retry(failed.id);
+        await pumpEventQueue();
+
+        verify(() => anyUploadVideoOn(service)).called(1);
+        expect(sentTags, [
+          [
+            ['title', 'Beach cut'],
+          ],
+          [
+            ['title', 'Beach cut'],
+          ],
+        ]);
+        expect(entries.last.single.phase, OutgoingVideoDmPhase.sent);
+        verify(file.delete).called(1);
+      },
+    );
+
+    test('sends an untitled draft without a title tag', () async {
+      final file = _MockFile();
+      when(() => file.path).thenReturn('/v/project.divinedraft');
+      when(file.delete).thenAnswer((_) async => file);
+      stubControlledSend();
+      outbox = createOutbox();
+
+      outbox.sendDraft(
+        conversationId: 'c1',
+        recipientPubkey: _recipientPubkey,
+        file: file,
+        title: ' ',
+      );
+      await pumpEventQueue();
+
+      expect(sends.single.blurhash, isNull);
+      sends.single.completer.complete(_success('draft'));
+      await pumpEventQueue();
+      expect(sends.single.publishedTags, isEmpty);
     });
 
     test('stalled upload fails and releases the account queue', () {
@@ -324,7 +527,8 @@ void main() {
         final outcomes = recordOutcomes();
         sendVideo();
         await tester.pump();
-        sends.single.onPhase!(DmVideoSendPhase.sending);
+        sends.single.finishUpload();
+        await tester.pump();
         await tester.pump(const Duration(hours: 1));
         expect(entries.last.single.phase, OutgoingVideoDmPhase.publishing);
         expect(outcomes, isEmpty);
@@ -419,7 +623,8 @@ void main() {
         sendVideo();
         sendVideo(path: '/v/queued.mp4');
         await tester.pump();
-        sends.single.onPhase!(DmVideoSendPhase.sending);
+        sends.single.finishUpload();
+        await tester.pump();
         var settled = false;
         final quiesced = outbox.quiesce().then((_) => settled = true);
         await tester.pump(const Duration(minutes: 30));
@@ -458,23 +663,33 @@ void main() {
         );
       });
 
-      test('passes the recipient, file and MIME type to the send service', () {
-        sendVideo(path: '/v/picked.MOV');
+      test(
+        'uploads the file with its MIME type, then publishes it to the '
+        'recipient',
+        () async {
+          sendVideo(path: '/v/picked.MOV');
 
-        expect(sends, hasLength(1));
-        expect(sends.single.videoFile.path, equals('/v/picked.MOV'));
-        expect(sends.single.mimeType, equals('video/quicktime'));
-        verify(
-          () => service.sendVideo(
-            recipientPubkey: _recipientPubkey,
-            videoFile: any(named: 'videoFile'),
-            mimeType: any(named: 'mimeType'),
-            onPhase: any(named: 'onPhase'),
-            onUploadProgress: any(named: 'onUploadProgress'),
-            cancellation: any(named: 'cancellation'),
-          ),
-        ).called(1);
-      });
+          expect(sends, hasLength(1));
+          expect(sends.single.videoFile.path, equals('/v/picked.MOV'));
+          expect(sends.single.mimeType, equals('video/quicktime'));
+          verifyNever(() => anyPublishVideoOn(service));
+
+          sends.single.completer.complete(_success('r1'));
+          await pumpEventQueue();
+
+          verify(
+            () => service.publishVideo(
+              recipientPubkey: _recipientPubkey,
+              uploaded: sends.single.upload,
+              extraTags: any(named: 'extraTags'),
+              createdAt: any(named: 'createdAt'),
+              onRumorCreatedAt: any(named: 'onRumorCreatedAt'),
+              onPhase: any(named: 'onPhase'),
+              cancellation: any(named: 'cancellation'),
+            ),
+          ).called(1);
+        },
+      );
 
       test('reads the send service when each send starts', () async {
         sendVideo(path: '/v/first.mp4');
@@ -491,8 +706,9 @@ void main() {
           sends.map((send) => send.videoFile.path),
           equals(['/v/first.mp4', '/v/second.mp4']),
         );
-        verify(() => anySendVideoOn(firstService)).called(1);
-        verify(() => anySendVideoOn(service)).called(1);
+        verify(() => anyUploadVideoOn(firstService)).called(1);
+        verify(() => anyPublishVideoOn(firstService)).called(1);
+        verify(() => anyUploadVideoOn(service)).called(1);
       });
 
       test(
@@ -506,7 +722,8 @@ void main() {
           send.onPhase!(DmVideoSendPhase.encrypting);
           send.onPhase!(DmVideoSendPhase.uploading);
           send.onUploadProgress!(0.4);
-          send.onPhase!(DmVideoSendPhase.sending);
+          send.finishUpload();
+          await pumpEventQueue();
           send.completer.complete(_success('r1'));
           await pumpEventQueue();
 
@@ -617,7 +834,7 @@ void main() {
       });
 
       test('maps DmVideoTooLargeException to failed(tooLarge)', () async {
-        whenSendVideo().thenThrow(const DmVideoTooLargeException(1 << 30));
+        whenUploadVideo().thenThrow(const DmVideoTooLargeException(1 << 30));
         final events = recordConversation('c1');
         final outcomes = recordOutcomes();
 
@@ -694,7 +911,7 @@ void main() {
       );
 
       test('a missing file ends failed, not thrown', () async {
-        whenSendVideo().thenAnswer(
+        whenUploadVideo().thenAnswer(
           (_) async => throw const FileSystemException(
             'Cannot open file',
             '/v/missing.mp4',
@@ -714,7 +931,7 @@ void main() {
       });
 
       test('an unexpected error ends failed, not thrown', () async {
-        whenSendVideo().thenThrow(StateError('invariant broken'));
+        whenUploadVideo().thenThrow(StateError('invariant broken'));
         final events = recordConversation('c1');
 
         sendVideo();
@@ -939,8 +1156,11 @@ void main() {
           ]),
         );
         expect(sends.single.videoFile.path, equals(_clipPath('clip-a')));
+
+        sends.single.completer.complete(_success('rumor-a'));
+        await pumpEventQueue();
         expect(
-          sends.single.extraTags,
+          sends.first.publishedTags,
           equals([
             ['divine-clip', 'square'],
           ]),
@@ -1372,11 +1592,14 @@ void main() {
       });
 
       test('a too-large clip ends the batch as tooLarge', () async {
-        stubAutoSend(
-          (path) => path == _clipPath('clip-b')
-              ? throw const DmVideoTooLargeException(1 << 30)
-              : _success('rumor-a'),
-        );
+        stubAutoSend();
+        whenUploadVideo().thenAnswer((invocation) async {
+          final path = (invocation.namedArguments[#videoFile] as File).path;
+          if (path == _clipPath('clip-b')) {
+            throw const DmVideoTooLargeException(1 << 30);
+          }
+          return _uploadOf(path);
+        });
         outbox = createOutbox();
         final events = recordConversation('c1');
         final outcomes = recordOutcomes();
@@ -1439,7 +1662,7 @@ void main() {
           .having((report) => report.$2, 'reason', reason);
 
       test('forwards a programming error from the send service', () async {
-        whenSendVideo().thenThrow(StateError('invariant broken'));
+        whenUploadVideo().thenThrow(StateError('invariant broken'));
         outbox = createOutbox(reporter: reporter);
 
         sendVideo();
@@ -1464,7 +1687,7 @@ void main() {
       });
 
       test('does not forward an unreadable file', () async {
-        whenSendVideo().thenAnswer(
+        whenUploadVideo().thenAnswer(
           (_) async => throw const FileSystemException(
             'Cannot open file',
             '/v/missing.mp4',
@@ -1481,7 +1704,7 @@ void main() {
       });
 
       test('does not forward a video that is too large', () async {
-        whenSendVideo().thenThrow(const DmVideoTooLargeException(1 << 30));
+        whenUploadVideo().thenThrow(const DmVideoTooLargeException(1 << 30));
         outbox = createOutbox(reporter: reporter);
         final outcomes = recordOutcomes();
 
@@ -1495,7 +1718,7 @@ void main() {
       test(
         'does not forward an expected error the send service throws',
         () async {
-          whenSendVideo().thenThrow(const SocketException('offline'));
+          whenUploadVideo().thenThrow(const SocketException('offline'));
           outbox = createOutbox(reporter: reporter);
           final outcomes = recordOutcomes();
 
@@ -1559,7 +1782,7 @@ void main() {
       });
 
       test(
-        're-queues a failed gallery video and redoes the whole pipeline',
+        're-queues a failed gallery video and sends it again',
         () async {
           var attempts = 0;
           stubAutoSend(
@@ -1608,15 +1831,18 @@ void main() {
       );
 
       test(
-        'retry re-queues a failed entry and re-checks a clip alone',
+        'retry re-queues a clip whose upload failed and re-checks it alone',
         () async {
           when(() => verifier.verify(any())).thenAnswer((_) async => _verified);
           var failClipB = true;
-          stubAutoSend(
-            (path) => path == _clipPath('clip-b') && failClipB
-                ? const NIP17SendResult.failure('relay rejected the wrap')
-                : _success('rumor-${sentPaths.length}'),
-          );
+          stubAutoSend();
+          whenUploadVideo().thenAnswer((invocation) async {
+            final path = (invocation.namedArguments[#videoFile] as File).path;
+            if (path == _clipPath('clip-b') && failClipB) {
+              throw const DmVideoUploadFailed('server refused');
+            }
+            return _uploadOf(path);
+          });
           final signed = <List<String>>[];
           outbox = createOutbox(
             clipVerifier: () => verifier,
@@ -1646,11 +1872,7 @@ void main() {
           );
           expect(
             sentPaths,
-            equals([
-              _clipPath('clip-a'),
-              _clipPath('clip-b'),
-              _clipPath('clip-b'),
-            ]),
+            equals([_clipPath('clip-a'), _clipPath('clip-b')]),
           );
           expect(
             sentTags.last,
@@ -1662,7 +1884,7 @@ void main() {
           expect(retried.id, equals(failed.id));
           expect(retried.batchId, equals(failed.batchId));
           expect(retried.phase, equals(OutgoingVideoDmPhase.sent));
-          expect(retried.rumorEventId, equals('rumor-3'));
+          expect(retried.rumorEventId, equals('rumor-2'));
           expect(
             outcomes,
             equals([
@@ -1689,7 +1911,8 @@ void main() {
         'a retried clip the check now rejects ends clipNotVerified',
         () async {
           when(() => verifier.verify(any())).thenAnswer((_) async => _verified);
-          stubAutoSend((_) => const NIP17SendResult.failure('relay rejected'));
+          stubAutoSend();
+          whenUploadVideo().thenThrow(const DmVideoUploadFailed('refused'));
           outbox = createOutbox(clipVerifier: () => verifier);
           final events = recordConversation('c1');
           final outcomes = recordOutcomes();
@@ -1706,7 +1929,7 @@ void main() {
             events.last.single.failure,
             equals(OutgoingVideoDmFailure.clipNotVerified),
           );
-          expect(sentPaths, hasLength(1));
+          expect(sentPaths, isEmpty);
           expect(
             outcomes.last,
             equals(
@@ -1728,8 +1951,8 @@ void main() {
         final events = recordConversation('c1');
         sendVideo();
         await pumpEventQueue();
-        sends.single.completer.complete(
-          const NIP17SendResult.failure('relay rejected'),
+        sends.single.completer.completeError(
+          const DmVideoUploadFailed('server refused'),
         );
         await pumpEventQueue();
         sendVideo(path: '/v/b.mp4');
@@ -1783,7 +2006,7 @@ void main() {
         expect(sends, hasLength(1));
         expect(events.last.first, equals(notVerified));
 
-        whenSendVideo().thenThrow(const DmVideoTooLargeException(1 << 30));
+        whenUploadVideo().thenThrow(const DmVideoTooLargeException(1 << 30));
         sends.single.completer.complete(_success('rumor-running'));
         sendVideo(path: '/v/huge.mp4');
         await pumpEventQueue();
@@ -1795,6 +2018,478 @@ void main() {
         await pumpEventQueue();
 
         expect(events, hasLength(eventCount));
+      });
+
+      group('after the upload finished', () {
+        late List<DmVideoUpload> uploads;
+        late List<(DmVideoUpload, List<List<String>>)> published;
+
+        /// Answers each upload with a new [DmVideoUpload] of its path and each
+        /// publication with the next of [answers], reporting the publishing
+        /// phase as the real service does.
+        void stubSends(List<NIP17SendResult> answers) {
+          whenUploadVideo().thenAnswer((invocation) async {
+            final upload = _uploadOf(
+              (invocation.namedArguments[#videoFile] as File).path,
+            );
+            uploads.add(upload);
+            return upload;
+          });
+          whenPublishVideo().thenAnswer((invocation) async {
+            (invocation.namedArguments[#onPhase]
+                    as void Function(DmVideoSendPhase)?)
+                ?.call(DmVideoSendPhase.sending);
+            published.add((
+              invocation.namedArguments[#uploaded] as DmVideoUpload,
+              invocation.namedArguments[#extraTags] as List<List<String>>,
+            ));
+            return answers.removeAt(0);
+          });
+        }
+
+        const unreadableInbox = NIP17SendResult.failure(
+          'Recipient DM inbox unreadable; file message not published',
+        );
+
+        setUp(() {
+          uploads = [];
+          published = [];
+        });
+
+        test('publishes the same upload again without uploading', () async {
+          stubSends([unreadableInbox, _success('rumor-retried')]);
+          outbox = createOutbox();
+          final events = recordConversation('c1');
+          final outcomes = recordOutcomes();
+          sendVideo();
+          await pumpEventQueue();
+          final failed = events.last.single;
+          expect(failed.phase, equals(OutgoingVideoDmPhase.failed));
+
+          outbox.retry(failed.id);
+          await pumpEventQueue();
+
+          verify(() => anyUploadVideoOn(service)).called(1);
+          expect(uploads, hasLength(1));
+          expect(published, hasLength(2));
+          expect(published[0].$1, same(uploads.single));
+          expect(published[1].$1, same(uploads.single));
+          expect(events.last.single.phase, equals(OutgoingVideoDmPhase.sent));
+          expect(events.last.single.rumorEventId, equals('rumor-retried'));
+          expect(outcomes.last.status, equals(VideoDmOutcomeStatus.sent));
+        });
+
+        test('goes straight from queued to publishing', () async {
+          stubSends([unreadableInbox, _success('rumor-retried')]);
+          outbox = createOutbox();
+          final events = recordConversation('c1');
+          sendVideo();
+          await pumpEventQueue();
+          final before = events.length;
+
+          outbox.retry(events.last.single.id);
+          await pumpEventQueue();
+
+          expect(
+            [
+              for (final entries in events.skip(before))
+                (entries.single.phase, entries.single.uploadProgress),
+            ],
+            equals([
+              (OutgoingVideoDmPhase.queued, null),
+              (OutgoingVideoDmPhase.publishing, null),
+              (OutgoingVideoDmPhase.sent, null),
+            ]),
+          );
+        });
+
+        test('still waits for the signer before publishing', () async {
+          stubSends([unreadableInbox, _success('rumor-retried')]);
+          var signerReady = Completer<void>()..complete();
+          outbox = createOutbox(waitUntilReady: (_) => signerReady.future);
+          final events = recordConversation('c1');
+          sendVideo();
+          await pumpEventQueue();
+          signerReady = Completer<void>();
+
+          outbox.retry(events.last.single.id);
+          await pumpEventQueue();
+
+          expect(published, hasLength(1));
+          expect(events.last.single.phase, equals(OutgoingVideoDmPhase.queued));
+
+          signerReady.complete();
+          await pumpEventQueue();
+
+          expect(published, hasLength(2));
+          expect(events.last.single.phase, equals(OutgoingVideoDmPhase.sent));
+        });
+
+        test('uploads again when the upload itself failed', () async {
+          var uploadAttempts = 0;
+          stubSends([_success('rumor-retried')]);
+          whenUploadVideo().thenAnswer((invocation) async {
+            if (++uploadAttempts == 1) {
+              throw const DmVideoUploadFailed('server refused');
+            }
+            final upload = _uploadOf(
+              (invocation.namedArguments[#videoFile] as File).path,
+            );
+            uploads.add(upload);
+            return upload;
+          });
+          outbox = createOutbox();
+          final events = recordConversation('c1');
+          sendVideo();
+          await pumpEventQueue();
+          expect(events.last.single.phase, equals(OutgoingVideoDmPhase.failed));
+          expect(published, isEmpty);
+
+          outbox.retry(events.last.single.id);
+          await pumpEventQueue();
+
+          verify(() => anyUploadVideoOn(service)).called(2);
+          expect(published.single.$1, same(uploads.single));
+          expect(events.last.single.phase, equals(OutgoingVideoDmPhase.sent));
+        });
+
+        test(
+          'a clip publishes its own upload again without being checked',
+          () async {
+            when(
+              () => verifier.verify(any()),
+            ).thenAnswer((_) async => _verified);
+            final signed = <List<String>>[];
+            stubSends([
+              _success('rumor-a'),
+              unreadableInbox,
+              _success('rumor-b'),
+            ]);
+            outbox = createOutbox(
+              clipVerifier: () => verifier,
+              signOwnRecordings: (clips) async =>
+                  signed.add([for (final clip in clips) clip.id]),
+            );
+            final events = recordConversation('c1');
+            sendClips([
+              _clip('clip-a'),
+              _clip('clip-b', aspect: AspectRatio.vertical),
+            ]);
+            await pumpEventQueue();
+            final failed = events.last[1];
+            expect(failed.phase, equals(OutgoingVideoDmPhase.failed));
+            clearInteractions(verifier);
+
+            outbox.retry(failed.id);
+            await pumpEventQueue();
+
+            verifyZeroInteractions(verifier);
+            expect(
+              signed,
+              equals([
+                ['clip-a', 'clip-b'],
+              ]),
+            );
+            expect(uploads, hasLength(2));
+            expect(published, hasLength(3));
+            expect(published[2].$1, same(published[1].$1));
+            expect(published[2].$1, same(uploads[1]));
+            expect(
+              published[2].$2,
+              equals([
+                ['divine-clip', 'vertical'],
+              ]),
+            );
+            expect(events.last[1].phase, equals(OutgoingVideoDmPhase.sent));
+            expect(events.last[1].rumorEventId, equals('rumor-b'));
+          },
+        );
+
+        test('a removed entry keeps no upload', () async {
+          stubSends([unreadableInbox, _success('rumor-new')]);
+          outbox = createOutbox();
+          final events = recordConversation('c1');
+          sendVideo();
+          await pumpEventQueue();
+          expect(outbox.keptUploadCount, equals(1));
+
+          outbox.remove(events.last.single.id);
+          expect(outbox.keptUploadCount, isZero);
+          // A new entry that happens to reuse the removed id uploads its own
+          // file.
+          idCounter = 0;
+          sendVideo(path: '/v/new.mp4');
+          await pumpEventQueue();
+
+          verify(() => anyUploadVideoOn(service)).called(2);
+          expect(published.last.$1, same(uploads.last));
+          expect(
+            published.last.$1.fileUrl,
+            equals('https://media.example//v/new.mp4'),
+          );
+        });
+
+        test('a sent entry keeps no upload', () async {
+          stubSends([unreadableInbox, _success('rumor-retried')]);
+          outbox = createOutbox();
+          final events = recordConversation('c1');
+          sendVideo();
+          await pumpEventQueue();
+
+          outbox.retry(events.last.single.id);
+          await pumpEventQueue();
+          expect(events.last.single.phase, equals(OutgoingVideoDmPhase.sent));
+          expect(outbox.keptUploadCount, isZero);
+        });
+
+        test(
+          'publishes the same upload again after the publication threw',
+          () async {
+            stubSends([_success('rumor-retried')]);
+            var publishes = 0;
+            whenPublishVideo().thenAnswer((invocation) async {
+              published.add((
+                invocation.namedArguments[#uploaded] as DmVideoUpload,
+                invocation.namedArguments[#extraTags] as List<List<String>>,
+              ));
+              if (++publishes == 1) {
+                throw const SocketException('relay socket closed');
+              }
+              return _success('rumor-retried');
+            });
+            outbox = createOutbox();
+            final events = recordConversation('c1');
+            sendVideo();
+            await pumpEventQueue();
+            expect(
+              events.last.single.phase,
+              equals(OutgoingVideoDmPhase.failed),
+            );
+
+            outbox.retry(events.last.single.id);
+            await pumpEventQueue();
+
+            verify(() => anyUploadVideoOn(service)).called(1);
+            expect(published, hasLength(2));
+            expect(published[1].$1, same(published[0].$1));
+            expect(published[1].$1, same(uploads.single));
+            expect(events.last.single.phase, equals(OutgoingVideoDmPhase.sent));
+          },
+        );
+
+        test(
+          'never hands a kept upload to publication once the account changed',
+          () async {
+            stubSends([unreadableInbox, _success('rumor-retried')]);
+            var accountIsOurs = true;
+            outbox = createOutbox(isAccountCurrent: () => accountIsOurs);
+            final events = recordConversation('c1');
+            sendVideo();
+            await pumpEventQueue();
+            expect(outbox.keptUploadCount, equals(1));
+
+            accountIsOurs = false;
+            outbox.retry(events.last.single.id);
+            await pumpEventQueue();
+
+            // A kept upload skips uploadVideo, so only the account checks
+            // keep its video and key from the incoming account's service.
+            verify(() => anyPublishVideoOn(service)).called(1);
+            expect(published, hasLength(1));
+            expect(
+              events.last.single.phase,
+              equals(OutgoingVideoDmPhase.failed),
+            );
+          },
+        );
+
+        group('keeps the first rumor created_at', () {
+          late List<int?> givenCreatedAt;
+          late int nextStamp;
+
+          /// Answers each publication with the next of [answers]. A
+          /// publication given no created_at reports a fresh one, as the
+          /// repository does when it builds the rumor, unless
+          /// [buildsNoRumor] says no rumor was built. [throwAfterRumor]
+          /// makes a publication throw once its rumor is built.
+          void stubRumors(
+            List<NIP17SendResult> answers, {
+            bool Function(int publication)? buildsNoRumor,
+            bool Function(int publication)? throwAfterRumor,
+          }) {
+            stubSends(const []);
+            var publications = 0;
+            whenPublishVideo().thenAnswer((invocation) async {
+              final publication = publications++;
+              final createdAt = invocation.namedArguments[#createdAt] as int?;
+              givenCreatedAt.add(createdAt);
+              published.add((
+                invocation.namedArguments[#uploaded] as DmVideoUpload,
+                invocation.namedArguments[#extraTags] as List<List<String>>,
+              ));
+              if (!(buildsNoRumor?.call(publication) ?? false)) {
+                (invocation.namedArguments[#onRumorCreatedAt]
+                        as void Function(int)?)
+                    ?.call(createdAt ?? nextStamp++);
+              }
+              if (throwAfterRumor?.call(publication) ?? false) {
+                throw const SocketException('relay socket closed');
+              }
+              return answers.removeAt(0);
+            });
+          }
+
+          setUp(() {
+            givenCreatedAt = [];
+            nextStamp = 1700000000;
+          });
+
+          test(
+            'a retry publishes with the created_at of the first rumor',
+            () async {
+              stubRumors([
+                const NIP17SendResult.failure('relay rejected'),
+                _success('rumor-retried'),
+              ]);
+              outbox = createOutbox();
+              final events = recordConversation('c1');
+              sendVideo();
+              await pumpEventQueue();
+
+              outbox.retry(events.last.single.id);
+              await pumpEventQueue();
+
+              expect(givenCreatedAt, equals([null, 1700000000]));
+              expect(
+                events.last.single.phase,
+                equals(OutgoingVideoDmPhase.sent),
+              );
+            },
+          );
+
+          test(
+            'every later retry keeps the first rumor created_at',
+            () async {
+              stubRumors([
+                const NIP17SendResult.failure('relay rejected'),
+                const NIP17SendResult.failure('relay rejected'),
+                _success('rumor-retried'),
+              ]);
+              outbox = createOutbox();
+              final events = recordConversation('c1');
+              sendVideo();
+              await pumpEventQueue();
+              outbox.retry(events.last.single.id);
+              await pumpEventQueue();
+
+              outbox.retry(events.last.single.id);
+              await pumpEventQueue();
+
+              expect(givenCreatedAt, equals([null, 1700000000, 1700000000]));
+            },
+          );
+
+          test(
+            'a retry after a publication that threw keeps its rumor '
+            'created_at',
+            () async {
+              stubRumors(
+                [_success('rumor-retried')],
+                throwAfterRumor: (publication) => publication == 0,
+              );
+              outbox = createOutbox();
+              final events = recordConversation('c1');
+              sendVideo();
+              await pumpEventQueue();
+              expect(
+                events.last.single.phase,
+                equals(OutgoingVideoDmPhase.failed),
+              );
+
+              outbox.retry(events.last.single.id);
+              await pumpEventQueue();
+
+              expect(givenCreatedAt, equals([null, 1700000000]));
+              expect(
+                events.last.single.phase,
+                equals(OutgoingVideoDmPhase.sent),
+              );
+            },
+          );
+
+          test(
+            'a retry builds a fresh rumor when the first attempt built none',
+            () async {
+              stubRumors(
+                [unreadableInbox, _success('rumor-retried')],
+                buildsNoRumor: (publication) => publication == 0,
+              );
+              outbox = createOutbox();
+              final events = recordConversation('c1');
+              sendVideo();
+              await pumpEventQueue();
+
+              outbox.retry(events.last.single.id);
+              await pumpEventQueue();
+
+              expect(givenCreatedAt, equals([null, null]));
+            },
+          );
+
+          test('a retried clip keeps its first rumor created_at', () async {
+            when(
+              () => verifier.verify(any()),
+            ).thenAnswer((_) async => _verified);
+            stubRumors([
+              _success('rumor-a'),
+              const NIP17SendResult.failure('relay rejected'),
+              _success('rumor-b'),
+            ]);
+            outbox = createOutbox(clipVerifier: () => verifier);
+            final events = recordConversation('c1');
+            sendClips([_clip('clip-a'), _clip('clip-b')]);
+            await pumpEventQueue();
+
+            outbox.retry(events.last[1].id);
+            await pumpEventQueue();
+
+            expect(givenCreatedAt, equals([null, null, 1700000001]));
+          });
+
+          test(
+            'a new entry that reuses a removed id gets a fresh rumor',
+            () async {
+              stubRumors([
+                const NIP17SendResult.failure('relay rejected'),
+                _success('rumor-new'),
+              ]);
+              outbox = createOutbox();
+              final events = recordConversation('c1');
+              sendVideo();
+              await pumpEventQueue();
+              outbox.remove(events.last.single.id);
+              idCounter = 0;
+
+              sendVideo(path: '/v/new.mp4');
+              await pumpEventQueue();
+
+              expect(givenCreatedAt, equals([null, null]));
+            },
+          );
+        });
+
+        test('dispose drops every kept upload', () async {
+          stubSends([unreadableInbox, unreadableInbox]);
+          outbox = createOutbox();
+          sendVideo();
+          sendVideo(path: '/v/b.mp4');
+          await pumpEventQueue();
+          expect(outbox.keptUploadCount, equals(2));
+
+          outbox.dispose();
+
+          expect(outbox.keptUploadCount, isZero);
+        });
       });
     });
 
@@ -1984,7 +2679,9 @@ void main() {
                 "the new account's send service",
           );
           final [running, queued] = events.last;
-          expect(running.phase, equals(OutgoingVideoDmPhase.sent));
+          // Its upload finished after the switch, and publication checks the
+          // account again before it starts.
+          expect(running.phase, equals(OutgoingVideoDmPhase.failed));
           expect(queued.phase, equals(OutgoingVideoDmPhase.failed));
         },
       );

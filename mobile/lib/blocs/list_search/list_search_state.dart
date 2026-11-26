@@ -42,8 +42,10 @@ final class ListSearchState extends Equatable {
   /// Latest requested query, including one still waiting for its debounce.
   final String? requestedQuery;
 
-  /// Curated video lists (kind 30005) matching the search.
-  final List<CuratedList> videoResults;
+  /// Curated video lists (kind 30005) matching the search. A list found in
+  /// the search index can be a summary without its video references; see
+  /// [CuratedListSearchResult.isComplete].
+  final List<CuratedListSearchResult> videoResults;
 
   /// People lists (kind 30000) matching the search, each preserving the
   /// owner pubkey alongside the decoded [UserList].
@@ -74,7 +76,7 @@ final class ListSearchState extends Equatable {
     ListSearchStatus? status,
     String? query,
     String? requestedQuery,
-    List<CuratedList>? videoResults,
+    List<CuratedListSearchResult>? videoResults,
     List<PeopleListSearchResult>? peopleResults,
     ListSearchSourceStatus? videoStatus,
     ListSearchSourceStatus? peopleStatus,

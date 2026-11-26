@@ -338,9 +338,9 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         publisher = self._definition_block("publish_github_release")
         self.assertIn('--release-env "build/shorebird/${SHOREBIRD_PLATFORM}_release.env"', publisher)
         macos = config['macos-build']['scripts']
-        direct = next(i for i, step in enumerate(macos) if 'release_identity.py direct' in step['script'])
+        allocate = next(i for i, step in enumerate(macos) if 'allocate_build_identity.py macos' in step['script'])
         build = next(i for i, step in enumerate(macos) if step['name'] == 'Build macOS app')
-        self.assertLess(direct, build)
+        self.assertLess(allocate, build)
 
     def test_android_build_bundles_the_wear_remote_beside_the_phone_bundle(self) -> None:
         workflow = self._resolved_config()["workflows"]["android-build"]
@@ -1479,10 +1479,14 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn("macos_signing_credentials", groups)
         self.assertEqual(groups[-1], "store_release_credentials")
         for other_name, other_workflow in resolved.items():
-            if other_name == "macos-build":
+            if other_name in {"macos-build", "macos-scheduled-build"}:
                 continue
             other_groups = (other_workflow.get("environment") or {}).get("groups") or []
             self.assertNotIn("macos_signing_credentials", other_groups)
+
+        scheduled = resolved["macos-scheduled-build"]
+        self.assertIs(scheduled["publishing"]["app_store_connect"]["submit_to_testflight"], False)
+        self.assertIs(scheduled["publishing"]["app_store_connect"]["submit_to_app_store"], False)
 
         env_vars = workflow["environment"]["vars"]
         self.assertEqual(env_vars["BUNDLE_ID"], "co.openvine.app")
@@ -1497,6 +1501,11 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn("Setup Mac App Store code signing", step_names)
         self.assertIn("Build macOS app", step_names)
         self.assertIn("Archive and export Mac App Store pkg", step_names)
+        self.assertIn("Record macOS release provenance", step_names)
+        provenance_step = next(
+            step for step in workflow["scripts"] if step["name"] == "Record macOS release provenance"
+        )
+        self.assertIn('DEFAULT_ENV="${{ inputs.DEFAULT_ENV }}"', provenance_step["script"])
         self.assertNotIn("Package macOS DMG", step_names)
         self.assertNotIn("Publish to GitHub Release", step_names)
         self.assertLess(
@@ -1507,24 +1516,24 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             step_names.index("Build macOS app"),
             step_names.index("Archive and export Mac App Store pkg"),
         )
+        self.assertLess(
+            step_names.index("Archive and export Mac App Store pkg"),
+            step_names.index("Record macOS release provenance"),
+        )
 
         allocate_script = next(
             step["script"]
             for step in workflow["scripts"]
-            if "release_identity.py direct" in step["script"]
+            if "allocate_build_identity.py macos" in step["script"]
         )
-        self.assertIn(
-            "app-store-connect get-latest-testflight-build-number",
-            allocate_script,
-        )
-        self.assertNotIn("|| echo", allocate_script)
-        self.assertNotIn("2>/dev/null", allocate_script)
+        self.assertIn("allocate_build_identity.py macos", allocate_script)
 
         build_macos = self._definition_block("build_macos")
         self.assertNotIn("CODE_SIGNING_ALLOWED=NO", build_macos)
         self.assertNotIn("CODE_SIGNING_REQUIRED=NO", build_macos)
 
         self.assertIn("build/macos/pkg/*.pkg", workflow["artifacts"])
+        self.assertIn("build/shorebird/macos_provenance.json", workflow["artifacts"])
         self.assertNotIn("build/macos/Build/Products/Release/*.dmg", workflow["artifacts"])
         publishing = workflow["publishing"]["app_store_connect"]
         self.assertEqual(publishing["auth"], "integration")

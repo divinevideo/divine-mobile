@@ -10,6 +10,22 @@ class AppLocalizationsPt extends AppLocalizations {
   AppLocalizationsPt([String locale = 'pt']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Mudar para $account para abrir esta mensagem?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Mensagens diretas';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Mostre uma notificação sem o nome do remetente nem o texto da mensagem.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Esta mensagem não está disponível.';
+
+  @override
   String get devOptionsClipRecovery => 'Recuperação de clipes';
 
   @override
@@ -7207,6 +7223,55 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'Duplicar';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'Converter em clipe';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Convertendo em clipe...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Rascunho convertido em clipe';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Falha ao converter rascunho';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Não foi possível preparar o texto e os stickers deste rascunho. Abra no editor e tente de novo.';
+
+  @override
+  String get libraryDraftActionShare => 'Compartilhar rascunho';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Enviar um rascunho editável para $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Você compartilha os clipes originais e o histórico de edição. Quem receber pode ver os trechos cortados, editar a própria cópia, publicá-la ou enviá-la de volta.';
+
+  @override
+  String get libraryDraftShareFailed => 'Não foi possível enviar o rascunho.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'O rascunho é grande demais para enviar.';
+
+  @override
+  String get dmSharedDraft => 'Rascunho compartilhado';
+
+  @override
+  String get dmOpenDraft => 'Importar e editar';
+
+  @override
+  String get dmDraftImportFailed => 'Não foi possível importar o rascunho.';
+
+  @override
+  String get libraryDraftSent => 'Rascunho enviado';
 
   @override
   String get libraryDraftActionDelete => 'Excluir rascunho';
@@ -17180,4 +17245,52 @@ class AppLocalizationsPt extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Vídeos de $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Editar';
+
+  @override
+  String get menuBarUndo => 'Desfazer';
+
+  @override
+  String get menuBarRedo => 'Refazer';
+
+  @override
+  String get menuBarCut => 'Recortar';
+
+  @override
+  String get menuBarCopy => 'Copiar';
+
+  @override
+  String get menuBarPaste => 'Colar';
+
+  @override
+  String get menuBarSelectAll => 'Selecionar Tudo';
+
+  @override
+  String get menuBarView => 'Visualizar';
+
+  @override
+  String get menuBarVideo => 'Vídeo';
+
+  @override
+  String get menuBarPreviousVideo => 'Vídeo Anterior';
+
+  @override
+  String get menuBarNextVideo => 'Próximo Vídeo';
+
+  @override
+  String get menuBarPlayPause => 'Reproduzir/Pausar';
+
+  @override
+  String get menuBarMute => 'Silenciar';
+
+  @override
+  String get menuBarUnmute => 'Ativar Som';
+
+  @override
+  String get menuBarWindow => 'Janela';
+
+  @override
+  String get menuBarHelp => 'Ajuda';
 }

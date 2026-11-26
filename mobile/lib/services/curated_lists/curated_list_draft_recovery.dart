@@ -10,6 +10,7 @@ extension _CuratedListDraftRecovery on CuratedListService {
     T? cancelled,
     bool recovering = false,
     bool allowOfflineDraft = false,
+    bool allowSeries = true,
   }) {
     if (!isReadyForMutations) return Future.value(cancelled as T);
     final owner = _relayGateway.currentAuthenticatedPubkey();
@@ -27,6 +28,9 @@ extension _CuratedListDraftRecovery on CuratedListService {
             return cancelled;
           }
           try {
+            if (!allowSeries && getListById(listId)?.isSeries == true) {
+              return cancelled;
+            }
             return await operation();
           } finally {
             _offlineListOperations.remove(listId);

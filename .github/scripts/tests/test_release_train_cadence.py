@@ -478,7 +478,7 @@ class ReleaseCadenceTest(unittest.TestCase):
         runtime.candidate = lambda: None
         clock = [NOW]
 
-        def apple_read():
+        def apple_read(platform="ios"):
             clock[0] += HOUR + 0.25
             return self.public_snapshot()["ios"]
 

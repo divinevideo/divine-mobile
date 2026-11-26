@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "切换到 {account} 以打开这条消息吗？",
+  "notificationSettingsDirectMessages": "私信",
+  "notificationSettingsDirectMessagesSubtitle": "显示通知，但不显示发送者姓名或消息内容。",
+  "dmNotificationMessageUnavailable": "这条消息无法查看。",
   "@@locale": "zh",
   "videoEditorSocialStickerPoll": "投票",
   "videoEditorSocialStickerQuiz": "测验",
@@ -3495,6 +3499,20 @@
   "libraryDraftActionPost": "发布",
   "libraryDraftActionEdit": "编辑",
   "libraryDraftActionDuplicate": "创建副本",
+  "libraryDraftActionConvertToClip": "转换为片段",
+  "libraryDraftConvertingToClip": "正在转换为片段...",
+  "libraryDraftConvertedToClipSnackbar": "草稿已转换为片段",
+  "libraryDraftConvertToClipFailedSnackbar": "转换草稿失败",
+  "libraryDraftConvertOverlaysUnavailable": "这份草稿上的文字和贴纸没能准备好。到编辑器里打开，然后再试一次。",
+  "libraryDraftActionShare": "分享草稿",
+  "libraryDraftShareConfirm": "向{name}发送可编辑的草稿？",
+  "libraryDraftShareNotice": "你将分享原始片段和编辑记录。对方可以看到你剪掉的部分，也可以编辑、发布或发回自己的副本。",
+  "libraryDraftShareFailed": "无法发送草稿。",
+  "libraryDraftShareTooLarge": "草稿太大，无法发送。",
+  "dmSharedDraft": "已分享的草稿",
+  "dmOpenDraft": "导入并编辑",
+  "dmDraftImportFailed": "无法导入草稿。",
+  "libraryDraftSent": "草稿已发送",
   "libraryDraftActionDelete": "删除草稿",
   "libraryDraftCopyTitle": "{title}（副本 {number}）",
   "@libraryDraftCopyTitle": {
@@ -7882,5 +7900,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "编辑",
+  "menuBarUndo": "撤销",
+  "menuBarRedo": "重做",
+  "menuBarCut": "剪切",
+  "menuBarCopy": "拷贝",
+  "menuBarPaste": "粘贴",
+  "menuBarSelectAll": "全选",
+  "menuBarView": "显示",
+  "menuBarVideo": "视频",
+  "menuBarPreviousVideo": "上一个视频",
+  "menuBarNextVideo": "下一个视频",
+  "menuBarPlayPause": "播放/暂停",
+  "menuBarMute": "静音",
+  "menuBarUnmute": "取消静音",
+  "menuBarWindow": "窗口",
+  "menuBarHelp": "帮助"
 }

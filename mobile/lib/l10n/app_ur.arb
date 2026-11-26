@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "یہ پیغام کھولنے کے لیے {account} پر سوئچ کریں؟",
+  "notificationSettingsDirectMessages": "براہ راست پیغامات",
+  "notificationSettingsDirectMessagesSubtitle": "بھیجنے والے کا نام یا پیغام کا متن دکھائے بغیر اطلاع دیں۔",
+  "dmNotificationMessageUnavailable": "یہ پیغام دستیاب نہیں ہے۔",
   "@@locale": "ur",
   "videoEditorSocialStickerPoll": "پول",
   "videoEditorSocialStickerQuiz": "کوئز",
@@ -3495,6 +3499,20 @@
   "libraryDraftActionPost": "پوسٹ کریں",
   "libraryDraftActionEdit": "ترمیم",
   "libraryDraftActionDuplicate": "نقل کریں",
+  "libraryDraftActionConvertToClip": "کلپ میں تبدیل کریں",
+  "libraryDraftConvertingToClip": "کلپ میں تبدیل ہو رہا ہے...",
+  "libraryDraftConvertedToClipSnackbar": "مسودہ کلپ میں تبدیل ہو گیا",
+  "libraryDraftConvertToClipFailedSnackbar": "مسودہ تبدیل نہیں ہو سکا",
+  "libraryDraftConvertOverlaysUnavailable": "اس مسودے کا ٹیکسٹ اور اسٹیکرز تیار نہیں ہو سکے۔ اسے ایڈیٹر میں کھولیں، پھر دوبارہ کوشش کریں۔",
+  "libraryDraftActionShare": "مسودہ شیئر کریں",
+  "libraryDraftShareConfirm": "کیا {name} کو قابلِ تدوین مسودہ بھیجنا ہے؟",
+  "libraryDraftShareNotice": "اصل کلپس اور ترمیم کی سرگزشت بھی شیئر ہوتی ہے۔ وصول کنندہ کٹے ہوئے حصے دیکھ سکتا ہے اور اپنی کاپی میں ترمیم کر کے اسے پوسٹ کر سکتا ہے یا واپس بھیج سکتا ہے۔",
+  "libraryDraftShareFailed": "مسودہ بھیجا نہیں جا سکا۔",
+  "libraryDraftShareTooLarge": "مسودہ بھیجنے کے لیے بہت بڑا ہے۔",
+  "dmSharedDraft": "شیئر کیا گیا مسودہ",
+  "dmOpenDraft": "درآمد کریں اور ترمیم کریں",
+  "dmDraftImportFailed": "مسودہ درآمد نہیں ہو سکا۔",
+  "libraryDraftSent": "مسودہ بھیج دیا گیا",
   "libraryDraftActionDelete": "مسودہ حذف کریں",
   "libraryDraftCopyTitle": "{title} (نقل {number})",
   "@libraryDraftCopyTitle": {
@@ -7882,5 +7900,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "ترمیم",
+  "menuBarUndo": "واپس کریں",
+  "menuBarRedo": "دوبارہ کریں",
+  "menuBarCut": "کاٹیں",
+  "menuBarCopy": "کاپی کریں",
+  "menuBarPaste": "چسپاں کریں",
+  "menuBarSelectAll": "سب منتخب کریں",
+  "menuBarView": "منظر",
+  "menuBarVideo": "ویڈیو",
+  "menuBarPreviousVideo": "پچھلی ویڈیو",
+  "menuBarNextVideo": "اگلی ویڈیو",
+  "menuBarPlayPause": "چلائیں/روکیں",
+  "menuBarMute": "میوٹ کریں",
+  "menuBarUnmute": "ان میوٹ کریں",
+  "menuBarWindow": "ونڈو",
+  "menuBarHelp": "مدد"
 }

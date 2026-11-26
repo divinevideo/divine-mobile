@@ -32,6 +32,7 @@ import 'package:dm_repository/src/dm_shared_video_citation.dart';
 import 'package:dm_repository/src/dm_subscription_ids.dart';
 import 'package:dm_repository/src/dm_sync_state.dart';
 import 'package:dm_repository/src/dm_verify_isolate.dart';
+import 'package:dm_repository/src/dm_wrap_lookup.dart';
 import 'package:dm_repository/src/group_conversation_recovery.dart';
 import 'package:dm_repository/src/nip17_message_service.dart';
 import 'package:meta/meta.dart';
@@ -54,6 +55,7 @@ import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:nostr_sdk/utils/relay_addr_util.dart';
 import 'package:nostr_sdk/utils/relay_url_policy.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// A stored conversation: its id and the pubkeys taking part in it.
@@ -698,6 +700,7 @@ class DmRepository {
     OutgoingDmsDao? outgoingDmsDao,
     PendingGiftWrapsDao? pendingGiftWrapsDao,
     ProcessedGiftWrapsDao? processedGiftWrapsDao,
+    Stream<DmWrapAudience?> Function(String owner)? watchWrapAudience,
     RemovedConversationsDao? removedConversationsDao,
     RemovedMessageIdsDao? removedMessageIdsDao,
     DmSyncState? syncState,
@@ -732,6 +735,7 @@ class DmRepository {
        _outgoingDmsDao = outgoingDmsDao,
        _pendingGiftWrapsDao = pendingGiftWrapsDao,
        _processedGiftWrapsDao = processedGiftWrapsDao,
+       _watchWrapAudience = watchWrapAudience,
        _removedConversationsDao = removedConversationsDao,
        _removedMessageIdsDao = removedMessageIdsDao,
        _syncState = syncState,
@@ -790,6 +794,28 @@ class DmRepository {
   /// remote-signer RPC each). Nullable to keep older test fixtures working
   /// without rewiring. See #5452.
   final ProcessedGiftWrapsDao? _processedGiftWrapsDao;
+  final Stream<DmWrapAudience?> Function(String owner)? _watchWrapAudience;
+
+  /// Resolves only verified inbound rows belonging to the current account.
+  Stream<DmWrapLookup> watchWrapLookup({
+    required String ownerPubkey,
+    required String giftWrapId,
+  }) {
+    if (ownerPubkey.isEmpty || ownerPubkey != _ownerPubkey) {
+      return Stream.value(const DmWrapSuppressed());
+    }
+    return Rx.combineLatest2(
+      _directMessagesDao.watchWrapTarget(
+        ownerPubkey: ownerPubkey,
+        giftWrapId: giftWrapId,
+      ),
+      _watchWrapAudience?.call(ownerPubkey) ??
+          Stream<DmWrapAudience?>.value(null),
+      (row, audience) => ownerPubkey == _ownerPubkey
+          ? DmWrapLookup.fromRecord(row, ownerPubkey, audience)
+          : const DmWrapSuppressed(),
+    );
+  }
 
   /// Durable owner-scoped removal markers. Relay events are replayable, so a
   /// hard delete without this ledger would restore the thread on restart.
@@ -5287,7 +5313,20 @@ class DmRepository {
             ownerPubkey: ownerPubkey,
             sendBatchId: sendBatchId,
           );
-          if (!inserted) return;
+          if (!inserted) {
+            await _processedGiftWrapsDao?.record(
+              giftWrapId: giftWrapEvent.id,
+              ownerPubkey: ownerPubkey,
+              verifiedDuplicate: isSentByMe
+                  ? null
+                  : (
+                      messageId: rumor.id,
+                      sender: rumor.pubkey,
+                      conversationId: conversationId,
+                    ),
+            );
+            return;
+          }
 
           final existing = await _conversationsDao.getConversation(
             conversationId,
@@ -5428,10 +5467,6 @@ class DmRepository {
           return;
         }
         if (!inserted) {
-          await _recordProcessedWrap(
-            giftWrapEvent.id,
-            ownerPubkey: ownerPubkey,
-          );
           Log.debug(
             'Skipped duplicate NIP-17 DM ${rumor.id} in conversation '
             '$conversationId: insert was ignored by local dedup constraints',
@@ -11918,6 +11953,13 @@ class DmRepository {
   /// app-level markers the recipient's client reads back from
   /// [DmMessage.tags]. They must not repeat a file tag this method writes.
   ///
+  /// [createdAt] is the rumor's `created_at`, the time now when omitted.
+  /// [onRumorCreatedAt] receives the `created_at` the rumor is built with,
+  /// before it is published, and is not called when no rumor is built. A
+  /// caller retrying the same file passes that value back as [createdAt], so
+  /// the retry keeps the first attempt's rumor id even when that attempt
+  /// threw (A′ in `mobile/docs/NIP17_RETRY_CONTRACT.md`).
+  ///
   /// Throws [StateError] if the repository has not been initialized.
   /// Throws [ArgumentError] if [recipientPubkey] is invalid or required
   /// metadata is missing.
@@ -11928,6 +11970,8 @@ class DmRepository {
     required DmFileMetadata fileMetadata,
     String? replyToId,
     List<List<String>> extraTags = const [],
+    int? createdAt,
+    void Function(int createdAt)? onRumorCreatedAt,
   }) async {
     _assertInitialized();
     validatePubkey(recipientPubkey);
@@ -11986,11 +12030,14 @@ class DmRepository {
       );
     }
 
+    final rumorCreatedAt = createdAt ?? DmClock.now().nowSeconds;
+    onRumorCreatedAt?.call(rumorCreatedAt);
     final result = await _messageService!.sendPrivateMessage(
       recipientPubkey: recipientPubkey,
       content: fileUrl,
       eventKind: EventKind.fileMessage,
       additionalTags: additionalTags,
+      createdAt: rumorCreatedAt,
       targetRelays: inbox.relays,
       selfWrapTargetRelays: selfWrapRelays,
       awaitRecipientOk: true,

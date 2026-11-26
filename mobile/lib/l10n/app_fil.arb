@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Lumipat sa {account} para buksan ang mensaheng ito?",
+  "notificationSettingsDirectMessages": "Mga direktang mensahe",
+  "notificationSettingsDirectMessagesSubtitle": "Magpakita ng abiso nang walang pangalan ng nagpadala o teksto ng mensahe.",
+  "dmNotificationMessageUnavailable": "Hindi available ang mensaheng ito.",
   "@@locale": "fil",
   "videoEditorSocialStickerPoll": "Poll",
   "videoEditorSocialStickerQuiz": "Quiz",
@@ -1766,6 +1770,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Hindi na-duplicate ang draft",
   "libraryDraftInProgressBadge": "Ginagawa pa",
   "libraryDraftActionDuplicate": "I-duplicate",
+  "libraryDraftActionConvertToClip": "Gawing clip",
+  "libraryDraftConvertingToClip": "Ginagawang clip...",
+  "libraryDraftConvertedToClipSnackbar": "Naging clip na ang draft",
+  "libraryDraftConvertToClipFailedSnackbar": "Hindi na-convert ang draft",
+  "libraryDraftConvertOverlaysUnavailable": "Hindi na-prepare ang text at stickers sa draft na ito. Buksan mo sa editor, tapos subukan ulit.",
   "libraryDraftCopyTitle": "{title} (kopya {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {
@@ -1780,6 +1789,15 @@
   "libraryDraftDeleteFailedSnackbar": "Hindi nabura ang draft",
   "libraryDraftActionPost": "I-post",
   "libraryDraftActionEdit": "I-edit",
+  "libraryDraftActionShare": "I-share ang draft",
+  "libraryDraftShareConfirm": "Magpapadala ng draft na puwedeng i-edit kay {name}?",
+  "libraryDraftShareNotice": "Kasama ang mga orihinal na clip at edit history. Makikita ng pinadalhan ang mga tinanggal mo. Puwede niyang i-edit, i-post o ibalik ang kopya niya.",
+  "libraryDraftShareFailed": "Hindi naipadala ang draft.",
+  "libraryDraftShareTooLarge": "Masyadong malaki ang draft para maipadala.",
+  "dmSharedDraft": "Na-share na draft",
+  "dmOpenDraft": "I-import at i-edit",
+  "dmDraftImportFailed": "Hindi na-import ang draft.",
+  "libraryDraftSent": "Naipadala ang draft",
   "libraryDraftActionDelete": "Burahin ang draft",
   "libraryDeleteDraftTitle": "Burahin ang Draft",
   "libraryDeleteDraftMessage": "Sigurado ka bang gusto mong burahin ang \"{title}\"?",
@@ -5626,5 +5644,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Edit",
+  "menuBarUndo": "I-undo",
+  "menuBarRedo": "I-redo",
+  "menuBarCut": "I-cut",
+  "menuBarCopy": "Kopyahin",
+  "menuBarPaste": "I-paste",
+  "menuBarSelectAll": "Piliin Lahat",
+  "menuBarView": "View",
+  "menuBarVideo": "Video",
+  "menuBarPreviousVideo": "Nakaraang Video",
+  "menuBarNextVideo": "Susunod na Video",
+  "menuBarPlayPause": "I-play/I-pause",
+  "menuBarMute": "I-mute",
+  "menuBarUnmute": "I-unmute",
+  "menuBarWindow": "Window",
+  "menuBarHelp": "Tulong"
 }

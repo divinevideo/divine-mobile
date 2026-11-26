@@ -64,7 +64,7 @@
 # 13 - Create app-level environment variable group "macos_signing_credentials" with:
 #   - CERTIFICATE_PRIVATE_KEY (mark as secure) — persistent 2048-bit RSA private key in PEM format
 #     matching the team's Mac App Distribution and Mac Installer Distribution certificates.
-#   - Imported only by `macos-build`. Create this group in Codemagic UI before merging a YAML
+#   - Imported only by `macos-build` and `macos-scheduled-build`. Create this group in Codemagic UI before merging a YAML
 #     change that references it, or Codemagic rejects every workflow in this file.
 #
 # Public people-list discovery exclusions come from the GitHub repository
@@ -1072,6 +1072,7 @@ workflows:
         IOS_EXTENSION_BUNDLE_IDS: >-
           co.openvine.app.NotificationServiceExtension
           co.openvine.app.CameraQuickActionWidget
+          co.openvine.app.watchkitapp
         # firebase_analytics links FirebaseAnalyticsCore — no IDFA support, no
         # Google ads-measurement SDK — when this is present while Xcode
         # evaluates its Package.swift (#7303). Presence is what counts, not the
@@ -1389,6 +1390,7 @@ workflows:
         IOS_EXTENSION_BUNDLE_IDS: >-
           co.openvine.app.NotificationServiceExtension
           co.openvine.app.CameraQuickActionWidget
+          co.openvine.app.watchkitapp
         # Same analytics product as ios-build (#7303); see the comment there.
         FIREBASE_ANALYTICS_WITHOUT_ADID: "true"
       ios_signing:
@@ -1505,7 +1507,7 @@ workflows:
       - *precache_shorebird_android_artifacts
       - *patch_android
 
-  macos-build:
+  macos-build: &macos_build
     name: macOS App Store Build
     working_directory: mobile
     max_build_duration: 60
@@ -1552,41 +1554,32 @@ workflows:
       - name: Allocate effective macOS distribution identity
         script: |
           set -euo pipefail
-          mkdir -p build/shorebird
-          git ls-remote --tags origin | awk '{print $2}' > build/shorebird/stable_tags.txt
-          # Fail closed on App Store Connect auth/network errors; an empty
-          # stdout with exit 0 means no macOS build has been uploaded yet.
-          LATEST_ASC_BUILD=$(
-            app-store-connect get-latest-testflight-build-number \
-              --platform MAC_OS \
-              "6747959501"
-          )
-          LATEST_ASC_BUILD="${LATEST_ASC_BUILD:-0}"
-          if ! [[ "$LATEST_ASC_BUILD" =~ ^[0-9]+$ ]]; then
-            echo "ERROR: Unexpected macOS TestFlight build number from App Store Connect: '$LATEST_ASC_BUILD'" >&2
-            exit 1
-          fi
-          NEXT_ASC_BUILD=$((LATEST_ASC_BUILD + 1))
-          BUILD_NUM="$PROJECT_BUILD_NUMBER"
-          if [ "$NEXT_ASC_BUILD" -gt "$BUILD_NUM" ]; then
-            BUILD_NUM="$NEXT_ASC_BUILD"
-          fi
-          python3 scripts/release_identity.py direct \
-            --pubspec pubspec.yaml --source-sha "$(git rev-parse HEAD)" \
-            --stable-tags build/shorebird/stable_tags.txt \
-            --build-number "$BUILD_NUM" \
-            --output build/shorebird/macos_release.env
+          python3 scripts/allocate_build_identity.py macos
           echo SHOREBIRD_PLATFORM=macos >> "$CM_ENV"
       - *build_macos
       - *package_macos_mas_pkg
+      - name: Record macOS release provenance
+        script: DEFAULT_ENV="${{ inputs.DEFAULT_ENV }}" python3 scripts/record_macos_provenance.py
     artifacts:
       - build/macos/pkg/*.pkg
       - build/macos/archive/Runner.xcarchive/dSYMs/**
       - build/shorebird/macos_release.env
+      - build/shorebird/macos_provenance.json
     publishing:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
+        submit_to_app_store: false
+
+  # Scheduled uploads never submit to external audiences. The coordinator owns
+  # external TestFlight group attachment, beta review budget, and Mac App Store submission.
+  macos-scheduled-build:
+    <<: *macos_build
+    name: macOS scheduled internal release
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: false
         submit_to_app_store: false
 
   e2e-smoke-ios:

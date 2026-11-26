@@ -10,6 +10,21 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return '切换到 $account 以打开这条消息吗？';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => '私信';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      '显示通知，但不显示发送者姓名或消息内容。';
+
+  @override
+  String get dmNotificationMessageUnavailable => '这条消息无法查看。';
+
+  @override
   String get devOptionsClipRecovery => '片段恢复';
 
   @override
@@ -6727,6 +6742,52 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => '创建副本';
+
+  @override
+  String get libraryDraftActionConvertToClip => '转换为片段';
+
+  @override
+  String get libraryDraftConvertingToClip => '正在转换为片段...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => '草稿已转换为片段';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar => '转换草稿失败';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      '这份草稿上的文字和贴纸没能准备好。到编辑器里打开，然后再试一次。';
+
+  @override
+  String get libraryDraftActionShare => '分享草稿';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return '向$name发送可编辑的草稿？';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      '你将分享原始片段和编辑记录。对方可以看到你剪掉的部分，也可以编辑、发布或发回自己的副本。';
+
+  @override
+  String get libraryDraftShareFailed => '无法发送草稿。';
+
+  @override
+  String get libraryDraftShareTooLarge => '草稿太大，无法发送。';
+
+  @override
+  String get dmSharedDraft => '已分享的草稿';
+
+  @override
+  String get dmOpenDraft => '导入并编辑';
+
+  @override
+  String get dmDraftImportFailed => '无法导入草稿。';
+
+  @override
+  String get libraryDraftSent => '草稿已发送';
 
   @override
   String get libraryDraftActionDelete => '删除草稿';
@@ -16024,4 +16085,52 @@ class AppLocalizationsZh extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return '$badgeName的视频';
   }
+
+  @override
+  String get menuBarEdit => '编辑';
+
+  @override
+  String get menuBarUndo => '撤销';
+
+  @override
+  String get menuBarRedo => '重做';
+
+  @override
+  String get menuBarCut => '剪切';
+
+  @override
+  String get menuBarCopy => '拷贝';
+
+  @override
+  String get menuBarPaste => '粘贴';
+
+  @override
+  String get menuBarSelectAll => '全选';
+
+  @override
+  String get menuBarView => '显示';
+
+  @override
+  String get menuBarVideo => '视频';
+
+  @override
+  String get menuBarPreviousVideo => '上一个视频';
+
+  @override
+  String get menuBarNextVideo => '下一个视频';
+
+  @override
+  String get menuBarPlayPause => '播放/暂停';
+
+  @override
+  String get menuBarMute => '静音';
+
+  @override
+  String get menuBarUnmute => '取消静音';
+
+  @override
+  String get menuBarWindow => '窗口';
+
+  @override
+  String get menuBarHelp => '帮助';
 }

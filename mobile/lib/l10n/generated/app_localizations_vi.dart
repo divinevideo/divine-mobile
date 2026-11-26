@@ -10,6 +10,21 @@ class AppLocalizationsVi extends AppLocalizations {
   AppLocalizationsVi([String locale = 'vi']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Chuyển sang $account để mở tin nhắn này?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Tin nhắn trực tiếp';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Hiện thông báo mà không hiển thị tên người gửi hay nội dung tin nhắn.';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'Tin nhắn này không khả dụng.';
+
+  @override
   String get devOptionsClipRecovery => 'Khôi phục clip';
 
   @override
@@ -7101,6 +7116,54 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'Nhân bản';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'Chuyển thành clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Đang chuyển thành clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Đã chuyển bản nháp thành clip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Không chuyển được bản nháp';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Không chuẩn bị được chữ và nhãn dán trên bản nháp này. Mở nó trong trình chỉnh sửa rồi thử lại.';
+
+  @override
+  String get libraryDraftActionShare => 'Chia sẻ bản nháp';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Gửi bản nháp có thể chỉnh sửa cho $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Bạn đang chia sẻ các clip gốc và lịch sử chỉnh sửa. Người nhận có thể xem những đoạn bạn đã cắt, chỉnh sửa bản sao của họ, đăng hoặc gửi lại cho bạn.';
+
+  @override
+  String get libraryDraftShareFailed => 'Không thể gửi bản nháp.';
+
+  @override
+  String get libraryDraftShareTooLarge => 'Bản nháp quá lớn để gửi.';
+
+  @override
+  String get dmSharedDraft => 'Bản nháp đã chia sẻ';
+
+  @override
+  String get dmOpenDraft => 'Nhập và chỉnh sửa';
+
+  @override
+  String get dmDraftImportFailed => 'Không thể nhập bản nháp.';
+
+  @override
+  String get libraryDraftSent => 'Đã gửi bản nháp';
 
   @override
   String get libraryDraftActionDelete => 'Xóa bản nháp';
@@ -16949,4 +17012,52 @@ class AppLocalizationsVi extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Video từ $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Sửa';
+
+  @override
+  String get menuBarUndo => 'Hoàn tác';
+
+  @override
+  String get menuBarRedo => 'Làm lại';
+
+  @override
+  String get menuBarCut => 'Cắt';
+
+  @override
+  String get menuBarCopy => 'Sao chép';
+
+  @override
+  String get menuBarPaste => 'Dán';
+
+  @override
+  String get menuBarSelectAll => 'Chọn tất cả';
+
+  @override
+  String get menuBarView => 'Xem';
+
+  @override
+  String get menuBarVideo => 'Video';
+
+  @override
+  String get menuBarPreviousVideo => 'Video trước';
+
+  @override
+  String get menuBarNextVideo => 'Video tiếp theo';
+
+  @override
+  String get menuBarPlayPause => 'Phát/Tạm dừng';
+
+  @override
+  String get menuBarMute => 'Tắt tiếng';
+
+  @override
+  String get menuBarUnmute => 'Bật tiếng';
+
+  @override
+  String get menuBarWindow => 'Cửa sổ';
+
+  @override
+  String get menuBarHelp => 'Trợ giúp';
 }

@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "ይህን መልዕክት ለመክፈት ወደ {account} ይቀየር?",
+  "notificationSettingsDirectMessages": "የግል መልዕክቶች",
+  "notificationSettingsDirectMessagesSubtitle": "የላኪውን ስም ወይም መልዕክቱን ሳያሳዩ የግል ማሳወቂያ ያሳዩ።",
+  "dmNotificationMessageUnavailable": "ይህ መልዕክት አይገኝም።",
   "@@locale": "am",
   "videoEditorSocialStickerPoll": "ድምፅ መስጫ",
   "videoEditorSocialStickerQuiz": "ፈተና",
@@ -2753,6 +2757,11 @@
   "libraryDraftDuplicateFailedSnackbar": "ረቂቅን ማባዛት አልተሳካም።",
   "libraryDraftInProgressBadge": "በሂደት ላይ",
   "libraryDraftActionDuplicate": "አባዛ",
+  "libraryDraftActionConvertToClip": "ወደ ክሊፕ ቀይር",
+  "libraryDraftConvertingToClip": "ወደ ክሊፕ በመቀየር ላይ...",
+  "libraryDraftConvertedToClipSnackbar": "ረቂቅ ወደ ክሊፕ ተቀይሯል።",
+  "libraryDraftConvertToClipFailedSnackbar": "ረቂቅን መቀየር አልተሳካም።",
+  "libraryDraftConvertOverlaysUnavailable": "የዚህ ረቂቅ ጽሑፍና ተለጣፊዎች ሊዘጋጁ አልቻሉም። በአራሚው ውስጥ ይክፈቱት፣ ከዚያ እንደገና ይሞክሩ።",
   "libraryDraftCopyTitle": "{title} (ቅጂ {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {
@@ -2767,6 +2776,15 @@
   "libraryDraftDeleteFailedSnackbar": "ረቂቅን መሰረዝ አልተሳካም።",
   "libraryDraftActionPost": "ለጥፍ",
   "libraryDraftActionEdit": "አርትዕ",
+  "libraryDraftActionShare": "ረቂቅ አጋራ",
+  "libraryDraftShareConfirm": "ሊታረም የሚችል ረቂቅ ለ{name} ይላክ?",
+  "libraryDraftShareNotice": "ዋናዎቹ ክሊፖችና የአርትዖት ታሪኩ ይላካሉ። ተቀባዩ የተቆረጡትን ክፍሎች ማየት፣ ቅጂውን ማርትዕ፣ መለጠፍ ወይም መልሶ መላክ ይችላል።",
+  "libraryDraftShareFailed": "ረቂቁን መላክ አልተቻለም።",
+  "libraryDraftShareTooLarge": "ረቂቁ ለመላክ በጣም ትልቅ ነው።",
+  "dmSharedDraft": "የተጋራ ረቂቅ",
+  "dmOpenDraft": "አስገባና አርም",
+  "dmDraftImportFailed": "ረቂቁን ማስገባት አልተቻለም።",
+  "libraryDraftSent": "ረቂቁ ተልኳል",
   "libraryDraftActionDelete": "ረቂቅ ሰርዝ",
   "libraryDeleteDraftTitle": "ረቂቅ ሰርዝ",
   "libraryDeleteDraftMessage": "እርግጠኛ ነህ \"{title}\" መሰረዝ ትፈልጋለህ?",
@@ -6642,5 +6660,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "አርትዕ",
+  "menuBarUndo": "ቀልብስ",
+  "menuBarRedo": "ድገም",
+  "menuBarCut": "ቁረጥ",
+  "menuBarCopy": "ቅዳ",
+  "menuBarPaste": "ለጥፍ",
+  "menuBarSelectAll": "ሁሉንም ምረጥ",
+  "menuBarView": "እይታ",
+  "menuBarVideo": "ቪዲዮ",
+  "menuBarPreviousVideo": "ቀዳሚ ቪዲዮ",
+  "menuBarNextVideo": "ቀጣይ ቪዲዮ",
+  "menuBarPlayPause": "አጫውት/ለአፍታ አቁም",
+  "menuBarMute": "ድምጸ-ከል አድርግ",
+  "menuBarUnmute": "ድምጸ-ከል አንሳ",
+  "menuBarWindow": "መስኮት",
+  "menuBarHelp": "እገዛ"
 }

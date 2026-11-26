@@ -146,142 +146,113 @@ class _CommentItemState extends ConsumerState<CommentItem> {
           color: _isHeld
               ? context.vineColors.containerLow
               : VineTheme.transparent,
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Thread lines for nested comments
-                if (widget.depth > 0)
-                  ...List.generate(
-                    min(widget.depth, 4),
-                    (i) => Container(
-                      width: 24,
-                      decoration: BoxDecoration(
-                        border: Border(
-                          left: BorderSide(
-                            color: context.vineColors.containerLow,
-                            width: i == min(widget.depth, 4) - 1 ? 2 : 1,
-                          ),
+          child: _ThreadLines(
+            depth: widget.depth,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: widget.depth > 0 ? 8 : 16,
+                right: 16,
+                top: widget.depth > 0 ? 10 : 16,
+                bottom: widget.depth > 0 ? 12 : 20,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _CommentHeader(
+                    authorPubkey: widget.comment.authorPubkey,
+                    isCurrentUser: isCurrentUser,
+                    relativeTime: LocalizedTimeFormatter.formatRelativeVerbose(
+                      context.l10n,
+                      widget.comment.createdAt.millisecondsSinceEpoch ~/ 1000,
+                    ),
+                    avatarSize: widget.depth >= 2 ? 28.0 : 36.0,
+                  ),
+                  if (widget.isHiddenByOwner) ...[
+                    const SizedBox(height: 8),
+                    _HiddenByOwnerLabel(
+                      viewerOwnsVideo: widget.viewerOwnsVideo,
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  // Name the parent when this reply is shown on its own.
+                  if (widget.depth == 0 &&
+                      widget.comment.replyToAuthorPubkey != null &&
+                      !widget.repliesToHiddenComment)
+                    _ReplyIndicator(
+                      parentAuthorPubkey: widget.comment.replyToAuthorPubkey!,
+                    ),
+                  if (pendingDraftId != null) ...[
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: PendingVideoReplyTile(
+                        draftId: pendingDraftId,
+                      ),
+                    ),
+                    if (showCommentText) ...[
+                      const SizedBox(height: 12),
+                      _CommentContent(
+                        commentId: widget.comment.id,
+                        content: commentContent,
+                      ),
+                    ],
+                  ] else if (widget.comment.hasVideo) ...[
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 248),
+                        child: VideoCommentPlayer(
+                          videoUrl:
+                              widget.comment
+                                  .toSyntheticVideoEvent()
+                                  .inlinePlayerVideoUrl ??
+                              widget.comment.videoUrl!,
+                          thumbnailUrl: widget.comment.thumbnailUrl,
+                          blurhash: widget.comment.videoBlurhash,
+                          borderRadius: BorderRadius.circular(12),
+                          onOpenVideo: () => VideoDetailRouteData(
+                            id: widget.comment.id,
+                            $extra: VideoDetailRouteExtra(
+                              initialVideo: widget.comment
+                                  .toSyntheticVideoEvent(),
+                            ),
+                          ).push<void>(context),
                         ),
                       ),
                     ),
-                  ),
-                // Comment content
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      left: widget.depth > 0 ? 8 : 16,
-                      right: 16,
-                      top: widget.depth > 0 ? 10 : 16,
-                      bottom: widget.depth > 0 ? 12 : 20,
+                    if (showCommentText) ...[
+                      const SizedBox(height: 12),
+                      _CommentContent(
+                        commentId: widget.comment.id,
+                        content: commentContent,
+                      ),
+                    ],
+                  ] else
+                    Padding(
+                      padding: EdgeInsets.only(
+                        top:
+                            widget.depth == 0 &&
+                                widget.comment.replyToAuthorPubkey != null
+                            ? 4
+                            : 0,
+                      ),
+                      child: _CommentContent(
+                        commentId: widget.comment.id,
+                        content: commentContent,
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _CommentHeader(
-                          authorPubkey: widget.comment.authorPubkey,
-                          isCurrentUser: isCurrentUser,
-                          relativeTime:
-                              LocalizedTimeFormatter.formatRelativeVerbose(
-                                context.l10n,
-                                widget
-                                        .comment
-                                        .createdAt
-                                        .millisecondsSinceEpoch ~/
-                                    1000,
-                              ),
-                          avatarSize: widget.depth >= 2 ? 28.0 : 36.0,
-                        ),
-                        if (widget.isHiddenByOwner) ...[
-                          const SizedBox(height: 8),
-                          _HiddenByOwnerLabel(
-                            viewerOwnsVideo: widget.viewerOwnsVideo,
-                          ),
-                        ],
-                        const SizedBox(height: 12),
-                        // Name the parent when this reply is shown on its own.
-                        if (widget.depth == 0 &&
-                            widget.comment.replyToAuthorPubkey != null &&
-                            !widget.repliesToHiddenComment)
-                          _ReplyIndicator(
-                            parentAuthorPubkey:
-                                widget.comment.replyToAuthorPubkey!,
-                          ),
-                        if (pendingDraftId != null) ...[
-                          const SizedBox(height: 12),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: PendingVideoReplyTile(
-                              draftId: pendingDraftId,
-                            ),
-                          ),
-                          if (showCommentText) ...[
-                            const SizedBox(height: 12),
-                            _CommentContent(
-                              commentId: widget.comment.id,
-                              content: commentContent,
-                            ),
-                          ],
-                        ] else if (widget.comment.hasVideo) ...[
-                          const SizedBox(height: 12),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 248),
-                              child: VideoCommentPlayer(
-                                videoUrl:
-                                    widget.comment
-                                        .toSyntheticVideoEvent()
-                                        .inlinePlayerVideoUrl ??
-                                    widget.comment.videoUrl!,
-                                thumbnailUrl: widget.comment.thumbnailUrl,
-                                blurhash: widget.comment.videoBlurhash,
-                                borderRadius: BorderRadius.circular(12),
-                                onOpenVideo: () => VideoDetailRouteData(
-                                  id: widget.comment.id,
-                                  $extra: VideoDetailRouteExtra(
-                                    initialVideo: widget.comment
-                                        .toSyntheticVideoEvent(),
-                                  ),
-                                ).push<void>(context),
-                              ),
-                            ),
-                          ),
-                          if (showCommentText) ...[
-                            const SizedBox(height: 12),
-                            _CommentContent(
-                              commentId: widget.comment.id,
-                              content: commentContent,
-                            ),
-                          ],
-                        ] else
-                          Padding(
-                            padding: EdgeInsets.only(
-                              top:
-                                  widget.depth == 0 &&
-                                      widget.comment.replyToAuthorPubkey != null
-                                  ? 4
-                                  : 0,
-                            ),
-                            child: _CommentContent(
-                              commentId: widget.comment.id,
-                              content: commentContent,
-                            ),
-                          ),
-                        if (!isPendingComment) ...[
-                          const SizedBox(height: 12),
-                          _ActionsRow(
-                            commentId: widget.comment.id,
-                            authorPubkey: widget.comment.authorPubkey,
-                            addressableId: widget.comment.addressableId,
-                            targetKind: widget.comment.eventKind,
-                          ),
-                        ],
-                      ],
+                  if (!isPendingComment) ...[
+                    const SizedBox(height: 12),
+                    _ActionsRow(
+                      commentId: widget.comment.id,
+                      authorPubkey: widget.comment.authorPubkey,
+                      addressableId: widget.comment.addressableId,
+                      targetKind: widget.comment.eventKind,
                     ),
-                  ),
-                ),
-              ],
+                  ],
+                ],
+              ),
             ),
           ),
         ),
@@ -385,6 +356,60 @@ class _CommentItemState extends ConsumerState<CommentItem> {
           );
         },
       ),
+    );
+  }
+}
+
+/// Draws one [_columnWidth]-wide thread column per nesting level, up to
+/// [_maxLines], on the start side of [child]; the line next to the comment is
+/// the thicker one.
+///
+/// The lines fill a row behind the comment instead of sitting in an
+/// intrinsic-height row, which measured the inline player at the full row
+/// width rather than its 248 dp cap and left a gap below video replies. The
+/// comment keeps one [Stack] slot at every depth, so a change of depth does
+/// not rebuild it and stop a playing reply.
+class _ThreadLines extends StatelessWidget {
+  const _ThreadLines({required this.depth, required this.child});
+
+  static const _maxLines = 4;
+  static const _columnWidth = 24.0;
+
+  final int depth;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final lineCount = min(depth, _maxLines);
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        Positioned.fill(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < lineCount; i++)
+                SizedBox(
+                  width: _columnWidth,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        left: BorderSide(
+                          color: context.vineColors.containerLow,
+                          width: i == lineCount - 1 ? 2 : 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: EdgeInsetsDirectional.only(start: lineCount * _columnWidth),
+          child: child,
+        ),
+      ],
     );
   }
 }

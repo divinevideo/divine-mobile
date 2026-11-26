@@ -281,12 +281,12 @@ void main() {
       });
     });
 
-    test('counts a relay replaced in the pool before it answered as '
-        'silent, even while its replacement keeps sending', () {
+    test('judges a relay replaced in the pool by its replacement, which '
+        'takes the read over', () {
       fakeAsync((async) {
         const url = 'wss://replaced.example';
-        // Streams until 8 s, so its own last frame would keep it inside the
-        // bound until 18 s; leaving the pool at 9 s is what ends the read.
+        // Streams until 8 s, so its own last frame keeps it inside the bound
+        // until 18 s.
         final original = _ScheduledRelay(
           url,
           events: events.take(9).toList(),
@@ -301,18 +301,69 @@ void main() {
         final read = _startRead(async, nostr);
         async.elapse(const Duration(seconds: 9));
         // What the relay manager does on resume: drop the relay object and
-        // add a fresh one for the url. The REQ stays with the old object.
+        // add a fresh one for the url, which asks for the read again
+        // (#11343). It then stays silent.
         final replacement = _ScheduledRelay(
           url,
           events: const [],
           answer: (first: Duration.zero, every: Duration.zero, eose: false),
-          busyEvery: const Duration(seconds: 1),
         );
         nostr.relayPool.remove(url);
         unawaited(nostr.relayPool.add(replacement));
 
         async.elapse(const Duration(seconds: 81));
-        replacement.stop();
+
+        expect(replacement.reqs, ['history_page']);
+        expect(read.result!.isComplete, isFalse);
+        expect(read.result!.events, hasLength(9));
+        // Heard from when it connected at 9 s, silent for the bound from then.
+        expect(read.took, greaterThanOrEqualTo(const Duration(seconds: 19)));
+        expect(read.took, lessThan(const Duration(seconds: 21)));
+        expect(
+          lines.map((line) => line.message),
+          contains(contains('silent: $url sent nothing for 10000ms')),
+        );
+      });
+    });
+
+    test('counts a relay removed from the pool before it answered as '
+        'silent, while another relay keeps the read open', () {
+      fakeAsync((async) {
+        const url = 'wss://removed.example';
+        // Streams until 8 s, so its own last frame would keep it inside the
+        // bound until 18 s; leaving the pool at 9 s is what ends the read.
+        final removed = _ScheduledRelay(
+          url,
+          events: events.take(9).toList(),
+          answer: (
+            first: Duration.zero,
+            every: const Duration(seconds: 1),
+            eose: false,
+          ),
+        );
+        // Answers this read only at 30 s, and keeps its socket busy until
+        // then, so it is neither silent nor done.
+        final busy = _ScheduledRelay(
+          'wss://busy.example',
+          events: events.take(3).toList(),
+          answer: (
+            first: const Duration(seconds: 30),
+            every: Duration.zero,
+            eose: true,
+          ),
+          busyEvery: const Duration(seconds: 1),
+        );
+        final lines = <RelayDiagnostic>[];
+        final nostr = _nostr(async, [
+          removed,
+          busy,
+        ], diagnosticsSink: lines.add);
+        final read = _startRead(async, nostr);
+        async.elapse(const Duration(seconds: 9));
+
+        nostr.relayPool.remove(url);
+        async.elapse(const Duration(seconds: 40));
+        busy.stop();
 
         expect(read.result!.isComplete, isFalse);
         expect(read.result!.events, hasLength(9));

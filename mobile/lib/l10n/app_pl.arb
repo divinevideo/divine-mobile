@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Przełączyć się na konto {account}, aby otworzyć tę wiadomość?",
+  "notificationSettingsDirectMessages": "Wiadomości prywatne",
+  "notificationSettingsDirectMessagesSubtitle": "Pokazuj powiadomienie bez nazwy nadawcy i treści wiadomości.",
+  "dmNotificationMessageUnavailable": "Ta wiadomość jest niedostępna.",
   "@@locale": "pl",
   "videoEditorSocialStickerPoll": "Ankieta",
   "videoEditorSocialStickerQuiz": "Quiz",
@@ -2244,6 +2248,15 @@
   "librarySortShortestClip": "Najkrótszy klip",
   "librarySortSquareFirst": "Najpierw kwadratowe",
   "librarySortVerticalFirst": "Najpierw pionowe",
+  "libraryDraftActionShare": "Udostępnij szkic",
+  "libraryDraftShareConfirm": "Wysłać edytowalny szkic do {name}?",
+  "libraryDraftShareNotice": "Udostępniasz oryginalne klipy i historię edycji. Osoba, która je otrzyma, zobaczy też wycięte fragmenty. Może edytować swoją kopię, opublikować ją lub odesłać.",
+  "libraryDraftShareFailed": "Nie udało się wysłać szkicu.",
+  "libraryDraftShareTooLarge": "Szkic jest za duży, żeby go wysłać.",
+  "dmSharedDraft": "Udostępniony szkic",
+  "dmOpenDraft": "Importuj i edytuj",
+  "dmDraftImportFailed": "Nie udało się zaimportować szkicu.",
+  "libraryDraftSent": "Wysłano szkic",
   "libraryDraftActionDelete": "Usuń wersję roboczą",
   "libraryDraftActionEdit": "Edytuj",
   "libraryDraftActionPost": "Opublikuj",
@@ -2253,6 +2266,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Nie udało się zduplikować wersji roboczej",
   "libraryDraftInProgressBadge": "W toku",
   "libraryDraftActionDuplicate": "Duplikuj",
+  "libraryDraftActionConvertToClip": "Zamień w klip",
+  "libraryDraftConvertingToClip": "Zamienianie w klip...",
+  "libraryDraftConvertedToClipSnackbar": "Zamieniono wersję roboczą w klip",
+  "libraryDraftConvertToClipFailedSnackbar": "Nie udało się zamienić wersji roboczej",
+  "libraryDraftConvertOverlaysUnavailable": "Nie udało się przygotować tekstu i naklejek z tej wersji roboczej. Otwórz ją w edytorze i spróbuj ponownie.",
   "libraryDraftCopyTitle": "{title} (kopia {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {
@@ -6589,5 +6607,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Edycja",
+  "menuBarUndo": "Cofnij",
+  "menuBarRedo": "Ponów",
+  "menuBarCut": "Wytnij",
+  "menuBarCopy": "Kopiuj",
+  "menuBarPaste": "Wklej",
+  "menuBarSelectAll": "Zaznacz wszystko",
+  "menuBarView": "Widok",
+  "menuBarVideo": "Wideo",
+  "menuBarPreviousVideo": "Poprzednie wideo",
+  "menuBarNextVideo": "Następne wideo",
+  "menuBarPlayPause": "Odtwórz/wstrzymaj",
+  "menuBarMute": "Wycisz",
+  "menuBarUnmute": "Włącz dźwięk",
+  "menuBarWindow": "Okno",
+  "menuBarHelp": "Pomoc"
 }

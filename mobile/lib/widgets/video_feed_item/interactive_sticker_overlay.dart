@@ -19,6 +19,7 @@ import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/sticker_responses_filter_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/video_replies_curation_provider.dart';
 import 'package:openvine/router/routes/interactive_sticker_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
@@ -28,17 +29,18 @@ import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/interactive_sticker_card.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// The question, Add yours or replies [region] on [video], as the frames
-/// show it until [isActive], and from then on with who joined or replied,
-/// opening what a tap on it opens.
+/// The question, Add yours or replies [region] on [video], opening what a
+/// tap on it opens while [isActive].
 ///
-/// Only the active video reads who joined or replied, so the videos the feed
-/// loads ahead ask for nothing. [onInteraction] is called when the viewer
-/// taps it, so the feed does not move on under them.
+/// An Add yours or replies sticker reads who joined or replied as soon as
+/// the feed builds its video, the ones it loads ahead included, so they are
+/// in by the time the viewer swipes to it, and keeps showing them while the
+/// video is not the one playing, as under the comments. [onInteraction] is
+/// called when the viewer taps it, so the feed does not move on under them.
 ///
 /// An Add yours or replies sticker only some may answer is in no frame: it
-/// shows once the video plays, to whoever may answer and to everyone else
-/// once someone did, and only they may join an Add yours.
+/// shows once that is read, to whoever may answer and to everyone else once
+/// someone did, and only they may join an Add yours.
 class InteractiveStickerOverlay extends ConsumerWidget {
   const InteractiveStickerOverlay({
     required this.region,
@@ -60,9 +62,7 @@ class InteractiveStickerOverlay extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!isActive) {
-      // Nothing in the frames to cover, and who may see it is not read yet.
-      if (data.isLeftOutOfFrames) return const SizedBox.shrink();
+    if (region.kind == VideoStickerKind.question && !isActive) {
       return IgnorePointer(child: InteractiveStickerCopy(data: data));
     }
     final viewer = ref.watch(nostrSessionProvider).pubkey;
@@ -120,6 +120,7 @@ class InteractiveStickerOverlay extends ConsumerWidget {
         region: region,
         video: video,
         data: data,
+        isActive: isActive,
         isSignedIn: viewer != null,
         isCreator: isCreator,
         onInteraction: onInteraction,
@@ -162,12 +163,14 @@ void _showSnackbar(BuildContext context, String message) =>
         ?.showSnackBar(DivineSnackbarContainer.snackBar(message));
 
 /// An Add yours or replies sticker with who joined or replied once that is
-/// read; nobody until then, or when it could not be read.
+/// read; nobody until then, or when it could not be read. It takes taps only
+/// while [isActive].
 class _ResponsesSticker extends ConsumerWidget {
   const _ResponsesSticker({
     required this.region,
     required this.video,
     required this.data,
+    required this.isActive,
     required this.isSignedIn,
     required this.isCreator,
     required this.onInteraction,
@@ -176,13 +179,31 @@ class _ResponsesSticker extends ConsumerWidget {
   final VideoStickerRegion region;
   final VideoEvent video;
   final SocialStickerData data;
+  final bool isActive;
   final bool isSignedIn;
   final bool isCreator;
   final VoidCallback? onInteraction;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = context.watch<StickerResponsesCubit>().state;
+    final cubit = context.watch<StickerResponsesCubit>();
+    final state = cubit.state;
+    final address = video.addressableId;
+    if (region.kind == VideoStickerKind.replies && address != null) {
+      ref.listen(
+        videoRepliesCurationProvider((pubkey: video.pubkey, address: address)),
+        (_, next) {
+          final curation = next.value;
+          if (curation == null) return;
+          runDetached(
+            cubit.applyCuration(curation),
+            'apply changes to replies curation',
+            logName: 'InteractiveStickerOverlay',
+            category: LogCategory.ui,
+          );
+        },
+      );
+    }
     if ((data.isLeftOutOfFrames || state.audience.isRestricted) &&
         !state.isShown) {
       return const SizedBox.shrink();
@@ -211,22 +232,27 @@ class _ResponsesSticker extends ConsumerWidget {
           )
         : null;
     final isAddYours = region.kind == VideoStickerKind.prompt;
-    return InteractiveStickerCopy(
-      data: data,
-      responses: responses,
-      // Once the chain it joins is known, and by whoever may answer.
-      onJoin: isAddYours && state.chainRoot != null && state.canAnswer
-          ? () {
-              onInteraction?.call();
-              _join(context, ref, state);
-            }
-          : null,
-      // Anyone who may not join is invited to watch the series instead.
-      watchOnly: isAddYours && !state.canAnswer,
-      onOpenResponses: () {
-        onInteraction?.call();
-        _open(context, ref, state);
-      },
+    // Ignored rather than built without its buttons, which would build the
+    // card anew and start its thumbnails over.
+    return IgnorePointer(
+      ignoring: !isActive,
+      child: InteractiveStickerCopy(
+        data: data,
+        responses: responses,
+        // Once the chain it joins is known, and by whoever may answer.
+        onJoin: isAddYours && state.chainRoot != null && state.canAnswer
+            ? () {
+                onInteraction?.call();
+                _join(context, ref, state);
+              }
+            : null,
+        // Anyone who may not join is invited to watch the series instead.
+        watchOnly: isAddYours && !state.canAnswer,
+        onOpenResponses: () {
+          onInteraction?.call();
+          _open(context, ref, state);
+        },
+      ),
     );
   }
 

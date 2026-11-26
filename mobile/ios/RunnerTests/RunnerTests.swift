@@ -336,6 +336,106 @@ final class MediaSessionScopePolicyTests: XCTestCase {
   }
 }
 
+/// An Apple Watch press names the revision of the recorder state the Watch
+/// showed, and `WatchShutterGate` drops a press made on any other state.
+/// Without it, a Stop the Watch still showed for a finished take would stop
+/// the next one.
+final class WatchShutterGateTests: XCTestCase {
+  private let takeRunning: [String: Any] = ["recordedMs": 0, "shutterActive": true]
+
+  func testAdmitsAPressOnTheLatestState() {
+    var gate = WatchShutterGate(nowMs: 1_000)
+    let revision = gate.publish(takeRunning, nowMs: 2_000)["revision"]!
+
+    XCTAssertEqual(gate.action(for: ["command": "watchStop", "revision": revision]), .stop)
+    XCTAssertEqual(gate.action(for: ["command": "watchStart", "revision": revision]), .start)
+  }
+
+  func testDropsAStopShownForTheTakeBefore() {
+    var gate = WatchShutterGate(nowMs: 1_000)
+    let firstTakeRunning = gate.publish(takeRunning, nowMs: 2_000)["revision"]!
+    _ = gate.publish(["recordedMs": 2000, "shutterActive": false], nowMs: 3_000)
+    _ = gate.publish(["recordedMs": 2000, "shutterActive": true], nowMs: 4_000)
+
+    XCTAssertNil(gate.action(for: ["command": "watchStop", "revision": firstTakeRunning]))
+  }
+
+  func testDropsAPressThatNamesNoState() {
+    let gate = WatchShutterGate(nowMs: 1_000)
+
+    XCTAssertNil(gate.action(for: ["command": "watchStop"]))
+  }
+
+  func testDropsAnythingButAWatchAction() {
+    let gate = WatchShutterGate(nowMs: 1_000)
+
+    XCTAssertNil(gate.action(for: ["command": "volumeUp", "revision": gate.revision]))
+    XCTAssertNil(gate.action(for: ["revision": gate.revision]))
+    XCTAssertNil(gate.action(for: ["command": "watchStop", "revision": "1000"]))
+  }
+
+  // A restarted app must not number its states the way the run before did, or
+  // a press on a state the Watch still shows from that run would pass.
+  func testStartsFromTheClock() {
+    XCTAssertEqual(WatchShutterGate(nowMs: 1_800_000_000_000).revision, 1_800_000_000_000)
+  }
+
+  func testRevisionsKeepRisingWhenTheClockDoesNot() {
+    var gate = WatchShutterGate(nowMs: 5_000)
+
+    _ = gate.publish(nil, nowMs: 4_000)
+    XCTAssertEqual(gate.revision, 5_001)
+    _ = gate.publish(nil, nowMs: 9_000)
+    XCTAssertEqual(gate.revision, 9_000)
+  }
+
+  func testTheWatchGetsTheStateWithoutDartsNumber() {
+    var gate = WatchShutterGate(nowMs: 1_000)
+
+    let payload = gate.publish(
+      ["recordedMs": 900, "activeTakeStartedAtMs": NSNull(), "stateId": 7],
+      nowMs: 2_000
+    )
+
+    XCTAssertEqual(payload["available"] as? Bool, true)
+    XCTAssertEqual(payload["recordedMs"] as? Int, 900)
+    XCTAssertEqual((payload["revision"] as? NSNumber)?.int64Value, 2_000)
+    XCTAssertNil(payload["stateId"])
+    XCTAssertNil(payload["activeTakeStartedAtMs"])
+  }
+
+  func testAClosedRecorderTellsTheWatchOnlyThatItIsClosed() {
+    var gate = WatchShutterGate(nowMs: 1_000)
+
+    let payload = gate.publish(nil, nowMs: 2_000)
+
+    XCTAssertEqual(Set(payload.keys), ["available", "revision"])
+    XCTAssertEqual(payload["available"] as? Bool, false)
+  }
+
+  // Dart can move to the next take before this side hears of it, so a press
+  // that passes here goes on with Dart's number for its state, and Dart
+  // checks that number again.
+  func testAPressGoesToDartWithDartsNumberForItsState() {
+    var gate = WatchShutterGate(nowMs: 1_000)
+    _ = gate.publish(["shutterActive": true, "stateId": 7], nowMs: 2_000)
+
+    let arguments = gate.triggerArguments(for: .stop)
+
+    XCTAssertEqual(arguments["trigger"] as? String, "watchStop")
+    XCTAssertEqual((arguments["stateId"] as? NSNumber)?.int64Value, 7)
+  }
+
+  func testAPressOnAClosedRecorderGoesToDartWithoutAState() {
+    var gate = WatchShutterGate(nowMs: 1_000)
+    _ = gate.publish(nil, nowMs: 2_000)
+
+    let arguments = gate.triggerArguments(for: .start)
+
+    XCTAssertTrue(arguments["stateId"] is NSNull)
+  }
+}
+
 /// Divine passes every ProofMode option as false (see `AppDelegate`), and the
 /// network fields must then stay out of the signed proof (#9073). Upstream
 /// LibProofMode records them whatever the options say, so this fails if a
@@ -5291,70 +5391,6 @@ final class CameraPurposeLocalizationTests: XCTestCase {
   }
 }
 
-/// What the camera's Live Activity shows comes from the map the recorder
-/// publishes for remote controls. A misread key leaves the Activity at
-/// `00:00` with no error anywhere.
-@available(iOS 16.2, *)
-final class RecorderActivityContentStateTests: XCTestCase {
-  func testReadsRecordedTimeWhileNoTakeRuns() {
-    let state = RecorderActivityAttributes.ContentState(
-      recorderState: ["recordedMs": 3900, "budgetMs": 6300, "modeName": "Capture"]
-    )
-
-    XCTAssertEqual(state.recordedDuration, 3.9, accuracy: 0.001)
-    XCTAssertFalse(state.isRecording)
-    XCTAssertNil(state.timerStart)
-    XCTAssertEqual(state.durationLabel, "00:03")
-  }
-
-  func testTimerStartsBeforeTheTakeByTheTimeAlreadyRecorded() {
-    let takeStartedAtMs: Double = 1_800_000_000_000
-    let state = RecorderActivityAttributes.ContentState(
-      recorderState: ["recordedMs": 2000, "activeTakeStartedAtMs": takeStartedAtMs]
-    )
-
-    XCTAssertTrue(state.isRecording)
-    XCTAssertEqual(
-      state.timerStart,
-      Date(timeIntervalSince1970: takeStartedAtMs / 1000 - 2)
-    )
-  }
-
-  func testATakeThatIsNotRunningArrivesAsNull() {
-    let state = RecorderActivityAttributes.ContentState(
-      recorderState: ["recordedMs": 1000, "activeTakeStartedAtMs": NSNull()]
-    )
-
-    XCTAssertFalse(state.isRecording)
-  }
-
-  func testAnIntervalCaptureShowsAsActiveWithoutCountingTime() {
-    let state = RecorderActivityAttributes.ContentState(
-      recorderState: ["recordedMs": 0, "shutterActive": true]
-    )
-
-    XCTAssertTrue(state.isShutterActive)
-    XCTAssertFalse(state.isRecording)
-    XCTAssertNil(state.timerStart)
-  }
-
-  func testAnIdleShutterIsReadFromTheRecorder() {
-    let state = RecorderActivityAttributes.ContentState(
-      recorderState: ["recordedMs": 1000, "shutterActive": false]
-    )
-
-    XCTAssertFalse(state.isShutterActive)
-  }
-
-  func testARunningTakeShowsAsActiveWhenTheRecorderSendsNoShutterState() {
-    let state = RecorderActivityAttributes.ContentState(
-      recorderState: ["recordedMs": 0, "activeTakeStartedAtMs": 1_800_000_000_000.0]
-    )
-
-    XCTAssertTrue(state.isShutterActive)
-  }
-}
-
 /// The error details the Zendesk bridge hands Dart when the iOS SDK fails to
 /// create a ticket. Dart retries on `authFailed` with the `expectedAuth`
 /// identity type, keeps `networkError` out of crash reports and gives up on an
@@ -5459,5 +5495,69 @@ final class ZendeskCreateTicketErrorDetailsTests: XCTestCase {
     XCTAssertEqual(details["authFailed"] as? Bool, true)
     XCTAssertNil(details["expectedAuth"])
     XCTAssertNil(details["identity"])
+  }
+}
+
+/// What the camera's Live Activity shows comes from the map the recorder
+/// publishes for remote controls. A misread key leaves the Activity at
+/// `00:00` with no error anywhere.
+@available(iOS 16.2, *)
+final class RecorderActivityContentStateTests: XCTestCase {
+  func testReadsRecordedTimeWhileNoTakeRuns() {
+    let state = RecorderActivityAttributes.ContentState(
+      recorderState: ["recordedMs": 3900, "budgetMs": 6300, "modeName": "Capture"]
+    )
+
+    XCTAssertEqual(state.recordedDuration, 3.9, accuracy: 0.001)
+    XCTAssertFalse(state.isRecording)
+    XCTAssertNil(state.timerStart)
+    XCTAssertEqual(state.durationLabel, "00:03")
+  }
+
+  func testTimerStartsBeforeTheTakeByTheTimeAlreadyRecorded() {
+    let takeStartedAtMs: Double = 1_800_000_000_000
+    let state = RecorderActivityAttributes.ContentState(
+      recorderState: ["recordedMs": 2000, "activeTakeStartedAtMs": takeStartedAtMs]
+    )
+
+    XCTAssertTrue(state.isRecording)
+    XCTAssertEqual(
+      state.timerStart,
+      Date(timeIntervalSince1970: takeStartedAtMs / 1000 - 2)
+    )
+  }
+
+  func testATakeThatIsNotRunningArrivesAsNull() {
+    let state = RecorderActivityAttributes.ContentState(
+      recorderState: ["recordedMs": 1000, "activeTakeStartedAtMs": NSNull()]
+    )
+
+    XCTAssertFalse(state.isRecording)
+  }
+
+  func testAnIntervalCaptureShowsAsActiveWithoutCountingTime() {
+    let state = RecorderActivityAttributes.ContentState(
+      recorderState: ["recordedMs": 0, "shutterActive": true]
+    )
+
+    XCTAssertTrue(state.isShutterActive)
+    XCTAssertFalse(state.isRecording)
+    XCTAssertNil(state.timerStart)
+  }
+
+  func testAnIdleShutterIsReadFromTheRecorder() {
+    let state = RecorderActivityAttributes.ContentState(
+      recorderState: ["recordedMs": 1000, "shutterActive": false]
+    )
+
+    XCTAssertFalse(state.isShutterActive)
+  }
+
+  func testARunningTakeShowsAsActiveWhenTheRecorderSendsNoShutterState() {
+    let state = RecorderActivityAttributes.ContentState(
+      recorderState: ["recordedMs": 0, "activeTakeStartedAtMs": 1_800_000_000_000.0]
+    )
+
+    XCTAssertTrue(state.isShutterActive)
   }
 }

@@ -103,16 +103,26 @@ abstract interface class PeopleListsRepository {
     required String listId,
   });
 
-  /// Searches public kind `30000` people lists on the discovery relays whose
-  /// decoded name or description contains [query] (case-insensitive).
+  /// Searches public kind `30000` people lists for [query], FunnelCake's list
+  /// index first.
   ///
-  /// Fetches at least 500 candidates independently of the displayed [limit].
-  /// Search is bounded to that recent candidate window.
+  /// When the index answers, its lists are the result, at most [limit] in the
+  /// server's order (every word of [query] matching the title or
+  /// description), and no relay is read. Each result's [UserList.pubkeys] is
+  /// then a preview of at most five members, and
+  /// [PeopleListSearchResult.memberCount] counts them all. The index leaves
+  /// out lists published since its last refresh, which runs every 30
+  /// minutes.
   ///
-  /// The stream emits **at most one** list of [PeopleListSearchResult], after
-  /// the relay query completes. When the query is blank, when the relay
-  /// returns no events, or when no decoded list matches the filters, the
-  /// stream closes without emitting.
+  /// When the index is unconfigured, fails or does not answer in time, the
+  /// discovery relays are searched instead, for lists whose decoded name or
+  /// description contains [query] (case-insensitive). That search fetches at
+  /// least 500 candidates independently of the displayed [limit], and is
+  /// bounded to that recent candidate window.
+  ///
+  /// The stream emits **at most one** list of [PeopleListSearchResult]. When
+  /// the query is blank, or when no list matches the filters, the stream
+  /// closes without emitting.
   ///
   /// Results are filtered so that:
   /// * lists with no `p` tag members are excluded,

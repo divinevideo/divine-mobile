@@ -10,6 +10,22 @@ class AppLocalizationsBg extends AppLocalizations {
   AppLocalizationsBg([String locale = 'bg']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Да се превключи ли към $account, за да се отвори това съобщение?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Лични съобщения';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Показвай известие без името на подателя или текста на съобщението.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Това съобщение не е достъпно.';
+
+  @override
   String get devOptionsClipRecovery => 'Възстановяване на клипове';
 
   @override
@@ -7215,6 +7231,55 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'Дублирай';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'Превърни в клип';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Превръща се в клип...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Черновата е превърната в клип';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Не успяхме да превърнем черновата';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Текстът и стикерите в тази чернова не можаха да се подготвят. Отвори я в редактора и опитай пак.';
+
+  @override
+  String get libraryDraftActionShare => 'Сподели чернова';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Да изпратим ли чернова за редактиране на $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Изпращаш оригиналните клипове и историята на редакциите. Получателят може да види изрязаните части, да редактира копието си, да го публикува или да ти го върне.';
+
+  @override
+  String get libraryDraftShareFailed => 'Черновата не можа да се изпрати.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'Черновата е твърде голяма за изпращане.';
+
+  @override
+  String get dmSharedDraft => 'Споделена чернова';
+
+  @override
+  String get dmOpenDraft => 'Импортирай и редактирай';
+
+  @override
+  String get dmDraftImportFailed => 'Черновата не можа да се импортира.';
+
+  @override
+  String get libraryDraftSent => 'Черновата е изпратена';
 
   @override
   String get libraryDraftActionDelete => 'Изтрий черновата';
@@ -17160,4 +17225,52 @@ class AppLocalizationsBg extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Видеоклипове от $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Редакция';
+
+  @override
+  String get menuBarUndo => 'Отмени';
+
+  @override
+  String get menuBarRedo => 'Повтори';
+
+  @override
+  String get menuBarCut => 'Изрежи';
+
+  @override
+  String get menuBarCopy => 'Копирай';
+
+  @override
+  String get menuBarPaste => 'Постави';
+
+  @override
+  String get menuBarSelectAll => 'Избери всичко';
+
+  @override
+  String get menuBarView => 'Изглед';
+
+  @override
+  String get menuBarVideo => 'Видео';
+
+  @override
+  String get menuBarPreviousVideo => 'Предишно видео';
+
+  @override
+  String get menuBarNextVideo => 'Следващо видео';
+
+  @override
+  String get menuBarPlayPause => 'Пусни/пауза';
+
+  @override
+  String get menuBarMute => 'Без звук';
+
+  @override
+  String get menuBarUnmute => 'Включи звука';
+
+  @override
+  String get menuBarWindow => 'Прозорец';
+
+  @override
+  String get menuBarHelp => 'Помощ';
 }

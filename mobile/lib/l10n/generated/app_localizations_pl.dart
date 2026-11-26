@@ -10,6 +10,22 @@ class AppLocalizationsPl extends AppLocalizations {
   AppLocalizationsPl([String locale = 'pl']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Przełączyć się na konto $account, aby otworzyć tę wiadomość?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Wiadomości prywatne';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Pokazuj powiadomienie bez nazwy nadawcy i treści wiadomości.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Ta wiadomość jest niedostępna.';
+
+  @override
   String get devOptionsClipRecovery => 'Odzyskiwanie klipów';
 
   @override
@@ -7331,6 +7347,54 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'Duplikuj';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'Zamień w klip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Zamienianie w klip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar =>
+      'Zamieniono wersję roboczą w klip';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Nie udało się zamienić wersji roboczej';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Nie udało się przygotować tekstu i naklejek z tej wersji roboczej. Otwórz ją w edytorze i spróbuj ponownie.';
+
+  @override
+  String get libraryDraftActionShare => 'Udostępnij szkic';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Wysłać edytowalny szkic do $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Udostępniasz oryginalne klipy i historię edycji. Osoba, która je otrzyma, zobaczy też wycięte fragmenty. Może edytować swoją kopię, opublikować ją lub odesłać.';
+
+  @override
+  String get libraryDraftShareFailed => 'Nie udało się wysłać szkicu.';
+
+  @override
+  String get libraryDraftShareTooLarge => 'Szkic jest za duży, żeby go wysłać.';
+
+  @override
+  String get dmSharedDraft => 'Udostępniony szkic';
+
+  @override
+  String get dmOpenDraft => 'Importuj i edytuj';
+
+  @override
+  String get dmDraftImportFailed => 'Nie udało się zaimportować szkicu.';
+
+  @override
+  String get libraryDraftSent => 'Wysłano szkic';
 
   @override
   String get libraryDraftActionDelete => 'Usuń wersję roboczą';
@@ -17355,4 +17419,52 @@ class AppLocalizationsPl extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Filmy społeczności $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Edycja';
+
+  @override
+  String get menuBarUndo => 'Cofnij';
+
+  @override
+  String get menuBarRedo => 'Ponów';
+
+  @override
+  String get menuBarCut => 'Wytnij';
+
+  @override
+  String get menuBarCopy => 'Kopiuj';
+
+  @override
+  String get menuBarPaste => 'Wklej';
+
+  @override
+  String get menuBarSelectAll => 'Zaznacz wszystko';
+
+  @override
+  String get menuBarView => 'Widok';
+
+  @override
+  String get menuBarVideo => 'Wideo';
+
+  @override
+  String get menuBarPreviousVideo => 'Poprzednie wideo';
+
+  @override
+  String get menuBarNextVideo => 'Następne wideo';
+
+  @override
+  String get menuBarPlayPause => 'Odtwórz/wstrzymaj';
+
+  @override
+  String get menuBarMute => 'Wycisz';
+
+  @override
+  String get menuBarUnmute => 'Włącz dźwięk';
+
+  @override
+  String get menuBarWindow => 'Okno';
+
+  @override
+  String get menuBarHelp => 'Pomoc';
 }

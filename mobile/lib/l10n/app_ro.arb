@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Treci la contul {account} pentru a deschide acest mesaj?",
+  "notificationSettingsDirectMessages": "Mesaje directe",
+  "notificationSettingsDirectMessagesSubtitle": "Afișează o notificare fără numele expeditorului sau textul mesajului.",
+  "dmNotificationMessageUnavailable": "Acest mesaj nu este disponibil.",
   "@@locale": "ro",
   "videoEditorSocialStickerPoll": "Sondaj",
   "videoEditorSocialStickerQuiz": "Quiz",
@@ -2244,6 +2248,15 @@
   "librarySortShortestClip": "Cel mai scurt clip",
   "librarySortSquareFirst": "Pătratele mai întâi",
   "librarySortVerticalFirst": "Verticalele mai întâi",
+  "libraryDraftActionShare": "Distribuie ciorna",
+  "libraryDraftShareConfirm": "Trimiți o ciornă editabilă către {name}?",
+  "libraryDraftShareNotice": "Trimiți clipurile originale și istoricul editărilor. Cine le primește poate vedea ce ai tăiat, își poate edita copia, o poate publica sau ți-o poate trimite înapoi.",
+  "libraryDraftShareFailed": "Ciorna nu a putut fi trimisă.",
+  "libraryDraftShareTooLarge": "Ciorna este prea mare pentru a fi trimisă.",
+  "dmSharedDraft": "Ciornă distribuită",
+  "dmOpenDraft": "Importă și editează",
+  "dmDraftImportFailed": "Ciorna nu a putut fi importată.",
+  "libraryDraftSent": "Ciornă trimisă",
   "libraryDraftActionDelete": "Șterge ciorna",
   "libraryDraftActionEdit": "Editează",
   "libraryDraftActionPost": "Publică",
@@ -2253,6 +2266,11 @@
   "libraryDraftDuplicateFailedSnackbar": "Nu s-a putut duplica ciorna",
   "libraryDraftInProgressBadge": "În lucru",
   "libraryDraftActionDuplicate": "Duplică",
+  "libraryDraftActionConvertToClip": "Transformă în clip",
+  "libraryDraftConvertingToClip": "Se transformă în clip...",
+  "libraryDraftConvertedToClipSnackbar": "Ciorna a fost transformată în clip",
+  "libraryDraftConvertToClipFailedSnackbar": "Nu s-a putut transforma ciorna",
+  "libraryDraftConvertOverlaysUnavailable": "Textul și stickerele din această ciornă nu au putut fi pregătite. Deschide-o în editor, apoi încearcă din nou.",
   "libraryDraftCopyTitle": "{title} (copie {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {
@@ -6589,5 +6607,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Editare",
+  "menuBarUndo": "Anulează",
+  "menuBarRedo": "Refă",
+  "menuBarCut": "Decupează",
+  "menuBarCopy": "Copiază",
+  "menuBarPaste": "Lipește",
+  "menuBarSelectAll": "Selectează tot",
+  "menuBarView": "Afișare",
+  "menuBarVideo": "Videoclip",
+  "menuBarPreviousVideo": "Videoclipul anterior",
+  "menuBarNextVideo": "Videoclipul următor",
+  "menuBarPlayPause": "Redă/pauză",
+  "menuBarMute": "Dezactivează sunetul",
+  "menuBarUnmute": "Activează sunetul",
+  "menuBarWindow": "Fereastră",
+  "menuBarHelp": "Ajutor"
 }

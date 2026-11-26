@@ -126,7 +126,10 @@ void main() {
     // The newest revision read is the one being edited.
     final videosRepository = _MockVideosRepository();
     when(
-      () => videosRepository.fetchLatestVideoRevision(any()),
+      () => videosRepository.fetchLatestVideoRevision(
+        any(),
+        notOlderThan: any(named: 'notOlderThan'),
+      ),
     ).thenAnswer(
       (_) async => LatestVideoRevisionFound(
         Event.fromJson({

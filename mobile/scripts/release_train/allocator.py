@@ -17,7 +17,7 @@ from release_train.ledger import (
 )
 from release_train.versions import Version, bump_patch, parse_version
 
-CHANNEL = {"ios": "app-store", "android": "play-production"}
+CHANNEL = {"ios": "app-store", "macos": "mac-app-store", "android": "play-production"}
 
 _CLAIM_RE = re.compile(r"^allocations/claims/([^/]+)/[^/]+\.json$")
 _PROVENANCE_RE = re.compile(
@@ -110,7 +110,7 @@ def reconcile(
     dry_run: bool = False,
 ) -> list[str]:
     channel = CHANNEL[platform]
-    if platform == "ios":
+    if platform in {"ios", "macos"}:
         versions = list(store_versions)
     else:
         versions = list(map_play_version_codes(ledger, store_version_codes).values())
@@ -367,7 +367,7 @@ def allocate(
     version = derive_version(
         pubspec, claimed_versions(ledger.paths()) + list(stable_tags)
     )
-    if platform == "ios" and observed_versions and version <= max(observed_versions):
+    if platform in {"ios", "macos"} and observed_versions and version <= max(observed_versions):
         raise AllocationError(
             f"derived version {version} is not newer than the highest App Store "
             f"submitted version {max(observed_versions)}"

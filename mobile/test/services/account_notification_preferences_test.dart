@@ -263,6 +263,7 @@ void main() {
               kind: any(named: 'kind'),
               content: any(named: 'content'),
               tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
             ),
           ).thenAnswer((call) async {
             if (signed++ == 0 && heldStage == 'signing') {
@@ -274,7 +275,8 @@ void main() {
               call.namedArguments[#kind] as int,
               call.namedArguments[#tags] as List<List<String>>,
               call.namedArguments[#content] as String,
-              createdAt: timestamp++,
+              createdAt:
+                  (call.namedArguments[#createdAt] as int?) ?? timestamp++,
             );
           });
           when(
@@ -810,22 +812,30 @@ void main() {
         repository.receive({
           'notifications/likesEnabled': false,
           'notifications/campaignsEnabled': true,
+          'notifications/directMessagesEnabled': true,
         });
         await pumpEventQueue();
         expect(cubit.state.preferences.likesEnabled, isFalse);
         expect(cubit.state.preferences.campaignsEnabled, isTrue);
         expect(registrations.last.likesEnabled, isFalse);
+        expect(registrations.last.directMessagesEnabled, isTrue);
         expect(repository.localWrites, 0);
         await cubit.resetToDefaults();
         expect(repository.value('notifications/likesEnabled'), isNull);
         expect(repository.contains('notifications/likesEnabled'), isTrue);
         expect(cubit.state.preferences, const NotificationPreferences());
         expect(
-          repository.values.keys
-              .where((key) => key.startsWith('notifications/'))
-              .length,
-          7,
+          Map.fromEntries(
+            repository.values.entries.where(
+              (entry) => entry.key.startsWith('notifications/'),
+            ),
+          ),
+          {
+            for (final preference in NotificationPreference.values)
+              'notifications/${preference.name}': null,
+          },
         );
+        expect(registrations.last.directMessagesEnabled, isFalse);
         await cubit.close();
         service.dispose();
         port.dispose();

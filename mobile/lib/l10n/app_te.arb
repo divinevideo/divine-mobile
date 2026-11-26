@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "ఈ సందేశాన్ని తెరవడానికి {account} ఖాతాకు మారాలా?",
+  "notificationSettingsDirectMessages": "ప్రత్యక్ష సందేశాలు",
+  "notificationSettingsDirectMessagesSubtitle": "పంపినవారి పేరు లేదా సందేశం చూపకుండా నోటిఫికేషన్ ఇవ్వండి.",
+  "dmNotificationMessageUnavailable": "ఈ సందేశం అందుబాటులో లేదు.",
   "@@locale": "te",
   "videoEditorSocialStickerPoll": "పోల్",
   "videoEditorSocialStickerQuiz": "క్విజ్",
@@ -4074,6 +4078,20 @@
   "libraryDraftActionPost": "పోస్ట్",
   "libraryDraftActionEdit": "సవరించండి",
   "libraryDraftActionDuplicate": "నకిలీ",
+  "libraryDraftActionConvertToClip": "క్లిప్‌గా మార్చు",
+  "libraryDraftConvertingToClip": "క్లిప్‌గా మారుస్తోంది...",
+  "libraryDraftConvertedToClipSnackbar": "డ్రాఫ్ట్ క్లిప్‌గా మార్చబడింది",
+  "libraryDraftConvertToClipFailedSnackbar": "డ్రాఫ్ట్‌ను మార్చడంలో విఫలమైంది",
+  "libraryDraftConvertOverlaysUnavailable": "ఈ డ్రాఫ్ట్‌లోని టెక్స్ట్ మరియు స్టిక్కర్‌లను సిద్ధం చేయడం సాధ్యపడలేదు. దాన్ని ఎడిటర్‌లో తెరిచి, ఆపై మళ్లీ ప్రయత్నించండి.",
+  "libraryDraftActionShare": "డ్రాఫ్ట్ షేర్ చేయి",
+  "libraryDraftShareConfirm": "{name}కు ఎడిట్ చేయగల డ్రాఫ్ట్ పంపాలా?",
+  "libraryDraftShareNotice": "అసలు క్లిప్‌లు, ఎడిటింగ్ చరిత్ర రెండూ షేర్ అవుతాయి. అందుకున్నవారు మీరు కత్తిరించిన భాగాలను చూడవచ్చు. తమ కాపీని ఎడిట్ చేయవచ్చు, పోస్ట్ చేయవచ్చు లేదా తిరిగి పంపవచ్చు.",
+  "libraryDraftShareFailed": "డ్రాఫ్ట్ పంపలేకపోయాం.",
+  "libraryDraftShareTooLarge": "డ్రాఫ్ట్ పంపడానికి చాలా పెద్దగా ఉంది.",
+  "dmSharedDraft": "షేర్ చేసిన డ్రాఫ్ట్",
+  "dmOpenDraft": "ఇంపోర్ట్ చేసి ఎడిట్ చేయి",
+  "dmDraftImportFailed": "డ్రాఫ్ట్ ఇంపోర్ట్ చేయలేకపోయాం.",
+  "libraryDraftSent": "డ్రాఫ్ట్ పంపాం",
   "libraryDraftActionDelete": "డ్రాఫ్ట్‌ను తొలగించండి",
   "libraryDraftCopyTitle": "{title}(కాపీ {number})",
   "@libraryDraftCopyTitle": {
@@ -9505,5 +9523,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "సవరణ",
+  "menuBarUndo": "అన్డు",
+  "menuBarRedo": "పునరావృతం",
+  "menuBarCut": "కత్తిరించండి",
+  "menuBarCopy": "కాపీ",
+  "menuBarPaste": "అతికించండి",
+  "menuBarSelectAll": "అన్నీ ఎంచుకోండి",
+  "menuBarView": "వీక్షణ",
+  "menuBarVideo": "వీడియో",
+  "menuBarPreviousVideo": "మునుపటి వీడియో",
+  "menuBarNextVideo": "తదుపరి వీడియో",
+  "menuBarPlayPause": "ప్లే/పాజ్",
+  "menuBarMute": "మ్యూట్ చేయండి",
+  "menuBarUnmute": "అన్‌మ్యూట్ చేయండి",
+  "menuBarWindow": "విండో",
+  "menuBarHelp": "సహాయం"
 }

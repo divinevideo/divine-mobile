@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/profile_feed/profile_tab_retap_cubit.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart' show FeedMode;
+import 'package:openvine/notifications/routing/dm_push_navigation.dart';
 import 'package:openvine/notifications/view/notifications_page.dart';
 import 'package:openvine/router/app_shell.dart';
 import 'package:openvine/router/go_router_page_name.dart';
@@ -317,11 +318,38 @@ class NotificationsRouteData extends GoRouteData with $NotificationsRouteData {
 
 /// The inbox.
 class InboxRouteData extends GoRouteData with $InboxRouteData {
-  const InboxRouteData();
+  const InboxRouteData({
+    this.messages = false,
+    @TypedQueryParameter(name: 'dmTap') this.dmTap,
+    this.$extra,
+  });
+  final Object? $extra;
+  final bool messages;
+  final String? dmTap;
 
   @override
-  Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      branchPage(state, const InboxPage());
+  Page<void> buildPage(BuildContext context, GoRouterState state) {
+    final intent = messages && ($extra is DmPushIntent || dmTap != null)
+        ? activeDmPushIntent(
+            ProviderScope.containerOf(context, listen: false),
+            extra: $extra,
+            token: dmTap,
+          )
+        : null;
+    return branchPage(
+      state,
+      intent != null
+          ? DmPushListener(
+              key: ObjectKey(intent),
+              intent: intent,
+              child: InboxPage(
+                initialMessages: true,
+                onLeaveMessages: intent.cancel,
+              ),
+            )
+          : InboxPage(initialMessages: messages),
+    );
+  }
 }
 
 /// The owner's recovery page for pinned videos that no longer resolve; the

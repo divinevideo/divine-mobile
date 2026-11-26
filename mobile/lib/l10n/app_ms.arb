@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Tukar kepada {account} untuk membuka mesej ini?",
+  "notificationSettingsDirectMessages": "Mesej langsung",
+  "notificationSettingsDirectMessagesSubtitle": "Paparkan pemberitahuan tanpa nama pengirim atau kandungan mesej.",
+  "dmNotificationMessageUnavailable": "Mesej ini tidak tersedia.",
   "@@locale": "ms",
   "videoEditorSocialStickerPoll": "Undian",
   "videoEditorSocialStickerQuiz": "Kuiz",
@@ -3495,6 +3499,20 @@
   "libraryDraftActionPost": "Siarkan",
   "libraryDraftActionEdit": "Sunting",
   "libraryDraftActionDuplicate": "Duplikasi",
+  "libraryDraftActionConvertToClip": "Tukar kepada klip",
+  "libraryDraftConvertingToClip": "Menukar kepada klip...",
+  "libraryDraftConvertedToClipSnackbar": "Draf ditukar kepada klip",
+  "libraryDraftConvertToClipFailedSnackbar": "Gagal menukar draf",
+  "libraryDraftConvertOverlaysUnavailable": "Teks dan pelekat pada draf ini tidak dapat disediakan. Buka ia dalam penyunting, kemudian cuba lagi.",
+  "libraryDraftActionShare": "Kongsi draf",
+  "libraryDraftShareConfirm": "Hantar draf yang boleh diedit kepada {name}?",
+  "libraryDraftShareNotice": "Anda berkongsi klip asal dan sejarah suntingan. Penerima boleh melihat bahagian yang dipotong, menyunting salinannya, menyiarkannya atau menghantarnya semula.",
+  "libraryDraftShareFailed": "Draf tidak dapat dihantar.",
+  "libraryDraftShareTooLarge": "Draf terlalu besar untuk dihantar.",
+  "dmSharedDraft": "Draf yang dikongsi",
+  "dmOpenDraft": "Import dan edit",
+  "dmDraftImportFailed": "Draf tidak dapat diimport.",
+  "libraryDraftSent": "Draf dihantar",
   "libraryDraftActionDelete": "Padam draf",
   "libraryDraftCopyTitle": "{title} (salinan {number})",
   "@libraryDraftCopyTitle": {
@@ -7882,5 +7900,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "Sunting",
+  "menuBarUndo": "Buat Asal",
+  "menuBarRedo": "Buat Semula",
+  "menuBarCut": "Potong",
+  "menuBarCopy": "Salin",
+  "menuBarPaste": "Tampal",
+  "menuBarSelectAll": "Pilih Semua",
+  "menuBarView": "Paparan",
+  "menuBarVideo": "Video",
+  "menuBarPreviousVideo": "Video Sebelumnya",
+  "menuBarNextVideo": "Video Seterusnya",
+  "menuBarPlayPause": "Main/Jeda",
+  "menuBarMute": "Senyapkan",
+  "menuBarUnmute": "Nyahsenyap",
+  "menuBarWindow": "Tetingkap",
+  "menuBarHelp": "Bantuan"
 }

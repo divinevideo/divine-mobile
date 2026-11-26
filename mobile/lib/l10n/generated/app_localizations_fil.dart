@@ -10,6 +10,22 @@ class AppLocalizationsFil extends AppLocalizations {
   AppLocalizationsFil([String locale = 'fil']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Lumipat sa $account para buksan ang mensaheng ito?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Mga direktang mensahe';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Magpakita ng abiso nang walang pangalan ng nagpadala o teksto ng mensahe.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Hindi available ang mensaheng ito.';
+
+  @override
   String get devOptionsClipRecovery => 'Pagbawi ng clip';
 
   @override
@@ -7189,6 +7205,54 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get libraryDraftActionDuplicate => 'I-duplicate';
+
+  @override
+  String get libraryDraftActionConvertToClip => 'Gawing clip';
+
+  @override
+  String get libraryDraftConvertingToClip => 'Ginagawang clip...';
+
+  @override
+  String get libraryDraftConvertedToClipSnackbar => 'Naging clip na ang draft';
+
+  @override
+  String get libraryDraftConvertToClipFailedSnackbar =>
+      'Hindi na-convert ang draft';
+
+  @override
+  String get libraryDraftConvertOverlaysUnavailable =>
+      'Hindi na-prepare ang text at stickers sa draft na ito. Buksan mo sa editor, tapos subukan ulit.';
+
+  @override
+  String get libraryDraftActionShare => 'I-share ang draft';
+
+  @override
+  String libraryDraftShareConfirm(String name) {
+    return 'Magpapadala ng draft na puwedeng i-edit kay $name?';
+  }
+
+  @override
+  String get libraryDraftShareNotice =>
+      'Kasama ang mga orihinal na clip at edit history. Makikita ng pinadalhan ang mga tinanggal mo. Puwede niyang i-edit, i-post o ibalik ang kopya niya.';
+
+  @override
+  String get libraryDraftShareFailed => 'Hindi naipadala ang draft.';
+
+  @override
+  String get libraryDraftShareTooLarge =>
+      'Masyadong malaki ang draft para maipadala.';
+
+  @override
+  String get dmSharedDraft => 'Na-share na draft';
+
+  @override
+  String get dmOpenDraft => 'I-import at i-edit';
+
+  @override
+  String get dmDraftImportFailed => 'Hindi na-import ang draft.';
+
+  @override
+  String get libraryDraftSent => 'Naipadala ang draft';
 
   @override
   String get libraryDraftActionDelete => 'Burahin ang draft';
@@ -17155,4 +17219,52 @@ class AppLocalizationsFil extends AppLocalizations {
   String badgeDiscoveryVideosLabel(String badgeName) {
     return 'Mga video mula sa $badgeName';
   }
+
+  @override
+  String get menuBarEdit => 'Edit';
+
+  @override
+  String get menuBarUndo => 'I-undo';
+
+  @override
+  String get menuBarRedo => 'I-redo';
+
+  @override
+  String get menuBarCut => 'I-cut';
+
+  @override
+  String get menuBarCopy => 'Kopyahin';
+
+  @override
+  String get menuBarPaste => 'I-paste';
+
+  @override
+  String get menuBarSelectAll => 'Piliin Lahat';
+
+  @override
+  String get menuBarView => 'View';
+
+  @override
+  String get menuBarVideo => 'Video';
+
+  @override
+  String get menuBarPreviousVideo => 'Nakaraang Video';
+
+  @override
+  String get menuBarNextVideo => 'Susunod na Video';
+
+  @override
+  String get menuBarPlayPause => 'I-play/I-pause';
+
+  @override
+  String get menuBarMute => 'I-mute';
+
+  @override
+  String get menuBarUnmute => 'I-unmute';
+
+  @override
+  String get menuBarWindow => 'Window';
+
+  @override
+  String get menuBarHelp => 'Tulong';
 }

@@ -34,6 +34,7 @@ class ConversationPage extends ConsumerWidget {
     required this.conversationId,
     required this.participantPubkeys,
     this.subject,
+    this.messageId,
     super.key,
   });
 
@@ -49,6 +50,7 @@ class ConversationPage extends ConsumerWidget {
 
   /// Subject carried from an inbox row to avoid a second read before render.
   final String? subject;
+  final String? messageId;
 
   /// Route name for this screen.
   static const routeName = 'conversation';
@@ -111,16 +113,22 @@ class ConversationPage extends ConsumerWidget {
       child: _ConversationPageContent(
         conversationId: conversationId,
         subject: subject,
+        messageId: messageId,
       ),
     );
   }
 }
 
 class _ConversationPageContent extends ConsumerWidget {
-  const _ConversationPageContent({required this.conversationId, this.subject});
+  const _ConversationPageContent({
+    required this.conversationId,
+    this.subject,
+    this.messageId,
+  });
 
   final String conversationId;
   final String? subject;
+  final String? messageId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -138,6 +146,7 @@ class _ConversationPageContent extends ConsumerWidget {
             conversationId: conversationId,
             participantPubkeys: state.participantPubkeys,
             subject: subject,
+            messageId: messageId,
           ),
         };
       },
@@ -172,11 +181,13 @@ class _ConversationBlocScope extends ConsumerWidget {
     required this.conversationId,
     required this.participantPubkeys,
     this.subject,
+    this.messageId,
   });
 
   final String conversationId;
   final List<String> participantPubkeys;
   final String? subject;
+  final String? messageId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -280,6 +291,7 @@ class _ConversationBlocScope extends ConsumerWidget {
         child: ConversationView(
           participantPubkeys: participantPubkeys,
           subject: subject,
+          messageId: messageId,
         ),
       ),
     );

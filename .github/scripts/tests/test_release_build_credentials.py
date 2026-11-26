@@ -41,6 +41,7 @@ class ProvenanceCredentialsTest(unittest.TestCase):
                                     'ios-scheduled-build': 'store_release_credentials',
                                     'android-build': 'store_release_credentials',
                                     'macos-build': 'store_release_credentials',
+                                    'macos-scheduled-build': 'store_release_credentials',
                                     'zapstore-publish': 'store_release_credentials'})
 
     def test_forwarded_policy_does_not_require_actions_variables_permission(self):

@@ -1,6 +1,8 @@
 // ABOUTME: Tests a question, Add yours or replies sticker on a playing video:
 // ABOUTME: it reads only on the active video and opens what its buttons open.
 
+import 'dart:async';
+
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +11,8 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart' show LatestAddressableEvents;
+import 'package:nostr_sdk/nostr_sdk.dart' show Event;
 import 'package:openvine/blocs/sticker_responses/sticker_responses_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/add_yours_context.dart';
@@ -22,6 +26,7 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/sticker_responses_filter_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/screens/video_replies/video_replies_screen.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/interactive_sticker_card.dart';
 import 'package:openvine/widgets/video_feed_item/interactive_sticker_overlay.dart';
 import 'package:video_responses_repository/video_responses_repository.dart';
@@ -76,6 +81,8 @@ VideoEvent _reply(int n) => VideoEvent(
 );
 
 void main() {
+  setUpAll(() => registerFallbackValue(const RepliesCuration()));
+
   group(InteractiveStickerOverlay, () {
     late _MockVideoResponsesRepository repository;
     late _MockFollowRepository followRepository;
@@ -124,14 +131,20 @@ void main() {
       );
     });
 
-    Future<void> pump(
+    /// Pumps the sticker, and returns whether its video is the one playing,
+    /// which a test may change afterwards.
+    Future<ValueNotifier<bool>> pump(
       WidgetTester tester,
       VideoStickerRegion region, {
       bool isActive = true,
       String? viewer = 'viewer',
       VideoEvent? on,
+      bool manageReplies = false,
+      LatestAddressableEvents? latestEvents,
     }) async {
       final pubkey = viewer == 'viewer' ? _viewer : viewer;
+      final active = ValueNotifier(isActive);
+      addTearDown(active.dispose);
       final router = GoRouter(
         routes: [
           GoRoute(
@@ -141,17 +154,28 @@ void main() {
                 child: SizedBox(
                   width: 300,
                   height: 240,
-                  child: InteractiveStickerOverlay(
-                    region: region,
-                    video: on ?? _video,
-                    data: SocialStickerData.ofRegion(region)!,
-                    isActive: isActive,
-                    onInteraction: () => interactions++,
+                  child: ValueListenableBuilder(
+                    valueListenable: active,
+                    builder: (_, isActive, _) => InteractiveStickerOverlay(
+                      region: region,
+                      video: on ?? _video,
+                      data: SocialStickerData.ofRegion(region)!,
+                      isActive: isActive,
+                      onInteraction: () => interactions++,
+                    ),
                   ),
                 ),
               ),
             ),
             routes: [
+              if (manageReplies)
+                GoRoute(
+                  path: 'video-replies/:videoId',
+                  builder: (_, state) => VideoRepliesScreen(
+                    videoId: state.pathParameters['videoId']!,
+                    videoAddress: state.uri.queryParameters['address']!,
+                  ),
+                ),
               GoRoute(
                 path: ':first',
                 builder: (_, state) => _Pushed(
@@ -181,6 +205,12 @@ void main() {
         ProviderScope(
           overrides: [
             videoResponsesRepositoryProvider.overrideWithValue(repository),
+            if (latestEvents != null)
+              latestAddressableEventsProvider.overrideWithValue(latestEvents),
+            if (manageReplies) ...[
+              repliesWarningsProvider.overrideWithValue((videos) => videos),
+              repliesHiddenBySettingsProvider.overrideWithValue((_) => false),
+            ],
             followRepositoryProvider.overrideWithValue(followRepository),
             stickerResponsesFilterProvider.overrideWithValue(
               (videos) => filter(videos),
@@ -208,6 +238,7 @@ void main() {
         ),
       );
       await tester.pump();
+      return active;
     }
 
     final question = _region(VideoStickerKind.question, 'Ask me anything');
@@ -221,22 +252,225 @@ void main() {
         AppLocalizations.of(tester.element(find.byType(Scaffold).first));
 
     group('renders', () {
-      testWidgets('draws a sticker of a video the feed only loads ahead, '
-          'without reading who replied', (tester) async {
+      testWidgets('reads who replied on a video the feed only loads ahead, '
+          'so they are in when the viewer swipes to it', (tester) async {
         await pump(tester, replies, isActive: false);
+        await tester.pump();
 
         expect(find.text('Reply with a video'), findsOneWidget);
         expect(
           find.text(l10n(tester).videoStickerRepliesCount(2)),
-          findsNothing,
+          findsOneWidget,
         );
-        verifyNever(
+      });
+
+      testWidgets('keeps who replied, without reading them again, while the '
+          'video is not the one playing, as under the comments', (
+        tester,
+      ) async {
+        final active = await pump(tester, replies);
+        await tester.pump();
+
+        active.value = false;
+        await tester.pump();
+
+        expect(
+          find.text(l10n(tester).videoStickerRepliesCount(2)),
+          findsOneWidget,
+        );
+
+        active.value = true;
+        await tester.pump();
+
+        expect(
+          find.text(l10n(tester).videoStickerRepliesCount(2)),
+          findsOneWidget,
+        );
+        verify(
           () => repository.fetchReplies(
             videoId: any(named: 'videoId'),
             videoAddress: any(named: 'videoAddress'),
             limit: any(named: 'limit'),
           ),
+        ).called(1);
+      });
+
+      testWidgets('keeps the remaining previews while applying a hide from '
+          'comments', (tester) async {
+        final events = LatestAddressableEvents();
+        addTearDown(events.dispose);
+        final secondRead = Completer<VideoResponses>();
+        final reply = _reply(2)
+            .copyWith(authorAvatar: 'https://cdn.example/2.jpg');
+        var reads = 0;
+        when(
+          () => repository.fetchReplies(
+            videoId: _video.id,
+            videoAddress: _video.addressableId,
+            limit: StickerResponsesCubit.feedLimit,
+          ),
+        ).thenAnswer((_) async {
+          if (reads++ > 0) return secondRead.future;
+          return VideoResponses(total: 2, videos: [_reply(1), reply]);
+        });
+        final active = await pump(tester, replies, latestEvents: events);
+        await tester.pumpAndSettle();
+        final strings = l10n(tester);
+        expect(find.text(strings.videoStickerRepliesCount(2)), findsOneWidget);
+
+        active.value = false;
+        await tester.pump();
+
+        // The comments writer records an accepted edit in the shared store.
+        events.remember(
+          Event(
+            _creator,
+            RepliesCuration.kind,
+            RepliesCuration(hiddenIds: {_reply(1).id})
+                .toTags(_video.addressableId!),
+            '',
+          ),
         );
+        await tester.pumpAndSettle();
+
+        expect(find.text(strings.videoStickerRepliesCount(1)), findsOneWidget);
+        expect(find.text(strings.videoStickerRepliesCount(2)), findsNothing);
+        final latest = tester
+            .widget<InteractiveStickerCopy>(find.byType(InteractiveStickerCopy))
+            .responses!
+            .latest;
+        expect(latest.single.avatarUrl, 'https://cdn.example/2.jpg');
+        expect(reads, 1);
+      });
+
+      testWidgets('applies newer hides while an older pin is still being '
+          'read', (tester) async {
+        final events = LatestAddressableEvents();
+        addTearDown(events.dispose);
+        final pin = Completer<VideoEvent?>();
+        final pinned = _reply(9)
+            .copyWith(authorAvatar: 'https://cdn.example/9.jpg');
+        when(
+          () => repository.fetchReplies(
+            videoId: _video.id,
+            videoAddress: _video.addressableId,
+            limit: StickerResponsesCubit.feedLimit,
+          ),
+        ).thenAnswer(
+          (_) async => VideoResponses(total: 3, videos: [_reply(1), _reply(2)]),
+        );
+        when(
+          () => repository.fetchReply(
+            pinned.id,
+            videoId: _video.id,
+            videoAddress: _video.addressableId,
+          ),
+        ).thenAnswer((_) => pin.future);
+        await pump(tester, replies, latestEvents: events);
+        await tester.pumpAndSettle();
+        final strings = l10n(tester);
+        expect(find.text(strings.videoStickerRepliesCount(3)), findsOneWidget);
+
+        void remember(RepliesCuration curation, int revision) =>
+            events.remember(
+              Event(
+                _creator,
+                RepliesCuration.kind,
+                curation.toTags(_video.addressableId!),
+                '',
+                createdAt: revision,
+              ),
+            );
+
+        remember(
+          RepliesCuration(pinnedId: pinned.id, hiddenIds: {_reply(1).id}),
+          1,
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(strings.videoStickerRepliesCount(2)), findsOneWidget);
+
+        remember(RepliesCuration(hiddenIds: {_reply(1).id, _reply(2).id}), 2);
+        await tester.pumpAndSettle();
+        expect(find.text(strings.videoStickerRepliesCount(1)), findsOneWidget);
+        expect(find.text(strings.videoStickerRepliesCount(2)), findsNothing);
+
+        pin.complete(pinned);
+        await tester.pumpAndSettle();
+        expect(find.text(strings.videoStickerRepliesCount(1)), findsOneWidget);
+        final latest = tester
+            .widget<InteractiveStickerCopy>(find.byType(InteractiveStickerCopy))
+            .responses!
+            .latest;
+        expect(latest, isEmpty);
+
+        // Pinning the same older reply again can reuse the completed read.
+        remember(
+          RepliesCuration(
+            pinnedId: pinned.id,
+            hiddenIds: {_reply(1).id, _reply(2).id},
+          ),
+          3,
+        );
+        await tester.pumpAndSettle();
+        final repinned = tester
+            .widget<InteractiveStickerCopy>(find.byType(InteractiveStickerCopy))
+            .responses!
+            .latest;
+        expect(repinned.single.avatarUrl, 'https://cdn.example/9.jpg');
+        verify(
+          () => repository.fetchReply(
+            pinned.id,
+            videoId: _video.id,
+            videoAddress: _video.addressableId,
+          ),
+        ).called(1);
+      });
+
+      testWidgets('uses the latest hides when they change during the initial '
+          'pin read', (tester) async {
+        final events = LatestAddressableEvents();
+        addTearDown(events.dispose);
+        final pin = Completer<VideoEvent?>();
+        final pinned = _reply(9)
+            .copyWith(authorAvatar: 'https://cdn.example/9.jpg');
+        when(
+          () => repository.fetchCuration(
+            creatorPubkey: _creator,
+            videoAddress: _video.addressableId!,
+          ),
+        ).thenAnswer((_) async => RepliesCuration(pinnedId: pinned.id));
+        when(
+          () => repository.fetchReply(
+            pinned.id,
+            videoId: _video.id,
+            videoAddress: _video.addressableId,
+          ),
+        ).thenAnswer((_) => pin.future);
+        await pump(tester, replies, latestEvents: events);
+        await tester.pumpAndSettle();
+        verify(
+          () => repository.fetchReply(
+            pinned.id,
+            videoId: _video.id,
+            videoAddress: _video.addressableId,
+          ),
+        ).called(1);
+        final strings = l10n(tester);
+        events.remember(
+          Event(
+            _creator,
+            RepliesCuration.kind,
+            RepliesCuration(hiddenIds: {_reply(1).id})
+                .toTags(_video.addressableId!),
+            '',
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(strings.videoStickerRepliesCount(1)), findsOneWidget);
+
+        pin.completeError(StateError('The old pin could not be read'));
+        await tester.pumpAndSettle();
+        expect(find.text(strings.videoStickerRepliesCount(1)), findsOneWidget);
       });
 
       testWidgets('shows how many replied once that is read', (tester) async {
@@ -441,6 +675,18 @@ void main() {
         expect(interactions, isZero);
       });
 
+      testWidgets('takes no tap on the replies while the video is not the '
+          'one playing', (tester) async {
+        await pump(tester, replies, isActive: false);
+        await tester.pump();
+
+        await tester.tap(find.text('Reply with a video'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+
+        expect(pushed, isEmpty);
+        expect(interactions, isZero);
+      });
+
       testWidgets('opens the replies in the feed for a viewer', (
         tester,
       ) async {
@@ -508,6 +754,63 @@ void main() {
         final uri = Uri.parse(pushed.single);
         expect(uri.path, equals('/video-replies/${_video.id}'));
         expect(uri.queryParameters['address'], equals(_video.addressableId));
+      });
+
+      testWidgets('updates the sticker when a hide finishes after leaving '
+          'Manage Replies', (tester) async {
+        final events = LatestAddressableEvents();
+        addTearDown(events.dispose);
+        final hide = Completer<void>();
+        when(
+          () => repository.saveCuration(
+            any(),
+            videoAddress: _video.addressableId!,
+            previous: any(named: 'previous'),
+            takenBackRestores: any(named: 'takenBackRestores'),
+          ),
+        ).thenAnswer((invocation) async {
+          await hide.future;
+          final curation =
+              invocation.positionalArguments.single as RepliesCuration;
+          events.remember(
+            Event(
+              _creator,
+              RepliesCuration.kind,
+              curation.toTags(_video.addressableId!),
+              '',
+            ),
+          );
+          return curation;
+        });
+        final active = await pump(
+          tester,
+          replies,
+          viewer: _creator,
+          manageReplies: true,
+          latestEvents: events,
+        );
+        await tester.pump();
+        final strings = l10n(tester);
+        expect(find.text(strings.videoStickerRepliesCount(2)), findsOneWidget);
+
+        await tester.tap(find.text('Reply with a video'));
+        await tester.pumpAndSettle();
+        active.value = false;
+        await tester.pump();
+
+        await tester.tap(find.text(strings.videoStickerRepliesHide).first);
+        await tester.pump();
+        final manager = tester.element(find.byType(VideoRepliesScreen));
+        GoRouter.of(manager).pop();
+        await tester.pumpAndSettle();
+        active.value = true;
+        await tester.pump();
+        expect(find.text(strings.videoStickerRepliesCount(2)), findsOneWidget);
+
+        hide.complete();
+        await tester.pumpAndSettle();
+        expect(find.text(strings.videoStickerRepliesCount(1)), findsOneWidget);
+        expect(find.text(strings.videoStickerRepliesCount(2)), findsNothing);
       });
 
       testWidgets('opens the camera to add yours, joining its chain', (
@@ -640,12 +943,13 @@ void main() {
                   FollowingSnapshot(pubkeys: pubkeys, count: pubkeys.length),
             );
 
-        testWidgets('draws nothing on a video the feed only loads ahead', (
-          tester,
-        ) async {
+        testWidgets('shows it on a video the feed only loads ahead once it is '
+            'read that the viewer may answer', (tester) async {
+          creatorFollows([_viewer]);
           await pump(tester, restricted(replies), isActive: false);
+          await tester.pump();
 
-          expect(find.text('Reply with a video'), findsNothing);
+          expect(find.text('Reply with a video'), findsOneWidget);
         });
 
         testWidgets('hides it from someone the creator does not follow while '

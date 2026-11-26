@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "이 메시지를 열려면 {account} 계정으로 전환할까요?",
+  "notificationSettingsDirectMessages": "다이렉트 메시지",
+  "notificationSettingsDirectMessagesSubtitle": "보낸 사람의 이름과 메시지 내용을 숨기고 알림을 표시합니다.",
+  "dmNotificationMessageUnavailable": "이 메시지를 볼 수 없습니다.",
   "@@locale": "ko",
   "videoEditorSocialStickerPoll": "투표",
   "videoEditorSocialStickerQuiz": "퀴즈",
@@ -1787,6 +1791,15 @@
   "librarySortShortestClip": "짧은 클립순",
   "librarySortSquareFirst": "정사각형 먼저",
   "librarySortVerticalFirst": "세로형 먼저",
+  "libraryDraftActionShare": "초안 공유",
+  "libraryDraftShareConfirm": "{name}님에게 편집 가능한 초안을 보낼까요?",
+  "libraryDraftShareNotice": "원본 클립과 편집 기록을 공유해요. 상대방은 잘라낸 부분을 볼 수 있고, 자기 사본을 편집하거나 게시하거나 다시 보낼 수 있어요.",
+  "libraryDraftShareFailed": "초안을 보내지 못했어요.",
+  "libraryDraftShareTooLarge": "초안이 너무 커서 보낼 수 없어요.",
+  "dmSharedDraft": "공유된 초안",
+  "dmOpenDraft": "가져와서 편집",
+  "dmDraftImportFailed": "초안을 가져오지 못했어요.",
+  "libraryDraftSent": "초안을 보냈어요",
   "libraryDraftActionDelete": "임시 저장 삭제",
   "libraryDraftActionEdit": "편집",
   "libraryDraftActionPost": "게시",
@@ -1796,6 +1809,11 @@
   "libraryDraftDuplicateFailedSnackbar": "임시 저장을 복제하지 못했어요",
   "libraryDraftInProgressBadge": "진행 중",
   "libraryDraftActionDuplicate": "복제",
+  "libraryDraftActionConvertToClip": "클립으로 변환",
+  "libraryDraftConvertingToClip": "클립으로 변환 중...",
+  "libraryDraftConvertedToClipSnackbar": "임시 저장을 클립으로 변환했어요",
+  "libraryDraftConvertToClipFailedSnackbar": "임시 저장을 변환하지 못했어요",
+  "libraryDraftConvertOverlaysUnavailable": "이 초안의 텍스트와 스티커를 준비하지 못했어요. 편집기에서 연 다음 다시 시도해주세요.",
   "libraryDraftCopyTitle": "{title} (사본 {number})",
   "@libraryDraftCopyTitle": {
     "placeholders": {
@@ -6142,5 +6160,21 @@
         "type": "String"
       }
     }
-  }
+  },
+  "menuBarEdit": "편집",
+  "menuBarUndo": "실행 취소",
+  "menuBarRedo": "실행 복귀",
+  "menuBarCut": "오려두기",
+  "menuBarCopy": "복사하기",
+  "menuBarPaste": "붙여넣기",
+  "menuBarSelectAll": "전체 선택",
+  "menuBarView": "보기",
+  "menuBarVideo": "동영상",
+  "menuBarPreviousVideo": "이전 동영상",
+  "menuBarNextVideo": "다음 동영상",
+  "menuBarPlayPause": "재생/일시 정지",
+  "menuBarMute": "음소거",
+  "menuBarUnmute": "음소거 해제",
+  "menuBarWindow": "윈도우",
+  "menuBarHelp": "도움말"
 }
