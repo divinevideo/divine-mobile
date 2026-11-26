@@ -764,7 +764,16 @@ void main() {
           final retry = repository.recoverFullSend(rumorId: last.id);
 
           finishLookup.complete();
-          await originalRead.future;
+          // The second read of the row is the original send reaching it
+          // behind the retry. Bounded, so a change in how often the row is
+          // read fails here instead of hanging until the test times out.
+          await originalRead.future.timeout(
+            const Duration(seconds: 10),
+            onTimeout: () => fail(
+              'expected the retry and then the original send to read the '
+              "last member's row; it was read $reads time(s)",
+            ),
+          );
           finishRecipient.complete();
           expect((await retry).success, isTrue);
           final results = await original;
