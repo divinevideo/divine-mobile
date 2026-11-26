@@ -1,5 +1,5 @@
-// ABOUTME: Widget tests for VideoEditorSticker - displays SVG asset or network stickers.
-// ABOUTME: Tests rendering paths for local SVG assets vs network images.
+// ABOUTME: Widget tests for VideoEditorSticker: bundled raster stickers, the
+// ABOUTME: legacy SVGs older drafts still name, and network stickers.
 
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,9 +12,16 @@ import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticke
 void main() {
   group(VideoEditorSticker, () {
     const assetSticker = StickerData.asset(
-      'assets/stickers/test.svg',
-      description: LocalizedText({'en': 'Test sticker'}),
-      tags: ['test'],
+      'assets/divine_stickers/heart.webp',
+      description: LocalizedText({'en': 'Heart'}),
+      tags: ['heart'],
+      packData: StickerPackData.fallback,
+    );
+
+    const legacySvgSticker = StickerData.asset(
+      'assets/stickers/heart.svg',
+      description: LocalizedText({'en': 'Heart'}),
+      tags: ['heart'],
       packData: StickerPackData.fallback,
     );
 
@@ -46,16 +53,59 @@ void main() {
       );
     }
 
-    testWidgets('renders SvgPicture for asset stickers', (tester) async {
-      await tester.pumpWidget(buildTestWidget());
+    group('asset stickers', () {
+      testWidgets('draws a raster sticker as an image', (tester) async {
+        await tester.pumpWidget(buildTestWidget());
 
-      expect(find.byType(SvgPicture), findsOneWidget);
-    });
+        expect(find.byType(Image), findsOneWidget);
+        expect(find.byType(SvgPicture), findsNothing);
+      });
 
-    testWidgets('skips LayoutBuilder for asset stickers', (tester) async {
-      await tester.pumpWidget(buildTestWidget());
+      testWidgets('draws a legacy SVG sticker a draft still names', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildTestWidget(sticker: legacySvgSticker));
 
-      expect(find.byType(LayoutBuilder), findsNothing);
+        expect(find.byType(SvgPicture), findsOneWidget);
+        expect(find.byType(Image), findsNothing);
+      });
+
+      testWidgets('decodes a raster sticker at the size it is shown', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildTestWidget());
+
+        final image = tester.widget<Image>(find.byType(Image)).image;
+        final pixels = (100 * tester.view.devicePixelRatio).ceil();
+        expect(
+          image,
+          isA<ResizeImage>()
+              .having((resize) => resize.width, 'width', pixels)
+              .having((resize) => resize.height, 'height', pixels)
+              .having(
+                (resize) => resize.policy,
+                'policy',
+                ResizeImagePolicy.fit,
+              )
+              .having(
+                (resize) => resize.imageProvider,
+                'imageProvider',
+                const AssetImage('assets/divine_stickers/heart.webp'),
+              ),
+        );
+      });
+
+      testWidgets(
+        'decodes a raster sticker at full size without cache sizing',
+        (tester) async {
+          await tester.pumpWidget(buildTestWidget(enableLimitCacheSize: false));
+
+          expect(
+            tester.widget<Image>(find.byType(Image)).image,
+            equals(const AssetImage('assets/divine_stickers/heart.webp')),
+          );
+        },
+      );
     });
 
     testWidgets('uses LayoutBuilder for network stickers with cache sizing', (

@@ -600,6 +600,56 @@ void main() {
       expect(restored.widget, isA<VideoEditorStickerGroup>());
     });
 
+    test('decodes a bundled raster sticker before the capture', () async {
+      const assetPath = 'assets/divine_stickers/heart.webp';
+      final imageKey = await const AssetImage(
+        assetPath,
+      ).obtainKey(ImageConfiguration.empty);
+      final imageCache = PaintingBinding.instance.imageCache;
+      imageCache.evict(imageKey);
+      addTearDown(() => imageCache.evict(imageKey));
+
+      bool? decodedAtCapture;
+      final stub = _StubLayerRasterizer(
+        onContentReady: () =>
+            decodedAtCapture = imageCache.containsKey(imageKey),
+      );
+      addTearDown(stub.dispose);
+      final meta = StickerData.asset(
+        assetPath,
+        description: LocalizedText.single('Heart'),
+        tags: const [],
+        packData: StickerPackData.fallback,
+      ).toJson();
+      final layer = WidgetLayer(
+        id: 'sticker-1',
+        width: 120,
+        widget: const SizedBox(),
+        meta: meta,
+        exportConfigs: WidgetLayerExportConfigs(id: 'sticker-1', meta: meta),
+      );
+
+      await DraftRenderParametersService(rasterizer: stub).buildForDraft(
+        _draft(
+          editorEditingParameters: _persistedParameters(
+            bodySize: const Size(300, 500),
+          ),
+          editorStateHistory: {
+            'position': 0,
+            'history': [
+              {
+                'layers': [layer.toMap()],
+              },
+            ],
+          },
+        ),
+      );
+
+      // An undecoded image paints nothing, so the capture would bake an
+      // empty sticker into the video.
+      expect(decodedAtCapture, isTrue);
+    });
+
     test('rebuilds an info sticker as its view', () async {
       final stub = _StubLayerRasterizer();
       addTearDown(stub.dispose);
@@ -787,9 +837,12 @@ void main() {
 /// [dropLayers] reproduces `captureAllLayers` returning fewer layers than it
 /// was given, which is how the package reports a layer that produced no image.
 class _StubLayerRasterizer extends LayerRasterizer {
-  _StubLayerRasterizer({this.dropLayers = false});
+  _StubLayerRasterizer({this.dropLayers = false, this.onContentReady});
 
   final bool dropLayers;
+
+  /// Called once the service reports the layers' content ready.
+  final VoidCallback? onContentReady;
 
   int? capturedLayerCount;
   List<Layer>? capturedLayers;
@@ -814,6 +867,7 @@ class _StubLayerRasterizer extends LayerRasterizer {
     this.basePixelRatio = basePixelRatio;
     this.configs = configs;
     await awaitContentReady?.call();
+    onContentReady?.call();
     if (dropLayers) return const [];
     return [
       for (final layer in layers)
