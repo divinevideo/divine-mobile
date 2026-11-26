@@ -472,6 +472,107 @@ class StoreReviewTest(unittest.TestCase):
         self.assertFalse(other_build[1])
 
 
+    def macos_plist(self, data):
+        path = self.repo / 'mobile/macos/Runner/Info.plist'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(plistlib.dumps(data))
+
+    def macos_action(self, candidate, number=2):
+        return {
+            'kind': 'app-store',
+            'platform': 'macos',
+            'build': {'number': number, 'version': '1.0.2', 'sha': candidate},
+        }
+
+    def test_macos_initial_release_requires_exact_confirmation_and_valid_plist(self):
+        # Missing Info.plist fails closed without an approval token.
+        missing_action = self.macos_action(self.base)
+        snap = {'macos': {'versions': [], 'builds': []}}
+        plan = {'actions': [missing_action], 'errors': [], 'reasons': []}
+        store_review.screen(plan, snap, 'any', dry=False)
+        self.assertFalse(plan['actions'])
+        self.assertIn('cannot read mobile/macos/Runner/Info.plist', plan['errors'][0])
+        self.assertNotIn('approve_store_review', plan['errors'][0])
+
+        self.macos_plist({'ITSAppUsesNonExemptEncryption': False})
+        candidate = self.commit()
+        action = self.macos_action(candidate)
+        snap = {'macos': {
+            'versions': [{'id': 'mv1', 'version': '1.0.0', 'state': 'PREPARE_FOR_SUBMISSION', 'build_id': None}],
+            'builds': [],
+        }}
+        plan = {'actions': [action], 'errors': [], 'reasons': []}
+        store_review.screen(plan, snap, '', dry=False)
+        self.assertFalse(plan['actions'])
+        self.assertIn('initial Mac App Store release', plan['errors'][0])
+        self.assertIn(store_review.APPLE, plan['errors'][0])
+        token = plan['errors'][0].split('approve_store_review=')[1].split('`')[0]
+        self.assertTrue(token.startswith('macos-'))
+
+        ok_plan = {'actions': [action], 'errors': [], 'reasons': []}
+        store_review.screen(ok_plan, snap, token, dry=False)
+        self.assertEqual(ok_plan['actions'], [action])
+        self.assertEqual(ok_plan['errors'], [])
+
+        # Confirmation is bound to the exact build number and candidate SHA.
+        other_num = {'actions': [self.macos_action(candidate, number=3)], 'errors': [], 'reasons': []}
+        store_review.screen(other_num, snap, token, dry=False)
+        self.assertFalse(other_num['actions'])
+
+    def test_macos_live_legacy_version_without_provenance_fails_closed_without_token(self):
+        self.macos_plist({'ITSAppUsesNonExemptEncryption': False})
+        candidate = self.commit()
+        snap = {'macos': {
+            'versions': [{'state': 'READY_FOR_SALE', 'version': '1.0.1', 'build_id': 'mb911'}],
+            'builds': [{'id': 'mb911', 'number': 911, 'version': '1.0.1', 'sha': None, 'legacy': True}],
+        }}
+        plan = {'actions': [self.macos_action(candidate)], 'errors': [], 'reasons': []}
+        store_review.screen(plan, snap, 'any', dry=False)
+        self.assertFalse(plan['actions'])
+        self.assertIn('missing verified source provenance', plan['errors'][0])
+        self.assertNotIn('approve_store_review', plan['errors'][0])
+
+    def test_macos_subsequent_release_screens_macos_paths_with_apple_policy_and_excludes_ios_android(self):
+        self.macos_plist({'ITSAppUsesNonExemptEncryption': False, 'LSApplicationCategoryType': 'public.app-category.social-networking'})
+        baseline = self.commit()
+
+        def mac_snap(base):
+            return {
+                'macos': {
+                    'versions': [{'state': 'READY_FOR_SALE', 'version': '1.0.1', 'build_id': 'live'}],
+                    'builds': [{'id': 'live', 'number': 1, 'version': '1.0.1', 'sha': base, 'default_env': 'PRODUCTION'}],
+                }
+            }
+
+        # iOS and Android changes do not flag macOS.
+        self.write('mobile/ios/Runner/PrivacyInfo.xcprivacy', 'ios change')
+        self.write('mobile/android/app/build.gradle.kts', 'android change')
+        candidate = self.commit()
+        action = self.macos_action(candidate)
+        plan = {'actions': [action], 'errors': [], 'reasons': []}
+        store_review.screen(plan, mac_snap(baseline), '', dry=False)
+        self.assertEqual((plan['actions'], plan['errors']), ([action], []))
+
+        # macOS entitlements, privacy manifest, Info.plist, and shared moderation/access paths flag with APPLE URL.
+        for path, writer, snippet in [
+            ('mobile/macos/Runner/Release.entitlements', lambda: self.write('mobile/macos/Runner/Release.entitlements', '<plist/>'), 'macOS privacy manifests and entitlements'),
+            ('mobile/macos/Runner/Info.plist', lambda: self.macos_plist({'ITSAppUsesNonExemptEncryption': True, 'LSApplicationCategoryType': 'public.app-category.social-networking'}), 'macOS permission prompts'),
+            ('mobile/lib/widgets/report_content_dialog.dart', lambda: self.write('mobile/lib/widgets/report_content_dialog.dart', 'mac report'), 'moderation flows'),
+            ('mobile/lib/services/auth_service.dart', lambda: self.write('mobile/lib/services/auth_service.dart', 'mac auth'), 'reviewer access'),
+        ]:
+            with self.subTest(path=path):
+                writer()
+                src = self.commit()
+                sub_plan = {'actions': [self.macos_action(src)], 'errors': [], 'reasons': []}
+                store_review.screen(sub_plan, mac_snap(baseline), '', dry=False)
+                self.assertFalse(sub_plan['actions'])
+                self.assertIn(snippet, sub_plan['errors'][0])
+                self.assertIn(store_review.APPLE, sub_plan['errors'][0])
+                self.assertNotIn(store_review.PLAY, sub_plan['errors'][0])
+                self.assertNotIn(store_review.PLAY_UGC, sub_plan['errors'][0])
+                baseline = src
+
+
 class StoreReviewPathListTest(unittest.TestCase):
     def test_every_watched_prefix_matches_a_tracked_file(self):
         tracked = subprocess.check_output(

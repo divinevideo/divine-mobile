@@ -23,32 +23,40 @@ def allocate_build(platform, env=os.environ, run=subprocess.run):
         path.write_text(result.stdout)
         return path
 
-    command = (
-        ["app-store-connect", "get-latest-build-number", "6747959501"]
-        if platform == "ios"
-        else [
+    if platform == "ios":
+        command = ["app-store-connect", "get-latest-build-number", "6747959501"]
+    elif platform == "macos":
+        command = [
+            "app-store-connect",
+            "get-latest-testflight-build-number",
+            "--platform",
+            "MAC_OS",
+            "6747959501",
+        ]
+    elif platform == "android":
+        command = [
             "google-play",
             "get-latest-build-number",
             "--package-name",
             "co.openvine.app",
         ]
-    )
+    else:
+        raise ValueError(f"unsupported release platform: {platform}")
     result = run(command, capture_output=True, text=True, check=False)
+    raw_latest = result.stdout.strip()
+    if platform == "macos" and result.returncode == 0 and raw_latest == "":
+        raw_latest = "0"
     if (
         result.returncode
-        or not result.stdout.strip().isascii()
-        or not result.stdout.strip().isdigit()
+        or not raw_latest.isascii()
+        or not raw_latest.isdigit()
     ):
         raise ValueError(
             "could not read the latest "
-            + ("App Store Connect" if platform == "ios" else "Google Play")
+            + ("App Store Connect" if platform in {"ios", "macos"} else "Google Play")
             + " build number; refusing to guess"
         )
-    latest = result.stdout.strip()
-    shorebird = capture(
-        "release_info.json",
-        ["shorebird", "releases", "list", "--platform=" + platform, "--json"],
-    )
+    latest = raw_latest
     tags = capture("stable_tags.txt", ["git", "ls-remote", "--tags", "origin"])
     # ls-remote includes object IDs; the allocator accepts ref names only.
     tags.write_text(
@@ -71,14 +79,19 @@ def allocate_build(platform, env=os.environ, run=subprocess.run):
         env["CM_BUILD_ID"],
         "--store-latest-build",
         latest,
-        "--shorebird-releases",
-        str(shorebird),
         "--stable-tags",
         str(tags),
         "--output",
         str(directory / (platform + "_release.env")),
     ]
-    if platform == "ios":
+    if platform != "macos":
+        shorebird = capture(
+            "release_info.json",
+            ["shorebird", "releases", "list", "--platform=" + platform, "--json"],
+        )
+        args += ["--shorebird-releases", str(shorebird)]
+    if platform in {"ios", "macos"}:
+        asc_platform = "MAC_OS" if platform == "macos" else "IOS"
         versions = capture(
             "store_versions.json",
             [
@@ -87,11 +100,13 @@ def allocate_build(platform, env=os.environ, run=subprocess.run):
                 "app-store-versions",
                 "6747959501",
                 "--platform",
-                "IOS",
+                asc_platform,
                 "--json",
             ],
         )
         args += ["--app-store-versions", str(versions)]
+        if platform == "macos" and env.get("PROJECT_BUILD_NUMBER"):
+            args += ["--build-number-floor", env["PROJECT_BUILD_NUMBER"]]
     else:
         track = capture(
             "production_track.json",
