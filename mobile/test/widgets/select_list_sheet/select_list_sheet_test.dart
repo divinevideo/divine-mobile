@@ -570,8 +570,12 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.byType(SelectListSheetBody), findsNothing);
           expect(cubit.state.status, SelectListStatus.editing);
-          verifyNever(() => service.addVideoToList(any(), any()));
-          verifyNever(() => service.removeVideoFromList(any(), any()));
+          verifyNever(
+            () => service.addVideoToList(any(), any(), allowSeries: false),
+          );
+          verifyNever(
+            () => service.removeVideoFromList(any(), any(), allowSeries: false),
+          );
           verifyNever(() => service.retryListSync(any()));
         },
       );
@@ -615,8 +619,12 @@ void main() {
         );
         await tester.tap(saveButton());
         await tester.pumpAndSettle();
-        verifyNever(() => service.addVideoToList(any(), any()));
-        verifyNever(() => service.removeVideoFromList(any(), any()));
+        verifyNever(
+          () => service.addVideoToList(any(), any(), allowSeries: false),
+        );
+        verifyNever(
+          () => service.removeVideoFromList(any(), any(), allowSeries: false),
+        );
       });
 
       testWidgets('callbacks captured before a hold cannot toggle or create', (
@@ -671,8 +679,12 @@ void main() {
           );
           await tester.tap(saveButton());
           await tester.pumpAndSettle();
-          verifyNever(() => service.addVideoToList(any(), any()));
-          verifyNever(() => replacement.addVideoToList(any(), any()));
+          verifyNever(
+            () => service.addVideoToList(any(), any(), allowSeries: false),
+          );
+          verifyNever(
+            () => replacement.addVideoToList(any(), any(), allowSeries: false),
+          );
         },
       );
 
@@ -700,8 +712,12 @@ void main() {
         expect(rowChecks(), findsOneWidget);
         await tester.tap(saveButton());
         await tester.pumpAndSettle();
-        verifyNever(() => service.addVideoToList(any(), any()));
-        verifyNever(() => replacement.addVideoToList(any(), any()));
+        verifyNever(
+          () => service.addVideoToList(any(), any(), allowSeries: false),
+        );
+        verifyNever(
+          () => replacement.addVideoToList(any(), any(), allowSeries: false),
+        );
       });
 
       testWidgets('missing service preserves its known hold and safe rows', (
@@ -872,8 +888,12 @@ void main() {
         await tester.pump();
         expect(rowChecks(), findsOneWidget);
 
-        verifyNever(() => service.addVideoToList(any(), any()));
-        verifyNever(() => service.removeVideoFromList(any(), any()));
+        verifyNever(
+          () => service.addVideoToList(any(), any(), allowSeries: false),
+        );
+        verifyNever(
+          () => service.removeVideoFromList(any(), any(), allowSeries: false),
+        );
       });
 
       testWidgets('the check writes every pick, so one visit can add the '
@@ -884,10 +904,10 @@ void main() {
           list('Second'),
         ]);
         when(
-          () => service.addVideoToList(any(), any()),
+          () => service.addVideoToList(any(), any(), allowSeries: false),
         ).thenAnswer((_) async => true);
         when(
-          () => service.removeVideoFromList(any(), any()),
+          () => service.removeVideoFromList(any(), any(), allowSeries: false),
         ).thenAnswer((_) async => true);
         await openSheet(tester);
 
@@ -902,18 +922,21 @@ void main() {
           () => service.addVideoToList(
             '$_authorPubkey:list_first',
             _videoEventId,
+            allowSeries: false,
           ),
         ).called(1);
         verify(
           () => service.addVideoToList(
             '$_authorPubkey:list_second',
             _videoEventId,
+            allowSeries: false,
           ),
         ).called(1);
         verify(
           () => service.removeVideoFromList(
             '$_authorPubkey:list_holds_it',
             _videoEventId,
+            allowSeries: false,
           ),
         ).called(1);
         expect(find.byType(SelectListSheetBody), findsNothing);
@@ -928,10 +951,10 @@ void main() {
           list('First'),
         ]);
         when(
-          () => service.addVideoToList(any(), any()),
+          () => service.addVideoToList(any(), any(), allowSeries: false),
         ).thenAnswer((_) async => true);
         when(
-          () => service.removeVideoFromList(any(), any()),
+          () => service.removeVideoFromList(any(), any(), allowSeries: false),
         ).thenAnswer((_) async => true);
         await openSheet(tester);
 
@@ -942,18 +965,24 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(
-          () => service.addVideoToList('$_authorPubkey:list_first', address),
+          () => service.addVideoToList(
+            '$_authorPubkey:list_first',
+            address,
+            allowSeries: false,
+          ),
         ).called(1);
         verify(
           () => service.removeVideoFromList(
             '$_authorPubkey:list_holds_it',
             address,
+            allowSeries: false,
           ),
         ).called(1);
         verify(
           () => service.removeVideoFromList(
             '$_authorPubkey:list_holds_it',
             _videoEventId,
+            allowSeries: false,
           ),
         ).called(1);
       });
@@ -1017,7 +1046,7 @@ void main() {
           list('Holds it', videoEventIds: const [_videoEventId]),
         ]);
         when(
-          () => service.removeVideoFromList(any(), any()),
+          () => service.removeVideoFromList(any(), any(), allowSeries: false),
         ).thenAnswer((_) async => true);
         await openSheet(tester);
 
@@ -1036,6 +1065,7 @@ void main() {
           () => service.removeVideoFromList(
             '$_authorPubkey:list_holds_it',
             _videoEventId,
+            allowSeries: false,
           ),
         ).called(1);
         expect(find.byType(SelectListSheetBody), findsNothing);
@@ -1053,8 +1083,12 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(SelectListSheetBody), findsNothing);
-        verifyNever(() => service.addVideoToList(any(), any()));
-        verifyNever(() => service.removeVideoFromList(any(), any()));
+        verifyNever(
+          () => service.addVideoToList(any(), any(), allowSeries: false),
+        );
+        verifyNever(
+          () => service.removeVideoFromList(any(), any(), allowSeries: false),
+        );
       });
 
       testWidgets('a refused change keeps the sheet open, says so, and keeps '
@@ -1063,7 +1097,7 @@ void main() {
           () => service.pickerListsForOwner(any()),
         ).thenReturn([list('Refuses')]);
         when(
-          () => service.addVideoToList(any(), any()),
+          () => service.addVideoToList(any(), any(), allowSeries: false),
         ).thenAnswer((_) async => false);
         await openSheet(tester);
 
@@ -1086,7 +1120,7 @@ void main() {
             () => service.pickerListsForOwner(any()),
           ).thenReturn([list('Refuses')]);
           when(
-            () => service.addVideoToList(any(), any()),
+            () => service.addVideoToList(any(), any(), allowSeries: false),
           ).thenAnswer((_) => answer.future);
           await openSheet(tester);
           await tester.tap(find.text('Refuses'));
@@ -1121,7 +1155,7 @@ void main() {
           ),
         ]);
         when(
-          () => service.addVideoToList(any(), any()),
+          () => service.addVideoToList(any(), any(), allowSeries: false),
         ).thenAnswer((_) async => false);
         await openSheet(tester);
 
@@ -1152,8 +1186,12 @@ void main() {
           await tester.pumpAndSettle();
           expect(rowChecks(), findsOneWidget);
           verify(() => service.retryListSync(pending.authorScopedId)).called(1);
-          verifyNever(() => service.addVideoToList(any(), any()));
-          verifyNever(() => service.removeVideoFromList(any(), any()));
+          verifyNever(
+            () => service.addVideoToList(any(), any(), allowSeries: false),
+          );
+          verifyNever(
+            () => service.removeVideoFromList(any(), any(), allowSeries: false),
+          );
         },
       );
 
@@ -1199,8 +1237,12 @@ void main() {
           expect(find.text(l10n.listRetrySync), findsOneWidget);
           expect(rowChecks(), findsOneWidget);
           verify(() => service.retryListSync(pending.authorScopedId)).called(1);
-          verifyNever(() => service.addVideoToList(any(), any()));
-          verifyNever(() => service.removeVideoFromList(any(), any()));
+          verifyNever(
+            () => service.addVideoToList(any(), any(), allowSeries: false),
+          );
+          verifyNever(
+            () => service.removeVideoFromList(any(), any(), allowSeries: false),
+          );
         },
       );
 
@@ -1246,8 +1288,12 @@ void main() {
           verify(
             () => service.retryListSync(ordinary.authorScopedId),
           ).called(1);
-          verifyNever(() => service.addVideoToList(any(), any()));
-          verifyNever(() => service.removeVideoFromList(any(), any()));
+          verifyNever(
+            () => service.addVideoToList(any(), any(), allowSeries: false),
+          );
+          verifyNever(
+            () => service.removeVideoFromList(any(), any(), allowSeries: false),
+          );
         },
       );
 
@@ -1271,8 +1317,12 @@ void main() {
           expect(rowChecks(), findsNothing);
           expect(find.text(l10n.listUpdateFailed), findsOneWidget);
           verify(() => service.retryListSync(pending.authorScopedId)).called(1);
-          verifyNever(() => service.addVideoToList(any(), any()));
-          verifyNever(() => service.removeVideoFromList(any(), any()));
+          verifyNever(
+            () => service.addVideoToList(any(), any(), allowSeries: false),
+          );
+          verifyNever(
+            () => service.removeVideoFromList(any(), any(), allowSeries: false),
+          );
         },
       );
 
@@ -1325,8 +1375,12 @@ void main() {
           await tester.pump();
           expect(rowChecks(), findsNothing);
           verify(() => service.retryListSync(winner.authorScopedId)).called(1);
-          verifyNever(() => service.addVideoToList(any(), any()));
-          verifyNever(() => service.removeVideoFromList(any(), any()));
+          verifyNever(
+            () => service.addVideoToList(any(), any(), allowSeries: false),
+          );
+          verifyNever(
+            () => service.removeVideoFromList(any(), any(), allowSeries: false),
+          );
         },
       );
 
@@ -1404,8 +1458,16 @@ void main() {
               verify(
                 () => service.retryListSync(pending.authorScopedId),
               ).called(1);
-              verifyNever(() => service.addVideoToList(any(), any()));
-              verifyNever(() => service.removeVideoFromList(any(), any()));
+              verifyNever(
+                () => service.addVideoToList(any(), any(), allowSeries: false),
+              );
+              verifyNever(
+                () => service.removeVideoFromList(
+                  any(),
+                  any(),
+                  allowSeries: false,
+                ),
+              );
             },
           );
         }
@@ -1447,8 +1509,13 @@ void main() {
             await tester.pump();
             expect(rowChecks(), findsOneWidget);
             verifyNever(() => service.retryListSync(any()));
-            verifyNever(() => service.addVideoToList(any(), any()));
-            verifyNever(() => service.removeVideoFromList(any(), any()));
+            verifyNever(
+              () => service.addVideoToList(any(), any(), allowSeries: false),
+            );
+            verifyNever(
+              () =>
+                  service.removeVideoFromList(any(), any(), allowSeries: false),
+            );
           },
         );
       }
@@ -1461,7 +1528,7 @@ void main() {
             () => service.pickerListsForOwner(any()),
           ).thenReturn([list('Empty')]);
           when(
-            () => service.addVideoToList(any(), any()),
+            () => service.addVideoToList(any(), any(), allowSeries: false),
           ).thenAnswer((_) => answer.future);
           await openSheet(tester);
           await tester.tap(find.text('Empty'));
@@ -1561,7 +1628,7 @@ void main() {
             if (!answer.isCompleted) answer.complete(false);
           });
           when(
-            () => service.addVideoToList(any(), any()),
+            () => service.addVideoToList(any(), any(), allowSeries: false),
           ).thenAnswer((_) => answer.future);
           await tester.binding.setSurfaceSize(const Size(800, 1200));
           addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -1623,7 +1690,9 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(SelectListSheetBody), findsNothing);
-        verifyNever(() => service.addVideoToList(any(), any()));
+        verifyNever(
+          () => service.addVideoToList(any(), any(), allowSeries: false),
+        );
       });
 
       testWidgets('a created list that refused the video says so inside the '
@@ -1751,7 +1820,10 @@ void main() {
             () => service.getListById(fresh.authorScopedId),
           ).thenReturn(pending);
           when(
-            () => service.addVideoToList(fresh.authorScopedId, _videoEventId),
+            () => service.addVideoToList(
+              fresh.authorScopedId,
+              _videoEventId,
+            ),
           ).thenAnswer((_) async {
             when(
               () => service.pickerListsForOwner(any()),
@@ -1789,9 +1861,14 @@ void main() {
           expect(find.text(l10n.listVideoPendingSync), findsNothing);
           verify(() => service.retryListSync(fresh.authorScopedId)).called(1);
           verify(
-            () => service.addVideoToList(fresh.authorScopedId, _videoEventId),
+            () => service.addVideoToList(
+              fresh.authorScopedId,
+              _videoEventId,
+            ),
           ).called(1);
-          verifyNever(() => service.removeVideoFromList(any(), any()));
+          verifyNever(
+            () => service.removeVideoFromList(any(), any(), allowSeries: false),
+          );
         },
       );
 
@@ -1825,7 +1902,10 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(ListInfoForm), findsNothing);
         verify(
-          () => service.addVideoToList(fresh.authorScopedId, _videoEventId),
+          () => service.addVideoToList(
+            fresh.authorScopedId,
+            _videoEventId,
+          ),
         ).called(1);
 
         // The real service tells its listeners once the list exists.

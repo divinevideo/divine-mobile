@@ -1082,6 +1082,88 @@ void main() {
         }
       });
 
+      test('recognizes only valid opaque address references as non-video', () {
+        for (final address in [
+          '30023:$person:article:slug',
+          '30023:$person:',
+          '10002:$person:',
+        ]) {
+          expect(
+            CuratedListConverter.isNonVideoItemTag(['a', address]),
+            isTrue,
+          );
+        }
+        for (final address in [
+          '34235:$person:video',
+          '34236:$person:',
+          '30023:short:article',
+          '30023:$person',
+          '99999:$person:article',
+          '10002:$person:unexpected',
+          '+30023:$person:article',
+        ]) {
+          expect(
+            CuratedListConverter.isNonVideoItemTag(['a', address]),
+            isFalse,
+          );
+        }
+      });
+
+      test('accepts complete visible and sealed item snapshots', () {
+        const items = [
+          ['e', person],
+          ['a', '34236:$person:clip'],
+          ['a', '30023:$person:article:slug'],
+        ];
+        expect(
+          CuratedListConverter.hasFullyKnownItemTags([
+            ...items,
+            ['future', 'metadata'],
+            <String>[],
+          ]),
+          isTrue,
+        );
+        expect(
+          CuratedListConverter.hasFullyKnownItemTags(
+            [
+              ...items,
+              ['p', person],
+            ],
+            isSealed: true,
+          ),
+          isTrue,
+        );
+      });
+
+      test('keeps malformed and unknown sealed item snapshots opaque', () {
+        expect(
+          CuratedListConverter.hasFullyKnownItemTags(null, isSealed: true),
+          isFalse,
+        );
+        for (final tag in [
+          ['a', article],
+          ['a', '99999:$person:article'],
+          ['a', '34236:$person:'],
+          ['a'],
+          ['e', 'short'],
+          ['p'],
+          ['word', ''],
+          ['future', 'item'],
+          <String>[],
+        ]) {
+          expect(
+            CuratedListConverter.hasFullyKnownItemTags([tag], isSealed: true),
+            isFalse,
+          );
+        }
+        expect(
+          CuratedListConverter.hasFullyKnownItemTags([
+            ['a', '99999:$person:article'],
+          ]),
+          isFalse,
+        );
+      });
+
       test('the size limit counts the sealed preserved tags', () {
         final list = privateList(
           preservedPrivateTags: [

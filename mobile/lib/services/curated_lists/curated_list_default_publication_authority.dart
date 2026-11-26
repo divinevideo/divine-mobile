@@ -128,21 +128,17 @@ class CuratedDefaultPublicationAuthority {
         CuratedListConverter.isEncryptedItemPayload(event.content)) {
       return;
     }
-    // A sealed non-video NIP-51 item is kept by the decoder, not dropped.
-    final tags = items.status == UnsealItemTagsStatus.unsealed
-        ? items.tags
-              ?.where((tag) => !CuratedListConverter.isNonVideoItemTag(tag))
-              .toList()
-        : event.tags
-              .where(
-                (tag) => tag.isNotEmpty && (tag[0] == 'e' || tag[0] == 'a'),
-              )
-              .toList();
-    if (!_fullyKnownItems(tags)) return;
+    final isSealed = items.status == UnsealItemTagsStatus.unsealed;
+    if (!CuratedListConverter.hasFullyKnownItemTags(
+      isSealed ? items.tags : event.tags,
+      isSealed: isSealed,
+    )) {
+      return;
+    }
     final decoded = CuratedListConverter.fromEvent(
       event,
       privateTags: items.tags,
-      isPrivateEvent: items.status == UnsealItemTagsStatus.unsealed,
+      isPrivateEvent: isSealed,
     );
     if (decoded == null || decoded.pubkey != owner || decoded.id != defaultId) {
       return;
@@ -166,18 +162,6 @@ class CuratedDefaultPublicationAuthority {
       _owns(event.pubkey) &&
       authenticates(event, _currentOwner()) &&
       _decodedBaseline?.nostrEventId == event.id;
-
-  bool _fullyKnownItems(List<List<String>>? tags) =>
-      tags != null &&
-      tags.every(
-        (tag) =>
-            tag.length >= 2 &&
-            ((tag[0] == 'e' && RegExp(r'^[0-9a-f]{64}$').hasMatch(tag[1])) ||
-                (tag[0] == 'a' &&
-                    RegExp(
-                      r'^(34235|34236):[0-9a-f]{64}:.+$',
-                    ).hasMatch(tag[1]))),
-      );
 
   /// Cached event IDs never establish this right by themselves.
   bool canMutate(CuratedList list) =>
@@ -223,7 +207,9 @@ class CuratedDefaultPublicationAuthority {
     }
     if (previous.authorScopedId != target.authorScopedId ||
         !canMutate(previous) ||
-        !_fullyKnownItems(CuratedListConverter.toItemTags(target))) {
+        !CuratedListConverter.hasFullyKnownItemTags(
+          CuratedListConverter.toItemTags(target),
+        )) {
       return null;
     }
     final before = _intent;
@@ -309,7 +295,9 @@ class CuratedDefaultPublicationAuthority {
         owner == null ||
         !_owns(owner) ||
         _newestObserved != null ||
-        !_fullyKnownItems(CuratedListConverter.toItemTags(target)) ||
+        !CuratedListConverter.hasFullyKnownItemTags(
+          CuratedListConverter.toItemTags(target),
+        ) ||
         !permit.consumeFor(owner)) {
       return false;
     }

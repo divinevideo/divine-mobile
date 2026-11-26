@@ -988,6 +988,60 @@ void main() {
         expect(h.signed.single.isSigned, isTrue);
       },
     );
+
+    for (final isPrivate in [false, true]) {
+      test(
+        'edits a default while keeping a non-video address (private=$isPrivate)',
+        () async {
+          final article = [
+            'a',
+            '30023:$owner:article:slug',
+            'wss://example.com',
+          ];
+          final items = [
+            ['e', _video],
+            article,
+          ];
+          final event = isPrivate
+              ? await _privateEvent(signer, owner, plaintext: jsonEncode(items))
+              : Event(
+                  owner,
+                  30005,
+                  [
+                    ['d', _defaultId],
+                    ['title', 'Verified My List'],
+                    ...items,
+                  ],
+                  '',
+                  createdAt: 1700000000,
+                );
+          if (!isPrivate) await signer.signEvent(event);
+          h.relay = (invocation) =>
+              completedOwnedListSnapshot(invocation, [event]);
+          await h.settle();
+          expect(h.service.getDefaultList()?.videoEventIds, [_video]);
+
+          expect(
+            await h.service.removeVideoFromList(_defaultId, _video),
+            isTrue,
+          );
+          final signed = h.signed.single;
+          final clearItems = signed.tags.where(
+            (tag) => tag.isNotEmpty && (tag.first == 'a' || tag.first == 'e'),
+          );
+          if (isPrivate) {
+            expect(clearItems, isEmpty);
+            expect(
+              jsonDecode((await signer.nip44Decrypt(owner, signed.content))!),
+              [article],
+            );
+          } else {
+            expect(clearItems, [article]);
+          }
+        },
+      );
+    }
+
     test(
       'unsupported public item reference keeps the membership opaque',
       () async {

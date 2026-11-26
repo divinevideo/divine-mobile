@@ -6,7 +6,8 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:models/models.dart';
-import 'package:nostr_sdk/nostr_sdk.dart' show Event, NIP04, NIP44V2;
+import 'package:nostr_sdk/nostr_sdk.dart'
+    show AId, Event, EventKind, NIP04, NIP44V2;
 
 /// NIP-71 addressable video kind numbers accepted in `a` tags.
 const Set<int> _nip71AddressableVideoKinds = {
@@ -281,14 +282,53 @@ abstract final class CuratedListConverter {
 
   static bool _isItemTag(List<String> tag) => _itemTagNames.contains(tag[0]);
 
-  /// Whether [tag] is a NIP-51 item that is not a video: a person, URL, word,
-  /// emoji, relay or group.
+  /// Whether [tag] is a known non-video item, including a NIP-01 address
+  /// reference to an addressable or replaceable non-video event.
   ///
-  /// [fromEvent] keeps such an item on the list unread, sealed when it came
-  /// sealed, and a private list seals it again on publish. So a sealed one is
-  /// not dropped, unlike a record of a kind this app does not know.
+  /// [fromEvent] keeps these tags unread and preserves their placement.
   static bool isNonVideoItemTag(List<String> tag) =>
-      tag.isNotEmpty && _nonVideoItemTagNames.contains(tag[0]);
+      tag.isNotEmpty &&
+      (_nonVideoItemTagNames.contains(tag.first) ||
+          (tag.first == 'a' && tag.length >= 2 && _isOpaqueAddress(tag[1])));
+
+  static final _hexIdentifier = RegExp(r'^[0-9a-f]{64}$');
+  static final _videoAddress = RegExp(r'^(34235|34236):[0-9a-f]{64}:.+$');
+
+  static bool _isOpaqueAddress(String value) {
+    final address = AId.fromString(value);
+    if (address == null ||
+        _nip71AddressableVideoKinds.contains(address.kind) ||
+        !_hexIdentifier.hasMatch(address.pubkey) ||
+        address.toAString() != value) {
+      return false;
+    }
+    return EventKind.isParameterizedReplaceable(address.kind) ||
+        (EventKind.isReplaceable(address.kind) && address.dTag.isEmpty);
+  }
+
+  /// Checks the item structure before a relay snapshot can authorize a write.
+  ///
+  /// Clear tags other than `e` and `a` are kept as metadata or ignored by the
+  /// decoder. In sealed content every record must be a known item.
+  static bool hasFullyKnownItemTags(
+    Iterable<List<String>>? tags, {
+    bool isSealed = false,
+  }) =>
+      tags != null &&
+      tags.every((tag) {
+        if (tag.isEmpty) return !isSealed;
+        return switch (tag.first) {
+          'e' => tag.length >= 2 && _hexIdentifier.hasMatch(tag[1]),
+          'a' =>
+            tag.length >= 2 &&
+                (_videoAddress.hasMatch(tag[1]) || isNonVideoItemTag(tag)),
+          _ =>
+            !isSealed ||
+                (tag.length >= 2 &&
+                    tag[1].isNotEmpty &&
+                    isNonVideoItemTag(tag)),
+        };
+      });
 
   /// The preserved tags [list] publishes in the clear: all of them for a
   /// public list, only those describing the list for a private one.

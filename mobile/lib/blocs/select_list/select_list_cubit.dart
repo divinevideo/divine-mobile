@@ -383,6 +383,7 @@ class SelectListCubit extends Cubit<SelectListState>
         final added = await service.addVideoToList(
           coordinate,
           _video.reference,
+          allowSeries: false,
         );
         if (!isSessionCurrent) return _sessionFailure();
         if (_writeInterrupted(epoch)) return null;
@@ -413,6 +414,7 @@ class SelectListCubit extends Cubit<SelectListState>
           final dropped = await service.removeVideoFromList(
             list.authorScopedId,
             reference,
+            allowSeries: false,
           );
           removed = removed && dropped;
           if (!isSessionCurrent) return _sessionFailure();

@@ -291,30 +291,15 @@ class CuratedListRelayEvidence {
             CuratedListConverter.isEncryptedItemPayload(event.content))) {
       return false;
     }
-    // A non-video NIP-51 item is kept on the decoded list, sealed, so it is
-    // not dropped; any other unknown record keeps the revision opaque.
-    final tags = items.status == UnsealItemTagsStatus.unsealed
-        ? items.tags
-              ?.where((tag) => !CuratedListConverter.isNonVideoItemTag(tag))
-              .toList()
-        : event.tags
-              .where(
-                (tag) => tag.isNotEmpty && (tag[0] == 'e' || tag[0] == 'a'),
-              )
-              .toList();
-    if (tags == null ||
-        tags.any(
-          (tag) =>
-              tag.length < 2 ||
-              !((tag[0] == 'e' && RegExp(r'^[0-9a-f]{64}$').hasMatch(tag[1])) ||
-                  (tag[0] == 'a' &&
-                      RegExp(r'^(34235|34236):[0-9a-f]{64}:.+$')
-                          .hasMatch(tag[1]))),
+    final isSealed = items.status == UnsealItemTagsStatus.unsealed;
+    if (!CuratedListConverter.hasFullyKnownItemTags(
+          isSealed ? items.tags : event.tags,
+          isSealed: isSealed,
         ) ||
         CuratedListConverter.fromEvent(
               event,
               privateTags: items.tags,
-              isPrivateEvent: items.status == UnsealItemTagsStatus.unsealed,
+              isPrivateEvent: isSealed,
             ) ==
             null) {
       return false;
