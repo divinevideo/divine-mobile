@@ -197,32 +197,37 @@ class _ProfileActionsSheetContentState
 /// Prompt asking the account to confirm its email, with a resend button.
 ///
 /// Shows resend feedback inside the sheet, above the modal barrier.
-class _ConfirmEmailPrompt extends StatelessWidget {
+class _ConfirmEmailPrompt extends StatefulWidget {
   const _ConfirmEmailPrompt({required this.onMaybeLater, super.key});
 
   final VoidCallback onMaybeLater;
 
   @override
+  State<_ConfirmEmailPrompt> createState() => _ConfirmEmailPromptState();
+}
+
+class _ConfirmEmailPromptState extends State<_ConfirmEmailPrompt> {
+  String? _resendAccount;
+
+  @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final email = context.select<EmailConfirmationCubit, String>(
-      (cubit) => cubit.state.email ?? '',
+    final (account, email, resendStatus) = context.select(
+      (EmailConfirmationCubit cubit) =>
+          (cubit.state.account, cubit.state.email, cubit.state.resendStatus),
     );
-    final resendStatus = context
-        .select<EmailConfirmationCubit, EmailConfirmationResendStatus>(
-          (cubit) => cubit.state.resendStatus,
-        );
+    final outcome = account == _resendAccount ? resendStatus : null;
     // Confirming in the mail app while this sheet is open clears the action,
     // so step on to the next one instead of offering a stale resend.
     return BlocListener<EmailConfirmationCubit, EmailConfirmationState>(
       listenWhen: (previous, current) =>
           previous.isUnconfirmed && !current.isUnconfirmed,
-      listener: (_, _) => onMaybeLater(),
+      listener: (_, _) => widget.onMaybeLater(),
       child: _ActionPrompt(
         sticker: DivineStickerName.email,
         title: l10n.emailConfirmationTitle,
-        subtitle: l10n.emailConfirmationProfileSubtitle(email),
-        statusMessage: switch (resendStatus) {
+        subtitle: l10n.emailConfirmationProfileSubtitle(email ?? ''),
+        statusMessage: switch (outcome) {
           EmailConfirmationResendStatus.sent =>
             l10n.emailConfirmationResendSent,
           EmailConfirmationResendStatus.failed =>
@@ -230,21 +235,28 @@ class _ConfirmEmailPrompt extends StatelessWidget {
           _ => null,
         },
         primaryLabel: l10n.emailConfirmationResendButton,
-        onPrimaryTap: resendStatus == EmailConfirmationResendStatus.sending
+        onPrimaryTap:
+            account == null ||
+                resendStatus == EmailConfirmationResendStatus.sending
             ? null
-            : () => runDetached(
-                context.read<EmailConfirmationCubit>().resend(),
-                'resend confirmation email',
-                logName: 'ProfileActionsSheetContent',
-                category: LogCategory.auth,
-              ),
-        onSecondaryTap: onMaybeLater,
+            : () {
+                setState(() => _resendAccount = account);
+                runDetached(
+                  context.read<EmailConfirmationCubit>().resend(
+                    account: account,
+                  ),
+                  'resend confirmation email',
+                  logName: 'ProfileActionsSheetContent',
+                  category: LogCategory.auth,
+                );
+              },
+        onSecondaryTap: widget.onMaybeLater,
       ),
     );
   }
 }
 
-/// Prompt for an action whose primary button opens another screen.
+/// Prompt with a primary action and a "Maybe Later" button.
 ///
 /// Displays a sticker illustration, title, subtitle, and primary/secondary
 /// action buttons matching the [VineBottomSheetPrompt] layout pattern.

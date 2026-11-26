@@ -225,18 +225,22 @@ void main() {
 
     group('confirmEmail', () {
       late _MockEmailConfirmationCubit emailConfirmationCubit;
+      const account =
+          'a3c1e0b6f7d2948e5c1b0a9f8e7d6c5b4a3928170f6e5d4c3b2a19087f6e5d4c';
       const email = 'you@example.com';
 
       setUp(() {
         emailConfirmationCubit = _MockEmailConfirmationCubit();
         when(() => emailConfirmationCubit.state).thenReturn(
           const EmailConfirmationState(
-            account: 'a3c1e0b6f7d2948e5c1b0a9f8e7d6c5b4a3928170f6e5d4c3b2a19087f6e5d4c',
+            account: account,
             status: EmailConfirmationStatus.unconfirmed,
             email: email,
           ),
         );
-        when(() => emailConfirmationCubit.resend()).thenAnswer((_) async {});
+        when(
+          () => emailConfirmationCubit.resend(account: account),
+        ).thenAnswer((_) async {});
       });
 
       testWidgets('steps on to the next action once the email is confirmed', (
@@ -245,7 +249,7 @@ void main() {
         final states = StreamController<EmailConfirmationState>();
         addTearDown(states.close);
         const unconfirmed = EmailConfirmationState(
-          account: 'a3c1e0b6f7d2948e5c1b0a9f8e7d6c5b4a3928170f6e5d4c3b2a19087f6e5d4c',
+          account: account,
           status: EmailConfirmationStatus.unconfirmed,
           email: email,
         );
@@ -270,7 +274,7 @@ void main() {
 
         states.add(
           const EmailConfirmationState(
-            account: 'a3c1e0b6f7d2948e5c1b0a9f8e7d6c5b4a3928170f6e5d4c3b2a19087f6e5d4c',
+            account: account,
             status: EmailConfirmationStatus.confirmed,
             email: email,
           ),
@@ -326,7 +330,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        verify(() => emailConfirmationCubit.resend()).called(1);
+        verify(() => emailConfirmationCubit.resend(account: account)).called(1);
         expect(find.text(l10n.emailConfirmationTitle), findsOneWidget);
         expect(
           find.descendant(
@@ -342,7 +346,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        verify(() => emailConfirmationCubit.resend()).called(1);
+        verify(() => emailConfirmationCubit.resend(account: account)).called(1);
         expect(find.text(l10n.emailConfirmationResendFailed), findsNothing);
         expect(
           find.descendant(
@@ -351,6 +355,14 @@ void main() {
           ),
           findsOneWidget,
         );
+
+        await tester.tap(find.text('Maybe Later'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.emailConfirmationTitle), findsOneWidget);
+        expect(find.text(l10n.emailConfirmationResendSent), findsNothing);
       });
     });
 
