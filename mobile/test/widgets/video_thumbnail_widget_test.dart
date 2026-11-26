@@ -4,6 +4,8 @@ import 'dart:ui' as ui;
 import 'package:blurhash_service/blurhash_service.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart' show SynchronousFuture;
+import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
+import 'package:flutter_cache_manager/flutter_cache_manager.dart' show FileInfo;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -35,6 +37,23 @@ Finder _divineIcon(DivineIconName name) =>
 
 double _thumbnailAspectRatio(WidgetTester tester) =>
     tester.widget<AspectRatio>(find.byType(AspectRatio)).aspectRatio;
+
+Future<double> _centerLuminance(WidgetTester tester, Finder finder) async {
+  final boundary = tester.renderObject<RenderRepaintBoundary>(finder);
+  final image = boundary.toImageSync();
+  try {
+    final pixels = (await tester.runAsync(image.toByteData))!;
+    final center = ((image.height ~/ 2) * image.width + image.width ~/ 2) * 4;
+    return Color.fromARGB(
+      pixels.getUint8(center + 3),
+      pixels.getUint8(center),
+      pixels.getUint8(center + 1),
+      pixels.getUint8(center + 2),
+    ).computeLuminance();
+  } finally {
+    image.dispose();
+  }
+}
 
 /// An [ImageProvider] that synchronously yields a pre-built [ui.Image] so a
 /// widget test can drive the image stream without an async decode.
@@ -148,6 +167,71 @@ void main() {
     // cascade in the merged VGV optimizer isolate (#5159).
     setUp(() => debugImageCacheOverride = createMockMediaCacheManager());
     tearDown(() => debugImageCacheOverride = null);
+
+    for (final brightness in Brightness.values) {
+      testWidgets(
+        'renders a theme-appropriate placeholder in ${brightness.name} mode',
+        (tester) async {
+          final cache = createMockMediaCacheManager();
+          final pendingThumbnail = Completer<FileInfo?>();
+          when(
+            () => cache.getFileFromCache(any()),
+          ).thenAnswer((_) => pendingThumbnail.future);
+          debugImageCacheOverride = cache;
+
+          final isDark = brightness == Brightness.dark;
+          final theme = isDark ? VineTheme.theme : VineTheme.lightTheme;
+          final video = createTestVideoEvent(
+            thumbnailUrl: 'https://example.com/bright-thumbnail.jpg',
+            blurhash: '00TSUA', // A solid white BlurHash.
+          );
+          const previewKey = Key('thumbnail-preview');
+          final preview = find.byKey(previewKey);
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: theme,
+              home: Center(
+                child: RepaintBoundary(
+                  key: previewKey,
+                  child: SizedBox(
+                    width: 60,
+                    height: 90,
+                    child: ColoredBox(
+                      color: theme
+                          .extension<VineThemeColors>()!
+                          .surfaceContainerHigh,
+                      child: VideoThumbnailWidget(video: video),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          final firstFrame = await _centerLuminance(tester, preview);
+          final decodedBlurhash = find.descendant(
+            of: find.byType(BlurhashDisplay),
+            matching: find.byType(CustomPaint),
+          );
+          for (
+            var attempt = 0;
+            attempt < 50 && decodedBlurhash.evaluate().isEmpty;
+            attempt++
+          ) {
+            await tester.runAsync(pumpEventQueue);
+            await tester.pump();
+          }
+          expect(decodedBlurhash, findsOneWidget);
+          final decodedFrame = await _centerLuminance(tester, preview);
+
+          final expectedLuminance = isDark
+              ? inInclusiveRange(0.05, 0.2)
+              : greaterThan(0.8);
+          expect(firstFrame, expectedLuminance, reason: 'initial gradient');
+          expect(decodedFrame, expectedLuminance, reason: 'decoded BlurHash');
+        },
+      );
+    }
 
     testWidgets('builds widget tree correctly when thumbnail URL exists', (
       tester,

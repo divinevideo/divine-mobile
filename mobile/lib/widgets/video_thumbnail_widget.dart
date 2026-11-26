@@ -96,16 +96,20 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
   }
 
   Widget _buildContent(BoxFit fit) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Show blurhash or flat color as background while image loads
+        // Blend the placeholder into a dark surface while the image loads.
+        if (isDark) ColoredBox(color: context.vineColors.surfaceContainerHigh),
         BlurhashDisplay(
           blurhash: widget.video.blurhash,
           contentType: widget.video.blurhashContentType,
           width: widget.width,
           height: widget.height,
           fit: fit,
+          opacity: isDark ? 0.35 : 1.0,
         ),
 
         // Actual thumbnail image with error boundary, rendered on top of
