@@ -1,6 +1,6 @@
 // ABOUTME: #10016 — a group message, a group delete-for-everyone and a group
 // ABOUTME: reaction each publish the sender's own copy once, not once per
-// ABOUTME: member.
+// ABOUTME: member, and the retry queue replays that copy once per batch.
 
 import 'dart:convert';
 
@@ -58,6 +58,7 @@ void main() {
     late bool ownCopiesPublish;
     late bool recipientOksArrive;
     late Set<String> unreadableInboxes;
+    late Set<String> refusingRecipients;
     late DmRepository repository;
     late DmReactionsRepository reactions;
 
@@ -89,6 +90,7 @@ void main() {
       ownCopiesPublish = true;
       recipientOksArrive = true;
       unreadableInboxes = {};
+      refusingRecipients = {};
 
       when(() => nostrClient.connectedRelayCount).thenReturn(1);
       when(() => nostrClient.configuredRelayCount).thenReturn(1);
@@ -149,6 +151,20 @@ void main() {
         final targets =
             invocation.namedArguments[#targetRelays] as List<String>? ??
             const [_poolRelay];
+        final refused = event.tags.any(
+          (tag) =>
+              tag.length >= 2 &&
+              tag[0] == 'p' &&
+              refusingRecipients.contains(tag[1]),
+        );
+        if (refused) {
+          return PublishOutcome(
+            eventId: event.id,
+            acceptedBy: const [],
+            rejectedBy: {for (final relay in targets) relay: 'invalid: test'},
+            noResponseFrom: const [],
+          );
+        }
         return PublishOutcome(
           eventId: event.id,
           acceptedBy: recipientOksArrive ? targets : const [],
@@ -373,6 +389,94 @@ void main() {
           expect(wrapsTo(owner), hasLength(1));
         });
       }
+    });
+
+    group('the retry queue', () {
+      /// Re-drives [rows] the way the retry sweep does: one call per row it
+      /// listed. A row gone by its turn is skipped, as the sweep skips the
+      /// `ArgumentError` a missing row raises.
+      Future<void> sweep(
+        List<OutgoingDm> rows,
+        Future<NIP17SendResult> Function(String rowId) recover,
+      ) async {
+        for (final row in rows) {
+          if (await OutgoingDmsDao(db).getById(row.id) == null) continue;
+          await recover(row.id);
+        }
+      }
+
+      test('replays a failed own copy once for the whole batch', () async {
+        ownCopiesPublish = false;
+        await sendToRoom(members.take(3).toList());
+        final rows = await queueRows();
+        expect(rows, hasLength(3), reason: 'precondition: three partial rows');
+        ownCopiesPublish = true;
+
+        await sweep(rows, (id) => repository.recoverSelfWrap(rumorId: id));
+
+        expect(wrapsTo(owner), hasLength(1));
+        expect(await queueRows(), isEmpty);
+      });
+
+      test('publishes one own copy when members whose OKs were lost are '
+          're-driven', () async {
+        recipientOksArrive = false;
+        final others = members.take(3).toList();
+        await sendToRoom(others);
+        final rows = await queueRows();
+        expect(rows, hasLength(3), reason: 'precondition: nothing confirmed');
+        recipientOksArrive = true;
+
+        await sweep(rows, (id) => repository.recoverFullSend(rumorId: id));
+
+        for (final member in others) {
+          expect(wrapsTo(member), isNotEmpty, reason: 'member $member');
+        }
+        expect(wrapsTo(owner), hasLength(1));
+        expect(await queueRows(), isEmpty);
+      });
+
+      test("keeps the batch's copy on a held member whose next attempt is "
+          'refused, so delivering to them later publishes none', () async {
+        final others = members.take(3).toList();
+        unreadableInboxes.add(others.last);
+        await sendToRoom(others);
+        expect(wrapsTo(owner), hasLength(1), reason: 'precondition');
+        final held = (await queueRows()).single;
+        unreadableInboxes.clear();
+        refusingRecipients.add(others.last);
+
+        final refused = await repository.recoverFullSend(rumorId: held.id);
+
+        expect(refused.success, isFalse);
+        final afterRefusal = await OutgoingDmsDao(db).getById(held.id);
+        expect(afterRefusal?.recipientWrapStatus, OutgoingWrapStatus.failed);
+        expect(afterRefusal?.selfWrapStatus, OutgoingWrapStatus.sent);
+        refusingRecipients.clear();
+
+        final delivered = await repository.recoverFullSend(rumorId: held.id);
+
+        expect(delivered.success, isTrue);
+        expect(wrapsTo(owner), hasLength(1));
+        expect(await queueRows(), isEmpty);
+      });
+
+      test('publishes no second own copy when a held member is delivered '
+          'later', () async {
+        final others = members.take(3).toList();
+        unreadableInboxes.add(others.last);
+        await sendToRoom(others);
+        expect(wrapsTo(owner), hasLength(1), reason: 'precondition');
+        final held = (await queueRows()).single;
+        unreadableInboxes.clear();
+
+        final result = await repository.recoverFullSend(rumorId: held.id);
+
+        expect(result.success, isTrue);
+        expect(wrapsTo(others.last), hasLength(2), reason: 'pool, then inbox');
+        expect(wrapsTo(owner), hasLength(1));
+        expect(await queueRows(), isEmpty);
+      });
     });
   });
 }

@@ -5067,6 +5067,27 @@ void main() {
               lastError: any(named: 'lastError'),
             ),
           ).thenAnswer((_) async => true);
+          // The recovered member's copy is its batch's (#10016): no other
+          // member's row records it yet, so this recovery publishes it.
+          when(
+            () => mockOutgoingDmsDao.getForConversation(
+              conversationId: any(named: 'conversationId'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => const []);
+          when(
+            () => mockMessageService.publishSelfWrap(
+              rumorEvent: any(named: 'rumorEvent'),
+              targetRelays: any(named: 'targetRelays'),
+              prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+            ),
+          ).thenAnswer(
+            (_) async => NIP17SendResult.success(
+              rumorEventId: _rumorEventId,
+              messageEventId: _rumorEventId,
+              recipientPubkey: _validPubkeyA,
+            ),
+          );
 
           final controller = StreamController<Event>();
           when(
@@ -33134,6 +33155,28 @@ void main() {
             ),
           );
 
+          // The recovered member's copy is its batch's (#10016): no other
+          // member's row records it yet, so this recovery publishes it.
+          when(
+            () => mockOutgoingDmsDao.getForConversation(
+              conversationId: any(named: 'conversationId'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => const []);
+          when(
+            () => mockMessageService.publishSelfWrap(
+              rumorEvent: any(named: 'rumorEvent'),
+              targetRelays: any(named: 'targetRelays'),
+              prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+            ),
+          ).thenAnswer(
+            (_) async => NIP17SendResult.success(
+              rumorEventId: _rumorEventId,
+              messageEventId: _rumorEventId,
+              recipientPubkey: _validPubkeyA,
+            ),
+          );
+
           final repository = createRepository(
             outgoingDmsDao: mockOutgoingDmsDao,
           );
@@ -33143,6 +33186,13 @@ void main() {
           );
 
           expect(result.success, isTrue);
+          verify(
+            () => mockMessageService.publishSelfWrap(
+              rumorEvent: any(named: 'rumorEvent'),
+              targetRelays: any(named: 'targetRelays'),
+              prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+            ),
+          ).called(1);
           verify(
             () => mockDirectMessagesDao.hasMessageWithSendBatchId(
               batchId: 'batch-recover',
