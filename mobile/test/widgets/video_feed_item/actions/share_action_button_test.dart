@@ -1821,20 +1821,32 @@ void main() {
           'offers a tappable resend in the share sheet when email is unconfirmed',
           (tester) async {
             final confirmation = _MockEmailConfirmationCubit();
+            final states = StreamController<EmailConfirmationState>();
+            addTearDown(states.close);
+            final unconfirmed = EmailConfirmationState(
+              account: ownPubkey,
+              status: EmailConfirmationStatus.unconfirmed,
+              email: 'you@example.com',
+              resendStatus: EmailConfirmationResendStatus.sent,
+            );
             whenListen(
               confirmation,
-              const Stream<EmailConfirmationState>.empty(),
-              initialState: EmailConfirmationState(
-                account: ownPubkey,
-                status: EmailConfirmationStatus.unconfirmed,
-                email: 'you@example.com',
-              ),
+              states.stream,
+              initialState: unconfirmed,
             );
             when(
               () => confirmation.resend(account: ownPubkey),
             ).thenAnswer((_) async {});
 
             await pumpOpenSheet(tester, confirmation: confirmation);
+
+            expect(find.text(l10n.shareRecipientSend), findsNothing);
+            expect(
+              find.text(l10n.emailConfirmationSendBlocked),
+              findsOneWidget,
+            );
+            expect(find.text(l10n.emailConfirmationResendSent), findsNothing);
+
             await tester.tap(find.text('Alice'));
             await tester.pumpAndSettle();
 
@@ -1845,6 +1857,17 @@ void main() {
             final resend = find.text(l10n.emailConfirmationResendButton);
             expect(resend.hitTestable(), findsOneWidget);
             await tester.tap(resend);
+            states.add(
+              unconfirmed.copyWith(
+                resendStatus: EmailConfirmationResendStatus.failed,
+              ),
+            );
+            await tester.pumpAndSettle();
+
+            expect(
+              find.text(l10n.emailConfirmationResendFailed),
+              findsOneWidget,
+            );
             verify(() => confirmation.resend(account: ownPubkey)).called(1);
             verifyNever(
               () => mockVideoSharingService.shareVideoWithMultipleUsers(

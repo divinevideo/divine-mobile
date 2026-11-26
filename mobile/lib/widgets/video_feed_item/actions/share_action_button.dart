@@ -551,6 +551,10 @@ class _UnifiedShareSheetView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final emailConfirmationRequired = context
+        .select<EmailConfirmationCubit?, bool>(
+          (cubit) => cubit?.state.isUnconfirmed ?? false,
+        );
     final isDeletePending =
         isOwnContent &&
         context.select<OwnerVideoActionsCubit, bool>((cubit) {
@@ -601,7 +605,8 @@ class _UnifiedShareSheetView extends StatelessWidget {
                       disabledPubkeys: state.disabledPubkeys,
                       isSending: state.isSending,
                       onSend:
-                          state.attemptedRecipients.isEmpty &&
+                          !emailConfirmationRequired &&
+                              state.attemptedRecipients.isEmpty &&
                               messageController.text.isEmpty
                           ? (user) => bloc.add(
                               ShareSheetSendRequested(only: user),
@@ -675,8 +680,10 @@ class _UnifiedShareSheetView extends StatelessWidget {
                           ],
                         ),
                       ),
-                    if (state.attemptedRecipients.isNotEmpty)
-                      _ShareMessageComposer(
+                    if (emailConfirmationRequired)
+                      const _ShareEmailConfirmationPrompt()
+                    else if (state.attemptedRecipients.isNotEmpty)
+                      _MessageInput(
                         controller: messageController,
                         isSending: state.isSending,
                         onSend: () => bloc.add(
@@ -724,55 +731,51 @@ class _UnifiedShareSheetView extends StatelessWidget {
 }
 
 /// Keeps the email prompt and its resend feedback above the modal barrier.
-class _ShareMessageComposer extends StatelessWidget {
-  const _ShareMessageComposer({
-    required this.controller,
-    required this.isSending,
-    required this.onSend,
-  });
+class _ShareEmailConfirmationPrompt extends StatefulWidget {
+  const _ShareEmailConfirmationPrompt();
 
-  final TextEditingController controller;
-  final bool isSending;
-  final VoidCallback onSend;
+  @override
+  State<_ShareEmailConfirmationPrompt> createState() =>
+      _ShareEmailConfirmationPromptState();
+}
+
+class _ShareEmailConfirmationPromptState
+    extends State<_ShareEmailConfirmationPrompt> {
+  String? _resendAccount;
 
   @override
   Widget build(BuildContext context) {
-    final confirmation = context
-        .select<EmailConfirmationCubit?, EmailConfirmationState?>(
-          (cubit) {
-            final state = cubit?.state;
-            return state != null && state.isUnconfirmed ? state : null;
-          },
-        );
-    final account = confirmation?.account;
-    if (confirmation == null || account == null) {
-      return _MessageInput(
-        controller: controller,
-        isSending: isSending,
-        onSend: onSend,
-      );
-    }
-
+    final (account, resendStatus) = context.select(
+      (EmailConfirmationCubit cubit) =>
+          (cubit.state.account, cubit.state.resendStatus),
+    );
     final l10n = context.l10n;
-    final resendStatus = confirmation.resendStatus;
-    final canResend = resendStatus != EmailConfirmationResendStatus.sending;
+    final canResend =
+        account != null &&
+        resendStatus != EmailConfirmationResendStatus.sending;
+    final outcome = account == _resendAccount ? resendStatus : null;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: DivineSnackbarContainer(
-        label: switch (resendStatus) {
+        label: switch (outcome) {
           EmailConfirmationResendStatus.sent =>
             l10n.emailConfirmationResendSent,
           EmailConfirmationResendStatus.failed =>
             l10n.emailConfirmationResendFailed,
           _ => l10n.emailConfirmationSendBlocked,
         },
-        error: resendStatus == EmailConfirmationResendStatus.failed,
+        error: outcome == EmailConfirmationResendStatus.failed,
         actionLabel: canResend ? l10n.emailConfirmationResendButton : null,
         onActionPressed: canResend
-            ? () => _runShareDetached(
-                context.read<EmailConfirmationCubit>().resend(account: account),
-                'resend confirmation email from share sheet',
-              )
+            ? () {
+                setState(() => _resendAccount = account);
+                _runShareDetached(
+                  context.read<EmailConfirmationCubit>().resend(
+                    account: account,
+                  ),
+                  'resend confirmation email from share sheet',
+                );
+              }
             : null,
       ),
     );
