@@ -366,7 +366,8 @@ class VideosRepository {
 
   /// Per-read account gate for private Classics recommendations, evaluated on
   /// every read so a status change never requires rebuilding the repository.
-  /// When it returns false the read uses the archive path.
+  /// False when a read starts sends it to the archive path; turning false
+  /// mid-read supersedes the read.
   final bool Function()? _classicRecommendationsAllowed;
   final String? Function()? _classicViewerPubkey;
   final Object? Function()? _classicContextKey;
@@ -1485,7 +1486,8 @@ class VideosRepository {
   /// retried with its cursor instead of mixing unrelated pagination modes.
   ///
   /// Throws:
-  /// - [FunnelcakeException] when [isCurrent] reports the request superseded.
+  /// - [FunnelcakeException] when [isCurrent] reports the request superseded,
+  ///   or `classicRecommendationsAllowed` turns false during the read.
   /// - [FunnelcakeException] when an adaptive continuation fails.
   Future<HomeFeedResult> getClassicRecommendations({
     required ClassicRecommendationsRequest request,
@@ -1582,12 +1584,13 @@ class VideosRepository {
   /// The application opts into private recommendations with
   /// `classicRecommendationsEnabled`, and `classicRecommendationsAllowed`
   /// can keep an individual account on the archive path per read.
-  /// Its viewer callback must respect consent.
+  /// `classicViewerPubkey` must respect consent.
   /// A refresh rotates the browsing seed; cursor pages retain server order.
   /// Older/disabled servers use the bounded, shuffled archive reader below.
   ///
-  /// Throws [FunnelcakeException] when the viewer or privacy context changes
-  /// while the page is read, or when an adaptive continuation fails.
+  /// Throws [FunnelcakeException] when the viewer, the privacy context or the
+  /// `classicRecommendationsAllowed` gate changes while the page is read, or
+  /// when an adaptive continuation fails.
   Future<HomeFeedResult> getClassicVideos({
     int limit = _defaultLimit,
     String? cursor,

@@ -57,12 +57,8 @@ Future<bool> _settledGate(
 void main() {
   group('Adaptive Classics build switch', () {
     test('ships on by default unless the build turns it off', () {
-      // Test runs pass no dart-define, so this observes the shipped default.
-      const definedValue = bool.fromEnvironment(
-        'ADAPTIVE_CLASSICS_ENABLED',
-        defaultValue: true,
-      );
-      expect(adaptiveClassicsEnabled, definedValue);
+      // Test runs do not define ADAPTIVE_CLASSICS_ENABLED, so this observes
+      // the shipped default.
       expect(
         const bool.hasEnvironment('ADAPTIVE_CLASSICS_ENABLED') ||
             adaptiveClassicsEnabled,
@@ -161,7 +157,8 @@ void main() {
           isTrue,
         );
 
-        // Simulate a 15-minute resume invalidation while still authenticated.
+        // Simulate an AccountStateResumeRefresher invalidation while still
+        // authenticated.
         nextStatus = Completer<ProtectedMinorStatus>();
         container.invalidate(protectedMinorStatusProvider);
         expect(container.read(confirmedNotProtectedMinorProvider), isTrue);

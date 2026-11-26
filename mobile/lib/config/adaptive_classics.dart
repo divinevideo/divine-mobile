@@ -9,9 +9,9 @@ import 'package:openvine/providers/provider_identity_stream.dart';
 /// recommendation endpoint and adapts to viewing feedback.
 ///
 /// On by default. Build with `--dart-define=ADAPTIVE_CLASSICS_ENABLED=false`
-/// to restore the archive-only Classics feed and grid. The Funnelcake
-/// `CLASSIC_RECOMMENDATIONS_ENABLED` flag is the operational off switch:
-/// when it is off the endpoint fails and the app falls back to the archive.
+/// to restore the archive-only Classics feed and grid. See
+/// `mobile/docs/ADAPTIVE_CLASSICS.md` (Rollout controls) for the server-side
+/// switch.
 const bool adaptiveClassicsEnabled = bool.fromEnvironment(
   'ADAPTIVE_CLASSICS_ENABLED',
   defaultValue: true,
@@ -19,10 +19,12 @@ const bool adaptiveClassicsEnabled = bool.fromEnvironment(
 
 /// Whether Adaptive Classics is active for the current account.
 ///
-/// Requires the build switch and a fresh, authenticated confirmation that the
-/// account is not a protected minor. Protected, pending, unknown and
-/// unavailable status stay on the archive path. Usage-data consent separately
-/// gates the viewer identity and feedback each request carries.
+/// Requires the build switch and [confirmedNotProtectedMinorProvider]: an
+/// authenticated Keycast check from this auth session, never the persisted
+/// sticky value. Protected, unknown and failed results, and a first lookup
+/// still pending, stay on the archive path; a later re-check keeps an earlier
+/// confirmation until it resolves. Usage-data consent separately gates the
+/// viewer identity and feedback each request carries.
 final adaptiveClassicsEnabledProvider = Provider<bool>((ref) {
   if (!adaptiveClassicsEnabled) return false;
   return ref.watch(confirmedNotProtectedMinorProvider);
