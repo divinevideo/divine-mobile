@@ -8571,6 +8571,11 @@ class DmRepository {
             rumor: rumor,
             selfWrapRelays: selfWrapRelays,
           );
+    // Nothing landed and the session ended meanwhile: leave the row and its
+    // retry budget to the account it belongs to.
+    if (!result.success && _ingestSessionEnded(row.ownerPubkey, gen)) {
+      return _queuedForDelivery(rumorId);
+    }
 
     if (result.success) {
       // Both wraps have landed. Mirror sendMessage's full-delivery
@@ -9895,12 +9900,19 @@ class DmRepository {
     if (row.selfWrapStatus == OutgoingWrapStatus.sent) {
       return Future.value(_batchOwnCopyRecorded(rumor));
     }
+    final generation = _resetGeneration;
     return _joinOrStartRecovery('self-batch:$sendBatchId', () async {
       final siblings = await _batchSiblings(
         dao: dao,
         row: row,
         sendBatchId: sendBatchId,
       );
+      // An account switch during the read replaces the message service, which
+      // would wrap this account's rumor as the next one's. The row stays
+      // queued for its own session.
+      if (_ingestSessionEnded(row.ownerPubkey, generation)) {
+        return _queuedForDelivery(row.id);
+      }
       if (siblings.any((s) => s.selfWrapStatus == OutgoingWrapStatus.sent)) {
         return _batchOwnCopyRecorded(rumor);
       }
@@ -11910,6 +11922,7 @@ class DmRepository {
     required List<String> recipients,
     Map<String, HeldWrap> heldWraps = const {},
   }) async {
+    final generation = _resetGeneration;
     // Resolve every recipient's kind-10050 inbox concurrently BEFORE the loop,
     // exactly as `sendMessage` and `sendGroupMessage` do. Without it the
     // OK-confirm below is satisfied by the default pool rather than the
@@ -11942,11 +11955,18 @@ class DmRepository {
     var withheldOwnCopy = false;
     var returned = false;
     Event? prebuiltOwnCopy;
-    Future<void> publishOwnCopy() => _publishRetractionOwnCopy(
-      deletion: deletion,
-      targetRelays: selfWrapTargets,
-      prebuiltSelfWrap: prebuiltOwnCopy,
-    );
+    Future<void> publishOwnCopy() async {
+      // The copy is published after awaits, on the detached path even after
+      // this returns: an account switch meanwhile replaces the message
+      // service, which would wrap this account's retraction as the next one's.
+      if (_ingestSessionEnded(deletion.pubkey, generation)) return;
+      await _publishRetractionOwnCopy(
+        deletion: deletion,
+        targetRelays: selfWrapTargets,
+        prebuiltSelfWrap: prebuiltOwnCopy,
+      );
+    }
+
     void onOwnCopyDue(Event? prebuiltSelfWrap) {
       if (held) {
         if (!withheldOwnCopy) {

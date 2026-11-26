@@ -24,9 +24,35 @@ class _MockNostrClient extends Mock implements NostrClient {}
 
 class _FakeEvent extends Fake implements Event {}
 
+/// The real queue, with a hook that runs once before the next read of a
+/// conversation's rows: the read a group row's batch copy starts with.
+class _HookedOutgoingDmsDao extends OutgoingDmsDao {
+  _HookedOutgoingDmsDao(super.attachedDatabase);
+
+  void Function()? beforeConversationRead;
+
+  @override
+  Future<List<OutgoingDm>> getForConversation({
+    required String conversationId,
+    required String ownerPubkey,
+  }) {
+    final hook = beforeConversationRead;
+    beforeConversationRead = null;
+    hook?.call();
+    return super.getForConversation(
+      conversationId: conversationId,
+      ownerPubkey: ownerPubkey,
+    );
+  }
+}
+
 // Real curve keys: the real message service encrypts every wrap.
 const _ownerKey =
     '5426e5b8b4b0e2a1f5e8d3c7a9b2f4e6d8c0a2b4f6e8d0c2a4b6f8e0d2c4a6b8';
+
+/// The account the device switches to mid-copy.
+const _nextAccountKey =
+    '6a1f2e3d4c5b6a7980f1e2d3c4b5a69788f9e0d1c2b3a4958677f8e9d0c1b2a3';
 
 /// Private keys 1..9 are valid scalars, so their public keys are points.
 String _memberKey(int seed) => seed.toRadixString(16).padLeft(64, '0');
@@ -50,6 +76,7 @@ void main() {
 
   group("#10016 the sender's own copy in a group", () {
     final owner = getPublicKey(_ownerKey);
+    final nextAccount = getPublicKey(_nextAccountKey);
     final members = [for (var i = 1; i <= 9; i++) getPublicKey(_memberKey(i))];
 
     late AppDatabase db;
@@ -59,6 +86,8 @@ void main() {
     late bool recipientOksArrive;
     late Set<String> unreadableInboxes;
     late Set<String> refusingRecipients;
+    late void Function(Event wrap)? onRecipientPublish;
+    late _HookedOutgoingDmsDao outgoingDao;
     late DmRepository repository;
     late DmReactionsRepository reactions;
 
@@ -91,6 +120,8 @@ void main() {
       recipientOksArrive = true;
       unreadableInboxes = {};
       refusingRecipients = {};
+      onRecipientPublish = null;
+      outgoingDao = _HookedOutgoingDmsDao(db);
 
       when(() => nostrClient.connectedRelayCount).thenReturn(1);
       when(() => nostrClient.configuredRelayCount).thenReturn(1);
@@ -148,6 +179,7 @@ void main() {
       ).thenAnswer((invocation) async {
         final event = invocation.positionalArguments.first as Event;
         published.add(event);
+        onRecipientPublish?.call(event);
         final targets =
             invocation.namedArguments[#targetRelays] as List<String>? ??
             const [_poolRelay];
@@ -208,7 +240,7 @@ void main() {
         messageService: messageService,
         directMessagesDao: DirectMessagesDao(db),
         conversationsDao: ConversationsDao(db),
-        outgoingDmsDao: OutgoingDmsDao(db),
+        outgoingDmsDao: outgoingDao,
         userPubkey: owner,
         signer: signer,
         reactionsRepository: reactions,
@@ -221,6 +253,24 @@ void main() {
     tearDown(() async {
       await db.close();
     });
+
+    /// Signs the repository into the next account, as an account switch does:
+    /// its message service is replaced.
+    void switchAccount() {
+      final signer = LocalNostrSigner(_nextAccountKey);
+      repository.setCredentials(
+        userPubkey: nextAccount,
+        signer: signer,
+        messageService: NIP17MessageService(
+          signer: signer,
+          senderPublicKey: nextAccount,
+          nostrService: nostrClient,
+          sendPolicy: (_) async => DmSendPolicyDecision.allowed,
+          isOffline: () async => false,
+          isolateGiftWrapBatchBuilder: buildGiftWrapBatch,
+        ),
+      );
+    }
 
     Future<String> seedRoom(List<String> others) async {
       final participants = [owner, ...others];
@@ -476,6 +526,66 @@ void main() {
         expect(wrapsTo(others.last), hasLength(2), reason: 'pool, then inbox');
         expect(wrapsTo(owner), hasLength(1));
         expect(await queueRows(), isEmpty);
+      });
+    });
+
+    group('an account switch mid-copy', () {
+      test('leaves a group row queued with its budget when the account '
+          "changes while its batch's copy is replayed", () async {
+        ownCopiesPublish = false;
+        await sendToRoom(members.take(3).toList());
+        final row = (await queueRows()).first;
+        expect(row.selfWrapStatus, OutgoingWrapStatus.failed);
+        ownCopiesPublish = true;
+        final from = published.length;
+        outgoingDao.beforeConversationRead = switchAccount;
+
+        final result = await repository.recoverSelfWrap(rumorId: row.id);
+
+        expect(result.success, isFalse);
+        expect(result.queuedRumorId, row.id);
+        expect(wrapsTo(nextAccount, from: from), isEmpty);
+        expect(wrapsTo(owner, from: from), isEmpty);
+        final kept = await outgoingDao.getById(row.id);
+        expect(kept?.selfWrapStatus, OutgoingWrapStatus.failed);
+        expect(kept?.retryCount, row.retryCount);
+      });
+
+      test('publishes no own copy of a retraction whose account changed during '
+          'the fan-out', () async {
+        final others = members.take(2).toList();
+        final conversationId = await seedRoom(others);
+        await DirectMessagesDao(db).insertMessage(
+          id: _retractedMessageId,
+          conversationId: conversationId,
+          senderPubkey: owner,
+          content: 'a message to delete for everyone',
+          createdAt: 1700000000,
+          giftWrapId: _retractedMessageWrapId,
+          ownerPubkey: owner,
+        );
+        onRecipientPublish = (wrap) {
+          final toLast = wrap.tags.any(
+            (tag) => tag.length >= 2 && tag[0] == 'p' && tag[1] == others.last,
+          );
+          if (!toLast) return;
+          onRecipientPublish = null;
+          switchAccount();
+        };
+
+        await repository.deleteMessageForEveryone(_retractedMessageId);
+        for (
+          var turn = 0;
+          turn < 400 && others.any((pubkey) => wrapsTo(pubkey).isEmpty);
+          turn++
+        ) {
+          await pumpEventQueue();
+        }
+        await pumpEventQueue(times: 100);
+
+        expect(wrapsTo(others.last), hasLength(1), reason: 'precondition');
+        expect(wrapsTo(nextAccount), isEmpty);
+        expect(wrapsTo(owner), isEmpty);
       });
     });
   });
