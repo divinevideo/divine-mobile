@@ -234,6 +234,15 @@ void main() {
         expect(count, equals(15));
       });
 
+      test('a complete batch count of zero clears the cached count', () async {
+        final count = await cachedAfterBatch(
+          cached: 10,
+          batch: (id) => LikeCounts(counts: {id: 0}),
+        );
+
+        expect(count, equals(0));
+      });
+
       test('a complete batch count still lowers the cached count', () async {
         final count = await cachedAfterBatch(
           cached: 10,
