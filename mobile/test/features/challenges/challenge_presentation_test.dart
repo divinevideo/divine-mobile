@@ -14,6 +14,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/profile/profile_tab_thumbnail.dart';
 
 import '../../../packages/challenges_repository/test/harness.dart';
+import '../../helpers/large_screen_layout.dart';
 
 Future<void> surface(
   WidgetTester tester,
@@ -189,6 +190,60 @@ void main() {
         await tester.pumpWidget(const SizedBox());
       },
     );
+
+    group('picker on a wide window', () {
+      /// Five candidates in a 1000 pt window, each still waiting for its
+      /// preview, and the row of each built candidate's retry button.
+      Future<List<double>> candidateRows(
+        WidgetTester tester, {
+        required bool largeScreenLayout,
+      }) async {
+        setTestWindowSize(tester, 1000);
+        await tester.pumpWidget(
+          largeScreenLayoutApp(
+            enabled: largeScreenLayout,
+            home: ChallengeVideoPicker(
+              videos: [
+                for (var i = 0; i < 5; i++)
+                  VideoEvent(
+                    id: '$i' * 64,
+                    pubkey: 'a' * 64,
+                    createdAt: 1893456000,
+                    timestamp: DateTime.utc(2030),
+                    content: '',
+                  ),
+              ],
+              busy: false,
+              onCancel: () {},
+              onContinue: (_) async {},
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final retries = find.text('Retry');
+        return [
+          for (var i = 0; i < retries.evaluate().length; i++)
+            tester.getTopLeft(retries.at(i)).dy,
+        ];
+      }
+
+      testWidgets('lays out a column per breakpoint with the large-screen '
+          'layouts', (tester) async {
+        // 968 pt between the padding crosses two breakpoints: 4 columns.
+        final rows = await candidateRows(tester, largeScreenLayout: true);
+
+        expect(rows, hasLength(5));
+        expect(rows.take(4), everyElement(equals(rows.first)));
+        expect(rows.last, greaterThan(rows.first));
+      });
+
+      testWidgets('keeps two columns with the flag off', (tester) async {
+        final rows = await candidateRows(tester, largeScreenLayout: false);
+
+        expect(rows[1], equals(rows[0]));
+        expect(rows[2], greaterThan(rows[0]));
+      });
+    });
 
     testWidgets('picker hides signed captions when preview policy is denied', (
       tester,

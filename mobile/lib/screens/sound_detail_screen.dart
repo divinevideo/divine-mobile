@@ -22,9 +22,12 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/services/saved_sound_context_builder.dart';
+import 'package:openvine/ui/adaptive_grid.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/library/saved_sound_details_editor.dart';
+import 'package:openvine/widgets/list_action_buttons.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/video_feed_item/audio_attribution_credit.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
@@ -700,34 +703,26 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
           const SizedBox(height: 16),
 
           // Action buttons
-          Row(
-            spacing: 12,
-            children: [
-              // Preview button
-              Expanded(
-                child: DivineButton(
-                  label: widget.isPlaying
-                      ? context.l10n.soundStop
-                      : context.l10n.soundPreview,
-                  type: DivineButtonType.secondary,
-                  leadingIcon: widget.isPlaying
-                      ? DivineIconName.squareFill
-                      : DivineIconName.play,
-                  isLoading: widget.isLoadingPreview,
-                  semanticIdentifier: 'sound_detail_preview_button',
-                  onPressed: widget.onPreviewTap,
-                ),
+          ListActionButtons(
+            buttons: [
+              DivineButton(
+                label: widget.isPlaying
+                    ? context.l10n.soundStop
+                    : context.l10n.soundPreview,
+                type: DivineButtonType.secondary,
+                leadingIcon: widget.isPlaying
+                    ? DivineIconName.squareFill
+                    : DivineIconName.play,
+                isLoading: widget.isLoadingPreview,
+                semanticIdentifier: 'sound_detail_preview_button',
+                onPressed: widget.onPreviewTap,
               ),
-
-              // Use Sound button
               if (widget.onUseSoundTap != null)
-                Expanded(
-                  child: DivineButton(
-                    label: context.l10n.soundUseSound,
-                    leadingIcon: DivineIconName.plus,
-                    semanticIdentifier: 'sound_detail_use_button',
-                    onPressed: widget.onUseSoundTap,
-                  ),
+                DivineButton(
+                  label: context.l10n.soundUseSound,
+                  leadingIcon: DivineIconName.plus,
+                  semanticIdentifier: 'sound_detail_use_button',
+                  onPressed: widget.onUseSoundTap,
                 ),
             ],
           ),
@@ -1008,8 +1003,9 @@ class _SourceVideoGrid extends StatelessWidget {
     return SliverPadding(
       padding: const EdgeInsets.all(2),
       sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
+        gridDelegate: AdaptiveGridDelegate(
+          layout: context.adaptiveLayout,
+          compactColumns: 3,
           crossAxisSpacing: 2,
           mainAxisSpacing: 2,
         ),
@@ -1272,8 +1268,9 @@ class _VideosGridContentState extends ConsumerState<_VideosGridContent> {
     return SliverPadding(
       padding: const EdgeInsets.all(2),
       sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
+        gridDelegate: AdaptiveGridDelegate(
+          layout: context.adaptiveLayout,
+          compactColumns: 3,
           crossAxisSpacing: 2,
           mainAxisSpacing: 2,
         ),

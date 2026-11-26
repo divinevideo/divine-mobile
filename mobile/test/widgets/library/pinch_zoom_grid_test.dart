@@ -26,15 +26,19 @@ void main() {
       renderedColumns = 3;
     });
 
-    Widget buildWidget({int columnCount = 3, bool withBadges = false}) {
+    Widget buildWidget({
+      int columnCount = 3,
+      bool withBadges = false,
+      int extraColumns = 0,
+    }) {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: PinchZoomGrid(
-            columnCount: columnCount,
-            minColumnCount: 2,
-            maxColumnCount: 5,
+            columnCount: columnCount + extraColumns,
+            minColumnCount: 2 + extraColumns,
+            maxColumnCount: 5 + extraColumns,
             onColumnCountChanged: reported.add,
             backgroundColor: _background,
             builder: (context, columns, controller) {
@@ -520,6 +524,36 @@ void main() {
       // already left.
       expect(reported, equals([2, 3]));
       expect(renderedColumns, equals(3));
+    });
+
+    testWidgets('cancels an unfinished pinch when the column range shifts', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildWidget());
+      expect(renderedColumns, 3);
+
+      final centre = tester.getCenter(find.byType(PinchZoomGrid));
+      final first = await tester.startGesture(centre - const Offset(80, 0));
+      final second = await tester.startGesture(centre + const Offset(80, 0));
+      await tester.pump();
+      await first.moveTo(centre - const Offset(60, 0));
+      await second.moveTo(centre + const Offset(60, 0));
+      await tester.pump();
+
+      await tester.pumpWidget(buildWidget(extraColumns: 1));
+      await first.moveTo(centre - const Offset(40, 0));
+      await second.moveTo(centre + const Offset(40, 0));
+      await tester.pump();
+      await first.up();
+      await second.up();
+      await tester.pumpAndSettle();
+
+      expect(renderedColumns, 4);
+      expect(reported, isEmpty);
+
+      await pinch(tester, from: 80, to: 60);
+      expect(renderedColumns, 5);
+      expect(reported, [5]);
     });
 
     testWidgets('follows a column count changed from outside', (tester) async {

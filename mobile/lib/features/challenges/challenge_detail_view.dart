@@ -8,6 +8,7 @@ import 'package:openvine/features/challenges/challenge_video_tile.dart';
 import 'package:openvine/features/challenges/challenge_view.dart'
     show challengeLifecycleText;
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
 /// Lists-style presentation of verified known-coordinate challenge state.
@@ -280,7 +281,10 @@ class _ChallengeDetailViewState extends State<ChallengeDetailView> {
                       constraints.crossAxisExtent < 360 ||
                           MediaQuery.textScalerOf(context).scale(16) > 24
                       ? 1
-                      : 2;
+                      : context.adaptiveLayout.gridColumns(
+                          compact: 2,
+                          width: constraints.crossAxisExtent,
+                        );
                   final winners =
                       view.currentResult?.winners ??
                       <protocol.ResolvedWinner>[];

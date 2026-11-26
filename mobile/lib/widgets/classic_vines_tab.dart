@@ -19,6 +19,7 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/state/video_feed_state.dart';
+import 'package:openvine/ui/adaptive_grid.dart';
 import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -343,25 +344,21 @@ class _ClassicVideosSliverGrid extends ConsumerWidget {
       return const SliverToBoxAdapter(child: _ClassicVinesEmptyState());
     }
 
-    // Responsive column count
-    final screenWidth = MediaQuery.of(context).size.width;
-    final layout = context.adaptiveLayout;
-    final crossAxisCount = layout.gridColumns(
-      compact: 2,
-      width: screenWidth,
-      largeColumnsWithoutFlag: 3,
-    );
-
     return SliverPadding(
       // Explore grids are edge-to-edge; the 4px gap between columns comes
       // from `crossAxisSpacing` below, not from outer side padding.
       padding: const EdgeInsets.symmetric(vertical: 4),
-      sliver: SliverMasonryGrid.count(
-        crossAxisCount: crossAxisCount,
+      sliver: SliverMasonryGrid(
+        // 2 columns on a phone and 3 on a tablet; with the large-screen
+        // layouts on, a column more at each breakpoint the grid crosses.
+        gridDelegate: AdaptiveMasonryColumns(
+          layout: context.adaptiveLayout,
+          compactColumns: 2,
+          largeColumnsWithoutFlag: 3,
+        ),
         mainAxisSpacing: 4,
         crossAxisSpacing: 4,
-        childCount: videosToShow.length,
-        itemBuilder: (context, index) {
+        delegate: SliverChildBuilderDelegate((context, index) {
           final video = videosToShow[index];
           return _ClassicVideoItem(
             video: video,
@@ -369,7 +366,7 @@ class _ClassicVideosSliverGrid extends ConsumerWidget {
             videos: videosToShow,
             onVideoTap: onVideoTap,
           );
-        },
+        }, childCount: videosToShow.length),
       ),
     );
   }

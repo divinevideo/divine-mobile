@@ -137,24 +137,43 @@ void main() {
       });
 
       test("keeps a grid's own large-window count with the flag off", () {
-        const layout = AdaptiveLayout(enabled: false, size: Size.zero);
+        const phone = AdaptiveLayout(enabled: false, size: Size(599, 900));
+        const tablet = AdaptiveLayout(enabled: false, size: Size(1300, 900));
 
         expect(
-          layout.gridColumns(
-            compact: 2,
-            width: 599,
-            largeColumnsWithoutFlag: 3,
-          ),
+          phone.gridColumns(compact: 2, width: 599, largeColumnsWithoutFlag: 3),
           equals(2),
         );
         expect(
-          layout.gridColumns(
+          tablet.gridColumns(
             compact: 2,
             width: 1300,
             largeColumnsWithoutFlag: 3,
           ),
           equals(3),
         );
+      });
+
+      test('reads the window, not the grid, with the flag off', () {
+        // A 600 pt tablet whose grid is padded below 600 kept its tablet
+        // count before the flag existed.
+        const layout = AdaptiveLayout(enabled: false, size: Size(600, 960));
+
+        expect(
+          layout.gridColumns(
+            compact: 2,
+            width: 592,
+            largeColumnsWithoutFlag: 3,
+          ),
+          equals(3),
+        );
+      });
+
+      test("reads the grid's own width with the flag on", () {
+        // The side navigation leaves a 1440 pt window's grid under 1200.
+        const layout = AdaptiveLayout(enabled: true, size: Size(1440, 900));
+
+        expect(layout.gridColumns(compact: 2, width: 1150), equals(4));
       });
 
       test('ignores the flag-off count with the flag on', () {

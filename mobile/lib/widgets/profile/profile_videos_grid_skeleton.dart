@@ -3,6 +3,7 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/profile_tab_thumbnail_placeholder.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -10,20 +11,21 @@ import 'package:skeletonizer/skeletonizer.dart';
 /// Skeleton placeholder for the videos tab grid.
 ///
 /// Rendered while the cold feed load is in flight and no videos are available
-/// yet. Uses the same 3-column [ProfileMasonryGrid] as the real
-/// `ProfileVideosGrid` so transitioning to loaded content does not pop, and a
-/// [CustomScrollView] body so it nests correctly inside the profile's
+/// yet. Uses the same [ProfileMasonryGrid] as the real `ProfileVideosGrid`,
+/// with as many columns, so transitioning to loaded content does not pop, and
+/// a [CustomScrollView] body so it nests correctly inside the profile's
 /// `NestedScrollView`. A single top-level [Skeletonizer] shimmers every
 /// placeholder cell.
 class ProfileVideosGridSkeleton extends StatelessWidget {
   const ProfileVideosGridSkeleton({
-    this.cellCount = 12,
+    this.rowCount = 4,
     this.scrollViewKey,
     super.key,
   });
 
-  /// Number of placeholder thumbnails to render.
-  final int cellCount;
+  /// Number of rows of placeholder thumbnails; each row is as wide as the
+  /// real grid's.
+  final int rowCount;
 
   /// Key for the wrapping [CustomScrollView].
   ///
@@ -32,25 +34,30 @@ class ProfileVideosGridSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final layout = context.adaptiveLayout;
     return Skeletonizer(
       effect: vineSkeletonEffectOf(context),
-      child: CustomScrollView(
-        key: scrollViewKey,
-        physics: const NeverScrollableScrollPhysics(),
-        slivers: [
-          SliverPadding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.viewPaddingOf(context).bottom,
+      child: LayoutBuilder(
+        builder: (context, constraints) => CustomScrollView(
+          key: scrollViewKey,
+          physics: const NeverScrollableScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.viewPaddingOf(context).bottom,
+              ),
+              sliver: ProfileMasonryGrid(
+                childCount:
+                    rowCount *
+                    ProfileMasonryGrid.columnsFor(layout, constraints.maxWidth),
+                // Most videos are vertical, so the placeholders are too.
+                aspectRatioOf: (_) => profileVerticalTileAspectRatio,
+                itemBuilder: (context, index) =>
+                    const ProfileTabThumbnailPlaceholder(),
+              ),
             ),
-            sliver: ProfileMasonryGrid(
-              childCount: cellCount,
-              // Most videos are vertical, so the placeholders are too.
-              aspectRatioOf: (_) => profileVerticalTileAspectRatio,
-              itemBuilder: (context, index) =>
-                  const ProfileTabThumbnailPlaceholder(),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

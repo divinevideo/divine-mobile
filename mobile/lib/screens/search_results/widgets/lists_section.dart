@@ -17,6 +17,8 @@ import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
+import 'package:openvine/ui/adaptive_grid.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
@@ -27,6 +29,16 @@ import 'package:skeletonizer/skeletonizer.dart';
 /// When [showAll] is true, displays all results in a grid and hides the
 /// section header — matching the pattern used by [VideosSection],
 /// [PeopleSection], and [TagsSection].
+/// Cards per row on a phone; wider windows with the large-screen layouts fit
+/// more (see [AdaptiveLayout.gridColumns]).
+const _compactColumns = 2;
+
+/// Gap between list cards.
+const double _cardGap = 12;
+
+/// Padding around the list cards.
+const _gridPadding = EdgeInsets.symmetric(horizontal: 16, vertical: 8);
+
 class ListsSection extends StatelessWidget {
   const ListsSection({this.showAll = false, this.onSeeAll, super.key});
 
@@ -196,12 +208,13 @@ class _ResultsGrid extends StatelessWidget {
       // In the full grid, show all video results followed by all people results.
       final totalCount = videoResults.length + peopleResults.length;
       return SliverPadding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: _gridPadding,
         sliver: SliverGrid(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
+          gridDelegate: AdaptiveGridDelegate(
+            layout: context.adaptiveLayout,
+            compactColumns: _compactColumns,
+            mainAxisSpacing: _cardGap,
+            crossAxisSpacing: _cardGap,
             childAspectRatio: 0.85,
           ),
           delegate: SliverChildBuilderDelegate((context, index) {
@@ -223,38 +236,46 @@ class _ResultsGrid extends StatelessWidget {
         ),
       );
     }
-    // In the preview (All tab), show at most 1 video card + 1 people card.
-    final previewVideo = videoResults.isNotEmpty ? videoResults.first : null;
-    final previewPeople = peopleResults.isNotEmpty ? peopleResults.first : null;
-    final previewCount =
-        (previewVideo != null ? 1 : 0) + (previewPeople != null ? 1 : 0);
-
+    // The preview (All tab) fills one row: as many video cards as people
+    // cards, and the odd column, if any, to a video card. On a phone that is
+    // at most 1 video card + 1 people card.
+    final layout = context.adaptiveLayout;
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
-          spacing: 12,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (previewVideo != null)
-              Expanded(
-                child: _ListCard(
-                  key: ValueKey(previewVideo.list.authorScopedId),
-                  result: previewVideo,
-                  onTap: () => _navigateToCuratedList(context, previewVideo),
+        padding: _gridPadding,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = layout.gridColumns(
+              compact: _compactColumns,
+              width: constraints.maxWidth,
+            );
+            final previewVideos = videoResults.take((columns + 1) ~/ 2);
+            final previewPeople = peopleResults.take(columns ~/ 2);
+            final cards = [
+              for (final result in previewVideos)
+                _ListCard(
+                  key: ValueKey(result.list.authorScopedId),
+                  result: result,
+                  onTap: () => _navigateToCuratedList(context, result),
                 ),
-              ),
-            if (previewPeople != null)
-              Expanded(
-                child: _PeopleListCard(
-                  key: ValueKey(previewPeople.addressableId),
-                  result: previewPeople,
-                  onTap: () => _navigateToPeopleList(context, previewPeople),
+              for (final result in previewPeople)
+                _PeopleListCard(
+                  key: ValueKey(result.addressableId),
+                  result: result,
+                  onTap: () => _navigateToPeopleList(context, result),
                 ),
-              ),
-            // If only one item, fill the second slot with empty space.
-            if (previewCount == 1) const Expanded(child: SizedBox()),
-          ],
+            ];
+            return Row(
+              spacing: _cardGap,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final card in cards) Expanded(child: card),
+                // Empty slots keep the cards as wide as a full row's.
+                for (var i = cards.length; i < columns; i++)
+                  const Expanded(child: SizedBox()),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -350,20 +371,30 @@ class _ListsSkeletonLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final layout = context.adaptiveLayout;
     return Semantics(
       identifier: 'lists_loading_indicator',
       label: context.l10n.searchListsLoadingLabel,
       child: Skeletonizer(
         effect: vineSkeletonEffectOf(context),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            spacing: 12,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: _ListCardSkeletonItem()),
-              Expanded(child: _ListCardSkeletonItem()),
-            ],
+        child: Padding(
+          padding: _gridPadding,
+          // One row, as wide as the preview's.
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = layout.gridColumns(
+                compact: _compactColumns,
+                width: constraints.maxWidth,
+              );
+              return Row(
+                spacing: _cardGap,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var i = 0; i < columns; i++)
+                    const Expanded(child: _ListCardSkeletonItem()),
+                ],
+              );
+            },
           ),
         ),
       ),

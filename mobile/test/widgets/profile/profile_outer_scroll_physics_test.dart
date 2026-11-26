@@ -57,8 +57,23 @@ void main() {
   group('profileTabMinimumContentExtent', () {
     test('is one row of the three-column grid plus the safe area', () {
       expect(
-        profileTabMinimumContentExtent(tabWidth: 404, bottomSafeArea: 34),
+        profileTabMinimumContentExtent(
+          tabWidth: 404,
+          columns: 3,
+          bottomSafeArea: 34,
+        ),
         equals(166),
+      );
+    });
+
+    test('is one row of a wider grid with more columns', () {
+      expect(
+        profileTabMinimumContentExtent(
+          tabWidth: 1016,
+          columns: 5,
+          bottomSafeArea: 34,
+        ),
+        equals(234),
       );
     });
   });
@@ -86,10 +101,7 @@ void main() {
 
       test('does nothing when the limit is past the natural end', () {
         expect(
-          physics.applyBoundaryConditions(
-            _metrics(pixels: 100, max: 150),
-            140,
-          ),
+          physics.applyBoundaryConditions(_metrics(pixels: 100, max: 150), 140),
           equals(0),
         );
       });

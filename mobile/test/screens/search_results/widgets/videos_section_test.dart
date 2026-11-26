@@ -18,8 +18,10 @@ import 'package:openvine/screens/search_results/widgets/search_section_error_sta
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
 import 'package:openvine/screens/search_results/widgets/videos_section.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../../helpers/go_router.dart';
+import '../../../helpers/large_screen_layout.dart';
 
 class _MockVideoSearchBloc extends MockBloc<VideoSearchEvent, VideoSearchState>
     implements VideoSearchBloc {}
@@ -167,6 +169,73 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(origin!.rect, isNull);
+      });
+    });
+
+    group('skeleton', () {
+      Future<void> pumpLoading(
+        WidgetTester tester, {
+        required double width,
+        required bool largeScreenLayout,
+      }) async {
+        when(
+          () => mockBloc.state,
+        ).thenReturn(
+          const VideoSearchState(status: VideoSearchStatus.searching),
+        );
+        setTestWindowSize(tester, width);
+        await tester.pumpWidget(
+          largeScreenLayoutApp(
+            enabled: largeScreenLayout,
+            home: Scaffold(
+              body: BlocProvider<VideoSearchBloc>.value(
+                value: mockBloc,
+                child: const CustomScrollView(slivers: [VideosSection()]),
+              ),
+            ),
+          ),
+        );
+      }
+
+      /// The skeleton's grid, which holds a placeholder per cell.
+      GridView skeletonGrid(WidgetTester tester) => tester.widget<GridView>(
+        find.descendant(
+          of: find.bySubtype<Skeletonizer>(),
+          matching: find.byType(GridView),
+        ),
+      );
+
+      testWidgets('shows two rows of two on a phone', (tester) async {
+        await pumpLoading(tester, width: 402, largeScreenLayout: true);
+
+        final grid = skeletonGrid(tester);
+        final delegate =
+            grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+        expect(delegate.crossAxisCount, equals(2));
+        expect(grid.semanticChildCount, equals(4));
+      });
+
+      testWidgets('shows two rows as wide as the results grid', (
+        tester,
+      ) async {
+        // 1000 pt less the padding crosses two breakpoints: 2 + 2 columns.
+        await pumpLoading(tester, width: 1000, largeScreenLayout: true);
+
+        final grid = skeletonGrid(tester);
+        final delegate =
+            grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+        expect(delegate.crossAxisCount, equals(4));
+        expect(grid.semanticChildCount, equals(8));
+      });
+
+      testWidgets('keeps two rows of two with the flag off', (tester) async {
+        await pumpLoading(tester, width: 1000, largeScreenLayout: false);
+
+        final grid = skeletonGrid(tester);
+        final delegate =
+            grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+        expect(delegate.crossAxisCount, equals(2));
+        expect(grid.semanticChildCount, equals(4));
       });
     });
 

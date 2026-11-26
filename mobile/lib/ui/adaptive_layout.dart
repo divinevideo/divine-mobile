@@ -85,24 +85,40 @@ class AdaptiveLayout {
     return (width: width, onRight: onRight);
   }
 
-  /// The column count for a video grid [width] wide that shows [compact]
-  /// columns on a phone.
+  /// The column count for a grid [width] wide that shows [compact] columns
+  /// on a phone.
   ///
-  /// Adds one column at each breakpoint the grid crosses, so tiles stay about
-  /// as wide as they are on a phone. Without the large-screen layouts a grid
-  /// keeps the rule it had before them: [compact] columns, or
-  /// [largeColumnsWithoutFlag] from [AdaptiveBreakpoints.large] where given.
+  /// [width] is the grid's own width, which the side navigation, the comments
+  /// panel or the grid's padding make narrower than the window. Adds one
+  /// column at each breakpoint the grid crosses, so tiles stay about as wide
+  /// as they are on a phone.
+  ///
+  /// Without the large-screen layouts a grid keeps the rule it had before
+  /// them, which read the window rather than the grid: [compact] columns, or
+  /// [largeColumnsWithoutFlag] in a window at least
+  /// [AdaptiveBreakpoints.large] wide where given.
   int gridColumns({
     required int compact,
     required double width,
     int? largeColumnsWithoutFlag,
   }) {
+    if (!enabled) {
+      return size.width >= AdaptiveBreakpoints.large
+          ? largeColumnsWithoutFlag ?? compact
+          : compact;
+    }
     if (width < AdaptiveBreakpoints.large) return compact;
-    if (!enabled) return largeColumnsWithoutFlag ?? compact;
     if (width < AdaptiveBreakpoints.wide) return compact + 1;
     if (width < AdaptiveBreakpoints.extraWide) return compact + 2;
     return compact + 3;
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is AdaptiveLayout && other.enabled == enabled && other.size == size;
+
+  @override
+  int get hashCode => Object.hash(enabled, size);
 }
 
 /// Reads the [AdaptiveLayout] of the window this context is drawn in.

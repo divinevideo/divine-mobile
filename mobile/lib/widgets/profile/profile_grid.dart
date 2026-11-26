@@ -25,6 +25,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/profile_tab_index_provider.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/profile/profile_banner_layer.dart';
 import 'package:openvine/widgets/profile/profile_collabs_grid.dart';
@@ -32,6 +33,7 @@ import 'package:openvine/widgets/profile/profile_comments_grid.dart';
 import 'package:openvine/widgets/profile/profile_header_widget.dart';
 import 'package:openvine/widgets/profile/profile_liked_grid.dart';
 import 'package:openvine/widgets/profile/profile_lists_grid.dart';
+import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/profile_outer_scroll_physics.dart';
 import 'package:openvine/widgets/profile/profile_reposts_grid.dart';
 import 'package:openvine/widgets/profile/profile_saved_grid.dart';
@@ -256,6 +258,10 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
   /// Cached in [build] so the scroll physics can read them mid-layout.
   double _safeAreaTop = 0;
   double _safeAreaBottom = 0;
+  AdaptiveLayout _adaptiveLayout = const AdaptiveLayout(
+    enabled: false,
+    size: Size.zero,
+  );
 
   /// The active tab's layout sizes, measured after layout by
   /// [_scheduleScrollMeasurement] and read by [_outerScrollLimit].
@@ -384,6 +390,10 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
       content: content,
       minimumContent: profileTabMinimumContentExtent(
         tabWidth: tabBox.size.width,
+        columns: ProfileMasonryGrid.columnsFor(
+          _adaptiveLayout,
+          tabBox.size.width,
+        ),
         bottomSafeArea: _safeAreaBottom,
       ),
     );
@@ -751,6 +761,7 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
   Widget build(BuildContext context) {
     _safeAreaTop = MediaQuery.paddingOf(context).top;
     _safeAreaBottom = MediaQuery.viewPaddingOf(context).bottom;
+    _adaptiveLayout = context.adaptiveLayout;
     _scheduleScrollMeasurement();
     final followRepository = ref.watch(followRepositoryProvider);
     final likesRepository = ref.watch(likesRepositoryProvider);

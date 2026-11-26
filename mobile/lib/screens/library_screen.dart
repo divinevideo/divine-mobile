@@ -38,6 +38,7 @@ import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/video_editor/draft_render_parameters_service.dart';
 import 'package:openvine/services/video_editor/video_editor_clip_library_save_service.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/library/library.dart';
@@ -372,6 +373,8 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
     with TickerProviderStateMixin, ReducedMotionTabControllerMixin {
   static const _logName = 'LibraryScreen';
 
+  final GlobalKey _libraryContentKey = GlobalKey();
+
   late int _activeTabIndex;
 
   /// Tabs of the current mode, in bar order. See [_libraryTabs].
@@ -511,7 +514,6 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
     BuildContext context,
     ClipsLibraryBloc clipsBloc,
     ClipSort currentSort,
-    int currentColumns,
   ) async {
     final selected = await VineBottomSheetSelectionMenu.show(
       context: context,
@@ -560,12 +562,25 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
 
     if (selected == null || !context.mounted) return;
     if (selected == _gridSizeMenuValue) {
-      await _openGridSizeMenu(context, clipsBloc, currentColumns);
+      await _openGridSizeMenu(context, clipsBloc);
       return;
     }
     clipsBloc.add(
       ClipsLibrarySortChanged(ClipSort.fromPersistenceKey(selected)),
     );
+  }
+
+  int? _gridColumnOffset(BuildContext context) {
+    // The tab body fills the library content after panel and safe-area
+    // insets. Read its current width in case the window was resized while a
+    // menu was open.
+    final width = _libraryContentKey.currentContext?.size?.width;
+    if (width == null) return null;
+    return context.adaptiveLayout.gridColumns(
+          compact: ClipGridColumns.initial,
+          width: width,
+        ) -
+        ClipGridColumns.initial;
   }
 
   /// The way to the column count that does not need a pinch.
@@ -577,11 +592,12 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
   Future<void> _openGridSizeMenu(
     BuildContext context,
     ClipsLibraryBloc clipsBloc,
-    int currentColumns,
   ) async {
+    final extraColumns = _gridColumnOffset(context);
+    if (extraColumns == null) return;
     final selected = await VineBottomSheetSelectionMenu.show(
       context: context,
-      selectedValue: '$currentColumns',
+      selectedValue: '${clipsBloc.state.gridColumnCount}',
       options: [
         for (
           var columns = ClipGridColumns.min;
@@ -589,7 +605,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
           columns++
         )
           VineBottomSheetSelectionOptionData(
-            label: context.l10n.libraryGridSizeColumns(columns),
+            label: context.l10n.libraryGridSizeColumns(columns + extraColumns),
             value: '$columns',
             leadingIcon: .gridNine,
           ),
@@ -600,9 +616,11 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
     if (columns == null) return;
     if (!context.mounted) return;
     clipsBloc.add(ClipsLibraryGridColumnsChanged(columns));
+    final currentOffset = _gridColumnOffset(context);
+    if (currentOffset == null) return;
     announceDetached(
       context,
-      context.l10n.libraryGridSizeColumns(columns),
+      context.l10n.libraryGridSizeColumns(columns + currentOffset),
       description: 'announce library grid columns',
       logName: _logName,
     );
@@ -966,7 +984,6 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                                 context,
                                 clipsBloc,
                                 clipsState.clipSort,
-                                clipsState.gridColumnCount,
                               ),
                               'open library sort menu',
                             ),
@@ -1027,6 +1044,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                           ),
                         Expanded(
                           child: _LibraryContent(
+                            key: _libraryContentKey,
                             tabs: _tabs,
                             tabController: tabController,
                             selectionMode: widget.selectionMode,
@@ -1116,6 +1134,7 @@ class _LibraryContent extends StatelessWidget {
     required this.onCreateVideo,
     this.scrollController,
     this.targetAspectRatio,
+    super.key,
   });
 
   /// Forwarded to [DraftsTab.showScheduledSection] (#3538).

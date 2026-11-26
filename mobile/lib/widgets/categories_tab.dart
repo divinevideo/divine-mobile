@@ -15,6 +15,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_category_name.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/routes/search_routes.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/categories/category_glyph.dart';
 import 'package:openvine/widgets/categories/category_visuals.dart';
@@ -22,6 +23,8 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// Category tile metrics from the Figma category list.
 const _tileHeight = 96.0;
+const _tileGap = 8.0;
+const _listPadding = EdgeInsets.fromLTRB(16, 16, 16, 24);
 const _tileRadius = 24.0;
 const _tileStartPadding = 24.0;
 const _tileVerticalPadding = 16.0;
@@ -145,17 +148,44 @@ class _CategoriesListBody extends StatelessWidget {
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      itemCount: categories.length,
-      separatorBuilder: (_, index) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final category = categories[index];
-        return _CategoryTile(
-          category: category,
-          visuals: CategoryVisuals.forCategory(category, index),
-          onTap: () => onCategoryTap(category),
-          index: index,
+    Widget buildTile(BuildContext context, int index) {
+      final category = categories[index];
+      return _CategoryTile(
+        category: category,
+        visuals: CategoryVisuals.forCategory(category, index),
+        onTap: () => onCategoryTap(category),
+        index: index,
+      );
+    }
+
+    final layout = context.adaptiveLayout;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // One full-width tile per row on a phone; with the large-screen
+        // layouts a wider window lays the tiles out side by side, so they
+        // keep about a phone tile's width.
+        final columns = layout.gridColumns(
+          compact: 1,
+          width: constraints.maxWidth - _listPadding.horizontal,
+        );
+        if (columns == 1) {
+          return ListView.separated(
+            padding: _listPadding,
+            itemCount: categories.length,
+            separatorBuilder: (_, index) => const SizedBox(height: _tileGap),
+            itemBuilder: buildTile,
+          );
+        }
+        return GridView.builder(
+          padding: _listPadding,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            mainAxisExtent: _tileHeight,
+            mainAxisSpacing: _tileGap,
+            crossAxisSpacing: _tileGap,
+          ),
+          itemCount: categories.length,
+          itemBuilder: buildTile,
         );
       },
     );
