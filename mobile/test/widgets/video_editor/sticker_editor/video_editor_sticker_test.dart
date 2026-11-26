@@ -1,6 +1,7 @@
 // ABOUTME: Widget tests for VideoEditorSticker: bundled raster stickers, the
 // ABOUTME: legacy SVGs older drafts still name, and network stickers.
 
+import 'package:flutter/rendering.dart' show RenderImage;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -70,13 +71,16 @@ void main() {
         expect(find.byType(Image), findsNothing);
       });
 
-      testWidgets('decodes a raster sticker at the size it is shown', (
+      testWidgets('decodes a raster sticker at the picker cell size', (
         tester,
       ) async {
-        await tester.pumpWidget(buildTestWidget());
+        // A smaller box than the largest picker cell still decodes at that
+        // cell's size, so a precache made before layout shares the entry.
+        await tester.pumpWidget(buildTestWidget(size: 80));
 
         final image = tester.widget<Image>(find.byType(Image)).image;
-        final pixels = (100 * tester.view.devicePixelRatio).ceil();
+        final pixels = (stickerPickerCellExtent * tester.view.devicePixelRatio)
+            .ceil();
         expect(
           image,
           isA<ResizeImage>()
@@ -92,6 +96,38 @@ void main() {
                 'imageProvider',
                 const AssetImage('assets/divine_stickers/heart.webp'),
               ),
+        );
+      });
+
+      testWidgets('draws a precached raster sticker in its first frame', (
+        tester,
+      ) async {
+        // Decodes started by earlier tests finish in real time between tests
+        // and would otherwise already be cached here.
+        final imageCache = PaintingBinding.instance.imageCache
+          ..clear()
+          ..clearLiveImages();
+        addTearDown(imageCache.clear);
+        late BuildContext context;
+        await tester.pumpWidget(
+          Builder(
+            builder: (builderContext) {
+              context = builderContext;
+              return const SizedBox();
+            },
+          ),
+        );
+        await tester.runAsync(
+          () => precacheStickerPickerImage(context, assetSticker.assetPath!),
+        );
+
+        await tester.pumpWidget(buildTestWidget());
+
+        // Without the precache the decode is still running here, and the
+        // picker shows an empty cell that fills in later.
+        expect(
+          tester.renderObject<RenderImage>(find.byType(RawImage)).image,
+          isNotNull,
         );
       });
 

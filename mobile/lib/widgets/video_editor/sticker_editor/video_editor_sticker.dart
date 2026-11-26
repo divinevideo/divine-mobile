@@ -43,6 +43,41 @@ Widget videoEditorStickerWidgetLoader(
 /// name them, so they stay bundled and are drawn as vectors.
 bool isLegacySvgStickerAsset(String assetPath) => assetPath.endsWith('.svg');
 
+/// The largest a cell of the sticker picker's grid gets, in logical pixels.
+const stickerPickerCellExtent = 120.0;
+
+/// The image the sticker picker draws the raster sticker [assetPath] with.
+///
+/// It is decoded to fit the largest picker cell rather than the cell it lands
+/// in, so [precacheStickerPickerImage] can fill the same cache entry before
+/// the picker is laid out. `fit` keeps the artwork's proportions, and the
+/// default `allowUpscaling: false` never decodes above its 512 px.
+ImageProvider<Object> stickerPickerImage(
+  String assetPath, {
+  required double devicePixelRatio,
+}) {
+  final pixels = (stickerPickerCellExtent * devicePixelRatio).ceil();
+  return ResizeImage(
+    AssetImage(assetPath),
+    width: pixels,
+    height: pixels,
+    policy: ResizeImagePolicy.fit,
+  );
+}
+
+/// Decodes the picker image of the raster sticker [assetPath] into the image
+/// cache, so the picker draws it in its first frame instead of popping it in.
+Future<void> precacheStickerPickerImage(
+  BuildContext context,
+  String assetPath,
+) => precacheImage(
+  stickerPickerImage(
+    assetPath,
+    devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+  ),
+  context,
+);
+
 /// A sticker widget that displays an image from either an asset or URL.
 ///
 /// Asset stickers are raster images, apart from the legacy SVGs described at
@@ -61,10 +96,12 @@ class VideoEditorSticker extends StatelessWidget {
 
   /// Whether to limit the image cache size based on the widget's constraints.
   ///
-  /// When `true` (default), raster images are decoded at the displayed size to
-  /// reduce memory usage. This has no effect on SVG assets, which are
-  /// resolution-independent. Set to `false` when the image may be scaled or
-  /// zoomed (e.g., in the video editor canvas) to preserve full resolution.
+  /// When `true` (default), raster images are decoded small to reduce memory
+  /// usage: asset stickers at the picker's cell size ([stickerPickerImage]),
+  /// network images at the displayed size. This has no effect on SVG assets,
+  /// which are resolution-independent. Set to `false` when the image may be
+  /// scaled or zoomed (e.g., in the video editor canvas) to preserve full
+  /// resolution.
   final bool enableLimitCacheSize;
 
   @override
@@ -111,8 +148,8 @@ class VideoEditorSticker extends StatelessWidget {
   }
 }
 
-/// Renders a bundled sticker, decoded at the displayed size when
-/// [enableLimitCacheSize] is set and the box is bounded.
+/// Renders a bundled sticker, decoded at the picker's cell size when
+/// [enableLimitCacheSize] is set.
 class _AssetImage extends StatelessWidget {
   const _AssetImage({
     required this.assetPath,
@@ -128,27 +165,13 @@ class _AssetImage extends StatelessWidget {
       return SvgPicture.asset(assetPath);
     }
 
-    final image = AssetImage(assetPath);
-    if (!enableLimitCacheSize) return _RasterAssetImage(image: image);
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (!constraints.hasBoundedWidth || !constraints.hasBoundedHeight) {
-          return _RasterAssetImage(image: image);
-        }
-
-        final pixelRatio = MediaQuery.devicePixelRatioOf(context);
-        return _RasterAssetImage(
-          // `fit` keeps the artwork's proportions inside the box, and the
-          // default `allowUpscaling: false` never decodes above its 512 px.
-          image: ResizeImage(
-            image,
-            width: (constraints.maxWidth * pixelRatio).ceil(),
-            height: (constraints.maxHeight * pixelRatio).ceil(),
-            policy: ResizeImagePolicy.fit,
-          ),
-        );
-      },
+    return _RasterAssetImage(
+      image: enableLimitCacheSize
+          ? stickerPickerImage(
+              assetPath,
+              devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+            )
+          : AssetImage(assetPath),
     );
   }
 }

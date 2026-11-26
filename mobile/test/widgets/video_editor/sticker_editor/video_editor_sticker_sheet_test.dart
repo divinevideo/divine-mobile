@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for VideoEditorStickerSheet - sticker selection bottom sheet.
 // ABOUTME: Tests search, grid display, empty states, and sticker selection.
 
+import 'dart:math' as math;
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,6 +15,7 @@ import 'package:openvine/blocs/video_editor/sticker/video_editor_sticker_bloc.da
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_kind_row.dart';
+import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_sheet.dart';
 
 class MockVideoEditorStickerBloc
@@ -118,6 +121,45 @@ void main() {
 
         // Should find GestureDetectors for each sticker (tappable items)
         expect(find.byType(GestureDetector), findsWidgets);
+      });
+
+      testWidgets('builds stickers a screen below the visible ones', (
+        tester,
+      ) async {
+        // Each sticker decodes when its cell is built; building cells only
+        // just before they scroll in makes them pop in while scrolling.
+        final manyStickers = List.generate(
+          80,
+          (index) => StickerData(
+            assetPath: 'assets/divine_stickers/heart.webp',
+            description: LocalizedText({'en': 'Heart $index'}),
+            tags: const ['heart'],
+            packData: StickerPackData.fallback,
+          ),
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            state: VideoEditorStickerLoaded(
+              stickers: manyStickers,
+              allStickers: manyStickers,
+            ),
+          ),
+        );
+
+        final viewportHeight =
+            tester.view.physicalSize.height / tester.view.devicePixelRatio;
+        // Cells in the lookahead are built and laid out but offstage, so
+        // their position is read from the render object.
+        final lowestBuiltTop = find
+            .byType(VideoEditorSticker, skipOffstage: false)
+            .evaluate()
+            .map(
+              (element) => (element.renderObject! as RenderBox)
+                  .localToGlobal(Offset.zero)
+                  .dy,
+            )
+            .reduce(math.max);
+        expect(lowestBuiltTop, greaterThan(viewportHeight * 1.5));
       });
 
       testWidgets('shows empty state message when no stickers available', (

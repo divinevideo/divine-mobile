@@ -571,8 +571,17 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     final estimatedSize = MediaQuery.sizeOf(context) / 3;
 
     for (final sticker in stickers) {
-      // SVG assets are vector and don't need raster precaching.
-      if (sticker.networkUrl == null) continue;
+      final assetPath = sticker.assetPath;
+      if (sticker.networkUrl == null) {
+        // Legacy SVG assets are vector and don't need raster precaching.
+        if (assetPath != null && !isLegacySvgStickerAsset(assetPath)) {
+          _runDetached(
+            precacheStickerPickerImage(context, assetPath),
+            'precache sticker',
+          );
+        }
+        continue;
+      }
 
       _runDetached(
         precacheImage(
