@@ -195,6 +195,29 @@ void main() {
       );
     });
 
+    group('cachedFileFor', () {
+      test('is null for a sound not downloaded yet', () {
+        final cache = RemoteAudioCache(
+          httpClientFactory: () => throw StateError('no download expected'),
+          directory: directory,
+        );
+
+        expect(cache.cachedFileFor(_soundUrl), isNull);
+      });
+
+      test('is the file an earlier download kept', () async {
+        when(request.close).thenAnswer((_) async => _ok(_mp4Bytes));
+        final downloaded = await cache().fileFor(_soundUrl);
+
+        final kept = RemoteAudioCache(
+          httpClientFactory: () => throw StateError('no download expected'),
+          directory: directory,
+        ).cachedFileFor(_soundUrl);
+
+        expect(kept?.path, downloaded.path);
+      });
+    });
+
     group('fileFor failures', () {
       test(
         'throws the status of a server error and keeps nothing',

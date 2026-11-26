@@ -83,7 +83,7 @@ class RemoteAudioCache {
   /// Throws [RemoteAudioDownloadException] when the download fails. Nothing
   /// is kept for a failed download, so the next call tries again.
   Future<File> fileFor(Uri uri) async {
-    final entry = Directory(p.join(_directory.path, _keyFor(uri)));
+    final entry = _entryFor(uri);
     final cached = _cachedFileIn(entry);
     if (cached != null) return cached;
     try {
@@ -94,6 +94,13 @@ class RemoteAudioCache {
       throw RemoteAudioDownloadException(uri, cause: error);
     }
   }
+
+  /// The local file holding the sound at [uri] if an earlier [fileFor]
+  /// downloaded it, or `null`. Never touches the network.
+  File? cachedFileFor(Uri uri) => _cachedFileIn(_entryFor(uri));
+
+  Directory _entryFor(Uri uri) =>
+      Directory(p.join(_directory.path, _keyFor(uri)));
 
   static String _keyFor(Uri uri) =>
       sha256.convert(utf8.encode(uri.toString())).toString();

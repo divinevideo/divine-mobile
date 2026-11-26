@@ -34,11 +34,13 @@ File _cachedFileFor(String url) =>
     File('/cache/${Uri.parse(url).pathSegments.last}');
 
 /// Hands out a local file for every sound URL without touching the network,
-/// or throws [error] when one is given.
+/// or throws [error] when one is given. The URLs in [kept] count as already
+/// downloaded.
 class _FakeRemoteAudioCache extends Fake implements RemoteAudioCache {
-  _FakeRemoteAudioCache({this.error});
+  _FakeRemoteAudioCache({this.error, this.kept = const {}});
 
   final Exception? error;
+  final Set<String> kept;
   final requested = <Uri>[];
 
   @override
@@ -48,6 +50,10 @@ class _FakeRemoteAudioCache extends Fake implements RemoteAudioCache {
     if (error != null) throw error;
     return _cachedFileFor(uri.toString());
   }
+
+  @override
+  File? cachedFileFor(Uri uri) =>
+      kept.contains(uri.toString()) ? _cachedFileFor(uri.toString()) : null;
 }
 
 /// Holds every download until the test finishes it.
@@ -471,7 +477,7 @@ void main() {
       verify(() => mockPlayer.setVolume(0.5)).called(1);
     });
 
-    group('setLooping', () {
+    group('setRewindsAtEnd', () {
       late StreamController<Duration> positions;
       late StreamController<ProcessingState> states;
 
@@ -486,8 +492,12 @@ void main() {
         when(
           () => mockPlayer.processingStateStream,
         ).thenAnswer((_) => states.stream);
+        when(
+          () => mockPlayer.processingState,
+        ).thenReturn(ProcessingState.completed);
         when(() => mockPlayer.duration).thenReturn(const Duration(seconds: 4));
         when(() => mockPlayer.playing).thenReturn(true);
+        when(() => mockPlayer.pause()).thenAnswer((_) async {});
         when(() => mockPlayer.seek(any())).thenAnswer((_) async {});
         service = AudioPlaybackService(
           audioPlayer: mockPlayer,
@@ -495,57 +505,82 @@ void main() {
         );
       });
 
-      test('starts the audio over when its position reaches the end', () async {
-        service.setLooping(looping: true);
-
-        positions.add(const Duration(seconds: 2));
-        await pumpEventQueue();
-        verifyNever(() => mockPlayer.seek(any()));
-
-        positions.add(const Duration(seconds: 4));
-        await pumpEventQueue();
-        verify(() => mockPlayer.seek(Duration.zero)).called(1);
-      });
-
-      test('starts the audio over when the player completes', () async {
-        service.setLooping(looping: true);
+      test('pauses and goes back to the start when the audio ends', () async {
+        service.setRewindsAtEnd(rewinds: true);
 
         states.add(ProcessingState.completed);
         await pumpEventQueue();
 
-        verify(() => mockPlayer.seek(Duration.zero)).called(1);
+        verifyInOrder([
+          () => mockPlayer.pause(),
+          () => mockPlayer.seek(Duration.zero),
+        ]);
       });
 
-      test('leaves paused audio at its end', () async {
-        when(() => mockPlayer.playing).thenReturn(false);
-        service.setLooping(looping: true);
+      // just_audio counts the position up from the play request, before the
+      // platform plays anything, so it reaches the duration while a short
+      // sound is still playing.
+      test('keeps playing when the position reaches the duration', () async {
+        when(
+          () => mockPlayer.processingState,
+        ).thenReturn(ProcessingState.ready);
+        service.setRewindsAtEnd(rewinds: true);
 
         positions.add(const Duration(seconds: 4));
         await pumpEventQueue();
 
+        verifyNever(() => mockPlayer.pause());
         verifyNever(() => mockPlayer.seek(any()));
       });
 
-      test('stops starting over once turned off', () async {
+      test('leaves a sound loaded after the end alone', () async {
+        service.setRewindsAtEnd(rewinds: true);
+        when(
+          () => mockPlayer.processingState,
+        ).thenReturn(ProcessingState.loading);
+
+        states.add(ProcessingState.completed);
+        await pumpEventQueue();
+
+        verifyNever(() => mockPlayer.pause());
+        verifyNever(() => mockPlayer.seek(any()));
+      });
+
+      test('stays at the end once turned off', () async {
         service
-          ..setLooping(looping: true)
-          ..setLooping(looping: false);
+          ..setRewindsAtEnd(rewinds: true)
+          ..setRewindsAtEnd(rewinds: false);
 
         states.add(ProcessingState.completed);
         await pumpEventQueue();
 
+        verifyNever(() => mockPlayer.pause());
         verifyNever(() => mockPlayer.seek(any()));
       });
 
-      test('keeps going when starting over fails', () async {
+      test('keeps going when rewinding fails', () async {
         when(() => mockPlayer.seek(any())).thenThrow(Exception('seek failed'));
-        service.setLooping(looping: true);
+        service.setRewindsAtEnd(rewinds: true);
 
         states.add(ProcessingState.completed);
         await pumpEventQueue();
+        states.add(ProcessingState.completed);
+        await pumpEventQueue();
 
-        verify(() => mockPlayer.seek(Duration.zero)).called(1);
+        verify(() => mockPlayer.seek(Duration.zero)).called(2);
       });
+    });
+
+    test('position is the player position', () {
+      when(
+        () => mockPlayer.position,
+      ).thenReturn(const Duration(milliseconds: 1500));
+      service = AudioPlaybackService(
+        audioPlayer: mockPlayer,
+        audioSessionWrapper: mockSessionWrapper,
+      );
+
+      expect(service.position, const Duration(milliseconds: 1500));
     });
 
     test('setVolume clamps volume above 1.0', () async {
@@ -1016,6 +1051,134 @@ void main() {
       expect(played, isTrue);
       await playing;
       verify(() => mockPlayer.play()).called(1);
+    });
+
+    test('loadAudio streams a sound not downloaded yet from its URL', () async {
+      when(
+        () => mockPlayer.setAudioSource(any()),
+      ).thenAnswer((_) async => const Duration(seconds: 204));
+      final cache = _FakeRemoteAudioCache();
+      final service = serviceWith(cache);
+
+      final duration = await service.loadAudio(
+        soundUrl,
+        streamUnlessCached: true,
+      );
+
+      final source =
+          verify(
+                () => mockPlayer.setAudioSource(captureAny()),
+              ).captured.single
+              as UriAudioSource;
+      expect(source.uri, Uri.parse(soundUrl));
+      expect(cache.requested, isEmpty);
+      expect(duration, const Duration(seconds: 204));
+    });
+
+    test(
+      'loadAudio plays a downloaded sound from its file, not its URL',
+      () async {
+        when(
+          () => mockPlayer.setAudioSource(any()),
+        ).thenAnswer((_) async => const Duration(seconds: 2));
+        final cache = _FakeRemoteAudioCache(kept: {soundUrl});
+        final service = serviceWith(cache);
+
+        await service.loadAudio(soundUrl, streamUnlessCached: true);
+
+        final source =
+            verify(
+                  () => mockPlayer.setAudioSource(captureAny()),
+                ).captured.single
+                as UriAudioSource;
+        expect(source.uri, Uri.file(_cachedFileFor(soundUrl).path));
+      },
+    );
+
+    // AVFoundation cannot stream from a server that ignores byte ranges
+    // (-11828), as media.divine.video did once (#4140).
+    test('loadAudio downloads a sound the player could not stream', () async {
+      var attempts = 0;
+      when(() => mockPlayer.setAudioSource(any())).thenAnswer((_) async {
+        if (attempts++ == 0) throw PlayerException(-11828, 'Cannot Open', 0);
+        return const Duration(seconds: 3);
+      });
+      final cache = _FakeRemoteAudioCache();
+      final service = serviceWith(cache);
+
+      final duration = await service.loadAudio(
+        soundUrl,
+        streamUnlessCached: true,
+      );
+
+      final sources = verify(
+        () => mockPlayer.setAudioSource(captureAny()),
+      ).captured.cast<UriAudioSource>();
+      expect(sources.map((source) => source.uri), [
+        Uri.parse(soundUrl),
+        Uri.file(_cachedFileFor(soundUrl).path),
+      ]);
+      expect(cache.requested, [Uri.parse(soundUrl)]);
+      expect(duration, const Duration(seconds: 3));
+    });
+
+    test('loadAudio reports a failed download after a failed stream', () async {
+      when(
+        () => mockPlayer.setAudioSource(any()),
+      ).thenThrow(PlayerException(0, 'Source error', 0));
+      final error = RemoteAudioDownloadException(
+        Uri.parse(soundUrl),
+        statusCode: 404,
+      );
+      final service = serviceWith(_FakeRemoteAudioCache(error: error));
+
+      await expectLater(
+        service.loadAudio(soundUrl, streamUnlessCached: true),
+        throwsA(isA<RemoteAudioDownloadException>()),
+      );
+      verify(() => mockPlayer.setAudioSource(any())).called(1);
+    });
+
+    test('a stream that fails after a later load gives way', () async {
+      final streaming = Completer<Duration?>();
+      when(
+        () => mockPlayer.setAudioSource(any()),
+      ).thenAnswer((_) => streaming.future);
+      when(
+        () => mockPlayer.setFilePath(any()),
+      ).thenAnswer((_) async => const Duration(seconds: 1));
+      final cache = _FakeRemoteAudioCache();
+      final service = serviceWith(cache);
+
+      final first = service.loadAudio(soundUrl, streamUnlessCached: true);
+      await pumpEventQueue();
+      final second = service.loadAudioFromFile('/imported.m4a');
+      streaming.completeError(PlayerException(0, 'Source error', 0));
+
+      await expectLater(first, throwsA(isA<PlayerInterruptedException>()));
+      await second;
+      expect(cache.requested, isEmpty);
+    });
+
+    test('loadAudio streams by URL when downloads are off', () async {
+      when(
+        () => mockPlayer.setAudioSource(any()),
+      ).thenAnswer((_) async => const Duration(seconds: 2));
+      final service = AudioPlaybackService(
+        audioPlayer: mockPlayer,
+        audioSessionWrapper: mockSessionWrapper,
+        downloadRemoteAudio: false,
+      );
+      addTearDown(service.dispose);
+
+      await service.loadAudio(soundUrl, streamUnlessCached: true);
+
+      final source =
+          verify(
+                () => mockPlayer.setAudioSource(captureAny()),
+              ).captured.single
+              as UriAudioSource;
+      expect(source.uri, Uri.parse(soundUrl));
     });
 
     test('plays a remote URL directly when downloads are off', () async {

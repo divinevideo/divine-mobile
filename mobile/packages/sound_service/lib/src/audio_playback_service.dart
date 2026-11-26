@@ -102,6 +102,9 @@ class AudioPlaybackService {
   /// Whether audio is currently playing.
   bool get isPlaying => _audioPlayer.playing;
 
+  /// Where playback is in the loaded audio.
+  Duration get position => _audioPlayer.position;
+
   /// Stream of headphone connection state changes.
   Stream<bool> get headphonesConnectedStream =>
       _headphonesConnectedSubject.stream;
@@ -199,6 +202,11 @@ class AudioPlaybackService {
   ///   so loading the same sound again needs no network
   /// - `asset://` URLs for bundled sounds (e.g., "asset://assets/sounds/bruh.mp3")
   ///
+  /// With [streamUnlessCached], a remote sound that is not downloaded yet
+  /// plays from its URL as it arrives instead, so a preview of a long song
+  /// starts without waiting for the whole file. Nothing is kept then. A
+  /// server the player cannot stream from is downloaded from as before.
+  ///
   /// Returns the duration of the loaded audio, or `null` when the service
   /// was disposed while the audio loaded.
   ///
@@ -208,7 +216,10 @@ class AudioPlaybackService {
   /// * [PlayerInterruptedException] if a later load started before this
   ///   one's download finished.
   /// * Whatever the player throws for audio it cannot open.
-  Future<Duration?> loadAudio(String url) async {
+  Future<Duration?> loadAudio(
+    String url, {
+    bool streamUnlessCached = false,
+  }) async {
     if (_isDisposed) return null;
     final generation = ++_loadGeneration;
     final completer = _loadCompleter = Completer<void>();
@@ -225,9 +236,32 @@ class AudioPlaybackService {
           category: LogCategory.video,
         );
       } else {
-        final source = await _uriSource(url, generation);
-        if (source == null) return null;
-        loadedDuration = await _audioPlayer.setAudioSource(source);
+        final streamUri = streamUnlessCached ? _uncachedRemoteUri(url) : null;
+        var loaded = false;
+        if (streamUri != null) {
+          try {
+            loadedDuration = await _audioPlayer.setAudioSource(
+              AudioSource.uri(streamUri),
+            );
+            loaded = true;
+          } on PlayerException catch (e) {
+            // A server that ignores byte ranges, which AVFoundation needs to
+            // stream, still serves the whole file for the download.
+            Log.info(
+              'Could not stream $url, downloading it instead: $e',
+              name: 'AudioPlaybackService',
+              category: LogCategory.video,
+            );
+            if (generation != _loadGeneration) {
+              throw PlayerInterruptedException('Loading interrupted');
+            }
+          }
+        }
+        if (!loaded) {
+          final source = await _uriSource(url, generation);
+          if (source == null) return null;
+          loadedDuration = await _audioPlayer.setAudioSource(source);
+        }
         Log.debug('Loaded audio from URL: $url', name: 'AudioPlaybackService');
       }
 
@@ -322,6 +356,18 @@ class AudioPlaybackService {
     } finally {
       _finishLoad(completer);
     }
+  }
+
+  /// [url] as a URI when it is an http(s) sound that is not downloaded yet,
+  /// or `null` when it is local, already kept, or always played by URL (the
+  /// web, which has no cache).
+  Uri? _uncachedRemoteUri(String url) {
+    final cache = _remoteAudioCache;
+    final uri = Uri.parse(url);
+    if (cache == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
+      return null;
+    }
+    return cache.cachedFileFor(uri) == null ? uri : null;
   }
 
   /// The player source for a network [uri].
@@ -481,39 +527,41 @@ class AudioPlaybackService {
     }
   }
 
-  /// Sets whether playback starts over at the end of the audio instead of
-  /// stopping there. Applies to every source loaded after it too.
+  /// Sets whether playback pauses and goes back to the beginning when the
+  /// audio ends, ready to play again. Applies to every source loaded after
+  /// it too.
   ///
-  /// Done here rather than with just_audio's `LoopMode.one`: on iOS the
-  /// player stays at the end of the audio, still playing, and reports
-  /// neither a loop nor completion (seen with just_audio 0.10.5). The end
-  /// shows on every platform either as a completed state or as the position
-  /// reaching the duration, so either one starts the audio over.
-  void setLooping({required bool looping}) {
+  /// Without it, just_audio stays at the end and still counts as playing, so
+  /// a play button would keep showing pause.
+  ///
+  /// The end is the player reporting completion, not the position reaching
+  /// the duration: just_audio counts the position up from the moment play is
+  /// requested, before the platform has played anything, so it reaches the
+  /// duration before the audio has ended and would cut a short sound off.
+  void setRewindsAtEnd({required bool rewinds}) {
     if (_isDisposed) return;
-    unawaited(_loopSubscription?.cancel());
-    _loopSubscription = looping
-        ? Rx.merge<void>([
-            _audioPlayer.processingStateStream.where(
-              (state) => state == ProcessingState.completed,
-            ),
-            _audioPlayer.positionStream.where((position) {
-              final duration = _audioPlayer.duration;
-              return duration != null && position >= duration;
-            }),
-          ]).listen((_) => unawaited(_startOver()))
+    unawaited(_endSubscription?.cancel());
+    _endSubscription = rewinds
+        ? _audioPlayer.processingStateStream
+              .where((state) => state == ProcessingState.completed)
+              .listen((_) => unawaited(_rewind()))
         : null;
   }
 
-  StreamSubscription<void>? _loopSubscription;
+  StreamSubscription<ProcessingState>? _endSubscription;
 
-  Future<void> _startOver() async {
-    if (_isDisposed || !_audioPlayer.playing) return;
+  Future<void> _rewind() async {
+    // A load started since the end was reported owns the player now.
+    if (_isDisposed ||
+        _audioPlayer.processingState != ProcessingState.completed) {
+      return;
+    }
     try {
+      await _audioPlayer.pause();
       await _audioPlayer.seek(Duration.zero);
     } on Exception catch (e) {
       Log.warning(
-        'Failed to start the audio over: $e',
+        'Failed to rewind the audio at its end: $e',
         name: 'AudioPlaybackService',
         category: LogCategory.video,
       );
@@ -560,7 +608,7 @@ class AudioPlaybackService {
     if (_isDisposed) return;
 
     _isDisposed = true;
-    await _loopSubscription?.cancel();
+    await _endSubscription?.cancel();
     await _deviceChangeSubscription?.cancel();
     await _headphonesConnectedSubject.close();
     await _audioPlayer.dispose();

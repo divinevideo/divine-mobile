@@ -193,10 +193,9 @@ class _AudioSelectionBottomSheetState
   void initState() {
     super.initState();
     _audioService = widget.audioService ?? AudioPlaybackService();
-    // A preview loops like the video it will play under. Played once, it
-    // would also leave its row animating: the player still counts as playing
-    // once it reaches the end.
-    _audioService.setLooping(looping: true);
+    // A preview plays once, then stops and goes back to its start, so its
+    // row and play button stop showing it as playing.
+    _audioService.setRewindsAtEnd(rewinds: true);
     _telemetry =
         widget.telemetry ??
         SoundPickerTelemetry(
@@ -638,10 +637,13 @@ class _AudioSelectionBottomSheetState
     // From here the player no longer holds the sound it held, so a sound
     // picked while this loads is loaded anew rather than played from it.
     _loadedSoundId = null;
-    await _audioService.stop();
+    // Paused rather than stopped: stopping releases the platform player, and
+    // building the next one adds about a tenth of a second to every preview.
+    await _audioService.pause();
     final loadedDuration = sound.isLocalImport && sound.localFilePath != null
         ? await _audioService.loadAudioFromFile(sound.localFilePath!)
-        : await _audioService.loadAudio(sound.url!);
+        // Streamed, so a long song starts without waiting for all of it.
+        : await _audioService.loadAudio(sound.url!, streamUnlessCached: true);
     _loadedSoundId = sound.id;
     if (sound.duration == null && loadedDuration != null) {
       return sound.copyWith(duration: loadedDuration.inMilliseconds / 1000.0);
@@ -680,7 +682,10 @@ class _AudioSelectionBottomSheetState
     );
 
     try {
-      await _audioService.seek(.zero);
+      // A sound just loaded, or played to its end, is at its start already,
+      // and seeking there anyway holds the preview up while the player
+      // buffers again.
+      if (_audioService.position > .zero) await _audioService.seek(.zero);
       var resolvedSound = sound;
       if (shouldReload) {
         if (mounted) setState(() => _isLoadingAudio = true);
