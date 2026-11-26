@@ -4043,6 +4043,48 @@ void main() {
       );
 
       test(
+        'does not cache a count when a readable relay missed the REQ',
+        () async {
+          var reachable = false;
+          when(() => mockNostrClient.readEvents(any())).thenAnswer(
+            (_) async => QueryResult(
+              events: [
+                createMockReaction(
+                  id: 'first_reaction',
+                  targetEventId: testEventId,
+                ),
+                if (reachable)
+                  createMockReaction(
+                    id: 'second_reaction',
+                    targetEventId: testEventId,
+                  ),
+              ],
+              endedBy: QueryEnd.complete,
+              answeredNetworkRelayCount: reachable ? 2 : 1,
+              unsentNetworkRelayCount: reachable ? 0 : 1,
+            ),
+          );
+
+          repository = createRepository();
+          final floor = await repository.getLikeCounts([testEventId]);
+          reachable = true;
+          final complete = await repository.getLikeCounts([testEventId]);
+          final cached = await repository.getLikeCounts([testEventId]);
+
+          expect(
+            floor,
+            const LikeCounts(
+              counts: {testEventId: 1},
+              incompleteIds: {testEventId},
+            ),
+          );
+          expect(complete, const LikeCounts(counts: {testEventId: 2}));
+          expect(cached, complete);
+          verify(() => mockNostrClient.readEvents(any())).called(2);
+        },
+      );
+
+      test(
         'leaves out ids without an addressable id when no relay answered, '
         'and caches nothing (#9223)',
         () async {

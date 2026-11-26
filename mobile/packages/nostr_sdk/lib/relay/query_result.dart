@@ -70,6 +70,7 @@ class QueryResult {
     required this.events,
     required this.endedBy,
     this.answeredNetworkRelayCount = 0,
+    this.unsentNetworkRelayCount = 0,
     this.unansweredRelayCount = 0,
     this.rateLimitedRelayCount = 0,
     this.closedRelayReasons = const {},
@@ -99,6 +100,11 @@ class QueryResult {
   /// Number of non-cache relays that sent `EOSE`, including relays with no
   /// matching events.
   final int answeredNetworkRelayCount;
+
+  /// Number of readable non-cache relays that could not take the `REQ`
+  /// and sent neither matching events nor a terminal frame for it.
+  /// [endedBy] describes the relays that took part.
+  final int unsentNetworkRelayCount;
 
   /// Number of participating relays, cache relays included, that sent no
   /// terminal frame and could still have answered: those serving the query on

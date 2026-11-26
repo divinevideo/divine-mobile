@@ -19,6 +19,7 @@ class QueryOutcome {
   const QueryOutcome({
     required this.endedBy,
     this.answeredNetworkRelayCount = 0,
+    this.unsentNetworkRelayCount = 0,
     this.unansweredRelayCount = 0,
     this.rateLimitedRelayCount = 0,
     this.closedRelayReasons = const {},
@@ -41,6 +42,10 @@ class QueryOutcome {
   /// Number of non-cache relays that sent `EOSE`; see
   /// [QueryResult.answeredNetworkRelayCount].
   final int answeredNetworkRelayCount;
+
+  /// Readable non-cache relays the query could not reach; see
+  /// [QueryResult.unsentNetworkRelayCount].
+  final int unsentNetworkRelayCount;
 
   /// Number of relays that sent no terminal frame and could still have
   /// answered; see [QueryResult.unansweredRelayCount].

@@ -1872,9 +1872,8 @@ class LikesRepository {
   /// addressable one (#10846). Nothing is cached then, so the next call asks
   /// again.
   ///
-  /// A count some relay did not settle (it timed out, refused, or the settle
-  /// window cut it off) is a floor: it is returned but not cached, so the
-  /// next call asks again (#9223).
+  /// A count that missed a readable relay is returned as a floor. It is not
+  /// cached, so the next call asks again (#9223).
   ///
   /// Note: This counts all likes, not just the current user's.
   Future<int?> getLikeCount(String eventId, {String? addressableId}) async {
@@ -3282,9 +3281,8 @@ class LikesRepository {
   /// The active likers of each of [eventIds], read from the relays, and
   /// whether the reaction reads finished.
   ///
-  /// With [waitForEveryRelay] a read finishes only once every relay settled;
-  /// without it, a settle window after the first relays answered, so only a
-  /// read that runs out of time or reaches no relay is unfinished.
+  /// [waitForEveryRelay] selects the settlement rules documented on
+  /// [_queryChunkedDetailed].
   ///
   /// The deletion read that follows does not affect completeness: a
   /// retraction it misses leaves someone listed, never anyone missing.
@@ -3425,12 +3423,8 @@ class LikesRepository {
   /// values and [_reqTagValueChunkBytes] bytes, so no single REQ frame can
   /// exceed the relay's message cap.
   ///
-  /// Deduplicates by event id once there is more than one chunk. Each chunk
-  /// is its own `queryEvents` call with its own dedup box, so an event that
-  /// tags targets in two different chunks comes back from both — and
-  /// [getLikeCounts] counts per e-tag occurrence, so a raw concatenation
-  /// would score that reaction twice. A single chunk is already deduped by
-  /// the client.
+  /// Deduplicates by event id across chunks. An event that tags targets in
+  /// two chunks can come back from both reads.
   Future<List<Event>> _queryChunked(
     List<String> values,
     Filter Function(List<String> chunk) buildFilter,
@@ -3459,9 +3453,9 @@ class LikesRepository {
   /// asked at least one relay.
   ///
   /// Without it each chunk settles a window after the first relays answer,
-  /// read through `readEvents`, and is complete only when it ended
-  /// [QueryEnd.complete]: a relay cut off by the settle window, a CLOSED
-  /// refusal, a dropped socket or the deadline leave it a floor (#9223).
+  /// read through `readEvents`. Each chunk must end [QueryEnd.complete]
+  /// and reach every readable network relay. A failed send, early settlement,
+  /// CLOSED refusal, dropped socket or deadline leaves a floor (#9223).
   /// Unlike [_readChunked], a relay that may have stopped at its result-size
   /// limit still counts as finished.
   Future<_CountRead> _queryChunkedDetailed(
@@ -3489,7 +3483,9 @@ class LikesRepository {
                 for (final read in reads)
                   for (final event in read.events) event.id: event,
               }.values.toList(),
-        isComplete: reads.every((read) => read.isComplete),
+        isComplete: reads.every(
+          (read) => read.isComplete && read.unsentNetworkRelayCount == 0,
+        ),
         anyAnswered: reads.any((read) => read.answeredNetworkRelayCount > 0),
       );
     }

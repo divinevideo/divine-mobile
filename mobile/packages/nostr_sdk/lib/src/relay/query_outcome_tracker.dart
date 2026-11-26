@@ -210,6 +210,14 @@ class QueryOutcomeTracker {
                 entry.key.relay.relayStatus.relayType != RelayType.cache,
           )
           .length,
+      unsentNetworkRelayCount: _tallies.values
+          .where(
+            (tally) =>
+                !tally.tookPart &&
+                tally.relay.relayStatus.readAccess &&
+                tally.relay.relayStatus.relayType != RelayType.cache,
+          )
+          .length,
       unansweredRelayCount: judgements.values
           .where((judgement) => judgement.standing == _Standing.noAnswer)
           .length,

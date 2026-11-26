@@ -1765,6 +1765,7 @@ class NostrClient {
       events: events,
       endedBy: network.endedBy,
       answeredNetworkRelayCount: network.answeredNetworkRelayCount,
+      unsentNetworkRelayCount: network.unsentNetworkRelayCount,
       unansweredRelayCount: network.unansweredRelayCount,
       rateLimitedRelayCount: network.rateLimitedRelayCount,
       closedRelayReasons: network.closedRelayReasons,
