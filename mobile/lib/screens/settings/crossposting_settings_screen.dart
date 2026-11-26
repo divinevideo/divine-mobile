@@ -16,6 +16,7 @@ import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/crossposting/crossposting_auto_card.dart';
@@ -240,12 +241,10 @@ class _CrosspostingScaffold extends StatelessWidget {
         onBackPressed: context.pop,
       ),
       backgroundColor: context.vineColors.background,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: child,
-        ),
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: child,
       ),
     );
   }

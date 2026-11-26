@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:nostr_app_bridge_repository/nostr_app_bridge_repository.dart';
 import 'package:openvine/blocs/apps_permissions/apps_permissions_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -66,45 +67,43 @@ class _AppsPermissionsContent extends StatelessWidget {
         onBackPressed: Navigator.of(context).pop,
       ),
       backgroundColor: context.vineColors.background,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: BlocBuilder<AppsPermissionsCubit, AppsPermissionsState>(
-            builder: (context, state) {
-              if (state.status != AppsPermissionsStatus.loaded) {
-                return const Center(child: BrandedLoadingIndicator(size: 60));
-              }
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: BlocBuilder<AppsPermissionsCubit, AppsPermissionsState>(
+          builder: (context, state) {
+            if (state.status != AppsPermissionsStatus.loaded) {
+              return const Center(child: BrandedLoadingIndicator(size: 60));
+            }
 
-              if (state.grants.isEmpty) {
-                return const _AppsPermissionsEmptyState();
-              }
+            if (state.grants.isEmpty) {
+              return const _AppsPermissionsEmptyState();
+            }
 
-              return RefreshIndicator(
-                color: VineTheme.onPrimary,
-                backgroundColor: VineTheme.vineGreen,
-                onRefresh: () =>
-                    context.read<AppsPermissionsCubit>().loadGrants(),
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: state.grants.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final grant = state.grants[index];
-                    return _GrantCard(
-                      grant: grant,
-                      onRevoke: () => runDetached(
-                        context.read<AppsPermissionsCubit>().revokeGrant(grant),
-                        'revoke app permission grant',
-                        logName: 'AppsPermissionsScreen',
-                        category: LogCategory.ui,
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
+            return RefreshIndicator(
+              color: VineTheme.onPrimary,
+              backgroundColor: VineTheme.vineGreen,
+              onRefresh: () =>
+                  context.read<AppsPermissionsCubit>().loadGrants(),
+              child: ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: state.grants.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final grant = state.grants[index];
+                  return _GrantCard(
+                    grant: grant,
+                    onRevoke: () => runDetached(
+                      context.read<AppsPermissionsCubit>().revokeGrant(grant),
+                      'revoke app permission grant',
+                      logName: 'AppsPermissionsScreen',
+                      category: LogCategory.ui,
+                    ),
+                  );
+                },
+              ),
+            );
+          },
         ),
       ),
     );

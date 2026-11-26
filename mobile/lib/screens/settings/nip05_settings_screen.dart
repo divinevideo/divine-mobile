@@ -15,6 +15,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/profile_editor/username_status_indicator.dart';
 
@@ -157,31 +158,29 @@ class _Nip05SettingsViewState extends State<Nip05SettingsView> {
                   };
                 }
 
-                return Align(
-                  alignment: Alignment.topCenter,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 600),
-                    child: currentProfile == null
-                        ? const Center(child: BrandedLoadingIndicator(size: 60))
-                        : ListView(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            children: [
-                              _buildIntro(context),
-                              const SizedBox(height: 8),
-                              _buildDivineUsernameField(context, editorState),
-                              const SizedBox(height: 16),
-                              _buildToggleRow(context, editorState),
-                              if (editorState.nip05Mode == Nip05Mode.external_)
-                                _buildExternalNip05Field(context, editorState),
-                              const SizedBox(height: 24),
-                              _buildSaveButton(
-                                context,
-                                currentProfile,
-                                editorState,
-                              ),
-                            ],
-                          ),
-                  ),
+                return AdaptiveContentColumn(
+                  width: AdaptiveContentWidth.list,
+                  capWithoutLargeLayout: true,
+                  child: currentProfile == null
+                      ? const Center(child: BrandedLoadingIndicator(size: 60))
+                      : ListView(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          children: [
+                            _buildIntro(context),
+                            const SizedBox(height: 8),
+                            _buildDivineUsernameField(context, editorState),
+                            const SizedBox(height: 16),
+                            _buildToggleRow(context, editorState),
+                            if (editorState.nip05Mode == Nip05Mode.external_)
+                              _buildExternalNip05Field(context, editorState),
+                            const SizedBox(height: 24),
+                            _buildSaveButton(
+                              context,
+                              currentProfile,
+                              editorState,
+                            ),
+                          ],
+                        ),
                 );
               },
             );

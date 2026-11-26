@@ -13,6 +13,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/safety_settings_screen.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -41,30 +42,28 @@ class PrivacySettingsScreen extends StatelessWidget {
         onBackPressed: () => context.safePop(fallback: RoutePaths.settings),
       ),
       backgroundColor: context.vineColors.background,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: ListView(
-            children: [
-              DivineSectionHeader(context.l10n.privacySettingsAnalyticsSection),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  context.l10n.settingsPrivacySubtitle,
-                  style: VineTheme.bodyMediumFont(
-                    color: context.vineColors.mutedText,
-                  ),
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: ListView(
+          children: [
+            DivineSectionHeader(context.l10n.privacySettingsAnalyticsSection),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                context.l10n.settingsPrivacySubtitle,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.mutedText,
                 ),
               ),
-              const _AnalyticsConsentToggle(),
-              DivineListTile(
-                icon: DivineIconName.shieldCheck,
-                title: context.l10n.settingsContentSafetyTitle,
-                onTap: () => context.push(SafetySettingsScreen.path),
-              ),
-            ],
-          ),
+            ),
+            const _AnalyticsConsentToggle(),
+            DivineListTile(
+              icon: DivineIconName.shieldCheck,
+              title: context.l10n.settingsContentSafetyTitle,
+              onTap: () => context.push(SafetySettingsScreen.path),
+            ),
+          ],
         ),
       ),
     );

@@ -11,6 +11,7 @@ import 'package:openvine/blocs/app_detail/app_detail_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/apps/nostr_app_launch_mode.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -75,92 +76,90 @@ class _AppDetailContent extends StatelessWidget {
             onBackPressed: context.pop,
           ),
           backgroundColor: context.vineColors.background,
-          body: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: switch (state) {
-                AppDetailLoading() => const Center(
-                  child: BrandedLoadingIndicator(size: 60),
-                ),
-                AppDetailNotFound() => _AppDetailMessage(
-                  title: context.l10n.appsDetailNotFoundTitle,
-                  subtitle: context.l10n.appsDetailNotFoundSubtitle,
-                ),
-                AppDetailLoaded(:final app) => ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: context.vineColors.card,
-                      child: DivineIcon(
-                        icon: DivineIconName.gridNine,
-                        color: context.vineColors.accentPositive,
-                      ),
+          body: AdaptiveContentColumn(
+            width: AdaptiveContentWidth.list,
+            capWithoutLargeLayout: true,
+            child: switch (state) {
+              AppDetailLoading() => const Center(
+                child: BrandedLoadingIndicator(size: 60),
+              ),
+              AppDetailNotFound() => _AppDetailMessage(
+                title: context.l10n.appsDetailNotFoundTitle,
+                subtitle: context.l10n.appsDetailNotFoundSubtitle,
+              ),
+              AppDetailLoaded(:final app) => ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: context.vineColors.card,
+                    child: DivineIcon(
+                      icon: DivineIconName.gridNine,
+                      color: context.vineColors.accentPositive,
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      app.name,
-                      style: VineTheme.headlineSmallFont(
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    app.name,
+                    style: VineTheme.headlineSmallFont(
+                      color: context.vineColors.primaryText,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    app.tagline,
+                    style: VineTheme.bodyLargeFont(
+                      color: context.vineColors.mutedText,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _AppDetailSection(
+                    title: context.l10n.appsDetailHowItWorksTitle,
+                    child: Text(
+                      context.l10n.appsDetailHowItWorksBody,
+                      style: VineTheme.bodyMediumFont(
                         color: context.vineColors.primaryText,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      app.tagline,
-                      style: VineTheme.bodyLargeFont(
-                        color: context.vineColors.mutedText,
+                  ),
+                  _AppDetailSection(
+                    title: context.l10n.appsDetailAboutTitle,
+                    child: Text(
+                      app.description,
+                      style: VineTheme.bodyMediumFont(
+                        color: context.vineColors.primaryText,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    _AppDetailSection(
-                      title: context.l10n.appsDetailHowItWorksTitle,
-                      child: Text(
-                        context.l10n.appsDetailHowItWorksBody,
-                        style: VineTheme.bodyMediumFont(
-                          color: context.vineColors.primaryText,
-                        ),
+                  ),
+                  _AppDetailSection(
+                    title: context.l10n.appsDetailPrimaryOriginTitle,
+                    child: Text(
+                      app.primaryOrigin,
+                      style: VineTheme.bodyMediumFont(
+                        color: context.vineColors.accentPositive,
                       ),
                     ),
-                    _AppDetailSection(
-                      title: context.l10n.appsDetailAboutTitle,
-                      child: Text(
-                        app.description,
-                        style: VineTheme.bodyMediumFont(
-                          color: context.vineColors.primaryText,
-                        ),
-                      ),
-                    ),
-                    _AppDetailSection(
-                      title: context.l10n.appsDetailPrimaryOriginTitle,
-                      child: Text(
-                        app.primaryOrigin,
-                        style: VineTheme.bodyMediumFont(
-                          color: context.vineColors.accentPositive,
-                        ),
-                      ),
-                    ),
-                    _AppDetailSection(
-                      title: context.l10n.appsDetailApprovedOriginsTitle,
-                      child: _PillList(items: app.allowedOrigins),
-                    ),
-                    _AppDetailSection(
-                      title: context.l10n.appsDetailCapabilitiesTitle,
-                      child: _PillList(items: app.allowedMethods),
-                    ),
-                    _AppDetailSection(
-                      title: context.l10n.appsDetailAskBeforeTitle,
-                      child: _PillList(items: app.promptRequiredFor),
-                    ),
-                    const SizedBox(height: 8),
-                    DivineButton(
-                      label: context.l10n.appsDetailOpenButton,
-                      onPressed: () => launchNostrApp(context, app),
-                    ),
-                  ],
-                ),
-              },
-            ),
+                  ),
+                  _AppDetailSection(
+                    title: context.l10n.appsDetailApprovedOriginsTitle,
+                    child: _PillList(items: app.allowedOrigins),
+                  ),
+                  _AppDetailSection(
+                    title: context.l10n.appsDetailCapabilitiesTitle,
+                    child: _PillList(items: app.allowedMethods),
+                  ),
+                  _AppDetailSection(
+                    title: context.l10n.appsDetailAskBeforeTitle,
+                    child: _PillList(items: app.promptRequiredFor),
+                  ),
+                  const SizedBox(height: 8),
+                  DivineButton(
+                    label: context.l10n.appsDetailOpenButton,
+                    onPressed: () => launchNostrApp(context, app),
+                  ),
+                ],
+              ),
+            },
           ),
         );
       },

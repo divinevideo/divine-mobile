@@ -10,6 +10,7 @@ import 'package:openvine/blocs/profile_feed/profile_feed_scope.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/npub_hex.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -85,115 +86,113 @@ class ProfileUnavailablePinsView extends StatelessWidget {
         showBackButton: true,
         onBackPressed: context.safePop,
       ),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: BlocBuilder<ProfileFeedCubit, ProfileFeedState>(
-            builder: (context, state) {
-              if (state.unavailablePinnedCoordinates.isEmpty) {
-                if (state.status == ProfileFeedStatus.initial ||
-                    state.status == ProfileFeedStatus.loading ||
-                    state.isInitialLoad) {
-                  return const Center(child: BrandedLoadingIndicator());
-                }
-                if (state.status == ProfileFeedStatus.failure) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            context.l10n.profilePinRecoveryLoadFailed,
-                            textAlign: TextAlign.center,
-                            style: VineTheme.bodyMediumFont(
-                              color: context.vineColors.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          DivineButton(
-                            label: context.l10n.profileRetryButton,
-                            type: DivineButtonType.secondary,
-                            onPressed: () => context
-                                .read<ProfileFeedCubit>()
-                                .add(const ProfileFeedRefreshRequested()),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: BlocBuilder<ProfileFeedCubit, ProfileFeedState>(
+          builder: (context, state) {
+            if (state.unavailablePinnedCoordinates.isEmpty) {
+              if (state.status == ProfileFeedStatus.initial ||
+                  state.status == ProfileFeedStatus.loading ||
+                  state.isInitialLoad) {
+                return const Center(child: BrandedLoadingIndicator());
+              }
+              if (state.status == ProfileFeedStatus.failure) {
                 return Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
-                    child: Text(
-                      context.l10n.profilePinRecoveryEmpty,
-                      textAlign: TextAlign.center,
-                      style: VineTheme.bodyMediumFont(
-                        color: context.vineColors.onSurface,
-                      ),
-                    ),
-                  ),
-                );
-              }
-
-              return ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: state.unavailablePinnedCoordinates.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final coordinate = state.unavailablePinnedCoordinates[index];
-                  return Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: context.vineColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          context.l10n.profilePinUnavailableLabel,
-                          style: VineTheme.titleSmallFont(
+                          context.l10n.profilePinRecoveryLoadFailed,
+                          textAlign: TextAlign.center,
+                          style: VineTheme.bodyMediumFont(
                             color: context.vineColors.onSurface,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Semantics(
-                          label:
-                              '${context.l10n.profilePinUnavailableCoordinate}: '
-                              '$coordinate',
-                          child: SelectableText(
-                            coordinate,
-                            style: VineTheme.bodySmallFont(
-                              color: context.vineColors.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: DivineButton(
-                            label: context.l10n.profilePinRemoveUnavailable,
-                            type: DivineButtonType.secondary,
-                            isLoading: state.isPinMutationInFlight,
-                            onPressed: state.isPinMutationInFlight
-                                ? null
-                                : () => context.read<ProfileFeedCubit>().add(
-                                    ProfileFeedPinnedCoordinateRemoveRequested(
-                                      coordinate,
-                                    ),
-                                  ),
+                        const SizedBox(height: 16),
+                        DivineButton(
+                          label: context.l10n.profileRetryButton,
+                          type: DivineButtonType.secondary,
+                          onPressed: () => context.read<ProfileFeedCubit>().add(
+                            const ProfileFeedRefreshRequested(),
                           ),
                         ),
                       ],
                     ),
-                  );
-                },
+                  ),
+                );
+              }
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    context.l10n.profilePinRecoveryEmpty,
+                    textAlign: TextAlign.center,
+                    style: VineTheme.bodyMediumFont(
+                      color: context.vineColors.onSurface,
+                    ),
+                  ),
+                ),
               );
-            },
-          ),
+            }
+
+            return ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: state.unavailablePinnedCoordinates.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final coordinate = state.unavailablePinnedCoordinates[index];
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: context.vineColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        context.l10n.profilePinUnavailableLabel,
+                        style: VineTheme.titleSmallFont(
+                          color: context.vineColors.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Semantics(
+                        label:
+                            '${context.l10n.profilePinUnavailableCoordinate}: '
+                            '$coordinate',
+                        child: SelectableText(
+                          coordinate,
+                          style: VineTheme.bodySmallFont(
+                            color: context.vineColors.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: DivineButton(
+                          label: context.l10n.profilePinRemoveUnavailable,
+                          type: DivineButtonType.secondary,
+                          isLoading: state.isPinMutationInFlight,
+                          onPressed: state.isPinMutationInFlight
+                              ? null
+                              : () => context.read<ProfileFeedCubit>().add(
+                                  ProfileFeedPinnedCoordinateRemoveRequested(
+                                    coordinate,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
         ),
       ),
     ),

@@ -15,6 +15,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/badges/awarded_badge_card.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -163,33 +164,30 @@ class _BadgesTabBody extends StatelessWidget {
           color: VineTheme.onPrimary,
           backgroundColor: VineTheme.vineGreen,
           onRefresh: () => context.read<BadgesCubit>().refresh(),
-          // Constrains and centres the viewport itself; a sliver has no
-          // max-width equivalent, and wrapping each one would repeat the
-          // centring on every list.
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: CustomScrollView(
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                    sliver: SliverMainAxisGroup(
-                      slivers: [
-                        if (state.actionStatus == BadgeActionStatus.error)
-                          SliverToBoxAdapter(
-                            child: _ErrorNote(context.l10n.badgesUpdateError),
-                          ),
-                        if (state.status == BadgesStatus.loading)
-                          const SliverToBoxAdapter(child: _BadgesLoadingCard())
-                        else if (state.status == BadgesStatus.error)
-                          const SliverToBoxAdapter(child: _BadgesErrorCard())
-                        else
-                          ...builder(context, state),
-                      ],
-                    ),
+          child: AdaptiveContentColumn(
+            width: const AdaptiveContentWidth.custom(640),
+            capWithoutLargeLayout: true,
+            alignment: Alignment.center,
+            child: CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                  sliver: SliverMainAxisGroup(
+                    slivers: [
+                      if (state.actionStatus == BadgeActionStatus.error)
+                        SliverToBoxAdapter(
+                          child: _ErrorNote(context.l10n.badgesUpdateError),
+                        ),
+                      if (state.status == BadgesStatus.loading)
+                        const SliverToBoxAdapter(child: _BadgesLoadingCard())
+                      else if (state.status == BadgesStatus.error)
+                        const SliverToBoxAdapter(child: _BadgesErrorCard())
+                      else
+                        ...builder(context, state),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );

@@ -19,6 +19,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/content_filters_screen.dart';
 import 'package:openvine/screens/settings/account_content_labels_tile.dart';
 import 'package:openvine/services/language_preference_service.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -37,23 +38,21 @@ class ContentPreferencesScreen extends ConsumerWidget {
         onBackPressed: context.pop,
       ),
       backgroundColor: context.vineColors.background,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: ListView(
-            children: [
-              const ContentLanguageSetting(),
-              const SubtitleTranslationSetting(),
-              const _ContentFiltersTile(),
-              const AccountContentLabelsTile(),
-              const _AudioSharingToggle(),
-              if (!kIsWeb &&
-                  (defaultTargetPlatform == TargetPlatform.iOS ||
-                      defaultTargetPlatform == TargetPlatform.android))
-                const MusicModeSetting(),
-            ],
-          ),
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: ListView(
+          children: [
+            const ContentLanguageSetting(),
+            const SubtitleTranslationSetting(),
+            const _ContentFiltersTile(),
+            const AccountContentLabelsTile(),
+            const _AudioSharingToggle(),
+            if (!kIsWeb &&
+                (defaultTargetPlatform == TargetPlatform.iOS ||
+                    defaultTargetPlatform == TargetPlatform.android))
+              const MusicModeSetting(),
+          ],
         ),
       ),
     );

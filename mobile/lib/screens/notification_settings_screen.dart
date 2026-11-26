@@ -17,6 +17,7 @@ import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -103,152 +104,148 @@ class NotificationSettingsView extends StatelessWidget {
       listenWhen: (previous, current) =>
           previous.markAllAsReadStatus != current.markAllAsReadStatus,
       listener: _onMarkAllAsReadStatusChanged,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child:
-              BlocBuilder<NotificationSettingsCubit, NotificationSettingsState>(
-                builder: (context, state) {
-                  final cubit = context.read<NotificationSettingsCubit>();
-                  final prefs = state.preferences;
-                  return ListView(
-                    padding: .fromLTRB(
-                      16,
-                      16,
-                      16,
-                      16 + MediaQuery.viewPaddingOf(context).bottom,
+      child: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child:
+            BlocBuilder<NotificationSettingsCubit, NotificationSettingsState>(
+              builder: (context, state) {
+                final cubit = context.read<NotificationSettingsCubit>();
+                final prefs = state.preferences;
+                return ListView(
+                  padding: .fromLTRB(
+                    16,
+                    16,
+                    16,
+                    16 + MediaQuery.viewPaddingOf(context).bottom,
+                  ),
+                  children: [
+                    DivineSectionHeader(
+                      context.l10n.notificationSettingsTypes,
+                      padding: const EdgeInsets.only(bottom: 8),
                     ),
-                    children: [
-                      DivineSectionHeader(
-                        context.l10n.notificationSettingsTypes,
-                        padding: const EdgeInsets.only(bottom: 8),
+                    _NotificationCard(
+                      icon: DivineIconName.heart,
+                      iconColor: VineTheme.likeRed,
+                      title: context.l10n.notificationSettingsLikes,
+                      subtitle: context.l10n.notificationSettingsLikesSubtitle,
+                      value: prefs.likesEnabled,
+                      onChanged: (value) => cubit.setPreference(
+                        NotificationPreference.likesEnabled,
+                        value,
                       ),
-                      _NotificationCard(
-                        icon: DivineIconName.heart,
-                        iconColor: VineTheme.likeRed,
-                        title: context.l10n.notificationSettingsLikes,
-                        subtitle:
-                            context.l10n.notificationSettingsLikesSubtitle,
-                        value: prefs.likesEnabled,
-                        onChanged: (value) => cubit.setPreference(
-                          NotificationPreference.likesEnabled,
-                          value,
-                        ),
+                    ),
+                    _NotificationCard(
+                      icon: DivineIconName.chat,
+                      iconColor: VineTheme.commentBlue,
+                      title: context.l10n.notificationSettingsComments,
+                      subtitle:
+                          context.l10n.notificationSettingsCommentsSubtitle,
+                      value: prefs.commentsEnabled,
+                      onChanged: (value) => cubit.setPreference(
+                        NotificationPreference.commentsEnabled,
+                        value,
                       ),
-                      _NotificationCard(
-                        icon: DivineIconName.chat,
-                        iconColor: VineTheme.commentBlue,
-                        title: context.l10n.notificationSettingsComments,
-                        subtitle:
-                            context.l10n.notificationSettingsCommentsSubtitle,
-                        value: prefs.commentsEnabled,
-                        onChanged: (value) => cubit.setPreference(
-                          NotificationPreference.commentsEnabled,
-                          value,
-                        ),
+                    ),
+                    _NotificationCard(
+                      icon: DivineIconName.user,
+                      iconColor: VineTheme.vineGreen,
+                      title: context.l10n.notificationSettingsFollows,
+                      subtitle:
+                          context.l10n.notificationSettingsFollowsSubtitle,
+                      value: prefs.followsEnabled,
+                      onChanged: (value) => cubit.setPreference(
+                        NotificationPreference.followsEnabled,
+                        value,
                       ),
+                    ),
+                    _NotificationCard(
+                      icon: DivineIconName.chat,
+                      iconColor: VineTheme.warning,
+                      title: context.l10n.notificationSettingsMentions,
+                      subtitle:
+                          context.l10n.notificationSettingsMentionsSubtitle,
+                      value: prefs.mentionsEnabled,
+                      onChanged: (value) => cubit.setPreference(
+                        NotificationPreference.mentionsEnabled,
+                        value,
+                      ),
+                    ),
+                    _NotificationCard(
+                      icon: DivineIconName.repeat,
+                      iconColor: VineTheme.vineGreenDark,
+                      title: context.l10n.notificationSettingsReposts,
+                      subtitle:
+                          context.l10n.notificationSettingsRepostsSubtitle,
+                      value: prefs.repostsEnabled,
+                      onChanged: (value) => cubit.setPreference(
+                        NotificationPreference.repostsEnabled,
+                        value,
+                      ),
+                    ),
+                    if (showDirectMessages)
                       _NotificationCard(
-                        icon: DivineIconName.user,
+                        icon: DivineIconName.envelopeSimple,
                         iconColor: VineTheme.vineGreen,
-                        title: context.l10n.notificationSettingsFollows,
-                        subtitle:
-                            context.l10n.notificationSettingsFollowsSubtitle,
-                        value: prefs.followsEnabled,
+                        title: context.l10n.notificationSettingsDirectMessages,
+                        subtitle: context
+                            .l10n
+                            .notificationSettingsDirectMessagesSubtitle,
+                        value: prefs.directMessagesEnabled,
                         onChanged: (value) => cubit.setPreference(
-                          NotificationPreference.followsEnabled,
+                          NotificationPreference.directMessagesEnabled,
                           value,
                         ),
                       ),
-                      _NotificationCard(
-                        icon: DivineIconName.chat,
-                        iconColor: VineTheme.warning,
-                        title: context.l10n.notificationSettingsMentions,
-                        subtitle:
-                            context.l10n.notificationSettingsMentionsSubtitle,
-                        value: prefs.mentionsEnabled,
-                        onChanged: (value) => cubit.setPreference(
-                          NotificationPreference.mentionsEnabled,
-                          value,
-                        ),
-                      ),
-                      _NotificationCard(
-                        icon: DivineIconName.repeat,
-                        iconColor: VineTheme.vineGreenDark,
-                        title: context.l10n.notificationSettingsReposts,
-                        subtitle:
-                            context.l10n.notificationSettingsRepostsSubtitle,
-                        value: prefs.repostsEnabled,
-                        onChanged: (value) => cubit.setPreference(
-                          NotificationPreference.repostsEnabled,
-                          value,
-                        ),
-                      ),
-                      if (showDirectMessages)
-                        _NotificationCard(
-                          icon: DivineIconName.envelopeSimple,
-                          iconColor: VineTheme.vineGreen,
-                          title:
-                              context.l10n.notificationSettingsDirectMessages,
-                          subtitle: context
-                              .l10n
-                              .notificationSettingsDirectMessagesSubtitle,
-                          value: prefs.directMessagesEnabled,
-                          onChanged: (value) => cubit.setPreference(
-                            NotificationPreference.directMessagesEnabled,
-                            value,
-                          ),
-                        ),
-                      if (showNewPosts)
-                        _NotificationCard(
-                          icon: DivineIconName.bellSimple,
-                          iconColor: VineTheme.vineGreen,
-                          title: context.l10n.notificationSettingsNewPosts,
-                          subtitle:
-                              context.l10n.notificationSettingsNewPostsSubtitle,
-                          value: prefs.newPostsEnabled,
-                          onChanged: (value) => cubit.setPreference(
-                            NotificationPreference.newPostsEnabled,
-                            value,
-                          ),
-                        ),
+                    if (showNewPosts)
                       _NotificationCard(
                         icon: DivineIconName.bellSimple,
                         iconColor: VineTheme.vineGreen,
-                        title: context.l10n.notificationSettingsCampaigns,
+                        title: context.l10n.notificationSettingsNewPosts,
                         subtitle:
-                            context.l10n.notificationSettingsCampaignsSubtitle,
-                        value: prefs.campaignsEnabled,
+                            context.l10n.notificationSettingsNewPostsSubtitle,
+                        value: prefs.newPostsEnabled,
                         onChanged: (value) => cubit.setPreference(
-                          NotificationPreference.campaignsEnabled,
+                          NotificationPreference.newPostsEnabled,
                           value,
                         ),
                       ),
-                      DivineSectionHeader(
-                        context.l10n.notificationSettingsActions,
-                        padding: const EdgeInsets.only(top: 24, bottom: 8),
+                    _NotificationCard(
+                      icon: DivineIconName.bellSimple,
+                      iconColor: VineTheme.vineGreen,
+                      title: context.l10n.notificationSettingsCampaigns,
+                      subtitle:
+                          context.l10n.notificationSettingsCampaignsSubtitle,
+                      value: prefs.campaignsEnabled,
+                      onChanged: (value) => cubit.setPreference(
+                        NotificationPreference.campaignsEnabled,
+                        value,
                       ),
-                      _ActionCard(
-                        icon: DivineIconName.checkCircle,
-                        iconColor: VineTheme.vineGreenDark,
-                        title: context.l10n.notificationSettingsMarkAllAsRead,
-                        subtitle: context
-                            .l10n
-                            .notificationSettingsMarkAllAsReadSubtitle,
-                        isBusy:
-                            state.markAllAsReadStatus ==
-                            MarkAllAsReadStatus.inProgress,
-                        onTap: state.canMarkAllAsRead
-                            ? cubit.markAllAsRead
-                            : null,
-                      ),
-                      const SizedBox(height: 24),
-                      const _InfoCard(),
-                    ],
-                  );
-                },
-              ),
-        ),
+                    ),
+                    DivineSectionHeader(
+                      context.l10n.notificationSettingsActions,
+                      padding: const EdgeInsets.only(top: 24, bottom: 8),
+                    ),
+                    _ActionCard(
+                      icon: DivineIconName.checkCircle,
+                      iconColor: VineTheme.vineGreenDark,
+                      title: context.l10n.notificationSettingsMarkAllAsRead,
+                      subtitle: context
+                          .l10n
+                          .notificationSettingsMarkAllAsReadSubtitle,
+                      isBusy:
+                          state.markAllAsReadStatus ==
+                          MarkAllAsReadStatus.inProgress,
+                      onTap: state.canMarkAllAsRead
+                          ? cubit.markAllAsRead
+                          : null,
+                    ),
+                    const SizedBox(height: 24),
+                    const _InfoCard(),
+                  ],
+                );
+              },
+            ),
       ),
     ),
   );

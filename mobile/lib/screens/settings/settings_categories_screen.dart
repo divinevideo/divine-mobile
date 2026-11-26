@@ -38,6 +38,7 @@ import 'package:openvine/screens/settings/recording_gallery_backup_setting.dart'
 import 'package:openvine/screens/settings/remix_setting.dart';
 import 'package:openvine/screens/settings/storage/storage_management_page.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/nostr_apps_platform_support.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -59,12 +60,10 @@ class _SettingsCategoryScaffold extends StatelessWidget {
       onBackPressed: () => context.safePop(fallback: RoutePaths.settings),
     ),
     backgroundColor: context.vineColors.background,
-    body: Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 600),
-        child: ListView(children: children),
-      ),
+    body: AdaptiveContentColumn(
+      width: AdaptiveContentWidth.list,
+      capWithoutLargeLayout: true,
+      child: ListView(children: children),
     ),
   );
 }

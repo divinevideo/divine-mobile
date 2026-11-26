@@ -16,6 +16,7 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/key_management/keycast_key_export_card.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -56,43 +57,41 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
         onBackPressed: context.safePop,
       ),
       backgroundColor: context.vineColors.background,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: ListView(
-            padding: .fromLTRB(
-              16,
-              16,
-              16,
-              16 + MediaQuery.viewPaddingOf(context).bottom,
-            ),
-            children: [
-              const _NpubDisplayBlock(),
-              const SizedBox(height: 24),
-
-              DivineInfoCard(
-                title: context.l10n.keyManagementWhatAreKeys,
-                message: context.l10n.keyManagementExplanation,
-              ),
-              const SizedBox(height: 24),
-
-              // Protected minors (#182) cannot export their nsec or swap the
-              // account to a self-held key; the affordances are replaced by an
-              // explanatory locked card. Fails closed via
-              // isKeyManagementRestrictedProvider.
-              if (restricted)
-                const _KeyManagementLockedCard()
-              else ...[
-                // Import existing key section
-                _buildImportSection(context, nostrService),
-                const SizedBox(height: 24),
-
-                // Export/Backup section
-                _buildExportSection(context),
-              ],
-            ],
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: ListView(
+          padding: .fromLTRB(
+            16,
+            16,
+            16,
+            16 + MediaQuery.viewPaddingOf(context).bottom,
           ),
+          children: [
+            const _NpubDisplayBlock(),
+            const SizedBox(height: 24),
+
+            DivineInfoCard(
+              title: context.l10n.keyManagementWhatAreKeys,
+              message: context.l10n.keyManagementExplanation,
+            ),
+            const SizedBox(height: 24),
+
+            // Protected minors (#182) cannot export their nsec or swap the
+            // account to a self-held key; the affordances are replaced by an
+            // explanatory locked card. Fails closed via
+            // isKeyManagementRestrictedProvider.
+            if (restricted)
+              const _KeyManagementLockedCard()
+            else ...[
+              // Import existing key section
+              _buildImportSection(context, nostrService),
+              const SizedBox(height: 24),
+
+              // Export/Backup section
+              _buildExportSection(context),
+            ],
+          ],
         ),
       ),
     );

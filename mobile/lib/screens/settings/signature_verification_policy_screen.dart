@@ -13,6 +13,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/nostr_signature_verification_policy.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/settings/nostr_settings_screen.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 
 class SignatureVerificationPolicyScreen extends ConsumerWidget {
   const SignatureVerificationPolicyScreen({super.key});
@@ -52,40 +53,38 @@ class _SignatureVerificationPolicyView extends StatelessWidget {
             context.safePop(fallback: NostrSettingsScreen.path),
       ),
       backgroundColor: context.vineColors.background,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: ListView(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Text(
-                  context.l10n.nostrSettingsSignatureVerificationIntro,
-                  style: VineTheme.bodyMediumFont(
-                    color: context.vineColors.mutedText,
-                  ),
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: ListView(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                context.l10n.nostrSettingsSignatureVerificationIntro,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.mutedText,
                 ),
               ),
-              for (final policy in NostrSignatureVerificationPolicy.values)
-                DivineSelectableRow(
-                  title: signatureVerificationPolicyTitle(context, policy),
-                  subtitle: signatureVerificationPolicySubtitle(
-                    context,
-                    policy,
-                  ),
-                  isSelected: policy == current,
-                  onTap: () {
-                    if (policy == current) return;
-                    unawaited(
-                      context
-                          .read<SignatureVerificationPolicyCubit>()
-                          .setPolicy(policy),
-                    );
-                  },
+            ),
+            for (final policy in NostrSignatureVerificationPolicy.values)
+              DivineSelectableRow(
+                title: signatureVerificationPolicyTitle(context, policy),
+                subtitle: signatureVerificationPolicySubtitle(
+                  context,
+                  policy,
                 ),
-            ],
-          ),
+                isSelected: policy == current,
+                onTap: () {
+                  if (policy == current) return;
+                  unawaited(
+                    context.read<SignatureVerificationPolicyCubit>().setPolicy(
+                      policy,
+                    ),
+                  );
+                },
+              ),
+          ],
         ),
       ),
     );

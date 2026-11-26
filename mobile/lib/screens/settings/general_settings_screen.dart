@@ -27,6 +27,7 @@ import 'package:openvine/screens/settings/crossposting_settings_screen.dart';
 import 'package:openvine/screens/settings/storage/storage_management_page.dart';
 import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
 import 'package:openvine/services/locale_preference_service.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 
 class GeneralSettingsScreen extends ConsumerWidget {
   static const routeName = 'general-settings';
@@ -55,161 +56,159 @@ class GeneralSettingsScreen extends ConsumerWidget {
         onBackPressed: context.pop,
       ),
       backgroundColor: context.vineColors.background,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: ListView(
-            children: [
-              if (showBluesky || showCrossposting)
-                DivineSectionHeader(
-                  context.l10n.generalSettingsSectionIntegrations,
-                ),
-              if (showBluesky)
-                ListTile(
-                  leading: Icon(
-                    Icons.cloud_upload,
-                    color: context.vineColors.accentPositive,
-                  ),
-                  title: Text(
-                    context.l10n.settingsBlueskyPublishing,
-                    style: _titleStyleOf(context),
-                  ),
-                  subtitle: Text(
-                    context.l10n.settingsBlueskyPublishingSubtitle,
-                    style: _subtitleStyleOf(context),
-                  ),
-                  trailing: DivineIcon(
-                    icon: DivineIconName.caretRight,
-                    color: context.vineColors.mutedText,
-                  ),
-                  onTap: () => context.push(BlueskySettingsScreen.path),
-                ),
-              if (showCrossposting)
-                ListTile(
-                  leading: DivineIcon(
-                    icon: DivineIconName.shareNetwork,
-                    color: context.vineColors.accentPositive,
-                  ),
-                  title: Text(
-                    context.l10n.settingsCrosspostingTitle,
-                    style: _titleStyleOf(context),
-                  ),
-                  subtitle: Text(
-                    context.l10n.settingsCrosspostingSubtitle,
-                    style: _subtitleStyleOf(context),
-                  ),
-                  trailing: DivineIcon(
-                    icon: DivineIconName.caretRight,
-                    color: context.vineColors.mutedText,
-                  ),
-                  onTap: () => context.push(CrosspostingSettingsScreen.path),
-                ),
-              DivineSectionHeader(context.l10n.generalSettingsSectionViewing),
-              const ClosedCaptionsSetting(),
-              const SquareVideosSetting(),
-              const StatsVisibilitySettings(),
-              DivineSectionHeader(context.l10n.generalSettingsSectionCreating),
-              const AudioSharingSetting(),
-              const HoldToRecordSetting(),
-              DivineSectionHeader(context.l10n.generalSettingsSectionApp),
-              const AppLanguageSetting(),
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: ListView(
+          children: [
+            if (showBluesky || showCrossposting)
+              DivineSectionHeader(
+                context.l10n.generalSettingsSectionIntegrations,
+              ),
+            if (showBluesky)
               ListTile(
-                leading: DivineIcon(
-                  icon: DivineIconName.sun,
+                leading: Icon(
+                  Icons.cloud_upload,
                   color: context.vineColors.accentPositive,
                 ),
                 title: Text(
-                  context.l10n.appearanceSettingsTitle,
+                  context.l10n.settingsBlueskyPublishing,
                   style: _titleStyleOf(context),
                 ),
                 subtitle: Text(
-                  context.l10n.appearanceSettingsSubtitle,
+                  context.l10n.settingsBlueskyPublishingSubtitle,
                   style: _subtitleStyleOf(context),
                 ),
                 trailing: DivineIcon(
                   icon: DivineIconName.caretRight,
                   color: context.vineColors.mutedText,
                 ),
-                onTap: () => context.push(AppearanceSettingsScreen.path),
+                onTap: () => context.push(BlueskySettingsScreen.path),
               ),
+            if (showCrossposting)
               ListTile(
                 leading: DivineIcon(
-                  icon: DivineIconName.stackSimple,
+                  icon: DivineIconName.shareNetwork,
                   color: context.vineColors.accentPositive,
                 ),
                 title: Text(
-                  context.l10n.settingsStorageTitle,
-                  style: _titleStyleOf(context),
-                ),
-                trailing: DivineIcon(
-                  icon: DivineIconName.caretRight,
-                  color: context.vineColors.mutedText,
-                ),
-                onTap: () => context.push(StorageManagementPage.path),
-              ),
-              DivineSectionHeader(context.l10n.generalSettingsSectionIdentity),
-              if (showAccountCredentials) ...[
-                ListTile(
-                  leading: DivineIcon(
-                    icon: DivineIconName.envelope,
-                    color: context.vineColors.accentPositive,
-                  ),
-                  title: Text(
-                    context.l10n.accountSettingsChangeEmail,
-                    style: _titleStyleOf(context),
-                  ),
-                  subtitle: Text(
-                    context.l10n.accountSettingsChangeEmailSubtitle,
-                    style: _subtitleStyleOf(context),
-                  ),
-                  trailing: DivineIcon(
-                    icon: DivineIconName.caretRight,
-                    color: context.vineColors.mutedText,
-                  ),
-                  onTap: () => context.push(ChangeEmailScreen.path),
-                ),
-                ListTile(
-                  leading: DivineIcon(
-                    icon: DivineIconName.lockSimple,
-                    color: context.vineColors.accentPositive,
-                  ),
-                  title: Text(
-                    context.l10n.accountSettingsChangePassword,
-                    style: _titleStyleOf(context),
-                  ),
-                  subtitle: Text(
-                    context.l10n.accountSettingsChangePasswordSubtitle,
-                    style: _subtitleStyleOf(context),
-                  ),
-                  trailing: DivineIcon(
-                    icon: DivineIconName.caretRight,
-                    color: context.vineColors.mutedText,
-                  ),
-                  onTap: () => context.push(ChangePasswordScreen.path),
-                ),
-              ],
-              ListTile(
-                leading: DivineIcon(
-                  icon: DivineIconName.sealCheck,
-                  color: context.vineColors.accentPositive,
-                ),
-                title: Text(
-                  context.l10n.verifyTitle,
+                  context.l10n.settingsCrosspostingTitle,
                   style: _titleStyleOf(context),
                 ),
                 subtitle: Text(
-                  context.l10n.verifyIntro,
+                  context.l10n.settingsCrosspostingSubtitle,
                   style: _subtitleStyleOf(context),
                 ),
                 trailing: DivineIcon(
                   icon: DivineIconName.caretRight,
                   color: context.vineColors.mutedText,
                 ),
-                onTap: () => const VerifyRouteData().push<void>(context),
+                onTap: () => context.push(CrosspostingSettingsScreen.path),
+              ),
+            DivineSectionHeader(context.l10n.generalSettingsSectionViewing),
+            const ClosedCaptionsSetting(),
+            const SquareVideosSetting(),
+            const StatsVisibilitySettings(),
+            DivineSectionHeader(context.l10n.generalSettingsSectionCreating),
+            const AudioSharingSetting(),
+            const HoldToRecordSetting(),
+            DivineSectionHeader(context.l10n.generalSettingsSectionApp),
+            const AppLanguageSetting(),
+            ListTile(
+              leading: DivineIcon(
+                icon: DivineIconName.sun,
+                color: context.vineColors.accentPositive,
+              ),
+              title: Text(
+                context.l10n.appearanceSettingsTitle,
+                style: _titleStyleOf(context),
+              ),
+              subtitle: Text(
+                context.l10n.appearanceSettingsSubtitle,
+                style: _subtitleStyleOf(context),
+              ),
+              trailing: DivineIcon(
+                icon: DivineIconName.caretRight,
+                color: context.vineColors.mutedText,
+              ),
+              onTap: () => context.push(AppearanceSettingsScreen.path),
+            ),
+            ListTile(
+              leading: DivineIcon(
+                icon: DivineIconName.stackSimple,
+                color: context.vineColors.accentPositive,
+              ),
+              title: Text(
+                context.l10n.settingsStorageTitle,
+                style: _titleStyleOf(context),
+              ),
+              trailing: DivineIcon(
+                icon: DivineIconName.caretRight,
+                color: context.vineColors.mutedText,
+              ),
+              onTap: () => context.push(StorageManagementPage.path),
+            ),
+            DivineSectionHeader(context.l10n.generalSettingsSectionIdentity),
+            if (showAccountCredentials) ...[
+              ListTile(
+                leading: DivineIcon(
+                  icon: DivineIconName.envelope,
+                  color: context.vineColors.accentPositive,
+                ),
+                title: Text(
+                  context.l10n.accountSettingsChangeEmail,
+                  style: _titleStyleOf(context),
+                ),
+                subtitle: Text(
+                  context.l10n.accountSettingsChangeEmailSubtitle,
+                  style: _subtitleStyleOf(context),
+                ),
+                trailing: DivineIcon(
+                  icon: DivineIconName.caretRight,
+                  color: context.vineColors.mutedText,
+                ),
+                onTap: () => context.push(ChangeEmailScreen.path),
+              ),
+              ListTile(
+                leading: DivineIcon(
+                  icon: DivineIconName.lockSimple,
+                  color: context.vineColors.accentPositive,
+                ),
+                title: Text(
+                  context.l10n.accountSettingsChangePassword,
+                  style: _titleStyleOf(context),
+                ),
+                subtitle: Text(
+                  context.l10n.accountSettingsChangePasswordSubtitle,
+                  style: _subtitleStyleOf(context),
+                ),
+                trailing: DivineIcon(
+                  icon: DivineIconName.caretRight,
+                  color: context.vineColors.mutedText,
+                ),
+                onTap: () => context.push(ChangePasswordScreen.path),
               ),
             ],
-          ),
+            ListTile(
+              leading: DivineIcon(
+                icon: DivineIconName.sealCheck,
+                color: context.vineColors.accentPositive,
+              ),
+              title: Text(
+                context.l10n.verifyTitle,
+                style: _titleStyleOf(context),
+              ),
+              subtitle: Text(
+                context.l10n.verifyIntro,
+                style: _subtitleStyleOf(context),
+              ),
+              trailing: DivineIcon(
+                icon: DivineIconName.caretRight,
+                color: context.vineColors.mutedText,
+              ),
+              onTap: () => const VerifyRouteData().push<void>(context),
+            ),
+          ],
         ),
       ),
     );

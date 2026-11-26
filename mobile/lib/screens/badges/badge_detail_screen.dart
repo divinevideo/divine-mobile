@@ -31,6 +31,7 @@ import 'package:openvine/screens/badges/badge_revoke_confirmation_sheet.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/badge_links.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/share_sheet.dart';
@@ -249,129 +250,127 @@ class _BadgeDetailBody extends StatelessWidget {
       color: VineTheme.onPrimary,
       backgroundColor: VineTheme.vineGreen,
       onRefresh: () => context.read<BadgeDetailCubit>().refresh(),
-      // Constrains and centres the viewport itself; a sliver has no
-      // max-width equivalent.
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: CustomScrollView(
-            slivers: [
-              SliverPadding(
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  16,
-                  16,
-                  32 + MediaQuery.viewPaddingOf(context).bottom,
-                ),
-                sliver: SliverMainAxisGroup(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        spacing: 20,
-                        children: [
-                          _BadgeHero(
-                            detail: detail,
-                            coordinate: state.coordinate,
-                          ),
-                          if (state.isMissing)
-                            Text(
-                              l10n.badgeDetailMissing,
-                              style: VineTheme.bodySmallFont(
-                                color: context.vineColors.onSurfaceVariant,
-                              ),
-                            ),
-                          if (state.actionStatus ==
-                              BadgeDetailActionStatus.failure)
-                            Text(
-                              l10n.badgeDetailActionError,
-                              style: VineTheme.bodySmallFont(
-                                color: VineTheme.error,
-                              ),
-                            ),
-                          _BadgeActions(state: state),
-                        ],
-                      ),
-                    ),
-                    _AcceptedHolders(
-                      key: ObjectKey(detail),
-                      coordinate: state.coordinate,
-                    ),
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 24),
-                        child: _BadgeIssuer(coordinate: state.coordinate),
-                      ),
-                    ),
-                    if (!detail.isOwner)
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 20),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: DivineButton(
-                              label: l10n.badgeDetailBlockClaimantsAction,
-                              type: DivineButtonType.link,
-                              size: DivineButtonSize.small,
-                              isLoading:
-                                  state.actionStatus ==
-                                  BadgeDetailActionStatus.blockingClaimants,
-                              onPressed: state.isBusy
-                                  ? null
-                                  : () => _BadgeActions._openBlockClaimants(
-                                      context,
-                                    ),
-                            ),
-                          ),
+      child: AdaptiveContentColumn(
+        width: const AdaptiveContentWidth.custom(640),
+        capWithoutLargeLayout: true,
+        alignment: Alignment.center,
+        child: CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                32 + MediaQuery.viewPaddingOf(context).bottom,
+              ),
+              sliver: SliverMainAxisGroup(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      spacing: 20,
+                      children: [
+                        _BadgeHero(
+                          detail: detail,
+                          coordinate: state.coordinate,
                         ),
-                      ),
-                    if (detail.isOwner && detail.recipients.isEmpty)
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 20),
-                          child: Text(
-                            l10n.badgeDetailNoRecipients,
+                        if (state.isMissing)
+                          Text(
+                            l10n.badgeDetailMissing,
                             style: VineTheme.bodySmallFont(
                               color: context.vineColors.onSurfaceVariant,
                             ),
                           ),
-                        ),
-                      )
-                    else if (detail.isOwner) ...[
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 20),
-                          child: Text(
-                            l10n.badgeDetailRecipientsTitle,
-                            style: VineTheme.titleSmallFont(
-                              color: context.vineColors.primaryText,
+                        if (state.actionStatus ==
+                            BadgeDetailActionStatus.failure)
+                          Text(
+                            l10n.badgeDetailActionError,
+                            style: VineTheme.bodySmallFont(
+                              color: VineTheme.error,
                             ),
+                          ),
+                        _BadgeActions(state: state),
+                      ],
+                    ),
+                  ),
+                  _AcceptedHolders(
+                    key: ObjectKey(detail),
+                    coordinate: state.coordinate,
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 24),
+                      child: _BadgeIssuer(coordinate: state.coordinate),
+                    ),
+                  ),
+                  if (!detail.isOwner)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 20),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: DivineButton(
+                            label: l10n.badgeDetailBlockClaimantsAction,
+                            type: DivineButtonType.link,
+                            size: DivineButtonSize.small,
+                            isLoading:
+                                state.actionStatus ==
+                                BadgeDetailActionStatus.blockingClaimants,
+                            onPressed: state.isBusy
+                                ? null
+                                : () => _BadgeActions._openBlockClaimants(
+                                    context,
+                                  ),
                           ),
                         ),
                       ),
-                      // Lazily built: a popular badge can carry a long
-                      // awardee list, and every row resolves a profile.
-                      SliverList.builder(
-                        itemCount: detail.recipients.length,
-                        itemBuilder: (context, index) {
-                          final recipient = detail.recipients[index];
-                          return BadgeRecipientRow(
-                            pubkey: recipient.pubkey,
-                            isAccepted: recipient.isAccepted,
-                            showRevokeAction: detail.isOwner,
-                            isRevoking: state.isRevoking(recipient.pubkey),
-                            onRevoke: state.isBusy
-                                ? null
-                                : () => _revoke(context, recipient),
-                          );
-                        },
+                    ),
+                  if (detail.isOwner && detail.recipients.isEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 20),
+                        child: Text(
+                          l10n.badgeDetailNoRecipients,
+                          style: VineTheme.bodySmallFont(
+                            color: context.vineColors.onSurfaceVariant,
+                          ),
+                        ),
                       ),
-                    ],
+                    )
+                  else if (detail.isOwner) ...[
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 20),
+                        child: Text(
+                          l10n.badgeDetailRecipientsTitle,
+                          style: VineTheme.titleSmallFont(
+                            color: context.vineColors.primaryText,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Lazily built: a popular badge can carry a long
+                    // awardee list, and every row resolves a profile.
+                    SliverList.builder(
+                      itemCount: detail.recipients.length,
+                      itemBuilder: (context, index) {
+                        final recipient = detail.recipients[index];
+                        return BadgeRecipientRow(
+                          pubkey: recipient.pubkey,
+                          isAccepted: recipient.isAccepted,
+                          showRevokeAction: detail.isOwner,
+                          isRevoking: state.isRevoking(recipient.pubkey),
+                          onRevoke: state.isBusy
+                              ? null
+                              : () => _revoke(context, recipient),
+                        );
+                      },
+                    ),
                   ],
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1056,88 +1055,88 @@ class _BlockClaimantsConfirmationScreenState
 
             final claimants = snapshot.data ?? const <String>{};
             return SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 640),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            spacing: 16,
-                            children: [
-                              Text(
-                                claimants.isEmpty
-                                    ? l10n.badgeDetailBlockClaimantsEmptyTitle
-                                    : l10n.badgeDetailBlockClaimantsHeading(
-                                        claimants.length,
-                                      ),
-                                textAlign: TextAlign.center,
-                                style: VineTheme.titleLargeFont(
-                                  color: context.vineColors.onSurface,
-                                ),
+              child: AdaptiveContentColumn(
+                width: const AdaptiveContentWidth.custom(640),
+                capWithoutLargeLayout: true,
+                alignment: Alignment.center,
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          spacing: 16,
+                          children: [
+                            Text(
+                              claimants.isEmpty
+                                  ? l10n.badgeDetailBlockClaimantsEmptyTitle
+                                  : l10n.badgeDetailBlockClaimantsHeading(
+                                      claimants.length,
+                                    ),
+                              textAlign: TextAlign.center,
+                              style: VineTheme.titleLargeFont(
+                                color: context.vineColors.onSurface,
                               ),
-                              Text(
-                                claimants.isEmpty
-                                    ? l10n.badgeDetailBlockClaimantsEmptyBody
-                                    : l10n.badgeDetailBlockClaimantsBody(
-                                        claimants.length,
-                                      ),
-                                textAlign: TextAlign.center,
-                                style: VineTheme.bodyMediumFont(
-                                  color: context.vineColors.onSurfaceVariant,
-                                ),
+                            ),
+                            Text(
+                              claimants.isEmpty
+                                  ? l10n.badgeDetailBlockClaimantsEmptyBody
+                                  : l10n.badgeDetailBlockClaimantsBody(
+                                      claimants.length,
+                                    ),
+                              textAlign: TextAlign.center,
+                              style: VineTheme.bodyMediumFont(
+                                color: context.vineColors.onSurfaceVariant,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        BlocBuilder<BadgeDetailCubit, BadgeDetailState>(
-                          builder: (context, state) {
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              spacing: 12,
-                              children: [
+                      ),
+                      BlocBuilder<BadgeDetailCubit, BadgeDetailState>(
+                        builder: (context, state) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            spacing: 12,
+                            children: [
+                              DivineButton(
+                                label: claimants.isEmpty
+                                    ? l10n.commonCancel
+                                    : l10n.badgeDetailBlockClaimantsConfirm(
+                                        claimants.length,
+                                      ),
+                                type: claimants.isEmpty
+                                    ? DivineButtonType.secondary
+                                    : DivineButtonType.error,
+                                leadingIcon: claimants.isEmpty
+                                    ? null
+                                    : DivineIconName.prohibit,
+                                isLoading:
+                                    state.actionStatus ==
+                                    BadgeDetailActionStatus.blockingClaimants,
+                                onPressed: state.isBusy
+                                    ? null
+                                    : claimants.isEmpty
+                                    ? () => context.safePop()
+                                    : () => context
+                                          .read<BadgeDetailCubit>()
+                                          .blockClaimants(claimants),
+                              ),
+                              if (claimants.isNotEmpty)
                                 DivineButton(
-                                  label: claimants.isEmpty
-                                      ? l10n.commonCancel
-                                      : l10n.badgeDetailBlockClaimantsConfirm(
-                                          claimants.length,
-                                        ),
-                                  type: claimants.isEmpty
-                                      ? DivineButtonType.secondary
-                                      : DivineButtonType.error,
-                                  leadingIcon: claimants.isEmpty
-                                      ? null
-                                      : DivineIconName.prohibit,
-                                  isLoading:
-                                      state.actionStatus ==
-                                      BadgeDetailActionStatus.blockingClaimants,
+                                  label: l10n.commonCancel,
+                                  type: DivineButtonType.secondary,
                                   onPressed: state.isBusy
                                       ? null
-                                      : claimants.isEmpty
-                                      ? () => context.safePop()
-                                      : () => context
-                                            .read<BadgeDetailCubit>()
-                                            .blockClaimants(claimants),
+                                      : () => context.safePop(),
                                 ),
-                                if (claimants.isNotEmpty)
-                                  DivineButton(
-                                    label: l10n.commonCancel,
-                                    type: DivineButtonType.secondary,
-                                    onPressed: state.isBusy
-                                        ? null
-                                        : () => context.safePop(),
-                                  ),
-                              ],
-                            );
-                          },
-                        ),
-                      ],
-                    ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ),

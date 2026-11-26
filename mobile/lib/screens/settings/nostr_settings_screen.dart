@@ -27,6 +27,7 @@ import 'package:openvine/screens/relay_diagnostic_screen.dart';
 import 'package:openvine/screens/relay_settings_screen.dart';
 import 'package:openvine/screens/settings/signature_verification_policy_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/external_link_launcher.dart';
 import 'package:openvine/widgets/delete_account_action.dart';
 import 'package:openvine/widgets/delete_account_dialog.dart';
@@ -62,62 +63,60 @@ class NostrSettingsScreen extends ConsumerWidget {
             : () => context.safePop(fallback: RoutePaths.settings),
       ),
       backgroundColor: context.vineColors.background,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: ListView(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Text(
-                  context.l10n.nostrSettingsIntro,
-                  style: VineTheme.bodyMediumFont(
-                    color: context.vineColors.mutedText,
-                  ),
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: ListView(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                context.l10n.nostrSettingsIntro,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.mutedText,
                 ),
               ),
+            ),
 
-              // Network section
-              DivineSectionHeader(context.l10n.nostrSettingsSectionNetwork),
-              if (showAdvancedRelaySettings) ...[
-                DivineListTile(
-                  leading: Icon(
-                    Icons.hub,
-                    size: DivineIcon.scaleSize(context, 24),
-                    color: context.vineColors.accentPositive,
-                  ),
-                  title: context.l10n.nostrSettingsRelays,
-                  subtitle: context.l10n.nostrSettingsRelaysSubtitle,
-                  onTap: () => context.push(RelaySettingsScreen.path),
-                ),
-                DivineListTile(
-                  leading: Icon(
-                    Icons.troubleshoot,
-                    size: DivineIcon.scaleSize(context, 24),
-                    color: context.vineColors.accentPositive,
-                  ),
-                  title: context.l10n.nostrSettingsRelayDiagnostics,
-                  subtitle: context.l10n.nostrSettingsRelayDiagnosticsSubtitle,
-                  onTap: () => context.push(RelayDiagnosticScreen.path),
-                ),
-              ],
+            // Network section
+            DivineSectionHeader(context.l10n.nostrSettingsSectionNetwork),
+            if (showAdvancedRelaySettings) ...[
               DivineListTile(
                 leading: Icon(
-                  Icons.cloud_upload,
+                  Icons.hub,
                   size: DivineIcon.scaleSize(context, 24),
                   color: context.vineColors.accentPositive,
                 ),
-                title: context.l10n.nostrSettingsMediaServers,
-                subtitle: context.l10n.nostrSettingsMediaServersSubtitle,
-                onTap: () => context.push(BlossomSettingsScreen.path),
+                title: context.l10n.nostrSettingsRelays,
+                subtitle: context.l10n.nostrSettingsRelaysSubtitle,
+                onTap: () => context.push(RelaySettingsScreen.path),
               ),
-              const _SignatureVerificationTile(),
-              // Attribution tags the signed-in account's events.
-              if (isAuthenticated) const _ClientAttributionToggle(),
-              if (!networkOnly) const NostrAccountSettingsSection(),
+              DivineListTile(
+                leading: Icon(
+                  Icons.troubleshoot,
+                  size: DivineIcon.scaleSize(context, 24),
+                  color: context.vineColors.accentPositive,
+                ),
+                title: context.l10n.nostrSettingsRelayDiagnostics,
+                subtitle: context.l10n.nostrSettingsRelayDiagnosticsSubtitle,
+                onTap: () => context.push(RelayDiagnosticScreen.path),
+              ),
             ],
-          ),
+            DivineListTile(
+              leading: Icon(
+                Icons.cloud_upload,
+                size: DivineIcon.scaleSize(context, 24),
+                color: context.vineColors.accentPositive,
+              ),
+              title: context.l10n.nostrSettingsMediaServers,
+              subtitle: context.l10n.nostrSettingsMediaServersSubtitle,
+              onTap: () => context.push(BlossomSettingsScreen.path),
+            ),
+            const _SignatureVerificationTile(),
+            // Attribution tags the signed-in account's events.
+            if (isAuthenticated) const _ClientAttributionToggle(),
+            if (!networkOnly) const NostrAccountSettingsSection(),
+          ],
         ),
       ),
     );

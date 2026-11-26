@@ -11,6 +11,7 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/badge_links.dart';
 import 'package:openvine/widgets/user_picker_sheet.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
@@ -146,67 +147,67 @@ class _BadgeAwardViewState extends State<BadgeAwardView> {
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             children: [
-              Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 640),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    spacing: 16,
-                    children: [
-                      DivineButton(
-                        label: l10n.badgeAwardPickAction,
-                        type: DivineButtonType.secondary,
-                        leadingIcon: DivineIconName.users,
-                        onPressed: state.isBusy ? null : _pickPeople,
-                      ),
-                      DivineTextField(
-                        labelText: l10n.badgeAwardManualLabel,
-                        hintText: l10n.badgeAwardManualHint,
-                        controller: _manualController,
-                        filled: true,
-                        fillColor: context.vineColors.surfaceContainer,
-                        primaryWhenFilled: true,
-                        enabled: !state.isBusy,
-                        minLines: 2,
-                        maxLines: 4,
-                        textCapitalization: TextCapitalization.none,
-                        onChanged: _manualChanged,
-                      ),
-                      if (recipients.isEmpty)
-                        Text(
-                          l10n.badgeAwardEmptyHint,
-                          style: VineTheme.bodySmallFont(
-                            color: context.vineColors.onSurfaceVariant,
-                          ),
-                        )
-                      else
-                        for (final pubkey in recipients)
-                          _SelectedRecipientRow(
-                            pubkey: pubkey,
-                            onRemove: state.isBusy
-                                ? null
-                                : () => _removeRecipient(pubkey),
-                          ),
-                      if (state.actionStatus == BadgeDetailActionStatus.failure)
-                        Text(
-                          l10n.badgeDetailActionError,
-                          style: VineTheme.bodySmallFont(
-                            color: VineTheme.error,
-                          ),
+              AdaptiveContentColumn(
+                width: const AdaptiveContentWidth.custom(640),
+                capWithoutLargeLayout: true,
+                alignment: Alignment.center,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: 16,
+                  children: [
+                    DivineButton(
+                      label: l10n.badgeAwardPickAction,
+                      type: DivineButtonType.secondary,
+                      leadingIcon: DivineIconName.users,
+                      onPressed: state.isBusy ? null : _pickPeople,
+                    ),
+                    DivineTextField(
+                      labelText: l10n.badgeAwardManualLabel,
+                      hintText: l10n.badgeAwardManualHint,
+                      controller: _manualController,
+                      filled: true,
+                      fillColor: context.vineColors.surfaceContainer,
+                      primaryWhenFilled: true,
+                      enabled: !state.isBusy,
+                      minLines: 2,
+                      maxLines: 4,
+                      textCapitalization: TextCapitalization.none,
+                      onChanged: _manualChanged,
+                    ),
+                    if (recipients.isEmpty)
+                      Text(
+                        l10n.badgeAwardEmptyHint,
+                        style: VineTheme.bodySmallFont(
+                          color: context.vineColors.onSurfaceVariant,
                         ),
-                      DivineButton(
-                        label: l10n.badgeAwardSubmitAction(recipients.length),
-                        isLoading:
-                            state.actionStatus ==
-                            BadgeDetailActionStatus.awarding,
-                        onPressed: recipients.isEmpty || state.isBusy
-                            ? null
-                            : () => context.read<BadgeDetailCubit>().award(
-                                recipients,
-                              ),
+                      )
+                    else
+                      for (final pubkey in recipients)
+                        _SelectedRecipientRow(
+                          pubkey: pubkey,
+                          onRemove: state.isBusy
+                              ? null
+                              : () => _removeRecipient(pubkey),
+                        ),
+                    if (state.actionStatus == BadgeDetailActionStatus.failure)
+                      Text(
+                        l10n.badgeDetailActionError,
+                        style: VineTheme.bodySmallFont(
+                          color: VineTheme.error,
+                        ),
                       ),
-                    ],
-                  ),
+                    DivineButton(
+                      label: l10n.badgeAwardSubmitAction(recipients.length),
+                      isLoading:
+                          state.actionStatus ==
+                          BadgeDetailActionStatus.awarding,
+                      onPressed: recipients.isEmpty || state.isBusy
+                          ? null
+                          : () => context.read<BadgeDetailCubit>().award(
+                              recipients,
+                            ),
+                    ),
+                  ],
                 ),
               ),
             ],

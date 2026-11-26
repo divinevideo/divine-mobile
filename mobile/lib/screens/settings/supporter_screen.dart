@@ -15,6 +15,7 @@ import 'package:openvine/l10n/supporter_failure_l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -78,16 +79,14 @@ class SupporterScreenView extends StatelessWidget {
         onBackPressed: () => context.safePop(fallback: SettingsScreen.path),
       ),
       backgroundColor: context.vineColors.surface,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              SupporterContent(storeBillingAvailable: storeBillingAvailable),
-            ],
-          ),
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            SupporterContent(storeBillingAvailable: storeBillingAvailable),
+          ],
         ),
       ),
     );

@@ -12,6 +12,7 @@ import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/routes/minor_account_review_routes.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/share_position_origin.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -39,33 +40,31 @@ class MinorAccountReviewUnder13SupportScreen extends ConsumerWidget {
       ),
       backgroundColor: context.vineColors.background,
       body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: statusAsync.when(
-              loading: () =>
-                  const Center(child: PartialCircleSpinner(progress: 0.33)),
-              error: (error, _) {
-                Log.error(
-                  'Failed to load under-13 support instructions: $error',
-                  name: 'MinorAccountReviewUnder13SupportScreen',
-                  category: LogCategory.ui,
-                );
-                return _MinorAccountReviewLoadErrorView(
-                  title: context.l10n.minorAccountReviewErrorTitle,
-                  body: context.l10n.minorAccountReviewErrorBody,
-                  buttonLabel: context.l10n.minorAccountReviewTryAgain,
-                  onPressed: () =>
-                      ref.invalidate(currentMinorAccountReviewStatusProvider),
-                );
-              },
-              data: (status) => _Under13SupportBody(
-                status: status,
-                composeEmail:
-                    composeEmail ??
-                    ref.watch(minorAccountReviewSupportEmailComposerProvider),
-              ),
+        child: AdaptiveContentColumn(
+          width: const AdaptiveContentWidth.custom(640),
+          capWithoutLargeLayout: true,
+          child: statusAsync.when(
+            loading: () =>
+                const Center(child: PartialCircleSpinner(progress: 0.33)),
+            error: (error, _) {
+              Log.error(
+                'Failed to load under-13 support instructions: $error',
+                name: 'MinorAccountReviewUnder13SupportScreen',
+                category: LogCategory.ui,
+              );
+              return _MinorAccountReviewLoadErrorView(
+                title: context.l10n.minorAccountReviewErrorTitle,
+                body: context.l10n.minorAccountReviewErrorBody,
+                buttonLabel: context.l10n.minorAccountReviewTryAgain,
+                onPressed: () =>
+                    ref.invalidate(currentMinorAccountReviewStatusProvider),
+              );
+            },
+            data: (status) => _Under13SupportBody(
+              status: status,
+              composeEmail:
+                  composeEmail ??
+                  ref.watch(minorAccountReviewSupportEmailComposerProvider),
             ),
           ),
         ),

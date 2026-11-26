@@ -9,6 +9,7 @@ import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/routes/minor_account_review_routes.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/share_position_origin.dart';
 import 'package:openvine/widgets/minor_account_review_checklist_card.dart';
 
@@ -48,82 +49,76 @@ class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
       ),
       backgroundColor: context.vineColors.background,
       body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-              children: [
-                Text(
-                  context.l10n.minorAccountReviewParentConsentTitle,
-                  style: VineTheme.headlineMediumFont(
-                    color: context.vineColors.primaryText,
-                  ),
+        child: AdaptiveContentColumn(
+          width: const AdaptiveContentWidth.custom(640),
+          capWithoutLargeLayout: true,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+            children: [
+              Text(
+                context.l10n.minorAccountReviewParentConsentTitle,
+                style: VineTheme.headlineMediumFont(
+                  color: context.vineColors.primaryText,
                 ),
-                const SizedBox(height: 20),
-                _InfoCard(
-                  title:
-                      context.l10n.minorAccountReviewParentConsentHonestyTitle,
-                  body:
-                      '${context.l10n.minorAccountReviewParentConsentHonestyBody}'
-                      '\n\n'
-                      '${canRecordInApp ? context.l10n.minorAccountReviewRecordConsentBody : context.l10n.minorAccountReviewParentConsentBody}',
-                  backgroundColor: context.vineColors.inverseSurface,
-                  borderColor: context.vineColors.inverseOnSurface,
-                  textColor: context.vineColors.inverseOnSurface,
-                ),
-                const SizedBox(height: 16),
-                MinorAccountReviewChecklistCard(
-                  title: context.l10n.minorAccountReviewParentConsentChecklist,
-                  items: [
-                    context.l10n.minorAccountReviewParentConsentChecklistKid,
-                    context
-                        .l10n
-                        .minorAccountReviewParentConsentChecklistPermission,
-                    context
-                        .l10n
-                        .minorAccountReviewParentConsentChecklistAgeBand,
-                    context
-                        .l10n
-                        .minorAccountReviewParentConsentChecklistSupervision,
-                  ],
-                ),
-                const SizedBox(height: 16),
-                MinorAccountReviewChecklistCard(
-                  title: context.l10n.minorAccountReviewParentConsentPrivacy,
-                  items: [
-                    if (canRecordInApp)
-                      context.l10n.minorAccountReviewRecordConsentPrivacyBody
-                    else
-                      context.l10n.minorAccountReviewParentConsentNeverPost,
-                    context.l10n.minorAccountReviewParentConsentDoNotSave,
-                    context.l10n.minorAccountReviewParentConsentOneMove,
-                  ],
-                ),
-                const SizedBox(height: 24),
-                if (canSubmitRecording) ...[
-                  DivineButton(
-                    label:
-                        context.l10n.minorAccountReviewParentConsentRecordCta,
-                    leadingIcon: DivineIconName.videoCamera,
-                    expanded: true,
-                    onPressed: () =>
-                        const MinorAccountReviewRecordConsentRouteData()
-                            .push<void>(context),
-                  ),
-                  const SizedBox(height: 12),
+              ),
+              const SizedBox(height: 20),
+              _InfoCard(
+                title: context.l10n.minorAccountReviewParentConsentHonestyTitle,
+                body:
+                    '${context.l10n.minorAccountReviewParentConsentHonestyBody}'
+                    '\n\n'
+                    '${canRecordInApp ? context.l10n.minorAccountReviewRecordConsentBody : context.l10n.minorAccountReviewParentConsentBody}',
+                backgroundColor: context.vineColors.inverseSurface,
+                borderColor: context.vineColors.inverseOnSurface,
+                textColor: context.vineColors.inverseOnSurface,
+              ),
+              const SizedBox(height: 16),
+              MinorAccountReviewChecklistCard(
+                title: context.l10n.minorAccountReviewParentConsentChecklist,
+                items: [
+                  context.l10n.minorAccountReviewParentConsentChecklistKid,
+                  context
+                      .l10n
+                      .minorAccountReviewParentConsentChecklistPermission,
+                  context.l10n.minorAccountReviewParentConsentChecklistAgeBand,
+                  context
+                      .l10n
+                      .minorAccountReviewParentConsentChecklistSupervision,
                 ],
+              ),
+              const SizedBox(height: 16),
+              MinorAccountReviewChecklistCard(
+                title: context.l10n.minorAccountReviewParentConsentPrivacy,
+                items: [
+                  if (canRecordInApp)
+                    context.l10n.minorAccountReviewRecordConsentPrivacyBody
+                  else
+                    context.l10n.minorAccountReviewParentConsentNeverPost,
+                  context.l10n.minorAccountReviewParentConsentDoNotSave,
+                  context.l10n.minorAccountReviewParentConsentOneMove,
+                ],
+              ),
+              const SizedBox(height: 24),
+              if (canSubmitRecording) ...[
                 DivineButton(
-                  label: context.l10n.minorAccountReviewParentConsentEmailCta,
-                  type: canRecordInApp
-                      ? DivineButtonType.secondary
-                      : DivineButtonType.primary,
+                  label: context.l10n.minorAccountReviewParentConsentRecordCta,
+                  leadingIcon: DivineIconName.videoCamera,
                   expanded: true,
-                  onPressed: () => _emailSupport(context, ref),
+                  onPressed: () =>
+                      const MinorAccountReviewRecordConsentRouteData()
+                          .push<void>(context),
                 ),
+                const SizedBox(height: 12),
               ],
-            ),
+              DivineButton(
+                label: context.l10n.minorAccountReviewParentConsentEmailCta,
+                type: canRecordInApp
+                    ? DivineButtonType.secondary
+                    : DivineButtonType.primary,
+                expanded: true,
+                onPressed: () => _emailSupport(context, ref),
+              ),
+            ],
           ),
         ),
       ),

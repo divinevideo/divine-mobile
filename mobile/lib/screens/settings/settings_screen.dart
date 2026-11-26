@@ -43,6 +43,7 @@ import 'package:openvine/screens/settings/privacy_settings_screen.dart';
 import 'package:openvine/screens/settings/settings_categories_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/user_data_cleanup_service.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/deferred_login_options_navigator.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -438,144 +439,139 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               : context.safePop,
         ),
         backgroundColor: context.vineColors.surface,
-        body: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: ListView(
-              children: [
-                // Account header
-                if (isAuthenticated) ...[
-                  _AccountHeader(
-                    onSwitchAccount: _handleSwitchAccount,
-                    accountSwitchingEnabled: accountSwitchingEnabled,
-                  ),
-                  if (authService.isAnonymous)
-                    DivineListTile(
-                      icon: DivineIconName.shieldCheck,
-                      title: context.l10n.settingsSecureAccount,
-                      onTap: () =>
-                          const SecureAccountRouteData().push<void>(context),
-                    ),
-                  if (!authService.isAnonymous && hasExpiredOAuthSession)
-                    DivineListTile(
-                      icon: DivineIconName.arrowClockwise,
-                      title: context.l10n.settingsSessionExpired,
-                      subtitle: context.l10n.settingsSessionExpiredSubtitle,
-                      onTap: _handleSessionExpired,
-                      iconColor: VineTheme.accentOrange,
-                    ),
-                  if (accountEnforced)
-                    DivineListTile(
-                      icon: DivineIconName.userFocus,
-                      title: context.l10n.accountStatusTitle,
-                      subtitle:
-                          context.l10n.accountStatusTileSubtitleRestricted,
-                      iconColor: VineTheme.accentOrange,
-                      onTap: () => context.push(AccountStatusScreen.path),
-                    ),
-                ],
-
-                if (widget.accountOnly) ...[
-                  if (!isAuthenticated)
-                    DivineListTile(
-                      icon: DivineIconName.userPlus,
-                      title: context.l10n.authSignInTitle,
-                      onTap: () => const WelcomeRouteData().go(context),
-                    ),
-                  if (isAuthenticated &&
-                      authService.authenticationSource ==
-                          AuthenticationSource.divineOAuth) ...[
-                    DivineListTile(
-                      icon: DivineIconName.envelope,
-                      title: context.l10n.accountSettingsChangeEmail,
-                      subtitle: context.l10n.accountSettingsChangeEmailSubtitle,
-                      onTap: () => context.push(ChangeEmailScreen.path),
-                    ),
-                    DivineListTile(
-                      icon: DivineIconName.lockSimple,
-                      title: context.l10n.accountSettingsChangePassword,
-                      subtitle:
-                          context.l10n.accountSettingsChangePasswordSubtitle,
-                      onTap: () => context.push(ChangePasswordScreen.path),
-                    ),
-                  ],
-                  if (isAuthenticated)
-                    DivineListTile(
-                      icon: DivineIconName.sealCheck,
-                      title: context.l10n.verifyTitle,
-                      subtitle: context.l10n.verifyIntro,
-                      onTap: () => const VerifyRouteData().push<void>(context),
-                    ),
-                  if (supporterVerificationAvailable)
-                    const SupporterMembership(),
-                  const NostrAccountSettingsSection(),
-                ] else ...[
-                  DivineListTile(
-                    icon: DivineIconName.userFocus,
-                    title: context.l10n.settingsAccountTitle,
-                    subtitle: context.l10n.settingsAccountSubtitle,
-                    semanticIdentifier: SemanticIds.settingsAccountRow,
-                    onTap: () => context.push(RoutePaths.settingsAccount),
-                  ),
-                  DivineListTile(
-                    icon: DivineIconName.play,
-                    title: context.l10n.settingsWhatYouSeeTitle,
-                    subtitle: context.l10n.settingsWhatYouSeeSubtitle,
-                    onTap: () => context.push(ViewingSettingsScreen.path),
-                  ),
-                  DivineListTile(
-                    icon: DivineIconName.cameraRetro,
-                    title: context.l10n.settingsCreateShareTitle,
-                    subtitle: context.l10n.settingsCreateShareSubtitle,
-                    onTap: () => context.push(CreatingSettingsScreen.path),
-                  ),
-                  DivineListTile(
-                    icon: DivineIconName.bellSimple,
-                    title: context.l10n.settingsNotifications,
-                    onTap: () => context.push(NotificationSettingsScreen.path),
-                  ),
+        body: AdaptiveContentColumn(
+          width: AdaptiveContentWidth.list,
+          capWithoutLargeLayout: true,
+          child: ListView(
+            children: [
+              // Account header
+              if (isAuthenticated) ...[
+                _AccountHeader(
+                  onSwitchAccount: _handleSwitchAccount,
+                  accountSwitchingEnabled: accountSwitchingEnabled,
+                ),
+                if (authService.isAnonymous)
                   DivineListTile(
                     icon: DivineIconName.shieldCheck,
-                    title: context.l10n.settingsPrivacySafetyTitle,
-                    subtitle: context.l10n.settingsPrivacySafetySubtitle,
-                    onTap: () => context.push(PrivacySettingsScreen.path),
-                  ),
-                  DivineListTile(
-                    icon: DivineIconName.sun,
-                    title: context.l10n.settingsAppPreferencesTitle,
-                    subtitle: context.l10n.settingsAppPreferencesSubtitle,
-                    semanticIdentifier: SemanticIds.settingsAppPreferencesRow,
+                    title: context.l10n.settingsSecureAccount,
                     onTap: () =>
-                        context.push(AppPreferencesSettingsScreen.path),
+                        const SecureAccountRouteData().push<void>(context),
+                  ),
+                if (!authService.isAnonymous && hasExpiredOAuthSession)
+                  DivineListTile(
+                    icon: DivineIconName.arrowClockwise,
+                    title: context.l10n.settingsSessionExpired,
+                    subtitle: context.l10n.settingsSessionExpiredSubtitle,
+                    onTap: _handleSessionExpired,
+                    iconColor: VineTheme.accentOrange,
+                  ),
+                if (accountEnforced)
+                  DivineListTile(
+                    icon: DivineIconName.userFocus,
+                    title: context.l10n.accountStatusTitle,
+                    subtitle: context.l10n.accountStatusTileSubtitleRestricted,
+                    iconColor: VineTheme.accentOrange,
+                    onTap: () => context.push(AccountStatusScreen.path),
+                  ),
+              ],
+
+              if (widget.accountOnly) ...[
+                if (!isAuthenticated)
+                  DivineListTile(
+                    icon: DivineIconName.userPlus,
+                    title: context.l10n.authSignInTitle,
+                    onTap: () => const WelcomeRouteData().go(context),
+                  ),
+                if (isAuthenticated &&
+                    authService.authenticationSource ==
+                        AuthenticationSource.divineOAuth) ...[
+                  DivineListTile(
+                    icon: DivineIconName.envelope,
+                    title: context.l10n.accountSettingsChangeEmail,
+                    subtitle: context.l10n.accountSettingsChangeEmailSubtitle,
+                    onTap: () => context.push(ChangeEmailScreen.path),
                   ),
                   DivineListTile(
-                    icon: DivineIconName.graph,
-                    title: context.l10n.settingsConnectionsTitle,
-                    subtitle: context.l10n.settingsConnectionsSubtitle,
-                    semanticIdentifier: SemanticIds.settingsConnectionsRow,
-                    onTap: () => context.push(ConnectionsSettingsScreen.path),
-                  ),
-                  DivineListTile(
-                    icon: DivineIconName.question,
-                    title: context.l10n.settingsHelpAboutTitle,
-                    subtitle: context.l10n.settingsHelpAboutSubtitle,
-                    onTap: () => context.push(HelpAboutSettingsScreen.path),
-                  ),
-                  DivineListTile(
-                    icon: DivineIconName.chats,
-                    title: context.l10n.settingsDiscordTitle,
-                    subtitle: context.l10n.settingsDiscordSubtitle,
-                    trailingIcon: DivineIconName.arrowUpRight,
-                    trailingIconSize: 20,
-                    trailingColor: context.vineColors.accentBrand,
-                    onTap: () => _openDiscord(context),
+                    icon: DivineIconName.lockSimple,
+                    title: context.l10n.accountSettingsChangePassword,
+                    subtitle:
+                        context.l10n.accountSettingsChangePasswordSubtitle,
+                    onTap: () => context.push(ChangePasswordScreen.path),
                   ),
                 ],
-                const SizedBox(height: 24),
-                _VersionTile(appVersion: _appVersion),
+                if (isAuthenticated)
+                  DivineListTile(
+                    icon: DivineIconName.sealCheck,
+                    title: context.l10n.verifyTitle,
+                    subtitle: context.l10n.verifyIntro,
+                    onTap: () => const VerifyRouteData().push<void>(context),
+                  ),
+                if (supporterVerificationAvailable) const SupporterMembership(),
+                const NostrAccountSettingsSection(),
+              ] else ...[
+                DivineListTile(
+                  icon: DivineIconName.userFocus,
+                  title: context.l10n.settingsAccountTitle,
+                  subtitle: context.l10n.settingsAccountSubtitle,
+                  semanticIdentifier: SemanticIds.settingsAccountRow,
+                  onTap: () => context.push(RoutePaths.settingsAccount),
+                ),
+                DivineListTile(
+                  icon: DivineIconName.play,
+                  title: context.l10n.settingsWhatYouSeeTitle,
+                  subtitle: context.l10n.settingsWhatYouSeeSubtitle,
+                  onTap: () => context.push(ViewingSettingsScreen.path),
+                ),
+                DivineListTile(
+                  icon: DivineIconName.cameraRetro,
+                  title: context.l10n.settingsCreateShareTitle,
+                  subtitle: context.l10n.settingsCreateShareSubtitle,
+                  onTap: () => context.push(CreatingSettingsScreen.path),
+                ),
+                DivineListTile(
+                  icon: DivineIconName.bellSimple,
+                  title: context.l10n.settingsNotifications,
+                  onTap: () => context.push(NotificationSettingsScreen.path),
+                ),
+                DivineListTile(
+                  icon: DivineIconName.shieldCheck,
+                  title: context.l10n.settingsPrivacySafetyTitle,
+                  subtitle: context.l10n.settingsPrivacySafetySubtitle,
+                  onTap: () => context.push(PrivacySettingsScreen.path),
+                ),
+                DivineListTile(
+                  icon: DivineIconName.sun,
+                  title: context.l10n.settingsAppPreferencesTitle,
+                  subtitle: context.l10n.settingsAppPreferencesSubtitle,
+                  semanticIdentifier: SemanticIds.settingsAppPreferencesRow,
+                  onTap: () => context.push(AppPreferencesSettingsScreen.path),
+                ),
+                DivineListTile(
+                  icon: DivineIconName.graph,
+                  title: context.l10n.settingsConnectionsTitle,
+                  subtitle: context.l10n.settingsConnectionsSubtitle,
+                  semanticIdentifier: SemanticIds.settingsConnectionsRow,
+                  onTap: () => context.push(ConnectionsSettingsScreen.path),
+                ),
+                DivineListTile(
+                  icon: DivineIconName.question,
+                  title: context.l10n.settingsHelpAboutTitle,
+                  subtitle: context.l10n.settingsHelpAboutSubtitle,
+                  onTap: () => context.push(HelpAboutSettingsScreen.path),
+                ),
+                DivineListTile(
+                  icon: DivineIconName.chats,
+                  title: context.l10n.settingsDiscordTitle,
+                  subtitle: context.l10n.settingsDiscordSubtitle,
+                  trailingIcon: DivineIconName.arrowUpRight,
+                  trailingIconSize: 20,
+                  trailingColor: context.vineColors.accentBrand,
+                  onTap: () => _openDiscord(context),
+                ),
               ],
-            ),
+              const SizedBox(height: 24),
+              _VersionTile(appVersion: _appVersion),
+            ],
           ),
         ),
       ),

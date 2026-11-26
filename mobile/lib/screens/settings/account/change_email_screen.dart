@@ -11,6 +11,7 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/account_credentials_providers.dart';
 import 'package:openvine/screens/settings/general_settings_screen.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -111,20 +112,18 @@ class _ChangeEmailViewState extends State<ChangeEmailView> {
       body: BlocConsumer<ChangeEmailCubit, ChangeEmailState>(
         listener: _onChanged,
         builder: (context, state) {
-          return Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: state.status == ChangeEmailStatus.requestSent
-                    ? _RequestSent(newEmail: state.newEmail.trim())
-                    : _Form(
-                        state: state,
-                        newEmailController: _newEmailController,
-                        passwordController: _passwordController,
-                      ),
-              ),
+          return AdaptiveContentColumn(
+            width: AdaptiveContentWidth.list,
+            capWithoutLargeLayout: true,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: state.status == ChangeEmailStatus.requestSent
+                  ? _RequestSent(newEmail: state.newEmail.trim())
+                  : _Form(
+                      state: state,
+                      newEmailController: _newEmailController,
+                      passwordController: _passwordController,
+                    ),
             ),
           );
         },

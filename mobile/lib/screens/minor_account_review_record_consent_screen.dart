@@ -25,6 +25,7 @@ import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/minor_account_review_routes.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/validators.dart';
 import 'package:openvine/widgets/minor_account_review_checklist_card.dart';
 
@@ -214,80 +215,76 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView>
         ),
         backgroundColor: context.vineColors.background,
         body: SafeArea(
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: flow.accepted && flow.videoPath != null
-                  ? MinorConsentSubmitView(
-                      videoPath: flow.videoPath!,
-                      onUseEmailFallback: _onUseEmailFallback,
-                      onRetake: () => unawaited(_retakeSubmission()),
-                      onUploadStarted: context
-                          .read<MinorConsentFlowCubit>()
-                          .uploadStarted,
-                      onUploadFinished: context
-                          .read<MinorConsentFlowCubit>()
-                          .uploadFinished,
-                    )
-                  : BlocListener<
-                      MinorConsentCaptureCubit,
-                      MinorConsentCaptureState
-                    >(
-                      listenWhen: (_, current) =>
-                          current is MinorConsentCaptureReview,
-                      listener: (context, state) {
-                        if (state is MinorConsentCaptureReview) {
-                          context.read<MinorConsentFlowCubit>().recorded(
-                            state.filePath,
-                          );
-                        }
-                      },
-                      child:
-                          BlocBuilder<
-                            MinorConsentCaptureCubit,
-                            MinorConsentCaptureState
-                          >(
-                            builder: (context, state) {
-                              return switch (state) {
-                                MinorConsentCaptureIdle() =>
-                                  flow.accessDenied
-                                      ? _DeniedPane(
-                                          onUseEmailFallback:
-                                              _onUseEmailFallback,
-                                          onRetry: flow.requiresSettings
-                                              ? null
-                                              : _retryPermissions,
-                                          onOpenSettings: flow.requiresSettings
-                                              ? _openSettings
-                                              : null,
-                                        )
-                                      : _CapturePane(
-                                          cameraReady: flow.cameraReady,
-                                          onRecord: _onRecord,
-                                        ),
-                                MinorConsentCaptureRecording() =>
-                                  _RecordingPane(
-                                    cameraReady: flow.cameraReady,
-                                    onStop: _onStop,
-                                  ),
-                                MinorConsentCaptureReview(:final filePath) =>
-                                  _ReviewPane(
-                                    filePath: filePath,
-                                    onRetake: _onRetake,
-                                    onUseVideo: () => _onUseVideo(filePath),
-                                  ),
-                                MinorConsentCaptureDenied() => _DeniedPane(
-                                  onUseEmailFallback: _onUseEmailFallback,
+          child: AdaptiveContentColumn(
+            width: const AdaptiveContentWidth.custom(640),
+            capWithoutLargeLayout: true,
+            child: flow.accepted && flow.videoPath != null
+                ? MinorConsentSubmitView(
+                    videoPath: flow.videoPath!,
+                    onUseEmailFallback: _onUseEmailFallback,
+                    onRetake: () => unawaited(_retakeSubmission()),
+                    onUploadStarted: context
+                        .read<MinorConsentFlowCubit>()
+                        .uploadStarted,
+                    onUploadFinished: context
+                        .read<MinorConsentFlowCubit>()
+                        .uploadFinished,
+                  )
+                : BlocListener<
+                    MinorConsentCaptureCubit,
+                    MinorConsentCaptureState
+                  >(
+                    listenWhen: (_, current) =>
+                        current is MinorConsentCaptureReview,
+                    listener: (context, state) {
+                      if (state is MinorConsentCaptureReview) {
+                        context.read<MinorConsentFlowCubit>().recorded(
+                          state.filePath,
+                        );
+                      }
+                    },
+                    child:
+                        BlocBuilder<
+                          MinorConsentCaptureCubit,
+                          MinorConsentCaptureState
+                        >(
+                          builder: (context, state) {
+                            return switch (state) {
+                              MinorConsentCaptureIdle() =>
+                                flow.accessDenied
+                                    ? _DeniedPane(
+                                        onUseEmailFallback: _onUseEmailFallback,
+                                        onRetry: flow.requiresSettings
+                                            ? null
+                                            : _retryPermissions,
+                                        onOpenSettings: flow.requiresSettings
+                                            ? _openSettings
+                                            : null,
+                                      )
+                                    : _CapturePane(
+                                        cameraReady: flow.cameraReady,
+                                        onRecord: _onRecord,
+                                      ),
+                              MinorConsentCaptureRecording() => _RecordingPane(
+                                cameraReady: flow.cameraReady,
+                                onStop: _onStop,
+                              ),
+                              MinorConsentCaptureReview(:final filePath) =>
+                                _ReviewPane(
+                                  filePath: filePath,
+                                  onRetake: _onRetake,
+                                  onUseVideo: () => _onUseVideo(filePath),
                                 ),
-                                MinorConsentCaptureError() => _ErrorPane(
-                                  onRetry: _onRetake,
-                                ),
-                              };
-                            },
-                          ),
-                    ),
-            ),
+                              MinorConsentCaptureDenied() => _DeniedPane(
+                                onUseEmailFallback: _onUseEmailFallback,
+                              ),
+                              MinorConsentCaptureError() => _ErrorPane(
+                                onRetry: _onRetake,
+                              ),
+                            };
+                          },
+                        ),
+                  ),
           ),
         ),
       ),

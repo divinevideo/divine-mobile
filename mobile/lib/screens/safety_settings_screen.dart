@@ -14,6 +14,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/dead_image_hosts.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -104,35 +105,33 @@ class SafetySettingsView extends StatelessWidget {
         onBackPressed: context.pop,
       ),
       backgroundColor: context.vineColors.background,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: BlocBuilder<SafetySettingsCubit, SafetySettingsState>(
-            builder: (context, state) {
-              if (state.status == SafetySettingsStatus.loading) {
-                return const Center(child: BrandedLoadingIndicator(size: 60));
-              }
-              return ListView(
-                children: [
-                  DivineSectionHeader(
-                    context.l10n.safetySettingsAgeVerification,
-                  ),
-                  const _AgeVerificationTile(),
-                  const SizedBox(height: 8),
-                  const _DivineHostedOnlyTile(),
-                  const _VerifiedOnlyTile(),
-                  DivineSectionHeader(context.l10n.safetySettingsModeration),
-                  const _DivineProviderTile(),
-                  const _PeopleIFollowProviderTile(),
-                  const _CustomLabelersSection(),
-                  const _BlurDmVideoPreviewsTile(),
-                  DivineSectionHeader(context.l10n.safetySettingsBlockedUsers),
-                  const _BlockedUsersSection(),
-                ],
-              );
-            },
-          ),
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: BlocBuilder<SafetySettingsCubit, SafetySettingsState>(
+          builder: (context, state) {
+            if (state.status == SafetySettingsStatus.loading) {
+              return const Center(child: BrandedLoadingIndicator(size: 60));
+            }
+            return ListView(
+              children: [
+                DivineSectionHeader(
+                  context.l10n.safetySettingsAgeVerification,
+                ),
+                const _AgeVerificationTile(),
+                const SizedBox(height: 8),
+                const _DivineHostedOnlyTile(),
+                const _VerifiedOnlyTile(),
+                DivineSectionHeader(context.l10n.safetySettingsModeration),
+                const _DivineProviderTile(),
+                const _PeopleIFollowProviderTile(),
+                const _CustomLabelersSection(),
+                const _BlurDmVideoPreviewsTile(),
+                DivineSectionHeader(context.l10n.safetySettingsBlockedUsers),
+                const _BlockedUsersSection(),
+              ],
+            );
+          },
         ),
       ),
     );

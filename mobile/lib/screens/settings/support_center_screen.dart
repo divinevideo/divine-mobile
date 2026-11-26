@@ -15,6 +15,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 import 'package:openvine/widgets/clear_logs_confirmation_sheet.dart';
@@ -54,90 +55,88 @@ class SupportCenterScreen extends ConsumerWidget {
         onBackPressed: () => context.safePop(fallback: WelcomeScreen.path),
       ),
       backgroundColor: context.vineColors.background,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: ListView(
-            children: [
-              _SupportContactTile(
-                openSupportMessages: openZendeskSupport,
-                composeEmail: composeEmail,
-              ),
-              if (isAuthenticated)
-                SupportTile(
-                  icon: DivineIconName.warningCircle,
-                  title: l10n.supportReportBug,
-                  subtitle: l10n.supportReportBugSubtitle,
-                  onTap: () => _showBugReport(context, userPubkey),
-                ),
-              if (isAuthenticated)
-                SupportTile(
-                  icon: DivineIconName.sparkle,
-                  title: l10n.supportRequestFeature,
-                  subtitle: l10n.supportRequestFeatureSubtitle,
-                  onTap: () => _showFeatureRequest(context),
-                ),
-              const ExportLogsTile(),
-              const _ClearLogsTile(),
-              // #6335 was filed from here by someone who could not find
-              // deletion, so it has to be reachable from here too. It sits
-              // above the outbound links rather than last so it stays on
-              // screen without scrolling on a 667pt phone.
-              if (isAuthenticated)
-                SupportTile(
-                  icon: DivineIconName.trash,
-                  title: l10n.nostrSettingsDeleteAccount,
-                  subtitle: l10n.nostrSettingsDeleteAccountSubtitle,
-                  destructive: true,
-                  onTap: () => startAccountDeletionFlow(
-                    context: context,
-                    ref: ref,
-                    screenName: 'SupportCenterScreen',
-                  ),
-                ),
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: ListView(
+          children: [
+            _SupportContactTile(
+              openSupportMessages: openZendeskSupport,
+              composeEmail: composeEmail,
+            ),
+            if (isAuthenticated)
               SupportTile(
-                icon: DivineIconName.question,
-                title: l10n.supportFaq,
-                subtitle: l10n.supportFaqSubtitle,
-                onTap: () => _launchUrl(
-                  context,
-                  'https://divine.video/faq',
-                  l10n.supportFaq,
-                ),
+                icon: DivineIconName.warningCircle,
+                title: l10n.supportReportBug,
+                subtitle: l10n.supportReportBugSubtitle,
+                onTap: () => _showBugReport(context, userPubkey),
               ),
+            if (isAuthenticated)
               SupportTile(
-                icon: DivineIconName.users,
-                title: l10n.supportFamily,
-                subtitle: l10n.supportFamilySubtitle,
-                onTap: () => _launchUrl(
-                  context,
-                  AppConstants.familyResourcesUrl,
-                  l10n.supportFamily,
-                ),
+                icon: DivineIconName.sparkle,
+                title: l10n.supportRequestFeature,
+                subtitle: l10n.supportRequestFeatureSubtitle,
+                onTap: () => _showFeatureRequest(context),
               ),
+            const ExportLogsTile(),
+            const _ClearLogsTile(),
+            // #6335 was filed from here by someone who could not find
+            // deletion, so it has to be reachable from here too. It sits
+            // above the outbound links rather than last so it stays on
+            // screen without scrolling on a 667pt phone.
+            if (isAuthenticated)
               SupportTile(
-                icon: DivineIconName.userFocus,
-                title: l10n.supportKids,
-                subtitle: l10n.supportKidsSubtitle,
-                onTap: () => _launchUrl(
-                  context,
-                  AppConstants.kidsPolicyUrl,
-                  l10n.supportKids,
+                icon: DivineIconName.trash,
+                title: l10n.nostrSettingsDeleteAccount,
+                subtitle: l10n.nostrSettingsDeleteAccountSubtitle,
+                destructive: true,
+                onTap: () => startAccountDeletionFlow(
+                  context: context,
+                  ref: ref,
+                  screenName: 'SupportCenterScreen',
                 ),
               ),
-              SupportTile(
-                icon: DivineIconName.shieldCheck,
-                title: l10n.supportProofMode,
-                subtitle: l10n.supportProofModeSubtitle,
-                onTap: () => _launchUrl(
-                  context,
-                  'https://divine.video/proofmode',
-                  l10n.supportProofMode,
-                ),
+            SupportTile(
+              icon: DivineIconName.question,
+              title: l10n.supportFaq,
+              subtitle: l10n.supportFaqSubtitle,
+              onTap: () => _launchUrl(
+                context,
+                'https://divine.video/faq',
+                l10n.supportFaq,
               ),
-            ],
-          ),
+            ),
+            SupportTile(
+              icon: DivineIconName.users,
+              title: l10n.supportFamily,
+              subtitle: l10n.supportFamilySubtitle,
+              onTap: () => _launchUrl(
+                context,
+                AppConstants.familyResourcesUrl,
+                l10n.supportFamily,
+              ),
+            ),
+            SupportTile(
+              icon: DivineIconName.userFocus,
+              title: l10n.supportKids,
+              subtitle: l10n.supportKidsSubtitle,
+              onTap: () => _launchUrl(
+                context,
+                AppConstants.kidsPolicyUrl,
+                l10n.supportKids,
+              ),
+            ),
+            SupportTile(
+              icon: DivineIconName.shieldCheck,
+              title: l10n.supportProofMode,
+              subtitle: l10n.supportProofModeSubtitle,
+              onTap: () => _launchUrl(
+                context,
+                'https://divine.video/proofmode',
+                l10n.supportProofMode,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -11,6 +11,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/router/routes/minor_account_review_routes.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 
 class FeatureFlagScreen extends ConsumerWidget {
   const FeatureFlagScreen({super.key});
@@ -49,80 +50,78 @@ class FeatureFlagScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: ListView.builder(
-            padding: .fromLTRB(
-              16,
-              12,
-              16,
-              MediaQuery.viewPaddingOf(context).bottom,
-            ),
-            itemCount: visibleFlags.length,
-            itemBuilder: (context, index) {
-              final flag = visibleFlags[index];
-              final isEnabled = state[flag] ?? false;
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: ListView.builder(
+          padding: .fromLTRB(
+            16,
+            12,
+            16,
+            MediaQuery.viewPaddingOf(context).bottom,
+          ),
+          itemCount: visibleFlags.length,
+          itemBuilder: (context, index) {
+            final flag = visibleFlags[index];
+            final isEnabled = state[flag] ?? false;
 
-              // `Card` is its own semantics container, so an identifier
-              // wrapped around it lands on an empty node above that boundary
-              // -- automation can neither read the flag's state from it nor
-              // tap anything but its bounds centre. Inside the Card the
-              // identifier merges with the tile, which carries both the tap
-              // and (via `toggled`) the on/off state the E2E flow asserts.
-              return Column(
-                children: [
-                  Card(
-                    clipBehavior: .hardEdge,
-                    margin: const .only(bottom: 12.0),
-                    child: Semantics(
-                      identifier: flag == FeatureFlag.accountSwitching
-                          ? SemanticIds.featureFlagAccountSwitching
-                          : null,
-                      toggled: isEnabled,
-                      child: ListTile(
-                        contentPadding: const .fromLTRB(16, 0, 12, 0),
-                        title: Text(
-                          flag.displayName,
-                          style: VineTheme.titleMediumFont(
-                            color: context.vineColors.primaryText,
-                          ),
+            // `Card` is its own semantics container, so an identifier
+            // wrapped around it lands on an empty node above that boundary
+            // -- automation can neither read the flag's state from it nor
+            // tap anything but its bounds centre. Inside the Card the
+            // identifier merges with the tile, which carries both the tap
+            // and (via `toggled`) the on/off state the E2E flow asserts.
+            return Column(
+              children: [
+                Card(
+                  clipBehavior: .hardEdge,
+                  margin: const .only(bottom: 12.0),
+                  child: Semantics(
+                    identifier: flag == FeatureFlag.accountSwitching
+                        ? SemanticIds.featureFlagAccountSwitching
+                        : null,
+                    toggled: isEnabled,
+                    child: ListTile(
+                      contentPadding: const .fromLTRB(16, 0, 12, 0),
+                      title: Text(
+                        flag.displayName,
+                        style: VineTheme.titleMediumFont(
+                          color: context.vineColors.primaryText,
                         ),
-                        subtitle: Text(
-                          flag.description,
-                          style: VineTheme.bodySmallFont(
-                            color: context.vineColors.onSurfaceVariant,
-                          ),
+                      ),
+                      subtitle: Text(
+                        flag.description,
+                        style: VineTheme.bodySmallFont(
+                          color: context.vineColors.onSurfaceVariant,
                         ),
-                        trailing: DivineSwitch(
-                          value: isEnabled,
-                          onChanged: (value) async {
-                            await service.setFlag(flag, value);
-                          },
-                        ),
-                        onTap: () async {
-                          await service.setFlag(flag, !isEnabled);
+                      ),
+                      trailing: DivineSwitch(
+                        value: isEnabled,
+                        onChanged: (value) async {
+                          await service.setFlag(flag, value);
                         },
                       ),
+                      onTap: () async {
+                        await service.setFlag(flag, !isEnabled);
+                      },
                     ),
                   ),
-                  if (flag == FeatureFlag.minorConsentInAppRecording &&
-                      isEnabled)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                      child: DivineButton(
-                        label: context.l10n.minorAccountReviewTitle,
-                        expanded: true,
-                        onPressed: () =>
-                            const MinorAccountReviewWelcomeRouteData()
-                                .push<void>(context),
-                      ),
+                ),
+                if (flag == FeatureFlag.minorConsentInAppRecording && isEnabled)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                    child: DivineButton(
+                      label: context.l10n.minorAccountReviewTitle,
+                      expanded: true,
+                      onPressed: () =>
+                          const MinorAccountReviewWelcomeRouteData().push<void>(
+                            context,
+                          ),
                     ),
-                ],
-              );
-            },
-          ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );

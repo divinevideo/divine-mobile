@@ -15,6 +15,7 @@ import 'package:openvine/constants/storage_cache_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/storage_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/byte_size_format.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -98,33 +99,31 @@ class StorageManagementView extends StatelessWidget {
             listener: _announceRepair,
           ),
         ],
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: ListView(
-              padding: EdgeInsets.only(
-                bottom: 32 + MediaQuery.viewPaddingOf(context).bottom,
-              ),
-              children: [
-                DivineSectionHeader(
-                  context.l10n.settingsStorageCacheSectionTitle,
-                ),
-                const _CacheSection(),
-                DivineSectionHeader(
-                  context.l10n.settingsStorageContentSectionTitle,
-                ),
-                const _ContentSection(),
-                DivineSectionHeader(
-                  context.l10n.settingsStorageLibrarySectionTitle,
-                ),
-                const _LibrarySection(),
-                DivineSectionHeader(
-                  context.l10n.settingsStorageRepairSectionTitle,
-                ),
-                const _RepairSection(),
-              ],
+        child: AdaptiveContentColumn(
+          width: AdaptiveContentWidth.list,
+          capWithoutLargeLayout: true,
+          child: ListView(
+            padding: EdgeInsets.only(
+              bottom: 32 + MediaQuery.viewPaddingOf(context).bottom,
             ),
+            children: [
+              DivineSectionHeader(
+                context.l10n.settingsStorageCacheSectionTitle,
+              ),
+              const _CacheSection(),
+              DivineSectionHeader(
+                context.l10n.settingsStorageContentSectionTitle,
+              ),
+              const _ContentSection(),
+              DivineSectionHeader(
+                context.l10n.settingsStorageLibrarySectionTitle,
+              ),
+              const _LibrarySection(),
+              DivineSectionHeader(
+                context.l10n.settingsStorageRepairSectionTitle,
+              ),
+              const _RepairSection(),
+            ],
           ),
         ),
       ),

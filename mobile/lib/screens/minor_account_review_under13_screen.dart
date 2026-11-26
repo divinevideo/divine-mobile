@@ -2,6 +2,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/routes/auth_routes.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 
 class MinorAccountReviewUnder13Screen extends StatelessWidget {
   static const routeName = 'minor-account-review-under13';
@@ -19,45 +20,43 @@ class MinorAccountReviewUnder13Screen extends StatelessWidget {
       ),
       backgroundColor: context.vineColors.background,
       body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-              children: [
-                Text(
-                  context.l10n.minorAccountReviewUnder13PublicTitle,
-                  style: VineTheme.headlineMediumFont(
-                    color: context.vineColors.primaryText,
-                  ),
+        child: AdaptiveContentColumn(
+          width: const AdaptiveContentWidth.custom(640),
+          capWithoutLargeLayout: true,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+            children: [
+              Text(
+                context.l10n.minorAccountReviewUnder13PublicTitle,
+                style: VineTheme.headlineMediumFont(
+                  color: context.vineColors.primaryText,
                 ),
-                const SizedBox(height: 20),
-                _CalloutCard(
-                  title: context.l10n.minorAccountReviewUnder13WhyTitle,
-                  body: context.l10n.minorAccountReviewUnder13PublicBody,
-                  backgroundColor: context.vineColors.surfaceContainer,
-                  borderColor: context.vineColors.outline,
-                  textColor: context.vineColors.onSurface,
-                ),
-                const SizedBox(height: 16),
-                _CalloutCard(
-                  title: context.l10n.minorAccountReviewUnder13FamilyTitle,
-                  body: context.l10n.minorAccountReviewUnder13FamilyBody,
-                  backgroundColor: context.vineColors.inverseSurface,
-                  borderColor: context.vineColors.inverseOnSurface,
-                  textColor: context.vineColors.inverseOnSurface,
-                ),
-                const SizedBox(height: 16),
-                _CalloutCard(
-                  title: context.l10n.minorAccountReviewUnder13ComeBackTitle,
-                  body: context.l10n.minorAccountReviewUnder13ComeBackBody,
-                  backgroundColor: context.vineColors.surfaceContainer,
-                  borderColor: context.vineColors.outline,
-                  textColor: context.vineColors.onSurface,
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 20),
+              _CalloutCard(
+                title: context.l10n.minorAccountReviewUnder13WhyTitle,
+                body: context.l10n.minorAccountReviewUnder13PublicBody,
+                backgroundColor: context.vineColors.surfaceContainer,
+                borderColor: context.vineColors.outline,
+                textColor: context.vineColors.onSurface,
+              ),
+              const SizedBox(height: 16),
+              _CalloutCard(
+                title: context.l10n.minorAccountReviewUnder13FamilyTitle,
+                body: context.l10n.minorAccountReviewUnder13FamilyBody,
+                backgroundColor: context.vineColors.inverseSurface,
+                borderColor: context.vineColors.inverseOnSurface,
+                textColor: context.vineColors.inverseOnSurface,
+              ),
+              const SizedBox(height: 16),
+              _CalloutCard(
+                title: context.l10n.minorAccountReviewUnder13ComeBackTitle,
+                body: context.l10n.minorAccountReviewUnder13ComeBackBody,
+                backgroundColor: context.vineColors.surfaceContainer,
+                borderColor: context.vineColors.outline,
+                textColor: context.vineColors.onSurface,
+              ),
+            ],
           ),
         ),
       ),

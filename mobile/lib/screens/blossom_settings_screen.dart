@@ -11,6 +11,7 @@ import 'package:openvine/blocs/blossom_settings/blossom_settings_state.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -133,28 +134,26 @@ class _BlossomSettingsViewState extends State<BlossomSettingsView> {
           backgroundColor: context.vineColors.background,
           body: isLoading
               ? const Center(child: BrandedLoadingIndicator(size: 60))
-              : Align(
-                  alignment: Alignment.topCenter,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 600),
-                    child: ListView(
-                      padding: .fromLTRB(
-                        0,
-                        16,
-                        0,
-                        16 + MediaQuery.viewPaddingOf(context).bottom,
-                      ),
-                      children: [
-                        const _AboutCard(),
-                        const SizedBox(height: 20),
-                        const _EnableToggle(),
-                        const SizedBox(height: 20),
-                        if (state.isBlossomEnabled)
-                          _ServerUrlSection(
-                            controller: _serverController,
-                          ),
-                      ],
+              : AdaptiveContentColumn(
+                  width: AdaptiveContentWidth.list,
+                  capWithoutLargeLayout: true,
+                  child: ListView(
+                    padding: .fromLTRB(
+                      0,
+                      16,
+                      0,
+                      16 + MediaQuery.viewPaddingOf(context).bottom,
                     ),
+                    children: [
+                      const _AboutCard(),
+                      const SizedBox(height: 20),
+                      const _EnableToggle(),
+                      const SizedBox(height: 20),
+                      if (state.isBlossomEnabled)
+                        _ServerUrlSection(
+                          controller: _serverController,
+                        ),
+                    ],
                   ),
                 ),
         );

@@ -12,6 +12,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/apps/nostr_app_launch_mode.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_apps_platform_support.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -68,71 +69,69 @@ class _AppsDirectoryContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: context.vineColors.background,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: BlocBuilder<AppsDirectoryCubit, AppsDirectoryState>(
-            builder: (context, state) {
-              return switch (state.status) {
-                AppsDirectoryStatus.initial || AppsDirectoryStatus.loading =>
-                  const Center(child: BrandedLoadingIndicator(size: 60)),
-                AppsDirectoryStatus.error => _AppsDirectoryMessage(
-                  title: context.l10n.appsDirectoryErrorTitle,
-                  subtitle: context.l10n.appsDirectoryErrorSubtitle,
-                  actionLabel: context.l10n.commonRetry,
+      child: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: BlocBuilder<AppsDirectoryCubit, AppsDirectoryState>(
+          builder: (context, state) {
+            return switch (state.status) {
+              AppsDirectoryStatus.initial || AppsDirectoryStatus.loading =>
+                const Center(child: BrandedLoadingIndicator(size: 60)),
+              AppsDirectoryStatus.error => _AppsDirectoryMessage(
+                title: context.l10n.appsDirectoryErrorTitle,
+                subtitle: context.l10n.appsDirectoryErrorSubtitle,
+                actionLabel: context.l10n.commonRetry,
+                onAction: () => runDetached(
+                  context.read<AppsDirectoryCubit>().refreshApps(),
+                  'retry loading approved apps',
+                  logName: 'AppsDirectoryScreen',
+                  category: LogCategory.ui,
+                ),
+              ),
+              AppsDirectoryStatus.loaded when state.apps.isEmpty =>
+                _AppsDirectoryMessage(
+                  title: context.l10n.appsDirectoryEmptyTitle,
+                  subtitle: context.l10n.appsDirectoryEmptySubtitle,
+                  actionLabel: context.l10n.appsDirectoryRefresh,
                   onAction: () => runDetached(
                     context.read<AppsDirectoryCubit>().refreshApps(),
-                    'retry loading approved apps',
+                    'refresh approved apps',
                     logName: 'AppsDirectoryScreen',
                     category: LogCategory.ui,
                   ),
                 ),
-                AppsDirectoryStatus.loaded when state.apps.isEmpty =>
-                  _AppsDirectoryMessage(
-                    title: context.l10n.appsDirectoryEmptyTitle,
-                    subtitle: context.l10n.appsDirectoryEmptySubtitle,
-                    actionLabel: context.l10n.appsDirectoryRefresh,
-                    onAction: () => runDetached(
-                      context.read<AppsDirectoryCubit>().refreshApps(),
-                      'refresh approved apps',
-                      logName: 'AppsDirectoryScreen',
-                      category: LogCategory.ui,
-                    ),
+              AppsDirectoryStatus.loaded => RefreshIndicator(
+                color: VineTheme.onPrimary,
+                backgroundColor: VineTheme.vineGreen,
+                onRefresh: () =>
+                    context.read<AppsDirectoryCubit>().refreshApps(),
+                child: ListView.builder(
+                  // A null padding makes Flutter fall back to the vertical
+                  // MediaQuery.padding — both insets. Embedded in Explore
+                  // there is no app bar above, so the top inset is still
+                  // the status bar and would gap the intro card; standalone
+                  // the bottom inset is real (no bottom nav) and has to stay
+                  // so the last card clears the gesture bar. Resolved here,
+                  // below the Scaffold: 0 embedded, the inset standalone.
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.paddingOf(context).bottom,
                   ),
-                AppsDirectoryStatus.loaded => RefreshIndicator(
-                  color: VineTheme.onPrimary,
-                  backgroundColor: VineTheme.vineGreen,
-                  onRefresh: () =>
-                      context.read<AppsDirectoryCubit>().refreshApps(),
-                  child: ListView.builder(
-                    // A null padding makes Flutter fall back to the vertical
-                    // MediaQuery.padding — both insets. Embedded in Explore
-                    // there is no app bar above, so the top inset is still
-                    // the status bar and would gap the intro card; standalone
-                    // the bottom inset is real (no bottom nav) and has to stay
-                    // so the last card clears the gesture bar. Resolved here,
-                    // below the Scaffold: 0 embedded, the inset standalone.
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.paddingOf(context).bottom,
-                    ),
-                    itemCount: state.apps.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        return const _AppsDirectoryIntro();
-                      }
+                  itemCount: state.apps.length + 1,
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      return const _AppsDirectoryIntro();
+                    }
 
-                      final app = state.apps[index - 1];
-                      return _AppsDirectoryRow(
-                        app: app,
-                        onTap: () => launchNostrApp(context, app),
-                      );
-                    },
-                  ),
+                    final app = state.apps[index - 1];
+                    return _AppsDirectoryRow(
+                      app: app,
+                      onTap: () => launchNostrApp(context, app),
+                    );
+                  },
                 ),
-              };
-            },
-          ),
+              ),
+            };
+          },
         ),
       ),
     );

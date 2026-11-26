@@ -13,6 +13,7 @@ import 'package:openvine/models/account_enforcement_status.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/external_link_launcher.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/widgets/support_contact_action.dart';
@@ -104,59 +105,56 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
         onBackPressed: () => context.safePop(fallback: SettingsScreen.path),
       ),
       backgroundColor: context.vineColors.background,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: async.when(
-            // Show the spinner while refreshing rather than Riverpod's default
-            // of holding the previous value on screen. A status cached before
-            // the user was suspended must not remain visible while the refetch
-            // is in flight; not knowing yet is the honest state. Publish
-            // evidence is the exception: a restriction is then known, so the
-            // loading branch shows it instead of the spinner.
-            skipLoadingOnRefresh: false,
-            loading: () {
-              if (publishRestriction == null) {
-                return const Center(child: DivineCircularProgressIndicator());
-              }
-              // The publish result cannot tell a closure from any other ban,
-              // so a closure this session already confirmed keeps its own
-              // explanation instead of the generic paths it leaves out.
-              return _ExplainedStatus(
-                status: switch (lastConfirmed) {
-                  final known? when known.isAgeReviewClosure => known,
-                  _ => publishRestriction,
-                },
-                openSupportMessages: widget.openSupportMessages,
-                composeEmail: widget.composeEmail,
-              );
-            },
-            // Keep a confirmed restriction through a failed read so its appeal
-            // and exit paths survive a bad connection. Without a confirmed
-            // result, report that the lookup is indeterminate rather than
-            // presenting an all-clear that Funnelcake never returned.
-            error: (_, _) {
-              final retained = lastConfirmed ?? publishRestriction;
-              if (retained == null) {
-                return _UnavailableBody(
-                  onRetry: () =>
-                      ref.invalidate(accountEnforcementStatusProvider),
-                );
-              }
-              return _ExplainedStatus(
-                status: retained,
-                isLastKnown: true,
-                onRetry: () => ref.invalidate(accountEnforcementStatusProvider),
-                openSupportMessages: widget.openSupportMessages,
-                composeEmail: widget.composeEmail,
-              );
-            },
-            data: (status) => _ExplainedStatus(
-              status: effective(status),
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: async.when(
+          // Show the spinner while refreshing rather than Riverpod's default
+          // of holding the previous value on screen. A status cached before
+          // the user was suspended must not remain visible while the refetch
+          // is in flight; not knowing yet is the honest state. Publish
+          // evidence is the exception: a restriction is then known, so the
+          // loading branch shows it instead of the spinner.
+          skipLoadingOnRefresh: false,
+          loading: () {
+            if (publishRestriction == null) {
+              return const Center(child: DivineCircularProgressIndicator());
+            }
+            // The publish result cannot tell a closure from any other ban,
+            // so a closure this session already confirmed keeps its own
+            // explanation instead of the generic paths it leaves out.
+            return _ExplainedStatus(
+              status: switch (lastConfirmed) {
+                final known? when known.isAgeReviewClosure => known,
+                _ => publishRestriction,
+              },
               openSupportMessages: widget.openSupportMessages,
               composeEmail: widget.composeEmail,
-            ),
+            );
+          },
+          // Keep a confirmed restriction through a failed read so its appeal
+          // and exit paths survive a bad connection. Without a confirmed
+          // result, report that the lookup is indeterminate rather than
+          // presenting an all-clear that Funnelcake never returned.
+          error: (_, _) {
+            final retained = lastConfirmed ?? publishRestriction;
+            if (retained == null) {
+              return _UnavailableBody(
+                onRetry: () => ref.invalidate(accountEnforcementStatusProvider),
+              );
+            }
+            return _ExplainedStatus(
+              status: retained,
+              isLastKnown: true,
+              onRetry: () => ref.invalidate(accountEnforcementStatusProvider),
+              openSupportMessages: widget.openSupportMessages,
+              composeEmail: widget.composeEmail,
+            );
+          },
+          data: (status) => _ExplainedStatus(
+            status: effective(status),
+            openSupportMessages: widget.openSupportMessages,
+            composeEmail: widget.composeEmail,
           ),
         ),
       ),

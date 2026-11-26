@@ -20,6 +20,7 @@ import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -556,289 +557,287 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
           ),
         ],
       ),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: ListView(
-            padding: .fromLTRB(
-              16,
-              16,
-              16,
-              16 + MediaQuery.viewPaddingOf(context).bottom,
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: ListView(
+          padding: .fromLTRB(
+            16,
+            16,
+            16,
+            16 + MediaQuery.viewPaddingOf(context).bottom,
+          ),
+          children: [
+            // Last refresh time
+            if (_lastRefresh != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(
+                  context.l10n.relayDiagnosticLastRefresh(
+                    _formatTime(_lastRefresh!),
+                  ),
+                  style: VineTheme.bodySmallFont(
+                    color: context.vineColors.mutedText,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+
+            // Relay status
+            _buildSection(
+              title: context.l10n.relayDiagnosticRelayStatus,
+              icon: Icons.storage,
+              children: [
+                _buildStatusRow(
+                  context.l10n.relayDiagnosticInitialized,
+                  nostrService.isInitialized,
+                  nostrService.isInitialized
+                      ? context.l10n.relayDiagnosticReady
+                      : context.l10n.relayDiagnosticNotInitialized,
+                ),
+                if (_relayStats != null) ...[
+                  _buildInfoRow(
+                    context.l10n.relayDiagnosticDatabaseEvents,
+                    _relayStats!['database']?['total_events']?.toString() ??
+                        'N/A',
+                  ),
+                  _buildInfoRow(
+                    context.l10n.relayDiagnosticActiveSubscriptions,
+                    _relayStats!['subscriptions']?['active_count']
+                            ?.toString() ??
+                        'N/A',
+                  ),
+                ],
+              ],
             ),
-            children: [
-              // Last refresh time
-              if (_lastRefresh != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Text(
-                    context.l10n.relayDiagnosticLastRefresh(
-                      _formatTime(_lastRefresh!),
-                    ),
-                    style: VineTheme.bodySmallFont(
-                      color: context.vineColors.mutedText,
-                    ),
-                    textAlign: TextAlign.center,
+
+            const SizedBox(height: 16),
+
+            // External relays status
+            _buildSection(
+              title: context.l10n.relayDiagnosticExternalRelays,
+              icon: Icons.cloud,
+              children: [
+                _buildInfoRow(
+                  context.l10n.relayDiagnosticConfigured,
+                  context.l10n.relayDiagnosticRelayCount(
+                    configuredRelays.length,
                   ),
                 ),
+                _buildInfoRow(
+                  context.l10n.relayDiagnosticConnectedLabel,
+                  context.l10n.relayDiagnosticConnectedRatio(
+                    connectedRelays.length,
+                    configuredRelays.length,
+                  ),
+                ),
+                Divider(color: context.vineColors.mutedText),
+                ...configuredRelays.map((relayUrl) {
+                  final isConnected = connectedRelays.contains(relayUrl);
+                  final status = relayStatuses[relayUrl];
+                  final isAuthenticated =
+                      status?.state == RelayState.authenticated;
+                  return _buildRelayRow(
+                    relayUrl,
+                    isConnected,
+                    isAuthenticated,
+                  );
+                }),
+              ],
+            ),
 
-              // Relay status
-              _buildSection(
-                title: context.l10n.relayDiagnosticRelayStatus,
-                icon: Icons.storage,
-                children: [
-                  _buildStatusRow(
-                    context.l10n.relayDiagnosticInitialized,
-                    nostrService.isInitialized,
-                    nostrService.isInitialized
-                        ? context.l10n.relayDiagnosticReady
-                        : context.l10n.relayDiagnosticNotInitialized,
-                  ),
-                  if (_relayStats != null) ...[
-                    _buildInfoRow(
-                      context.l10n.relayDiagnosticDatabaseEvents,
-                      _relayStats!['database']?['total_events']?.toString() ??
-                          'N/A',
-                    ),
-                    _buildInfoRow(
-                      context.l10n.relayDiagnosticActiveSubscriptions,
-                      _relayStats!['subscriptions']?['active_count']
-                              ?.toString() ??
-                          'N/A',
-                    ),
-                  ],
-                ],
-              ),
+            const SizedBox(height: 16),
 
-              const SizedBox(height: 16),
+            // Video events status
+            _buildSection(
+              title: context.l10n.relayDiagnosticVideoEvents,
+              icon: Icons.video_library,
+              children: [
+                _buildInfoRow(
+                  context.l10n.relayDiagnosticHomeFeed,
+                  context.l10n.relayDiagnosticVideosCount(homeFeedCount),
+                ),
+                _buildInfoRow(
+                  context.l10n.relayDiagnosticDiscovery,
+                  context.l10n.relayDiagnosticVideosCount(discoveryCount),
+                ),
+                _buildInfoRow(
+                  context.l10n.relayDiagnosticLoading,
+                  videoService.isLoading
+                      ? context.l10n.relayDiagnosticYes
+                      : context.l10n.relayDiagnosticNo,
+                ),
+                if (videoService.error != null)
+                  _buildErrorRow('Error', videoService.error!),
+                Divider(color: context.vineColors.mutedText),
+                Center(
+                  child: DivineButton(
+                    label: context.l10n.relayDiagnosticTestDirectQuery,
+                    leadingIcon: DivineIconName.search,
+                    onPressed: _testDirectEventQuery,
+                  ),
+                ),
+              ],
+            ),
 
-              // External relays status
-              _buildSection(
-                title: context.l10n.relayDiagnosticExternalRelays,
-                icon: Icons.cloud,
-                children: [
-                  _buildInfoRow(
-                    context.l10n.relayDiagnosticConfigured,
-                    context.l10n.relayDiagnosticRelayCount(
-                      configuredRelays.length,
-                    ),
-                  ),
-                  _buildInfoRow(
-                    context.l10n.relayDiagnosticConnectedLabel,
-                    context.l10n.relayDiagnosticConnectedRatio(
-                      connectedRelays.length,
-                      configuredRelays.length,
-                    ),
-                  ),
-                  Divider(color: context.vineColors.mutedText),
-                  ...configuredRelays.map((relayUrl) {
-                    final isConnected = connectedRelays.contains(relayUrl);
-                    final status = relayStatuses[relayUrl];
-                    final isAuthenticated =
-                        status?.state == RelayState.authenticated;
-                    return _buildRelayRow(
-                      relayUrl,
-                      isConnected,
-                      isAuthenticated,
-                    );
-                  }),
-                ],
-              ),
+            const SizedBox(height: 16),
 
-              const SizedBox(height: 16),
-
-              // Video events status
-              _buildSection(
-                title: context.l10n.relayDiagnosticVideoEvents,
-                icon: Icons.video_library,
-                children: [
-                  _buildInfoRow(
-                    context.l10n.relayDiagnosticHomeFeed,
-                    context.l10n.relayDiagnosticVideosCount(homeFeedCount),
-                  ),
-                  _buildInfoRow(
-                    context.l10n.relayDiagnosticDiscovery,
-                    context.l10n.relayDiagnosticVideosCount(discoveryCount),
-                  ),
-                  _buildInfoRow(
-                    context.l10n.relayDiagnosticLoading,
-                    videoService.isLoading
-                        ? context.l10n.relayDiagnosticYes
-                        : context.l10n.relayDiagnosticNo,
-                  ),
-                  if (videoService.error != null)
-                    _buildErrorRow('Error', videoService.error!),
-                  Divider(color: context.vineColors.mutedText),
+            // Network connectivity test
+            _buildSection(
+              title: context.l10n.relayDiagnosticNetworkConnectivity,
+              icon: Icons.network_check,
+              children: [
+                if (_networkTests.isEmpty && !_isTestingNetwork)
                   Center(
                     child: DivineButton(
-                      label: context.l10n.relayDiagnosticTestDirectQuery,
-                      leadingIcon: DivineIconName.search,
-                      onPressed: _testDirectEventQuery,
+                      label: context.l10n.relayDiagnosticRunNetworkTest,
+                      leadingIcon: DivineIconName.play,
+                      onPressed: _testNetworkConnectivity,
+                    ),
+                  ),
+                if (_isTestingNetwork)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: BrandedLoadingIndicator(size: 44),
+                    ),
+                  ),
+                if (_networkTests.isNotEmpty)
+                  ..._networkTests.entries.map((entry) {
+                    final isOk = entry.value.startsWith('OK');
+                    return _buildInfoRow(
+                      entry.key,
+                      entry.value,
+                      textColor: isOk ? VineTheme.success : VineTheme.error,
+                    );
+                  }),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Blossom Server status
+            _buildSection(
+              title: context.l10n.relayDiagnosticBlossomServer,
+              icon: Icons.cloud_upload,
+              children: [
+                if (_blossomResult == null && !_isTestingRestEndpoints)
+                  Center(
+                    child: DivineButton(
+                      label: context.l10n.relayDiagnosticTestAllEndpoints,
+                      leadingIcon: DivineIconName.play,
+                      onPressed: _testRestEndpoints,
+                    ),
+                  ),
+                if (_isTestingRestEndpoints && _blossomResult == null)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: BrandedLoadingIndicator(size: 44),
+                    ),
+                  ),
+                if (_blossomResult != null) ...[
+                  _buildInfoRow(
+                    context.l10n.relayDiagnosticStatus,
+                    _blossomResult!.isReachable
+                        ? 'OK (${_blossomResult!.latencyMs}ms)'
+                        : 'FAILED',
+                    textColor: _blossomResult!.isReachable
+                        ? VineTheme.success
+                        : VineTheme.error,
+                  ),
+                  if (_blossomResult!.serverUrl != null)
+                    _buildInfoRow(
+                      context.l10n.relayDiagnosticUrl,
+                      _blossomResult!.serverUrl!,
+                    ),
+                  if (_blossomResult!.errorMessage != null)
+                    _buildErrorRow(
+                      context.l10n.relayDiagnosticError,
+                      _blossomResult!.errorMessage!,
+                    ),
+                ],
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // FunnelCake API status - comprehensive endpoint testing
+            _buildSection(
+              title: context.l10n.relayDiagnosticFunnelCakeApi,
+              icon: Icons.api,
+              children: [
+                if (_funnelCakeResults == null && !_isTestingRestEndpoints)
+                  Center(
+                    child: DivineButton(
+                      label: context.l10n.relayDiagnosticTestAllEndpoints,
+                      leadingIcon: DivineIconName.play,
+                      onPressed: _testRestEndpoints,
+                    ),
+                  ),
+                if (_isTestingRestEndpoints && _funnelCakeResults == null)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: BrandedLoadingIndicator(size: 44),
+                    ),
+                  ),
+                if (_funnelCakeResults != null) ...[
+                  // Summary row
+                  _buildInfoRow(
+                    context.l10n.relayDiagnosticBaseUrl,
+                    _funnelCakeResults!.apiBaseUrl,
+                  ),
+                  _buildInfoRow(
+                    context.l10n.relayDiagnosticSummary,
+                    context.l10n.relayDiagnosticEndpointSummary(
+                      _funnelCakeResults!.successCount,
+                      _funnelCakeResults!.endpoints.length,
+                      _funnelCakeResults!.avgLatencyMs,
+                    ),
+                    textColor: _funnelCakeResults!.allSuccess
+                        ? VineTheme.success
+                        : VineTheme.warning,
+                  ),
+                  Divider(color: context.vineColors.mutedText),
+                  // Individual endpoint results
+                  ..._funnelCakeResults!.endpoints.map(
+                    _buildEndpointResultRow,
+                  ),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: DivineButton(
+                      label: context.l10n.relayDiagnosticRetestAll,
+                      type: DivineButtonType.link,
+                      onPressed: _testRestEndpoints,
                     ),
                   ),
                 ],
-              ),
+              ],
+            ),
 
-              const SizedBox(height: 16),
+            const SizedBox(height: 24),
 
-              // Network connectivity test
-              _buildSection(
-                title: context.l10n.relayDiagnosticNetworkConnectivity,
-                icon: Icons.network_check,
-                children: [
-                  if (_networkTests.isEmpty && !_isTestingNetwork)
-                    Center(
-                      child: DivineButton(
-                        label: context.l10n.relayDiagnosticRunNetworkTest,
-                        leadingIcon: DivineIconName.play,
-                        onPressed: _testNetworkConnectivity,
-                      ),
-                    ),
-                  if (_isTestingNetwork)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: BrandedLoadingIndicator(size: 44),
-                      ),
-                    ),
-                  if (_networkTests.isNotEmpty)
-                    ..._networkTests.entries.map((entry) {
-                      final isOk = entry.value.startsWith('OK');
-                      return _buildInfoRow(
-                        entry.key,
-                        entry.value,
-                        textColor: isOk ? VineTheme.success : VineTheme.error,
-                      );
-                    }),
-                ],
-              ),
+            // Retry connection button
+            DivineButton(
+              label: _isRetrying
+                  ? context.l10n.relayDiagnosticRetrying
+                  : context.l10n.relayDiagnosticRetryConnection,
+              leadingIcon: DivineIconName.arrowClockwise,
+              expanded: true,
+              isLoading: _isRetrying,
+              onPressed: _isRetrying ? null : _retryConnection,
+            ),
 
-              const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-              // Blossom Server status
-              _buildSection(
-                title: context.l10n.relayDiagnosticBlossomServer,
-                icon: Icons.cloud_upload,
-                children: [
-                  if (_blossomResult == null && !_isTestingRestEndpoints)
-                    Center(
-                      child: DivineButton(
-                        label: context.l10n.relayDiagnosticTestAllEndpoints,
-                        leadingIcon: DivineIconName.play,
-                        onPressed: _testRestEndpoints,
-                      ),
-                    ),
-                  if (_isTestingRestEndpoints && _blossomResult == null)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: BrandedLoadingIndicator(size: 44),
-                      ),
-                    ),
-                  if (_blossomResult != null) ...[
-                    _buildInfoRow(
-                      context.l10n.relayDiagnosticStatus,
-                      _blossomResult!.isReachable
-                          ? 'OK (${_blossomResult!.latencyMs}ms)'
-                          : 'FAILED',
-                      textColor: _blossomResult!.isReachable
-                          ? VineTheme.success
-                          : VineTheme.error,
-                    ),
-                    if (_blossomResult!.serverUrl != null)
-                      _buildInfoRow(
-                        context.l10n.relayDiagnosticUrl,
-                        _blossomResult!.serverUrl!,
-                      ),
-                    if (_blossomResult!.errorMessage != null)
-                      _buildErrorRow(
-                        context.l10n.relayDiagnosticError,
-                        _blossomResult!.errorMessage!,
-                      ),
-                  ],
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // FunnelCake API status - comprehensive endpoint testing
-              _buildSection(
-                title: context.l10n.relayDiagnosticFunnelCakeApi,
-                icon: Icons.api,
-                children: [
-                  if (_funnelCakeResults == null && !_isTestingRestEndpoints)
-                    Center(
-                      child: DivineButton(
-                        label: context.l10n.relayDiagnosticTestAllEndpoints,
-                        leadingIcon: DivineIconName.play,
-                        onPressed: _testRestEndpoints,
-                      ),
-                    ),
-                  if (_isTestingRestEndpoints && _funnelCakeResults == null)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: BrandedLoadingIndicator(size: 44),
-                      ),
-                    ),
-                  if (_funnelCakeResults != null) ...[
-                    // Summary row
-                    _buildInfoRow(
-                      context.l10n.relayDiagnosticBaseUrl,
-                      _funnelCakeResults!.apiBaseUrl,
-                    ),
-                    _buildInfoRow(
-                      context.l10n.relayDiagnosticSummary,
-                      context.l10n.relayDiagnosticEndpointSummary(
-                        _funnelCakeResults!.successCount,
-                        _funnelCakeResults!.endpoints.length,
-                        _funnelCakeResults!.avgLatencyMs,
-                      ),
-                      textColor: _funnelCakeResults!.allSuccess
-                          ? VineTheme.success
-                          : VineTheme.warning,
-                    ),
-                    Divider(color: context.vineColors.mutedText),
-                    // Individual endpoint results
-                    ..._funnelCakeResults!.endpoints.map(
-                      _buildEndpointResultRow,
-                    ),
-                    const SizedBox(height: 12),
-                    Center(
-                      child: DivineButton(
-                        label: context.l10n.relayDiagnosticRetestAll,
-                        type: DivineButtonType.link,
-                        onPressed: _testRestEndpoints,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Retry connection button
-              DivineButton(
-                label: _isRetrying
-                    ? context.l10n.relayDiagnosticRetrying
-                    : context.l10n.relayDiagnosticRetryConnection,
-                leadingIcon: DivineIconName.arrowClockwise,
-                expanded: true,
-                isLoading: _isRetrying,
-                onPressed: _isRetrying ? null : _retryConnection,
-              ),
-
-              const SizedBox(height: 16),
-
-              DivineInfoCard(
-                tone: DivineInfoCardTone.neutral,
-                compact: true,
-                title: context.l10n.relayDiagnosticTroubleshooting,
-                message: context.l10n.relayDiagnosticTroubleshootingGuide,
-              ),
-            ],
-          ),
+            DivineInfoCard(
+              tone: DivineInfoCardTone.neutral,
+              compact: true,
+              title: context.l10n.relayDiagnosticTroubleshooting,
+              message: context.l10n.relayDiagnosticTroubleshootingGuide,
+            ),
+          ],
         ),
       ),
     );

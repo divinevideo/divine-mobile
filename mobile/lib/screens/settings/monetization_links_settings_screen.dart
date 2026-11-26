@@ -20,6 +20,7 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 
 class MonetizationLinksSettingsScreen extends ConsumerWidget {
   static const routeName = 'monetization-links-settings';
@@ -144,50 +145,71 @@ class _MonetizationLinksSettingsViewState
         onBackPressed: () => context.safePop(fallback: SettingsScreen.path),
       ),
       backgroundColor: context.vineColors.surface,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-            children: [
-              _SectionIntro(
-                profile: state.currentProfile,
-                appStoreTipPolicy: appStoreTipPolicy,
-              ),
-              if (state.isLoading)
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Center(
-                    child: DivineCircularProgressIndicator(
-                      semanticsLabel: context.l10n.commonLoading,
-                    ),
+      body: AdaptiveContentColumn(
+        width: const AdaptiveContentWidth.custom(640),
+        capWithoutLargeLayout: true,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          children: [
+            _SectionIntro(
+              profile: state.currentProfile,
+              appStoreTipPolicy: appStoreTipPolicy,
+            ),
+            if (state.isLoading)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: DivineCircularProgressIndicator(
+                    semanticsLabel: context.l10n.commonLoading,
                   ),
                 ),
-              if (state.loadStatus ==
-                  MonetizationLinksSettingsLoadStatus.failure)
-                Column(
-                  children: [
-                    Text(context.l10n.commonSomethingWentWrong),
-                    DivineButton(
-                      label: context.l10n.commonRetry,
-                      onPressed: () =>
-                          context.read<MonetizationLinksSettingsCubit>().load(),
-                    ),
-                  ],
-                ),
-              const SizedBox(height: 20),
+              ),
+            if (state.loadStatus == MonetizationLinksSettingsLoadStatus.failure)
+              Column(
+                children: [
+                  Text(context.l10n.commonSomethingWentWrong),
+                  DivineButton(
+                    label: context.l10n.commonRetry,
+                    onPressed: () =>
+                        context.read<MonetizationLinksSettingsCubit>().load(),
+                  ),
+                ],
+              ),
+            const SizedBox(height: 20),
+            DivineSectionHeader(
+              context.l10n.monetizationSettingsTipSection,
+              padding: const EdgeInsets.only(top: 8, bottom: 8),
+            ),
+            for (final provider in tipProviders)
+              _ProviderEditor(
+                provider: provider,
+                controller: _controllers[provider]!,
+                enabled: state.isEnabled(provider),
+                canEdit: state.canEdit,
+                errorText: _errorTextFor(context, state.errorFor(provider)),
+                onEnabledChanged: (value) => context
+                    .read<MonetizationLinksSettingsCubit>()
+                    .setEnabled(provider, value),
+                onChanged: (value) => context
+                    .read<MonetizationLinksSettingsCubit>()
+                    .setValue(provider, value),
+              ),
+            if (subscriptionProviders.isNotEmpty) ...[
+              const SizedBox(height: 16),
               DivineSectionHeader(
-                context.l10n.monetizationSettingsTipSection,
+                context.l10n.monetizationSettingsSubscriptionSection,
                 padding: const EdgeInsets.only(top: 8, bottom: 8),
               ),
-              for (final provider in tipProviders)
+              for (final provider in subscriptionProviders)
                 _ProviderEditor(
                   provider: provider,
                   controller: _controllers[provider]!,
                   enabled: state.isEnabled(provider),
                   canEdit: state.canEdit,
-                  errorText: _errorTextFor(context, state.errorFor(provider)),
+                  errorText: _errorTextFor(
+                    context,
+                    state.errorFor(provider),
+                  ),
                   onEnabledChanged: (value) => context
                       .read<MonetizationLinksSettingsCubit>()
                       .setEnabled(provider, value),
@@ -195,32 +217,8 @@ class _MonetizationLinksSettingsViewState
                       .read<MonetizationLinksSettingsCubit>()
                       .setValue(provider, value),
                 ),
-              if (subscriptionProviders.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                DivineSectionHeader(
-                  context.l10n.monetizationSettingsSubscriptionSection,
-                  padding: const EdgeInsets.only(top: 8, bottom: 8),
-                ),
-                for (final provider in subscriptionProviders)
-                  _ProviderEditor(
-                    provider: provider,
-                    controller: _controllers[provider]!,
-                    enabled: state.isEnabled(provider),
-                    canEdit: state.canEdit,
-                    errorText: _errorTextFor(
-                      context,
-                      state.errorFor(provider),
-                    ),
-                    onEnabledChanged: (value) => context
-                        .read<MonetizationLinksSettingsCubit>()
-                        .setEnabled(provider, value),
-                    onChanged: (value) => context
-                        .read<MonetizationLinksSettingsCubit>()
-                        .setValue(provider, value),
-                  ),
-              ],
             ],
-          ),
+          ],
         ),
       ),
       bottomNavigationBar: SafeArea(
@@ -234,24 +232,23 @@ class _MonetizationLinksSettingsViewState
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            child: Center(
+            child: AdaptiveContentColumn(
+              width: const AdaptiveContentWidth.custom(640),
+              capWithoutLargeLayout: true,
+              alignment: Alignment.center,
               heightFactor: 1,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 640),
-                child: DivineButton(
-                  label: state.isSaving
-                      ? context.l10n.monetizationSettingsSaving
-                      : appStoreTipPolicy
-                      ? context.l10n.monetizationTipsSettingsSave
-                      : context.l10n.monetizationSettingsSave,
-                  leadingIcon: .check,
-                  expanded: true,
-                  onPressed: state.canSave
-                      ? () => context
-                            .read<MonetizationLinksSettingsCubit>()
-                            .save()
-                      : null,
-                ),
+              child: DivineButton(
+                label: state.isSaving
+                    ? context.l10n.monetizationSettingsSaving
+                    : appStoreTipPolicy
+                    ? context.l10n.monetizationTipsSettingsSave
+                    : context.l10n.monetizationSettingsSave,
+                leadingIcon: .check,
+                expanded: true,
+                onPressed: state.canSave
+                    ? () =>
+                          context.read<MonetizationLinksSettingsCubit>().save()
+                    : null,
               ),
             ),
           ),

@@ -11,6 +11,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/profile_setup/widgets/widgets.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/profile/nostr_info_sheet_content.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -148,68 +149,66 @@ class _ProfileSetupScreenViewState
                         top: Radius.circular(bodyTopRadius),
                       ),
                       child: SingleChildScrollView(
-                        child: Align(
-                          alignment: Alignment.topCenter,
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 600),
-                            child: Theme(
-                              data: Theme.of(context).copyWith(
-                                textSelectionTheme: TextSelectionThemeData(
-                                  cursorColor: VineTheme.primary,
-                                  selectionColor: VineTheme.primary.withValues(
-                                    alpha: 0.3,
-                                  ),
+                        child: AdaptiveContentColumn(
+                          width: AdaptiveContentWidth.list,
+                          capWithoutLargeLayout: true,
+                          child: Theme(
+                            data: Theme.of(context).copyWith(
+                              textSelectionTheme: TextSelectionThemeData(
+                                cursorColor: VineTheme.primary,
+                                selectionColor: VineTheme.primary.withValues(
+                                  alpha: 0.3,
                                 ),
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  // Banner and avatar are both edited from here, so
-                                  // neither has a section further down the form.
-                                  ProfileHeaderPreview(
-                                    nameController: _nameController,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // Banner and avatar are both edited from here, so
+                                // neither has a section further down the form.
+                                ProfileHeaderPreview(
+                                  nameController: _nameController,
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    16,
+                                    16,
+                                    24,
                                   ),
-                                  Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                      16,
-                                      16,
-                                      16,
-                                      24,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      spacing: 16,
-                                      children: [
-                                        DisplayNameField(
-                                          controller: _nameController,
-                                          focusNode: _nameFocusNode,
-                                        ),
-                                        UsernameField(
-                                          controller: _nip05Controller,
-                                          nextFocusNode: _bioFocusNode,
-                                        ),
-                                        const Nip05Row(),
-                                        BioField(
-                                          controller: _bioController,
-                                          focusNode: _bioFocusNode,
-                                        ),
-                                        const PublicKeyRow(),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    spacing: 16,
+                                    children: [
+                                      DisplayNameField(
+                                        controller: _nameController,
+                                        focusNode: _nameFocusNode,
+                                      ),
+                                      UsernameField(
+                                        controller: _nip05Controller,
+                                        nextFocusNode: _bioFocusNode,
+                                      ),
+                                      const Nip05Row(),
+                                      BioField(
+                                        controller: _bioController,
+                                        focusNode: _bioFocusNode,
+                                      ),
+                                      const PublicKeyRow(),
 
-                                        // Below here: still shipped, but absent from
-                                        // the current design for this screen. Kept
-                                        // in the same style rather than dropped.
-                                        WebsiteField(
-                                          controller: _websiteController,
-                                        ),
-                                        const VerifiedAccountsSection(),
-                                        if (!widget.isNewUser)
-                                          const SupporterRecognitionSection(),
-                                      ],
-                                    ),
+                                      // Below here: still shipped, but absent from
+                                      // the current design for this screen. Kept
+                                      // in the same style rather than dropped.
+                                      WebsiteField(
+                                        controller: _websiteController,
+                                      ),
+                                      const VerifiedAccountsSection(),
+                                      if (!widget.isNewUser)
+                                        const SupporterRecognitionSection(),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         ),

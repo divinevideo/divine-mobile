@@ -19,6 +19,7 @@ import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/creator_analytics/analytics_widgets.dart';
 import 'package:openvine/screens/creator_analytics/creator_sounds_card.dart';
 import 'package:openvine/screens/creator_analytics/social_counts_info_sheet.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -219,103 +220,100 @@ class _CreatorAnalyticsScreenState
           ),
         ],
       ),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: FutureBuilder<_CreatorAnalyticsData>(
-            future: _analyticsFuture,
-            builder: (context, snapshot) {
-              final data = snapshot.data;
-              final Widget content;
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: FutureBuilder<_CreatorAnalyticsData>(
+          future: _analyticsFuture,
+          builder: (context, snapshot) {
+            final data = snapshot.data;
+            final Widget content;
 
-              if (snapshot.connectionState != ConnectionState.done) {
-                content = Padding(
-                  padding: .only(
-                    bottom: MediaQuery.viewPaddingOf(context).bottom,
+            if (snapshot.connectionState != ConnectionState.done) {
+              content = Padding(
+                padding: .only(
+                  bottom: MediaQuery.viewPaddingOf(context).bottom,
+                ),
+                child: const Center(child: BrandedLoadingIndicator()),
+              );
+            } else if (snapshot.hasError) {
+              content = _ErrorView(error: snapshot.error, onRetry: _refresh);
+            } else if (data == null) {
+              content = _ErrorView(
+                error: context.l10n.analyticsUnableToLoad,
+                onRetry: _refresh,
+              );
+            } else {
+              final summary = _CreatorAnalyticsSummary.build(
+                data: data,
+                window: _selectedWindow,
+              );
+              final useFixture = ref.watch(
+                useFixtureCreatorAnalyticsProvider,
+              );
+
+              content = RefreshIndicator(
+                color: VineTheme.onPrimary,
+                backgroundColor: VineTheme.vineGreen,
+                onRefresh: _refresh,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    12,
+                    16,
+                    // Important on Android to ensure content is not behind
+                    // the device navigation bar.
+                    24 + MediaQuery.viewPaddingOf(context).bottom,
                   ),
-                  child: const Center(child: BrandedLoadingIndicator()),
-                );
-              } else if (snapshot.hasError) {
-                content = _ErrorView(error: snapshot.error, onRetry: _refresh);
-              } else if (data == null) {
-                content = _ErrorView(
-                  error: context.l10n.analyticsUnableToLoad,
-                  onRetry: _refresh,
-                );
-              } else {
-                final summary = _CreatorAnalyticsSummary.build(
-                  data: data,
-                  window: _selectedWindow,
-                );
-                final useFixture = ref.watch(
-                  useFixtureCreatorAnalyticsProvider,
-                );
-
-                content = RefreshIndicator(
-                  color: VineTheme.onPrimary,
-                  backgroundColor: VineTheme.vineGreen,
-                  onRefresh: _refresh,
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(
-                      16,
-                      12,
-                      16,
-                      // Important on Android to ensure content is not behind
-                      // the device navigation bar.
-                      24 + MediaQuery.viewPaddingOf(context).bottom,
+                  children: [
+                    _RangeSelector(
+                      selected: _selectedWindow,
+                      onSelected: (window) {
+                        setState(() {
+                          _selectedWindow = window;
+                        });
+                      },
                     ),
-                    children: [
-                      _RangeSelector(
-                        selected: _selectedWindow,
-                        onSelected: (window) {
-                          setState(() {
-                            _selectedWindow = window;
-                          });
+                    if (_showDiagnostics) ...[
+                      const SizedBox(height: 16),
+                      _DiagnosticsPanel(
+                        diagnostics: data.diagnostics,
+                        useFixture: useFixture,
+                        onToggleFixture: (enabled) async {
+                          ref
+                                  .read(
+                                    useFixtureCreatorAnalyticsProvider.notifier,
+                                  )
+                                  .state =
+                              enabled;
+                          await _refresh();
                         },
                       ),
-                      if (_showDiagnostics) ...[
-                        const SizedBox(height: 16),
-                        _DiagnosticsPanel(
-                          diagnostics: data.diagnostics,
-                          useFixture: useFixture,
-                          onToggleFixture: (enabled) async {
-                            ref
-                                    .read(
-                                      useFixtureCreatorAnalyticsProvider
-                                          .notifier,
-                                    )
-                                    .state =
-                                enabled;
-                            await _refresh();
-                          },
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      ..._buildOverviewSection(summary, data),
-                      const SizedBox(height: 12),
-                      Text(
-                        context.l10n.analyticsUpdatedTimestamp(
-                          _formatLastUpdated(context.l10n, data.fetchedAt),
-                        ),
-                        style: VineTheme.bodySmallFont(
-                          color: context.vineColors.onSurfaceMuted,
-                        ),
-                      ),
                     ],
-                  ),
-                );
-              }
-
-              return AnimatedSwitcher(
-                duration: MediaQuery.disableAnimationsOf(context)
-                    ? Duration.zero
-                    : const Duration(milliseconds: 200),
-                child: content,
+                    const SizedBox(height: 16),
+                    ..._buildOverviewSection(summary, data),
+                    const SizedBox(height: 12),
+                    Text(
+                      context.l10n.analyticsUpdatedTimestamp(
+                        _formatLastUpdated(context.l10n, data.fetchedAt),
+                      ),
+                      style: VineTheme.bodySmallFont(
+                        color: context.vineColors.onSurfaceMuted,
+                      ),
+                    ),
+                  ],
+                ),
               );
-            },
-          ),
+            }
+
+            return AnimatedSwitcher(
+              duration: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : const Duration(milliseconds: 200),
+              child: content,
+            );
+          },
         ),
       ),
     );
@@ -1161,117 +1159,115 @@ class _PostAnalyticsDetailView extends StatelessWidget {
         onBackPressed: () =>
             context.safePop(fallback: CreatorAnalyticsScreen.path),
       ),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-            children: [
-              AnalyticsCard(
-                title: performance.displayTitle,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        _MetricPill(
-                          label: context.l10n.analyticsViews,
-                          value: performance.views == null
-                              ? context.l10n.analyticsNa
-                              : StringUtils.formatCompactNumber(
-                                  performance.views!,
-                                ),
-                        ),
-                        _MetricPill(
-                          label: context.l10n.analyticsUniqueViewers,
-                          value: performance.uniqueViewers == null
-                              ? context.l10n.analyticsNa
-                              : StringUtils.formatCompactNumber(
-                                  performance.uniqueViewers!,
-                                ),
-                        ),
-                        _MetricPill(
-                          label: context.l10n.analyticsLikes,
-                          value: hasEngagementData
-                              ? StringUtils.formatCompactNumber(likes)
-                              : context.l10n.analyticsNa,
-                        ),
-                        _MetricPill(
-                          label: context.l10n.analyticsComments,
-                          value: hasEngagementData
-                              ? StringUtils.formatCompactNumber(comments)
-                              : context.l10n.analyticsNa,
-                        ),
-                        _MetricPill(
-                          label: context.l10n.analyticsReposts,
-                          value: hasEngagementData
-                              ? StringUtils.formatCompactNumber(reposts)
-                              : context.l10n.analyticsNa,
-                        ),
-                        _MetricPill(
-                          label: context.l10n.analyticsEngagement,
-                          value:
-                              !hasEngagementData ||
-                                  performance.engagementRate == null
-                              ? context.l10n.analyticsNa
-                              : '${(performance.engagementRate! * 100).toStringAsFixed(1)}%',
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    if (hasEngagementData) ...[
-                      _BreakdownRow(
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+          children: [
+            AnalyticsCard(
+              title: performance.displayTitle,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      _MetricPill(
+                        label: context.l10n.analyticsViews,
+                        value: performance.views == null
+                            ? context.l10n.analyticsNa
+                            : StringUtils.formatCompactNumber(
+                                performance.views!,
+                              ),
+                      ),
+                      _MetricPill(
+                        label: context.l10n.analyticsUniqueViewers,
+                        value: performance.uniqueViewers == null
+                            ? context.l10n.analyticsNa
+                            : StringUtils.formatCompactNumber(
+                                performance.uniqueViewers!,
+                              ),
+                      ),
+                      _MetricPill(
                         label: context.l10n.analyticsLikes,
-                        value: likes,
-                        share: likesShare,
-                        color: VineTheme.likeRed,
+                        value: hasEngagementData
+                            ? StringUtils.formatCompactNumber(likes)
+                            : context.l10n.analyticsNa,
                       ),
-                      const SizedBox(height: 8),
-                      _BreakdownRow(
+                      _MetricPill(
                         label: context.l10n.analyticsComments,
-                        value: comments,
-                        share: commentsShare,
-                        color: VineTheme.commentBlue,
+                        value: hasEngagementData
+                            ? StringUtils.formatCompactNumber(comments)
+                            : context.l10n.analyticsNa,
                       ),
-                      const SizedBox(height: 8),
-                      _BreakdownRow(
+                      _MetricPill(
                         label: context.l10n.analyticsReposts,
-                        value: reposts,
-                        share: repostShare,
-                        color: VineTheme.vineGreenDark,
+                        value: hasEngagementData
+                            ? StringUtils.formatCompactNumber(reposts)
+                            : context.l10n.analyticsNa,
                       ),
-                    ] else
-                      Text(
-                        context.l10n.analyticsNa,
-                        style: VineTheme.bodySmallFont(
-                          color: context.vineColors.onSurfaceMuted,
-                        ),
+                      _MetricPill(
+                        label: context.l10n.analyticsEngagement,
+                        value:
+                            !hasEngagementData ||
+                                performance.engagementRate == null
+                            ? context.l10n.analyticsNa
+                            : '${(performance.engagementRate! * 100).toStringAsFixed(1)}%',
                       ),
-                    const SizedBox(height: 14),
-                    DivineButton(
-                      label: context.l10n.analyticsOpenPost,
-                      leadingIcon: DivineIconName.playCircle,
-                      type: DivineButtonType.secondary,
-                      expanded: true,
-                      onPressed: performance.video.id.isEmpty
-                          ? null
-                          : () => runDetached(
-                              VideoDetailRouteData(
-                                id: performance.video.id,
-                              ).push<void>(context),
-                              'open post video',
-                              logName: 'CreatorAnalyticsScreen',
-                              category: LogCategory.ui,
-                            ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  if (hasEngagementData) ...[
+                    _BreakdownRow(
+                      label: context.l10n.analyticsLikes,
+                      value: likes,
+                      share: likesShare,
+                      color: VineTheme.likeRed,
                     ),
-                  ],
-                ),
+                    const SizedBox(height: 8),
+                    _BreakdownRow(
+                      label: context.l10n.analyticsComments,
+                      value: comments,
+                      share: commentsShare,
+                      color: VineTheme.commentBlue,
+                    ),
+                    const SizedBox(height: 8),
+                    _BreakdownRow(
+                      label: context.l10n.analyticsReposts,
+                      value: reposts,
+                      share: repostShare,
+                      color: VineTheme.vineGreenDark,
+                    ),
+                  ] else
+                    Text(
+                      context.l10n.analyticsNa,
+                      style: VineTheme.bodySmallFont(
+                        color: context.vineColors.onSurfaceMuted,
+                      ),
+                    ),
+                  const SizedBox(height: 14),
+                  DivineButton(
+                    label: context.l10n.analyticsOpenPost,
+                    leadingIcon: DivineIconName.playCircle,
+                    type: DivineButtonType.secondary,
+                    expanded: true,
+                    onPressed: performance.video.id.isEmpty
+                        ? null
+                        : () => runDetached(
+                            VideoDetailRouteData(
+                              id: performance.video.id,
+                            ).push<void>(context),
+                            'open post video',
+                            logName: 'CreatorAnalyticsScreen',
+                            category: LogCategory.ui,
+                          ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

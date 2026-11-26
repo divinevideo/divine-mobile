@@ -29,6 +29,7 @@ import 'package:openvine/router/routes/dm_inbox_prototype_routes.dart';
 import 'package:openvine/screens/clip_recovery_screen.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/video_format_preference.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/developer/storage_footprint_section.dart';
 import 'package:openvine/widgets/developer_options/shorebird_patch_section.dart';
@@ -170,222 +171,109 @@ class _DeveloperOptionsScreenState
         showBackButton: true,
         onBackPressed: context.pop,
       ),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: ListView(
-            children: [
-              // Environment configs
-              ...environments.map((env) {
-                final isSelected = env == currentConfig;
-                return ListTile(
-                  leading: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(env.indicatorColorValue),
-                    ),
-                  ),
-                  title: Text(
-                    env.displayName,
-                    style: VineTheme.titleMediumFont(
-                      color: context.vineColors.primaryText,
-                    ),
-                  ),
-                  subtitle: Text(
-                    env.relayUrl,
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.secondaryText,
-                    ),
-                  ),
-                  trailing: isSelected
-                      ? DivineIcon(
-                          icon: DivineIconName.check,
-                          color: context.vineColors.accentPositive,
-                        )
-                      : null,
-                  onTap: () => _switchEnvironment(context, env, isSelected),
-                );
-              }),
-
-              // Divider between environments and Shorebird patches
-              Divider(color: context.vineColors.outline, height: 32),
-
-              ShorebirdPatchSection(
-                preferences: ref.watch(sharedPreferencesProvider),
-                updaterFactory: widget.shorebirdUpdaterFactory,
-              ),
-
-              // Divider between Shorebird patches and page load times
-              Divider(color: context.vineColors.outline, height: 32),
-
-              // Page Load Times section header
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: Text(
-                  context.l10n.devOptionsPageLoadTimes,
-                  style: VineTheme.titleMediumFont(
-                    color: context.vineColors.accentPositive,
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: ListView(
+          children: [
+            // Environment configs
+            ...environments.map((env) {
+              final isSelected = env == currentConfig;
+              return ListTile(
+                leading: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(env.indicatorColorValue),
                   ),
                 ),
-              ),
-
-              // Recent page load records
-              if (recentRecords.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    context.l10n.devOptionsNoPageLoads,
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.secondaryText,
-                    ),
-                  ),
-                )
-              else
-                ...recentRecords.map((record) {
-                  return ListTile(
-                    title: Text(
-                      _recordTitle(record),
-                      style: VineTheme.labelLargeFont(
-                        color: context.vineColors.primaryText,
-                      ),
-                    ),
-                    subtitle: Text(
-                      _recordDetailsText(context, record),
-                      style: VineTheme.bodySmallFont(
-                        color: context.vineColors.secondaryText,
-                      ),
-                    ),
-                    trailing: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _getSpeedColor(record),
-                      ),
-                    ),
-                  );
-                }),
-
-              // Slowest Screens subsection
-              if (slowestRecords.isNotEmpty) ...[
-                Divider(color: context.vineColors.outline, height: 32),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Text(
-                    context.l10n.devOptionsSlowestScreens,
-                    style: VineTheme.titleMediumFont(
-                      color: context.vineColors.accentPositive,
-                    ),
-                  ),
-                ),
-                ...slowestRecords.map((record) {
-                  final dataMs = record.dataLoadedMs ?? 0;
-                  final result = record.result == null
-                      ? ''
-                      : ' | result: ${record.result}';
-                  return ListTile(
-                    title: Text(
-                      _recordTitle(record),
-                      style: VineTheme.labelLargeFont(
-                        color: context.vineColors.primaryText,
-                      ),
-                    ),
-                    subtitle: Text(
-                      '${record.source} | data: ${dataMs}ms$result',
-                      style: VineTheme.bodySmallFont(
-                        color: _getSpeedColor(record),
-                      ),
-                    ),
-                    trailing: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _getSpeedColor(record),
-                      ),
-                    ),
-                  );
-                }),
-              ],
-
-              Divider(color: context.vineColors.outline, height: 32),
-
-              const StorageFootprintSection(),
-
-              Divider(color: context.vineColors.outline, height: 32),
-
-              ListTile(
                 title: Text(
-                  context.l10n.devOptionsClipRecovery,
+                  env.displayName,
                   style: VineTheme.titleMediumFont(
                     color: context.vineColors.primaryText,
                   ),
                 ),
                 subtitle: Text(
-                  context.l10n.devOptionsClipRecoveryDescription,
+                  env.relayUrl,
                   style: VineTheme.bodyMediumFont(
                     color: context.vineColors.secondaryText,
                   ),
                 ),
-                trailing: DivineIcon(
-                  icon: .caretRight,
-                  color: context.vineColors.primaryText,
-                ),
-                onTap: () => context.push(ClipRecoveryScreen.path),
+                trailing: isSelected
+                    ? DivineIcon(
+                        icon: DivineIconName.check,
+                        color: context.vineColors.accentPositive,
+                      )
+                    : null,
+                onTap: () => _switchEnvironment(context, env, isSelected),
+              );
+            }),
+
+            // Divider between environments and Shorebird patches
+            Divider(color: context.vineColors.outline, height: 32),
+
+            ShorebirdPatchSection(
+              preferences: ref.watch(sharedPreferencesProvider),
+              updaterFactory: widget.shorebirdUpdaterFactory,
+            ),
+
+            // Divider between Shorebird patches and page load times
+            Divider(color: context.vineColors.outline, height: 32),
+
+            // Page Load Times section header
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
               ),
-
-              Divider(color: context.vineColors.outline, height: 32),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+              child: Text(
+                context.l10n.devOptionsPageLoadTimes,
+                style: VineTheme.titleMediumFont(
+                  color: context.vineColors.accentPositive,
                 ),
+              ),
+            ),
+
+            // Recent page load records
+            if (recentRecords.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16),
                 child: Text(
-                  context.l10n.devOptionsVideoPlaybackFormat,
-                  style: VineTheme.titleMediumFont(
-                    color: context.vineColors.accentPositive,
+                  context.l10n.devOptionsNoPageLoads,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.secondaryText,
                   ),
                 ),
-              ),
-
-              ..._formatOptions.map((option) {
-                final isSelected =
-                    option.format == videoFormatPreference.format;
+              )
+            else
+              ...recentRecords.map((record) {
                 return ListTile(
                   title: Text(
-                    option.label,
-                    style: VineTheme.titleMediumFont(
+                    _recordTitle(record),
+                    style: VineTheme.labelLargeFont(
                       color: context.vineColors.primaryText,
                     ),
                   ),
                   subtitle: Text(
-                    option.urlPattern,
-                    style: VineTheme.bodyMediumFont(
+                    _recordDetailsText(context, record),
+                    style: VineTheme.bodySmallFont(
                       color: context.vineColors.secondaryText,
                     ),
                   ),
-                  trailing: isSelected
-                      ? DivineIcon(
-                          icon: DivineIconName.check,
-                          color: context.vineColors.accentPositive,
-                        )
-                      : null,
-                  onTap: () => _switchFormat(option.format),
+                  trailing: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _getSpeedColor(record),
+                    ),
+                  ),
                 );
               }),
 
-              // Outside the kDebugMode block: testers reach it on a release
-              // build by turning developer mode on.
+            // Slowest Screens subsection
+            if (slowestRecords.isNotEmpty) ...[
               Divider(color: context.vineColors.outline, height: 32),
               Padding(
                 padding: const EdgeInsets.symmetric(
@@ -393,363 +281,466 @@ class _DeveloperOptionsScreenState
                   vertical: 8,
                 ),
                 child: Text(
-                  context.l10n.devOptionsConfirmationAccessTitle,
+                  context.l10n.devOptionsSlowestScreens,
                   style: VineTheme.titleMediumFont(
                     color: context.vineColors.accentPositive,
                   ),
                 ),
               ),
-              ..._confirmationAccessOptions(context).map((option) {
-                final (value, label) = option;
-                final isSelected = value == confirmationAccessOverride;
+              ...slowestRecords.map((record) {
+                final dataMs = record.dataLoadedMs ?? 0;
+                final result = record.result == null
+                    ? ''
+                    : ' | result: ${record.result}';
                 return ListTile(
-                  // Announces the current choice; the check mark is only
-                  // its visual.
-                  selected: isSelected,
                   title: Text(
-                    label,
-                    style: VineTheme.titleMediumFont(
+                    _recordTitle(record),
+                    style: VineTheme.labelLargeFont(
                       color: context.vineColors.primaryText,
                     ),
                   ),
-                  trailing: isSelected
-                      ? DivineIcon(
-                          icon: DivineIconName.check,
-                          color: context.vineColors.accentPositive,
-                        )
-                      : null,
-                  onTap: () => runDetached(
-                    ref
-                        .read(confirmationAccessOverrideProvider.notifier)
-                        .set(value),
-                    'set the Confirmation access override',
-                    logName: 'DeveloperOptionsScreen',
-                    category: LogCategory.system,
+                  subtitle: Text(
+                    '${record.source} | data: ${dataMs}ms$result',
+                    style: VineTheme.bodySmallFont(
+                      color: _getSpeedColor(record),
+                    ),
+                  ),
+                  trailing: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _getSpeedColor(record),
+                    ),
                   ),
                 );
               }),
-              DivineSwitchTile(
-                title: context
-                    .l10n
-                    .devOptionsConfirmationRequirementSimulatedTitle,
-                subtitle: context
-                    .l10n
-                    .devOptionsConfirmationRequirementSimulatedSubtitle,
-                value: confirmationRequirementSimulated,
-                onChanged: (on) => runDetached(
+            ],
+
+            Divider(color: context.vineColors.outline, height: 32),
+
+            const StorageFootprintSection(),
+
+            Divider(color: context.vineColors.outline, height: 32),
+
+            ListTile(
+              title: Text(
+                context.l10n.devOptionsClipRecovery,
+                style: VineTheme.titleMediumFont(
+                  color: context.vineColors.primaryText,
+                ),
+              ),
+              subtitle: Text(
+                context.l10n.devOptionsClipRecoveryDescription,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.secondaryText,
+                ),
+              ),
+              trailing: DivineIcon(
+                icon: .caretRight,
+                color: context.vineColors.primaryText,
+              ),
+              onTap: () => context.push(ClipRecoveryScreen.path),
+            ),
+
+            Divider(color: context.vineColors.outline, height: 32),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+              child: Text(
+                context.l10n.devOptionsVideoPlaybackFormat,
+                style: VineTheme.titleMediumFont(
+                  color: context.vineColors.accentPositive,
+                ),
+              ),
+            ),
+
+            ..._formatOptions.map((option) {
+              final isSelected = option.format == videoFormatPreference.format;
+              return ListTile(
+                title: Text(
+                  option.label,
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.primaryText,
+                  ),
+                ),
+                subtitle: Text(
+                  option.urlPattern,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.secondaryText,
+                  ),
+                ),
+                trailing: isSelected
+                    ? DivineIcon(
+                        icon: DivineIconName.check,
+                        color: context.vineColors.accentPositive,
+                      )
+                    : null,
+                onTap: () => _switchFormat(option.format),
+              );
+            }),
+
+            // Outside the kDebugMode block: testers reach it on a release
+            // build by turning developer mode on.
+            Divider(color: context.vineColors.outline, height: 32),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+              child: Text(
+                context.l10n.devOptionsConfirmationAccessTitle,
+                style: VineTheme.titleMediumFont(
+                  color: context.vineColors.accentPositive,
+                ),
+              ),
+            ),
+            ..._confirmationAccessOptions(context).map((option) {
+              final (value, label) = option;
+              final isSelected = value == confirmationAccessOverride;
+              return ListTile(
+                // Announces the current choice; the check mark is only
+                // its visual.
+                selected: isSelected,
+                title: Text(
+                  label,
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.primaryText,
+                  ),
+                ),
+                trailing: isSelected
+                    ? DivineIcon(
+                        icon: DivineIconName.check,
+                        color: context.vineColors.accentPositive,
+                      )
+                    : null,
+                onTap: () => runDetached(
                   ref
-                      .read(confirmationRequirementSimulatedProvider.notifier)
-                      .set(on: on),
-                  'set the simulated Confirmation requirement',
+                      .read(confirmationAccessOverrideProvider.notifier)
+                      .set(value),
+                  'set the Confirmation access override',
                   logName: 'DeveloperOptionsScreen',
                   category: LogCategory.system,
                 ),
+              );
+            }),
+            DivineSwitchTile(
+              title:
+                  context.l10n.devOptionsConfirmationRequirementSimulatedTitle,
+              subtitle: context
+                  .l10n
+                  .devOptionsConfirmationRequirementSimulatedSubtitle,
+              value: confirmationRequirementSimulated,
+              onChanged: (on) => runDetached(
+                ref
+                    .read(confirmationRequirementSimulatedProvider.notifier)
+                    .set(on: on),
+                'set the simulated Confirmation requirement',
+                logName: 'DeveloperOptionsScreen',
+                category: LogCategory.system,
               ),
+            ),
 
-              if (kDebugMode) ...[
-                Divider(color: context.vineColors.outline, height: 32),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Text(
-                    context.l10n.devOptionsMinorReviewSimulationTitle,
-                    style: VineTheme.titleMediumFont(
-                      color: context.vineColors.accentPositive,
-                    ),
-                  ),
-                ),
-                ListTile(
-                  title: Text(
-                    context.l10n.devOptionsMinorReviewCurrentStateLabel,
-                    style: VineTheme.titleMediumFont(
-                      color: context.vineColors.primaryText,
-                    ),
-                  ),
-                  subtitle: Text(
-                    reviewStatusAsync.when(
-                      data: (status) => status.isRestricted
-                          ? context.l10n.devOptionsMinorReviewStateRestricted(
-                              status.currentCase?.state.name ?? 'unknown',
-                            )
-                          : context.l10n.devOptionsMinorReviewStateActive,
-                      loading: () =>
-                          context.l10n.devOptionsMinorReviewStateLoading,
-                      error: (error, stackTrace) =>
-                          context.l10n.devOptionsMinorReviewStateError,
-                    ),
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.secondaryText,
-                    ),
-                  ),
-                ),
-                ListTile(
-                  title: Text(
-                    context.l10n.devOptionsMinorReviewClearTitle,
-                    style: VineTheme.titleMediumFont(
-                      color: context.vineColors.primaryText,
-                    ),
-                  ),
-                  subtitle: Text(
-                    context.l10n.devOptionsMinorReviewClearSubtitle,
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.secondaryText,
-                    ),
-                  ),
-                  onTap: _clearMinorReviewOverride,
-                ),
-                ListTile(
-                  title: Text(
-                    context.l10n.devOptionsMinorReviewTeenTitle,
-                    style: VineTheme.titleMediumFont(
-                      color: context.vineColors.primaryText,
-                    ),
-                  ),
-                  subtitle: Text(
-                    context.l10n.devOptionsMinorReviewTeenSubtitle,
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.secondaryText,
-                    ),
-                  ),
-                  onTap: () => _simulateTeenMinorReview(
-                    deadline: MinorReviewResponseDeadline(
-                      clock: MinorReviewResponseClock.running,
-                      serverNow: DateTime.utc(2026, 8, 26, 14, 30),
-                      deadlineAt: DateTime.utc(2026, 9, 10, 14, 30),
-                    ),
-                    toast: context
-                        .l10n
-                        .devOptionsMinorReviewResponseClockRunningToast,
-                  ),
-                ),
-                ListTile(
-                  title: Text(
-                    context.l10n.devOptionsMinorReviewUnder13Title,
-                    style: VineTheme.titleMediumFont(
-                      color: context.vineColors.primaryText,
-                    ),
-                  ),
-                  subtitle: Text(
-                    context.l10n.devOptionsMinorReviewUnder13Subtitle,
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.secondaryText,
-                    ),
-                  ),
-                  onTap: _simulateUnder13MinorReview,
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: Text(
-                    context.l10n.devOptionsMinorReviewResponseClockTitle,
-                    style: VineTheme.titleSmallFont(
-                      color: context.vineColors.secondaryText,
-                    ),
-                  ),
-                ),
-                ...[
-                  (
-                    context.l10n.devOptionsMinorReviewResponseClockRunning,
-                    MinorReviewResponseDeadline(
-                      clock: MinorReviewResponseClock.running,
-                      serverNow: DateTime.utc(2026, 8, 26, 14, 30),
-                      deadlineAt: DateTime.utc(2026, 9, 10, 14, 30),
-                    ),
-                    context.l10n.devOptionsMinorReviewResponseClockRunningToast,
-                  ),
-                  (
-                    context.l10n.devOptionsMinorReviewResponseClockPaused,
-                    MinorReviewResponseDeadline(
-                      clock: MinorReviewResponseClock.paused,
-                      pausedAt: DateTime.utc(2026, 8, 26, 14, 30),
-                      remainingDaysWhenPaused: 7.5,
-                    ),
-                    context.l10n.devOptionsMinorReviewResponseClockPausedToast,
-                  ),
-                  (
-                    context.l10n.devOptionsMinorReviewResponseClockExpired,
-                    MinorReviewResponseDeadline(
-                      clock: MinorReviewResponseClock.expired,
-                      serverNow: DateTime.utc(2026, 9, 11, 14, 30),
-                      deadlineAt: DateTime.utc(2026, 9, 10, 14, 30),
-                    ),
-                    context.l10n.devOptionsMinorReviewResponseClockExpiredToast,
-                  ),
-                  (
-                    context
-                        .l10n
-                        .devOptionsMinorReviewResponseClockNotApplicable,
-                    const MinorReviewResponseDeadline(
-                      clock: MinorReviewResponseClock.notApplicable,
-                    ),
-                    context
-                        .l10n
-                        .devOptionsMinorReviewResponseClockNotApplicableToast,
-                  ),
-                  (
-                    context.l10n.devOptionsMinorReviewResponseClockMalformed,
-                    MinorReviewResponseDeadline.fromJson({
-                      'clock': 'running',
-                      'serverNow': '2026-08-26T14:30:00.000Z',
-                      'deadlineAt': null,
-                    }),
-                    context
-                        .l10n
-                        .devOptionsMinorReviewResponseClockMalformedToast,
-                  ),
-                ].map(
-                  (option) => ListTile(
-                    title: Text(
-                      option.$1,
-                      style: VineTheme.titleMediumFont(
-                        color: context.vineColors.primaryText,
-                      ),
-                    ),
-                    onTap: () => _simulateTeenMinorReview(
-                      deadline: option.$2,
-                      toast: option.$3,
-                    ),
-                  ),
-                ),
-                // Kept apart from the response-clock rows above, which belong
-                // to the teen review simulation.
-                Divider(color: context.vineColors.outline, height: 32),
-                ListTile(
-                  title: Text(
-                    context.l10n.devOptionsAgeReviewClosureTitle,
-                    style: VineTheme.titleMediumFont(
-                      color: context.vineColors.primaryText,
-                    ),
-                  ),
-                  subtitle: Text(
-                    context.l10n.devOptionsAgeReviewClosureSubtitle,
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.secondaryText,
-                    ),
-                  ),
-                  onTap: _simulateAgeReviewClosure,
-                ),
-                // Protected-minor (13-15) simulation (#5721): flips the
-                // debug-only ProtectedMinorOverrideService so QA can exercise
-                // the #175/#176 protections without a real approved-minor
-                // account. Sibling of the review simulation above.
-                Divider(color: context.vineColors.outline, height: 32),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Text(
-                    context.l10n.devOptionsProtectedMinorSimulationTitle,
-                    style: VineTheme.titleMediumFont(
-                      color: context.vineColors.accentPositive,
-                    ),
-                  ),
-                ),
-                ListTile(
-                  title: Text(
-                    context.l10n.devOptionsProtectedMinorCurrentStateLabel,
-                    style: VineTheme.titleMediumFont(
-                      color: context.vineColors.primaryText,
-                    ),
-                  ),
-                  subtitle: Text(
-                    _protectedMinorStateText(context),
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.secondaryText,
-                    ),
-                  ),
-                ),
-                ListTile(
-                  title: Text(
-                    context.l10n.devOptionsProtectedMinorSimulateTitle,
-                    style: VineTheme.titleMediumFont(
-                      color: context.vineColors.primaryText,
-                    ),
-                  ),
-                  subtitle: Text(
-                    context.l10n.devOptionsProtectedMinorSimulateSubtitle,
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.secondaryText,
-                    ),
-                  ),
-                  onTap: () => _setProtectedMinorOverride(true),
-                ),
-                ListTile(
-                  title: Text(
-                    context.l10n.devOptionsProtectedMinorSimulateNonMinorTitle,
-                    style: VineTheme.titleMediumFont(
-                      color: context.vineColors.primaryText,
-                    ),
-                  ),
-                  subtitle: Text(
-                    context
-                        .l10n
-                        .devOptionsProtectedMinorSimulateNonMinorSubtitle,
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.secondaryText,
-                    ),
-                  ),
-                  onTap: () => _setProtectedMinorOverride(false),
-                ),
-                ListTile(
-                  title: Text(
-                    context.l10n.devOptionsProtectedMinorClearTitle,
-                    style: VineTheme.titleMediumFont(
-                      color: context.vineColors.primaryText,
-                    ),
-                  ),
-                  subtitle: Text(
-                    context.l10n.devOptionsProtectedMinorClearSubtitle,
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.secondaryText,
-                    ),
-                  ),
-                  onTap: _clearProtectedMinorOverride,
-                ),
-                // PROTOTYPE (#8076). Remove with the prototype. Its own block,
-                // so it does not read as part of a simulation above.
-                Divider(color: context.vineColors.outline, height: 32),
-                ListTile(
-                  title: Text(
-                    'DM inbox: 4-tab prototype',
-                    style: VineTheme.titleMediumFont(
-                      color: context.vineColors.primaryText,
-                    ),
-                  ),
-                  subtitle: Text(
-                    'Official / Inbox / Requests / Likely spam on fixture '
-                    'data, with adjustable weights.',
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.secondaryText,
-                    ),
-                  ),
-                  onTap: () => const DmInboxPrototypeRouteData().push<void>(
-                    context,
-                  ),
-                ),
-              ],
-
+            if (kDebugMode) ...[
               Divider(color: context.vineColors.outline, height: 32),
-              ListTile(
-                leading: const DivineIcon(
-                  icon: DivineIconName.bracketsAngle,
-                  color: VineTheme.warning,
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
                 ),
+                child: Text(
+                  context.l10n.devOptionsMinorReviewSimulationTitle,
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.accentPositive,
+                  ),
+                ),
+              ),
+              ListTile(
                 title: Text(
-                  context.l10n.devOptionsDisableDeveloperMode,
-                  style: VineTheme.titleMediumFont(color: VineTheme.warning),
+                  context.l10n.devOptionsMinorReviewCurrentStateLabel,
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.primaryText,
+                  ),
                 ),
                 subtitle: Text(
-                  context.l10n.devOptionsDisableDeveloperModeSubtitle,
+                  reviewStatusAsync.when(
+                    data: (status) => status.isRestricted
+                        ? context.l10n.devOptionsMinorReviewStateRestricted(
+                            status.currentCase?.state.name ?? 'unknown',
+                          )
+                        : context.l10n.devOptionsMinorReviewStateActive,
+                    loading: () =>
+                        context.l10n.devOptionsMinorReviewStateLoading,
+                    error: (error, stackTrace) =>
+                        context.l10n.devOptionsMinorReviewStateError,
+                  ),
                   style: VineTheme.bodyMediumFont(
                     color: context.vineColors.secondaryText,
                   ),
                 ),
-                onTap: _disableDeveloperMode,
+              ),
+              ListTile(
+                title: Text(
+                  context.l10n.devOptionsMinorReviewClearTitle,
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.primaryText,
+                  ),
+                ),
+                subtitle: Text(
+                  context.l10n.devOptionsMinorReviewClearSubtitle,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.secondaryText,
+                  ),
+                ),
+                onTap: _clearMinorReviewOverride,
+              ),
+              ListTile(
+                title: Text(
+                  context.l10n.devOptionsMinorReviewTeenTitle,
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.primaryText,
+                  ),
+                ),
+                subtitle: Text(
+                  context.l10n.devOptionsMinorReviewTeenSubtitle,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.secondaryText,
+                  ),
+                ),
+                onTap: () => _simulateTeenMinorReview(
+                  deadline: MinorReviewResponseDeadline(
+                    clock: MinorReviewResponseClock.running,
+                    serverNow: DateTime.utc(2026, 8, 26, 14, 30),
+                    deadlineAt: DateTime.utc(2026, 9, 10, 14, 30),
+                  ),
+                  toast: context
+                      .l10n
+                      .devOptionsMinorReviewResponseClockRunningToast,
+                ),
+              ),
+              ListTile(
+                title: Text(
+                  context.l10n.devOptionsMinorReviewUnder13Title,
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.primaryText,
+                  ),
+                ),
+                subtitle: Text(
+                  context.l10n.devOptionsMinorReviewUnder13Subtitle,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.secondaryText,
+                  ),
+                ),
+                onTap: _simulateUnder13MinorReview,
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Text(
+                  context.l10n.devOptionsMinorReviewResponseClockTitle,
+                  style: VineTheme.titleSmallFont(
+                    color: context.vineColors.secondaryText,
+                  ),
+                ),
+              ),
+              ...[
+                (
+                  context.l10n.devOptionsMinorReviewResponseClockRunning,
+                  MinorReviewResponseDeadline(
+                    clock: MinorReviewResponseClock.running,
+                    serverNow: DateTime.utc(2026, 8, 26, 14, 30),
+                    deadlineAt: DateTime.utc(2026, 9, 10, 14, 30),
+                  ),
+                  context.l10n.devOptionsMinorReviewResponseClockRunningToast,
+                ),
+                (
+                  context.l10n.devOptionsMinorReviewResponseClockPaused,
+                  MinorReviewResponseDeadline(
+                    clock: MinorReviewResponseClock.paused,
+                    pausedAt: DateTime.utc(2026, 8, 26, 14, 30),
+                    remainingDaysWhenPaused: 7.5,
+                  ),
+                  context.l10n.devOptionsMinorReviewResponseClockPausedToast,
+                ),
+                (
+                  context.l10n.devOptionsMinorReviewResponseClockExpired,
+                  MinorReviewResponseDeadline(
+                    clock: MinorReviewResponseClock.expired,
+                    serverNow: DateTime.utc(2026, 9, 11, 14, 30),
+                    deadlineAt: DateTime.utc(2026, 9, 10, 14, 30),
+                  ),
+                  context.l10n.devOptionsMinorReviewResponseClockExpiredToast,
+                ),
+                (
+                  context.l10n.devOptionsMinorReviewResponseClockNotApplicable,
+                  const MinorReviewResponseDeadline(
+                    clock: MinorReviewResponseClock.notApplicable,
+                  ),
+                  context
+                      .l10n
+                      .devOptionsMinorReviewResponseClockNotApplicableToast,
+                ),
+                (
+                  context.l10n.devOptionsMinorReviewResponseClockMalformed,
+                  MinorReviewResponseDeadline.fromJson({
+                    'clock': 'running',
+                    'serverNow': '2026-08-26T14:30:00.000Z',
+                    'deadlineAt': null,
+                  }),
+                  context.l10n.devOptionsMinorReviewResponseClockMalformedToast,
+                ),
+              ].map(
+                (option) => ListTile(
+                  title: Text(
+                    option.$1,
+                    style: VineTheme.titleMediumFont(
+                      color: context.vineColors.primaryText,
+                    ),
+                  ),
+                  onTap: () => _simulateTeenMinorReview(
+                    deadline: option.$2,
+                    toast: option.$3,
+                  ),
+                ),
+              ),
+              // Kept apart from the response-clock rows above, which belong
+              // to the teen review simulation.
+              Divider(color: context.vineColors.outline, height: 32),
+              ListTile(
+                title: Text(
+                  context.l10n.devOptionsAgeReviewClosureTitle,
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.primaryText,
+                  ),
+                ),
+                subtitle: Text(
+                  context.l10n.devOptionsAgeReviewClosureSubtitle,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.secondaryText,
+                  ),
+                ),
+                onTap: _simulateAgeReviewClosure,
+              ),
+              // Protected-minor (13-15) simulation (#5721): flips the
+              // debug-only ProtectedMinorOverrideService so QA can exercise
+              // the #175/#176 protections without a real approved-minor
+              // account. Sibling of the review simulation above.
+              Divider(color: context.vineColors.outline, height: 32),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Text(
+                  context.l10n.devOptionsProtectedMinorSimulationTitle,
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.accentPositive,
+                  ),
+                ),
+              ),
+              ListTile(
+                title: Text(
+                  context.l10n.devOptionsProtectedMinorCurrentStateLabel,
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.primaryText,
+                  ),
+                ),
+                subtitle: Text(
+                  _protectedMinorStateText(context),
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.secondaryText,
+                  ),
+                ),
+              ),
+              ListTile(
+                title: Text(
+                  context.l10n.devOptionsProtectedMinorSimulateTitle,
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.primaryText,
+                  ),
+                ),
+                subtitle: Text(
+                  context.l10n.devOptionsProtectedMinorSimulateSubtitle,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.secondaryText,
+                  ),
+                ),
+                onTap: () => _setProtectedMinorOverride(true),
+              ),
+              ListTile(
+                title: Text(
+                  context.l10n.devOptionsProtectedMinorSimulateNonMinorTitle,
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.primaryText,
+                  ),
+                ),
+                subtitle: Text(
+                  context.l10n.devOptionsProtectedMinorSimulateNonMinorSubtitle,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.secondaryText,
+                  ),
+                ),
+                onTap: () => _setProtectedMinorOverride(false),
+              ),
+              ListTile(
+                title: Text(
+                  context.l10n.devOptionsProtectedMinorClearTitle,
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.primaryText,
+                  ),
+                ),
+                subtitle: Text(
+                  context.l10n.devOptionsProtectedMinorClearSubtitle,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.secondaryText,
+                  ),
+                ),
+                onTap: _clearProtectedMinorOverride,
+              ),
+              // PROTOTYPE (#8076). Remove with the prototype. Its own block,
+              // so it does not read as part of a simulation above.
+              Divider(color: context.vineColors.outline, height: 32),
+              ListTile(
+                title: Text(
+                  'DM inbox: 4-tab prototype',
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.primaryText,
+                  ),
+                ),
+                subtitle: Text(
+                  'Official / Inbox / Requests / Likely spam on fixture '
+                  'data, with adjustable weights.',
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.secondaryText,
+                  ),
+                ),
+                onTap: () => const DmInboxPrototypeRouteData().push<void>(
+                  context,
+                ),
               ),
             ],
-          ),
+
+            Divider(color: context.vineColors.outline, height: 32),
+            ListTile(
+              leading: const DivineIcon(
+                icon: DivineIconName.bracketsAngle,
+                color: VineTheme.warning,
+              ),
+              title: Text(
+                context.l10n.devOptionsDisableDeveloperMode,
+                style: VineTheme.titleMediumFont(color: VineTheme.warning),
+              ),
+              subtitle: Text(
+                context.l10n.devOptionsDisableDeveloperModeSubtitle,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.secondaryText,
+                ),
+              ),
+              onTap: _disableDeveloperMode,
+            ),
+          ],
         ),
       ),
     );

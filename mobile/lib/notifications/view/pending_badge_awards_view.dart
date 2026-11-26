@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/badges/badges_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/widgets/badges/awarded_badge_card.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 
@@ -26,11 +27,11 @@ class PendingBadgeAwardsView extends StatelessWidget {
           color: VineTheme.onPrimary,
           backgroundColor: VineTheme.vineGreen,
           onRefresh: () => context.read<BadgesCubit>().refresh(),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: _PendingBody(state: state),
-            ),
+          child: AdaptiveContentColumn(
+            width: const AdaptiveContentWidth.custom(640),
+            capWithoutLargeLayout: true,
+            alignment: Alignment.center,
+            child: _PendingBody(state: state),
           ),
         );
       },

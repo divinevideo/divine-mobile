@@ -15,6 +15,7 @@ import 'package:openvine/models/content_label.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/content_filter_service.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -85,44 +86,42 @@ class ContentFiltersView extends StatelessWidget {
         onBackPressed: context.pop,
       ),
       backgroundColor: context.vineColors.background,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: BlocBuilder<ContentFiltersCubit, ContentFiltersState>(
-            builder: (context, state) {
-              if (state.status != ContentFiltersStatus.ready) {
-                return const Center(child: BrandedLoadingIndicator(size: 60));
-              }
-              final cubit = context.read<ContentFiltersCubit>();
-              return ListView(
-                padding: .only(
-                  bottom: 32 + MediaQuery.viewPaddingOf(context).bottom,
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: BlocBuilder<ContentFiltersCubit, ContentFiltersState>(
+          builder: (context, state) {
+            if (state.status != ContentFiltersStatus.ready) {
+              return const Center(child: BrandedLoadingIndicator(size: 60));
+            }
+            final cubit = context.read<ContentFiltersCubit>();
+            return ListView(
+              padding: .only(
+                bottom: 32 + MediaQuery.viewPaddingOf(context).bottom,
+              ),
+              children: [
+                if (!state.isAgeVerified) const _AgeGateBanner(),
+                _CategoryGroup(
+                  title: context.l10n.contentFiltersAdultContent,
+                  labels: _adultLabels,
+                  state: state,
+                  onChanged: cubit.setPreference,
                 ),
-                children: [
-                  if (!state.isAgeVerified) const _AgeGateBanner(),
-                  _CategoryGroup(
-                    title: context.l10n.contentFiltersAdultContent,
-                    labels: _adultLabels,
-                    state: state,
-                    onChanged: cubit.setPreference,
-                  ),
-                  _CategoryGroup(
-                    title: context.l10n.contentFiltersSubstances,
-                    labels: _substanceLabels,
-                    state: state,
-                    onChanged: cubit.setPreference,
-                  ),
-                  _CategoryGroup(
-                    title: context.l10n.contentFiltersOther,
-                    labels: _otherLabels,
-                    state: state,
-                    onChanged: cubit.setPreference,
-                  ),
-                ],
-              );
-            },
-          ),
+                _CategoryGroup(
+                  title: context.l10n.contentFiltersSubstances,
+                  labels: _substanceLabels,
+                  state: state,
+                  onChanged: cubit.setPreference,
+                ),
+                _CategoryGroup(
+                  title: context.l10n.contentFiltersOther,
+                  labels: _otherLabels,
+                  state: state,
+                  onChanged: cubit.setPreference,
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

@@ -8,6 +8,7 @@ import 'package:openvine/blocs/chat/chat_cubit.dart';
 import 'package:openvine/features/chat/public_room_notice.dart';
 import 'package:openvine/features/chat/room_activity_tile.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 
 class RoomsView extends StatelessWidget {
   const RoomsView({
@@ -32,56 +33,54 @@ class RoomsView extends StatelessWidget {
     // The inbox paints a colored box above its ancestor Material. Keep the
     // channel rows on their own Material so their ink remains visible.
     type: MaterialType.transparency,
-    child: Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 720),
-        child: ListView(
-          key: const PageStorageKey('messages-rooms'),
-          padding: const EdgeInsets.only(bottom: 24),
-          children: [
-            for (final community in communities) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-                child: Semantics(
-                  header: true,
-                  child: Text(
-                    community.name,
-                    style: VineTheme.titleLargeFont(
-                      color: context.vineColors.primaryText,
-                    ),
+    child: AdaptiveContentColumn(
+      width: AdaptiveContentWidth.reading,
+      capWithoutLargeLayout: true,
+      child: ListView(
+        key: const PageStorageKey('messages-rooms'),
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [
+          for (final community in communities) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+              child: Semantics(
+                header: true,
+                child: Text(
+                  community.name,
+                  style: VineTheme.titleLargeFont(
+                    color: context.vineColors.primaryText,
                   ),
                 ),
               ),
-              if (isTest)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    context.l10n.messagesPublicTestRooms,
-                    style: VineTheme.bodySmallFont(
-                      color: context.vineColors.onSurfaceMuted,
-                    ),
+            ),
+            if (isTest)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  context.l10n.messagesPublicTestRooms,
+                  style: VineTheme.bodySmallFont(
+                    color: context.vineColors.onSurfaceMuted,
                   ),
                 ),
-              const SizedBox(height: 16),
-              for (final channel in community.channels)
-                RoomActivityTile(
-                  title: community.channelName(channel),
-                  activity:
-                      activity[channelIdFor?.call(community.id, channel) ??
-                          channel],
-                  onRetry: onRetry,
-                  onTap: () => onRoomSelected(community.id, channel),
-                ),
-            ],
-            if (communities.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(context.l10n.messagesNoRooms),
               ),
-            PublicRoomNotice(isTest: isTest),
+            const SizedBox(height: 16),
+            for (final channel in community.channels)
+              RoomActivityTile(
+                title: community.channelName(channel),
+                activity:
+                    activity[channelIdFor?.call(community.id, channel) ??
+                        channel],
+                onRetry: onRetry,
+                onTap: () => onRoomSelected(community.id, channel),
+              ),
           ],
-        ),
+          if (communities.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(context.l10n.messagesNoRooms),
+            ),
+          PublicRoomNotice(isTest: isTest),
+        ],
       ),
     ),
   );

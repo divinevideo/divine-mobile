@@ -5,6 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -24,88 +25,86 @@ class LegalScreen extends StatelessWidget {
         onBackPressed: () => Navigator.of(context).pop(),
       ),
       backgroundColor: context.vineColors.background,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: ListView(
-            children: [
-              DivineListTile(
-                leading: Icon(
-                  Icons.description,
-                  size: DivineIcon.scaleSize(context, 24),
-                  color: context.vineColors.accentPositive,
-                ),
-                title: l10n.legalTermsOfService,
-                subtitle: l10n.legalTermsOfServiceSubtitle,
-                trailingIcon: DivineIconName.arrowUpRight,
-                trailingIconSize: 20,
-                onTap: () => _launchUrl(
-                  context,
-                  'https://divine.video/terms',
-                  l10n.legalTermsOfService,
-                ),
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: ListView(
+          children: [
+            DivineListTile(
+              leading: Icon(
+                Icons.description,
+                size: DivineIcon.scaleSize(context, 24),
+                color: context.vineColors.accentPositive,
               ),
-              DivineListTile(
-                leading: Icon(
-                  Icons.privacy_tip,
-                  size: DivineIcon.scaleSize(context, 24),
-                  color: context.vineColors.accentPositive,
-                ),
-                title: l10n.legalPrivacyPolicy,
-                subtitle: l10n.legalPrivacyPolicySubtitle,
-                trailingIcon: DivineIconName.arrowUpRight,
-                trailingIconSize: 20,
-                onTap: () => _launchUrl(
-                  context,
-                  'https://divine.video/privacy',
-                  l10n.legalPrivacyPolicy,
-                ),
+              title: l10n.legalTermsOfService,
+              subtitle: l10n.legalTermsOfServiceSubtitle,
+              trailingIcon: DivineIconName.arrowUpRight,
+              trailingIconSize: 20,
+              onTap: () => _launchUrl(
+                context,
+                'https://divine.video/terms',
+                l10n.legalTermsOfService,
               ),
-              DivineListTile(
-                icon: DivineIconName.shieldCheck,
-                iconColor: context.vineColors.accentPositive,
-                title: l10n.legalSafetyStandards,
-                subtitle: l10n.legalSafetyStandardsSubtitle,
-                trailingIcon: DivineIconName.arrowUpRight,
-                trailingIconSize: 20,
-                onTap: () => _launchUrl(
-                  context,
-                  'https://divine.video/safety',
-                  l10n.legalSafetyStandards,
-                ),
+            ),
+            DivineListTile(
+              leading: Icon(
+                Icons.privacy_tip,
+                size: DivineIcon.scaleSize(context, 24),
+                color: context.vineColors.accentPositive,
               ),
-              DivineListTile(
-                leading: Icon(
-                  Icons.copyright,
-                  size: DivineIcon.scaleSize(context, 24),
-                  color: context.vineColors.accentPositive,
-                ),
-                title: l10n.legalDmca,
-                subtitle: l10n.legalDmcaSubtitle,
-                trailingIcon: DivineIconName.arrowUpRight,
-                trailingIconSize: 20,
-                onTap: () => _launchUrl(
-                  context,
-                  'https://divine.video/dmca',
-                  l10n.legalDmca,
-                ),
+              title: l10n.legalPrivacyPolicy,
+              subtitle: l10n.legalPrivacyPolicySubtitle,
+              trailingIcon: DivineIconName.arrowUpRight,
+              trailingIconSize: 20,
+              onTap: () => _launchUrl(
+                context,
+                'https://divine.video/privacy',
+                l10n.legalPrivacyPolicy,
               ),
-              DivineListTile(
-                leading: Icon(
-                  Icons.source,
-                  size: DivineIcon.scaleSize(context, 24),
-                  color: context.vineColors.accentPositive,
-                ),
-                title: l10n.legalOpenSourceLicenses,
-                subtitle: l10n.legalOpenSourceLicensesSubtitle,
-                onTap: () => showLicensePage(
-                  context: context,
-                  applicationName: l10n.legalAppName,
-                ),
+            ),
+            DivineListTile(
+              icon: DivineIconName.shieldCheck,
+              iconColor: context.vineColors.accentPositive,
+              title: l10n.legalSafetyStandards,
+              subtitle: l10n.legalSafetyStandardsSubtitle,
+              trailingIcon: DivineIconName.arrowUpRight,
+              trailingIconSize: 20,
+              onTap: () => _launchUrl(
+                context,
+                'https://divine.video/safety',
+                l10n.legalSafetyStandards,
               ),
-            ],
-          ),
+            ),
+            DivineListTile(
+              leading: Icon(
+                Icons.copyright,
+                size: DivineIcon.scaleSize(context, 24),
+                color: context.vineColors.accentPositive,
+              ),
+              title: l10n.legalDmca,
+              subtitle: l10n.legalDmcaSubtitle,
+              trailingIcon: DivineIconName.arrowUpRight,
+              trailingIconSize: 20,
+              onTap: () => _launchUrl(
+                context,
+                'https://divine.video/dmca',
+                l10n.legalDmca,
+              ),
+            ),
+            DivineListTile(
+              leading: Icon(
+                Icons.source,
+                size: DivineIcon.scaleSize(context, 24),
+                color: context.vineColors.accentPositive,
+              ),
+              title: l10n.legalOpenSourceLicenses,
+              subtitle: l10n.legalOpenSourceLicensesSubtitle,
+              onTap: () => showLicensePage(
+                context: context,
+                applicationName: l10n.legalAppName,
+              ),
+            ),
+          ],
         ),
       ),
     );

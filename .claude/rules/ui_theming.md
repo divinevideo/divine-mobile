@@ -579,6 +579,14 @@ class MyWidget extends StatelessWidget {
 
 ---
 
+## Readable width on large screens
+
+Use [`AdaptiveContentColumn`](../../mobile/lib/ui/adaptive_content_column.dart) for page content that needs a maximum width. Use `AdaptiveContentWidth.form` for forms (440 logical pixels), `.list` for row lists and settings (600), and `.reading` for longer text and conversations (720). The column centers in the space its parent gives it. Use `capWithoutLargeLayout: true` when migrating a cap that predates the large-screen layouts.
+
+For a new scrolling page, keep the viewport full width and wrap its content slivers in `SliverAdaptiveContentColumn`. This keeps the scrollbar at the viewport edge and lets users scroll over the margins.
+
+---
+
 ## Layout Best Practices
 
 ### Row/Column Sizing

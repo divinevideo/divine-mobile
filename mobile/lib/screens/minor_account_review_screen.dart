@@ -17,6 +17,7 @@ import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/router/routes/minor_account_review_routes.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/delete_account_action.dart';
 import 'package:openvine/widgets/export_logs_tile.dart';
@@ -74,35 +75,33 @@ class MinorAccountReviewScreen extends ConsumerWidget {
       appBar: DiVineAppBar(title: context.l10n.minorAccountReviewTitle),
       backgroundColor: context.vineColors.background,
       body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: statusAsync.when(
-              data: (status) => _LoadedView(
-                status: status,
-                openSupportMessages: openSupportMessages,
-                composeEmail: composeEmail,
-                // Started from this screen's context: a failed refresh swaps
-                // the loaded view for the error view, and a deletion confirmed
-                // after that would otherwise stop on the unmounted view.
-                onDeleteAccount: () => startAccountDeletionFlow(
-                  context: context,
-                  ref: ref,
-                  screenName: 'MinorAccountReviewScreen',
-                ),
+        child: AdaptiveContentColumn(
+          width: const AdaptiveContentWidth.custom(640),
+          capWithoutLargeLayout: true,
+          child: statusAsync.when(
+            data: (status) => _LoadedView(
+              status: status,
+              openSupportMessages: openSupportMessages,
+              composeEmail: composeEmail,
+              // Started from this screen's context: a failed refresh swaps
+              // the loaded view for the error view, and a deletion confirmed
+              // after that would otherwise stop on the unmounted view.
+              onDeleteAccount: () => startAccountDeletionFlow(
+                context: context,
+                ref: ref,
+                screenName: 'MinorAccountReviewScreen',
               ),
-              loading: () =>
-                  const Center(child: PartialCircleSpinner(progress: 0.33)),
-              error: (error, _) {
-                Log.error(
-                  'Failed to load account review status: $error',
-                  name: 'MinorAccountReviewScreen',
-                  category: LogCategory.ui,
-                );
-                return _ErrorView(onRetry: () => refreshMinorAccountState(ref));
-              },
             ),
+            loading: () =>
+                const Center(child: PartialCircleSpinner(progress: 0.33)),
+            error: (error, _) {
+              Log.error(
+                'Failed to load account review status: $error',
+                name: 'MinorAccountReviewScreen',
+                category: LogCategory.ui,
+              );
+              return _ErrorView(onRetry: () => refreshMinorAccountState(ref));
+            },
           ),
         ),
       ),
@@ -125,78 +124,77 @@ class _WelcomeEntryView extends StatelessWidget {
       ),
       backgroundColor: context.vineColors.background,
       body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-              children: [
-                _HeroCard(
-                  title: l10n.minorAccountReviewWelcomeTitle,
-                  body: l10n.minorAccountReviewWelcomeBody,
+        child: AdaptiveContentColumn(
+          width: const AdaptiveContentWidth.custom(640),
+          capWithoutLargeLayout: true,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+            children: [
+              _HeroCard(
+                title: l10n.minorAccountReviewWelcomeTitle,
+                body: l10n.minorAccountReviewWelcomeBody,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                l10n.minorAccountReviewChooseAgeBandTitle,
+                style: VineTheme.titleMediumFont(
+                  color: context.vineColors.primaryText,
                 ),
-                const SizedBox(height: 24),
-                Text(
-                  l10n.minorAccountReviewChooseAgeBandTitle,
-                  style: VineTheme.titleMediumFont(
-                    color: context.vineColors.primaryText,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DivineButton(
-                        label: l10n.minorAccountReviewUnder13Cta,
-                        onPressed: () =>
-                            const MinorAccountReviewUnder13RouteData()
-                                .push<void>(context),
-                      ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: DivineButton(
+                      label: l10n.minorAccountReviewUnder13Cta,
+                      onPressed: () =>
+                          const MinorAccountReviewUnder13RouteData().push<void>(
+                            context,
+                          ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DivineButton(
-                        label: l10n.minorAccountReviewTeenCta,
-                        type: DivineButtonType.secondary,
-                        onPressed: () =>
-                            const MinorAccountReviewParentConsentRouteData()
-                                .push<void>(context),
-                      ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DivineButton(
+                      label: l10n.minorAccountReviewTeenCta,
+                      type: DivineButtonType.secondary,
+                      onPressed: () =>
+                          const MinorAccountReviewParentConsentRouteData()
+                              .push<void>(context),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  l10n.minorAccountReviewLearnMoreTitle,
-                  style: VineTheme.titleMediumFont(
-                    color: context.vineColors.primaryText,
                   ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Text(
+                l10n.minorAccountReviewLearnMoreTitle,
+                style: VineTheme.titleMediumFont(
+                  color: context.vineColors.primaryText,
                 ),
-                const SizedBox(height: 12),
-                DivineButton(
-                  label: l10n.minorAccountReviewKidsPolicyCta,
-                  type: DivineButtonType.secondary,
-                  expanded: true,
-                  onPressed: () => _openExternalPage(
-                    context,
-                    AppConstants.kidsPolicyUrl,
-                    'divine.video/kids',
-                  ),
+              ),
+              const SizedBox(height: 12),
+              DivineButton(
+                label: l10n.minorAccountReviewKidsPolicyCta,
+                type: DivineButtonType.secondary,
+                expanded: true,
+                onPressed: () => _openExternalPage(
+                  context,
+                  AppConstants.kidsPolicyUrl,
+                  'divine.video/kids',
                 ),
-                const SizedBox(height: 12),
-                DivineButton(
-                  label: l10n.minorAccountReviewFamilyResourcesCta,
-                  type: DivineButtonType.secondary,
-                  expanded: true,
-                  onPressed: () => _openExternalPage(
-                    context,
-                    AppConstants.familyResourcesUrl,
-                    'divine.video/family',
-                  ),
+              ),
+              const SizedBox(height: 12),
+              DivineButton(
+                label: l10n.minorAccountReviewFamilyResourcesCta,
+                type: DivineButtonType.secondary,
+                expanded: true,
+                onPressed: () => _openExternalPage(
+                  context,
+                  AppConstants.familyResourcesUrl,
+                  'divine.video/family',
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

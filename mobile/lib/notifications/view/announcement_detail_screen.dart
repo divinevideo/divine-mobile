@@ -8,6 +8,7 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/cubit/announcement_detail_cubit.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 
 /// Displays a current, validated catalog announcement, or its lookup [status]
 /// while there is none.
@@ -50,54 +51,52 @@ class AnnouncementDetailScreen extends StatelessWidget {
             context.safePop(fallback: RoutePaths.notificationsForIndex(0)),
       ),
       body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: item == null
-                ? _AnnouncementLookupStatus(
-                    status: status,
-                    onRetry: onRetry,
-                  )
-                : ListView(
-                    padding: const EdgeInsets.all(24),
-                    children: [
-                      SelectableText(
-                        item.title,
-                        style: VineTheme.titleLargeFont(
-                          color: colors.onSurface,
+        child: AdaptiveContentColumn(
+          width: const AdaptiveContentWidth.custom(640),
+          capWithoutLargeLayout: true,
+          child: item == null
+              ? _AnnouncementLookupStatus(
+                  status: status,
+                  onRetry: onRetry,
+                )
+              : ListView(
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    SelectableText(
+                      item.title,
+                      style: VineTheme.titleLargeFont(
+                        color: colors.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SelectableText(
+                      item.body,
+                      style: VineTheme.bodyLargeFont(color: colors.onSurface),
+                    ),
+                    if (actionLabel != null && onAction != null) ...[
+                      const SizedBox(height: 24),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: DivineButton(
+                          label: actionLabel!,
+                          onPressed: onAction,
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      SelectableText(
-                        item.body,
-                        style: VineTheme.bodyLargeFont(color: colors.onSurface),
-                      ),
-                      if (actionLabel != null && onAction != null) ...[
-                        const SizedBox(height: 24),
-                        Align(
-                          alignment: AlignmentDirectional.centerStart,
-                          child: DivineButton(
-                            label: actionLabel!,
-                            onPressed: onAction,
-                          ),
-                        ),
-                      ],
-                      if (item.learnMoreUrl case final Uri url) ...[
-                        const SizedBox(height: 24),
-                        Align(
-                          alignment: AlignmentDirectional.centerStart,
-                          child: DivineButton(
-                            label: l10n.profileLearnMore,
-                            onPressed: onLearnMore == null
-                                ? null
-                                : () => onLearnMore!(url),
-                          ),
-                        ),
-                      ],
                     ],
-                  ),
-          ),
+                    if (item.learnMoreUrl case final Uri url) ...[
+                      const SizedBox(height: 24),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: DivineButton(
+                          label: l10n.profileLearnMore,
+                          onPressed: onLearnMore == null
+                              ? null
+                              : () => onLearnMore!(url),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
         ),
       ),
     );

@@ -16,6 +16,7 @@ import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/image_crop_editor/image_crop_editor.dart';
 import 'package:openvine/screens/profile_setup/widgets/profile_image_actions_sheet.dart';
 import 'package:openvine/screens/profile_setup/widgets/profile_image_picker.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/badge_links.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -264,58 +265,56 @@ class _BadgeEditorForm extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
-        Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 16,
-              children: [
-                _ArtworkSection(state: state, onChangeArtwork: onChangeArtwork),
-                DivineTextField(
-                  labelText: l10n.badgeEditorNameLabel,
-                  hintText: l10n.badgeEditorNameHint,
-                  controller: nameController,
-                  filled: true,
-                  fillColor: context.vineColors.surfaceContainer,
-                  primaryWhenFilled: true,
-                  enabled: !state.isPublishing,
-                  textInputAction: TextInputAction.next,
-                  onChanged: cubit.nameChanged,
+        AdaptiveContentColumn(
+          width: const AdaptiveContentWidth.custom(640),
+          capWithoutLargeLayout: true,
+          alignment: Alignment.center,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 16,
+            children: [
+              _ArtworkSection(state: state, onChangeArtwork: onChangeArtwork),
+              DivineTextField(
+                labelText: l10n.badgeEditorNameLabel,
+                hintText: l10n.badgeEditorNameHint,
+                controller: nameController,
+                filled: true,
+                fillColor: context.vineColors.surfaceContainer,
+                primaryWhenFilled: true,
+                enabled: !state.isPublishing,
+                textInputAction: TextInputAction.next,
+                onChanged: cubit.nameChanged,
+              ),
+              _IdentifierField(
+                state: state,
+                controller: identifierController,
+                onChanged: cubit.identifierChanged,
+              ),
+              DivineTextField(
+                labelText: l10n.badgeEditorDescriptionLabel,
+                hintText: l10n.badgeEditorDescriptionHint,
+                controller: descriptionController,
+                filled: true,
+                fillColor: context.vineColors.surfaceContainer,
+                primaryWhenFilled: true,
+                enabled: !state.isPublishing,
+                minLines: 3,
+                maxLines: 6,
+                onChanged: cubit.descriptionChanged,
+              ),
+              if (state.status == BadgeEditorStatus.saveFailure)
+                Text(
+                  l10n.badgeEditorSaveError,
+                  style: VineTheme.bodySmallFont(color: VineTheme.error),
                 ),
-                _IdentifierField(
-                  state: state,
-                  controller: identifierController,
-                  onChanged: cubit.identifierChanged,
-                ),
-                DivineTextField(
-                  labelText: l10n.badgeEditorDescriptionLabel,
-                  hintText: l10n.badgeEditorDescriptionHint,
-                  controller: descriptionController,
-                  filled: true,
-                  fillColor: context.vineColors.surfaceContainer,
-                  primaryWhenFilled: true,
-                  enabled: !state.isPublishing,
-                  minLines: 3,
-                  maxLines: 6,
-                  onChanged: cubit.descriptionChanged,
-                ),
-                if (state.status == BadgeEditorStatus.saveFailure)
-                  Text(
-                    l10n.badgeEditorSaveError,
-                    style: VineTheme.bodySmallFont(color: VineTheme.error),
-                  ),
-                DivineButton(
-                  label: l10n.badgeEditorSaveAction,
-                  isLoading: state.status == BadgeEditorStatus.saving,
-                  // Pressable without artwork or identifier on purpose:
-                  // pressing it is what surfaces what is still missing.
-                  onPressed: state.canSubmit && !state.isBusy
-                      ? cubit.save
-                      : null,
-                ),
-              ],
-            ),
+              DivineButton(
+                label: l10n.badgeEditorSaveAction,
+                isLoading: state.status == BadgeEditorStatus.saving,
+                // Pressable without artwork or identifier on purpose:
+                // pressing it is what surfaces what is still missing.
+                onPressed: state.canSubmit && !state.isBusy ? cubit.save : null,
+              ),
+            ],
           ),
         ),
       ],

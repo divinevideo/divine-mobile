@@ -15,6 +15,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/repositories/bluesky_crosspost_repository.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/settings/nip05_settings_screen.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 
 class BlueskySettingsScreen extends ConsumerWidget {
@@ -82,34 +83,31 @@ class _BlueskySettingsView extends StatelessWidget {
         onBackPressed: context.pop,
       ),
       backgroundColor: context.vineColors.background,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: BlocConsumer<CrosspostSettingsCubit, CrosspostSettingsState>(
-            listener: _onStateChanged,
-            builder: (context, state) {
-              if (state.status == CrosspostSettingsStatus.loading) {
-                return const Center(child: BrandedLoadingIndicator(size: 60));
-              }
+      body: AdaptiveContentColumn(
+        width: AdaptiveContentWidth.list,
+        capWithoutLargeLayout: true,
+        child: BlocConsumer<CrosspostSettingsCubit, CrosspostSettingsState>(
+          listener: _onStateChanged,
+          builder: (context, state) {
+            if (state.status == CrosspostSettingsStatus.loading) {
+              return const Center(child: BrandedLoadingIndicator(size: 60));
+            }
 
-              return ListView(
-                children: [
-                  const SizedBox(height: 16),
-                  if (state.usernameClaimStatus ==
-                      UsernameClaimStatus.notClaimed)
-                    const _UsernameRequiredNotice(),
-                  if (state.usernameClaimStatus == UsernameClaimStatus.unknown)
-                    const _UsernameLookupUnavailableNotice(),
-                  const _BackfillDisclosure(),
-                  _CrosspostToggle(state: state),
-                  if (state.handle != null) _HandleInfo(handle: state.handle!),
-                  if (state.did != null) _DidInfo(did: state.did!),
-                  _ProvisioningStatus(state: state),
-                ],
-              );
-            },
-          ),
+            return ListView(
+              children: [
+                const SizedBox(height: 16),
+                if (state.usernameClaimStatus == UsernameClaimStatus.notClaimed)
+                  const _UsernameRequiredNotice(),
+                if (state.usernameClaimStatus == UsernameClaimStatus.unknown)
+                  const _UsernameLookupUnavailableNotice(),
+                const _BackfillDisclosure(),
+                _CrosspostToggle(state: state),
+                if (state.handle != null) _HandleInfo(handle: state.handle!),
+                if (state.did != null) _DidInfo(did: state.did!),
+                _ProvisioningStatus(state: state),
+              ],
+            );
+          },
         ),
       ),
     );

@@ -12,6 +12,7 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/account_credentials_providers.dart';
 import 'package:openvine/screens/settings/general_settings_screen.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/validators.dart';
 
 /// Page layer: reads the repository from Riverpod and hands it to the cubit.
@@ -113,113 +114,110 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
       body: BlocConsumer<ChangePasswordCubit, ChangePasswordState>(
         listener: _onChanged,
         builder: (context, state) {
-          return Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          spacing: 16,
-                          children: [
-                            const SizedBox(height: 8),
-                            Text(
-                              context.l10n.changePasswordSubtitle,
-                              style: VineTheme.bodyMediumFont(
-                                color: context.vineColors.secondaryText,
-                              ),
+          return AdaptiveContentColumn(
+            width: AdaptiveContentWidth.list,
+            capWithoutLargeLayout: true,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 16,
+                        children: [
+                          const SizedBox(height: 8),
+                          Text(
+                            context.l10n.changePasswordSubtitle,
+                            style: VineTheme.bodyMediumFont(
+                              color: context.vineColors.secondaryText,
                             ),
-                            AutofillGroup(
-                              child: Column(
-                                spacing: 16,
-                                children: [
-                                  DivineAuthTextField(
-                                    controller: _currentPasswordController,
-                                    label:
-                                        context.l10n.changePasswordCurrentLabel,
-                                    obscureText: true,
-                                    enabled: !state.isSubmitting,
-                                    autofillHints: const [
-                                      AutofillHints.password,
-                                    ],
-                                    errorText: state.currentPasswordMissing
-                                        ? context.l10n.authPasswordRequired
-                                        : null,
-                                    textInputAction: TextInputAction.next,
-                                    onChanged: cubit.updateCurrentPassword,
-                                    showPasswordSemanticLabel:
-                                        context.l10n.authShowPassword,
-                                    hidePasswordSemanticLabel:
-                                        context.l10n.authHidePassword,
+                          ),
+                          AutofillGroup(
+                            child: Column(
+                              spacing: 16,
+                              children: [
+                                DivineAuthTextField(
+                                  controller: _currentPasswordController,
+                                  label:
+                                      context.l10n.changePasswordCurrentLabel,
+                                  obscureText: true,
+                                  enabled: !state.isSubmitting,
+                                  autofillHints: const [
+                                    AutofillHints.password,
+                                  ],
+                                  errorText: state.currentPasswordMissing
+                                      ? context.l10n.authPasswordRequired
+                                      : null,
+                                  textInputAction: TextInputAction.next,
+                                  onChanged: cubit.updateCurrentPassword,
+                                  showPasswordSemanticLabel:
+                                      context.l10n.authShowPassword,
+                                  hidePasswordSemanticLabel:
+                                      context.l10n.authHidePassword,
+                                ),
+                                DivineAuthTextField(
+                                  controller: _newPasswordController,
+                                  label: context.l10n.authNewPasswordLabel,
+                                  obscureText: true,
+                                  enabled: !state.isSubmitting,
+                                  autofillHints: const [
+                                    AutofillHints.newPassword,
+                                  ],
+                                  errorText: _passwordErrorText(
+                                    context,
+                                    state.newPasswordError,
                                   ),
-                                  DivineAuthTextField(
-                                    controller: _newPasswordController,
-                                    label: context.l10n.authNewPasswordLabel,
-                                    obscureText: true,
-                                    enabled: !state.isSubmitting,
-                                    autofillHints: const [
-                                      AutofillHints.newPassword,
-                                    ],
-                                    errorText: _passwordErrorText(
-                                      context,
-                                      state.newPasswordError,
-                                    ),
-                                    textInputAction: TextInputAction.next,
-                                    onChanged: cubit.updateNewPassword,
-                                    showPasswordSemanticLabel:
-                                        context.l10n.authShowPassword,
-                                    hidePasswordSemanticLabel:
-                                        context.l10n.authHidePassword,
+                                  textInputAction: TextInputAction.next,
+                                  onChanged: cubit.updateNewPassword,
+                                  showPasswordSemanticLabel:
+                                      context.l10n.authShowPassword,
+                                  hidePasswordSemanticLabel:
+                                      context.l10n.authHidePassword,
+                                ),
+                                DivineAuthTextField(
+                                  controller: _confirmPasswordController,
+                                  label:
+                                      context.l10n.authConfirmNewPasswordLabel,
+                                  obscureText: true,
+                                  enabled: !state.isSubmitting,
+                                  autofillHints: const [
+                                    AutofillHints.newPassword,
+                                  ],
+                                  errorText: _confirmPasswordErrorText(
+                                    context,
+                                    state.confirmPasswordError,
                                   ),
-                                  DivineAuthTextField(
-                                    controller: _confirmPasswordController,
-                                    label: context
-                                        .l10n
-                                        .authConfirmNewPasswordLabel,
-                                    obscureText: true,
-                                    enabled: !state.isSubmitting,
-                                    autofillHints: const [
-                                      AutofillHints.newPassword,
-                                    ],
-                                    errorText: _confirmPasswordErrorText(
-                                      context,
-                                      state.confirmPasswordError,
-                                    ),
-                                    textInputAction: TextInputAction.done,
-                                    onSubmitted: (_) => cubit.submit(),
-                                    onChanged: cubit.updateConfirmPassword,
-                                    showPasswordSemanticLabel:
-                                        context.l10n.authShowPassword,
-                                    hidePasswordSemanticLabel:
-                                        context.l10n.authHidePassword,
-                                  ),
-                                ],
-                              ),
+                                  textInputAction: TextInputAction.done,
+                                  onSubmitted: (_) => cubit.submit(),
+                                  onChanged: cubit.updateConfirmPassword,
+                                  showPasswordSemanticLabel:
+                                      context.l10n.authShowPassword,
+                                  hidePasswordSemanticLabel:
+                                      context.l10n.authHidePassword,
+                                ),
+                              ],
                             ),
-                            if (state.failureReason != null)
-                              _FailureMessage(reason: state.failureReason!),
-                          ],
-                        ),
+                          ),
+                          if (state.failureReason != null)
+                            _FailureMessage(reason: state.failureReason!),
+                        ],
                       ),
                     ),
-                    DivineButton(
-                      expanded: true,
-                      label: context.l10n.authUpdatePassword,
-                      isLoading: state.isSubmitting,
-                      onPressed: state.canSubmit ? cubit.submit : null,
-                    ),
-                    SizedBox(
-                      height: 32 + MediaQuery.viewPaddingOf(context).bottom,
-                    ),
-                  ],
-                ),
+                  ),
+                  DivineButton(
+                    expanded: true,
+                    label: context.l10n.authUpdatePassword,
+                    isLoading: state.isSubmitting,
+                    onPressed: state.canSubmit ? cubit.submit : null,
+                  ),
+                  SizedBox(
+                    height: 32 + MediaQuery.viewPaddingOf(context).bottom,
+                  ),
+                ],
               ),
             ),
           );

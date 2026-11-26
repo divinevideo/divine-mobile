@@ -24,6 +24,7 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/message_input_bar.dart';
 import 'package:openvine/services/content_moderation_types.dart';
+import 'package:openvine/ui/adaptive_content_column.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/mentions/mention_overlay.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -296,129 +297,125 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   onPressed: cubit.closeThread,
                 ),
         ),
-        body: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: Column(
-              children: [
-                PublicRoomNotice(isTest: state.isTestCommunity),
-                if (state.loading) const DivineLinearProgressIndicator(),
-                if (state.loadFailed)
-                  _LoadFailureNotice(
-                    failure: state.loadFailure,
-                    onRetry: state.loading ? null : cubit.start,
-                  ),
-                BlocSelector<ChatComposerCubit, ChatComposerState, bool>(
-                  bloc: _composer,
-                  selector: (composer) => composer.sendFailed,
-                  builder: (context, composerFailed) =>
-                      state.sendFailed || composerFailed
-                      ? Text(context.l10n.dmSendFailedMessage)
-                      : const SizedBox.shrink(),
+        body: AdaptiveContentColumn(
+          width: AdaptiveContentWidth.reading,
+          capWithoutLargeLayout: true,
+          child: Column(
+            children: [
+              PublicRoomNotice(isTest: state.isTestCommunity),
+              if (state.loading) const DivineLinearProgressIndicator(),
+              if (state.loadFailed)
+                _LoadFailureNotice(
+                  failure: state.loadFailure,
+                  onRetry: state.loading ? null : cubit.start,
                 ),
-                Expanded(
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (messages.isEmpty)
-                        _EmptyRoom(
-                          channel:
-                              community?.channelName(state.selectedChannelId) ??
-                              state.selectedChannelId,
-                        )
-                      else
-                        ListView.builder(
-                          controller: _scrollController,
-                          reverse: true,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          itemCount: messages.length,
-                          itemBuilder: (context, index) {
-                            final message =
-                                messages[messages.length - index - 1];
-                            return ChatMessageTile(
-                              key: ValueKey(message.id),
-                              message: message,
-                              reactions:
-                                  state.reactions[message.id] ?? const {},
-                              pending: state.pendingIds.contains(
-                                message.id,
-                              ),
-                              sending: state.sending,
-                              onRestoreDraft:
-                                  state.retiredPendingIds.contains(message.id)
-                                  ? () {
-                                      final text = _controller.text.isEmpty
-                                          ? message.body
-                                          : '${_controller.text}\n${message.body}';
-                                      _controller.value = TextEditingValue(
-                                        text: text,
-                                        selection: TextSelection.collapsed(
-                                          offset: text.length,
-                                        ),
-                                      );
-                                    }
-                                  : null,
-                              onDiscardDraft:
-                                  state.retiredPendingIds.contains(message.id)
-                                  ? () => runDetached(
-                                      cubit.discardPendingDraft(message.id),
-                                      'discard retired room draft',
-                                      logName: 'ChatScreen',
-                                      category: LogCategory.ui,
-                                    )
-                                  : null,
-                              // Your own messages, sent or not, are not
-                              // something to report.
-                              onReport:
-                                  ref.watch(concordReportsProvider) == null ||
-                                      message.author == state.account
-                                  ? null
-                                  : () => runDetached(
-                                      _report(message),
-                                      'report room message',
-                                      logName: 'ChatScreen',
-                                      category: LogCategory.ui,
-                                    ),
-                              onRetry: () => runDetached(
-                                cubit.retry(message.id),
-                                'retry room message',
-                                logName: 'ChatScreen',
-                                category: LogCategory.ui,
-                              ),
-                            );
-                          },
-                        ),
-                      Align(
-                        alignment: Alignment.bottomCenter,
-                        child:
-                            BlocBuilder<
-                              CaptionMentionsCubit,
-                              CaptionMentionsState
-                            >(
-                              bloc: _mentions,
-                              builder: (context, mentions) => MentionOverlay(
-                                suggestions: mentions.suggestions,
-                                onSelect: _selectMention,
-                              ),
+              BlocSelector<ChatComposerCubit, ChatComposerState, bool>(
+                bloc: _composer,
+                selector: (composer) => composer.sendFailed,
+                builder: (context, composerFailed) =>
+                    state.sendFailed || composerFailed
+                    ? Text(context.l10n.dmSendFailedMessage)
+                    : const SizedBox.shrink(),
+              ),
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (messages.isEmpty)
+                      _EmptyRoom(
+                        channel:
+                            community?.channelName(state.selectedChannelId) ??
+                            state.selectedChannelId,
+                      )
+                    else
+                      ListView.builder(
+                        controller: _scrollController,
+                        reverse: true,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        itemCount: messages.length,
+                        itemBuilder: (context, index) {
+                          final message = messages[messages.length - index - 1];
+                          return ChatMessageTile(
+                            key: ValueKey(message.id),
+                            message: message,
+                            reactions: state.reactions[message.id] ?? const {},
+                            pending: state.pendingIds.contains(
+                              message.id,
                             ),
+                            sending: state.sending,
+                            onRestoreDraft:
+                                state.retiredPendingIds.contains(message.id)
+                                ? () {
+                                    final text = _controller.text.isEmpty
+                                        ? message.body
+                                        : '${_controller.text}\n${message.body}';
+                                    _controller.value = TextEditingValue(
+                                      text: text,
+                                      selection: TextSelection.collapsed(
+                                        offset: text.length,
+                                      ),
+                                    );
+                                  }
+                                : null,
+                            onDiscardDraft:
+                                state.retiredPendingIds.contains(message.id)
+                                ? () => runDetached(
+                                    cubit.discardPendingDraft(message.id),
+                                    'discard retired room draft',
+                                    logName: 'ChatScreen',
+                                    category: LogCategory.ui,
+                                  )
+                                : null,
+                            // Your own messages, sent or not, are not
+                            // something to report.
+                            onReport:
+                                ref.watch(concordReportsProvider) == null ||
+                                    message.author == state.account
+                                ? null
+                                : () => runDetached(
+                                    _report(message),
+                                    'report room message',
+                                    logName: 'ChatScreen',
+                                    category: LogCategory.ui,
+                                  ),
+                            onRetry: () => runDetached(
+                              cubit.retry(message.id),
+                              'retry room message',
+                              logName: 'ChatScreen',
+                              category: LogCategory.ui,
+                            ),
+                          );
+                        },
                       ),
-                    ],
-                  ),
+                    Align(
+                      alignment: Alignment.bottomCenter,
+                      child:
+                          BlocBuilder<
+                            CaptionMentionsCubit,
+                            CaptionMentionsState
+                          >(
+                            bloc: _mentions,
+                            builder: (context, mentions) => MentionOverlay(
+                              suggestions: mentions.suggestions,
+                              onSelect: _selectMention,
+                            ),
+                          ),
+                    ),
+                  ],
                 ),
-                Focus(
-                  canRequestFocus: false,
-                  onKeyEvent: _handleComposerKey,
-                  child: MessageInputBar(
-                    controller: _controller,
-                    clearOnSend: false,
-                    textCapitalization: TextCapitalization.sentences,
-                    enabled: !state.loading && !state.loadFailed,
-                    onSend: _submit,
-                  ),
+              ),
+              Focus(
+                canRequestFocus: false,
+                onKeyEvent: _handleComposerKey,
+                child: MessageInputBar(
+                  controller: _controller,
+                  clearOnSend: false,
+                  textCapitalization: TextCapitalization.sentences,
+                  enabled: !state.loading && !state.loadFailed,
+                  onSend: _submit,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       );
