@@ -262,12 +262,14 @@ class CuratedList extends Equatable {
   ///
   /// These came from the event's public tags: a series marker or a NIP-32
   /// label another client wrote. The app's own tags are never kept here, and
-  /// neither is a `client` tag, which the signing path writes afresh.
+  /// neither is another app's `client` tag: the signing path adds Divine's
+  /// unless the user opted out.
   final List<List<String>> preservedTags;
 
-  /// The [preservedTags] counterpart read from a private list's encrypted
-  /// content. A private list seals them again; they never become public
-  /// unless the owner makes the list public.
+  /// Every non-video tag in a private list's encrypted content, kept unread,
+  /// including ones named like the app's own. A private list seals them
+  /// again; making the list public publishes them, except the app-named
+  /// ones, which are dropped.
   final List<List<String>> preservedPrivateTags;
 
   /// Whether the list is marked as a series (`["series", "true"]`), whose

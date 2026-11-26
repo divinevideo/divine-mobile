@@ -17,7 +17,9 @@ final class CuratedListRelaySnapshot {
     required this.completedNormally,
   }) : events = List.unmodifiable(events);
 
-  /// The events received before completion, error, or the timeout.
+  /// For an account read, the events received before completion, error or
+  /// the timeout; for a list about to be replaced, its current version or
+  /// none.
   final List<Event> events;
 
   /// True only once the read finished: relay EOSE for an account read, every

@@ -607,7 +607,7 @@ class CuratedListService extends ChangeNotifier {
     );
   }
 
-  /// Add video to a list
+  /// Adds [videoEventId]; with [allowSeries] false a series is refused.
   Future<bool> addVideoToList(
     String listId,
     String videoEventId, {
@@ -670,7 +670,7 @@ class CuratedListService extends ChangeNotifier {
     }
   }
 
-  /// Remove video from a list
+  /// Removes [videoEventId]; with [allowSeries] false a series is refused.
   Future<bool> removeVideoFromList(
     String listId,
     String videoEventId, {

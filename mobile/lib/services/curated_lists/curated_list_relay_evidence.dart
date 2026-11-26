@@ -267,7 +267,9 @@ class CuratedListRelayEvidence {
     }
   }
 
-  /// No permissive decoder may silently drop unknown or malformed item records.
+  /// A malformed `e` or `a` tag, or a sealed record that is not a known
+  /// NIP-51 item, keeps the revision opaque (see
+  /// [CuratedListConverter.hasFullyKnownItemTags]).
   /// A validation probe leaves the retained source held until a successful merge.
   bool decoded(
     Event event,
