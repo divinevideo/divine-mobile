@@ -314,6 +314,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
             state.copyWith(
               isLoadingMore: false,
               clearPaginationCursor: true,
+              coordination: state.coordination.copyWith(
+                classicsSliceFromSession: true,
+              ),
             ),
           );
         }
@@ -475,12 +478,16 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   ///
   /// For You, Following and archive-only Classics resume beyond the last
   /// active video, then splice in fresh results. Adaptive Classics keeps its
-  /// own queue in [ClassicFeedSession]. New loads from the top in publication
-  /// order. Curated and people lists load their current membership.
+  /// own queue in [ClassicFeedSession], and the personalized slice it leaves on
+  /// screen when the account gate closes is not archive either. New loads from
+  /// the top in publication order. Curated and people lists load their current
+  /// membership.
   bool _usesHomeFeedCache(VideoFeedSource source) =>
       source.type == VideoFeedSourceType.forYou ||
       source.type == VideoFeedSourceType.following ||
-      (source.type == VideoFeedSourceType.classic && _classicSession == null);
+      (source.type == VideoFeedSourceType.classic &&
+          _classicSession == null &&
+          !state.coordination.classicsSliceFromSession);
 
   /// Whether [source] can paginate via an opaque server cursor rather than a
   /// `createdAt` "until" timestamp.
@@ -2294,6 +2301,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
             newVideosUntil: source.type == VideoFeedSourceType.newVideos
                 ? _oldestTimestamp(result.videos)
                 : null,
+            // A fresh first page replaces a detached session's slice, unless
+            // the splice kept its playing prefix.
+            classicsSliceFromSession:
+                preserveCurrentVideo &&
+                state.coordination.classicsSliceFromSession,
           ),
           isLoadingMore: false,
           hasMore: _hasMoreForSource(

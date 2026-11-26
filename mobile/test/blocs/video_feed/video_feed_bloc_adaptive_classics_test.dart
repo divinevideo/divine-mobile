@@ -1,5 +1,5 @@
 // ABOUTME: Pins how Home's VideoFeedBloc follows the Adaptive Classics gate:
-// ABOUTME: an archive slice stays on the archive until the user refreshes.
+// ABOUTME: an archive slice stays archive, and a session slice is not cached.
 
 import 'dart:async';
 
@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/video_feed/home_feed_cache.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:videos_repository/videos_repository.dart';
 
@@ -28,6 +29,8 @@ class _MockFollowRepository extends Mock implements FollowRepository {}
 
 class _MockCuratedListRepository extends Mock
     implements CuratedListRepository {}
+
+class _MockHomeFeedCache extends Mock implements HomeFeedCache {}
 
 /// Keeps the cold-start serve path off the shared on-disk cache.
 class _FakeCacheDao implements CacheDao {
@@ -69,6 +72,8 @@ VideoEvent _video(int n) {
 }
 
 void main() {
+  setUpAll(() => registerFallbackValue(<VideoEvent>[]));
+
   group('$VideoFeedBloc adaptive Classics gate', () {
     late _MockVideosRepository videosRepository;
     late _MockFollowRepository followRepository;
@@ -202,6 +207,108 @@ void main() {
           expect(archiveCursors, [null, 'archive-2']);
           expect(sessionReads, isZero);
           expect(bloc.state.videos, hasLength(4));
+        },
+      );
+    });
+
+    group('restart cache', () {
+      late _MockHomeFeedCache homeFeedCache;
+
+      setUp(() {
+        homeFeedCache = _MockHomeFeedCache();
+        when(
+          () => homeFeedCache.readVideos(
+            pubkey: any(named: 'pubkey'),
+            mode: any(named: 'mode'),
+          ),
+        ).thenAnswer((_) async => null);
+        when(
+          () => homeFeedCache.writeVideos(
+            pubkey: any(named: 'pubkey'),
+            mode: any(named: 'mode'),
+            videos: any(named: 'videos'),
+          ),
+        ).thenAnswer((_) async {});
+        when(
+          () => homeFeedCache.clearVideos(
+            pubkey: any(named: 'pubkey'),
+            mode: any(named: 'mode'),
+          ),
+        ).thenAnswer((_) async {});
+      });
+
+      VideoFeedBloc buildCachingBloc({ClassicFeedSession? classicSession}) =>
+          VideoFeedBloc(
+            videosRepository: videosRepository,
+            followRepository: followRepository,
+            curatedListRepository: curatedListRepository,
+            homeFeedCache: homeFeedCache,
+            classicSession: classicSession,
+            adaptiveClassicsEnabledStream: gate.stream,
+          );
+
+      List<VideoEvent> classicWrites() => verify(
+        () => homeFeedCache.writeVideos(
+          pubkey: any(named: 'pubkey'),
+          mode: FeedMode.classic.name,
+          videos: captureAny(named: 'videos'),
+        ),
+      ).captured.expand((videos) => videos as List<VideoEvent>).toList();
+
+      test('persists an archive slice as the resume window', () async {
+        final bloc = buildCachingBloc();
+        gate.add(false);
+        bloc.add(
+          const VideoFeedStarted(mode: FeedMode.classic, forceMode: true),
+        );
+        await pumpEventQueue();
+        firstArchivePage.complete(
+          HomeFeedResult(
+            videos: [for (var n = 1; n <= 6; n++) _video(n)],
+            paginationCursor: 'archive-2',
+            hasMore: true,
+          ),
+        );
+        await pumpEventQueue();
+
+        bloc.add(const VideoFeedActiveIndexChanged(1));
+        await pumpEventQueue();
+        await bloc.close();
+
+        expect(classicWrites(), isNotEmpty);
+      });
+
+      test(
+        'does not persist the personalized slice left after the gate closes',
+        () async {
+          final session = ClassicFeedSession(
+            loadPage: (_) async => HomeFeedResult(
+              videos: [for (var n = 20; n < 26; n++) _video(n)],
+              hasMore: true,
+              recommendationPageCount: 1,
+            ),
+          );
+          final bloc = buildCachingBloc(classicSession: session);
+          gate.add(true);
+          bloc.add(
+            const VideoFeedStarted(mode: FeedMode.classic, forceMode: true),
+          );
+          await pumpEventQueue();
+          expect(bloc.state.videos.first.title, 'Classic 20');
+
+          gate.add(false);
+          await pumpEventQueue();
+          bloc.add(const VideoFeedActiveIndexChanged(1));
+          await pumpEventQueue();
+          await bloc.close();
+
+          verifyNever(
+            () => homeFeedCache.writeVideos(
+              pubkey: any(named: 'pubkey'),
+              mode: FeedMode.classic.name,
+              videos: any(named: 'videos'),
+            ),
+          );
         },
       );
     });
