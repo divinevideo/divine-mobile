@@ -378,12 +378,12 @@ void main() {
         await tester.pumpAndSettle();
 
         // With Classics, ForYou, and Apps disabled, the tab order is:
-        // new(0), popular(1), categories(2), lists(3).
+        // latest(0), new(1), popular(2), categories(3), lists(4), badges(5).
         final tabBar = tester.widget<TabBar>(find.byType(TabBar));
         expect(
           tabBar.controller?.index,
-          equals(1),
-          reason: 'Popular tab should be selected at index 1',
+          equals(2),
+          reason: 'Popular tab should be selected at index 2',
         );
       },
     );
@@ -420,8 +420,8 @@ void main() {
       final tabBar = tester.widget<TabBar>(find.byType(TabBar));
       expect(
         tabBar.controller?.index,
-        equals(0),
-        reason: 'New tab should be selected at index 0',
+        equals(1),
+        reason: 'New tab should be selected at index 1, after Latest',
       );
     });
   });

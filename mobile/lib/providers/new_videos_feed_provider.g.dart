@@ -68,7 +68,7 @@ final class NewVideosFeedProvider
   }
 }
 
-String _$newVideosFeedHash() => r'f9f571feb6f259f875b1ee3926ee2d31bd6f8c60';
+String _$newVideosFeedHash() => r'1aa97a9a14e67aa67ace0b98b1bc8e1eb3a24f72';
 
 /// Publication-ordered feed provider - shows newest videos first.
 ///

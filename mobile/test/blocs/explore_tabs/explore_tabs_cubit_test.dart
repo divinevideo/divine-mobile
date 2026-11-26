@@ -71,7 +71,7 @@ void main() {
         appsAvailable: true,
       ),
       expect: () => [
-        isA<ExploreTabsState>().having((s) => s.tabCount, 'tabCount', 8).having(
+        isA<ExploreTabsState>().having((s) => s.tabCount, 'tabCount', 9).having(
           (s) => s.tabNames,
           'tabNames',
           const [
