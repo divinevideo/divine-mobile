@@ -23,6 +23,7 @@ class CountResult extends Equatable {
   /// {@macro CountResult}
   const CountResult({
     required this.count,
+    required this.isComplete,
     this.approximate = false,
     this.source = CountSource.websocket,
   });
@@ -42,21 +43,30 @@ class CountResult extends Equatable {
   /// and understanding cache behavior.
   final CountSource source;
 
+  /// Whether every relay asked for this count answered it.
+  ///
+  /// `false` when a relay that could hold matching events timed out, refused
+  /// with CLOSED or could not be sent the COUNT while another answered:
+  /// [count] is then a floor. Callers must not cache an incomplete count.
+  final bool isComplete;
+
   /// Creates a copy with optional field overrides
   CountResult copyWith({
     int? count,
     bool? approximate,
     CountSource? source,
+    bool? isComplete,
   }) {
     return CountResult(
       count: count ?? this.count,
       approximate: approximate ?? this.approximate,
       source: source ?? this.source,
+      isComplete: isComplete ?? this.isComplete,
     );
   }
 
   @override
-  List<Object?> get props => [count, approximate, source];
+  List<Object?> get props => [count, approximate, source, isComplete];
 }
 
 /// Thrown by `NostrClient.countEvents` when no relay produced a NIP-45 COUNT

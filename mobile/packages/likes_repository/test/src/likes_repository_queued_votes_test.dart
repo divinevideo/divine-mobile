@@ -53,6 +53,7 @@ class _Relay {
     );
     when(() => client.countEvents(any())).thenAnswer(
       (invocation) async => CountResult(
+        isComplete: true,
         count: _matching(invocation.positionalArguments.first as List).length,
       ),
     );

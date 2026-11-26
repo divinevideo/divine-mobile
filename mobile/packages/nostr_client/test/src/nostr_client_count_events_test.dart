@@ -1,5 +1,5 @@
-// ABOUTME: Validation probe for #9223: countEvents' redial asks again within
-// ABOUTME: what is left of the caller's timeout. Scratch evidence only.
+// ABOUTME: Tests NostrClient.countEvents: completeness is passed through and a
+// ABOUTME: redial asks again within what is left of the caller's timeout.
 
 import 'dart:async';
 
@@ -14,12 +14,43 @@ class _MockNostr extends Mock implements Nostr {}
 class _MockRelayManager extends Mock implements RelayManager {}
 
 void main() {
-  group('NostrClient.countEvents redial budget (#9223)', () {
+  group('NostrClient.countEvents', () {
     setUpAll(() {
       registerFallbackValue(Duration.zero);
       registerFallbackValue(<Map<String, dynamic>>[]);
       registerFallbackValue(<int>[]);
     });
+
+    test(
+      'reports a count another relay did not settle as incomplete',
+      () async {
+        final nostr = _MockNostr();
+        final relayManager = _MockRelayManager();
+        when(
+          () => nostr.countEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => const CountResponse(count: 3, isComplete: false),
+        );
+        when(() => relayManager.isRelayAllowed(any())).thenReturn(true);
+        final client = NostrClient.forTesting(
+          nostr: nostr,
+          relayManager: relayManager,
+        );
+
+        final result = await client.countEvents([
+          Filter(kinds: [EventKind.reaction]),
+        ]);
+
+        expect(result.count, equals(3));
+        expect(result.isComplete, isFalse);
+      },
+    );
 
     test('asks again with what is left of the caller timeout after a 2 s '
         'redial', () {
@@ -40,7 +71,7 @@ void main() {
           if (budgets.length == 1) {
             throw CountNotSentException('No relay accepted COUNT');
           }
-          return const CountResponse(count: 4);
+          return const CountResponse(isComplete: true, count: 4);
         });
         when(
           relayManager.retryDisconnectedRelays,

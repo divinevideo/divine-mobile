@@ -535,7 +535,9 @@ void main() {
           // so the optimistic +1 has to come back off.
           when(
             () => nostrClient.countEvents(any()),
-          ).thenAnswer((_) async => const CountResult(count: 10));
+          ).thenAnswer(
+            (_) async => const CountResult(isComplete: true, count: 10),
+          );
           stubRelay(reactions: [reaction(id: landedReactionId)]);
           expect(await repository.getLikeCount(target), equals(10));
 
@@ -840,7 +842,9 @@ void main() {
         () async {
           when(
             () => nostrClient.countEvents(any()),
-          ).thenAnswer((_) async => const CountResult(count: 10));
+          ).thenAnswer(
+            (_) async => const CountResult(isComplete: true, count: 10),
+          );
           expect(await repository.getLikeCount(target), equals(10));
           final relayGate = Completer<List<Event>>();
           when(readEvents).thenAnswer((invocation) async {
@@ -984,7 +988,9 @@ void main() {
           // was never inside the count the UI showed before the tap.
           when(
             () => nostrClient.countEvents(any()),
-          ).thenAnswer((_) async => const CountResult(count: 10));
+          ).thenAnswer(
+            (_) async => const CountResult(isComplete: true, count: 10),
+          );
           expect(await repository.getLikeCount(target), equals(10));
           stubRelay();
           final publishGate = Completer<Event?>();

@@ -7,7 +7,7 @@ import 'package:test/test.dart';
 void main() {
   group('CountResult', () {
     test('creates with required count parameter', () {
-      const result = CountResult(count: 42);
+      const result = CountResult(isComplete: true, count: 42);
 
       expect(result.count, equals(42));
       expect(result.approximate, isFalse);
@@ -16,6 +16,7 @@ void main() {
 
     test('creates with all parameters', () {
       const result = CountResult(
+        isComplete: true,
         count: 100,
         approximate: true,
         source: CountSource.cache,
@@ -26,8 +27,18 @@ void main() {
       expect(result.source, equals(CountSource.cache));
     });
 
+    test('isComplete separates a floor from a complete count', () {
+      const complete = CountResult(isComplete: true, count: 3);
+      final floor = complete.copyWith(isComplete: false);
+
+      expect(floor.isComplete, isFalse);
+      expect(floor.count, equals(3));
+      expect(floor, isNot(equals(complete)));
+    });
+
     test('copyWith creates new instance with updated values', () {
       const original = CountResult(
+        isComplete: true,
         count: 50,
       );
 
@@ -41,6 +52,7 @@ void main() {
 
     test('copyWith can update all fields', () {
       const original = CountResult(
+        isComplete: true,
         count: 50,
       );
 
@@ -56,10 +68,14 @@ void main() {
     });
 
     test('equality works correctly', () {
-      const result1 = CountResult(count: 42);
-      const result2 = CountResult(count: 42);
-      const result3 = CountResult(count: 42, source: CountSource.gateway);
-      const result4 = CountResult(count: 100);
+      const result1 = CountResult(isComplete: true, count: 42);
+      const result2 = CountResult(isComplete: true, count: 42);
+      const result3 = CountResult(
+        isComplete: true,
+        count: 42,
+        source: CountSource.gateway,
+      );
+      const result4 = CountResult(isComplete: true, count: 100);
 
       expect(result1, equals(result2));
       expect(result1, isNot(equals(result3)));

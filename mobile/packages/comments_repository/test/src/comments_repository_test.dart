@@ -2068,7 +2068,7 @@ void main() {
 
       test('returns count from NIP-45', () async {
         when(() => mockNostrClient.countEvents(any())).thenAnswer(
-          (_) async => const CountResult(count: 42),
+          (_) async => const CountResult(isComplete: true, count: 42),
         );
 
         final result = await repository.getCommentsCount(testRootEventId);
@@ -2078,7 +2078,7 @@ void main() {
 
       test('queries with correct filter', () async {
         when(() => mockNostrClient.countEvents(any())).thenAnswer(
-          (_) async => const CountResult(count: 0),
+          (_) async => const CountResult(isComplete: true, count: 0),
         );
 
         await repository.getCommentsCount(testRootEventId);
@@ -2094,7 +2094,7 @@ void main() {
 
       test('queries video replies when includeVideoReplies is true', () async {
         when(() => mockNostrClient.countEvents(any())).thenAnswer(
-          (_) async => const CountResult(count: 0),
+          (_) async => const CountResult(isComplete: true, count: 0),
         );
 
         await repository.getCommentsCount(
@@ -2124,7 +2124,7 @@ void main() {
           when(() => mockNostrClient.countEvents(any())).thenAnswer((_) async {
             callCount++;
             // First call (E tag) returns 5, second call (A tag) returns 8
-            return CountResult(count: callCount == 1 ? 5 : 8);
+            return CountResult(isComplete: true, count: callCount == 1 ? 5 : 8);
           });
 
           final result = await repository.getCommentsCount(
@@ -2151,7 +2151,10 @@ void main() {
           when(() => mockNostrClient.countEvents(any())).thenAnswer((_) async {
             callCount++;
             // First call (E tag) returns 10, second call (A tag) returns 3
-            return CountResult(count: callCount == 1 ? 10 : 3);
+            return CountResult(
+              isComplete: true,
+              count: callCount == 1 ? 10 : 3,
+            );
           });
 
           final result = await repository.getCommentsCount(
@@ -2199,7 +2202,8 @@ void main() {
           when(() => mockNostrClient.countEvents(any())).thenAnswer((_) async {
             callCount++;
             // The E count answers and the A count does not.
-            if (callCount.isOdd) return const CountResult(count: 5);
+            if (callCount.isOdd)
+              return const CountResult(isComplete: true, count: 5);
             throw const CountUnavailableException(
               'No relay responded to COUNT',
             );
@@ -2222,7 +2226,7 @@ void main() {
 
       test('returns cached count on second call without relay query', () async {
         when(() => mockNostrClient.countEvents(any())).thenAnswer(
-          (_) async => const CountResult(count: 42),
+          (_) async => const CountResult(isComplete: true, count: 42),
         );
 
         final first = await repository.getCommentsCount(testRootEventId);
@@ -2235,7 +2239,7 @@ void main() {
 
       test('updateCachedCommentCount overrides cached value', () async {
         when(() => mockNostrClient.countEvents(any())).thenAnswer(
-          (_) async => const CountResult(count: 5),
+          (_) async => const CountResult(isComplete: true, count: 5),
         );
 
         await repository.getCommentsCount(testRootEventId);
@@ -2248,7 +2252,7 @@ void main() {
 
       test('cache is incremented after postComment', () async {
         when(() => mockNostrClient.countEvents(any())).thenAnswer(
-          (_) async => const CountResult(count: 5),
+          (_) async => const CountResult(isComplete: true, count: 5),
         );
         when(() => mockNostrClient.publishEvent(any())).thenAnswer(
           (inv) async =>
@@ -2269,14 +2273,14 @@ void main() {
 
       test('clearCommentCountCache resets count cache', () async {
         when(() => mockNostrClient.countEvents(any())).thenAnswer(
-          (_) async => const CountResult(count: 42),
+          (_) async => const CountResult(isComplete: true, count: 42),
         );
 
         await repository.getCommentsCount(testRootEventId);
         repository.clearCommentCountCache();
 
         when(() => mockNostrClient.countEvents(any())).thenAnswer(
-          (_) async => const CountResult(count: 99),
+          (_) async => const CountResult(isComplete: true, count: 99),
         );
 
         final fresh = await repository.getCommentsCount(testRootEventId);
@@ -2300,7 +2304,7 @@ void main() {
               ':video-dtag';
 
           when(() => mockNostrClient.countEvents(any())).thenAnswer(
-            (_) async => const CountResult(count: 7),
+            (_) async => const CountResult(isComplete: true, count: 7),
           );
 
           // Seed the cache with the pre-edit fetch.
@@ -2337,7 +2341,7 @@ void main() {
               ':video-dtag';
 
           when(() => mockNostrClient.countEvents(any())).thenAnswer(
-            (_) async => const CountResult(count: 7),
+            (_) async => const CountResult(isComplete: true, count: 7),
           );
 
           await repository.getCommentsCount(
@@ -2347,7 +2351,7 @@ void main() {
           repository.clearCommentCountCache();
 
           when(() => mockNostrClient.countEvents(any())).thenAnswer(
-            (_) async => const CountResult(count: 11),
+            (_) async => const CountResult(isComplete: true, count: 11),
           );
 
           final fresh = await repository.getCommentsCount(
@@ -2371,7 +2375,7 @@ void main() {
               ':video-dtag';
 
           when(() => mockNostrClient.countEvents(any())).thenAnswer(
-            (_) async => const CountResult(count: 7),
+            (_) async => const CountResult(isComplete: true, count: 7),
           );
           when(
             () => mockNostrClient.publishEventAwaitOk(
@@ -2602,7 +2606,7 @@ void main() {
 
       test('decrements cached count when rootEventId is provided', () async {
         when(() => mockNostrClient.countEvents(any())).thenAnswer(
-          (_) async => const CountResult(count: 10),
+          (_) async => const CountResult(isComplete: true, count: 10),
         );
 
         await repository.getCommentsCount(testRootEventId);
@@ -2620,7 +2624,7 @@ void main() {
         'leaves the cached count alone when no relay accepts the request',
         () async {
           when(() => mockNostrClient.countEvents(any())).thenAnswer(
-            (_) async => const CountResult(count: 10),
+            (_) async => const CountResult(isComplete: true, count: 10),
           );
           answerDeletionRequests(
             acceptedBy: const [],
@@ -2643,7 +2647,7 @@ void main() {
 
       test('does not decrement when rootEventId is omitted', () async {
         when(() => mockNostrClient.countEvents(any())).thenAnswer(
-          (_) async => const CountResult(count: 10),
+          (_) async => const CountResult(isComplete: true, count: 10),
         );
 
         await repository.getCommentsCount(testRootEventId);

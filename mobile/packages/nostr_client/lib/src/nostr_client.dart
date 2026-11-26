@@ -2039,6 +2039,10 @@ class NostrClient {
   /// the pool went idle or every relay dropped, the relays are redialled once
   /// and the COUNT is asked again within what is left of it.
   ///
+  /// [CountResult.isComplete] is `false` when a relay timed out, refused with
+  /// CLOSED or could not be sent the COUNT while another answered: the count
+  /// is then a floor, to be shown but not cached.
+  ///
   /// Throws [CountUnavailableException] when no relay answered. The count is
   /// then unknown, and no number is substituted for it.
   ///
@@ -2107,6 +2111,7 @@ class NostrClient {
       return CountResult(
         count: _normalizeRelayCount(response.count),
         approximate: response.approximate,
+        isComplete: response.isComplete,
       );
     } on CountNotSupportedException catch (e) {
       throw CountUnavailableException(e.reason);

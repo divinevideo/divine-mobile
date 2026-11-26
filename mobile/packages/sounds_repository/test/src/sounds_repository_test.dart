@@ -98,7 +98,7 @@ void main() {
           relayTypes: any(named: 'relayTypes'),
           timeout: any(named: 'timeout'),
         ),
-      ).thenAnswer((_) async => const CountResult(count: 0));
+      ).thenAnswer((_) async => const CountResult(isComplete: true, count: 0));
 
       repository = SoundsRepository(nostrClient: mockNostrClient);
     });
@@ -3051,7 +3051,9 @@ void main() {
             relayTypes: any(named: 'relayTypes'),
             timeout: any(named: 'timeout'),
           ),
-        ).thenAnswer((_) async => const CountResult(count: 5));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 5),
+        );
 
         final count = await repository.fetchVideosUsingSoundCount(testEventId1);
 

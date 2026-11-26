@@ -1542,7 +1542,9 @@ void main() {
         () async {
           when(
             () => mockNostrClient.countEvents(any()),
-          ).thenAnswer((_) async => const CountResult(count: 10));
+          ).thenAnswer(
+            (_) async => const CountResult(isComplete: true, count: 10),
+          );
           when(
             () => mockLocalStorage.saveLikeRecord(any()),
           ).thenAnswer((_) async {});
@@ -2985,7 +2987,9 @@ void main() {
       test('queries relay for like count by event ID', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 42));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 42),
+        );
 
         repository = createRepository();
         expect(await repository.getLikeCount(testEventId), equals(42));
@@ -3209,7 +3213,9 @@ void main() {
       test('ignores empty addressableId', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 7));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 7),
+        );
 
         repository = createRepository();
         final count = await repository.getLikeCount(
@@ -3225,7 +3231,9 @@ void main() {
       test('returns cached count on second call without relay query', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 42));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 42),
+        );
 
         repository = createRepository();
 
@@ -3240,7 +3248,9 @@ void main() {
       test('cache is adjusted after likeEvent', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 10));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 10),
+        );
 
         final reactionEvent = MockEvent();
         when(() => reactionEvent.id).thenReturn('reaction_1');
@@ -3278,7 +3288,9 @@ void main() {
       test('cache is adjusted after offline likeEvent', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 10));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 10),
+        );
 
         var queuedAction = false;
         repository = LikesRepository(
@@ -3321,7 +3333,9 @@ void main() {
       test('cache is adjusted after unlikeEvent', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 10));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 10),
+        );
         when(
           () => mockLocalStorage.getAllLikeRecords(),
         ).thenAnswer((_) async => [createLikeRecord()]);
@@ -3345,7 +3359,9 @@ void main() {
       test('clearCache resets count cache', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 42));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 42),
+        );
         when(() => mockLocalStorage.clearAll()).thenAnswer((_) async {});
 
         repository = createRepository();
@@ -3354,7 +3370,9 @@ void main() {
 
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 99));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 99),
+        );
 
         final fresh = await repository.getLikeCount(testEventId);
         expect(fresh, equals(99));
@@ -3902,7 +3920,9 @@ void main() {
         // Pre-populate cache via a single-event getLikeCount
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 5));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 5),
+        );
 
         repository = createRepository();
         await repository.getLikeCount(eventId1);
@@ -7098,7 +7118,9 @@ void main() {
       test('decrements like count cache', () async {
         when(
           () => mockNostrClient.countEvents(any()),
-        ).thenAnswer((_) async => const CountResult(count: 10));
+        ).thenAnswer(
+          (_) async => const CountResult(isComplete: true, count: 10),
+        );
         when(
           () => mockNostrClient.sendLike(
             any(),
