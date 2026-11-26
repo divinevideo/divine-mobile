@@ -456,6 +456,30 @@ void main() {
           isFalse,
         );
       });
+
+      test('seriesEpisodes keeps the author short videos in order', () {
+        final author = 'a' * 64;
+        final first = '34236:$author:first';
+        final second = '34236:$author:second';
+
+        final list = createSubject(
+          pubkey: author,
+          videoEventIds: [
+            second,
+            'b' * 64,
+            '34236:${'d' * 64}:someone-else',
+            '34235:$author:long-video',
+            '34236:$author:',
+            first,
+          ],
+        );
+
+        expect(list.seriesEpisodes, equals([second, first]));
+        expect(
+          createSubject(pubkey: null, videoEventIds: [first]).seriesEpisodes,
+          isEmpty,
+        );
+      });
     });
 
     group('UTF-16 well-formedness', () {

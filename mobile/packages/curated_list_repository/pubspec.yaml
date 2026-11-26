@@ -8,6 +8,7 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
+  cache_sync:
   clock: ^1.1.2
   collection: ^1.19.1
   equatable: ^2.0.5

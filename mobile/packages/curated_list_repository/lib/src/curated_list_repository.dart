@@ -3,6 +3,9 @@
 // ABOUTME(WIP): read-only query methods, and in-memory state populated by the
 // ABOUTME(WIP): Page layer. Persistence and relay sync come in later phases.
 
+import 'dart:convert';
+
+import 'package:cache_sync/cache_sync.dart';
 import 'package:curated_list_repository/src/curated_list_converter.dart';
 import 'package:curated_list_repository/src/curated_list_search_result.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
@@ -53,6 +56,12 @@ const kCuratedListSearchIndexTimeout = Duration(seconds: 5);
 
 /// Most video lists one search asks FunnelCake's list index for.
 const kCuratedListSearchIndexLimit = 50;
+
+/// How long a series read from relays is served from the cache.
+///
+/// Short, so the episode count moves while a creator publishes episodes one
+/// after another, yet a feed of one series' episodes still reads it once.
+const kSeriesListCacheTtl = Duration(seconds: 60);
 
 /// An immutable subscription snapshot and its resolution readiness.
 ///
@@ -576,6 +585,139 @@ class CuratedListRepository {
       merged[list.authorScopedId] = list;
     }
     yield List.unmodifiable(merged.values.toList());
+  }
+
+  // ---------------------------------------------------------------------------
+  // Series
+  // ---------------------------------------------------------------------------
+
+  static final _seriesAddress = RegExp(
+    r'^30005:([0-9a-f]{64}):(.+)$',
+    dotAll: true,
+  );
+
+  /// Relay reads of a series in flight, by cache key, so that the episodes of
+  /// one series in a feed share a single read.
+  final Map<String, Future<CuratedList?>> _seriesReads = {};
+
+  /// The series at [seriesCoordinate] (`30005:<pubkey>:<d-tag>`) when it is a
+  /// list marked as a series and [episodeCoordinate] is one of its
+  /// [CuratedList.seriesEpisodes]; otherwise null. A private list never is:
+  /// its episodes are sealed to its owner.
+  ///
+  /// A series read from relays is cached for [kSeriesListCacheTtl]. A cached
+  /// copy that does not hold [episodeCoordinate] is never the answer, since
+  /// it may predate that episode: the series is read from relays again first.
+  ///
+  /// Also null when [seriesCoordinate] is malformed or the relays cannot be
+  /// read. The cache only saves reads: when it fails, the relays answer.
+  Future<CuratedList?> fetchSeriesContaining({
+    required String seriesCoordinate,
+    required String episodeCoordinate,
+  }) async {
+    final address = _seriesAddress.firstMatch(seriesCoordinate);
+    if (address == null) return null;
+    final key = 'global:series-list:v1:$seriesCoordinate';
+
+    final cached = await _readCachedSeries(key);
+    if (cached != null) {
+      if (cached.seriesEpisodes.contains(episodeCoordinate)) return cached;
+      await _forgetCachedSeries(key);
+    }
+
+    final series = await _readSeriesOnce(
+      key,
+      pubkey: address[1]!,
+      dTag: address[2]!,
+    );
+    if (series == null || !series.seriesEpisodes.contains(episodeCoordinate)) {
+      return null;
+    }
+    return series;
+  }
+
+  /// Joins the relay read of [key] in flight, or starts one.
+  Future<CuratedList?> _readSeriesOnce(
+    String key, {
+    required String pubkey,
+    required String dTag,
+  }) async {
+    final inFlight = _seriesReads[key];
+    if (inFlight != null) return inFlight;
+
+    final read = _readSeriesFromRelays(key, pubkey: pubkey, dTag: dTag);
+    _seriesReads[key] = read;
+    try {
+      return await read;
+    } finally {
+      _seriesReads.removeWhere((_, pending) => identical(pending, read));
+    }
+  }
+
+  /// Reads the newest revision of the list by [pubkey] with [dTag] from
+  /// relays and caches it under [key] when it is marked as a series.
+  Future<CuratedList?> _readSeriesFromRelays(
+    String key, {
+    required String pubkey,
+    required String dTag,
+  }) async {
+    final List<Event> events;
+    try {
+      events = await _nostrClient.queryEvents(
+        [
+          Filter(
+            kinds: [_curatedListKind],
+            authors: [pubkey],
+            d: [dTag],
+          ),
+        ],
+        timeout: kPublicCuratedListsRelayReadTimeout,
+      );
+    } on Exception {
+      return null;
+    }
+
+    final newest = CuratedListConverter.latestRevisions([
+      for (final event in events)
+        if (event.kind == _curatedListKind &&
+            event.pubkey == pubkey &&
+            CuratedListConverter.extractDTag(event) == dTag)
+          event,
+    ]).firstOrNull;
+    final list = newest == null ? null : CuratedListConverter.fromEvent(newest);
+    if (list == null || !list.isSeries) return null;
+
+    try {
+      await CacheSync.write(
+        key: key,
+        value: list,
+        toJson: (list) => jsonEncode(list.toJson()),
+        ttl: kSeriesListCacheTtl,
+      );
+    } on Object {
+      // Not cached: the next read asks the relays again.
+    }
+    return list;
+  }
+
+  Future<CuratedList?> _readCachedSeries(String key) async {
+    try {
+      return await CacheSync.read(
+        key: key,
+        fromJson: (json) =>
+            CuratedList.fromJson(jsonDecode(json) as Map<String, dynamic>),
+      );
+    } on Object {
+      return null;
+    }
+  }
+
+  Future<void> _forgetCachedSeries(String key) async {
+    try {
+      await CacheSync.invalidate(key);
+    } on Object {
+      // The relay read below overwrites the entry when it finds the series.
+    }
   }
 
   // ---------------------------------------------------------------------------
