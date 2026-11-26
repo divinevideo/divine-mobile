@@ -373,7 +373,7 @@ Stream<List<VideoEvent>> _listVideos({
       foundVideos.add(video);
       return true;
     }
-    if (video.createdAt <= foundVideos[slot].createdAt) return false;
+    if (!isNewerVideoRevision(video, foundVideos[slot])) return false;
     foundVideos[slot] = video;
     return true;
   }

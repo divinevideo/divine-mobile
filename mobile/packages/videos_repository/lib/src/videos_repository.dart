@@ -24,6 +24,7 @@ import 'package:videos_repository/src/seen_video_lookup.dart';
 import 'package:videos_repository/src/video_content_filter.dart';
 import 'package:videos_repository/src/video_event_filter.dart';
 import 'package:videos_repository/src/video_local_storage.dart';
+import 'package:videos_repository/src/video_merge_helpers.dart';
 import 'package:videos_repository/src/video_route_lookup_result.dart';
 import 'package:videos_repository/src/video_route_ref.dart';
 import 'package:videos_repository/src/video_search_sort.dart';
@@ -1018,10 +1019,18 @@ class VideosRepository {
     }
 
     final refToVideo = <String, VideoEvent>{};
-    List<VideoEvent> inListOrder() => deduplicateVideosPreservingOrder([
-      for (final ref in videoRefs)
-        ?refToVideo[ref.contains(':') ? ref : ref.toLowerCase()],
-    ]);
+    List<VideoEvent> inListOrder() {
+      final byVideoKey = <String, VideoEvent>{};
+      for (final ref in videoRefs) {
+        final video = refToVideo[ref.contains(':') ? ref : ref.toLowerCase()];
+        if (video == null) continue;
+        final existing = byVideoKey[video.feedDedupKey];
+        if (existing == null || isNewerVideoRevision(video, existing)) {
+          byVideoKey[video.feedDedupKey] = video;
+        }
+      }
+      return byVideoKey.values.toList();
+    }
 
     final fromApi = relayOnly
         ? (videos: const <VideoEvent>[], answeredIds: const <String>{})

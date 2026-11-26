@@ -841,16 +841,18 @@ void main() {
     });
 
     test(
-      'keeps one tile when successive reads resolve different revisions',
+      'ignores an older revision that arrives later',
       () async {
         const dTag = 'clip';
         final first = _video(
           id: _allowedVideoId,
           pubkey: _ownerA,
+          createdAt: 200,
         ).copyWith(addressableDTag: dTag);
         final second = _video(
           id: missingVideoId,
           pubkey: _ownerA,
+          createdAt: 100,
         ).copyWith(addressableDTag: dTag);
         answerRepository(
           Stream.fromIterable([
@@ -866,21 +868,21 @@ void main() {
       },
     );
 
-    test("shows a newer revision in the older one's tile", () async {
+    test('uses the signed revision time without moving the tile', () async {
       const dTag = 'clip';
       const otherId =
           '0000000000000000000000000000000000000000000000000000000000000abd';
       final older = _video(
+        id: missingVideoId,
+        pubkey: _ownerA,
+        createdAt: 100,
+      ).copyWith(addressableDTag: dTag, eventCreatedAt: 150);
+      final other = _video(id: otherId, pubkey: _ownerB);
+      final newer = _video(
         id: _allowedVideoId,
         pubkey: _ownerA,
         createdAt: 100,
-      ).copyWith(addressableDTag: dTag);
-      final other = _video(id: otherId, pubkey: _ownerB);
-      final newer = _video(
-        id: missingVideoId,
-        pubkey: _ownerA,
-        createdAt: 200,
-      ).copyWith(addressableDTag: dTag);
+      ).copyWith(addressableDTag: dTag, eventCreatedAt: 200);
       answerRepository(
         Stream.fromIterable([
           [older, other],
@@ -889,12 +891,12 @@ void main() {
       );
 
       final states = await collect([
-        _allowedVideoId,
+        missingVideoId,
         otherId,
         '34236:$_ownerA:$dTag',
       ]);
 
-      expect(idsOf(states).last, [missingVideoId, otherId]);
+      expect(idsOf(states).last, [_allowedVideoId, otherId]);
       verify(() => videoEventService.addVideoEvent(newer)).called(1);
     });
 

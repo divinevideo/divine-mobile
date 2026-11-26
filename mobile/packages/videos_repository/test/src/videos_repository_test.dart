@@ -5428,7 +5428,7 @@ void main() {
       );
 
       test(
-        'deduplicates repeated addressable refs with different event ids',
+        'deduplicates relay revisions in favor of the newer event',
         () async {
           final author = 'a' * 64;
           final firstCopy = _createVideoEventWithDTag(
@@ -5446,12 +5446,7 @@ void main() {
             createdAt: 1704067300,
           );
 
-          var callCount = 0;
-          when(() => mockNostrClient.queryEvents(any())).thenAnswer((_) async {
-            callCount++;
-            if (callCount == 1) return [firstCopy];
-            return [secondCopy];
-          });
+          _answerQueriesFrom(mockNostrClient, [firstCopy, secondCopy]);
 
           final result = await repository.getVideosForList([
             'first-event-id',
@@ -5459,7 +5454,7 @@ void main() {
           ]);
 
           expect(result, hasLength(1));
-          expect(result.single.id, equals('first-event-id'));
+          expect(result.single.id, equals('second-event-id'));
         },
       );
 
@@ -5843,6 +5838,35 @@ void main() {
         });
 
         group('watchVideosForList', () {
+          test(
+            'replaces an older event ID with the resolved revision',
+            () async {
+              final api = availableApi();
+              answerApi(api, (_) async => [statsFor(1), statsFor(2)]);
+              _answerQueriesFrom(mockNostrClient, [
+                _createVideoEventWithDTag(
+                  id: videoIdFor(3),
+                  pubkey: authorFor(1),
+                  dTag: 'd-1',
+                  videoUrl: 'https://example.com/edited.mp4',
+                  createdAt: 1704067201,
+                  publishedAt: 1704067200,
+                ),
+              ]);
+
+              final emissions = await repositoryWith(api).watchVideosForList([
+                videoIdFor(1),
+                videoIdFor(2),
+                '34236:${authorFor(1)}:d-1',
+              ]).toList();
+
+              expect(emissions.map((videos) => videos.map((v) => v.id)), [
+                [videoIdFor(1), videoIdFor(2)],
+                [videoIdFor(3), videoIdFor(2)],
+              ]);
+            },
+          );
+
           test('emits Funnelcake videos before the relays answer', () async {
             final api = availableApi();
             answerApi(api, (_) async => [statsFor(1)]);
@@ -18753,6 +18777,7 @@ Event _createVideoEventWithDTag({
   required String dTag,
   required String? videoUrl,
   required int createdAt,
+  int? publishedAt,
   int? loops,
   List<String>? hashtags,
   bool hasContentWarning = false,
@@ -18762,6 +18787,7 @@ Event _createVideoEventWithDTag({
     if (videoUrl != null) ['url', videoUrl],
     if (loops != null) ['loops', loops.toString()],
     ['d', dTag], // Custom d-tag
+    if (publishedAt != null) ['published_at', publishedAt.toString()],
     if (hashtags != null)
       for (final tag in hashtags) ['t', tag],
     if (hasContentWarning) ['content-warning', 'adult content'],
