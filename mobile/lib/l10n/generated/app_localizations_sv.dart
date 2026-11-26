@@ -7838,6 +7838,14 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'Den här gruppen vill skicka meddelanden till dig och har skickat $messageText.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'I den här gruppen';
+
+  @override
   String get deleteAccountAccountChanged =>
       'Du bytte konto, så ingenting raderades. Öppna raderingen igen för kontot du vill ta bort.';
 

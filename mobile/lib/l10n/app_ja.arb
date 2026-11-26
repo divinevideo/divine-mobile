@@ -5333,6 +5333,8 @@
   "messageRequestViewMessagesButton": "メッセージを表示",
   "messageRequestViewProfileButton": "プロフィールを表示",
   "messageRequestWantsToMessageYou": "{displayName}があなたにメッセージを送りたがってるよ。{messageText}を送信済みだよ。",
+  "messageRequestGroupWantsToMessageYou": "このグループがあなたにメッセージを送りたがってるよ。{messageText}を送信済みだよ。",
+  "messageRequestGroupMembersHeading": "このグループのメンバー",
   "@messageRequestWantsToMessageYou": {
     "placeholders": {
       "displayName": {

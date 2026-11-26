@@ -5333,6 +5333,8 @@
   "messageRequestViewMessagesButton": "Vezi mesajele",
   "messageRequestViewProfileButton": "Vezi profilul",
   "messageRequestWantsToMessageYou": "{displayName} vrea să-ți trimită un mesaj, a trimis {messageText}.",
+  "messageRequestGroupWantsToMessageYou": "Acest grup vrea să-ți trimită un mesaj, au trimis {messageText}.",
+  "messageRequestGroupMembersHeading": "În acest grup",
   "@messageRequestWantsToMessageYou": {
     "placeholders": {
       "displayName": {

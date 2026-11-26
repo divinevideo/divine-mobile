@@ -4439,6 +4439,8 @@
   "messageRequestViewMessagesButton": "సందేశాలను వీక్షించండి",
   "messageRequestViewProfileButton": "ప్రొఫైల్‌ని వీక్షించండి",
   "messageRequestWantsToMessageYou": "{displayName}మీకు సందేశం పంపాలనుకుంటున్నారు, వారు పంపారు {messageText}.",
+  "messageRequestGroupWantsToMessageYou": "ఈ గ్రూప్ మీకు సందేశం పంపాలనుకుంటోంది, వారు పంపారు {messageText}.",
+  "messageRequestGroupMembersHeading": "ఈ గ్రూప్‌లో",
   "@messageRequestWantsToMessageYou": {
     "placeholders": {
       "displayName": {

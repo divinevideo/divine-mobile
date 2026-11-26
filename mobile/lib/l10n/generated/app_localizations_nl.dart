@@ -7878,6 +7878,14 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'Deze groep wil je een bericht sturen en heeft $messageText gestuurd.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'In deze groep';
+
+  @override
   String get deleteAccountAccountChanged =>
       'Je bent van account gewisseld, dus er is niets verwijderd. Open de verwijdering opnieuw voor het account dat je wilt verwijderen.';
 

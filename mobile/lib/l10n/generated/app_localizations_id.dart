@@ -7754,6 +7754,14 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'Grup ini ingin mengirim pesan kepadamu, mereka mengirim $messageText.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'Di grup ini';
+
+  @override
   String get deleteAccountAccountChanged =>
       'Kamu beralih akun, jadi tidak ada yang dihapus. Buka lagi penghapusan untuk akun yang ingin kamu hapus.';
 

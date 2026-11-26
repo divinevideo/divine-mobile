@@ -4370,6 +4370,8 @@
   "messageRequestViewMessagesButton": "Tingnan ang mga mensahe",
   "messageRequestViewProfileButton": "Tingnan ang profile",
   "messageRequestWantsToMessageYou": "Gustong mag-message sa iyo ni {displayName}, nagpadala sila ng {messageText}.",
+  "messageRequestGroupWantsToMessageYou": "Gustong mag-message sa iyo ng grupong ito, nagpadala sila ng {messageText}.",
+  "messageRequestGroupMembersHeading": "Sa grupong ito",
   "@messageRequestWantsToMessageYou": {
     "placeholders": {
       "displayName": {

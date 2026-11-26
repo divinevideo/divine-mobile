@@ -7923,6 +7923,14 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'Тази група иска да ти пише, изпратиха ти $messageText.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'В тази група';
+
+  @override
   String get deleteAccountAccountChanged =>
       'Смени акаунта, затова нищо не беше изтрито. Отвори отново изтриването за акаунта, който искаш да премахнеш.';
 

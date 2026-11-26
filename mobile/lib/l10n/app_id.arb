@@ -5333,6 +5333,8 @@
   "messageRequestViewMessagesButton": "Lihat pesan",
   "messageRequestViewProfileButton": "Lihat profil",
   "messageRequestWantsToMessageYou": "{displayName} ingin mengirim pesan kepadamu, mereka mengirim {messageText}.",
+  "messageRequestGroupWantsToMessageYou": "Grup ini ingin mengirim pesan kepadamu, mereka mengirim {messageText}.",
+  "messageRequestGroupMembersHeading": "Di grup ini",
   "@messageRequestWantsToMessageYou": {
     "placeholders": {
       "displayName": {

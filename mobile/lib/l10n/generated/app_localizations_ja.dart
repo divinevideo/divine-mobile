@@ -7439,6 +7439,14 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'このグループがあなたにメッセージを送りたがってるよ。$messageTextを送信済みだよ。';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'このグループのメンバー';
+
+  @override
   String get deleteAccountAccountChanged =>
       'アカウントが切り替わったから、何も削除されていないよ。削除したいアカウントで削除画面を開き直してね。';
 
