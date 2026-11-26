@@ -97,26 +97,26 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
 
   Widget _buildContent(BoxFit fit) {
     final blurhash = widget.video.blurhash;
-    final dimFallback =
-        blurhash == null && Theme.of(context).brightness == Brightness.dark;
+    final useColorClouds =
+        (blurhash == null || blurhash.isEmpty) &&
+        Theme.of(context).brightness == Brightness.dark;
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        // A missing video BlurHash uses a shared gradient that can be bright.
-        if (dimFallback)
-          ColoredBox(color: context.vineColors.surfaceContainerHigh),
-        BlurhashDisplay(
-          blurhash: blurhash,
-          contentType: widget.video.blurhashContentType,
-          width: widget.width,
-          height: widget.height,
-          fit: fit,
-          opacity: dimFallback ? 0.35 : 1.0,
-        ),
+        if (useColorClouds)
+          _ThumbnailColorClouds(videoId: widget.video.id)
+        else
+          BlurhashDisplay(
+            blurhash: blurhash,
+            contentType: widget.video.blurhashContentType,
+            width: widget.width,
+            height: widget.height,
+            fit: fit,
+          ),
 
         // Actual thumbnail image with error boundary, rendered on top of
-        // the blurhash placeholder once it loads.
+        // the placeholder once it loads.
         if (_thumbnailUrl != null)
           PassiveAuthThumbnailImage(
             url: _thumbnailUrl!,
@@ -178,6 +178,78 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
     }
 
     return AspectRatio(aspectRatio: clampedAspectRatio, child: content);
+  }
+}
+
+/// Soft, low-brightness colors for dark thumbnails without a video BlurHash.
+class _ThumbnailColorClouds extends StatelessWidget {
+  const _ThumbnailColorClouds({required this.videoId});
+
+  final String videoId;
+
+  static const List<
+    ({
+      Color base,
+      Color tint,
+      Color glow,
+      Alignment tintCenter,
+      Alignment glowCenter,
+    })
+  >
+  _palettes = [
+    (
+      base: Color(0xFF3F354C),
+      tint: Color(0xFF784C74),
+      glow: Color(0xFFA96E7B),
+      tintCenter: Alignment(0.54, -0.24),
+      glowCenter: Alignment(-0.66, -0.76),
+    ),
+    (
+      base: Color(0xFF293E51),
+      tint: Color(0xFF626885),
+      glow: Color(0xFF6A98AA),
+      tintCenter: Alignment(-0.9, -0.24),
+      glowCenter: Alignment(0.72, -0.64),
+    ),
+    (
+      base: Color(0xFF544638),
+      tint: Color(0xFF8A5E50),
+      glow: Color(0xFF9A835B),
+      tintCenter: Alignment(0.8, 0.14),
+      glowCenter: Alignment(-0.54, -0.44),
+    ),
+    (
+      base: Color(0xFF273D37),
+      tint: Color(0xFF5A756F),
+      glow: Color(0xFF648E77),
+      tintCenter: Alignment(-0.78, -0.88),
+      glowCenter: Alignment(0.26, -0.3),
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    // A video keeps the same palette when it reappears in another grid.
+    final seed = videoId.codeUnits.fold<int>(0, (sum, unit) => sum + unit);
+    final palette = _palettes[seed % _palettes.length];
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          center: palette.tintCenter,
+          radius: 1,
+          colors: [palette.tint, palette.base],
+        ),
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: palette.glowCenter,
+            radius: 0.9,
+            colors: [palette.glow, palette.glow.withValues(alpha: 0)],
+          ),
+        ),
+      ),
+    );
   }
 }
 

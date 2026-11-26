@@ -38,7 +38,7 @@ Finder _divineIcon(DivineIconName name) =>
 double _thumbnailAspectRatio(WidgetTester tester) =>
     tester.widget<AspectRatio>(find.byType(AspectRatio)).aspectRatio;
 
-Future<double> _centerLuminance(WidgetTester tester, Finder finder) async {
+Future<Color> _centerColor(WidgetTester tester, Finder finder) async {
   final boundary = tester.renderObject<RenderRepaintBoundary>(finder);
   final image = boundary.toImageSync();
   try {
@@ -49,7 +49,7 @@ Future<double> _centerLuminance(WidgetTester tester, Finder finder) async {
       pixels.getUint8(center),
       pixels.getUint8(center + 1),
       pixels.getUint8(center + 2),
-    ).computeLuminance();
+    );
   } finally {
     image.dispose();
   }
@@ -168,13 +168,56 @@ void main() {
     setUp(() => debugImageCacheOverride = createMockMediaCacheManager());
     tearDown(() => debugImageCacheOverride = null);
 
+    testWidgets(
+      'uses stable, distinct color clouds for dark thumbnails without BlurHashes',
+      (tester) async {
+        final first = createTestVideoEvent(id: 'a'.padLeft(64, '0'));
+        final second = createTestVideoEvent(id: 'b'.padLeft(64, '0'));
+        final firstTile = find.byKey(ValueKey(first.id));
+        final secondTile = find.byKey(ValueKey(second.id));
+
+        Future<void> pumpThumbnails(List<VideoEvent> videos) {
+          return tester.pumpWidget(
+            MaterialApp(
+              theme: VineTheme.theme,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final video in videos)
+                      RepaintBoundary(
+                        key: ValueKey(video.id),
+                        child: SizedBox(
+                          width: 60,
+                          height: 90,
+                          child: VideoThumbnailWidget(video: video),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        await pumpThumbnails([first, second]);
+        final firstColor = await _centerColor(tester, firstTile);
+        final secondColor = await _centerColor(tester, secondTile);
+
+        expect(firstColor, isNot(secondColor));
+        expect(firstColor.computeLuminance(), inInclusiveRange(0.025, 0.25));
+        expect(secondColor.computeLuminance(), inInclusiveRange(0.025, 0.25));
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await pumpThumbnails([second, first]);
+        expect(await _centerColor(tester, firstTile), firstColor);
+        expect(await _centerColor(tester, secondTile), secondColor);
+      },
+    );
+
     final placeholderCases = [
-      (
-        description: 'dims the generic thumbnail fallback in dark mode',
-        theme: VineTheme.theme,
-        blurhash: null,
-        luminance: inInclusiveRange(0.025, 0.2),
-      ),
       (
         description:
             'keeps the generic thumbnail fallback bright in light mode',
@@ -231,7 +274,10 @@ void main() {
             ),
           );
 
-          final firstFrame = await _centerLuminance(tester, preview);
+          final firstFrame = (await _centerColor(
+            tester,
+            preview,
+          )).computeLuminance();
           final decodedBlurhash = find.descendant(
             of: find.byType(BlurhashDisplay),
             matching: find.byType(CustomPaint),
@@ -245,7 +291,10 @@ void main() {
             await tester.pump();
           }
           expect(decodedBlurhash, findsOneWidget);
-          final decodedFrame = await _centerLuminance(tester, preview);
+          final decodedFrame = (await _centerColor(
+            tester,
+            preview,
+          )).computeLuminance();
 
           expect(firstFrame, testCase.luminance, reason: 'initial gradient');
           expect(decodedFrame, testCase.luminance, reason: 'decoded BlurHash');
