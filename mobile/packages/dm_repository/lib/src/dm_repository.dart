@@ -9000,6 +9000,7 @@ class DmRepository {
     }
 
     if (!isCurrent()) return _queuedForDelivery(rumorId);
+    var finalized = result;
     if (result.success) {
       // Mirror sendMessage's happy-path transaction: persist
       // direct_messages + conversation upsert + queue finalize
@@ -9169,10 +9170,11 @@ class DmRepository {
               environment: _environment ?? '',
             );
           }
+          finalized = _withRecordedOwnCopy(result, liveRow);
           await _finalizeAfterRecipientSuccess(
             outgoingDao: dao,
             rumorId: rumorId,
-            result: result,
+            result: finalized,
           );
           // Throwing rolls the finalize back so the old account's row stays
           // queued for its own session.
@@ -9277,8 +9279,6 @@ class DmRepository {
         errorMessage: result.error ?? 'Unknown publish failure',
         reachedNoRelay: result.reachedNoRelay,
         wrapRefused: result.recipientWrapRefused,
-        keepsOwnCopy:
-            batchId != null && row.selfWrapStatus == OutgoingWrapStatus.sent,
         unconfirmedWrap: _unconfirmedWrapOf(result),
       );
       // An attempt that reached no relay is an outage on our side, not a
@@ -9288,7 +9288,7 @@ class DmRepository {
       }
     }
 
-    return result;
+    return finalized;
   }
 
   /// Watches the durable outgoing DM queue for collaborator invites whose
@@ -9912,11 +9912,10 @@ class DmRepository {
   /// rows already records it (#10016).
   ///
   /// The group send and a replay of a member's row both publish through here,
-  /// joined under one key per batch, so they share one publish rather than
-  /// make two. Once the copy lands every other row of the batch records it:
-  /// one already delivered is done and goes, one still waiting is marked so
-  /// its delivery publishes none. [callerRowId] is left to its caller, which
-  /// finalizes it. A session that ended meanwhile publishes nothing: the
+  /// joined under one key per batch. Once the copy lands, the batch records
+  /// it before releasing the key: delivered rows are removed and pending
+  /// rows are marked. [callerRowId] is marked too so its caller can finalize
+  /// it. A session that ended meanwhile publishes nothing: the
   /// message service may already be the next account's.
   Future<NIP17SendResult> _publishBatchOwnCopy({
     required OutgoingDmsDao dao,
@@ -9930,19 +9929,18 @@ class DmRepository {
     String? callerRowId,
   }) {
     return _joinOrStartRecovery('self-batch:$sendBatchId', () async {
-      final others = [
-        for (final row in await _batchRows(
-          dao: dao,
-          conversationId: conversationId,
-          ownerPubkey: ownerPubkey,
-          sendBatchId: sendBatchId,
-        ))
-          if (row.id != callerRowId) row,
-      ];
+      final rows = await _batchRows(
+        dao: dao,
+        conversationId: conversationId,
+        ownerPubkey: ownerPubkey,
+        sendBatchId: sendBatchId,
+      );
       if (_ingestSessionEnded(ownerPubkey, generation)) {
         return _queuedForDelivery(callerRowId ?? rumor.id);
       }
-      if (others.any((row) => row.selfWrapStatus == OutgoingWrapStatus.sent)) {
+      // Include the caller's fresh row. The original send may have recorded
+      // the copy there and removed the other rows while its retry was on wire.
+      if (rows.any((row) => row.selfWrapStatus == OutgoingWrapStatus.sent)) {
         return _batchOwnCopyRecorded(rumor);
       }
       final published = await _messageService!.publishSelfWrap(
@@ -9952,8 +9950,9 @@ class DmRepository {
       );
       if (!published.success) return published;
       try {
-        for (final row in others) {
-          if (row.recipientWrapStatus == OutgoingWrapStatus.sent) {
+        for (final row in rows) {
+          if (row.id != callerRowId &&
+              row.recipientWrapStatus == OutgoingWrapStatus.sent) {
             await dao.deleteById(row.id);
           } else {
             await dao.markSelfWrapStatus(
@@ -10023,6 +10022,17 @@ class DmRepository {
     timestamp: result.timestamp,
   );
 
+  /// The recipient's finalization can run after another batch attempt has
+  /// recorded its copy. Use the row read inside the finalization transaction.
+  NIP17SendResult _withRecordedOwnCopy(NIP17SendResult result, OutgoingDm row) {
+    if (result is NIP17SendSuccess &&
+        !result.selfWrapPublished &&
+        row.selfWrapStatus == OutgoingWrapStatus.sent) {
+      return _withOwnCopyOutcome(result, published: true);
+    }
+    return result;
+  }
+
   /// Apply the queue-row transition for a failed per-recipient rumor
   /// publish. Shared between [sendMessage] and [sendGroupMessage] so
   /// both call sites keep recipient/self wrap failure bookkeeping in
@@ -10030,17 +10040,12 @@ class DmRepository {
   ///
   /// A delivery the sender stopped while this attempt was on the wire is left
   /// as it is: the queue's status writes do not reopen a stopped row.
-  ///
-  /// [keepsOwnCopy] leaves a self-wrap the row records as `sent` alone: a
-  /// group member's row can hold its batch's one own copy before the member
-  /// has the message, and marking it failed would publish a second (#10016).
   Future<void> _finalizeAfterRecipientFailure({
     required OutgoingDmsDao outgoingDao,
     required String rumorId,
     required String errorMessage,
     bool reachedNoRelay = false,
     bool wrapRefused = false,
-    bool keepsOwnCopy = false,
     Event? unconfirmedWrap,
   }) async {
     // A relay that stayed silent beside a refusal a retry can get past may
@@ -10057,13 +10062,11 @@ class DmRepository {
         // watchDeliveryState reads this exact sentinel as still queued.
         lastError: reachedNoRelay ? outgoingDmOfflineError : errorMessage,
       );
-      if (!keepsOwnCopy) {
-        await outgoingDao.markSelfWrapStatus(
-          id: rumorId,
-          status: OutgoingWrapStatus.failed,
-          lastError: errorMessage,
-        );
-      }
+      await outgoingDao.markSelfWrapStatus(
+        id: rumorId,
+        status: OutgoingWrapStatus.failed,
+        lastError: errorMessage,
+      );
       // A relay that refused the kept wrap for good would refuse it again, so
       // the next attempt builds a new one; any other failure keeps it.
       if (wrapRefused) {
@@ -11208,6 +11211,7 @@ class DmRepository {
               await outgoingDao.deleteById(queueIds[i]);
               continue;
             }
+            results[i] = _withRecordedOwnCopy(results[i], liveRow);
           }
           liveSuccessIndexes.add(i);
         }

@@ -2,6 +2,7 @@
 // ABOUTME: reaction each publish the sender's own copy once, not once per
 // ABOUTME: member, and the retry queue replays that copy once per batch.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
@@ -86,7 +87,7 @@ void main() {
     late bool recipientOksArrive;
     late Set<String> unreadableInboxes;
     late Set<String> refusingRecipients;
-    late void Function(Event wrap)? onRecipientPublish;
+    late FutureOr<void> Function(Event wrap)? onRecipientPublish;
     late _HookedOutgoingDmsDao outgoingDao;
     late DmRepository repository;
     late DmReactionsRepository reactions;
@@ -179,7 +180,7 @@ void main() {
       ).thenAnswer((invocation) async {
         final event = invocation.positionalArguments.first as Event;
         published.add(event);
-        onRecipientPublish?.call(event);
+        await onRecipientPublish?.call(event);
         final targets =
             invocation.namedArguments[#targetRelays] as List<String>? ??
             const [_poolRelay];
@@ -497,6 +498,69 @@ void main() {
         expect(wrapsTo(owner), hasLength(1));
         expect(await queueRows(), isEmpty);
       });
+
+      for (final retryIsRefused in [false, true]) {
+        test(
+          retryIsRefused
+              ? 'keeps the recorded own copy when an in-flight retry is refused'
+              : 'uses the recorded own copy when an in-flight retry lands',
+          () async {
+            final others = members.take(2).toList();
+            final originalLastPublish = Completer<void>();
+            final finishOriginal = Completer<void>();
+            final retryPublish = Completer<void>();
+            final finishRetry = Completer<void>();
+            refusingRecipients.add(others.first);
+            onRecipientPublish = (wrap) async {
+              final recipient = wrap.tags.firstWhere(
+                (tag) => tag.first == 'p',
+              )[1];
+              if (recipient == others.last) {
+                originalLastPublish.complete();
+                await finishOriginal.future;
+              } else if (wrapsTo(others.first).length == 2) {
+                retryPublish.complete();
+                await finishRetry.future;
+              }
+            };
+
+            final original = sendToRoom(others);
+            await originalLastPublish.future;
+            final row = (await queueRows()).firstWhere(
+              (row) => row.recipientPubkey == others.first,
+            );
+            final retry = repository.recoverFullSend(rumorId: row.id);
+            await retryPublish.future;
+
+            finishOriginal.complete();
+            final originalResults = await original;
+            expect(originalResults.first.success, isFalse);
+            expect(originalResults.last.success, isTrue);
+            expect(wrapsTo(owner), hasLength(1));
+            expect(
+              (await queueRows()).single.selfWrapStatus,
+              OutgoingWrapStatus.sent,
+            );
+
+            if (!retryIsRefused) refusingRecipients.clear();
+            finishRetry.complete();
+            expect((await retry).success, !retryIsRefused);
+            if (retryIsRefused) {
+              expect(
+                (await queueRows()).single.selfWrapStatus,
+                OutgoingWrapStatus.sent,
+              );
+              refusingRecipients.clear();
+              expect(
+                (await repository.recoverFullSend(rumorId: row.id)).success,
+                isTrue,
+              );
+            }
+            expect(wrapsTo(owner), hasLength(1));
+            expect(await queueRows(), isEmpty);
+          },
+        );
+      }
 
       test('publishes one own copy when members whose OKs were lost are '
           're-driven', () async {

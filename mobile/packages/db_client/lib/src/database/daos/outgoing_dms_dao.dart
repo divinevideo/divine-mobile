@@ -519,26 +519,33 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
   /// Update the self-addressed gift-wrap status for [id]. Same per-wrap
   /// error semantics as [markRecipientWrapStatus] — [lastError] writes to
   /// `self_wrap_last_error` only, and a delivery the sender stopped is left
-  /// as it is.
+  /// as it is. A failure cannot overwrite a recorded publish: a group
+  /// sibling can record the shared copy while this row's attempt is in flight.
   Future<bool> markSelfWrapStatus({
     required String id,
     required OutgoingWrapStatus status,
     String? eventId,
     String? lastError,
   }) async {
-    final rows = await (update(outgoingDms)..where((t) => _unstopped(t, id)))
-        .write(
-          OutgoingDmsCompanion(
-            selfWrapStatus: Value(status.name),
-            selfWrapEventId: eventId != null
-                ? Value(eventId)
-                : const Value.absent(),
-            selfWrapLastError: lastError != null
-                ? Value(lastError)
-                : const Value.absent(),
-            lastAttemptAt: Value(DateTime.now()),
-          ),
-        );
+    final rows =
+        await (update(outgoingDms)..where((t) {
+              final liveRow = _unstopped(t, id);
+              if (status != OutgoingWrapStatus.failed) return liveRow;
+              return liveRow &
+                  t.selfWrapStatus.equals(OutgoingWrapStatus.sent.name).not();
+            }))
+            .write(
+              OutgoingDmsCompanion(
+                selfWrapStatus: Value(status.name),
+                selfWrapEventId: eventId != null
+                    ? Value(eventId)
+                    : const Value.absent(),
+                selfWrapLastError: lastError != null
+                    ? Value(lastError)
+                    : const Value.absent(),
+                lastAttemptAt: Value(DateTime.now()),
+              ),
+            );
     return rows > 0;
   }
 
