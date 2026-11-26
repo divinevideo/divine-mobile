@@ -235,6 +235,41 @@ void main() {
         expect(container.read(confirmedNotProtectedMinorProvider), isFalse);
       },
     );
+
+    test(
+      'fails closed during a reload after an unwatched flip to protected or '
+      'unknown',
+      () async {
+        for (final flippedStatus in [
+          ProtectedMinorStatus.protected(),
+          ProtectedMinorStatus.unknown(),
+        ]) {
+          var nextStatus = Completer<ProtectedMinorStatus>()
+            ..complete(ProtectedMinorStatus.notProtected());
+          final container = _container(
+            authState: AuthState.authenticated,
+            status: () => nextStatus.future,
+          );
+          final sub = container.listen(protectedMinorStatusProvider, (_, _) {});
+          addTearDown(sub.close);
+
+          await container.read(protectedMinorStatusProvider.future);
+          expect(container.read(confirmedNotProtectedMinorProvider), isTrue);
+
+          // Status flips while confirmedNotProtectedMinorProvider is unwatched.
+          nextStatus = Completer<ProtectedMinorStatus>()
+            ..complete(flippedStatus);
+          container.invalidate(protectedMinorStatusProvider);
+          await container.read(protectedMinorStatusProvider.future);
+
+          // A subsequent reload starts before anyone re-reads the gate.
+          nextStatus = Completer<ProtectedMinorStatus>();
+          container.invalidate(protectedMinorStatusProvider);
+
+          expect(container.read(confirmedNotProtectedMinorProvider), isFalse);
+        }
+      },
+    );
   });
 
   group('adaptiveClassicsEnabledProvider', () {

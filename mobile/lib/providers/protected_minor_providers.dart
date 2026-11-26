@@ -192,15 +192,20 @@ class _ConfirmedNotProtectedMinorNotifier
       // Preserve an in-session confirmation across same-account resume
       // refreshes (`isRefreshing` carries `isLoading: true` on AsyncData, and
       // `isReloading` emits AsyncLoading) so active feeds do not flicker or
-      // tear down while Keycast re-validates. Cold start, logout, and account
-      // switches increment resetCount or start unconfirmed and stay
-      // fail-closed.
+      // tear down while Keycast re-validates. Require all three:
+      // 1) sameAuthSession (auth has not left authenticated),
+      // 2) previous.confirmed (previously confirmed while authenticated), and
+      // 3) retainedNotProtected (the status being reloaded is still
+      //    notProtected, catching any unwatched flip to protected/unknown).
       final previous = stateOrNull;
       final sameAuthSession =
           previous != null && previous.resetCount == resetCount;
+      final retainedNotProtected =
+          live.value?.kind == ProtectedMinorStatusKind.notProtected;
       return (
         resetCount: resetCount,
-        confirmed: sameAuthSession && previous.confirmed,
+        confirmed:
+            sameAuthSession && previous.confirmed && retainedNotProtected,
       );
     }
     final trusted = trustedProtectedMinorStatus(

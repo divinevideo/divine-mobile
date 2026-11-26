@@ -260,7 +260,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   void _tryAttachClassicSession() {
     if (_isClosing ||
         isClosed ||
-        !_adaptiveClassicsEnabled ||
+        !_isAdaptiveClassicsAllowed ||
         _classicSession != null ||
         _createClassicSession == null) {
       return;
@@ -2040,7 +2040,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Emitter<VideoFeedBlocState> emit,
   ) {
     final videoId = event.videoId.toLowerCase();
-    final classicSession = state.source.type == VideoFeedSourceType.classic
+    final classicSession =
+        state.source.type == VideoFeedSourceType.classic &&
+            _isAdaptiveClassicsAllowed
         ? _classicSession
         : null;
     final snapshot = classicSession?.state;
@@ -2106,10 +2108,14 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   ) {
     final classicSession = _classicSession;
     if (state.source.type == VideoFeedSourceType.classic &&
+        _isAdaptiveClassicsAllowed &&
         classicSession != null) {
       classicSession.reapplyFilters();
       _onClassicsSessionChanged(
-        VideoFeedClassicsSessionChanged(classicSession.state),
+        VideoFeedClassicsSessionChanged(
+          classicSession.state,
+          session: classicSession,
+        ),
         emit,
       );
       return;
