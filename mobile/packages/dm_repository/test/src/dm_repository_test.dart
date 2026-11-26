@@ -5051,21 +5051,22 @@ void main() {
             'sig': '',
           });
           final mockOutgoingDmsDao = _MockOutgoingDmsDao();
-          when(() => mockOutgoingDmsDao.getById(any())).thenAnswer(
-            (_) async => OutgoingDm(
-              id: _rumorEventId,
-              conversationId: groupConversationId,
-              recipientPubkey: _validPubkeyB,
-              content: 'Hello from B!',
-              createdAt: 1700000000,
-              rumorEventJson: bRumorJson,
-              recipientWrapStatus: OutgoingWrapStatus.failed,
-              selfWrapStatus: OutgoingWrapStatus.failed,
-              queuedAt: DateTime.fromMillisecondsSinceEpoch(0),
-              ownerPubkey: _validPubkeyA,
-              sendBatchId: batchId,
-            ),
+          final groupRow = OutgoingDm(
+            id: _rumorEventId,
+            conversationId: groupConversationId,
+            recipientPubkey: _validPubkeyB,
+            content: 'Hello from B!',
+            createdAt: 1700000000,
+            rumorEventJson: bRumorJson,
+            recipientWrapStatus: OutgoingWrapStatus.failed,
+            selfWrapStatus: OutgoingWrapStatus.failed,
+            queuedAt: DateTime.fromMillisecondsSinceEpoch(0),
+            ownerPubkey: _validPubkeyA,
+            sendBatchId: batchId,
           );
+          when(
+            () => mockOutgoingDmsDao.getById(any()),
+          ).thenAnswer((_) async => groupRow);
           when(
             () => mockOutgoingDmsDao.deleteById(any()),
           ).thenAnswer((_) async => 1);
@@ -5092,7 +5093,7 @@ void main() {
               conversationId: any(named: 'conversationId'),
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
-          ).thenAnswer((_) async => const []);
+          ).thenAnswer((_) async => [groupRow]);
           when(
             () => mockMessageService.publishSelfWrap(
               rumorEvent: any(named: 'rumorEvent'),
@@ -33188,9 +33189,10 @@ void main() {
         'group-row recovery skips the direct_messages insert when a batch '
         'sibling already persisted the message (no duplicate group bubble)',
         () async {
+          final groupRow = queuedRow(sendBatchId: 'batch-recover');
           when(
             () => mockOutgoingDmsDao.getById(_rumorEventId),
-          ).thenAnswer((_) async => queuedRow(sendBatchId: 'batch-recover'));
+          ).thenAnswer((_) async => groupRow);
           // queuedRow's conversationId ('conv') differs from the computed
           // 1:1 pair id, so the row classifies as a group sibling. The
           // recovered row carries a durable batch id, so the dedup probes
@@ -33216,7 +33218,7 @@ void main() {
               conversationId: any(named: 'conversationId'),
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
-          ).thenAnswer((_) async => const []);
+          ).thenAnswer((_) async => [groupRow]);
           when(
             () => mockMessageService.publishSelfWrap(
               rumorEvent: any(named: 'rumorEvent'),

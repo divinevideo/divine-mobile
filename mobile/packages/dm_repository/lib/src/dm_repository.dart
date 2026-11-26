@@ -8571,9 +8571,11 @@ class DmRepository {
             rumor: rumor,
             selfWrapRelays: selfWrapRelays,
           );
-    // Nothing landed and the session ended meanwhile: leave the row and its
-    // retry budget to the account it belongs to.
-    if (!result.success && _ingestSessionEnded(row.ownerPubkey, gen)) {
+    // No publish ran after the row or session went away. Leave the queue
+    // and its retry budget alone.
+    if (!result.success &&
+        (_ingestSessionEnded(row.ownerPubkey, gen) ||
+            (batchId != null && result.retryablePending))) {
       return _queuedForDelivery(rumorId);
     }
 
@@ -9938,10 +9940,22 @@ class DmRepository {
       if (_ingestSessionEnded(ownerPubkey, generation)) {
         return _queuedForDelivery(callerRowId ?? rumor.id);
       }
-      // Include the caller's fresh row. The original send may have recorded
-      // the copy there and removed the other rows while its retry was on wire.
-      if (rows.any((row) => row.selfWrapStatus == OutgoingWrapStatus.sent)) {
-        return _batchOwnCopyRecorded(rumor);
+      if (rows != null) {
+        // The original send may have recorded the copy on the caller's row
+        // and removed the other rows while its retry was on the wire.
+        if (rows.any((row) => row.selfWrapStatus == OutgoingWrapStatus.sent)) {
+          return _batchOwnCopyRecorded(rumor);
+        }
+        // Only finish a deferred publish for work still in the queue. A
+        // sibling may have completed it, or the sender may have cancelled it.
+        if (!rows.any(
+          (row) =>
+              _isLiveDelivery(row) &&
+              row.recipientWrapStatus != OutgoingWrapStatus.blocked &&
+              (callerRowId == null || row.id == callerRowId),
+        )) {
+          return _queuedForDelivery(callerRowId ?? rumor.id);
+        }
       }
       final published = await _messageService!.publishSelfWrap(
         rumorEvent: rumor,
@@ -9950,7 +9964,7 @@ class DmRepository {
       );
       if (!published.success) return published;
       try {
-        for (final row in rows) {
+        for (final row in rows ?? const <OutgoingDm>[]) {
           if (row.id != callerRowId &&
               row.recipientWrapStatus == OutgoingWrapStatus.sent) {
             await dao.deleteById(row.id);
@@ -9975,10 +9989,9 @@ class DmRepository {
     });
   }
 
-  /// The queue rows of group send [sendBatchId]. A read that fails finds none,
-  /// so the caller publishes the copy rather than leave a delivery without
-  /// one.
-  Future<List<OutgoingDm>> _batchRows({
+  /// The queue rows of group send [sendBatchId]. Returns null if the read
+  /// failed, so the caller can still publish the copy after delivery.
+  Future<List<OutgoingDm>?> _batchRows({
     required OutgoingDmsDao dao,
     required String conversationId,
     required String ownerPubkey,
@@ -9997,7 +10010,7 @@ class DmRepository {
         'Could not read the rows of batch $sendBatchId: $e',
         category: LogCategory.system,
       );
-      return const [];
+      return null;
     }
   }
 
@@ -11125,30 +11138,33 @@ class DmRepository {
     // One own copy for the whole batch once any member has the message, the
     // moment it is stored locally below. A replay of a member's row publishes
     // through the same joined path, so the two share one copy (#10016).
-    final batchHasOwnCopy =
-        results.any((r) => r.success) &&
-        (await (outgoingDao == null
-                ? _messageService!.publishSelfWrap(
-                    rumorEvent: groupRumor,
-                    targetRelays: selfWrapRelays,
-                    prebuiltSelfWrap: prebuiltOwnCopy,
-                  )
-                : _publishBatchOwnCopy(
-                    dao: outgoingDao,
-                    conversationId: conversationId,
-                    ownerPubkey: owner,
-                    sendBatchId: sendBatchId,
-                    rumor: groupRumor,
-                    selfWrapRelays: selfWrapRelays,
-                    generation: generation,
-                    prebuiltSelfWrap: prebuiltOwnCopy,
-                  )))
-            .success;
+    var batchHasOwnCopy = joinedRecovery.any(
+      (i) => results[i].selfWrapPublished == true,
+    );
+    if (!batchHasOwnCopy && results.any((r) => r.success)) {
+      final ownCopy = outgoingDao == null
+          ? await _messageService!.publishSelfWrap(
+              rumorEvent: groupRumor,
+              targetRelays: selfWrapRelays,
+              prebuiltSelfWrap: prebuiltOwnCopy,
+            )
+          : await _publishBatchOwnCopy(
+              dao: outgoingDao,
+              conversationId: conversationId,
+              ownerPubkey: owner,
+              sendBatchId: sendBatchId,
+              rumor: groupRumor,
+              selfWrapRelays: selfWrapRelays,
+              generation: generation,
+              prebuiltSelfWrap: prebuiltOwnCopy,
+            );
+      batchHasOwnCopy = ownCopy.success;
+    }
     // Every delivered member carries that outcome: their sends handed the
     // copy over, so they cannot report it themselves.
     for (var i = 0; i < results.length; i++) {
       final result = results[i];
-      if (result is NIP17SendSuccess && !joinedRecovery.contains(i)) {
+      if (result is NIP17SendSuccess) {
         results[i] = _withOwnCopyOutcome(result, published: batchHasOwnCopy);
       }
     }
@@ -11357,21 +11373,6 @@ class DmRepository {
           );
           results[i] = _stampQueuedRow(result, queueIds[i]);
         }
-      }
-    }
-
-    // A member still waiting for the message keeps a row, and that row now
-    // records the batch's own copy, so delivering to them later publishes no
-    // second one (#10016).
-    if (outgoingDao != null && batchHasOwnCopy) {
-      for (var i = 0; i < queueIds.length; i++) {
-        if (cancelledBeforePublish.contains(i)) continue;
-        final result = results[i];
-        if (result.success || result.blocked) continue;
-        await outgoingDao.markSelfWrapStatus(
-          id: queueIds[i],
-          status: OutgoingWrapStatus.sent,
-        );
       }
     }
 

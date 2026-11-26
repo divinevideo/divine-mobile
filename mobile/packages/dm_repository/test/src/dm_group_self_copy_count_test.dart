@@ -31,6 +31,14 @@ class _HookedOutgoingDmsDao extends OutgoingDmsDao {
   _HookedOutgoingDmsDao(super.attachedDatabase);
 
   void Function()? beforeConversationRead;
+  FutureOr<void> Function(String id)? afterRowRead;
+
+  @override
+  Future<OutgoingDm?> getById(String id) async {
+    final row = await super.getById(id);
+    await afterRowRead?.call(id);
+    return row;
+  }
 
   @override
   Future<List<OutgoingDm>> getForConversation({
@@ -87,6 +95,7 @@ void main() {
     late bool recipientOksArrive;
     late Set<String> unreadableInboxes;
     late Set<String> refusingRecipients;
+    late Future<void> Function(String pubkey)? onInboxLookup;
     late FutureOr<void> Function(Event wrap)? onRecipientPublish;
     late _HookedOutgoingDmsDao outgoingDao;
     late DmRepository repository;
@@ -121,6 +130,7 @@ void main() {
       recipientOksArrive = true;
       unreadableInboxes = {};
       refusingRecipients = {};
+      onInboxLookup = null;
       onRecipientPublish = null;
       outgoingDao = _HookedOutgoingDmsDao(db);
 
@@ -150,6 +160,7 @@ void main() {
         final filters = (invocation.positionalArguments.first as List)
             .cast<nostr_filter.Filter>();
         final pubkey = filters.first.authors!.single;
+        await onInboxLookup?.call(pubkey);
         if (unreadableInboxes.contains(pubkey)) {
           return (events: const <Event>[], timedOut: false, noRelays: true);
         }
@@ -379,6 +390,29 @@ void main() {
         expect(wrapsTo(members.first), hasLength(1));
         expect(wrapsTo(owner), isEmpty);
       });
+
+      test('publishes no sender copy if the batch is cancelled before the '
+          'deferred publish', () async {
+        final others = members.take(2).toList();
+        final lastPublish = Completer<void>();
+        final finishLastPublish = Completer<void>();
+        onRecipientPublish = (wrap) async {
+          if (!wrapsTo(others.last).contains(wrap)) return;
+          lastPublish.complete();
+          await finishLastPublish.future;
+        };
+
+        final send = sendToRoom(others);
+        await lastPublish.future;
+        final rows = await queueRows();
+        expect(await repository.cancelOutgoingBatch(rumorId: rows.first.id), 2);
+        expect(await queueRows(), isEmpty);
+
+        finishLastPublish.complete();
+        await send;
+
+        expect(wrapsTo(owner), isEmpty);
+      });
     });
 
     group('a delete-for-everyone', () {
@@ -498,6 +532,89 @@ void main() {
         expect(wrapsTo(owner), hasLength(1));
         expect(await queueRows(), isEmpty);
       });
+
+      test(
+        'does not replay a copy after another retry cleared its queue row',
+        () async {
+          ownCopiesPublish = false;
+          await sendToRoom(members.take(2).toList());
+          final rows = await queueRows();
+          expect(rows, hasLength(2));
+          ownCopiesPublish = true;
+          final staleRead = Completer<void>();
+          final proceedWithStaleRow = Completer<void>();
+          outgoingDao.afterRowRead = (id) async {
+            if (id != rows.last.id) return;
+            outgoingDao.afterRowRead = null;
+            staleRead.complete();
+            await proceedWithStaleRow.future;
+          };
+
+          final lateRetry = repository.recoverSelfWrap(rumorId: rows.last.id);
+          await staleRead.future;
+          expect(
+            (await repository.recoverSelfWrap(rumorId: rows.first.id)).success,
+            isTrue,
+          );
+          expect(await queueRows(), isEmpty);
+
+          proceedWithStaleRow.complete();
+          await lateRetry;
+
+          expect(wrapsTo(owner), hasLength(1));
+        },
+      );
+
+      test(
+        'uses a joined retry\'s sender copy after both queue rows are gone',
+        () async {
+          final others = members.take(2).toList();
+          final inboxStarted = Completer<void>();
+          final finishLookup = Completer<void>();
+          onInboxLookup = (pubkey) async {
+            if (pubkey != others.last) return;
+            if (!inboxStarted.isCompleted) inboxStarted.complete();
+            await finishLookup.future;
+          };
+
+          final original = sendToRoom(others);
+          await inboxStarted.future;
+          final rows = await queueRows();
+          final first = rows.singleWhere(
+            (row) => row.recipientPubkey == others.first,
+          );
+          final last = rows.singleWhere(
+            (row) => row.recipientPubkey == others.last,
+          );
+          expect(
+            (await repository.recoverFullSend(rumorId: first.id)).success,
+            isTrue,
+          );
+          expect(wrapsTo(owner), hasLength(1));
+
+          final originalRead = Completer<void>();
+          var reads = 0;
+          outgoingDao.afterRowRead = (id) {
+            if (id == last.id && ++reads == 2) originalRead.complete();
+          };
+          final finishRecipient = Completer<void>();
+          onRecipientPublish = (wrap) async {
+            if (wrapsTo(others.last).contains(wrap))
+              await finishRecipient.future;
+          };
+          final retry = repository.recoverFullSend(rumorId: last.id);
+
+          finishLookup.complete();
+          await originalRead.future;
+          finishRecipient.complete();
+          expect((await retry).success, isTrue);
+          final results = await original;
+
+          expect(results.last.selfWrapPublished, isTrue);
+          expect(await queueRows(), isEmpty);
+          expect(wrapsTo(owner), hasLength(1));
+        },
+      );
 
       for (final retryIsRefused in [false, true]) {
         test(
