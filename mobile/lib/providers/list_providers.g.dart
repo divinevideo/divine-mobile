@@ -482,7 +482,9 @@ final class PublicPeopleListFamily extends $Family
 }
 
 /// The videos of a curated list held in local storage (the viewer's own lists
-/// and the ones they follow), as [_listVideos] reads them.
+/// and the ones they follow), as [_listVideos] reads them, from the relays
+/// alone: a private list's decrypted contents must not reach Funnelcake as
+/// one request.
 ///
 /// `Ref` is either read synchronously in `build` or guarded by [_LiveDeps] —
 /// this provider is the one that matters most, because
@@ -494,7 +496,9 @@ final class PublicPeopleListFamily extends $Family
 final curatedListVideoEventsProvider = CuratedListVideoEventsFamily._();
 
 /// The videos of a curated list held in local storage (the viewer's own lists
-/// and the ones they follow), as [_listVideos] reads them.
+/// and the ones they follow), as [_listVideos] reads them, from the relays
+/// alone: a private list's decrypted contents must not reach Funnelcake as
+/// one request.
 ///
 /// `Ref` is either read synchronously in `build` or guarded by [_LiveDeps] —
 /// this provider is the one that matters most, because
@@ -511,7 +515,9 @@ final class CuratedListVideoEventsProvider
         >
     with $FutureModifier<List<VideoEvent>>, $StreamProvider<List<VideoEvent>> {
   /// The videos of a curated list held in local storage (the viewer's own lists
-  /// and the ones they follow), as [_listVideos] reads them.
+  /// and the ones they follow), as [_listVideos] reads them, from the relays
+  /// alone: a private list's decrypted contents must not reach Funnelcake as
+  /// one request.
   ///
   /// `Ref` is either read synchronously in `build` or guarded by [_LiveDeps] —
   /// this provider is the one that matters most, because
@@ -567,7 +573,9 @@ String _$curatedListVideoEventsHash() =>
     r'9f195da0426a9a6a75e2dfd097b6b9ec1410010b';
 
 /// The videos of a curated list held in local storage (the viewer's own lists
-/// and the ones they follow), as [_listVideos] reads them.
+/// and the ones they follow), as [_listVideos] reads them, from the relays
+/// alone: a private list's decrypted contents must not reach Funnelcake as
+/// one request.
 ///
 /// `Ref` is either read synchronously in `build` or guarded by [_LiveDeps] —
 /// this provider is the one that matters most, because
@@ -587,7 +595,9 @@ final class CuratedListVideoEventsFamily extends $Family
       );
 
   /// The videos of a curated list held in local storage (the viewer's own lists
-  /// and the ones they follow), as [_listVideos] reads them.
+  /// and the ones they follow), as [_listVideos] reads them, from the relays
+  /// alone: a private list's decrypted contents must not reach Funnelcake as
+  /// one request.
   ///
   /// `Ref` is either read synchronously in `build` or guarded by [_LiveDeps] —
   /// this provider is the one that matters most, because

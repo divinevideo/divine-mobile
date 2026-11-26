@@ -5912,6 +5912,40 @@ void main() {
               equals([videoIdFor(1)]),
             );
           });
+
+          test('keeps a relay-only list away from Funnelcake', () async {
+            final api = availableApi();
+            final author = authorFor(9);
+            when(
+              () => mockNostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [relayVideo(1)]);
+            when(() => mockNostrClient.readEvents(any())).thenAnswer(
+              (_) async => QueryResult(
+                events: [
+                  _createVideoEventWithDTag(
+                    id: videoIdFor(9),
+                    pubkey: author,
+                    dTag: 'vine-9',
+                    videoUrl: 'https://example.com/9.mp4',
+                    createdAt: 1704067200,
+                  ),
+                ],
+                endedBy: QueryEnd.complete,
+              ),
+            );
+
+            final emissions = await repositoryWith(api).watchVideosForList(
+              ['34236:$author:vine-9', videoIdFor(1)],
+              relayOnly: true,
+            ).toList();
+
+            expect(emissions, hasLength(1));
+            expect(
+              emissions.single.map((video) => video.id),
+              equals([videoIdFor(9), videoIdFor(1)]),
+            );
+            verifyZeroInteractions(api);
+          });
         });
       });
     });

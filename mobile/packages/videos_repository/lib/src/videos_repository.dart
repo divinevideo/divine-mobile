@@ -998,9 +998,14 @@ class VideosRepository {
   /// resolved, and it is always emitted, empty when none did. A reference
   /// that resolves to no video, or to one this viewer's filters hide, is left
   /// out. [includeFeedShape] works as for [getVideosByIds].
+  ///
+  /// [relayOnly] reads every reference from the relays alone, with no
+  /// Funnelcake read, fallback or counts, for a list whose contents must not
+  /// reach Funnelcake in one request, such as the viewer's own private list.
   Stream<List<VideoEvent>> watchVideosForList(
     List<String> videoRefs, {
     bool includeFeedShape = true,
+    bool relayOnly = false,
   }) async* {
     final eventIds = <String>[];
     final addressableIds = <String>[];
@@ -1018,17 +1023,19 @@ class VideosRepository {
         ?refToVideo[ref.contains(':') ? ref : ref.toLowerCase()],
     ]);
 
-    final fromApi = await _listVideosFromApi(
-      eventIds,
-      includeFeedShape: includeFeedShape,
-    );
+    final fromApi = relayOnly
+        ? (videos: const <VideoEvent>[], answeredIds: const <String>{})
+        : await _listVideosFromApi(
+            eventIds,
+            includeFeedShape: includeFeedShape,
+          );
     for (final video in fromApi.videos) {
       refToVideo[video.id.toLowerCase()] = video;
     }
     final unanswered = [
       for (final id in eventIds)
         if (!fromApi.answeredIds.contains(id.toLowerCase()))
-          _hex64.hasMatch(id) ? id.toLowerCase() : id,
+          if (_hex64.hasMatch(id)) id.toLowerCase() else id,
     ];
     if (unanswered.isEmpty && addressableIds.isEmpty) {
       yield inListOrder();
@@ -1044,9 +1051,15 @@ class VideosRepository {
           unanswered,
           includeFeedShape: includeFeedShape,
           permissive: true,
+          hydrateBulkStats: !relayOnly,
         ),
       if (addressableIds.isEmpty)
         Future.value(const <VideoEvent>[])
+      else if (relayOnly)
+        getVideosFromRelaysByAddressableIds(
+          addressableIds,
+          includeFeedShape: includeFeedShape,
+        ).then((read) => read.videos)
       else
         getVideosByAddressableIds(
           addressableIds,
@@ -2115,9 +2128,9 @@ class VideosRepository {
 
   Future<List<VideoEvent>> _getVideosByIds(
     List<String> eventIds, {
+    required bool includeFeedShape,
     bool cacheResults = false,
     bool hydrateBulkStats = true,
-    required bool includeFeedShape,
     bool permissive = false,
   }) async {
     if (eventIds.isEmpty) return [];

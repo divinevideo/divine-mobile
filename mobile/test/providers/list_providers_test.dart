@@ -765,6 +765,7 @@ void main() {
         () => videosRepository.watchVideosForList(
           any(),
           includeFeedShape: any(named: 'includeFeedShape'),
+          relayOnly: any(named: 'relayOnly'),
         ),
       ).thenAnswer((_) => answer);
     }
@@ -807,6 +808,8 @@ void main() {
 
         await collect([_allowedVideoId, missingVideoId, '34236:$_ownerB:d']);
 
+        // A discovered list is public, so Funnelcake may answer first: the
+        // omitted relayOnly matches only its default, false.
         verify(
           () => videosRepository.watchVideosForList(
             [missingVideoId, '34236:$_ownerB:d'],
@@ -863,6 +866,38 @@ void main() {
       },
     );
 
+    test("shows a newer revision in the older one's tile", () async {
+      const dTag = 'clip';
+      const otherId =
+          '0000000000000000000000000000000000000000000000000000000000000abd';
+      final older = _video(
+        id: _allowedVideoId,
+        pubkey: _ownerA,
+        createdAt: 100,
+      ).copyWith(addressableDTag: dTag);
+      final other = _video(id: otherId, pubkey: _ownerB);
+      final newer = _video(
+        id: missingVideoId,
+        pubkey: _ownerA,
+        createdAt: 200,
+      ).copyWith(addressableDTag: dTag);
+      answerRepository(
+        Stream.fromIterable([
+          [older, other],
+          [newer],
+        ]),
+      );
+
+      final states = await collect([
+        _allowedVideoId,
+        otherId,
+        '34236:$_ownerA:$dTag',
+      ]);
+
+      expect(idsOf(states).last, [missingVideoId, otherId]);
+      verify(() => videoEventService.addVideoEvent(newer)).called(1);
+    });
+
     test('leaves out a video the read finds that the viewer hides', () async {
       final fetched = _video(id: missingVideoId, pubkey: _blockedAuthor);
       when(() => videoEventService.shouldHideVideo(fetched)).thenReturn(true);
@@ -903,6 +938,7 @@ void main() {
         () => videosRepository.watchVideosForList(
           any(),
           includeFeedShape: any(named: 'includeFeedShape'),
+          relayOnly: any(named: 'relayOnly'),
         ),
       );
     });
@@ -1024,7 +1060,7 @@ void main() {
   });
 
   group(curatedListVideoEventsProvider, () {
-    test('reads the videos the pool lacks through the repository', () async {
+    test('reads the videos the pool lacks from the relays alone', () async {
       const listId = 'repository-list';
       final fetched = _video(id: _allowedVideoId, pubkey: _ownerA);
       final videoEventService = _MockVideoEventService();
@@ -1040,6 +1076,8 @@ void main() {
         () => videosRepository.watchVideosForList(
           [_allowedVideoId],
           includeFeedShape: false,
+          // A stored list can be the viewer's private one.
+          relayOnly: true,
         ),
       ).thenAnswer((_) => Stream.value([fetched]));
 

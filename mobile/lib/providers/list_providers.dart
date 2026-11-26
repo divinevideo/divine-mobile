@@ -265,7 +265,9 @@ Future<UserList?> publicPeopleList(
 }
 
 /// The videos of a curated list held in local storage (the viewer's own lists
-/// and the ones they follow), as [_listVideos] reads them.
+/// and the ones they follow), as [_listVideos] reads them, from the relays
+/// alone: a private list's decrypted contents must not reach Funnelcake as
+/// one request.
 ///
 /// `Ref` is either read synchronously in `build` or guarded by [_LiveDeps] —
 /// this provider is the one that matters most, because
@@ -304,6 +306,7 @@ Stream<List<VideoEvent>> _curatedListVideoEvents({
     videoRefs: await videoIdsFuture,
     live: live,
     logName: 'CuratedListVideoEvents',
+    relayOnly: true,
   );
 }
 
@@ -330,8 +333,9 @@ Stream<List<VideoEvent>> videoEventsByIds(Ref ref, List<String> videoIds) {
 ///
 /// Pooled videos show at once. The rest come from
 /// [VideosRepository.watchVideosForList]: Funnelcake first, the relays for
-/// what it does not hold. They are appended as they arrive, so a tile already
-/// on screen keeps its place, and are added to the pool. The viewer's
+/// what it does not hold, or the relays alone when [relayOnly] is set. They
+/// are appended as they arrive, so a tile already on screen keeps its place,
+/// and are added to the pool. The viewer's
 /// feed-shape preference does not apply, because the list's author chose
 /// these videos; videos [VideoEventService.shouldHideVideo] hides are left
 /// out. A reference of any other shape is skipped.
@@ -343,6 +347,7 @@ Stream<List<VideoEvent>> _listVideos({
   required List<String> videoRefs,
   required _LiveDeps live,
   required String logName,
+  bool relayOnly = false,
 }) async* {
   if (videoRefs.isEmpty) {
     yield const [];
@@ -355,8 +360,23 @@ Stream<List<VideoEvent>> _listVideos({
   if (videoEventService == null) return;
 
   final foundVideos = <VideoEvent>[];
-  final seenVideoKeys = <String>{};
+  final slotByVideoKey = <String, int>{};
   final missingRefs = <String>[];
+
+  // A list can name an old event id and the current coordinate of the same
+  // video, so revisions share a tile: the newest keeps the first one's slot.
+  // Returns whether the tiles changed.
+  bool keepNewest(VideoEvent video) {
+    final slot = slotByVideoKey[video.feedDedupKey];
+    if (slot == null) {
+      slotByVideoKey[video.feedDedupKey] = foundVideos.length;
+      foundVideos.add(video);
+      return true;
+    }
+    if (video.createdAt <= foundVideos[slot].createdAt) return false;
+    foundVideos[slot] = video;
+    return true;
+  }
 
   // Every subscription's pool, for the coordinates (kind:pubkey:d-tag).
   final pooledVideos = <VideoEvent>{
@@ -388,9 +408,8 @@ Stream<List<VideoEvent>> _listVideos({
     }
     if (pooled == null) {
       missingRefs.add(ref);
-    } else if (!videoEventService.shouldHideVideo(pooled) &&
-        seenVideoKeys.add(pooled.feedDedupKey)) {
-      foundVideos.add(pooled);
+    } else if (!videoEventService.shouldHideVideo(pooled)) {
+      keepNewest(pooled);
     }
   }
 
@@ -419,17 +438,17 @@ Stream<List<VideoEvent>> _listVideos({
       await for (final videos in repository.watchVideosForList(
         missingRefs,
         includeFeedShape: false,
+        relayOnly: relayOnly,
       )) {
-        final shownBefore = foundVideos.length;
+        var changed = false;
         for (final video in videos) {
-          if (videoEventService.shouldHideVideo(video) ||
-              !seenVideoKeys.add(video.feedDedupKey)) {
+          if (videoEventService.shouldHideVideo(video) || !keepNewest(video)) {
             continue;
           }
-          foundVideos.add(video);
+          changed = true;
           videoEventService.addVideoEvent(video);
         }
-        if (foundVideos.length > shownBefore) yield List.of(foundVideos);
+        if (changed) yield List.of(foundVideos);
       }
     } on Exception catch (error, stackTrace) {
       if (foundVideos.isEmpty) rethrow;
