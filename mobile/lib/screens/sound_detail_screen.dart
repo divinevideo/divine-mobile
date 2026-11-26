@@ -513,6 +513,10 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
   String? _licenseUrl;
   String? _sourceUrl;
 
+  /// Whether the app ships only a cut of this bundled sound's recording; a
+  /// published sound says so in its own description instead.
+  bool _isBundledExcerpt = false;
+
   @override
   void initState() {
     super.initState();
@@ -541,6 +545,7 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
       _license = vineSound.license;
       _licenseUrl = _launchableUrl(vineSound.licenseUrl);
       _sourceUrl = _launchableUrl(vineSound.sourceUrl);
+      _isBundledExcerpt = vineSound.isExcerpt;
     }
   }
 
@@ -590,8 +595,11 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
               );
     // Divine's imported library changes most of its recordings before
     // sharing them (loudness, edge silence, length) and says so in the
-    // event, which an Attribution licence asks the credit to repeat.
-    final isEdited = sound.requiresAttribution && sound.isChangedFromOriginal;
+    // event, and the app ships two CC BY sounds as cuts of longer
+    // recordings. An Attribution licence asks the credit to say so.
+    final isEdited =
+        sound.requiresAttribution &&
+        (sound.isChangedFromOriginal || _isBundledExcerpt);
     // Matches the feed pill and the metadata sheet: a credited creator who is
     // not the signer means the signer only shared the sound. Bundled sounds
     // carry a marker pubkey rather than a real signer, so they are excluded
@@ -839,8 +847,8 @@ class _ProfileAttributionInfo extends StatelessWidget {
   /// See [_AttributionInfo.isEdited].
   final bool isEdited;
 
-  /// Makes [license] a link to the licence text, as CC BY 4.0
-  /// §3(a)(1)(C) asks where it is reasonably practicable.
+  /// Makes [license] a link to the licence, whose text or link CC BY 4.0
+  /// §3(a)(1)(C) asks a credit to include.
   final String? licenseUrl;
   final String? sourceUrl;
 
@@ -937,8 +945,8 @@ class _AttributionInfo extends StatelessWidget {
   /// CC BY 4.0 §3(a)(1)(B) asks of whoever shares a changed copy.
   final bool isEdited;
 
-  /// Makes [license] a link to the licence text, as CC BY 4.0
-  /// §3(a)(1)(C) asks where it is reasonably practicable.
+  /// Makes [license] a link to the licence, whose text or link CC BY 4.0
+  /// §3(a)(1)(C) asks a credit to include.
   final String? licenseUrl;
   final String? sourceUrl;
 

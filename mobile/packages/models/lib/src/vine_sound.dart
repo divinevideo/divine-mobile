@@ -12,6 +12,7 @@ class VineSound {
     this.license,
     this.licenseUrl,
     this.sourceUrl,
+    this.isExcerpt = false,
   });
 
   factory VineSound.fromJson(Map<String, dynamic> json) {
@@ -25,6 +26,7 @@ class VineSound {
       license: json['license'] as String?,
       licenseUrl: json['licenseUrl'] as String?,
       sourceUrl: json['sourceUrl'] as String?,
+      isExcerpt: json['excerpt'] as bool? ?? false,
     );
   }
 
@@ -37,6 +39,11 @@ class VineSound {
   final String? license;
   final String? licenseUrl;
   final String? sourceUrl;
+
+  /// Whether the app ships only a cut of a longer recording, which an
+  /// Attribution licence asks the sound's credit to say (CC BY 4.0
+  /// §3(a)(1)(B)). The manifest's `excerpt` key.
+  final bool isExcerpt;
 
   double get durationInSeconds => duration.inMilliseconds / 1000.0;
 
@@ -71,6 +78,7 @@ class VineSound {
       'license': license,
       'licenseUrl': licenseUrl,
       'sourceUrl': sourceUrl,
+      if (isExcerpt) 'excerpt': true,
     };
   }
 

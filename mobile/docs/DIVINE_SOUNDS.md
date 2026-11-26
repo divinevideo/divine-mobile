@@ -97,9 +97,9 @@ As in the table above, with these values:
 | `summary` | incompetech's description |
 | `alt` | `Sound: <title>` |
 
-`content` holds the readable credit, in English, and a line `Edited: …` naming what preparing changed (edge silence trimmed, cut to the first 5 minutes with a fade-out, loudness normalized), as CC BY 4.0 asks for an adapted file. The encoded file carries the title, artist and credit in its own metadata too.
+`content` holds the readable credit, in English, and, when preparing changed the file, a line `Edited: …` naming what it changed (edge silence trimmed; cut to the first 5 minutes with a fade-out, for a sound longer than `--max-duration 300`; loudness normalized), as CC BY 4.0 asks for an adapted file. The encoded file carries the title, artist and credit in its own metadata too.
 
-The app reads that line, or `Excerpt of the original recording` (`AudioEvent.isChangedFromOriginal`), and the sound's page then says "edited" after a CC BY licence. The picker's lists and player bar and the editor's sound chip name the `creator` beside the title where `source` is only a link (`AudioEvent.sourceForDisplay`); the link stays on the sound's page as "View source". A video made with a CC BY sound carries its own credit line ending in "(edited)" (`soundCreditLine`).
+The app reads that line, or `Excerpt of the original recording` (`AudioEvent.isChangedFromOriginal`), and the sound's page then says "edited" after a CC BY licence. A shipped sound the manifest marks `"excerpt": true` (`VineSound.isExcerpt`) gets the same note on its bundled page. Where `source` is only a link, the picker's rows and player bar, under the title, and the editor's sound chip, beside it, name the `creator` instead (`AudioEvent.sourceForDisplay`); the link stays on the sound's page as "View source". A video made with a CC BY sound carries its own credit line ending in "(edited)" (`soundCreditLine`).
 
 ### Importing
 

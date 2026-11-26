@@ -997,6 +997,48 @@ void main() {
           expect(find.textContaining(edited), findsNothing);
         });
 
+        testWidgets('says a shipped CC BY excerpt was changed', (
+          tester,
+        ) async {
+          SharedPreferences.setMockInitialValues({});
+          final soundLibraryService = SoundLibraryService();
+          final vineSound = VineSound(
+            id: 'freesound_elevator_music',
+            title: 'Elevator Music',
+            assetPath: 'assets/sounds/elevator-music.mp3',
+            duration: const Duration(milliseconds: 6021),
+            artist: 'YellowTree',
+            license: 'CC BY 4.0',
+            licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+            isExcerpt: true,
+          );
+          await soundLibraryService.addCustomSound(vineSound);
+          final testSound = AudioEvent.fromBundledSound(vineSound);
+
+          await tester.pumpWidget(
+            createTestWidget(
+              child: SoundDetailScreen(sound: testSound),
+              overrides: [
+                soundLibraryServiceSyncProvider.overrideWithValue(
+                  soundLibraryService,
+                ),
+                soundUsageCountProvider(
+                  testSound.id,
+                ).overrideWith((ref) => Future.value(0)),
+                videosUsingSoundProvider(
+                  testSound.id,
+                ).overrideWith((ref) => Future.value(<String>[])),
+                audioPlaybackServiceProvider.overrideWithValue(
+                  mockAudioService,
+                ),
+              ],
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.textContaining(edited), findsOneWidget);
+        });
+
         testWidgets('leaves it out under a licence that asks for no credit', (
           tester,
         ) async {

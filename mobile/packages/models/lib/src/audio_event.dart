@@ -650,7 +650,7 @@ class AudioEvent {
   /// recording before it was shared: a line opening with [editedLinePrefix],
   /// or the [excerptLine].
   ///
-  /// An Attribution licence asks to say so wherever the sound is credited
+  /// An Attribution licence asks whoever shares a changed copy to say so
   /// (CC BY 4.0 §3(a)(1)(B)).
   bool get isChangedFromOriginal {
     for (final line in (description ?? '').split('\n')) {
@@ -662,8 +662,9 @@ class AudioEvent {
     return false;
   }
 
-  /// What a list names beside the sound's title for where it comes from:
-  /// [source], or [creatorName] when [source] is only a link.
+  /// What the picker's rows and player bar and the editor's sound chip name
+  /// for where the sound comes from: [source], or [creatorName] when [source]
+  /// is only an http(s) link and [creatorName] is not blank.
   ///
   /// Divine's imported sound library publishes each sound's source page as
   /// [source] and its creator apart from it, and a row cut short after the
