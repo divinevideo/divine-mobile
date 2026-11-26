@@ -192,13 +192,37 @@ void main() {
           selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
           recipientWrapBuildTimeout: any(named: 'recipientWrapBuildTimeout'),
           selfWrapBuildTimeout: any(named: 'selfWrapBuildTimeout'),
+          onSelfWrapDue: any(named: 'onSelfWrapDue'),
         ),
       ).thenAnswer((invocation) async {
         final rumor = invocation.namedArguments[#rumorEvent] as Event;
         final recipient = invocation.namedArguments[#recipientPubkey] as String;
-        return rumor.kind == EventKind.eventDeletion
+        final result = await (rumor.kind == EventKind.eventDeletion
             ? deletionWrap(rumor, recipient)
-            : messageWrap(rumor, recipient);
+            : messageWrap(rumor, recipient));
+        final onSelfWrapDue =
+            invocation.namedArguments[#onSelfWrapDue] as void Function(Event?)?;
+        if (result is NIP17SendSuccess && onSelfWrapDue != null) {
+          onSelfWrapDue(null);
+          return NIP17SendResult.success(
+            rumorEventId: result.rumorEventId,
+            messageEventId: result.messageEventId,
+            recipientPubkey: result.recipientPubkey,
+            selfWrapPublished: false,
+          );
+        }
+        return result;
+      });
+
+      when(
+        () => messageService.publishSelfWrap(
+          rumorEvent: any(named: 'rumorEvent'),
+          targetRelays: any(named: 'targetRelays'),
+          prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+        ),
+      ).thenAnswer((invocation) async {
+        final rumor = invocation.namedArguments[#rumorEvent] as Event;
+        return delivered(rumor, _owner);
       });
 
       repository = DmRepository(
