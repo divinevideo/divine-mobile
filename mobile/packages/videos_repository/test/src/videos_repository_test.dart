@@ -5757,6 +5757,48 @@ void main() {
           verify(() => api.getVideosByIds([videoIdFor(1)])).called(1);
         });
 
+        test(
+          'resolves external video kinds by event id on the relays',
+          () async {
+            final api = availableApi();
+            answerApi(api, (_) async => const []);
+            final events = [
+              for (final (index, kind) in [
+                (1, NIP71VideoKinds.normalVideo),
+                (2, NIP71VideoKinds.shortVideo),
+                (3, NIP71VideoKinds.addressableNormalVideo),
+              ])
+                _createVideoEventWithDTag(
+                  id: videoIdFor(index),
+                  pubkey: authorFor(index),
+                  dTag: 'd-$index',
+                  videoUrl: 'https://example.com/$index.mp4',
+                  createdAt: 1704067200,
+                  kind: kind,
+                ),
+            ];
+            when(() => mockNostrClient.queryEvents(any())).thenAnswer((
+              invocation,
+            ) async {
+              final filters =
+                  invocation.positionalArguments.single as List<Filter>;
+              return events.where(filters.single.checkEvent).toList();
+            });
+
+            final result = await repositoryWith(api).watchVideosForList([
+              videoIdFor(1).toUpperCase(),
+              videoIdFor(2),
+              videoIdFor(3),
+            ], includeFeedShape: false).last;
+
+            expect(result.map((video) => video.id), [
+              videoIdFor(1),
+              videoIdFor(2),
+              videoIdFor(3),
+            ]);
+          },
+        );
+
         test('reads coordinates from the relays', () async {
           final api = availableApi();
           answerApi(api, (_) async => [statsFor(1)]);

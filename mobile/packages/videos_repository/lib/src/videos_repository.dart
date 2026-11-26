@@ -1,8 +1,7 @@
 // ABOUTME: Repository for video operations with Nostr.
 // ABOUTME: Orchestrates NostrClient for fetching and
 // ABOUTME: VideoLocalStorage for caching.
-// ABOUTME: Returns Future<List<VideoEvent>>, not streams -
-// ABOUTME: loading is pagination-based.
+// ABOUTME: Paginates feeds and streams progressively resolved curated lists.
 
 import 'dart:async';
 import 'dart:math';
@@ -988,7 +987,8 @@ class VideosRepository {
   /// Event ids are read from Funnelcake first, a hundred per request, all
   /// requests at once. The ids it does not return, and every id when it is
   /// not configured or a request fails, are read as [getVideosByIds] reads
-  /// them. Funnelcake leaves out deleted videos and the older revisions of
+  /// them, including external NIP-71 video kinds. Funnelcake leaves out
+  /// deleted videos and the older revisions of
   /// edited ones, and the relays still hold some of those. Coordinates
   /// (`kind:pubkey:d-tag`) are read as [getVideosByAddressableIds] reads
   /// them, once Funnelcake has answered.
@@ -1027,7 +1027,8 @@ class VideosRepository {
     }
     final unanswered = [
       for (final id in eventIds)
-        if (!fromApi.answeredIds.contains(id.toLowerCase())) id,
+        if (!fromApi.answeredIds.contains(id.toLowerCase()))
+          _hex64.hasMatch(id) ? id.toLowerCase() : id,
     ];
     if (unanswered.isEmpty && addressableIds.isEmpty) {
       yield inListOrder();
@@ -1039,7 +1040,11 @@ class VideosRepository {
       if (unanswered.isEmpty)
         Future.value(const <VideoEvent>[])
       else
-        getVideosByIds(unanswered, includeFeedShape: includeFeedShape),
+        _getVideosByIds(
+          unanswered,
+          includeFeedShape: includeFeedShape,
+          permissive: true,
+        ),
       if (addressableIds.isEmpty)
         Future.value(const <VideoEvent>[])
       else
@@ -2101,6 +2106,19 @@ class VideosRepository {
     bool cacheResults = false,
     bool hydrateBulkStats = true,
     bool includeFeedShape = true,
+  }) => _getVideosByIds(
+    eventIds,
+    cacheResults: cacheResults,
+    hydrateBulkStats: hydrateBulkStats,
+    includeFeedShape: includeFeedShape,
+  );
+
+  Future<List<VideoEvent>> _getVideosByIds(
+    List<String> eventIds, {
+    bool cacheResults = false,
+    bool hydrateBulkStats = true,
+    required bool includeFeedShape,
+    bool permissive = false,
   }) async {
     if (eventIds.isEmpty) return [];
 
@@ -2123,7 +2141,9 @@ class VideosRepository {
     if (missingIds.isNotEmpty) {
       final filter = Filter(
         ids: missingIds,
-        kinds: NIP71VideoKinds.getAllVideoKinds(),
+        kinds: permissive
+            ? NIP71VideoKinds.getAllAcceptableVideoKinds()
+            : NIP71VideoKinds.getAllVideoKinds(),
       );
 
       final relayEvents = await _nostrClient.queryEvents([filter]);
@@ -2144,6 +2164,7 @@ class VideosRepository {
 
       final video = _tryParseAndFilter(
         event,
+        permissive: permissive,
         includeFeedShape: includeFeedShape,
       );
       if (video != null) videos.add(video);
