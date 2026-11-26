@@ -2360,6 +2360,54 @@ void main() {
       );
 
       test(
+        'judges each later row by its state after the previous dispatch, so '
+        'a row attempted meanwhile waits out its backoff (#8627)',
+        () async {
+          final now = DateTime.utc(2026, 5, 10, 12);
+          final queuedAt = now.subtract(const Duration(minutes: 5));
+          final first = _row(
+            id: 'sibling-1',
+            recipient: OutgoingWrapStatus.pending,
+            self: OutgoingWrapStatus.pending,
+            queuedAt: queuedAt,
+          );
+          final second = _row(
+            id: 'sibling-2',
+            recipient: OutgoingWrapStatus.pending,
+            self: OutgoingWrapStatus.pending,
+            queuedAt: queuedAt,
+          );
+          // What a group send the first dispatch joined has done to the
+          // second row by the time that dispatch returns: attempted, charged.
+          final secondAfterGroupSend = _row(
+            id: 'sibling-2',
+            recipient: OutgoingWrapStatus.pending,
+            self: OutgoingWrapStatus.pending,
+            queuedAt: queuedAt,
+            retryCount: 1,
+            lastAttemptAt: now,
+          );
+          var reads = 0;
+          when(() => dao.getStillPendingForOwner(any())).thenAnswer(
+            (_) async =>
+                reads++ == 0 ? [first, second] : [secondAfterGroupSend],
+          );
+          when(
+            () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
+          ).thenAnswer((_) async => _successResult('sibling-1'));
+
+          await buildService(now: () => now).sweep();
+
+          verify(
+            () => dmRepository.recoverFullSend(rumorId: 'sibling-1'),
+          ).called(1);
+          verifyNever(
+            () => dmRepository.recoverFullSend(rumorId: 'sibling-2'),
+          );
+        },
+      );
+
+      test(
         'blocked interrupted-send drain is terminal: no incrementRetry',
         () async {
           final now = DateTime.utc(2026, 5, 10, 12);

@@ -551,11 +551,20 @@ class OutgoingDmRetryService {
       var stoppedHeld = 0;
       var skippedInterruptedTooYoung = 0;
       if (!abortedNotReady) {
-        final pending = await _dao.getStillPendingForOwner(
+        var pending = await _dao.getStillPendingForOwner(
           _userPubkey,
           environment: _environment,
         );
-        for (final row in pending) {
+        // After a dispatch the arm reads the rows again rather than trusting
+        // this list: a recoverFullSend that joined a group send returns only
+        // once that send has attempted and finalized every member, so the
+        // rows read before it no longer say when each was last tried, and
+        // backing off on them would re-drive members just attempted (#8627).
+        final handled = <String>{};
+        var next = 0;
+        while (next < pending.length) {
+          final row = pending[next++];
+          if (!handled.add(row.id)) continue;
           // Skip rows already dispatched above (a recipient=failed +
           // self=pending row appears in both filters; the failed arm owns
           // that dispatch). Rows the arms did NOT match — e.g.
@@ -663,6 +672,13 @@ class OutgoingDmRetryService {
                 ),
               );
             }
+          }
+          if (next < pending.length) {
+            pending = await _dao.getStillPendingForOwner(
+              _userPubkey,
+              environment: _environment,
+            );
+            next = 0;
           }
         }
       }

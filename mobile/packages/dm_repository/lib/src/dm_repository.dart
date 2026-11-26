@@ -1530,8 +1530,8 @@ class DmRepository {
   /// against the row — [_recoverFullSendLocked] and [sendMessage]'s
   /// registered attempt finalize every branch inside their bodies — so a
   /// joiner that finalized again would charge one underlying attempt twice
-  /// (#8619). [sendGroupMessage] learns which side it was on from a flag the
-  /// closure sets when it actually runs.
+  /// (#8619). [sendGroupMessage] holds its siblings' keys with
+  /// [_holdRecoveryKey] instead, so it is never the joiner.
   Future<NIP17SendResult> _joinOrStartRecovery(
     String key,
     Future<NIP17SendResult> Function() attempt,
@@ -1541,6 +1541,33 @@ class DmRepository {
     final future = attempt();
     _recoveriesInFlight[key] = future;
     return future.whenComplete(() => _recoveriesInFlight.remove(key));
+  }
+
+  /// Holds [key] for an attempt the caller will run later, so a
+  /// [recoverFullSend] that lands in between joins it rather than publishing.
+  ///
+  /// Returns the release, to call on every path or a joiner waits forever:
+  /// with the row's final outcome once the row is finalized, or with a
+  /// failure when the send throws first, as [sendMessage]'s key is. It frees
+  /// the key
+  /// before handing the outcome to joiners, so a retry made by anyone who
+  /// already has the outcome runs its own attempt instead of joining this
+  /// finished one. Calls after the first do nothing.
+  void Function(NIP17SendResult) _holdRecoveryKey(String key) {
+    assert(
+      !_recoveriesInFlight.containsKey(key),
+      'a send holds a key nothing else can hold yet',
+    );
+    final completer = Completer<NIP17SendResult>();
+    final held = completer.future;
+    _recoveriesInFlight[key] = held;
+    return (outcome) {
+      if (completer.isCompleted) return;
+      _recoveriesInFlight.removeWhere(
+        (k, attempt) => k == key && identical(attempt, held),
+      );
+      completer.complete(outcome);
+    };
   }
 
   /// Broadcasts the user's pubkey whenever credentials are attached.
@@ -7683,11 +7710,11 @@ class DmRepository {
     final row = prep.row;
 
     // Register the attempt under the per-rumor recovery key, as the group
-    // send does for its publishes: a Retry or sweep recoverFullSend that
-    // lands while this send is in flight JOINS it instead of publishing a
-    // second recipient wrap of the same rumor (#10005).
+    // send does for each member (#8627): a Retry or sweep recoverFullSend
+    // that lands while this send is in flight JOINS it instead of publishing
+    // a second recipient wrap of the same rumor (#10005).
     //
-    // Unlike the group send, the key also spans finalization. A joiner must
+    // The key spans finalization, as the group send's keys do. A joiner must
     // receive an outcome the owner has already recorded against the row (see
     // [_joinOrStartRecovery]), and releasing the key before the row is
     // finalized would let a retry republish a row whose attempt has already
@@ -8714,9 +8741,9 @@ class DmRepository {
   /// or the row belongs to a different account.
   ///
   /// When a recovery for the same rumor is already in flight (a manual
-  /// Resend racing the reconnect sweep), or the original [sendMessage] is
-  /// still publishing it, the call JOINS that attempt and returns its outcome
-  /// instead of publishing a duplicate.
+  /// Resend racing the reconnect sweep), or the original [sendMessage] or
+  /// [sendGroupMessage] has not finished with it, the call JOINS that attempt
+  /// and returns its outcome instead of publishing a duplicate.
   ///
   /// [resetRetryBudget] zeroes the row's retry counter before dispatch. Pass
   /// `true` from the manual Resend path: each failed attempt burns the shared
@@ -10398,6 +10425,9 @@ class DmRepository {
   /// failed and the siblings already parked are best-effort deleted. Any row
   /// that cannot be deleted is returned with its `queuedRumorId` so retry can
   /// re-drive the surviving parked rumor instead of minting a fresh fan-out.
+  ///
+  /// A [recoverFullSend] for one of these rows issued before this send has
+  /// finalized the batch joins it rather than publishing again (#8627).
   @useResult
   Future<List<NIP17SendResult>> sendGroupMessage({
     required List<String> recipientPubkeys,
@@ -10667,27 +10697,62 @@ class DmRepository {
         expectedGeneration: generation,
       );
     }
-    final delivery = _publishPreparedGroup(
-      recipientPubkeys: recipientPubkeys,
-      content: content,
-      replyToId: replyToId,
-      additionalTags: additionalTags,
-      participants: participants,
-      conversationId: conversationId,
-      queueIds: queueIds,
-      sendBatchId: sendBatchId,
-      groupRumor: groupRumor,
-      batchCreatedAt: batchCreatedAt,
-      generation: generation,
-      startAfter: backgroundDelivery && outgoingDao != null
-          ? _backgroundDeliveryTail
-          : null,
+    // Hold every sibling's recovery key until its row is finalized, the way
+    // [sendMessage] holds its one key (#10005). In background mode this send
+    // waits behind earlier ones before it publishes anything, and a retry
+    // sweep reaching a row during that wait would otherwise run the attempt
+    // itself and finish it before the loop re-reads the row (#8627). Nothing
+    // holds these keys yet: the batch token makes every queue id new, and the
+    // rows are too young for the sweep.
+    final heldKeys = [
+      if (outgoingDao != null)
+        for (final id in queueIds) _holdRecoveryKey('full:$id'),
+    ];
+    final delivery = _settleHeldKeys(
+      heldKeys,
+      _publishPreparedGroup(
+        recipientPubkeys: recipientPubkeys,
+        content: content,
+        replyToId: replyToId,
+        additionalTags: additionalTags,
+        participants: participants,
+        conversationId: conversationId,
+        queueIds: queueIds,
+        sendBatchId: sendBatchId,
+        groupRumor: groupRumor,
+        batchCreatedAt: batchCreatedAt,
+        generation: generation,
+        startAfter: backgroundDelivery && outgoingDao != null
+            ? _backgroundDeliveryTail
+            : null,
+      ),
     );
     if (backgroundDelivery && outgoingDao != null) {
       _continueDelivery(delivery, queueIds, generation);
       return [for (final id in queueIds) _queuedForDelivery(id)];
     }
     return delivery;
+  }
+
+  /// Releases [heldKeys] with each sibling's outcome once [delivery] has
+  /// finalized every row, so a retry that joined a key gets the recorded
+  /// result. A delivery that throws releases them with a failure instead.
+  Future<List<NIP17SendResult>> _settleHeldKeys(
+    List<void Function(NIP17SendResult)> heldKeys,
+    Future<List<NIP17SendResult>> delivery,
+  ) async {
+    try {
+      final results = await delivery;
+      for (var i = 0; i < heldKeys.length; i++) {
+        heldKeys[i](results[i]);
+      }
+      return results;
+    } on Object catch (error) {
+      for (final release in heldKeys) {
+        release(NIP17SendResult.failure('group send failed: $error'));
+      }
+      rethrow;
+    }
   }
 
   Future<List<NIP17SendResult>> _publishPreparedGroup({
@@ -10746,14 +10811,6 @@ class DmRepository {
     // skips them too — a cancelled index must never resurrect a queue
     // transition or a thread.
     final cancelledBeforePublish = <int>{};
-    // Siblings whose outcome came from a recovery another caller already
-    // owned — the sweep's recoverFullSend registered `full:<queueId>` before
-    // this loop reached the row. That owner finalized the row inside its
-    // locked body, so the non-success pass below must not run the same
-    // transition again: a second _finalizeAfterRecipientUnconfirmed charged
-    // one underlying attempt twice, and a five-retry budget then covered four
-    // attempts (#8619). Only the durable handle is stamped for these.
-    final joinedRecovery = <int>{};
     for (var i = 0; i < recipientPubkeys.length; i++) {
       if (_disposed || _resetGeneration != generation) {
         return [for (final id in queueIds) _queuedForDelivery(id)];
@@ -10787,106 +10844,67 @@ class DmRepository {
         );
         continue;
       }
-      // Coalesce through the recovery lock: the sequential publishes of a
-      // group send can outlive the retry sweep's interrupted-send min-age
-      // (all sibling rows share the batch queuedAt), so a sweep
-      // recoverFullSend for this rumor may fire while THIS publish is still
-      // in flight. Registering the publish under the same per-rumor key
-      // makes the sweep JOIN the live attempt instead of dispatching a
-      // concurrent duplicate. The reverse interleaving (sweep registered
-      // first) hands back the recovery's real outcome, and the persistence
-      // transaction below dedups on it. That reverse interleaving is the
-      // common one once a sweep overlaps a batch at all: after both sides
-      // resume from a joined sibling, this loop still has to re-read the next
-      // row before it can register, while the sweep registers synchronously.
-      // A joined recovery can throw (ArgumentError after a mid-flight cancel);
-      // convert it to a plain failure so one bad join cannot abort the rest of
-      // the batch — _sendRumorWithTimeout itself classifies instead of
-      // throwing.
-      NIP17SendResult result;
+      // This send holds the row's recovery key until the row is finalized
+      // (see [_settleHeldKeys]), so a retry that lands meanwhile joins this
+      // attempt rather than running its own (#8627). A throw from the publish
+      // (a signer failing, say) becomes a plain failure so one sibling cannot
+      // abort the rest of the batch.
       final inbox = inboxByRecipient[pubkey];
-      // Set only when this call runs the attempt; a join never invokes the
-      // closure, so the flag is exact.
-      var attemptRanHere = false;
-      try {
-        result = await _joinOrStartRecovery('full:${queueIds[i]}', () async {
-          attemptRanHere = true;
-          if (_disposed || _resetGeneration != generation) {
-            return _queuedForDelivery(queueIds[i]);
-          }
-          // A sweep may have finished an unconfirmed attempt on this row
-          // before this loop reached it. Read its wrap under the row's key: a
-          // recovery can finish after the cancel check above read the row.
-          final keptRow = await outgoingDao?.getById(queueIds[i]);
-          final published = await _sendRumorWithTimeout(
-            rumor: groupRumor,
-            recipientPubkey: pubkey,
-            recipientWrap: keptRow == null
-                ? null
-                : _storedUnconfirmedWrap(keptRow),
-            targetRelays: inbox?.relays,
-            selfWrapTargetRelays: selfWrapRelays,
-            awaitRecipientOk: true,
-            // Held by the downgrade below, so no self-copy yet (#10012).
-            withholdSelfWrap:
-                outgoingDao != null &&
-                inbox?.state == DmInboxResolution.unreadable,
-          );
-          // Kept while this key is held: the finalize pass below runs only
-          // after every sibling has published, and a retry of this row in
-          // between would otherwise build a second wrap (#8441).
-          if (outgoingDao != null) {
-            // Clear under the same key too: the later finalize pass must not
-            // erase a newer wrap that a recovery kept between siblings.
-            if (published.recipientWrapRefused) {
-              await _clearUnconfirmedWrap(
-                outgoingDao: outgoingDao,
-                rumorId: queueIds[i],
-              );
-            }
-            await _keepUnconfirmedWrap(
-              outgoingDao: outgoingDao,
-              rumorId: queueIds[i],
-              wrap: _unconfirmedWrapOf(published),
-            );
-          }
-          // An `OK` from the DEFAULT POOL is not delivery for a recipient
-          // whose inbox we never read: their wrap may sit on relays they never
-          // query, and finalizing this sibling deletes the one handle that
-          // could re-resolve and republish it (#8434). Per recipient, because
-          // the batch holds one queue row per member — a sibling we DID reach
-          // on its advertised inbox is still genuinely delivered.
-          //
-          // Applied INSIDE the closure, not around the join. A second entrant
-          // does not run this attempt; it awaits an in-flight recovery that
-          // resolved its own inbox and already applied this same rule. Judging
-          // that outcome out here would re-judge it against this send's older
-          // snapshot, and could hold a wrap that did reach the advertised
-          // inbox.
-          //
-          // Only when the queue is wired, mirroring `sendMessage`: with no row
-          // to preserve there is nothing to gain, and downgrading every
-          // sibling would leave `results.any(success)` false, skipping the
-          // local persist that puts the message in the sender's own thread.
-          //
-          // The held sibling's row records the pool's wrap here rather than in
-          // the finalize pass below, which runs after every sibling has
-          // published and outside this key (#10012).
-          if (outgoingDao == null || inbox == null) return published;
-          return _holdFallbackPoolDelivery(
+      Future<NIP17SendResult> attempt() async {
+        if (_disposed || _resetGeneration != generation) {
+          return _queuedForDelivery(queueIds[i]);
+        }
+        final published = await _sendRumorWithTimeout(
+          rumor: groupRumor,
+          recipientPubkey: pubkey,
+          targetRelays: inbox?.relays,
+          selfWrapTargetRelays: selfWrapRelays,
+          awaitRecipientOk: true,
+          // Held by the downgrade below, so no self-copy yet (#10012).
+          withholdSelfWrap:
+              outgoingDao != null &&
+              inbox?.state == DmInboxResolution.unreadable,
+        );
+        // Kept on the row so a recovery after the app is killed sends this
+        // same wrap again instead of building a second one (#8441).
+        if (outgoingDao != null) {
+          await _keepUnconfirmedWrap(
             outgoingDao: outgoingDao,
-            rowId: queueIds[i],
-            rowStatus: OutgoingWrapStatus.pending,
-            published: published,
-            inboxState: inbox.state,
+            rumorId: queueIds[i],
+            wrap: _unconfirmedWrapOf(published),
           );
-        });
-      } on Object catch (e) {
-        result = NIP17SendResult.failure(
-          'joined in-flight recovery failed: $e',
+        }
+        // An `OK` from the DEFAULT POOL is not delivery for a recipient
+        // whose inbox we never read: their wrap may sit on relays they never
+        // query, and finalizing this sibling deletes the one handle that
+        // could re-resolve and republish it (#8434). Per recipient, because
+        // the batch holds one queue row per member — a sibling we DID reach
+        // on its advertised inbox is still genuinely delivered.
+        //
+        // Only when the queue is wired, mirroring `sendMessage`: with no row
+        // to preserve there is nothing to gain, and downgrading every
+        // sibling would leave `results.any(success)` false, skipping the
+        // local persist that puts the message in the sender's own thread.
+        //
+        // The held sibling's row records the pool's wrap here, beside the
+        // attempt that made it, rather than in the finalize pass below
+        // (#10012).
+        if (outgoingDao == null || inbox == null) return published;
+        return _holdFallbackPoolDelivery(
+          outgoingDao: outgoingDao,
+          rowId: queueIds[i],
+          rowStatus: OutgoingWrapStatus.pending,
+          published: published,
+          inboxState: inbox.state,
         );
       }
-      if (!attemptRanHere) joinedRecovery.add(i);
+
+      NIP17SendResult result;
+      try {
+        result = await attempt();
+      } on Object catch (e) {
+        result = NIP17SendResult.failure('group publish failed: $e');
+      }
       results.add(result);
     }
 
@@ -10954,20 +10972,19 @@ class DmRepository {
         if (liveSuccessIndexes.isEmpty) {
           Log.info(
             'Group publish landed after every successful sibling row was '
-            'already removed or stopped (cancelled mid-flight, or finalized '
-            'by a concurrent recovery); skipping local persist for '
-            'conversation $conversationId.',
+            'already removed or stopped (cancelled mid-flight); skipping '
+            'local persist for conversation $conversationId.',
             category: LogCategory.system,
           );
           return;
         }
 
-        // Sibling dedup (same guard as _recoverFullSendLocked): a group
-        // send's sequential publishes can outlive the retry sweep's
-        // interrupted-send min-age, so the sweep may recover a sibling and
-        // persist the batch's ONE local message first. Match on the durable
-        // batch id, not a content/timestamp window — two distinct sends of
-        // the same text carry different batch ids even in the same second.
+        // Sibling dedup (same guard as _recoverFullSendLocked): a batch keeps
+        // ONE local message. While this send holds its siblings' keys no
+        // recovery can store it, so this guards that invariant rather than a
+        // race. Match on the durable batch id, not a content/timestamp window
+        // — two distinct sends of the same text carry different batch ids
+        // even in the same second.
         final alreadyPersisted =
             outgoingDao != null &&
             await _directMessagesDao.hasMessageWithSendBatchId(
@@ -11059,16 +11076,6 @@ class DmRepository {
         }
         final result = results[i];
         if (result.success) continue;
-        // A joined outcome was finalized by the recovery that owns it
-        // (#8619): charging, failure marks and the blocked disposition are
-        // all that owner's. Stamp the handle exactly as the surviving-row
-        // branches below do, so the caller can still re-drive the row.
-        if (joinedRecovery.contains(i)) {
-          if (!result.blocked) {
-            results[i] = _stampQueuedRow(result, queueIds[i]);
-          }
-          continue;
-        }
         if (result.blocked) {
           await _finalizeAfterRecipientBlocked(
             outgoingDao: outgoingDao,
@@ -11076,9 +11083,8 @@ class DmRepository {
             result: result,
           );
         } else if (result.retryablePending) {
-          // The attempt kept its wrap while it held the row's key. Keeping it
-          // again here could restore a wrap that a retry in between had seen
-          // refused (#8441).
+          // The attempt already kept its wrap on the row (#8441), so there is
+          // nothing to keep again here.
           await _finalizeAfterRecipientUnconfirmed(
             outgoingDao: outgoingDao,
             rumorId: queueIds[i],

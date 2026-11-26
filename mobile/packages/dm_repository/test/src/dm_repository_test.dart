@@ -31421,14 +31421,14 @@ void main() {
       );
 
       test(
-        'a sibling that JOINS a recovery the sweep already owns is charged '
-        'for that attempt exactly once — the owner finalized it (#8619)',
+        'a retry of a sibling the group has not reached joins the group '
+        'send, which publishes and charges that sibling once (#8619, #8627)',
         () async {
-          // Sweep-first: the sweep's recoverFullSend registers C's recovery
-          // and runs the attempt while the group loop is still parked on B.
-          // When the group reaches C it joins that attempt and receives an
-          // outcome _recoverFullSendLocked has ALREADY finalized, so the
-          // group's own non-success pass must not charge the row again.
+          // The group send holds every sibling's recovery key from the start,
+          // so a sweep recoverFullSend for C while the loop is parked on B
+          // joins the group's attempt instead of running its own. The group
+          // publishes C once, finalizes it once, and the joiner receives that
+          // finalized outcome.
           final bPublish = Completer<NIP17SendResult>();
           final cPublish = Completer<NIP17SendResult>();
           var cSendRumorCalls = 0;
@@ -31464,15 +31464,14 @@ void main() {
           await pumpEventQueue();
           expect(enqueued, hasLength(2));
 
-          // The sweep reaches C's row while the group is still on B: its
-          // recovery owns `full:<C>` and parks on C's publish.
+          // The sweep reaches C's row while the group is still on B.
           final recoveryFuture = repository.recoverFullSend(
             rumorId: enqueued.last.id,
           );
           await pumpEventQueue();
-          expect(cSendRumorCalls, equals(1), reason: 'the sweep published C');
+          expect(cSendRumorCalls, isZero, reason: 'the retry joined the send');
 
-          // Release B so the group loop reaches C and joins.
+          // Release B so the group loop reaches C and publishes it itself.
           bPublish.complete(
             NIP17SendResult.success(
               rumorEventId: 'rumor-$_validPubkeyB',
@@ -31484,10 +31483,10 @@ void main() {
           expect(
             cSendRumorCalls,
             equals(1),
-            reason: 'the group joined the in-flight attempt, no second publish',
+            reason: 'one publish of C, by the group send',
           );
 
-          // The sweep's attempt ends soft-unconfirmed.
+          // The group's attempt ends soft-unconfirmed.
           cPublish.complete(
             const NIP17SendResult.failure(
               'frame written, no OK',
@@ -31501,11 +31500,11 @@ void main() {
           expect(recovered.retryablePending, isTrue);
           expect(results.last.retryablePending, isTrue);
           expect(
-            results.last.queuedRumorId,
+            recovered.queuedRumorId,
             equals(enqueued.last.id),
-            reason:
-                'a joined sibling still hands the caller its durable handle',
+            reason: 'the joined retry receives the durable handle too',
           );
+          expect(results.last.queuedRumorId, equals(enqueued.last.id));
           verify(
             () => mockOutgoingDmsDao.incrementRetry(enqueued.last.id),
           ).called(1);
@@ -31540,7 +31539,7 @@ void main() {
           expect(results.first.success, isFalse);
           expect(
             results.first.error,
-            contains('joined in-flight recovery failed'),
+            contains('group publish failed'),
           );
           expect(
             results.last.success,
