@@ -153,6 +153,9 @@ class _AuthSessionResetCounter {
 
 /// Counts transitions away from [AuthState.authenticated] across the container
 /// lifetime, even when no widget is watching the intermediate frame.
+///
+/// Relies on the same account-switch invariant as [isProtectedMinorProvider]:
+/// every account swap transits a non-authenticated [AuthState].
 final _authSessionResetCounterProvider = Provider<_AuthSessionResetCounter>((
   ref,
 ) {

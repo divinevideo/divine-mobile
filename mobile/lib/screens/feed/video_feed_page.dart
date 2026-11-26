@@ -169,6 +169,11 @@ class VideoFeedPage extends ConsumerWidget {
                   adaptiveClassicsEnabledStream: adaptiveClassicsEnabled
                       ? ref.read(adaptiveClassicsEnabledStreamProvider)
                       : null,
+                  isAdaptiveClassicsAllowed: adaptiveClassicsEnabled
+                      ? () =>
+                            ref.context.mounted &&
+                            ref.read(adaptiveClassicsEnabledProvider)
+                      : null,
                   followRepository: followRepository,
                   curatedListRepository: curatedListRepository,
                   hashtagSubscriptionRepository: hashtagRepository,

@@ -1011,6 +1011,266 @@ void main() {
     );
 
     testWidgets(
+      'Home Classics falls back to archive when recommendations are superseded '
+      'before the async detach event runs',
+      (tester) async {
+        var pendingStatus = Completer<ProtectedMinorStatus>()
+          ..complete(ProtectedMinorStatus.notProtected());
+        final recommendationsReply = Completer<HomeFeedResult>();
+        final analytics = _ConsentingAnalytics();
+        final home = await _mountSafetyPolicyHome(
+          tester,
+          overrides: [
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+            protectedMinorStatusProvider.overrideWith(
+              (ref) => pendingStatus.future,
+            ),
+            analyticsServiceProvider.overrideWith((ref) {
+              ref.onDispose(analytics.dispose);
+              return analytics;
+            }),
+          ],
+        );
+        registerFallbackValue(
+          const ClassicRecommendationsRequest(seed: 'fallback'),
+        );
+        registerFallbackValue(<VideoEvent>[]);
+        when(() => home.videos.applyContentPreferences(any())).thenAnswer(
+          (call) => call.positionalArguments.single as List<VideoEvent>,
+        );
+        when(
+          () => home.videos.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+            isCurrent: any(named: 'isCurrent'),
+          ),
+        ).thenAnswer((_) => recommendationsReply.future);
+        when(
+          () => home.videos.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              HomeFeedResult(videos: [_removalVideo('8')], hasMore: false),
+        );
+
+        await tester.runAsync(
+          () => home.container.read(protectedMinorStatusProvider.future),
+        );
+        expect(home.container.read(adaptiveClassicsEnabledProvider), isTrue);
+        await tester.runAsync(pumpEventQueue);
+
+        home.originalFeed.add(
+          const VideoFeedSourceChanged(VideoFeedSource.classic()),
+        );
+        await tester.runAsync(pumpEventQueue);
+
+        // Close the gate AND immediately fail the in-flight recommendation as
+        // superseded WITHOUT draining the async detach stream event first.
+        pendingStatus = Completer<ProtectedMinorStatus>()
+          ..complete(ProtectedMinorStatus.protected());
+        home.container.invalidate(protectedMinorStatusProvider);
+        await tester.runAsync(
+          () => home.container.read(protectedMinorStatusProvider.future),
+        );
+        expect(home.container.read(adaptiveClassicsEnabledProvider), isFalse);
+        recommendationsReply.completeError(
+          const FunnelcakeException('Classics request superseded'),
+        );
+        await tester.runAsync(pumpEventQueue);
+
+        expect(home.originalFeed.state.status, VideoFeedStatus.success);
+        expect(home.originalFeed.state.videos, [_removalVideo('8')]);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.runAsync(pumpEventQueue);
+      },
+    );
+
+    testWidgets(
+      'closing the Classics gate during in-flight pagination clears '
+      'isLoadingMore on Classics and does not disrupt For You pagination',
+      (tester) async {
+        var pendingStatus = Completer<ProtectedMinorStatus>()
+          ..complete(ProtectedMinorStatus.notProtected());
+        final pageTwoReply = Completer<HomeFeedResult>();
+        final analytics = _ConsentingAnalytics();
+        final home = await _mountSafetyPolicyHome(
+          tester,
+          overrides: [
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+            protectedMinorStatusProvider.overrideWith(
+              (ref) => pendingStatus.future,
+            ),
+            analyticsServiceProvider.overrideWith((ref) {
+              ref.onDispose(analytics.dispose);
+              return analytics;
+            }),
+          ],
+        );
+        registerFallbackValue(
+          const ClassicRecommendationsRequest(seed: 'fallback'),
+        );
+        registerFallbackValue(<VideoEvent>[]);
+        when(() => home.videos.applyContentPreferences(any())).thenAnswer(
+          (call) => call.positionalArguments.single as List<VideoEvent>,
+        );
+        var recCalls = 0;
+        when(
+          () => home.videos.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+            isCurrent: any(named: 'isCurrent'),
+          ),
+        ).thenAnswer((_) {
+          recCalls++;
+          if (recCalls == 1) {
+            return Future.value(
+              HomeFeedResult(
+                videos: [_removalVideo('1')],
+                paginationCursor: 'adaptive-cursor-1',
+                hasMore: true,
+                recommendationPageCount: 1,
+              ),
+            );
+          }
+          return pageTwoReply.future;
+        });
+        when(
+          () => home.videos.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer(
+          (_) async => HomeFeedResult(
+            videos: [_removalVideo('2')],
+            paginationCursor: 'archive-offset-2',
+            hasMore: true,
+          ),
+        );
+
+        await tester.runAsync(
+          () => home.container.read(protectedMinorStatusProvider.future),
+        );
+        expect(home.container.read(adaptiveClassicsEnabledProvider), isTrue);
+        await tester.runAsync(pumpEventQueue);
+
+        // Load page 1 of adaptive Classics, then start paginating page 2.
+        home.originalFeed.add(
+          const VideoFeedSourceChanged(VideoFeedSource.classic()),
+        );
+        await tester.runAsync(pumpEventQueue);
+        expect(home.originalFeed.state.videos, [_removalVideo('1')]);
+
+        home.originalFeed.add(const VideoFeedLoadMoreRequested());
+        await tester.runAsync(pumpEventQueue);
+        expect(home.originalFeed.state.isLoadingMore, isTrue);
+
+        // Close the gate while page 2 is still in flight.
+        pendingStatus = Completer<ProtectedMinorStatus>()
+          ..complete(ProtectedMinorStatus.protected());
+        home.container.invalidate(protectedMinorStatusProvider);
+        await tester.runAsync(
+          () => home.container.read(protectedMinorStatusProvider.future),
+        );
+        expect(home.container.read(adaptiveClassicsEnabledProvider), isFalse);
+        await tester.runAsync(pumpEventQueue);
+
+        expect(home.originalFeed.state.isLoadingMore, isFalse);
+        expect(home.originalFeed.state.paginationCursor, isNull);
+
+        // Once the superseded in-flight request settles, droppable pagination
+        // is free again and subsequent pagination uses the archive cleanly.
+        pageTwoReply.completeError(
+          const FunnelcakeException('Classics request superseded'),
+        );
+        await tester.runAsync(pumpEventQueue);
+        expect(home.originalFeed.state.isLoadingMore, isFalse);
+        expect(home.originalFeed.state.paginationCursor, isNull);
+
+        home.originalFeed.add(const VideoFeedLoadMoreRequested());
+        await tester.runAsync(pumpEventQueue);
+        expect(home.originalFeed.state.isLoadingMore, isFalse);
+        expect(home.originalFeed.state.videos, [
+          _removalVideo('1'),
+          _removalVideo('2'),
+        ]);
+
+        // Re-open gate, switch to For You, start paginating For You, and close
+        // the Classics gate mid-flight: For You pagination must complete.
+        pendingStatus = Completer<ProtectedMinorStatus>()
+          ..complete(ProtectedMinorStatus.notProtected());
+        home.container.invalidate(protectedMinorStatusProvider);
+        await tester.runAsync(
+          () => home.container.read(protectedMinorStatusProvider.future),
+        );
+        expect(home.container.read(adaptiveClassicsEnabledProvider), isTrue);
+        await tester.runAsync(pumpEventQueue);
+
+        final forYouPage2 = Completer<HomeFeedResult>();
+        var forYouCalls = 0;
+        when(
+          () => home.videos.getRecommendedVideos(
+            userPubkey: any(named: 'userPubkey'),
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer((_) {
+          forYouCalls++;
+          if (forYouCalls == 1) {
+            return Future.value(
+              HomeFeedResult(
+                videos: [_removalVideo('3')],
+                paginationCursor: 'fy-cursor-1',
+                hasMore: true,
+              ),
+            );
+          }
+          return forYouPage2.future;
+        });
+
+        home.originalFeed.add(
+          const VideoFeedSourceChanged(VideoFeedSource.forYou()),
+        );
+        await tester.runAsync(pumpEventQueue);
+        expect(home.originalFeed.state.videos, [_removalVideo('3')]);
+
+        home.originalFeed.add(const VideoFeedLoadMoreRequested());
+        await tester.runAsync(pumpEventQueue);
+        expect(home.originalFeed.state.isLoadingMore, isTrue);
+
+        pendingStatus = Completer<ProtectedMinorStatus>()
+          ..complete(ProtectedMinorStatus.protected());
+        home.container.invalidate(protectedMinorStatusProvider);
+        await tester.runAsync(
+          () => home.container.read(protectedMinorStatusProvider.future),
+        );
+        expect(home.container.read(adaptiveClassicsEnabledProvider), isFalse);
+        await tester.runAsync(pumpEventQueue);
+
+        forYouPage2.complete(
+          HomeFeedResult(videos: [_removalVideo('4')], hasMore: false),
+        );
+        await tester.runAsync(pumpEventQueue);
+
+        expect(home.originalFeed.state.isLoadingMore, isFalse);
+        expect(home.originalFeed.state.videos, [
+          _removalVideo('3'),
+          _removalVideo('4'),
+        ]);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.runAsync(pumpEventQueue);
+      },
+    );
+
+    testWidgets(
       'legacy false flags preserve people sources and saved selection',
       (tester) async {
         await CacheSync.init(dao: _CacheDao());
