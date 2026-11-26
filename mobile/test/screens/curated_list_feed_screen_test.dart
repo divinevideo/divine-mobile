@@ -1503,6 +1503,67 @@ void main() {
         expect(playing(tester), part(3).id);
       });
 
+      testWidgets('opens the tapped video even if an earlier part arrives', (
+        tester,
+      ) async {
+        final videos = StreamController<List<VideoEvent>>();
+        addTearDown(videos.close);
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            overrideVideoEvents: false,
+            extraOverrides: [
+              videoEventsByIdsProvider(
+                references,
+              ).overrideWith((ref) => videos.stream),
+            ],
+          ),
+        );
+        videos.add([part(2)]);
+        await tester.pump();
+
+        final grid = tester.widget<ComposableVideoGrid>(
+          find.byType(ComposableVideoGrid),
+        );
+        grid.onVideoTap([part(2)], 0, () => null);
+        videos.add([part(1), part(2)]);
+        await tester.pump();
+
+        expect(playing(tester), part(2).id);
+      });
+
+      testWidgets('can return to the grid if the tapped video disappears', (
+        tester,
+      ) async {
+        final videos = StreamController<List<VideoEvent>>();
+        addTearDown(videos.close);
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            overrideVideoEvents: false,
+            extraOverrides: [
+              videoEventsByIdsProvider(
+                references,
+              ).overrideWith((ref) => videos.stream),
+            ],
+          ),
+        );
+        videos.add([part(2)]);
+        await tester.pump();
+
+        tester
+            .widget<ComposableVideoGrid>(find.byType(ComposableVideoGrid))
+            .onVideoTap([part(2)], 0, () => null);
+        videos.add([part(1)]);
+        await tester.pump();
+
+        expect(find.text(l10n.curatedListVideoNotAvailable), findsOneWidget);
+        await tester.binding.handlePopRoute();
+        await tester.pump();
+
+        expect(find.byType(ComposableVideoGrid), findsOneWidget);
+      });
+
       testWidgets('keeps the back button until the requested video arrives', (
         tester,
       ) async {

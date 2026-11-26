@@ -95,7 +95,7 @@ class CuratedListFeedScreen extends ConsumerStatefulWidget {
 }
 
 class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
-  int? _activeVideoIndex;
+  String? _activeVideoId;
 
   /// [CuratedListFeedScreen.initialListIndex] until playback opens there or
   /// the viewer moves on: backing out, tapping a video, managing the posts or
@@ -138,11 +138,15 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     final videosAsync = useFrozenIds
         ? ref.watch(videoEventsByIdsProvider(widget.videoIds!))
         : ref.watch(curatedListVideoEventsProvider(_cacheListId));
-    final pendingIndex = _activeVideoIndex == null
-        ? _pendingPlaybackIndex(videosAsync, useFrozenIds: useFrozenIds)
+    final videos = videosAsync.hasError ? null : videosAsync.value;
+    final activeVideoId = _activeVideoId;
+    final pendingIndex = activeVideoId == null && videos != null
+        ? _pendingPlaybackIndex(videos, useFrozenIds: useFrozenIds)
         : null;
-    if (pendingIndex != null) _keepPendingPlayback(pendingIndex);
-    final activeVideoIndex = _activeVideoIndex ?? pendingIndex;
+    if (pendingIndex != null) _keepPendingPlayback(videos![pendingIndex].id);
+    final activeVideoIndex = activeVideoId == null
+        ? pendingIndex
+        : videos?.indexWhere((video) => video.id == activeVideoId);
 
     // Managing posts needs loaded, non-empty content: an empty list has
     // nothing to remove and an error view has no posts to manage.
@@ -265,20 +269,13 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         onExitVideoMode: _exitVideoMode,
         onVideoTap: (videoList, index) {
           final selected = videoList[index];
-          // Grid filtering can remove videos before the tapped tile. Resolve
-          // its identity in the same list the fullscreen player will use.
-          final sourceIndex =
-              videosAsync.value?.indexWhere(
-                (video) => video.id == selected.id,
-              ) ??
-              -1;
-          if (sourceIndex < 0) return;
           Log.info(
             'Tapped video in curated list: ${selected.id}',
             category: LogCategory.ui,
           );
           setState(() {
-            _activeVideoIndex = sourceIndex;
+            // A relay can insert a video before the next frame opens playback.
+            _activeVideoId = selected.id;
             _pendingListIndex = null;
           });
         },
@@ -318,21 +315,19 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
 
   void _exitVideoMode() {
     setState(() {
-      _activeVideoIndex = null;
+      _activeVideoId = null;
       _pendingListIndex = null;
     });
   }
 
-  /// Where the video at the pending list position sits in [videosAsync], or
+  /// Where the video at the pending list position sits in [videos], or
   /// null while it has not resolved, or when it never will.
   int? _pendingPlaybackIndex(
-    AsyncValue<List<VideoEvent>> videosAsync, {
+    List<VideoEvent> videos, {
     required bool useFrozenIds,
   }) {
     final position = _pendingListIndex;
-    if (position == null || videosAsync.hasError) return null;
-    final videos = videosAsync.value;
-    if (videos == null) return null;
+    if (position == null) return null;
     final references = useFrozenIds
         ? widget.videoIds
         : ref.watch(curatedListVideosProvider(_cacheListId)).value;
@@ -358,13 +353,13 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
   /// Holds playback once the pending position has opened, so that a later
   /// emission of the list, such as a reload after a block, does not drop the
   /// viewer back to the grid.
-  void _keepPendingPlayback(int index) {
+  void _keepPendingPlayback(String id) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _pendingListIndex == null || _activeVideoIndex != null) {
+      if (!mounted || _pendingListIndex == null || _activeVideoId != null) {
         return;
       }
       setState(() {
-        _activeVideoIndex = index;
+        _activeVideoId = id;
         _pendingListIndex = null;
       });
     });
