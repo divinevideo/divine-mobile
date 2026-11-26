@@ -565,6 +565,62 @@ void main() {
       });
 
       test(
+        'replays both legacy rumors from a batch that used per-member IDs',
+        () async {
+          final others = members.take(2).toList();
+          final conversationId = await seedRoom(others);
+          final rows = <OutgoingDm>[];
+          for (final member in others) {
+            final rumor = Event(
+              owner,
+              EventKind.privateDirectMessage,
+              [
+                ['p', member],
+                for (final peer in others.where((peer) => peer != member))
+                  ['p', peer],
+              ],
+              'legacy group message',
+              createdAt: 1700000000,
+            );
+            final row = OutgoingDm(
+              id: rumor.id,
+              conversationId: conversationId,
+              recipientPubkey: member,
+              content: rumor.content,
+              createdAt: rumor.createdAt,
+              rumorEventJson: jsonEncode(rumor.toJson()),
+              recipientWrapStatus: OutgoingWrapStatus.sent,
+              selfWrapStatus: OutgoingWrapStatus.failed,
+              queuedAt: DateTime.fromMillisecondsSinceEpoch(0),
+              ownerPubkey: owner,
+              sendBatchId: 'a' * 64,
+            );
+            await outgoingDao.enqueue(row);
+            rows.add(row);
+          }
+
+          expect(
+            (await repository.recoverSelfWrap(rumorId: rows.last.id)).success,
+            isTrue,
+          );
+          expect((await queueRows()).map((row) => row.id), [rows.first.id]);
+          expect(
+            (await repository.recoverSelfWrap(rumorId: rows.first.id)).success,
+            isTrue,
+          );
+
+          final publishedRumors = await Future.wait(
+            wrapsTo(owner).map(openAsOwner),
+          );
+          expect(
+            publishedRumors.map((rumor) => rumor?.id),
+            unorderedEquals(rows.map((row) => row.id)),
+          );
+          expect(await queueRows(), isEmpty);
+        },
+      );
+
+      test(
         'does not replay a copy after another retry cleared its queue row',
         () async {
           ownCopiesPublish = false;
@@ -597,7 +653,7 @@ void main() {
       );
 
       test(
-        'uses a joined retry\'s sender copy after both queue rows are gone',
+        "uses a joined retry's sender copy after both queue rows are gone",
         () async {
           final others = members.take(2).toList();
           final inboxStarted = Completer<void>();
@@ -630,8 +686,9 @@ void main() {
           };
           final finishRecipient = Completer<void>();
           onRecipientPublish = (wrap) async {
-            if (wrapsTo(others.last).contains(wrap))
+            if (wrapsTo(others.last).contains(wrap)) {
               await finishRecipient.future;
+            }
           };
           final retry = repository.recoverFullSend(rumorId: last.id);
 

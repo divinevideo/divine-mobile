@@ -5052,7 +5052,7 @@ void main() {
           });
           final mockOutgoingDmsDao = _MockOutgoingDmsDao();
           final groupRow = OutgoingDm(
-            id: _rumorEventId,
+            id: '$_rumorEventId:$_validPubkeyB',
             conversationId: groupConversationId,
             recipientPubkey: _validPubkeyB,
             content: 'Hello from B!',
@@ -5141,7 +5141,7 @@ void main() {
             ),
           );
           final recovered = await repository.recoverFullSend(
-            rumorId: _rumorEventId,
+            rumorId: groupRow.id,
           );
 
           expect(recovered.success, isTrue);
@@ -33189,9 +33189,11 @@ void main() {
         'group-row recovery skips the direct_messages insert when a batch '
         'sibling already persisted the message (no duplicate group bubble)',
         () async {
-          final groupRow = queuedRow(sendBatchId: 'batch-recover');
+          final groupRow = queuedRow(
+            sendBatchId: 'batch-recover',
+          ).copyWith(id: '$_rumorEventId:$_validPubkeyB');
           when(
-            () => mockOutgoingDmsDao.getById(_rumorEventId),
+            () => mockOutgoingDmsDao.getById(groupRow.id),
           ).thenAnswer((_) async => groupRow);
           // queuedRow's conversationId ('conv') differs from the computed
           // 1:1 pair id, so the row classifies as a group sibling. The
@@ -33238,7 +33240,7 @@ void main() {
           );
 
           final result = await repository.recoverFullSend(
-            rumorId: _rumorEventId,
+            rumorId: groupRow.id,
           );
 
           expect(result.success, isTrue);
@@ -33283,7 +33285,7 @@ void main() {
           );
           // The queue row still finalizes — full delivery deletes it.
           verify(
-            () => mockOutgoingDmsDao.deleteById(_rumorEventId),
+            () => mockOutgoingDmsDao.deleteById(groupRow.id),
           ).called(1);
         },
       );

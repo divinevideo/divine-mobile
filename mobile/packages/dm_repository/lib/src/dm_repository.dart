@@ -9872,18 +9872,12 @@ class DmRepository {
     }
   }
 
-  /// The send batch [row] belongs to when it is one member of a group send,
-  /// whose members share one own copy (#10016); `null` for a one-to-one row
-  /// and for a row queued before batches were labelled.
-  String? _groupBatchOf(OutgoingDm row, Event rumor) {
-    final batchId = row.sendBatchId;
-    if (batchId == null) return null;
-    // The group entry point also accepts one recipient, whose conversation
-    // ID equals the pair's. Its per-member queue handle still identifies it.
-    if (row.id == _groupQueueId(rumor.id, row.recipientPubkey)) return batchId;
-    final pair = [row.ownerPubkey, row.recipientPubkey]..sort();
-    return row.conversationId == computeConversationId(pair) ? null : batchId;
-  }
+  /// The batch whose members share [rumor] with [row]. Legacy group rows
+  /// used each member's rumor ID directly and still need their own copies.
+  String? _groupBatchOf(OutgoingDm row, Event rumor) =>
+      row.id == _groupQueueId(rumor.id, row.recipientPubkey)
+      ? row.sendBatchId
+      : null;
 
   /// Make sure group send [row]'s batch has its one own copy before [row]
   /// counts as delivered, publishing it now unless [row] or another member's
@@ -9939,6 +9933,7 @@ class DmRepository {
         conversationId: conversationId,
         ownerPubkey: ownerPubkey,
         sendBatchId: sendBatchId,
+        rumorId: rumor.id,
       );
       if (_ingestSessionEnded(ownerPubkey, generation)) {
         return _queuedForDelivery(callerRowId ?? rumor.id);
@@ -9999,6 +9994,7 @@ class DmRepository {
     required String conversationId,
     required String ownerPubkey,
     required String sendBatchId,
+    required String rumorId,
   }) async {
     try {
       return [
@@ -10006,7 +10002,9 @@ class DmRepository {
           conversationId: conversationId,
           ownerPubkey: ownerPubkey,
         ))
-          if (row.sendBatchId == sendBatchId) row,
+          if (row.sendBatchId == sendBatchId &&
+              row.id == _groupQueueId(rumorId, row.recipientPubkey))
+            row,
       ];
     } on Object catch (e) {
       Log.warning(
