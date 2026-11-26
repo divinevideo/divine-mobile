@@ -171,7 +171,7 @@ void main() {
         await container.read(protectedMinorStatusProvider.future);
         expect(container.read(confirmedNotProtectedMinorProvider), isFalse);
 
-        // Confirm again, then fail a refresh: must fail closed.
+        // Confirm again, then resolve unknown: must fail closed.
         nextStatus = Completer<ProtectedMinorStatus>()
           ..complete(ProtectedMinorStatus.notProtected());
         container.invalidate(protectedMinorStatusProvider);
@@ -181,12 +181,23 @@ void main() {
         nextStatus = Completer<ProtectedMinorStatus>();
         container.invalidate(protectedMinorStatusProvider);
         expect(container.read(confirmedNotProtectedMinorProvider), isTrue);
-        nextStatus.completeError(StateError('keycast timeout'));
-        try {
-          await container.read(protectedMinorStatusProvider.future);
-        } on Object {
-          // Expected lookup failure.
-        }
+        nextStatus.complete(ProtectedMinorStatus.unknown());
+        await container.read(protectedMinorStatusProvider.future);
+        expect(container.read(confirmedNotProtectedMinorProvider), isFalse);
+
+        // Confirm again, then fail a refresh with a retryable Exception:
+        // must fail closed immediately even under Riverpod 3's default retry.
+        nextStatus = Completer<ProtectedMinorStatus>()
+          ..complete(ProtectedMinorStatus.notProtected());
+        container.invalidate(protectedMinorStatusProvider);
+        await container.read(protectedMinorStatusProvider.future);
+        expect(container.read(confirmedNotProtectedMinorProvider), isTrue);
+
+        nextStatus = Completer<ProtectedMinorStatus>();
+        container.invalidate(protectedMinorStatusProvider);
+        expect(container.read(confirmedNotProtectedMinorProvider), isTrue);
+        nextStatus.completeError(Exception('keycast 503'));
+        await pumpEventQueue();
         expect(container.read(confirmedNotProtectedMinorProvider), isFalse);
       },
     );

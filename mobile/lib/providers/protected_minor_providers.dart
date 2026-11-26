@@ -180,11 +180,17 @@ class _ConfirmedNotProtectedMinorNotifier
     if (authState != AuthState.authenticated) {
       return (resetCount: resetCount, confirmed: false);
     }
-    if (live is AsyncLoading<ProtectedMinorStatus>) {
+    // Fail closed immediately on errors, including Riverpod 3 retry backoffs
+    // where `isLoading` and `hasError` are both true.
+    if (live.hasError) {
+      return (resetCount: resetCount, confirmed: false);
+    }
+    if (live.isLoading) {
       // Preserve an in-session confirmation across same-account resume
-      // refreshes (AccountStateResumeRefresher) so active feeds do not flicker
-      // or tear down while Keycast re-validates. Cold start, logout, and
-      // account switches increment resetCount or start unconfirmed and stay
+      // refreshes (`isRefreshing` carries `isLoading: true` on AsyncData, and
+      // `isReloading` emits AsyncLoading) so active feeds do not flicker or
+      // tear down while Keycast re-validates. Cold start, logout, and account
+      // switches increment resetCount or start unconfirmed and stay
       // fail-closed.
       final previous = stateOrNull;
       final sameAuthSession =
