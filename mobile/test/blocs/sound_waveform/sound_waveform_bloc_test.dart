@@ -1,13 +1,40 @@
 // ABOUTME: Tests for SoundWaveformBloc - waveform extraction from audio.
 // ABOUTME: Covers initial state, extract events, clear events, and state transitions.
 
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/sound_waveform/sound_waveform_bloc.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:sound_service/sound_service.dart';
+
+class _MockRemoteAudioCache extends Mock implements RemoteAudioCache {}
+
+/// The file [_MockRemoteAudioCache] hands out for every sound.
+final _cachedFile = File('/cache/sound.m4a');
+
+/// A piece of a waveform stream covering samples from [start] on, of a
+/// sound [samples] samples long at one sample a second.
+WaveformChunk _chunk(
+  int start,
+  List<double> left, {
+  List<double>? right,
+  int samples = 4,
+  bool isComplete = false,
+}) => WaveformChunk(
+  leftChannel: Float32List.fromList(left),
+  rightChannel: right == null ? null : Float32List.fromList(right),
+  startIndex: start,
+  progress: (start + left.length) / samples,
+  sampleRate: 44100,
+  totalDuration: Duration(seconds: samples),
+  samplesPerSecond: 1,
+  isComplete: isComplete,
+);
 
 class _MockProVideoEditor extends ProVideoEditor {
   bool shouldThrowError = false;
@@ -19,6 +46,10 @@ class _MockProVideoEditor extends ProVideoEditor {
   /// Captured so tests can assert the file-vs-network mapping rather than
   /// just the resulting state.
   EditorVideo? lastWaveformSource;
+
+  /// What [getWaveformStream] sends, by default the whole waveform at once.
+  List<WaveformChunk>? chunks;
+  Object? streamError;
 
   _MockProVideoEditor() {
     // Default waveform data
@@ -32,21 +63,32 @@ class _MockProVideoEditor extends ProVideoEditor {
   }
 
   @override
-  Future<WaveformData> getWaveform(
+  Stream<WaveformChunk> getWaveformStream(
     WaveformConfigs configs, {
     NativeLogLevel? nativeLogLevel,
-  }) async {
+  }) async* {
     lastWaveformSource = configs.video;
     if (shouldThrowError) {
       throw Exception('Waveform extraction failed');
     }
-    return WaveformData(
-      leftChannel: leftChannel,
-      rightChannel: rightChannel,
-      duration: waveformDuration,
-      sampleRate: 44100,
-      samplesPerSecond: 10,
-    );
+    final chunks =
+        this.chunks ??
+        [
+          WaveformChunk(
+            leftChannel: leftChannel,
+            rightChannel: rightChannel,
+            startIndex: 0,
+            progress: 1,
+            sampleRate: 44100,
+            totalDuration: waveformDuration,
+            samplesPerSecond: leftChannel.length ~/ waveformDuration.inSeconds,
+            isComplete: true,
+          ),
+        ];
+    for (final chunk in chunks) {
+      yield chunk;
+    }
+    if (streamError case final error?) throw error;
   }
 }
 
@@ -55,11 +97,18 @@ void main() {
 
   late _MockProVideoEditor mockProVideoEditor;
   late ProVideoEditor originalProVideoEditor;
+  late _MockRemoteAudioCache remoteAudioCache;
+
+  setUpAll(() => registerFallbackValue(Uri()));
 
   setUp(() {
     originalProVideoEditor = ProVideoEditor.instance;
     mockProVideoEditor = _MockProVideoEditor();
     ProVideoEditor.instance = mockProVideoEditor;
+    remoteAudioCache = _MockRemoteAudioCache();
+    when(
+      () => remoteAudioCache.fileFor(any()),
+    ).thenAnswer((_) async => _cachedFile);
   });
 
   tearDown(() {
@@ -68,7 +117,7 @@ void main() {
 
   group(SoundWaveformBloc, () {
     SoundWaveformBloc buildBloc() {
-      return SoundWaveformBloc();
+      return SoundWaveformBloc(remoteAudioCache: remoteAudioCache);
     }
 
     test('initial state is $SoundWaveformInitial', () async {
@@ -207,8 +256,10 @@ void main() {
         },
       );
 
+      // Handed the URL, the editor downloads the sound again on every read;
+      // a preview or an earlier screen usually has its file already.
       blocTest<SoundWaveformBloc, SoundWaveformState>(
-        'builds a network source for network-kind extraction',
+        'reads a network sound from the file the cache keeps for it',
         build: buildBloc,
         act: (bloc) => bloc.add(
           const SoundWaveformExtract(
@@ -218,15 +269,110 @@ void main() {
         ),
         expect: () => [isA<SoundWaveformLoading>(), isA<SoundWaveformLoaded>()],
         verify: (_) {
+          verify(
+            () => remoteAudioCache.fileFor(
+              Uri.parse('https://example.com/audio.mp3'),
+            ),
+          ).called(1);
           final source = mockProVideoEditor.lastWaveformSource;
-          expect(source?.hasNetworkUrl, isTrue);
-          expect(
-            source?.networkUrl,
-            equals('https://example.com/audio.mp3'),
-          );
-          expect(source?.hasFile, isFalse);
-          expect(source?.hasAssetPath, isFalse);
+          expect(source?.hasFile, isTrue);
+          expect(source?.file?.path, _cachedFile.path);
+          expect(source?.hasNetworkUrl, isFalse);
         },
+      );
+
+      blocTest<SoundWaveformBloc, SoundWaveformState>(
+        'reports a sound that could not be downloaded',
+        setUp: () => when(() => remoteAudioCache.fileFor(any())).thenThrow(
+          RemoteAudioDownloadException(
+            Uri.parse('https://example.com/audio.mp3'),
+            statusCode: 404,
+          ),
+        ),
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          const SoundWaveformExtract(
+            path: 'https://example.com/audio.mp3',
+            soundId: 'remote-sound-id',
+          ),
+        ),
+        expect: () => [
+          isA<SoundWaveformLoading>(),
+          const SoundWaveformError(),
+        ],
+        errors: () => [isA<RemoteAudioDownloadException>()],
+      );
+    });
+
+    group('$SoundWaveformExtract as the sound is read', () {
+      const longSound = SoundWaveformExtract(
+        path: '/sounds/song.m4a',
+        soundId: 'song',
+        kind: AudioSourceKind.file,
+      );
+
+      blocTest<SoundWaveformBloc, SoundWaveformState>(
+        'shows the waveform as it is read, from the start',
+        setUp: () => mockProVideoEditor.chunks = [
+          _chunk(0, [0.1, 0.2], right: [0.3, 0.4]),
+          _chunk(2, [0.5, 0.6], right: [0.7, 0.8], isComplete: true),
+        ],
+        build: buildBloc,
+        act: (bloc) => bloc.add(longSound),
+        expect: () => [
+          const SoundWaveformLoading(),
+          SoundWaveformLoaded(
+            leftChannel: Float32List.fromList([0.1, 0.2, 0, 0]),
+            rightChannel: Float32List.fromList([0.3, 0.4, 0, 0]),
+            duration: const Duration(seconds: 4),
+            isComplete: false,
+          ),
+          SoundWaveformLoaded(
+            leftChannel: Float32List.fromList([0.1, 0.2, 0.5, 0.6]),
+            rightChannel: Float32List.fromList([0.3, 0.4, 0.7, 0.8]),
+            duration: const Duration(seconds: 4),
+          ),
+        ],
+      );
+
+      // The editor ends a waveform where the decoded audio ends, which can
+      // be a little short of the duration in the file's header.
+      blocTest<SoundWaveformBloc, SoundWaveformState>(
+        'ends the waveform where the last piece ends',
+        setUp: () => mockProVideoEditor.chunks = [
+          _chunk(0, [0.1, 0.2]),
+          _chunk(2, [0.5], isComplete: true),
+        ],
+        build: buildBloc,
+        act: (bloc) => bloc.add(longSound),
+        skip: 2,
+        expect: () => [
+          SoundWaveformLoaded(
+            leftChannel: Float32List.fromList([0.1, 0.2, 0.5]),
+            duration: const Duration(seconds: 4),
+          ),
+        ],
+      );
+
+      blocTest<SoundWaveformBloc, SoundWaveformState>(
+        'reports a stream that fails partway',
+        setUp: () => mockProVideoEditor
+          ..chunks = [
+            _chunk(0, [0.1, 0.2]),
+          ]
+          ..streamError = Exception('decoder died'),
+        build: buildBloc,
+        act: (bloc) => bloc.add(longSound),
+        expect: () => [
+          const SoundWaveformLoading(),
+          isA<SoundWaveformLoaded>().having(
+            (state) => state.isComplete,
+            'isComplete',
+            isFalse,
+          ),
+          const SoundWaveformError(),
+        ],
+        errors: () => [isA<Exception>()],
       );
     });
 
@@ -418,6 +564,22 @@ void main() {
       );
       final state2 = SoundWaveformLoaded(
         leftChannel: Float32List.fromList([0.9, 0.3]),
+        duration: const Duration(seconds: 5),
+      );
+      expect(state1, isNot(equals(state2)));
+    });
+
+    test('$SoundWaveformLoaded states still being read are not equal to '
+        'whole ones', () {
+      final leftChannel = Float32List.fromList([0.1, 0.5]);
+
+      final state1 = SoundWaveformLoaded(
+        leftChannel: leftChannel,
+        duration: const Duration(seconds: 5),
+        isComplete: false,
+      );
+      final state2 = SoundWaveformLoaded(
+        leftChannel: leftChannel,
         duration: const Duration(seconds: 5),
       );
       expect(state1, isNot(equals(state2)));
