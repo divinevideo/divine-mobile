@@ -9019,6 +9019,7 @@ class DmRepository {
       try {
         final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
         var persistedLocally = false;
+        var rowGone = false;
         String? protocol;
         await _conversationsDao.runInTransaction(() async {
           // Cancel interlock: the queue row may be gone by the time this
@@ -9038,6 +9039,7 @@ class DmRepository {
               'recovery); skipping local persist.',
               category: LogCategory.system,
             );
+            rowGone = true;
             return;
           }
           if (!_isLiveDelivery(liveRow)) {
@@ -9190,6 +9192,20 @@ class DmRepository {
           if (!isCurrent()) throw StateError('Account changed during recovery');
           persistedLocally = true;
         });
+        // A delete took the batch while this publish was on the wire.
+        if (rowGone &&
+            batchId != null &&
+            result.selfWrapPublished != true &&
+            isCurrent()) {
+          await _restoreOwnCopyRow(
+            dao: dao,
+            conversationId: row.conversationId,
+            ownerPubkey: row.ownerPubkey,
+            sendBatchId: batchId,
+            rumor: rumor,
+            recipientPubkey: row.recipientPubkey,
+          );
+        }
 
         // Guarded: the interlock's early return above skips the persist, and
         // logging success for it made the race read as a delivered-and-saved
@@ -10009,6 +10025,54 @@ class DmRepository {
       }
       return published;
     });
+  }
+
+  /// Puts back the row of [recipientPubkey], a member who got group send
+  /// [sendBatchId] after a delete took its rows, as delivered with the
+  /// sender's copy failed, so the sweep replays the copy (#10016). This device
+  /// stored no message then, so the copy is how the sender sees, and can
+  /// retract, what the members got. A message stored here is left to the
+  /// delete, which retracts it. Non-rethrowing: without the row the copy
+  /// stays unpublished, as before.
+  Future<void> _restoreOwnCopyRow({
+    required OutgoingDmsDao dao,
+    required String conversationId,
+    required String ownerPubkey,
+    required String sendBatchId,
+    required Event rumor,
+    required String recipientPubkey,
+  }) async {
+    try {
+      final stored = await _directMessagesDao.getMessageById(
+        rumor.id,
+        ownerPubkey: ownerPubkey,
+      );
+      if (stored != null) return;
+      await dao.enqueue(
+        OutgoingDm(
+          id: _groupQueueId(rumor.id, recipientPubkey),
+          conversationId: conversationId,
+          recipientPubkey: recipientPubkey,
+          content: rumor.content,
+          createdAt: rumor.createdAt,
+          rumorEventJson: jsonEncode(rumor.toJson()),
+          messageKind: rumor.kind,
+          recipientWrapStatus: OutgoingWrapStatus.sent,
+          selfWrapStatus: OutgoingWrapStatus.failed,
+          selfWrapLastError:
+              'Recipient delivered, but self-wrap publish failed',
+          queuedAt: DateTime.now(),
+          ownerPubkey: ownerPubkey,
+          sendBatchId: sendBatchId,
+          environment: _environment,
+        ),
+      );
+    } on Object catch (e) {
+      Log.warning(
+        'Could not queue the own copy of rumor ${rumor.id} for the sweep: $e',
+        category: LogCategory.system,
+      );
+    }
   }
 
   /// The queue rows of group send [sendBatchId]. Returns null if the read
@@ -11213,6 +11277,7 @@ class DmRepository {
         if (replyToId != null) ['e', replyToId],
       ];
 
+      var deliveredAfterDelete = false;
       await _conversationsDao.runInTransaction(() async {
         if (_disposed || _resetGeneration != generation) return;
         // A Leave that landed after the rejoin above found nothing to rejoin,
@@ -11267,6 +11332,7 @@ class DmRepository {
             'conversation $conversationId.',
             category: LogCategory.system,
           );
+          deliveredAfterDelete = true;
           return;
         }
 
@@ -11337,6 +11403,20 @@ class DmRepository {
           }
         }
       });
+      // A delete took the batch while a member's publish was on the wire.
+      if (deliveredAfterDelete && !batchHasOwnCopy && outgoingDao != null) {
+        await _restoreOwnCopyRow(
+          dao: outgoingDao,
+          conversationId: conversationId,
+          ownerPubkey: owner,
+          sendBatchId: sendBatchId,
+          rumor: groupRumor,
+          recipientPubkey:
+              recipientPubkeys[results.indexWhere(
+                (r) => r.success,
+              )],
+        );
+      }
     }
 
     // Per-recipient non-success finalize. Lives outside the success

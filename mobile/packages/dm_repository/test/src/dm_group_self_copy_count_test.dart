@@ -517,6 +517,190 @@ void main() {
         expect(wrapsTo(owner), hasLength(1));
       });
 
+      test('queues the sender copy for the sweep when it fails after a delete '
+          'took the batch', () async {
+        final others = members.take(2).toList();
+        ownCopiesPublish = false;
+        final lastPublish = Completer<void>();
+        final finishLastPublish = Completer<void>();
+        onRecipientPublish = (wrap) async {
+          if (!wrapsTo(others.last).contains(wrap)) return;
+          lastPublish.complete();
+          await finishLastPublish.future;
+        };
+
+        final send = sendToRoom(others);
+        await lastPublish.future;
+        final rows = await queueRows();
+        expect(await repository.cancelOutgoingBatch(rumorId: rows.first.id), 2);
+        finishLastPublish.complete();
+        final results = await send;
+
+        // The deleted bubble stays gone: only the sweep's copy brings it back.
+        expect(
+          await DirectMessagesDao(
+            db,
+          ).getMessageById(results.first.rumorEventId!, ownerPubkey: owner),
+          isNull,
+        );
+        final queued = await queueRows();
+        expect(queued, hasLength(1));
+        expect(queued.single.recipientWrapStatus, OutgoingWrapStatus.sent);
+        expect(queued.single.selfWrapStatus, OutgoingWrapStatus.failed);
+
+        ownCopiesPublish = true;
+        expect(
+          (await repository.recoverSelfWrap(rumorId: queued.single.id)).success,
+          isTrue,
+        );
+
+        expect(wrapsTo(owner), hasLength(1));
+        expect(await queueRows(), isEmpty);
+      });
+
+      test("queues the sender copy for the sweep when a retry's member got the "
+          'message after a delete took the batch', () async {
+        final others = members.take(2).toList();
+        recipientOksArrive = false;
+        await sendToRoom(others);
+        final last = (await queueRows()).singleWhere(
+          (row) => row.recipientPubkey == others.last,
+        );
+        recipientOksArrive = true;
+        ownCopiesPublish = false;
+        onRecipientPublish = (wrap) async {
+          if (!wrapsTo(others.last).contains(wrap)) return;
+          onRecipientPublish = null;
+          await repository.cancelOutgoingBatch(rumorId: last.id);
+        };
+
+        expect(
+          (await repository.recoverFullSend(rumorId: last.id)).success,
+          isTrue,
+        );
+
+        expect(
+          await DirectMessagesDao(
+            db,
+          ).getMessageById(last.rumorId, ownerPubkey: owner),
+          isNull,
+        );
+        final queued = await queueRows();
+        expect(queued, hasLength(1));
+        expect(queued.single.id, last.id);
+        expect(queued.single.recipientWrapStatus, OutgoingWrapStatus.sent);
+        expect(queued.single.selfWrapStatus, OutgoingWrapStatus.failed);
+      });
+
+      test("publishes the sender copy and queues nothing when a retry's member "
+          'got the message after a delete took the batch', () async {
+        final others = members.take(2).toList();
+        recipientOksArrive = false;
+        await sendToRoom(others);
+        final last = (await queueRows()).singleWhere(
+          (row) => row.recipientPubkey == others.last,
+        );
+        recipientOksArrive = true;
+        onRecipientPublish = (wrap) async {
+          if (!wrapsTo(others.last).contains(wrap)) return;
+          onRecipientPublish = null;
+          await repository.cancelOutgoingBatch(rumorId: last.id);
+        };
+
+        expect(
+          (await repository.recoverFullSend(rumorId: last.id)).success,
+          isTrue,
+        );
+
+        expect(wrapsTo(owner), hasLength(1));
+        expect(await queueRows(), isEmpty);
+      });
+
+      test('queues no sender copy when a delete kept the record of the member '
+          'a retry then delivered, as the message is stored', () async {
+        final others = members.take(2).toList();
+        ownCopiesPublish = false;
+        silentRecipients = {others.last};
+        await sendToRoom(others);
+        final last = (await queueRows()).singleWhere(
+          (row) => row.recipientPubkey == others.last,
+        );
+        silentRecipients = {};
+        onRecipientPublish = (wrap) async {
+          if (!wrapsTo(others.last).contains(wrap)) return;
+          onRecipientPublish = null;
+          await repository.cancelOutgoingBatch(rumorId: last.id);
+        };
+
+        var refusals = 0;
+        onOwnCopyRefused = () async => refusals++;
+
+        expect(
+          (await repository.recoverFullSend(rumorId: last.id)).success,
+          isTrue,
+        );
+
+        expect(refusals, 1, reason: 'precondition: the retry tried the copy');
+        expect(await queueRows(), isEmpty);
+        expect(wrapsTo(owner), isEmpty);
+      });
+
+      test('queues no sender copy after a delete when a joined retry stored '
+          'the message, as the delete retracts it', () async {
+        final others = members.take(2).toList();
+        silentRecipients = {others.first};
+        ownCopiesPublish = false;
+        final releaseFirst = Completer<void>();
+        final releaseRetry = Completer<void>();
+        Future<NIP17SendResult>? retry;
+        String? firstRowId;
+        onRecipientPublish = (wrap) async {
+          if (wrapsTo(others.first).contains(wrap) && retry == null) {
+            final rows = await queueRows();
+            firstRowId = rows
+                .singleWhere((row) => row.recipientPubkey == others.first)
+                .id;
+            retry = repository.recoverFullSend(
+              rumorId: rows
+                  .singleWhere((row) => row.recipientPubkey == others.last)
+                  .id,
+            );
+            await releaseFirst.future;
+          } else if (wrapsTo(others.last).contains(wrap)) {
+            await releaseRetry.future;
+          }
+        };
+        // The retry's copy fails, then the sender deletes before the send's
+        // own attempt, which fails too.
+        onOwnCopyRefused = () async {
+          onOwnCopyRefused = null;
+          outgoingDao.beforeConversationRead = () =>
+              repository.cancelOutgoingBatch(rumorId: firstRowId!);
+        };
+
+        final send = sendToRoom(others);
+        await pumpEventQueue(times: 100);
+        expect(retry, isNotNull, reason: 'precondition: the retry started');
+        releaseFirst.complete();
+        await pumpEventQueue(times: 100);
+        releaseRetry.complete();
+        final results = await send;
+        await retry;
+
+        expect(
+          await DirectMessagesDao(
+            db,
+          ).getMessageById(results.last.rumorEventId!, ownerPubkey: owner),
+          isNotNull,
+          reason: 'precondition: the retry stored the message',
+        );
+        final queued = await queueRows();
+        expect(queued, hasLength(1));
+        expect(queued.single.id, firstRowId);
+        expect(queued.single.recipientWrapStatus, OutgoingWrapStatus.cancelled);
+        expect(wrapsTo(owner), isEmpty);
+      });
+
       test('publishes no second sender copy when a retry published it before '
           'the batch was cancelled', () async {
         final others = members.take(2).toList();
