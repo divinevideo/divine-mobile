@@ -30,9 +30,13 @@ class _ObservedService extends CuratedListService {
   String? lastRemovalCoordinate;
 
   @override
-  Future<bool> removeVideoFromList(String listId, String videoId) {
+  Future<bool> removeVideoFromList(
+    String listId,
+    String videoId, {
+    bool allowSeries = true,
+  }) {
     lastRemovalCoordinate = listId;
-    return super.removeVideoFromList(listId, videoId);
+    return super.removeVideoFromList(listId, videoId, allowSeries: allowSeries);
   }
 }
 

@@ -33,6 +33,20 @@ void main() {
       );
       expect(merged!.videoEventIds, [b, c]);
     });
+    test('a membership edit waits for review if the list became a series', () {
+      final series = base.copyWith(
+        preservedTags: const [
+          ['series', 'true'],
+        ],
+      );
+
+      expect(replay(base.copyWith(videoEventIds: [a, b, c]), series), isNull);
+
+      final renamed = replay(base.copyWith(name: 'Renamed'), series)!;
+      expect(renamed.name, 'Renamed');
+      expect(renamed.isSeries, isTrue);
+      expect(renamed.videoEventIds, [a, b]);
+    });
     test('an unchanged local member never resurrects a remote deletion', () {
       final merged = replay(
         base.copyWith(name: 'Renamed'),

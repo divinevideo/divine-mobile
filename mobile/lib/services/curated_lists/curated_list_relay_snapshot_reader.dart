@@ -3,14 +3,13 @@
 
 import 'dart:async';
 
-import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Relay events paired with whether the subscription completed normally.
+/// Relay events paired with whether the read completed normally.
 final class CuratedListRelaySnapshot {
   /// Captures a read without implying that partial events authorize writes.
   CuratedListRelaySnapshot({
@@ -21,7 +20,9 @@ final class CuratedListRelaySnapshot {
   /// The events received before completion, error, or the timeout.
   final List<Event> events;
 
-  /// True only after relay EOSE; teardown, cancellation and errors are incomplete.
+  /// True only once the read finished: relay EOSE for an account read, every
+  /// relay's answer for a list about to be replaced. Teardown, cancellation
+  /// and errors are incomplete.
   final bool completedNormally;
 }
 
@@ -36,40 +37,6 @@ final class CuratedListRelaySnapshotReader {
     : _nostrClient = nostrClient;
 
   final NostrClient _nostrClient;
-
-  /// Reads one replacement source directly from every serving relay.
-  /// Incomplete answers and cancellation never grant mutation authority.
-  Future<CuratedListRelaySnapshot> readForMutation({
-    required String ownerPubkey,
-    required String listId,
-    required Duration timeout,
-    required Future<void> cancelled,
-  }) async {
-    final result = await Future.any([
-      _nostrClient.queryEventsDetailed(
-        [
-          Filter(authors: [ownerPubkey], kinds: const [30005], d: [listId]),
-        ],
-        useCache: false,
-        requireAllRelaysSettled: true,
-        timeout: timeout,
-      ),
-      cancelled.then((_) => null),
-    ]);
-    return CuratedListRelaySnapshot(
-      events: result == null
-          ? const []
-          : result.events
-                .where(
-                  (event) =>
-                      event.kind == 30005 &&
-                      event.pubkey == ownerPubkey &&
-                      CuratedListConverter.extractDTag(event) == listId,
-                )
-                .toList(),
-      completedNormally: result != null && !result.timedOut && !result.noRelays,
-    );
-  }
 
   /// Cancels the subscription on every exit and retains partial events.
   Future<CuratedListRelaySnapshot> read({

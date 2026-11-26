@@ -26,6 +26,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 import '../../helpers/completed_owned_list_snapshot.dart';
+import '../../helpers/curated_list_publish_stubs.dart';
 import '../../helpers/signed_curated_list.dart';
 
 class _Client extends Mock implements NostrClient {}
@@ -89,16 +90,22 @@ class _Harness {
     when(() => client.signer).thenReturn(signer);
     registerFallbackValue(Duration.zero);
     when(
-      () => client.queryEventsDetailed(
-        any(),
-        useCache: false,
-        requireAllRelaysSettled: true,
+      () => client.readCurrentVersion(
+        kind: any(named: 'kind'),
+        pubkey: any(named: 'pubkey'),
+        dTag: any(named: 'dTag'),
         timeout: any(named: 'timeout'),
       ),
     ).thenAnswer((invocation) async {
       var completed = false;
       final events = <Event>[];
-      final filters = invocation.positionalArguments.single as List<Filter>;
+      final filters = [
+        Filter(
+          kinds: [invocation.namedArguments[#kind] as int],
+          authors: [invocation.namedArguments[#pubkey] as String],
+          d: [invocation.namedArguments[#dTag] as String],
+        ),
+      ];
       try {
         await for (final event
             in relay(
@@ -121,7 +128,11 @@ class _Harness {
       } on Object {
         completed = false;
       }
-      return (events: events, timedOut: !completed, noRelays: false);
+      return currentVersionFromRelays((
+        events: events,
+        timedOut: !completed,
+        noRelays: false,
+      ), invocation);
     });
     when(
       () => client.subscribe(
@@ -977,6 +988,60 @@ void main() {
         expect(h.signed.single.isSigned, isTrue);
       },
     );
+
+    for (final isPrivate in [false, true]) {
+      test(
+        'edits a default while keeping a non-video address (private=$isPrivate)',
+        () async {
+          final article = [
+            'a',
+            '30023:$owner:article:slug',
+            'wss://example.com',
+          ];
+          final items = [
+            ['e', _video],
+            article,
+          ];
+          final event = isPrivate
+              ? await _privateEvent(signer, owner, plaintext: jsonEncode(items))
+              : Event(
+                  owner,
+                  30005,
+                  [
+                    ['d', _defaultId],
+                    ['title', 'Verified My List'],
+                    ...items,
+                  ],
+                  '',
+                  createdAt: 1700000000,
+                );
+          if (!isPrivate) await signer.signEvent(event);
+          h.relay = (invocation) =>
+              completedOwnedListSnapshot(invocation, [event]);
+          await h.settle();
+          expect(h.service.getDefaultList()?.videoEventIds, [_video]);
+
+          expect(
+            await h.service.removeVideoFromList(_defaultId, _video),
+            isTrue,
+          );
+          final signed = h.signed.single;
+          final clearItems = signed.tags.where(
+            (tag) => tag.isNotEmpty && (tag.first == 'a' || tag.first == 'e'),
+          );
+          if (isPrivate) {
+            expect(clearItems, isEmpty);
+            expect(
+              jsonDecode((await signer.nip44Decrypt(owner, signed.content))!),
+              [article],
+            );
+          } else {
+            expect(clearItems, [article]);
+          }
+        },
+      );
+    }
+
     test(
       'unsupported public item reference keeps the membership opaque',
       () async {

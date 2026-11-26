@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:models/models.dart';
 import 'package:test/test.dart';
 
@@ -366,6 +368,93 @@ void main() {
         final original = createSubject();
         final roundtripped = CuratedList.fromJson(original.toJson());
         expect(roundtripped, equals(original));
+      });
+    });
+
+    group('preserved tags', () {
+      const series = [
+        ['series', 'true'],
+        ['L', 'video.divine'],
+      ];
+      const sealed = [
+        [
+          'p',
+          'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+        ],
+      ];
+
+      test('older JSON has none, and an empty set stays out of JSON', () {
+        final json = createSubject().toJson();
+
+        expect(json.containsKey('preservedTags'), isFalse);
+        expect(json.containsKey('preservedPrivateTags'), isFalse);
+        final list = CuratedList.fromJson(json);
+        expect(list.preservedTags, isEmpty);
+        expect(list.preservedPrivateTags, isEmpty);
+      });
+
+      test('survive encoded JSON, copies and equality', () {
+        final list = createSubject().copyWith(
+          preservedTags: series,
+          preservedPrivateTags: sealed,
+        );
+
+        final stored = CuratedList.fromJson(
+          jsonDecode(jsonEncode(list.toJson())) as Map<String, dynamic>,
+        );
+
+        expect(stored.preservedTags, series);
+        expect(stored.preservedPrivateTags, sealed);
+        expect(stored, equals(list));
+        expect(stored.copyWith(name: 'Renamed').preservedTags, series);
+        expect(
+          stored,
+          isNot(equals(stored.copyWith(preservedPrivateTags: const []))),
+        );
+      });
+
+      test('an edit draft keeps them in both snapshots', () {
+        final list = createSubject().copyWith(preservedTags: series);
+        final draft = CuratedListEditDraft(
+          baseline: list,
+          desired: list.copyWith(name: 'Renamed'),
+        );
+
+        final stored = CuratedListEditDraft.fromJson(
+          jsonDecode(jsonEncode(draft.toJson())) as Map<String, dynamic>,
+        );
+
+        expect(stored.baseline.preservedTags, series);
+        expect(stored.desired.preservedTags, series);
+      });
+
+      test('isSeries reads the series marker on either side', () {
+        expect(createSubject().isSeries, isFalse);
+        expect(
+          createSubject().copyWith(preservedTags: series).isSeries,
+          isTrue,
+        );
+        expect(
+          createSubject()
+              .copyWith(
+                preservedPrivateTags: const [
+                  ['series', 'true'],
+                ],
+              )
+              .isSeries,
+          isTrue,
+        );
+        expect(
+          createSubject()
+              .copyWith(
+                preservedTags: const [
+                  ['series', 'false'],
+                  ['series'],
+                ],
+              )
+              .isSeries,
+          isFalse,
+        );
       });
     });
 

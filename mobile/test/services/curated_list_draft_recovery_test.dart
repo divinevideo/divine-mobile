@@ -12,6 +12,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/blocs/curated_list_info/curated_list_info_cubit.dart';
+import 'package:openvine/blocs/select_list/select_list_cubit.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_relay_evidence.dart';
@@ -53,13 +54,13 @@ void main() {
 
   void answer(Future<_Read> Function() read) {
     when(
-      () => client.queryEventsDetailed(
-        any(),
-        useCache: false,
-        requireAllRelaysSettled: true,
+      () => client.readCurrentVersion(
+        kind: 30005,
+        pubkey: any(named: 'pubkey'),
+        dTag: any(named: 'dTag'),
         timeout: const Duration(seconds: 10),
       ),
-    ).thenAnswer((_) => read());
+    ).thenAnswer((i) async => currentVersionFromRelays(await read(), i));
   }
 
   List<String> publishedVideos() => published.single.tags
@@ -768,6 +769,178 @@ void main() {
         isTrue,
       );
       expect(publishedVideos(), [firstVideo, remoteVideo]);
+    });
+
+    for (final isPublic in [true, false]) {
+      test(
+        'renaming a cached ${isPublic ? 'public' : 'private'} list '
+        'recovers tags from the same relay revision',
+        () async {
+          final signer = LocalNostrSigner('1'.padLeft(64, '0'));
+          const marker = ['series', 'true'];
+          final person = ['p', 'e' * 64];
+          final legacy = cached.copyWith(isPublic: isPublic);
+          remote = await signedCuratedListFixture(
+            legacy.copyWith(
+              preservedTags: [marker],
+              preservedPrivateTags: [if (!isPublic) person],
+            ),
+            signer,
+          );
+          await reopen(legacy.copyWith(nostrEventId: remote.id));
+
+          expect(
+            await service.updateList(listId: cached.id, name: 'New name'),
+            isTrue,
+          );
+
+          final event = published.single;
+          expect(event.tags, anyElement(equals(marker)));
+          if (!isPublic) {
+            expect(event.tags, isNot(anyElement(equals(person))));
+            final sealed = await signer.nip44Decrypt(
+              signedListFixtureOwner,
+              event.content,
+            );
+            expect(jsonDecode(sealed!), anyElement(equals(person)));
+          }
+        },
+      );
+    }
+
+    group('picker selections made before a list becomes a series', () {
+      late SelectListCubit picker;
+
+      setUp(() async {
+        remote = await signedCuratedListFixture(
+          cached.copyWith(
+            updatedAt: cached.updatedAt.add(const Duration(seconds: 10)),
+            preservedTags: const [
+              ['series', 'true'],
+            ],
+          ),
+          LocalNostrSigner('1'.padLeft(64, '0')),
+        );
+        picker = SelectListCubit(
+          service: service,
+          videoEventId: addedVideo,
+          currentOwnerPubkey: () => signedListFixtureOwner,
+        );
+        addTearDown(picker.close);
+        expect(picker.state.lists.map((list) => list.id), contains(cached.id));
+        picker.toggled(cached.id);
+        expect(picker.state.listIdsToAdd, contains(cached.id));
+      });
+
+      test(
+        'a fresh series revision prevents the add from publishing',
+        () async {
+          expect(await picker.submitted(), SelectListStatus.failure);
+          expect(service.getListById(cached.id)!.isSeries, isTrue);
+          expect(published, isEmpty);
+        },
+      );
+
+      test(
+        'retry holds an offline add when the list became a series',
+        () async {
+          answer(
+            () async => (events: <Event>[], timedOut: true, noRelays: false),
+          );
+
+          await picker.submitted();
+
+          final draft = service.getListById(cached.id)!;
+          expect(
+            draft.localEditDraft?.desired.videoEventIds,
+            contains(addedVideo),
+          );
+          expect(published, isEmpty);
+          answer(
+            () async => (events: [remote], timedOut: false, noRelays: false),
+          );
+
+          expect(await service.retryListSync(cached.id), isFalse);
+          expect(service.getListById(cached.id)!.hasRelayConflict, isTrue);
+          expect(published, isEmpty);
+        },
+      );
+    });
+
+    group('tags only the relay copy has', () {
+      const preserved = [
+        ['series', 'true'],
+        ['L', 'video.divine'],
+        ['l', 'series', 'video.divine'],
+      ];
+      final person = 'e' * 64;
+
+      setUp(() async {
+        remote = await signedCuratedListFixture(
+          cached.copyWith(
+            videoEventIds: [firstVideo, remoteVideo],
+            updatedAt: cached.updatedAt.add(const Duration(seconds: 10)),
+            preservedTags: [
+              ...preserved,
+              ['p', person],
+            ],
+          ),
+          LocalNostrSigner('1'.padLeft(64, '0')),
+        );
+      });
+
+      final edits = <String, Future<bool> Function(CuratedListService)>{
+        'renaming': (service) =>
+            service.updateList(listId: 'playlist', name: 'New name'),
+        'describing': (service) =>
+            service.updateList(listId: 'playlist', description: 'Episodes'),
+        'adding': (service) => service.addVideoToList('playlist', addedVideo),
+        'removing': (service) =>
+            service.removeVideoFromList('playlist', firstVideo),
+        'reordering': (service) =>
+            service.reorderVideos('playlist', [remoteVideo, firstVideo]),
+      };
+      for (final MapEntry(key: name, value: edit) in edits.entries) {
+        test('survive $name', () async {
+          expect(await edit(service), isTrue);
+
+          final tags = published.single.tags;
+          expect(
+            tags,
+            containsAllInOrder([
+              ...preserved,
+              ['p', person],
+            ]),
+          );
+          expect(tags.where((tag) => tag.first == 'series'), hasLength(1));
+          expect(
+            tags.indexWhere((tag) => tag.first == 'series'),
+            greaterThan(tags.indexWhere((tag) => tag.first == 'playorder')),
+          );
+        });
+      }
+
+      test(
+        'stay public when the list is made private, people sealed',
+        () async {
+          expect(
+            await service.updateList(listId: cached.id, isPublic: false),
+            isTrue,
+          );
+
+          final event = published.firstWhere((event) => event.kind == 30005);
+          expect(event.tags, containsAllInOrder(preserved));
+          expect(event.tags.any((tag) => tag.first == 'p'), isFalse);
+          final sealed = await LocalNostrSigner(
+            '1'.padLeft(64, '0'),
+          ).nip44Decrypt(signedListFixtureOwner, event.content);
+          expect(jsonDecode(sealed!), [
+            ['e', firstVideo],
+            ['e', remoteVideo],
+            ['p', person],
+          ]);
+        },
+      );
     });
 
     test(

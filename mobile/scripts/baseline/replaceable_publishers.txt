@@ -21,7 +21,6 @@ lib/services/challenges/challenge_app_session.dart	? # review: signs challenge e
 lib/services/collaborator_response_service.dart	34238 # review: writes a whole kind 34238 acceptance at d=<video address> from the invite; nothing to carry over
 lib/services/content_reporting_service.dart	? # review: signs a queued report whose kind (1984) was fixed when it was built; not replaceable
 lib/services/corrupted_video_repair_service.dart	34236 # fixed site: one-time repair republishes own kind 34236 events from a requireAllRelaysSettled scan and skips an incomplete one
-lib/services/curated_list_relay_gateway.dart	30005 # fixed site: the settled read sits in curated_list_relay_snapshot_reader.dart; the readCurrentVersion call has to sit here, where the list is signed (#11317)
 lib/services/scheduled_post_coordinator.dart	? # review: re-signs a held scheduled video with a new created_at, keeping the kind and body it was scheduled with; reads no relay
 lib/services/video_event_publisher.dart	39307 # open: #9003 / #11251 (subtitle track)
 packages/account_state_repository/lib/src/account_state_repository.dart	30078 # fixed site: merges encrypted kind 30078 account state from a requireAllRelaysSettled read and refuses an incomplete one

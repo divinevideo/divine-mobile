@@ -156,8 +156,16 @@ class CuratedListRelayMerger {
     );
 
     if (existingListIndex != -1) {
-      // Update existing list if relay version is newer
       final existingList = lists[existingListIndex];
+      if (existingList.nostrEventId == event.id) {
+        // A row cached by an older app may lack the tags that this same
+        // signed revision carries. Recover them without replacing local state.
+        lists[existingListIndex] = existingList.copyWith(
+          preservedTags: curatedList.preservedTags,
+          preservedPrivateTags: curatedList.preservedPrivateTags,
+        );
+        return;
+      }
       final isSameOwner =
           existingList.pubkey == event.pubkey ||
           (existingList.pubkey == null &&
