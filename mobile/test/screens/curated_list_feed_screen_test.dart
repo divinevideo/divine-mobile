@@ -1565,9 +1565,24 @@ void main() {
       testWidgets('adds late parts without changing the playing video', (
         tester,
       ) async {
+        final earlier = part(1).copyWith(
+          eventKind: 34235,
+          addressableDTag: 'chapter',
+          vineId: 'chapter',
+        );
+        final selected = part(2).copyWith(
+          eventKind: 34236,
+          addressableDTag: 'chapter',
+          vineId: 'chapter',
+        );
+        final list = [
+          '34235:$author:chapter',
+          '34236:$author:chapter',
+          references.last,
+        ];
         final videos = StreamController<List<VideoEvent>>();
         addTearDown(videos.close);
-        registerFallbackValue(part(1));
+        registerFallbackValue(earlier);
         final videoService = createMockVideoEventService();
         when(() => videoService.shouldHideVideo(any())).thenReturn(false);
         final volume = _MockVideoVolumeCubit();
@@ -1576,37 +1591,44 @@ void main() {
           BlocProvider<VideoVolumeCubit>.value(
             value: volume,
             child: buildSubject(
-              videoIds: references,
+              videoIds: list,
               initialListIndex: 1,
               overrideVideoEvents: false,
               extraOverrides: [
                 videoEventServiceProvider.overrideWithValue(videoService),
                 videoEventsByIdsProvider(
-                  references,
+                  list,
                 ).overrideWith((ref) => videos.stream),
               ],
             ),
           ),
         );
-        videos.add([part(2)]);
+        videos.add([selected]);
         await tester.pump();
         await tester.pump();
 
         FullscreenFeedBloc playback() => tester
             .element(find.byType(FullscreenFeedContent))
             .read<FullscreenFeedBloc>();
-        expect(playback().state.currentVideo?.id, part(2).id);
+        expect(playback().state.currentVideo?.id, selected.id);
 
-        videos.add([part(1), part(2), part(3)]);
+        videos.add([earlier, selected, part(3)]);
         await tester.pump();
         await tester.pump();
 
         expect(playback().state.videos.map((video) => video.id), [
-          part(1).id,
-          part(2).id,
+          earlier.id,
+          selected.id,
           part(3).id,
         ]);
-        expect(playback().state.currentVideo?.id, part(2).id);
+        expect(playback().state.currentVideo?.id, selected.id);
+
+        final revised = selected.copyWith(id: 'part-2-revision');
+        videos.add([earlier, revised, part(3)]);
+        await tester.pump();
+        await tester.pump();
+
+        expect(playback().state.currentVideo?.id, revised.id);
       });
 
       testWidgets('backing out of the requested video lands on the grid', (
