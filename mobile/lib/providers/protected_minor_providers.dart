@@ -147,21 +147,83 @@ final isProtectedMinorProvider = Provider<bool>((ref) {
   return store.isProtectedMinorFor(pubkey);
 });
 
+class _AuthSessionResetCounter {
+  int resets = 0;
+}
+
+/// Counts transitions away from [AuthState.authenticated] across the container
+/// lifetime, even when no widget is watching the intermediate frame.
+final _authSessionResetCounterProvider = Provider<_AuthSessionResetCounter>((
+  ref,
+) {
+  final counter = _AuthSessionResetCounter();
+  final subscription = ref.container.listen<AuthState>(
+    currentAuthStateProvider,
+    (_, next) {
+      if (next != AuthState.authenticated) {
+        counter.resets++;
+      }
+    },
+  );
+  ref.onDispose(subscription.close);
+  return counter;
+});
+
+class _ConfirmedNotProtectedMinorNotifier
+    extends Notifier<({int resetCount, bool confirmed})> {
+  @override
+  ({int resetCount, bool confirmed}) build() {
+    final counter = ref.read(_authSessionResetCounterProvider);
+    final authState = ref.watch(currentAuthStateProvider);
+    final live = ref.watch(protectedMinorStatusProvider);
+    final resetCount = counter.resets;
+    if (authState != AuthState.authenticated) {
+      return (resetCount: resetCount, confirmed: false);
+    }
+    if (live is AsyncLoading<ProtectedMinorStatus>) {
+      // Preserve an in-session confirmation across same-account resume
+      // refreshes (AccountStateResumeRefresher) so active feeds do not flicker
+      // or tear down while Keycast re-validates. Cold start, logout, and
+      // account switches increment resetCount or start unconfirmed and stay
+      // fail-closed.
+      final previous = stateOrNull;
+      final sameAuthSession =
+          previous != null && previous.resetCount == resetCount;
+      return (
+        resetCount: resetCount,
+        confirmed: sameAuthSession && previous.confirmed,
+      );
+    }
+    final trusted = trustedProtectedMinorStatus(
+      authenticated: true,
+      live: live,
+    );
+    return (
+      resetCount: resetCount,
+      confirmed: trusted?.kind == ProtectedMinorStatusKind.notProtected,
+    );
+  }
+}
+
+final _confirmedNotProtectedMinorSessionProvider =
+    NotifierProvider<
+      _ConfirmedNotProtectedMinorNotifier,
+      ({int resetCount, bool confirmed})
+    >(_ConfirmedNotProtectedMinorNotifier.new);
+
 /// Whether the current account is freshly confirmed as not a protected minor.
 ///
 /// Features that personalize from private viewing data require this positive
-/// signal. Unlike [isProtectedMinorProvider], an unauthenticated session, a
-/// loading or failed lookup, an unknown status (for example a non-OAuth signer
-/// session with no Keycast token) and a protected status all read as `false`,
-/// so callers fail closed until an authenticated Keycast check says otherwise.
-final confirmedNotProtectedMinorProvider = Provider<bool>((ref) {
-  final authState = ref.watch(currentAuthStateProvider);
-  final trusted = trustedProtectedMinorStatus(
-    authenticated: authState == AuthState.authenticated,
-    live: ref.watch(protectedMinorStatusProvider),
-  );
-  return trusted?.kind == ProtectedMinorStatusKind.notProtected;
-});
+/// signal. Unlike [isProtectedMinorProvider], an unauthenticated session, an
+/// initial loading or failed lookup, an unknown status (for example a
+/// non-OAuth signer session with no Keycast token) and a protected status all
+/// read as `false`, so callers fail closed until an authenticated Keycast
+/// check says otherwise. A same-account resume refresh preserves an existing
+/// in-session confirmation while reloading, and immediately closes if the
+/// refresh resolves protected, unknown, or fails.
+final confirmedNotProtectedMinorProvider = Provider<bool>(
+  (ref) => ref.watch(_confirmedNotProtectedMinorSessionProvider).confirmed,
+);
 
 /// Whether a Keycast-backed protected-minor verdict can apply to the current
 /// account. Returns `true` only for OAuth-authenticated accounts and for

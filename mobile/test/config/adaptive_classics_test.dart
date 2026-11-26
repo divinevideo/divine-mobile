@@ -11,6 +11,17 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 
+class _MutableAuthStateNotifier extends CurrentAuthState {
+  _MutableAuthStateNotifier(this._initial);
+
+  final AuthState _initial;
+
+  @override
+  AuthState build() => _initial;
+
+  void set(AuthState next) => state = next;
+}
+
 ProviderContainer _container({
   required AuthState authState,
   required Future<ProtectedMinorStatus> Function() status,
@@ -132,6 +143,85 @@ void main() {
           await _settledGate(container, confirmedNotProtectedMinorProvider),
           isFalse,
         );
+      },
+    );
+
+    test(
+      'preserves confirmation during a same-account refresh and closes if the '
+      'refresh turns protected or fails',
+      () async {
+        var nextStatus = Completer<ProtectedMinorStatus>()
+          ..complete(ProtectedMinorStatus.notProtected());
+        final container = _container(
+          authState: AuthState.authenticated,
+          status: () => nextStatus.future,
+        );
+        expect(
+          await _settledGate(container, confirmedNotProtectedMinorProvider),
+          isTrue,
+        );
+
+        // Simulate a 15-minute resume invalidation while still authenticated.
+        nextStatus = Completer<ProtectedMinorStatus>();
+        container.invalidate(protectedMinorStatusProvider);
+        expect(container.read(confirmedNotProtectedMinorProvider), isTrue);
+
+        // A server-side flip to protected closes the gate immediately.
+        nextStatus.complete(ProtectedMinorStatus.protected());
+        await container.read(protectedMinorStatusProvider.future);
+        expect(container.read(confirmedNotProtectedMinorProvider), isFalse);
+
+        // Confirm again, then fail a refresh: must fail closed.
+        nextStatus = Completer<ProtectedMinorStatus>()
+          ..complete(ProtectedMinorStatus.notProtected());
+        container.invalidate(protectedMinorStatusProvider);
+        await container.read(protectedMinorStatusProvider.future);
+        expect(container.read(confirmedNotProtectedMinorProvider), isTrue);
+
+        nextStatus = Completer<ProtectedMinorStatus>();
+        container.invalidate(protectedMinorStatusProvider);
+        expect(container.read(confirmedNotProtectedMinorProvider), isTrue);
+        nextStatus.completeError(StateError('keycast timeout'));
+        try {
+          await container.read(protectedMinorStatusProvider.future);
+        } on Object {
+          // Expected lookup failure.
+        }
+        expect(container.read(confirmedNotProtectedMinorProvider), isFalse);
+      },
+    );
+
+    test(
+      'resets confirmation across an account switch even without an active '
+      'watcher during the unauthenticated frame',
+      () async {
+        final authNotifier = _MutableAuthStateNotifier(AuthState.authenticated);
+        var nextStatus = Completer<ProtectedMinorStatus>()
+          ..complete(ProtectedMinorStatus.notProtected());
+        final container = ProviderContainer(
+          overrides: [
+            currentAuthStateProvider.overrideWith(() => authNotifier),
+            protectedMinorStatusProvider.overrideWith((ref) {
+              final state = ref.watch(currentAuthStateProvider);
+              if (state != AuthState.authenticated) {
+                return Future.value(ProtectedMinorStatus.notProtected());
+              }
+              return nextStatus.future;
+            }),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await container.read(protectedMinorStatusProvider.future);
+        expect(container.read(confirmedNotProtectedMinorProvider), isTrue);
+
+        // Account A logs out and Account B begins authenticating while nobody
+        // reads confirmedNotProtectedMinorProvider during unauthenticated.
+        nextStatus = Completer<ProtectedMinorStatus>();
+        authNotifier.set(AuthState.unauthenticated);
+        authNotifier.set(AuthState.authenticated);
+
+        expect(container.read(confirmedNotProtectedMinorProvider), isFalse);
       },
     );
   });
