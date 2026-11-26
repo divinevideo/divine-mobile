@@ -1,5 +1,6 @@
-// ABOUTME: #10016 — a group message and a group reaction each publish the
-// ABOUTME: sender's own copy once, not once per member.
+// ABOUTME: #10016 — a group message, a group delete-for-everyone and a group
+// ABOUTME: reaction each publish the sender's own copy once, not once per
+// ABOUTME: member.
 
 import 'dart:convert';
 
@@ -35,6 +36,10 @@ const _advertisedInbox = 'wss://inbox.example.com';
 
 const _reactedMessageId =
     '1111111111111111111111111111111111111111111111111111111111111111';
+const _retractedMessageId =
+    '2222222222222222222222222222222222222222222222222222222222222222';
+const _retractedMessageWrapId =
+    '3333333333333333333333333333333333333333333333333333333333333333';
 
 void main() {
   setUpAll(() {
@@ -307,6 +312,44 @@ void main() {
         expect(wrapsTo(members.first), hasLength(1));
         expect(wrapsTo(owner), isEmpty);
       });
+    });
+
+    group('a delete-for-everyone', () {
+      for (final size in [2, 3, 4, 10]) {
+        test('in a conversation of $size publishes one own copy and one wrap '
+            'per member', () async {
+          final others = members.take(size - 1).toList();
+          final conversationId = await seedRoom(others);
+          await DirectMessagesDao(db).insertMessage(
+            id: _retractedMessageId,
+            conversationId: conversationId,
+            senderPubkey: owner,
+            content: 'a message to delete for everyone',
+            createdAt: 1700000000,
+            giftWrapId: _retractedMessageWrapId,
+            ownerPubkey: owner,
+          );
+
+          await repository.deleteMessageForEveryone(_retractedMessageId);
+          for (
+            var turn = 0;
+            turn < 400 &&
+                (others.any((pubkey) => wrapsTo(pubkey).isEmpty) ||
+                    wrapsTo(owner).isEmpty);
+            turn++
+          ) {
+            await pumpEventQueue();
+          }
+          await pumpEventQueue(times: 100);
+
+          for (final member in others) {
+            expect(wrapsTo(member), hasLength(1), reason: 'member $member');
+          }
+          expect(wrapsTo(owner), hasLength(1));
+          final ownCopy = await openAsOwner(wrapsTo(owner).single);
+          expect(ownCopy?.kind, EventKind.eventDeletion);
+        });
+      }
     });
 
     group('a reaction (the shape #8446 shipped)', () {

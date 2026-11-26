@@ -11670,6 +11670,37 @@ class DmRepository {
     return outcome;
   }
 
+  /// Publish the sender's own copy of retraction [deletion], once for its
+  /// whole fan-out (#10016). Never throws: a copy that fails, throws or
+  /// outlives [_messagePublishTimeout] is logged and dropped.
+  Future<void> _publishRetractionOwnCopy({
+    required Event deletion,
+    required List<String>? targetRelays,
+    required Event? prebuiltSelfWrap,
+  }) async {
+    try {
+      final published = await _messageService!
+          .publishSelfWrap(
+            rumorEvent: deletion,
+            targetRelays: targetRelays,
+            prebuiltSelfWrap: prebuiltSelfWrap,
+          )
+          .timeout(_messagePublishTimeout);
+      if (!published.success) {
+        Log.warning(
+          'Own copy of retraction ${deletion.id} not published: '
+          '${published.error}',
+          category: LogCategory.system,
+        );
+      }
+    } on Object catch (e) {
+      Log.warning(
+        'Own copy of retraction ${deletion.id} failed: $e',
+        category: LogCategory.system,
+      );
+    }
+  }
+
   /// Wrap [deletion] to each recipient in turn.
   ///
   /// Terminal success only when EVERY recipient's wrap lands. One row holds
@@ -11710,10 +11741,15 @@ class DmRepository {
   /// with the rules `_fanOutRumor` applies (#10012): nothing more to that
   /// recipient while their inbox stays unreadable, the held wrap as their
   /// delivery once they advertise no inbox, a new wrap once it is found. An
-  /// attempt in which any recipient's inbox is unreadable is held, so no
-  /// recipient's send publishes the sender's copy then; the attempt that
-  /// delivers publishes one per member, as every delivered retraction does
-  /// (#10016), a member it sends nothing included.
+  /// attempt in which any recipient's inbox is unreadable is held, so it
+  /// publishes no copy for the sender then.
+  ///
+  /// The sender's own copy is published once per fan-out, after every
+  /// recipient, when at least one recipient's send reached the point where it
+  /// is due or a recipient counts as delivered with no send, as a reaction's
+  /// is (#8446). It used to be one per recipient (#10016). A copy handed over
+  /// by a send that outlived its cap, after this returned, is published
+  /// detached. Its outcome never changes the result.
   Future<({NIP17SendResult result, bool anyRecipientAccepted})>
   _fanOutDeletion({
     required String rumorId,
@@ -11749,6 +11785,34 @@ class DmRepository {
     final failures = <NIP17SendFailure>[];
     // The members this attempt delivered to, and the wrap each has (#10012).
     final deliveredWraps = <String, String>{};
+    var ownCopyDue = false;
+    var withheldOwnCopy = false;
+    var returned = false;
+    Event? prebuiltOwnCopy;
+    Future<void> publishOwnCopy() => _publishRetractionOwnCopy(
+      deletion: deletion,
+      targetRelays: selfWrapTargets,
+      prebuiltSelfWrap: prebuiltOwnCopy,
+    );
+    void onOwnCopyDue(Event? prebuiltSelfWrap) {
+      if (held) {
+        if (!withheldOwnCopy) {
+          withheldOwnCopy = true;
+          Log.info(
+            'Withholding the own copy of rumor ${deletion.id}: a recipient '
+            'inbox is unreadable, so this attempt is held, not delivered '
+            '(#10012)',
+            category: LogCategory.system,
+          );
+        }
+        return;
+      }
+      prebuiltOwnCopy ??= prebuiltSelfWrap;
+      if (ownCopyDue) return;
+      ownCopyDue = true;
+      if (returned) unawaited(publishOwnCopy());
+    }
+
     for (final recipient in recipients) {
       final inbox = inboxByRecipient[recipient];
       final heldWrap = heldWraps[recipient];
@@ -11762,22 +11826,9 @@ class DmRepository {
       );
       if (unsent != null) {
         result = unsent;
-        // Settled on the held wrap, or delivered by an earlier attempt:
-        // publish the copy its send would have.
-        if (unsent.success && !held) {
-          final ownCopy = await _messageService!.publishSelfWrap(
-            rumorEvent: deletion,
-            targetRelays: selfWrapTargets,
-          );
-          if (!ownCopy.success) {
-            Log.warning(
-              'Own copy of retraction ${deletion.id} not published for '
-              '${pubkeyForLogs(recipient)}, who has wrap '
-              '${unsent.messageEventId} with no send: ${ownCopy.error}',
-              category: LogCategory.system,
-            );
-          }
-        }
+        // Settled on the held wrap, or delivered by an earlier attempt: no
+        // send ran to hand the own copy over.
+        if (unsent.success) onOwnCopyDue(null);
       } else {
         final published = await _messageService!
             .sendRumor(
@@ -11786,14 +11837,7 @@ class DmRepository {
               targetRelays: inbox?.relays,
               selfWrapTargetRelays: selfWrapTargets,
               awaitRecipientOk: true,
-              onSelfWrapDue: held
-                  ? (_) => Log.info(
-                      'Withholding the self-wrap for rumor ${deletion.id}: '
-                      'a recipient inbox is unreadable, so this attempt is '
-                      'held, not delivered (#10012)',
-                      category: LogCategory.system,
-                    )
-                  : null,
+              onSelfWrapDue: onOwnCopyDue,
             )
             .timeout(
               _messagePublishTimeout,
@@ -11840,6 +11884,8 @@ class DmRepository {
         wraps: deliveredWraps,
       );
     }
+    if (ownCopyDue) await publishOwnCopy();
+    returned = true;
     final anyRecipientAccepted = lastSuccess != null;
     if (failures.isEmpty) {
       return (
