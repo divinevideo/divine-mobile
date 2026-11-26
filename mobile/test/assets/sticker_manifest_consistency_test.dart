@@ -1,11 +1,11 @@
-// ABOUTME: Guards the shipped sticker assets: every locale strings file must
-// ABOUTME: cover exactly the structural manifest's stickers, with no blanks —
-// ABOUTME: so a hand-edited translation can never silently drift or go missing,
-// ABOUTME: and no two stickers may point at identical image files.
+// ABOUTME: Guards the shipped sticker assets: the picker offers exactly the
+// ABOUTME: DivineSticker set, every locale strings file covers its stickers
+// ABOUTME: with no blanks, and no two stickers point at identical image files.
 
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/l10n/l10n.dart';
 
@@ -46,6 +46,24 @@ void main() {
       }
     });
 
+    test('offers exactly the DivineSticker set', () {
+      // The OpenMoji SVGs stay bundled for drafts made before the move, but
+      // the picker must not offer them again, and a sticker added to the
+      // design set belongs in the picker too.
+      expect(
+        manifestKeys,
+        equals({
+          for (final sticker in DivineStickerName.values) sticker.assetPath,
+        }),
+      );
+    });
+
+    test('every sticker points at a bundled file', () {
+      for (final key in manifestKeys) {
+        expect(File(key).existsSync(), isTrue, reason: 'Missing $key.');
+      }
+    });
+
     test('no two stickers draw the same image', () {
       final manifest =
           json.decode(File(manifestPath).readAsStringSync()) as List<dynamic>;
@@ -54,7 +72,10 @@ void main() {
         final assetPath = (entry as Map<String, dynamic>)['assetPath'];
         if (assetPath is! String) continue;
         pathsByImage
-            .putIfAbsent(File(assetPath).readAsStringSync(), () => [])
+            .putIfAbsent(
+              base64.encode(File(assetPath).readAsBytesSync()),
+              () => [],
+            )
             .add(assetPath);
       }
 

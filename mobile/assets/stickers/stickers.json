@@ -1,274 +1,722 @@
 [
   {
-    "assetPath": "assets/stickers/adjustable_dumbbell.svg",
-    "tags": ["dumbbell", "fitness", "gym", "workout", "exercise", "weight"]
+    "assetPath": "assets/divine_stickers/ac_remote.webp",
+    "tags": ["remote", "air conditioning", "ac", "cold", "summer", "cool"]
   },
   {
-    "assetPath": "assets/stickers/alert.svg",
+    "assetPath": "assets/divine_stickers/alert.webp",
     "tags": ["alert", "warning", "attention", "notification", "danger", "exclamation"]
   },
   {
-    "assetPath": "assets/stickers/angry_cat.svg",
-    "tags": ["cat", "angry", "pet", "animal", "mad", "grumpy"]
+    "assetPath": "assets/divine_stickers/ashtray.webp",
+    "tags": ["ashtray", "cigarette", "smoking", "smoke", "ash", "bad habit"]
   },
   {
-    "assetPath": "assets/stickers/avocado.svg",
+    "assetPath": "assets/divine_stickers/avocado.webp",
     "tags": ["avocado", "food", "healthy", "green", "fruit", "vegetable"]
   },
   {
-    "assetPath": "assets/stickers/ballon_dog.svg",
+    "assetPath": "assets/divine_stickers/baby_bottle.webp",
+    "tags": ["baby", "bottle", "milk", "infant", "feeding", "parent"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/baby_car_seat.webp",
+    "tags": ["baby", "car seat", "infant", "parent", "family", "travel"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/balloon_dog.webp",
     "tags": ["balloon", "dog", "party", "art", "fun", "colorful"]
   },
   {
-    "assetPath": "assets/stickers/bicep.svg",
-    "tags": ["bicep", "muscle", "strong", "fitness", "arm", "flex"]
-  },
-  {
-    "assetPath": "assets/stickers/blocked.svg",
-    "tags": ["blocked", "stop", "forbidden", "no", "prohibited", "ban"]
-  },
-  {
-    "assetPath": "assets/stickers/boom.svg",
-    "tags": ["boom", "explosion", "bang", "comic", "action", "pow"]
-  },
-  {
-    "assetPath": "assets/stickers/broken_heart.svg",
-    "tags": ["heart", "broken", "sad", "love", "heartbreak", "emotion"]
-  },
-  {
-    "assetPath": "assets/stickers/chattering_teeth.svg",
-    "tags": ["teeth", "chattering", "cold", "funny", "toy", "nervous"]
-  },
-  {
-    "assetPath": "assets/stickers/clover.svg",
-    "tags": ["clover", "luck", "lucky", "irish", "green", "nature"]
-  },
-  {
-    "assetPath": "assets/stickers/confetti.svg",
-    "tags": ["confetti", "party", "celebration", "birthday", "festive", "fun"]
-  },
-  {
-    "assetPath": "assets/stickers/cracked_phone_screen.svg",
-    "tags": ["phone", "cracked", "broken", "screen", "shattered", "damage"]
-  },
-  {
-    "assetPath": "assets/stickers/disco_ball.svg",
-    "tags": ["disco", "ball", "party", "dance", "music", "club", "70s"]
-  },
-  {
-    "assetPath": "assets/stickers/disco_helmet.svg",
-    "tags": ["disco", "helmet", "party", "dance", "music", "daft punk", "retro"]
-  },
-  {
-    "assetPath": "assets/stickers/donut.svg",
-    "tags": ["donut", "food", "sweet", "dessert", "yummy", "snack"]
-  },
-  {
-    "assetPath": "assets/stickers/double_cheeseburger.svg",
-    "tags": ["burger", "cheeseburger", "food", "fast food", "meal", "yummy"]
-  },
-  {
-    "assetPath": "assets/stickers/eggplant.svg",
-    "tags": ["eggplant", "vegetable", "food", "purple", "emoji", "aubergine"]
-  },
-  {
-    "assetPath": "assets/stickers/email.svg",
-    "tags": ["email", "mail", "message", "envelope", "communication", "inbox"]
-  },
-  {
-    "assetPath": "assets/stickers/espresso_martini.svg",
-    "tags": ["espresso", "martini", "cocktail", "drink", "coffee", "alcohol"]
-  },
-  {
-    "assetPath": "assets/stickers/finger_pointing.svg",
-    "tags": ["finger", "pointing", "hand", "gesture", "direction", "you"]
-  },
-  {
-    "assetPath": "assets/stickers/floating_lilo.svg",
-    "tags": ["lilo", "float", "pool", "summer", "water", "relaxation"]
-  },
-  {
-    "assetPath": "assets/stickers/forgot_password.svg",
-    "tags": ["password", "forgot", "security", "lock", "login", "key"]
-  },
-  {
-    "assetPath": "assets/stickers/forgot_password_alt.svg",
-    "tags": ["password", "forgot", "security", "lock", "login", "reset"]
-  },
-  {
-    "assetPath": "assets/stickers/grandfather.svg",
-    "tags": ["grandfather", "grandpa", "old", "family", "elder", "man"]
-  },
-  {
-    "assetPath": "assets/stickers/hang_loose.svg",
-    "tags": ["hang loose", "shaka", "hand", "gesture", "surf", "chill"]
-  },
-  {
-    "assetPath": "assets/stickers/heart.svg",
-    "tags": ["heart", "love", "romance", "emotion", "red", "valentine"]
-  },
-  {
-    "assetPath": "assets/stickers/hibiscus_flower.svg",
-    "tags": ["hibiscus", "flower", "tropical", "hawaii", "nature", "pink"]
-  },
-  {
-    "assetPath": "assets/stickers/holographic_jacket.svg",
-    "tags": ["holographic", "jacket", "fashion", "futuristic", "shiny", "iridescent"]
-  },
-  {
-    "assetPath": "assets/stickers/id_license.svg",
-    "tags": ["id", "license", "identity", "card", "document", "verification"]
-  },
-  {
-    "assetPath": "assets/stickers/index_finger_pointing_up.svg",
-    "tags": ["finger", "pointing", "up", "hand", "gesture", "number one"]
-  },
-  {
-    "assetPath": "assets/stickers/inflatable_flamingo_pool_float.svg",
-    "tags": ["flamingo", "pool", "float", "summer", "inflatable", "pink"]
-  },
-  {
-    "assetPath": "assets/stickers/knight_in_armor.svg",
-    "tags": ["knight", "armor", "medieval", "warrior", "shield", "sword"]
-  },
-  {
-    "assetPath": "assets/stickers/lip_piercing.svg",
-    "tags": ["lip", "piercing", "jewelry", "mouth", "style", "punk"]
-  },
-  {
-    "assetPath": "assets/stickers/maple_leaf.svg",
-    "tags": ["maple", "leaf", "canada", "autumn", "fall", "nature", "red"]
-  },
-  {
-    "assetPath": "assets/stickers/matrix_message_sign.svg",
-    "tags": ["matrix", "sign", "led", "digital", "message", "display"]
-  },
-  {
-    "assetPath": "assets/stickers/nail_polish.svg",
-    "tags": ["nail", "polish", "beauty", "makeup", "manicure", "cosmetics"]
-  },
-  {
-    "assetPath": "assets/stickers/nokia_3310.svg",
-    "tags": ["nokia", "phone", "retro", "vintage", "mobile", "classic"]
-  },
-  {
-    "assetPath": "assets/stickers/old_fashion_mic.svg",
-    "tags": ["microphone", "mic", "vintage", "retro", "music", "singing"]
-  },
-  {
-    "assetPath": "assets/stickers/password.svg",
-    "tags": ["password", "security", "lock", "login", "key", "protect"]
-  },
-  {
-    "assetPath": "assets/stickers/pause.svg",
-    "tags": ["pause", "stop", "break", "media", "control", "wait"]
-  },
-  {
-    "assetPath": "assets/stickers/peach.svg",
-    "tags": ["peach", "fruit", "food", "emoji", "butt", "pink"]
-  },
-  {
-    "assetPath": "assets/stickers/peeled_banana.svg",
+    "assetPath": "assets/divine_stickers/banana.webp",
     "tags": ["banana", "fruit", "food", "yellow", "peeled", "healthy"]
   },
   {
-    "assetPath": "assets/stickers/police_siren.svg",
-    "tags": ["police", "siren", "emergency", "light", "alarm", "cop"]
+    "assetPath": "assets/divine_stickers/baseball_bat.webp",
+    "tags": ["baseball", "bat", "sport", "game", "hit", "wood"]
   },
   {
-    "assetPath": "assets/stickers/poop_emoji.svg",
-    "tags": ["poop", "emoji", "funny", "silly", "humor", "gross"]
+    "assetPath": "assets/divine_stickers/basketball.webp",
+    "tags": ["basketball", "ball", "sport", "hoops", "game", "orange"]
   },
   {
-    "assetPath": "assets/stickers/profile.svg",
-    "tags": ["profile", "user", "account", "avatar", "person", "identity"]
+    "assetPath": "assets/divine_stickers/beach_ball.webp",
+    "tags": ["beach", "ball", "summer", "pool", "vacation", "fun"]
   },
   {
-    "assetPath": "assets/stickers/programmer.svg",
-    "tags": ["programmer", "coding", "developer", "computer", "tech", "nerd"]
+    "assetPath": "assets/divine_stickers/beer_can.webp",
+    "tags": ["beer", "can", "drink", "alcohol", "party", "cheers"]
   },
   {
-    "assetPath": "assets/stickers/purple_diamond.svg",
-    "tags": ["diamond", "purple", "gem", "jewel", "luxury", "precious"]
+    "assetPath": "assets/divine_stickers/bicep.webp",
+    "tags": ["bicep", "muscle", "strong", "fitness", "arm", "flex"]
   },
   {
-    "assetPath": "assets/stickers/radar.svg",
-    "tags": ["radar", "scan", "detect", "signal", "technology", "search"]
+    "assetPath": "assets/divine_stickers/binoculars.webp",
+    "tags": ["binoculars", "look", "watch", "spy", "search", "explore"]
   },
   {
-    "assetPath": "assets/stickers/raised_hand.svg",
-    "tags": ["hand", "raised", "stop", "wave", "gesture", "hello"]
+    "assetPath": "assets/divine_stickers/biohazard_sign.webp",
+    "tags": ["biohazard", "hazard", "toxic", "danger", "warning", "sign"]
   },
   {
-    "assetPath": "assets/stickers/samoyed_dog.svg",
-    "tags": ["dog", "samoyed", "pet", "animal", "cute", "fluffy", "white"]
+    "assetPath": "assets/divine_stickers/blocked.webp",
+    "tags": ["blocked", "stop", "forbidden", "no", "prohibited", "ban"]
   },
   {
-    "assetPath": "assets/stickers/shrimp.svg",
-    "tags": ["shrimp", "seafood", "food", "prawn", "ocean", "fish"]
+    "assetPath": "assets/divine_stickers/bomb.webp",
+    "tags": ["bomb", "explosion", "fuse", "danger", "boom", "blast"]
   },
   {
-    "assetPath": "assets/stickers/skeleton_key.svg",
-    "tags": ["key", "skeleton", "lock", "vintage", "antique", "unlock"]
+    "assetPath": "assets/divine_stickers/boom.webp",
+    "tags": ["boom", "explosion", "bang", "comic", "action", "pow"]
   },
   {
-    "assetPath": "assets/stickers/sparkle.svg",
-    "tags": ["sparkle", "shine", "glitter", "magic", "star", "bright"]
+    "assetPath": "assets/divine_stickers/broken_heart.webp",
+    "tags": ["heart", "broken", "sad", "love", "heartbreak", "emotion"]
   },
   {
-    "assetPath": "assets/stickers/storyboard.svg",
-    "tags": ["storyboard", "film", "movie", "planning", "video", "production"]
+    "assetPath": "assets/divine_stickers/cactus_vase.webp",
+    "tags": ["cactus", "vase", "plant", "ceramic", "decor", "home"]
   },
   {
-    "assetPath": "assets/stickers/teeth.svg",
-    "tags": ["teeth", "smile", "dental", "mouth", "grin", "white"]
+    "assetPath": "assets/divine_stickers/car_keys.webp",
+    "tags": ["car", "keys", "drive", "key", "road trip", "vehicle"]
   },
   {
-    "assetPath": "assets/stickers/trail_sign.svg",
-    "tags": ["trail", "sign", "hiking", "direction", "nature", "path"]
+    "assetPath": "assets/divine_stickers/cassette_tape.webp",
+    "tags": ["cassette", "tape", "music", "mixtape", "retro", "90s"]
   },
   {
-    "assetPath": "assets/stickers/troll_face.svg",
-    "tags": ["troll", "meme", "funny", "internet", "joke", "face"]
+    "assetPath": "assets/divine_stickers/cat.webp",
+    "tags": ["cat", "pet", "animal", "kitty", "cute", "fluffy"]
   },
   {
-    "assetPath": "assets/stickers/under_construction_sign.svg",
-    "tags": ["construction", "sign", "warning", "work", "building", "caution", "road", "traffic", "barrier"]
+    "assetPath": "assets/divine_stickers/cd.webp",
+    "tags": ["cd", "disc", "music", "album", "retro", "rainbow"]
   },
   {
-    "assetPath": "assets/stickers/verified.svg",
-    "tags": ["verified", "check", "approved", "authentic", "badge", "confirmed"]
+    "assetPath": "assets/divine_stickers/cell_phone.webp",
+    "tags": ["phone", "mobile", "retro", "vintage", "90s", "classic"]
   },
   {
-    "assetPath": "assets/stickers/videogame.svg",
+    "assetPath": "assets/divine_stickers/ceramic_hands.webp",
+    "tags": ["hands", "ceramic", "sculpture", "decor", "art", "friendship"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/chat.webp",
+    "tags": ["chat", "message", "speech bubble", "talk", "conversation", "text"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/chattering_teeth.webp",
+    "tags": ["teeth", "chattering", "cold", "funny", "toy", "nervous"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/cherries.webp",
+    "tags": ["cherries", "cherry", "fruit", "food", "red", "sweet"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/chili_pepper.webp",
+    "tags": ["chili", "pepper", "spicy", "hot", "food", "red"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/clover.webp",
+    "tags": ["clover", "luck", "lucky", "irish", "green", "nature"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/confetti.webp",
+    "tags": ["confetti", "party", "celebration", "birthday", "festive", "fun"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/cordless_vacuum.webp",
+    "tags": ["vacuum", "cleaning", "clean", "chores", "home", "dust"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/cracked_phone_screen.webp",
+    "tags": ["phone", "cracked", "broken", "screen", "shattered", "damage"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/credit_card.webp",
+    "tags": ["credit card", "card", "money", "payment", "shopping", "pay"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/crt_monitor.webp",
+    "tags": ["monitor", "computer", "screen", "retro", "90s", "tech"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/d20_die.webp",
+    "tags": ["dice", "die", "d20", "game", "tabletop", "roll"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/delivery_backpack.webp",
+    "tags": ["delivery", "backpack", "food", "courier", "order", "takeout"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/detergent_pod.webp",
+    "tags": ["detergent", "laundry", "pod", "washing", "clean", "chores"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/devil_horns_hand.webp",
+    "tags": ["rock", "horns", "hand", "gesture", "metal", "music"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/digital_pet.webp",
+    "tags": ["digital pet", "virtual pet", "toy", "keychain", "retro", "90s"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/disco_ball.webp",
+    "tags": ["disco", "ball", "party", "dance", "music", "club", "70s"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/disco_helmet.webp",
+    "tags": ["disco", "helmet", "party", "dance", "music", "daft punk", "retro"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/dj_controller.webp",
+    "tags": ["dj", "controller", "music", "mix", "party", "turntable"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/dog_corgi.webp",
+    "tags": ["dog", "corgi", "pet", "animal", "cute", "puppy"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/dog_in_hoodie.webp",
+    "tags": ["dog", "hoodie", "pet", "animal", "cute", "french bulldog"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/dog_leash.webp",
+    "tags": ["dog", "leash", "walk", "pet", "walkies", "outside"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/dog_shiba_inu.webp",
+    "tags": ["dog", "shiba", "pet", "animal", "cute", "doge"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/donut.webp",
+    "tags": ["donut", "food", "sweet", "dessert", "yummy", "snack"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/double_cheeseburger.webp",
+    "tags": ["burger", "cheeseburger", "food", "fast food", "meal", "yummy"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/ear.webp",
+    "tags": ["ear", "listen", "hear", "sound", "body", "gossip"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/earth_globe.webp",
+    "tags": ["earth", "world", "globe", "planet", "travel", "space"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/eggplant.webp",
+    "tags": ["eggplant", "vegetable", "food", "purple", "emoji", "aubergine"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/electric_scooter.webp",
+    "tags": ["scooter", "electric", "ride", "commute", "city", "travel"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/email.webp",
+    "tags": ["email", "mail", "message", "envelope", "communication", "inbox"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/empty_toilet_roll.webp",
+    "tags": ["toilet paper", "empty", "bathroom", "out of", "oops", "roll"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/espresso_martini.webp",
+    "tags": ["espresso", "martini", "cocktail", "drink", "coffee", "alcohol"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/face_mask.webp",
+    "tags": ["mask", "face mask", "health", "sick", "doctor", "protection"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/fidget_spinner.webp",
+    "tags": ["fidget", "spinner", "toy", "spin", "trend", "rainbow"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/finger_pointing.webp",
+    "tags": ["finger", "pointing", "hand", "gesture", "direction", "you"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/flat_tire.webp",
+    "tags": ["tire", "flat", "car", "broken", "bad day", "road"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/flip_flops.webp",
+    "tags": ["flip flops", "sandals", "beach", "summer", "vacation", "shoes"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/floating_lilo.webp",
+    "tags": ["lilo", "float", "pool", "summer", "water", "relaxation"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/foam_finger.webp",
+    "tags": ["foam finger", "fan", "sports", "cheer", "number one", "game"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/forest.webp",
+    "tags": ["forest", "trees", "pine", "nature", "outdoors", "woods"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/forgot_password.webp",
+    "tags": ["password", "forgot", "security", "lock", "login", "key"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/fortune_cookie.webp",
+    "tags": ["fortune cookie", "fortune", "cookie", "luck", "future", "snack"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/fountain_soda.webp",
+    "tags": ["soda", "drink", "fast food", "cup", "straw", "refresh"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/french_bulldog.webp",
+    "tags": ["dog", "french bulldog", "puppy", "pet", "cute", "tired"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/game_controller.webp",
     "tags": ["videogame", "gaming", "controller", "play", "console", "arcade"]
   },
   {
-    "assetPath": "assets/stickers/video_camera.svg",
+    "assetPath": "assets/divine_stickers/glitter_lips.webp",
+    "tags": ["lips", "glitter", "lipstick", "kiss", "makeup", "sparkle"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/hair_dryer.webp",
+    "tags": ["hair dryer", "hair", "beauty", "salon", "blow dry", "styling"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/hand_grip.webp",
+    "tags": ["hand grip", "fitness", "gym", "workout", "strength", "exercise"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/hand_sanitizer.webp",
+    "tags": ["sanitizer", "hands", "clean", "hygiene", "health", "germs"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/handcuffs.webp",
+    "tags": ["handcuffs", "police", "arrest", "crime", "jail", "busted"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/handheld_console.webp",
+    "tags": ["console", "handheld", "gaming", "videogame", "retro", "play"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/hang_loose.webp",
+    "tags": ["hang loose", "shaka", "hand", "gesture", "surf", "chill"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/hazard_sign.webp",
+    "tags": ["hazard", "voltage", "electric", "danger", "warning", "sign"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/headphones.webp",
+    "tags": ["headphones", "music", "listen", "audio", "sound", "retro"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/heart.webp",
+    "tags": ["heart", "love", "romance", "emotion", "red", "valentine"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/hibiscus_flower.webp",
+    "tags": ["hibiscus", "flower", "tropical", "hawaii", "nature", "pink"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/holographic_jacket.webp",
+    "tags": ["holographic", "jacket", "fashion", "futuristic", "shiny", "iridescent"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/holographic_shape.webp",
+    "tags": ["holographic", "shape", "iridescent", "shiny", "abstract", "y2k"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/horse.webp",
+    "tags": ["horse", "laugh", "funny", "animal", "teeth", "lol"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/horseshoe_magnet.webp",
+    "tags": ["magnet", "attract", "science", "physics", "pull", "blue"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/hot_air_balloon.webp",
+    "tags": ["hot air balloon", "balloon", "flight", "travel", "sky", "adventure"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/index_finger_pointing_up.webp",
+    "tags": ["finger", "pointing", "up", "hand", "gesture", "number one"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/inflatable_flamingo.webp",
+    "tags": ["flamingo", "pool", "float", "summer", "inflatable", "pink"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/instant_camera.webp",
+    "tags": ["camera", "instant", "photo", "picture", "retro", "snapshot"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/instant_photo.webp",
+    "tags": ["photo", "instant", "picture", "memory", "snapshot", "summer"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/knight_in_armor.webp",
+    "tags": ["knight", "armor", "medieval", "warrior", "shield", "sword"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/lip_piercing.webp",
+    "tags": ["lip", "piercing", "jewelry", "mouth", "style", "punk"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/lipstick.webp",
+    "tags": ["lipstick", "makeup", "beauty", "lips", "cosmetics", "pink"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/low_battery_phone.webp",
+    "tags": ["battery", "low", "phone", "charge", "empty", "dying"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/lucky_cat.webp",
+    "tags": ["lucky cat", "cat", "luck", "fortune", "gold", "wave"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/luggage.webp",
+    "tags": ["luggage", "suitcase", "travel", "vacation", "trip", "airport"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/mannequin_hand.webp",
+    "tags": ["hand", "rings", "jewelry", "gold", "fashion", "luxury"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/maple_leaf.webp",
+    "tags": ["maple", "leaf", "canada", "autumn", "fall", "nature", "red"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/massage_gun.webp",
+    "tags": ["massage", "recovery", "fitness", "muscle", "gym", "relax"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/matrix_message_sign.webp",
+    "tags": ["matrix", "sign", "led", "digital", "message", "display"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/microwave_burger.webp",
+    "tags": ["burger", "microwave", "food", "snack", "cheap", "lunch"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/middle_finger.webp",
+    "tags": ["middle finger", "hand", "gesture", "rude", "angry", "attitude"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/milk_bottle.webp",
+    "tags": ["milk", "bottle", "dairy", "drink", "breakfast", "retro"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/mirror_ball.webp",
+    "tags": ["mirror ball", "disco", "party", "gold", "dance", "sparkle"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/mittens.webp",
+    "tags": ["mittens", "winter", "cold", "knit", "snow", "cozy"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/moka_pot.webp",
+    "tags": ["coffee", "moka", "espresso", "breakfast", "morning", "italian"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/motion_lamp.webp",
+    "tags": ["lamp", "lava lamp", "retro", "groovy", "glow", "decor"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/nail_polish.webp",
+    "tags": ["nail", "polish", "beauty", "makeup", "manicure", "cosmetics"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/news_camera.webp",
+    "tags": ["camera", "news", "broadcast", "tv", "reporter", "filming"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/oak_tree.webp",
+    "tags": ["tree", "oak", "nature", "park", "green", "outdoors"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/old_fashion_mic.webp",
+    "tags": ["microphone", "mic", "vintage", "retro", "music", "singing"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/on_air_sign.webp",
+    "tags": ["on air", "live", "broadcast", "radio", "studio", "podcast"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/orange_juice.webp",
+    "tags": ["orange juice", "juice", "drink", "breakfast", "fresh", "vitamin"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/padlock.webp",
+    "tags": ["padlock", "lock", "security", "password", "safe", "protect"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/passport_holder.webp",
+    "tags": ["passport", "travel", "vacation", "airport", "trip", "abroad"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/pause.webp",
+    "tags": ["pause", "stop", "break", "media", "control", "wait"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/peace_sign.webp",
+    "tags": ["peace", "hand", "gesture", "victory", "two", "chill"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/peace_sign_neon.webp",
+    "tags": ["peace", "neon", "sign", "glow", "victory", "night"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/peach.webp",
+    "tags": ["peach", "fruit", "food", "emoji", "butt", "pink"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/phone_charger.webp",
+    "tags": ["charger", "cable", "phone", "battery", "charging", "tangled"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/pineapple_pizza.webp",
+    "tags": ["pizza", "pineapple", "hawaiian", "food", "controversial", "dinner"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/pink_dumbbells.webp",
+    "tags": ["dumbbell", "fitness", "gym", "workout", "exercise", "weight"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/pixel_sunglasses.webp",
+    "tags": ["sunglasses", "pixel", "deal with it", "cool", "meme", "8 bit"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/pizza_slice.webp",
+    "tags": ["pizza", "slice", "food", "cheese", "pepperoni", "snack"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/police_siren.webp",
+    "tags": ["police", "siren", "emergency", "light", "alarm", "cop"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/poop_emoji.webp",
+    "tags": ["poop", "emoji", "funny", "silly", "humor", "gross"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/power_bank.webp",
+    "tags": ["power bank", "battery", "charging", "phone", "travel", "energy"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/profile.webp",
+    "tags": ["profile", "user", "account", "avatar", "person", "identity"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/programmer.webp",
+    "tags": ["programmer", "coding", "developer", "computer", "tech", "nerd"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/protein_bar.webp",
+    "tags": ["protein", "bar", "snack", "fitness", "gym", "chocolate"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/psychedelic_tv.webp",
+    "tags": ["tv", "psychedelic", "retro", "70s", "trippy", "television"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/purple_diamond.webp",
+    "tags": ["diamond", "purple", "gem", "jewel", "luxury", "precious"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/radar.webp",
+    "tags": ["radar", "scan", "detect", "signal", "technology", "search"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/rainforest.webp",
+    "tags": ["rainforest", "jungle", "plants", "tropical", "nature", "green"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/raised_hand.webp",
+    "tags": ["hand", "raised", "stop", "wave", "gesture", "hello"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/roller_skates.webp",
+    "tags": ["roller skates", "skates", "skating", "retro", "fun", "disco"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/rotary_phone.webp",
+    "tags": ["phone", "rotary", "call", "retro", "vintage", "red"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/salt_lamp.webp",
+    "tags": ["salt lamp", "lamp", "glow", "cozy", "decor", "wellness"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/samoyed_dog.webp",
+    "tags": ["dog", "samoyed", "pet", "animal", "cute", "fluffy", "white"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/school_backpack.webp",
+    "tags": ["backpack", "school", "kids", "back to school", "90s", "bag"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/school_notebook.webp",
+    "tags": ["notebook", "school", "pencil", "study", "homework", "notes"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/secure_vault.webp",
+    "tags": ["safe", "vault", "security", "money", "lock", "protect"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/serum_dropper.webp",
+    "tags": ["serum", "skincare", "beauty", "dropper", "oil", "self care"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/shrimp.webp",
+    "tags": ["shrimp", "seafood", "food", "prawn", "ocean", "fish"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/skateboard.webp",
+    "tags": ["skateboard", "skate", "skating", "street", "sport", "ride"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/skeleton_key.webp",
+    "tags": ["key", "skeleton", "lock", "vintage", "antique", "unlock"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/soap_bar.webp",
+    "tags": ["soap", "clean", "wash", "hygiene", "bath", "bubbles"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/soccer_ball.webp",
+    "tags": ["soccer", "football", "ball", "sport", "goal", "game"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/socks_and_sandals.webp",
+    "tags": ["socks", "sandals", "fashion", "dad", "comfy", "summer"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/sparkle.webp",
+    "tags": ["sparkle", "shine", "glitter", "magic", "star", "bright"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/speakers.webp",
+    "tags": ["speakers", "music", "sound", "audio", "loud", "retro"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/stop_sign.webp",
+    "tags": ["stop", "sign", "traffic", "road", "halt", "red"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/storyboard.webp",
+    "tags": ["storyboard", "film", "movie", "planning", "video", "production"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/sunglasses.webp",
+    "tags": ["sunglasses", "summer", "cool", "sun", "fashion", "90s"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/teeth.webp",
+    "tags": ["teeth", "smile", "dental", "mouth", "grin", "white"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/tissue_box.webp",
+    "tags": ["tissues", "cold", "sick", "cry", "sad", "allergy"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/toaster.webp",
+    "tags": ["toaster", "toast", "breakfast", "kitchen", "morning", "bread"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/toddler_bike.webp",
+    "tags": ["bike", "balance bike", "kids", "toddler", "ride", "toy"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/toilet_paper.webp",
+    "tags": ["toilet paper", "bathroom", "roll", "paper", "home", "supplies"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/traffic_barrel.webp",
+    "tags": ["traffic", "barrel", "construction", "road", "warning", "roadwork"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/traffic_cone.webp",
+    "tags": ["traffic cone", "cone", "construction", "road", "warning", "orange"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/trail_sign.webp",
+    "tags": ["trail", "sign", "hiking", "direction", "nature", "path"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/travel_pillow.webp",
+    "tags": ["travel", "pillow", "flight", "sleep", "airport", "nap"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/tulip.webp",
+    "tags": ["tulip", "flower", "spring", "pink", "nature", "bloom"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/tv_remote.webp",
+    "tags": ["remote", "tv", "television", "watch", "channel", "couch"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/under_construction_sign.webp",
+    "tags": ["construction", "sign", "warning", "work", "building", "caution", "road", "traffic", "barrier"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/unicorn_float.webp",
+    "tags": ["unicorn", "pool", "float", "summer", "inflatable", "rainbow"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/usb_stick.webp",
+    "tags": ["usb", "flash drive", "data", "computer", "tech", "storage"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/venus_flytrap.webp",
+    "tags": ["venus flytrap", "plant", "carnivorous", "nature", "bite", "creepy"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/verified.webp",
+    "tags": ["verified", "check", "approved", "authentic", "badge", "confirmed"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/video_camera.webp",
     "tags": ["video", "camera", "film", "recording", "movie", "camcorder"]
   },
   {
-    "assetPath": "assets/stickers/video_clap_board.svg",
+    "assetPath": "assets/divine_stickers/video_clap_board.webp",
     "tags": ["clapboard", "film", "movie", "action", "director", "cinema"]
   },
   {
-    "assetPath": "assets/stickers/vintage_tv_test_pattern.svg",
+    "assetPath": "assets/divine_stickers/vintage_tv_test_pattern.webp",
     "tags": ["tv", "vintage", "test", "pattern", "retro", "television"]
   },
   {
-    "assetPath": "assets/stickers/vinyl_record.svg",
+    "assetPath": "assets/divine_stickers/vinyl_record.webp",
     "tags": ["vinyl", "record", "music", "retro", "dj", "turntable"]
   },
   {
-    "assetPath": "assets/stickers/wave_pool.svg",
+    "assetPath": "assets/divine_stickers/vr_headset.webp",
+    "tags": ["vr", "virtual reality", "headset", "tech", "gaming", "future"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/wave_pool.webp",
     "tags": ["wave", "pool", "water", "summer", "swim", "fun"]
   },
   {
-    "assetPath": "assets/stickers/world_map.svg",
-    "tags": ["world", "map", "globe", "travel", "earth", "geography"]
+    "assetPath": "assets/divine_stickers/wet_wipes.webp",
+    "tags": ["wet wipes", "wipes", "clean", "baby", "hygiene", "mess"]
   },
   {
-    "assetPath": "assets/stickers/x.svg",
+    "assetPath": "assets/divine_stickers/whey_protein.webp",
+    "tags": ["protein", "whey", "gym", "fitness", "gains", "shake"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/wireless_earbuds.webp",
+    "tags": ["earbuds", "wireless", "music", "audio", "listen", "tech"]
+  },
+  {
+    "assetPath": "assets/divine_stickers/x.webp",
     "tags": ["x", "cross", "close", "delete", "cancel", "no"]
   }
 ]
