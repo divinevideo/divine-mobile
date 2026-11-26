@@ -1130,6 +1130,29 @@ void main() {
       },
     );
 
+    test('a relay snapshot fills missing series for the same video', () {
+      fakeAsync((clock) {
+        final episode = _video('episode', dTag: 'episode-3');
+        const series = '30005:$_author:our-story';
+        final cubit = buildReadyWithClock(_result([episode]), clock);
+
+        when(() => h.ves.authorVideos(_author)).thenReturn([
+          episode.copyWith(
+            nostrEventTags: [
+              ['a', series, '', videoSeriesTagMarker],
+            ],
+          ),
+        ]);
+        h.onChanged!();
+        clock.elapse(ProfileFeedCubit.relaySnapshotAudit);
+        clock.flushMicrotasks();
+
+        expect(cubit.state.videos.single.seriesCoordinate, equals(series));
+        unawaited(cubit.close());
+        clock.flushMicrotasks();
+      });
+    });
+
     test(
       'relay-snapshot bursts coalesce into a single reconciliation (audit)',
       () {

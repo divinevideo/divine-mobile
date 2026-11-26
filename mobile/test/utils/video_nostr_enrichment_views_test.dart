@@ -1,5 +1,5 @@
-// ABOUTME: Regression tests for views/loops engagement metrics surviving
-// ABOUTME: Nostr enrichment in enrichVideosWithNostrTags.
+// ABOUTME: Regression tests for preserving engagement and filling metadata
+// ABOUTME: when enrichVideosWithNostrTags combines REST and relay data.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -49,6 +49,42 @@ void main() {
 
     setUp(() {
       mockNostrClient = _MockNostrClient();
+    });
+
+    test('fills series from the relay when the REST tags omit it', () async {
+      final author = 'a' * 64;
+      final series = '30005:$author:our-story';
+      final nostrEvent = Event(
+        author,
+        34236,
+        [
+          ['d', 'episode-3'],
+          ['url', 'https://example.com/episode-3.mp4'],
+          ['a', series, '', videoSeriesTagMarker],
+        ],
+        'Episode 3',
+        createdAt: 1704067200,
+      );
+      final restVideo = VideoStats.fromJson({
+        'id': nostrEvent.id,
+        'pubkey': author,
+        'created_at': nostrEvent.createdAt,
+        'kind': nostrEvent.kind,
+        'tags': const [
+          ['d', 'episode-3'],
+          ['url', 'https://example.com/episode-3.mp4'],
+        ],
+      }).toVideoEvent();
+
+      when(
+        () => mockNostrClient.queryEvents(any()),
+      ).thenAnswer((_) async => [nostrEvent]);
+
+      final enriched = await enrichVideosWithNostrTags([
+        restVideo,
+      ], nostrService: mockNostrClient);
+
+      expect(enriched.single.seriesCoordinate, equals(series));
     });
 
     test(

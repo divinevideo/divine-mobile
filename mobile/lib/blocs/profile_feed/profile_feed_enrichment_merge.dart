@@ -52,6 +52,7 @@ VideoEvent _mergeEnrichmentIntoCurrent(
       enriched.eventCreatedAt! > current.eventCreatedAt!;
   final primary = enrichedIsNewer ? enriched : current;
   final secondary = enrichedIsNewer ? current : enriched;
+  final eventMetadata = mergeProfileVideoEventMetadata(primary, secondary);
 
   return primary.copyWith(
     publishedAt:
@@ -118,15 +119,14 @@ VideoEvent _mergeEnrichmentIntoCurrent(
                 primary.textTrackRefs.isNotEmpty
             ? null
             : secondary.textTrackContent),
-    nostrEventTags: primary.nostrEventTags.isNotEmpty
-        ? primary.nostrEventTags
-        : secondary.nostrEventTags,
+    nostrEventTags: eventMetadata.tags,
     linkUrls: primary.linkUrls.isNotEmpty
         ? primary.linkUrls
         : secondary.linkUrls,
     stickerRegions: primary.stickerRegions.isNotEmpty
         ? primary.stickerRegions
         : secondary.stickerRegions,
+    seriesCoordinate: eventMetadata.seriesCoordinate,
     authorName: primary.authorName ?? secondary.authorName,
     authorAvatar: primary.authorAvatar ?? secondary.authorAvatar,
     nostrLikeCount: mergeNullableEngagementMax(

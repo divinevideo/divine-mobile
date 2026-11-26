@@ -2632,6 +2632,89 @@ void main() {
       }
     });
 
+    group('series', () {
+      final author = 'a' * 64;
+      final series = '30005:$author:our-story';
+
+      Map<String, dynamic> row({
+        Object? seriesField,
+        List<List<String>>? tags,
+      }) => {
+        'id': '1' * 64,
+        'pubkey': author,
+        'created_at': 1700000000,
+        'kind': 34236,
+        'd_tag': 'episode-3',
+        'title': 'Episode 3',
+        'video_url': 'https://example.com/episode-3.mp4',
+        'series': ?seriesField,
+        'tags': ?tags,
+      };
+
+      test('reads the series of a row that leaves its tags out', () {
+        final stats = VideoStats.fromJson(row(seriesField: series));
+
+        expect(stats.series, equals(series));
+        expect(stats.toVideoEvent().seriesCoordinate, equals(series));
+      });
+
+      test('reads the series from the tags of a row that has them', () {
+        final stats = VideoStats.fromJson(
+          row(
+            tags: [
+              ['d', 'episode-3'],
+              ['a', series, '', videoSeriesTagMarker],
+            ],
+          ),
+        );
+
+        expect(stats.series, isNull);
+        expect(stats.toVideoEvent().seriesCoordinate, equals(series));
+      });
+
+      test('drops a series that is a list by someone else', () {
+        final stats = VideoStats.fromJson(
+          row(seriesField: '30005:${'d' * 64}:their-story'),
+        );
+
+        expect(stats.toVideoEvent().seriesCoordinate, isNull);
+      });
+
+      test('prefers the series the row names over its tags', () {
+        final stats = VideoStats.fromJson(
+          row(
+            seriesField: series,
+            tags: [
+              ['a', '30005:$author:another-story', '', videoSeriesTagMarker],
+            ],
+          ),
+        );
+
+        expect(stats.toVideoEvent().seriesCoordinate, equals(series));
+      });
+
+      test("reads the tags when the row names someone else's list", () {
+        // An API row can name another creator's list; the tags still name ours.
+        final stats = VideoStats.fromJson(
+          row(
+            seriesField: '30005:${'d' * 64}:their-story',
+            tags: [
+              ['a', series, '', videoSeriesTagMarker],
+            ],
+          ),
+        );
+
+        expect(stats.toVideoEvent().seriesCoordinate, equals(series));
+      });
+
+      test('ignores a series that is not a string', () {
+        final stats = VideoStats.fromJson(row(seriesField: 42));
+
+        expect(stats.series, isNull);
+        expect(stats.toVideoEvent().seriesCoordinate, isNull);
+      });
+    });
+
     group('toString', () {
       test('returns formatted string with id and title', () {
         final stats = VideoStats(

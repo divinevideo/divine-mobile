@@ -42,6 +42,7 @@ VideoEvent mergeProfileFeedVideos(VideoEvent existing, VideoEvent incoming) {
       secondary.publishedAt != null && secondary.publishedAt!.isNotEmpty;
   final preserveOriginalTimestamp =
       !primaryHasPublishedAt && !secondaryHasPublishedAt;
+  final eventMetadata = mergeProfileVideoEventMetadata(primary, secondary);
 
   return primary.copyWith(
     createdAt: preserveOriginalTimestamp
@@ -108,15 +109,14 @@ VideoEvent mergeProfileFeedVideos(VideoEvent existing, VideoEvent incoming) {
                 primary.textTrackRefs.isNotEmpty
             ? null
             : secondary.textTrackContent),
-    nostrEventTags: primary.nostrEventTags.isNotEmpty
-        ? primary.nostrEventTags
-        : secondary.nostrEventTags,
+    nostrEventTags: eventMetadata.tags,
     linkUrls: primary.linkUrls.isNotEmpty
         ? primary.linkUrls
         : secondary.linkUrls,
     stickerRegions: primary.stickerRegions.isNotEmpty
         ? primary.stickerRegions
         : secondary.stickerRegions,
+    seriesCoordinate: eventMetadata.seriesCoordinate,
     authorName: primary.authorName ?? secondary.authorName,
     authorAvatar: primary.authorAvatar ?? secondary.authorAvatar,
     nostrLikeCount: mergeNullableEngagementMax(
@@ -131,6 +131,34 @@ VideoEvent mergeProfileFeedVideos(VideoEvent existing, VideoEvent incoming) {
       primary.nostrRepostCount,
       secondary.nostrRepostCount,
     ),
+  );
+}
+
+/// Selects tags and series for the primary copy in a profile feed merge.
+///
+/// Series membership belongs to the signed revision. Drop series tags when
+/// borrowing other metadata across revisions so `copyWith` cannot parse an
+/// old series back into the current revision.
+({List<List<String>> tags, String? seriesCoordinate})
+mergeProfileVideoEventMetadata(VideoEvent primary, VideoEvent secondary) {
+  final sameEvent = primary.id == secondary.id;
+  final primaryTags = primary.nostrEventTags;
+  final secondaryTags = secondary.nostrEventTags;
+  return (
+    tags: primaryTags.isNotEmpty
+        ? primaryTags
+        : sameEvent
+        ? secondaryTags
+        : [
+            for (final tag in secondaryTags)
+              if (tag.length < 4 ||
+                  tag[0] != 'a' ||
+                  tag[3] != videoSeriesTagMarker)
+                tag,
+          ],
+    seriesCoordinate:
+        primary.seriesCoordinate ??
+        (sameEvent ? secondary.seriesCoordinate : null),
   );
 }
 
