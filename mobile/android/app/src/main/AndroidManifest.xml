@@ -32,6 +32,9 @@
     <!-- The camera activity requests portrait. Devices with other display orientations can still install Divine. -->
     <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
 
+    <!-- Without this, Play treats a touchscreen as required and hides Divine from Chromebooks and other devices driven by mouse and keyboard. -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
     <!-- Force override camera.any and wifi to NOT be required (dependencies set them to required=true) -->
     <uses-feature android:name="android.hardware.camera.any" android:required="false" tools:replace="android:required" />
     <uses-feature android:name="android.hardware.wifi" android:required="false" tools:replace="android:required" />

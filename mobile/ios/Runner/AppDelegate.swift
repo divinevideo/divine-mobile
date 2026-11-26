@@ -144,7 +144,7 @@ extension FlutterError: @retroactive Error {}
 
   // Portrait for the entire app (including camera preview), except on a large
   // screen — an iPad, or the iPhone Duo's inner display — while the Large
-  // Screen Layout experimental feature is on. There every orientation is
+  // Screen Layout feature is on, as it is by default. There every orientation is
   // allowed here and Dart narrows it through SystemChrome
   // (AdaptiveLayoutScope), asking for portrait while the camera is on top.
   // Asked again on every rotation and whenever the feature turns on or off,
@@ -168,7 +168,11 @@ extension FlutterError: @retroactive Error {}
   /// FeatureFlag.largeScreenLayout as the app resolves it: the user's choice,
   /// or else the build default. Dart reports it (AdaptiveLayoutScope); a
   /// persisted override alone would miss a build that turns it on by default.
-  private var largeScreenLayoutEnabled = false
+  ///
+  /// Starts at the build default, on (#11472), so an iPad held in landscape
+  /// launches in landscape instead of turning once Dart reports. Only someone
+  /// who turned the layouts off sees the app turn to portrait at launch.
+  private var largeScreenLayoutEnabled = true
 
   /// AdaptiveBreakpoints.large: the shortest side, in points, from which a
   /// screen counts as large.
