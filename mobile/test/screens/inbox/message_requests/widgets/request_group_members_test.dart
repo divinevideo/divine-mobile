@@ -198,12 +198,21 @@ void main() {
                   ),
                 ),
               ),
+              // Even a claim that verifies is withheld for a moderation key.
+              nip05ClaimVerificationProvider(
+                const Nip05Claim(
+                  pubkey: kModerationPubkeyHex,
+                  nip05: 'moderation@example.com',
+                ),
+              ).overrideWith((ref) async => Nip05VerificationStatus.verified),
               userProfileReactiveProvider(
                 bob,
               ).overrideWith((ref) => Stream.value(profileOf(bob, 'Bob'))),
             ],
           ),
         );
+        await tester.pump();
+        // A second frame lets the claim's verification settle.
         await tester.pump();
 
         expect(find.text(l10n.inboxSupportRowTitle), findsOneWidget);
