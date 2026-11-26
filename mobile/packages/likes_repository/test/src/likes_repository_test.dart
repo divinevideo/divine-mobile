@@ -280,6 +280,25 @@ void main() {
       mockNostrClient = MockNostrClient();
       mockLocalStorage = MockLikesLocalStorage();
 
+      // Translate older deletion fixtures into a settled retraction read.
+      when(
+        () => mockNostrClient.readEvents(
+          any(
+            that: predicate<List<Filter>>(
+              (filters) =>
+                  filters.single.kinds?.singleOrNull == EventKind.eventDeletion,
+            ),
+          ),
+          requireAllRelaysSettled: true,
+        ),
+      ).thenAnswer(
+        (invocation) async => _answered(
+          await mockNostrClient.queryEvents(
+            invocation.positionalArguments.single as List<Filter>,
+          ),
+        ),
+      );
+
       // Default mock behaviors
       when(() => mockNostrClient.publicKey).thenReturn(testUserPubkey);
       when(
@@ -3091,7 +3110,12 @@ void main() {
 
           expect(count, equals(2));
           verify(() => mockNostrClient.readEvents(any())).called(2);
-          verify(() => mockNostrClient.queryEvents(any())).called(1);
+          verify(
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: true,
+            ),
+          ).called(1);
         },
       );
 
@@ -3137,14 +3161,39 @@ void main() {
             ['e', 'reaction_deleted'],
           ]);
 
-          mockQueryEventsSequence([
-            [deletedReaction, downvote],
-            [liveReaction, blockedReaction],
-            [deletion],
-            [deletedReaction, downvote],
-            [liveReaction, blockedReaction],
-            [deletion],
-          ]);
+          List<Event> reactionsFor(Invocation invocation) {
+            final filters =
+                invocation.positionalArguments.single as List<Filter>;
+            return filters.single.e != null
+                ? [deletedReaction, downvote]
+                : [liveReaction, blockedReaction];
+          }
+
+          when(() => mockNostrClient.readEvents(any())).thenAnswer(
+            (invocation) async => _answered(reactionsFor(invocation)),
+          );
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer((_) async => _answered([deletion]));
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
+            ),
+          ).thenAnswer(
+            (invocation) async => (
+              events: reactionsFor(invocation),
+              timedOut: false,
+              noRelays: false,
+            ),
+          );
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [deletion],
+          );
 
           repository = createRepository(
             blockFilter: (pubkey) {
@@ -3549,6 +3598,53 @@ void main() {
           ),
         );
       });
+
+      test(
+        'leaves an active count unknown when retractions cannot settle',
+        () async {
+          const coordinate = '34236:author:d-tag';
+          const reactionId = 'reaction-to-retract';
+          final reaction = createMockReaction(
+            id: reactionId,
+            targetEventId: testEventId,
+          );
+          final deletion = createMockDeletion([reactionId]);
+          var settled = false;
+          when(() => mockNostrClient.readEvents(any())).thenAnswer(
+            (_) async => _answered([reaction]),
+          );
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer(
+            (_) async => settled
+                ? _answered([deletion])
+                : const QueryResult(
+                    events: [],
+                    endedBy: QueryEnd.deadline,
+                    answeredNetworkRelayCount: 1,
+                  ),
+          );
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => []);
+
+          repository = createRepository();
+          Future<LikeCounts> getCounts() => repository.getLikeCounts(
+            [testEventId],
+            addressableIds: {testEventId: coordinate},
+          );
+          final unknown = await getCounts();
+          settled = true;
+          final complete = await getCounts();
+
+          expect(unknown, const LikeCounts(counts: {}));
+          expect(complete, const LikeCounts(counts: {testEventId: 0}));
+          expect(await getCounts(), complete);
+        },
+      );
 
       test('returns empty map for empty input', () async {
         repository = createRepository();

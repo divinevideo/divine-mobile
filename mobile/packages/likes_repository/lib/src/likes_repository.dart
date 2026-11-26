@@ -1873,8 +1873,8 @@ class LikesRepository {
   ///
   /// Returns `null` when the COUNT for a non-addressable event gets no
   /// answer from any relay, or when no relay answers the read for an
-  /// addressable one (#10846). Nothing is cached then, so the next call asks
-  /// again.
+  /// addressable one (#10846), or when a missed retraction could change the
+  /// count. Nothing is cached then, so the next call asks again.
   ///
   /// A count that missed a readable relay is returned as a floor. It is not
   /// cached, so the next call asks again (#9223).
@@ -3284,11 +3284,10 @@ class LikesRepository {
   /// The active likers of each of [eventIds], read from the relays, and
   /// whether the reaction reads finished.
   ///
-  /// [waitForEveryRelay] selects the settlement rules documented on
-  /// [_queryChunkedDetailed].
-  ///
-  /// The deletion read that follows does not affect completeness: a
-  /// retraction it misses leaves someone listed, never anyone missing.
+  /// Lists use the settlement rules in [_queryChunkedDetailed] and apply
+  /// whatever retractions arrived. Counts require a settled retraction read
+  /// before reporting a target with candidate reactions: missing a retraction
+  /// could inflate the apparent floor.
   Future<
     ({
       Map<String, List<String>> likersByEvent,
@@ -3365,7 +3364,32 @@ class LikesRepository {
       );
     }
 
-    final deletedReactionIds = await _deletedReactionIds(allReactionsById);
+    final reactionIds = allReactionsById.keys.toList();
+    Filter deletionFilter(List<String> chunk) =>
+        Filter(kinds: const [EventKind.eventDeletion], e: chunk);
+
+    final List<Event> deletions;
+    if (waitForEveryRelay) {
+      deletions = await _queryChunked(reactionIds, deletionFilter);
+    } else {
+      final read = await _readCountChunks(
+        reactionIds,
+        deletionFilter,
+        requireAllRelaysSettled: true,
+      );
+      if (!read.isComplete) {
+        return (
+          likersByEvent: const <String, List<String>>{},
+          isComplete: false,
+          answeredEventIds: {
+            for (final id in answeredEventIds)
+              if (reactionsByTarget[id]!.isEmpty) id,
+          },
+        );
+      }
+      deletions = read.events;
+    }
+    final deletedReactionIds = _deletedReactionIds(allReactionsById, deletions);
 
     return (
       likersByEvent: {
@@ -3382,27 +3406,11 @@ class LikesRepository {
 
   /// Resolves which of [reactionsById] their own author has since retracted.
   ///
-  /// Scopes the deletion query to the reaction ids already fetched, so an
-  /// `authors:` filter would be redundant (dropped to halve the frame size).
-  /// Chunks the `#e` list so a very high-engagement target can't build a
-  /// single REQ frame over the relay's `max_message_length` — an oversized
-  /// frame errors the socket and the query fails open, counting deletes
-  /// (#5751).
-  ///
-  /// Only honors a Kind 5 whose author matches the reaction's author —
-  /// otherwise anyone could suppress someone else's vote by publishing a
-  /// deletion that references the other user's reaction id.
-  Future<Set<String>> _deletedReactionIds(
+  /// Only honors a Kind 5 whose author matches the reaction's author.
+  Set<String> _deletedReactionIds(
     Map<String, Event> reactionsById,
-  ) async {
-    final reactionIds = reactionsById.keys.toList();
-    if (reactionIds.isEmpty) return const {};
-
-    final deletions = await _queryEventsByEIds(
-      reactionIds,
-      kind: EventKind.eventDeletion,
-    );
-
+    List<Event> deletions,
+  ) {
     final deleted = <String>{};
     for (final deletion in deletions) {
       for (final tag in deletion.tags) {
@@ -3416,14 +3424,6 @@ class LikesRepository {
       }
     }
     return deleted;
-  }
-
-  /// Events of [kind] targeting any of [eventIds] via `#e`.
-  Future<List<Event>> _queryEventsByEIds(
-    List<String> eventIds, {
-    required int kind,
-  }) {
-    return _queryChunked(eventIds, (chunk) => Filter(kinds: [kind], e: chunk));
   }
 
   /// Runs [buildFilter] over [values] in chunks capped at [_reqEidChunkSize]
@@ -3477,33 +3477,8 @@ class LikesRepository {
       );
     }
 
+    if (!waitForEveryRelay) return _readCountChunks(values, buildFilter);
     final chunks = _chunkStrings(values, _reqEidChunkSize);
-    if (!waitForEveryRelay) {
-      final reads = await Future.wait([
-        for (final chunk in chunks)
-          _nostrClient.readEvents([buildFilter(chunk)]),
-      ]);
-      return (
-        // A single read is already deduplicated by the client.
-        events: reads.length == 1
-            ? reads.first.events
-            : {
-                for (final read in reads)
-                  for (final event in read.events) event.id: event,
-              }.values.toList(),
-        isComplete: reads.every(
-          (read) =>
-              read.isComplete &&
-              read.answeredNetworkRelayCount > 0 &&
-              read.unsentNetworkRelayCount == 0 &&
-              !read.hasCapEvidence,
-        ),
-        answeredValues: {
-          for (var i = 0; i < chunks.length; i++)
-            if (reads[i].answeredNetworkRelayCount > 0) ...chunks[i],
-        },
-      );
-    }
 
     final results = await Future.wait([
       for (final chunk in chunks)
@@ -3526,6 +3501,42 @@ class LikesRepository {
         (result) => !result.timedOut && !result.noRelays,
       ),
       answeredValues: answeredValues,
+    );
+  }
+
+  /// Reads chunked reaction or retraction filters and preserves count coverage.
+  Future<_CountRead> _readCountChunks(
+    List<String> values,
+    Filter Function(List<String> chunk) buildFilter, {
+    bool requireAllRelaysSettled = false,
+  }) async {
+    final chunks = _chunkStrings(values, _reqEidChunkSize);
+    final reads = await Future.wait([
+      for (final chunk in chunks)
+        _nostrClient.readEvents(
+          [buildFilter(chunk)],
+          requireAllRelaysSettled: requireAllRelaysSettled,
+        ),
+    ]);
+    return (
+      // A single read is already deduplicated by the client.
+      events: reads.length == 1
+          ? reads.first.events
+          : {
+              for (final read in reads)
+                for (final event in read.events) event.id: event,
+            }.values.toList(),
+      isComplete: reads.every(
+        (read) =>
+            read.isComplete &&
+            read.answeredNetworkRelayCount > 0 &&
+            read.unsentNetworkRelayCount == 0 &&
+            !read.hasCapEvidence,
+      ),
+      answeredValues: {
+        for (var i = 0; i < chunks.length; i++)
+          if (reads[i].answeredNetworkRelayCount > 0) ...chunks[i],
+      },
     );
   }
 
