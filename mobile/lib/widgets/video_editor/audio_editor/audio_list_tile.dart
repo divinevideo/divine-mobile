@@ -70,9 +70,9 @@ class AudioListTile extends StatelessWidget {
         details: [
           if (videoCount != null && videoCount > 0)
             context.l10n.soundVideoCount(videoCount),
-          // Last, so a long source such as a URL is what the single line
-          // cuts short, not the count.
-          ?audio.source,
+          // Last, so a long source is what the single line cuts short, not
+          // the count.
+          ?audio.sourceForDisplay,
         ],
         cover: cover,
         colorSeed: audio.id,

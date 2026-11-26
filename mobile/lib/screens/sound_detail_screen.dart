@@ -513,6 +513,10 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
   String? _licenseUrl;
   String? _sourceUrl;
 
+  /// Whether the app ships only a cut of this bundled sound's recording; a
+  /// published sound says so in its own description instead.
+  bool _isBundledExcerpt = false;
+
   @override
   void initState() {
     super.initState();
@@ -541,6 +545,7 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
       _license = vineSound.license;
       _licenseUrl = _launchableUrl(vineSound.licenseUrl);
       _sourceUrl = _launchableUrl(vineSound.sourceUrl);
+      _isBundledExcerpt = vineSound.isExcerpt;
     }
   }
 
@@ -588,6 +593,13 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
                 pubkey: profileCreditPubkey,
                 profile: profileCreditProfile,
               );
+    // Divine's imported library changes most of its recordings before
+    // sharing them (loudness, edge silence, length) and says so in the
+    // event, and the app ships two CC BY sounds as cuts of longer
+    // recordings. An Attribution licence asks the credit to say so.
+    final isEdited =
+        sound.requiresAttribution &&
+        (sound.isChangedFromOriginal || _isBundledExcerpt);
     // Matches the feed pill and the metadata sheet: a credited creator who is
     // not the signer means the signer only shared the sound. Bundled sounds
     // carry a marker pubkey rather than a real signer, so they are excluded
@@ -654,6 +666,7 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
                         license: _license,
                         licenseUrl: _licenseUrl,
                         sourceUrl: _sourceUrl,
+                        isEdited: isEdited,
                       )
                     else if (_artistName != null)
                       _AttributionInfo(
@@ -661,6 +674,7 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
                         license: _license,
                         licenseUrl: _licenseUrl,
                         sourceUrl: _sourceUrl,
+                        isEdited: isEdited,
                       ),
                     if (showsSeparatePublisher && publisherName != null)
                       _ProfileCreditLink(
@@ -822,6 +836,7 @@ class _ProfileAttributionInfo extends StatelessWidget {
     this.license,
     this.licenseUrl,
     this.sourceUrl,
+    this.isEdited = false,
   });
 
   final String text;
@@ -829,8 +844,11 @@ class _ProfileAttributionInfo extends StatelessWidget {
   final String semanticsIdentifier;
   final String? license;
 
-  /// Makes [license] a link to the licence text, as CC BY 4.0
-  /// §3(a)(1)(C) asks where it is reasonably practicable.
+  /// See [_AttributionInfo.isEdited].
+  final bool isEdited;
+
+  /// Makes [license] a link to the licence, whose text or link CC BY 4.0
+  /// §3(a)(1)(C) asks a credit to include.
   final String? licenseUrl;
   final String? sourceUrl;
 
@@ -859,6 +877,7 @@ class _ProfileAttributionInfo extends StatelessWidget {
               ),
             ] else
               TextSpan(text: ' · $license'),
+          if (isEdited) TextSpan(text: ' · ${context.l10n.soundCreditEdited}'),
           if (sourceUrl != null) ...[
             const TextSpan(text: ' · '),
             WidgetSpan(
@@ -916,13 +935,18 @@ class _AttributionInfo extends StatelessWidget {
     this.license,
     this.licenseUrl,
     this.sourceUrl,
+    this.isEdited = false,
   });
 
   final String artistName;
   final String? license;
 
-  /// Makes [license] a link to the licence text, as CC BY 4.0
-  /// §3(a)(1)(C) asks where it is reasonably practicable.
+  /// Whether to say the sound was changed from the original recording, as
+  /// CC BY 4.0 §3(a)(1)(B) asks of whoever shares a changed copy.
+  final bool isEdited;
+
+  /// Makes [license] a link to the licence, whose text or link CC BY 4.0
+  /// §3(a)(1)(C) asks a credit to include.
   final String? licenseUrl;
   final String? sourceUrl;
 
@@ -943,6 +967,7 @@ class _AttributionInfo extends StatelessWidget {
               ),
             ] else
               TextSpan(text: ' · $license'),
+          if (isEdited) TextSpan(text: ' · ${context.l10n.soundCreditEdited}'),
           if (sourceUrl != null) ...[
             const TextSpan(text: ' · '),
             WidgetSpan(

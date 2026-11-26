@@ -16,8 +16,10 @@ ProcessRunner _fakeTools({
   required String inputDuration,
   required String trimmedDuration,
   required String truePeak,
+  List<List<String>>? ffmpegCalls,
 }) {
   return (executable, arguments) async {
+    if (executable == 'ffmpeg') ffmpegCalls?.add(arguments);
     if (executable == 'ffprobe') {
       if (arguments.contains('stream=channels')) {
         return ProcessResult(0, 0, '1', '');
@@ -33,8 +35,11 @@ ProcessRunner _fakeTools({
   };
 }
 
-Future<PrepareOutcome> _prepare(ProcessRunner run) {
-  return AudioPipeline(run: run).prepare(
+Future<PrepareOutcome> _prepare(
+  ProcessRunner run, {
+  AudioTargets targets = _targets,
+}) {
+  return AudioPipeline(targets: targets, run: run).prepare(
     input: File('input.wav'),
     output: File('output.m4a'),
     kind: SoundKind.sfx,
@@ -162,6 +167,87 @@ void main() {
           'silent',
         ),
       );
+    });
+
+    group('with a maximum duration', () {
+      const fiveMinutes = AudioTargets(maxDurationSeconds: 300);
+
+      test('keeps only the start of a longer sound, faded out, and says '
+          'so', () async {
+        // A 59-minute ambient track from incompetech, as ffmpeg measures it.
+        final calls = <List<String>>[];
+        final outcome = await _prepare(
+          _fakeTools(
+            inputDuration: '3520.656000',
+            trimmedDuration: '3520.410000',
+            truePeak: '-3.20',
+            ffmpegCalls: calls,
+          ),
+          targets: fiveMinutes,
+        );
+
+        expect(
+          calls.expand((arguments) => arguments),
+          contains('atrim=end=300.0,afade=t=out:st=297.0:d=3.0'),
+        );
+        expect(
+          outcome,
+          isA<PreparedAudio>().having(
+            (prepared) => prepared.changes,
+            'changes',
+            contains('cut to the first 5 minutes with a fade-out'),
+          ),
+        );
+      });
+
+      test('measures and encodes the cut, not the whole track', () async {
+        final calls = <List<String>>[];
+        await _prepare(
+          _fakeTools(
+            inputDuration: '3520.656000',
+            trimmedDuration: '3520.410000',
+            truePeak: '-3.20',
+            ffmpegCalls: calls,
+          ),
+          targets: fiveMinutes,
+        );
+
+        String inputOf(List<String> arguments) =>
+            arguments[arguments.indexOf('-i') + 1];
+        final excerpt = calls.singleWhere(
+          (arguments) => arguments.any((value) => value.startsWith('atrim=')),
+        );
+        final measure = calls.singleWhere((args) => args.contains('null'));
+        final encode = calls.singleWhere((args) => args.contains('aac'));
+        expect(inputOf(measure), equals(excerpt.last));
+        expect(inputOf(encode), equals(excerpt.last));
+      });
+
+      test('keeps a shorter sound whole', () async {
+        final calls = <List<String>>[];
+        final outcome = await _prepare(
+          _fakeTools(
+            inputDuration: '151.200000',
+            trimmedDuration: '151.000000',
+            truePeak: '-3.20',
+            ffmpegCalls: calls,
+          ),
+          targets: fiveMinutes,
+        );
+
+        expect(
+          calls.expand((arguments) => arguments),
+          isNot(contains(startsWith('atrim='))),
+        );
+        expect(
+          outcome,
+          isA<PreparedAudio>().having(
+            (prepared) => prepared.changes,
+            'changes',
+            isNot(contains(startsWith('cut to'))),
+          ),
+        );
+      });
     });
   });
 }

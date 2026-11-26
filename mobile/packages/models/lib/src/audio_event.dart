@@ -467,6 +467,16 @@ class AudioEvent {
   /// whatever their own locale.
   static const originalSoundTitle = 'Original sound';
 
+  /// Opens the line of a sound's [description] that names what was changed
+  /// from the original recording before the sound was shared:
+  /// `Edited: loudness normalized`. Divine's imported sound library writes
+  /// it, in English like the rest of the event.
+  static const editedLinePrefix = 'Edited: ';
+
+  /// The line of a sound's [description] saying it is a shortened cut of a
+  /// longer recording.
+  static const excerptLine = 'Excerpt of the original recording';
+
   /// The tag naming, on an event Divine publishes for one of the sounds the
   /// app ships, that sound's manifest id: `['divine_sound', 'wednesday']`.
   static const divineSoundTag = 'divine_sound';
@@ -634,6 +644,43 @@ class AudioEvent {
       '',
     );
     return name.startsWith('ccby') || name.contains('attribution');
+  }
+
+  /// Whether its [description] says the file was changed from the original
+  /// recording before it was shared: a line opening with [editedLinePrefix],
+  /// or the [excerptLine].
+  ///
+  /// An Attribution licence asks whoever shares a changed copy to say so
+  /// (CC BY 4.0 §3(a)(1)(B)).
+  bool get isChangedFromOriginal {
+    for (final line in (description ?? '').split('\n')) {
+      final text = line.trim();
+      if (text.startsWith(editedLinePrefix) || text == excerptLine) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// What the picker's rows and player bar and the editor's sound chip name
+  /// for where the sound comes from: [source], or [creatorName] when [source]
+  /// is only an http(s) link and [creatorName] is not blank.
+  ///
+  /// Divine's imported sound library publishes each sound's source page as
+  /// [source] and its creator apart from it, and a row cut short after the
+  /// host names neither the creator nor the recording. The link stays on the
+  /// sound's own page.
+  String? get sourceForDisplay {
+    final source = this.source;
+    final creator = creatorName?.trim() ?? '';
+    if (source == null || creator.isEmpty) return source;
+    final text = source.trim();
+    final uri = text.contains(RegExp(r'\s')) ? null : Uri.tryParse(text);
+    final isLink =
+        uri != null &&
+        const {'http', 'https'}.contains(uri.scheme) &&
+        uri.host.isNotEmpty;
+    return isLink ? creator : source;
   }
 
   /// Whether this audio was extracted from one of the draft's own clips.

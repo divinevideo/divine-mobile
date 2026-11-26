@@ -9721,7 +9721,7 @@ abstract class AppLocalizations {
   /// **'View source'**
   String get soundViewSource;
 
-  /// Shown after the licence in a sound's credit on a video when the licence (such as CC BY) asks to say that the sound was changed: the video uses an excerpt, mixed into its own audio. Lowercase, a past participle describing the sound.
+  /// Shown after the licence in a sound's credit when the licence (such as CC BY) asks to say that the sound was changed: on a video, which uses an excerpt mixed into its own audio, and on a sound's page, when its publisher changed the recording before sharing it. Lowercase, a past participle describing the sound.
   ///
   /// In en, this message translates to:
   /// **'edited'**

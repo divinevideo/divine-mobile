@@ -201,9 +201,9 @@ class _Details extends StatelessWidget {
                 ).toMmSs(),
                 style: const TextStyle(fontFeatures: [.tabularFigures()]),
               ),
-              if (audio.source != null) ...[
+              if (audio.sourceForDisplay case final source?) ...[
                 const TextSpan(text: ' ∙ '),
-                TextSpan(text: audio.source),
+                TextSpan(text: source),
               ],
             ],
           ),

@@ -2,6 +2,7 @@
 // ABOUTME: credit and shipped-sound id each one carries.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart' show AudioEvent;
 
 import '../../../tools/sound_import/app_sounds.dart';
 import '../../../tools/sound_import/sound_candidate.dart';
@@ -120,10 +121,8 @@ void main() {
         ],
       }).single;
 
-      expect(
-        candidate.creditLines,
-        contains('Excerpt of the original recording'),
-      );
+      // The line the app reads to say so on the sound's page.
+      expect(candidate.creditLines, contains(AudioEvent.excerptLine));
     });
 
     test('gives a CC0 sound the generic credit', () {

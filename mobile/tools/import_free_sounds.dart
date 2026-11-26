@@ -116,6 +116,12 @@ ArgParser _parser() {
       splitCommas: false,
     )
     ..addOption('interval', defaultsTo: '2', help: 'Seconds between downloads.')
+    ..addOption(
+      'max-duration',
+      help:
+          'Seconds. A longer sound keeps only its start, faded out; the '
+          'credit says so. Use it for tracks over the 16 MiB upload limit.',
+    )
     ..addFlag('dry-run', negatable: false);
   parser.addCommand('events')
     ..addOption('blossom', help: 'The server the files are uploaded to.')
@@ -230,10 +236,17 @@ Future<void> _prepare(Directory work, ArgResults args) async {
   final interval = Duration(
     milliseconds: (double.parse(args['interval'] as String) * 1000).round(),
   );
+  final maxDuration = _intOption(args, 'max-duration');
+  if (maxDuration != null && maxDuration <= 0) {
+    throw const _UsageError('--max-duration must be a positive number.');
+  }
   final pending = [
     for (final candidate in catalog)
       if ((only.isEmpty || only.contains(candidate.id)) &&
-          _needsPreparing(state.records[candidate.id]))
+          _needsPreparing(
+            state.records[candidate.id],
+            maxDuration: maxDuration,
+          ))
         candidate,
   ];
   final batch = limit == null ? pending : pending.take(limit).toList();
@@ -255,7 +268,9 @@ Future<void> _prepare(Directory work, ArgResults args) async {
 
   final sources = Directory('${work.path}/src')..createSync(recursive: true);
   final outputs = Directory('${work.path}/out')..createSync(recursive: true);
-  final pipeline = AudioPipeline();
+  final pipeline = AudioPipeline(
+    targets: AudioTargets(maxDurationSeconds: maxDuration?.toDouble()),
+  );
   final downloader = SourceDownloader();
   var lastDownload = DateTime.fromMillisecondsSinceEpoch(0);
   try {
@@ -342,8 +357,23 @@ Future<void> _prepare(Directory work, ArgResults args) async {
   _printSummary(state);
 }
 
-bool _needsPreparing(ImportRecord? record) =>
-    record == null || record.status == ImportStatus.failed;
+/// Whether [record] is prepared again: it never was, it failed, or it is
+/// longer than [maxDuration] and has been neither uploaded nor published.
+///
+/// The last case lets a run with `--max-duration` cut a track that an earlier
+/// run without it left too long to upload. An uploaded or published file is
+/// kept, so the run never orphans a blob or an event. The second of slack
+/// covers the encoder's padding on a track already cut to the limit.
+bool _needsPreparing(ImportRecord? record, {int? maxDuration}) {
+  if (record == null || record.status == ImportStatus.failed) return true;
+  final duration = record.durationSeconds;
+  return maxDuration != null &&
+      record.status == ImportStatus.prepared &&
+      duration != null &&
+      duration > maxDuration + 1 &&
+      record.uploadedTo.isEmpty &&
+      record.publishedEventId == null;
+}
 
 void _events(Directory work, ArgResults args) {
   final blossom = args['blossom'] as String?;

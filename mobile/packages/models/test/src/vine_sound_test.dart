@@ -180,6 +180,31 @@ void main() {
       expect(restored.sourceUrl, equals(sound.sourceUrl));
     });
 
+    test('reads whether the app ships only an excerpt', () {
+      VineSound parsed({bool? excerpt}) => VineSound.fromJson({
+        'id': 'freesound_elevator_music',
+        'title': 'Elevator Music',
+        'assetPath': 'assets/sounds/elevator-music.mp3',
+        'durationMs': 6021,
+        'excerpt': ?excerpt,
+      });
+
+      expect(parsed(excerpt: true).isExcerpt, isTrue);
+      expect(parsed().isExcerpt, isFalse);
+    });
+
+    test('toJson roundtrip keeps the excerpt flag', () {
+      final sound = VineSound(
+        id: 'freesound_elevator_music',
+        title: 'Elevator Music',
+        assetPath: 'assets/sounds/elevator-music.mp3',
+        duration: const Duration(milliseconds: 6021),
+        isExcerpt: true,
+      );
+
+      expect(VineSound.fromJson(sound.toJson()).isExcerpt, isTrue);
+    });
+
     test('matchesSearch finds by artist', () {
       final sound = VineSound(
         id: 'sound_001',
