@@ -721,6 +721,7 @@ class _ProfileActionLabel extends StatelessWidget {
       ProfileActionType.accountRestricted =>
         context.vineColors.accentChipOrange,
       ProfileActionType.secureAccount ||
+      ProfileActionType.recoverAccount ||
       ProfileActionType.completeProfile => context.vineColors.accentChipYellow,
       // A brand fill, the same in both appearances, paired as on primary
       // buttons so the label stays legible.

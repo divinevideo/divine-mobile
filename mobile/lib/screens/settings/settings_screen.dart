@@ -458,9 +458,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       subtitle:
                           context.l10n.authRegisteredKeyRecoveryDescription,
                       onTap: () => context.push(
-                        WelcomeScreen.loginOptionsPathWithRecovery(
+                        LoginOptionsRouteData(
                           email: registeredKeyConflict.email,
-                        ),
+                        ).location,
                       ),
                     )
                   else if (authService.isAnonymous)
