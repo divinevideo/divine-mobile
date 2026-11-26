@@ -1,5 +1,5 @@
-// ABOUTME: Validation probe for #9223: a COUNT that only some relays settled.
-// ABOUTME: Scratch evidence for the issue validation, not a shipped test.
+// ABOUTME: Tests that RelayPool.count reports whether every relay settled.
+// ABOUTME: A relay that timed out or refused leaves the count a floor (#9223).
 
 import 'dart:convert';
 
@@ -11,7 +11,7 @@ import '../support/fake_web_socket.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('RelayPool.count when one relay does not settle (#9223)', () {
+  group('RelayPool.count completeness', () {
     const relayAUrl = 'wss://relay-a.test';
     const relayBUrl = 'wss://relay-b.test';
     final filters = [
@@ -101,64 +101,47 @@ void main() {
       return result;
     }
 
-    test('control: relay B answering a larger count changes the result, so B '
-        'holds data the result depends on', () async {
-      final withB = await countWith(
+    void sendUnknownCommandNotice(FakeWebSocketChannel channel) {
+      channel.simulateMessage(
+        jsonEncode(['NOTICE', 'ERROR: bad msg: unknown cmd']),
+      );
+    }
+
+    test('is complete when every relay answered', () async {
+      final result = await countWith(
         (channelB) => answerCount(channelB, 7),
-        id: 'control-b-answers-7',
+        id: 'all-answered',
       );
 
-      expect(withB.count, equals(7));
+      expect(result.count, equals(7));
+      expect(result.isComplete, isTrue);
     });
 
-    test('control: two fully settled COUNTs with the same answers compare '
-        'equal', () async {
-      final first = await countWith(
-        (channelB) => answerCount(channelB, 0),
-        id: 'control-full-1',
-      );
-      final second = await countWith(
-        (channelB) => answerCount(channelB, 0),
-        id: 'control-full-2',
-      );
+    test('is incomplete when a relay never answered', () async {
+      final result = await countWith(null, id: 'b-timed-out');
 
-      expect(first, equals(second));
+      expect(result.count, equals(3));
+      expect(result.isComplete, isFalse);
     });
 
-    test('a COUNT relay B never answered is distinguishable from one relay B '
-        'answered', () async {
-      final fullySettled = await countWith(
-        (channelB) => answerCount(channelB, 0),
-        id: 'full',
-      );
-      final bTimedOut = await countWith(null, id: 'b-timed-out');
+    test('is incomplete when a relay refused with CLOSED', () async {
+      final result = await countWith(refuseCount, id: 'b-refused');
 
-      expect(
-        bTimedOut,
-        isNot(equals(fullySettled)),
-        reason:
-            'relay B timed out, so 3 is only a floor, but the pool returned '
-            '$bTimedOut, the same value it returns when every relay answered '
-            '($fullySettled)',
-      );
+      expect(result.count, equals(3));
+      expect(result.isComplete, isFalse);
     });
 
-    test('a COUNT relay B refused with CLOSED is distinguishable from one '
-        'relay B answered', () async {
-      final fullySettled = await countWith(
-        (channelB) => answerCount(channelB, 0),
-        id: 'full-2',
-      );
-      final bRefused = await countWith(refuseCount, id: 'b-refused');
+    test(
+      'stays complete when a relay replied it does not know COUNT',
+      () async {
+        final result = await countWith(
+          sendUnknownCommandNotice,
+          id: 'b-unknown-command',
+        );
 
-      expect(
-        bRefused,
-        isNot(equals(fullySettled)),
-        reason:
-            'relay B refused with CLOSED, so 3 is only a floor, but the pool '
-            'returned $bRefused, the same value it returns when every relay '
-            'answered ($fullySettled)',
-      );
-    });
+        expect(result.count, equals(3));
+        expect(result.isComplete, isTrue);
+      },
+    );
   });
 }
