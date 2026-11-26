@@ -2305,6 +2305,212 @@ void main() {
       );
     });
 
+    group('discoverLists', () {
+      PublicListCard card(
+        String dTag, {
+        String pubkey = _testPubkey,
+        int itemCount = 2,
+      }) => PublicListCard(
+        kind: 30005,
+        pubkey: pubkey,
+        dTag: dTag,
+        title: 'Dance',
+        itemCount: itemCount,
+        updatedAt: DateTime.fromMillisecondsSinceEpoch(
+          1718400000 * 1000,
+          isUtc: true,
+        ),
+      );
+
+      void answerIndex(List<PublicListCard> cards) {
+        when(
+          () => funnelcakeApiClient.discoverLists(
+            kind: any(named: 'kind'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => ListSearchResponse(cards: cards));
+      }
+
+      void answerRelayWindow(
+        List<Event> events, {
+        bool timedOut = false,
+      }) {
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => (events: events, timedOut: timedOut, noRelays: false),
+        );
+      }
+
+      Event listEvent(String dTag, {int? createdAt, String? pubkey}) =>
+          _makeEvent(
+            tags: [
+              ['d', dTag],
+              ['title', 'Dance'],
+              ['e', _videoEventId],
+            ],
+            createdAt: createdAt,
+            pubkey: pubkey ?? _testPubkey,
+          );
+
+      setUp(() {
+        registerFallbackValue(<Filter>[]);
+        registerFallbackValue(PublicListKind.videos);
+        when(() => funnelcakeApiClient.isAvailable).thenReturn(true);
+        when(
+          () => funnelcakeApiClient.getVideoStats(any()),
+        ).thenAnswer((_) async => _previewStats());
+      });
+
+      test(
+        "shows the index's newest lists first, without the viewer's own",
+        () async {
+          answerIndex([card('newest'), card('own', pubkey: _otherPubkey)]);
+          when(
+            () =>
+                nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+          ).thenAnswer((_) => Completer<List<Event>>().future);
+
+          final first = await repository
+              .discoverLists(limit: 50, excludeAuthor: _otherPubkey)
+              .first;
+
+          expect(first.single.list.id, 'newest');
+          expect(first.single.isComplete, isFalse);
+          verify(
+            () => funnelcakeApiClient.discoverLists(
+              kind: PublicListKind.videos,
+              limit: 50,
+            ),
+          ).called(1);
+        },
+      );
+
+      test(
+        'completes the lists from their events, then resolves thumbnails',
+        () async {
+          answerIndex([card('dance-list')]);
+          when(
+            () =>
+                nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+          ).thenAnswer((_) async => [listEvent('dance-list')]);
+
+          final emissions = await repository.discoverLists(limit: 50).toList();
+
+          expect(emissions, hasLength(3));
+          expect(emissions[1].single.isComplete, isTrue);
+          expect(emissions[2].single.list.thumbnailUrls, [
+            'https://example.com/preview.jpg',
+          ]);
+          verifyNever(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              timeout: any(named: 'timeout'),
+            ),
+          );
+        },
+      );
+
+      test('asks the index for no more than one page holds', () async {
+        answerIndex([]);
+
+        await repository.discoverLists(limit: 500).toList();
+
+        verify(
+          () => funnelcakeApiClient.discoverLists(
+            kind: PublicListKind.videos,
+            limit: FunnelcakeApiClient.maxListSearchLimit,
+          ),
+        ).called(1);
+      });
+
+      test(
+        'reads the newest lists on relays when the index fails',
+        () async {
+          when(
+            () => funnelcakeApiClient.discoverLists(
+              kind: any(named: 'kind'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenThrow(
+            const FunnelcakeApiException(message: 'down', statusCode: 503),
+          );
+          answerRelayWindow([
+            listEvent('third', createdAt: 1718400000),
+            listEvent('own', createdAt: 1718400300, pubkey: _otherPubkey),
+            listEvent('first', createdAt: 1718400200),
+            listEvent('second', createdAt: 1718400100),
+          ]);
+
+          final emissions = await repository
+              .discoverLists(limit: 2, excludeAuthor: _otherPubkey)
+              .toList();
+
+          expect(emissions, hasLength(2));
+          expect(emissions.first.map((result) => result.list.id), [
+            'first',
+            'second',
+          ]);
+          expect(emissions.first.every((result) => result.isComplete), isTrue);
+          expect(emissions.last.first.list.thumbnailUrls, [
+            'https://example.com/preview.jpg',
+          ]);
+          final filter =
+              (verify(
+                        () => nostrClient.queryEventsDetailed(
+                          captureAny(),
+                          timeout: kPublicCuratedListsRelayReadTimeout,
+                        ),
+                      ).captured.single
+                      as List<Filter>)
+                  .single;
+          expect(filter.kinds, [30005]);
+          expect(filter.limit, kPublicListsRelayWindow);
+        },
+      );
+
+      test('publishes no lists when the relays hold none', () async {
+        when(() => funnelcakeApiClient.isAvailable).thenReturn(false);
+        answerRelayWindow([]);
+
+        final emissions = await repository.discoverLists(limit: 50).toList();
+
+        expect(emissions, [isEmpty]);
+        verifyNever(() => funnelcakeApiClient.getVideoStats(any()));
+      });
+
+      test('fails when the index is unconfigured and no relay answers', () {
+        when(() => funnelcakeApiClient.isAvailable).thenReturn(false);
+        answerRelayWindow([], timedOut: true);
+
+        expect(
+          repository.discoverLists(limit: 50),
+          emitsError(isA<PublicCuratedListReadUnavailableException>()),
+        );
+      });
+
+      test('leaves out lists by blocked authors from the relays', () async {
+        final blockedRepository = CuratedListRepository(
+          nostrClient: nostrClient,
+          funnelcakeApiClient: funnelcakeApiClient,
+          blockFilter: (pubkey) => pubkey == _blockedPubkey,
+        );
+        addTearDown(blockedRepository.dispose);
+        when(() => funnelcakeApiClient.isAvailable).thenReturn(false);
+        answerRelayWindow([
+          listEvent('kept'),
+          listEvent('blocked', pubkey: _blockedPubkey),
+        ]);
+
+        final first = await blockedRepository.discoverLists(limit: 50).first;
+
+        expect(first.single.list.id, 'kept');
+      });
+    });
+
     group('getVideoListSummary', () {
       test('returns "Not in any lists" when video is nowhere', () {
         expect(

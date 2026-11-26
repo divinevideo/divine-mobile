@@ -1,8 +1,8 @@
 // ABOUTME: State for the Explore Lists discovery gallery: two independent
 // ABOUTME: columns (video lists and people lists), each with its own status.
 
+import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:equatable/equatable.dart';
-import 'package:models/models.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 
 /// Load status of one discovery column.
@@ -10,9 +10,9 @@ enum ListsDiscoveryColumnStatus { initial, loading, success, failure }
 
 /// State of the discovery gallery.
 ///
-/// The columns are independent by design: video lists come from a relay
-/// stream while people lists come from a one-shot query, and either can
-/// fail or stay empty without affecting the other.
+/// The columns are independent by design: video lists arrive as a stream
+/// that fills in step by step while people lists come from a one-shot query,
+/// and either can fail or stay empty without affecting the other.
 class ListsDiscoveryState extends Equatable {
   const ListsDiscoveryState({
     this.videoStatus = ListsDiscoveryColumnStatus.initial,
@@ -27,15 +27,17 @@ class ListsDiscoveryState extends Equatable {
   final ListsDiscoveryColumnStatus videoStatus;
   final ListsDiscoveryColumnStatus peopleStatus;
 
-  /// Discovered kind-30005 video lists, newest first.
-  final List<CuratedList> videoLists;
+  /// Discovered kind-30005 video lists, most recently updated first. A list
+  /// from FunnelCake's index starts as a summary without its videos (see
+  /// [CuratedListSearchResult.isComplete]).
+  final List<CuratedListSearchResult> videoLists;
 
   /// Discovered kind-30000 people lists, newest first.
   final List<PeopleListSearchResult> peopleLists;
 
-  /// Whether [videoLists] are still waiting on the thumbnail resolver:
-  /// true from the first streamed lists until the enriched copies land or
-  /// the resolve gives up, so cards can shimmer their empty fan slots.
+  /// Whether [videoLists] are still waiting on their thumbnails: true from
+  /// the first lists until the discovery stream ends, so cards can shimmer
+  /// their empty fan slots.
   final bool videoThumbnailsPending;
 
   /// Identifies the people-list request whose result may update this state.
@@ -54,7 +56,7 @@ class ListsDiscoveryState extends Equatable {
   ListsDiscoveryState copyWith({
     ListsDiscoveryColumnStatus? videoStatus,
     ListsDiscoveryColumnStatus? peopleStatus,
-    List<CuratedList>? videoLists,
+    List<CuratedListSearchResult>? videoLists,
     List<PeopleListSearchResult>? peopleLists,
     bool? videoThumbnailsPending,
     int? peopleLoadGeneration,

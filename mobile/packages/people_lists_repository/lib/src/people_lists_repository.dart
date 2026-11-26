@@ -148,16 +148,21 @@ abstract interface class PeopleListsRepository {
     String? viewerPubkey,
   });
 
-  /// Discovers public kind `30000` people lists on the discovery relays.
+  /// Discovers public kind `30000` people lists, FunnelCake's list index
+  /// first, at most [limit] of them from the index.
   ///
-  /// The same relay query, decoding, filtering, author check, and
+  /// The index's lists come in its order, most recently updated first, each
+  /// holding a preview of at most five members, with
+  /// [PeopleListSearchResult.memberCount] counting them all; the index keeps
+  /// only lists whose owner has posted a video. When it is unconfigured,
+  /// fails or does not answer in time, the discovery relays stand in, with
+  /// the same relay query, decoding, filtering, author check, and
   /// addressable-coordinate dedup as [searchPublicLists], without the text
-  /// match. Results come newest first by `updatedAt`. Lists authored by
-  /// [excludeAuthor] are dropped, so a discovery surface can keep the
-  /// viewer's own lists on their profile instead.
+  /// match, newest first by `updatedAt`.
   ///
-  /// Returns an empty list when the relay returns no events or none survive
-  /// the filters.
+  /// Lists authored by [excludeAuthor] are dropped, so a discovery surface
+  /// can keep the viewer's own lists on their profile instead. Returns an
+  /// empty list when no list survives the filters.
   Future<List<PeopleListSearchResult>> discoverPublicLists({
     int limit = 50,
     String? excludeAuthor,

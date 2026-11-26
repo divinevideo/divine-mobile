@@ -1,5 +1,5 @@
 // ABOUTME: Tests for ListsDiscoveryCubit: independent column loading,
-// ABOUTME: own-list exclusion, ordering, thumbnail hydration, close guard.
+// ABOUTME: own and blocked list exclusion, the column cap, close guard.
 
 import 'dart:async';
 
@@ -8,10 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/lists_discovery/cubit/lists_discovery_cubit.dart';
-import 'package:openvine/services/curated_list_service.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
-
-class _MockCuratedListService extends Mock implements CuratedListService {}
 
 class _MockCuratedListRepository extends Mock
     implements CuratedListRepository {}
@@ -22,20 +19,20 @@ class _MockPeopleListsRepository extends Mock
 final String _viewer = 'f' * 64;
 final String _author = 'a' * 64;
 
-CuratedList _videoList(
+CuratedListSearchResult _videoList(
   String id, {
   String? pubkey,
-  int createdAtYear = 2026,
-  List<String> videoEventIds = const ['v1'],
   List<String> thumbnailUrls = const [],
-}) => CuratedList(
-  id: id,
-  name: 'List $id',
-  pubkey: pubkey ?? _author,
-  videoEventIds: videoEventIds,
-  createdAt: DateTime(createdAtYear),
-  updatedAt: DateTime(createdAtYear),
-  thumbnailUrls: thumbnailUrls,
+}) => CuratedListSearchResult(
+  CuratedList(
+    id: id,
+    name: 'List $id',
+    pubkey: pubkey ?? _author,
+    videoEventIds: const ['v1'],
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+    thumbnailUrls: thumbnailUrls,
+  ),
 );
 
 PeopleListSearchResult _peopleList(String id) => PeopleListSearchResult(
@@ -48,6 +45,10 @@ PeopleListSearchResult _peopleList(String id) => PeopleListSearchResult(
     updatedAt: DateTime(2026),
   ),
 );
+
+List<String> _ids(List<CuratedListSearchResult> results) => [
+  for (final result in results) result.list.id,
+];
 
 void main() {
   group('relay read budget', () {
@@ -63,12 +64,10 @@ void main() {
   });
 
   group(ListsDiscoveryCubit, () {
-    late _MockCuratedListService service;
     late _MockCuratedListRepository curatedRepository;
     late _MockPeopleListsRepository peopleRepository;
 
     setUp(() {
-      service = _MockCuratedListService();
       curatedRepository = _MockCuratedListRepository();
       peopleRepository = _MockPeopleListsRepository();
     });
@@ -78,7 +77,6 @@ void main() {
       bool Function(String)? blockFilter,
       bool videoInitializationFailed = false,
     }) => ListsDiscoveryCubit(
-      curatedListService: service,
       curatedListRepository: curatedRepository,
       peopleListsRepository: peopleRepository,
       viewerPubkey: _viewer,
@@ -87,48 +85,49 @@ void main() {
       videoInitializationFailed: videoInitializationFailed,
     );
 
+    void answerVideos(Stream<List<CuratedListSearchResult>> Function() next) {
+      when(
+        () => curatedRepository.discoverLists(
+          limit: any(named: 'limit'),
+          excludeAuthor: any(named: 'excludeAuthor'),
+          maxThumbnails: any(named: 'maxThumbnails'),
+        ),
+      ).thenAnswer((_) => next());
+    }
+
+    void answerPeople(
+      Future<List<PeopleListSearchResult>> Function() next,
+    ) {
+      when(
+        () => peopleRepository.discoverPublicLists(
+          limit: any(named: 'limit'),
+          excludeAuthor: any(named: 'excludeAuthor'),
+        ),
+      ).thenAnswer((_) => next());
+    }
+
+    void verifyNoVideoDiscovery() => verifyNever(
+      () => curatedRepository.discoverLists(
+        limit: any(named: 'limit'),
+        excludeAuthor: any(named: 'excludeAuthor'),
+        maxThumbnails: any(named: 'maxThumbnails'),
+      ),
+    );
+
     group('discovery visibility policy', () {
       setUp(() {
-        when(
-          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-        ).thenAnswer((_) => const Stream.empty());
-        when(
-          () => peopleRepository.discoverPublicLists(
-            limit: any(named: 'limit'),
-            excludeAuthor: any(named: 'excludeAuthor'),
-          ),
-        ).thenAnswer((_) async => [_peopleList('crew')]);
-        when(
-          () => curatedRepository.resolveListThumbnails(
-            any(),
-            maxThumbnails: any(named: 'maxThumbnails'),
-          ),
-        ).thenAnswer(
-          (invocation) async =>
-              invocation.positionalArguments.first as List<CuratedList>,
-        );
+        answerVideos(() => const Stream.empty());
+        answerPeople(() async => [_peopleList('crew')]);
       });
 
-      test(
-        'loads people and video discovery together',
-        () async {
-          when(
-            () =>
-                service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-          ).thenAnswer((_) => Stream.value([_videoList('video')]));
-          final cubit = buildCubit();
-          addTearDown(cubit.close);
-          await cubit.load();
-          expect(cubit.state.videoLists.single.id, 'video');
-          expect(cubit.state.peopleLists.single.list.id, 'crew');
-          verify(
-            () => peopleRepository.discoverPublicLists(
-              limit: any(named: 'limit'),
-              excludeAuthor: any(named: 'excludeAuthor'),
-            ),
-          ).called(1);
-        },
-      );
+      test('loads people and video discovery together', () async {
+        answerVideos(() => Stream.value([_videoList('video')]));
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        await cubit.load();
+        expect(_ids(cubit.state.videoLists), ['video']);
+        expect(cubit.state.peopleLists.single.list.id, 'crew');
+      });
 
       test(
         'failed video initialization keeps independent people query usable',
@@ -139,81 +138,63 @@ void main() {
           expect(cubit.state.videoInitializationFailed, isTrue);
           expect(cubit.state.videoStatus, ListsDiscoveryColumnStatus.failure);
           expect(cubit.state.peopleLists.single.list.id, 'crew');
-          verifyNever(
-            () => service.streamPublicListsFromRelays(
-              limit: any(named: 'limit'),
-            ),
-          );
+          verifyNoVideoDiscovery();
         },
       );
 
-      test('filters blocked authors before cap and thumbnail work', () async {
+      test('filters blocked authors before the cap', () async {
         final blocked = 'b' * 64;
-        final eligible = List.generate(
-          kListsDiscoveryColumnCap,
-          (index) => _videoList('eligible-$index'),
-        );
-        when(
-          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-        ).thenAnswer(
-          (_) => Stream.value([
-            _videoList('blocked', pubkey: blocked, createdAtYear: 2027),
+        final eligible = [
+          for (var i = 0; i < kListsDiscoveryColumnCap; i++)
+            _videoList('eligible-$i'),
+        ];
+        answerVideos(
+          () => Stream.value([
+            _videoList('blocked', pubkey: blocked),
             ...eligible,
           ]),
         );
         final cubit = buildCubit(blockFilter: (author) => author == blocked);
         addTearDown(cubit.close);
         await cubit.load();
-        expect(cubit.state.videoLists, hasLength(kListsDiscoveryColumnCap));
-        final hydrated =
-            verify(
-                  () => curatedRepository.resolveListThumbnails(
-                    captureAny(),
-                    maxThumbnails: any(named: 'maxThumbnails'),
-                  ),
-                ).captured.single
-                as List<CuratedList>;
-        expect(hydrated, eligible);
+        expect(cubit.state.videoLists, eligible);
       });
 
-      test('block during hydration removes cards and late results cannot revive them', () async {
-        var blocked = false;
-        final resolve = Completer<List<CuratedList>>();
-        var resolveCalls = 0;
-        when(
-          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-        ).thenAnswer((_) => Stream.value([_videoList('visible')]));
-        when(
-          () => curatedRepository.resolveListThumbnails(
-            any(),
-            maxThumbnails: any(named: 'maxThumbnails'),
-          ),
-        ).thenAnswer(
-          (invocation) => resolveCalls++ == 0
-              ? resolve.future
-              : Future.value(
-                  invocation.positionalArguments.first as List<CuratedList>,
-                ),
-        );
-        final cubit = buildCubit(blockFilter: (_) => blocked);
-        addTearDown(cubit.close);
-        final first = cubit.load();
-        await pumpEventQueue();
-        expect(cubit.state.videoLists.single.id, 'visible');
-        blocked = true;
-        final refreshed = cubit.load();
-        expect(cubit.state.videoLists, isEmpty);
-        expect(cubit.state.peopleLists, isEmpty);
-        await refreshed;
-        resolve.complete([_videoList('visible')]);
-        await first;
-        expect(cubit.state.videoLists, isEmpty);
-        expect(cubit.state.peopleLists, isEmpty);
-        blocked = false;
-        await cubit.load();
-        expect(cubit.state.videoLists.single.id, 'visible');
-        expect(cubit.state.peopleLists.single.list.id, 'crew');
-      });
+      test(
+        'a block refresh removes cards a superseded load cannot revive',
+        () async {
+          var blocked = false;
+          final firstLoad = StreamController<List<CuratedListSearchResult>>();
+          var calls = 0;
+          answerVideos(
+            () => calls++ == 0
+                ? firstLoad.stream
+                : Stream.value([_videoList('visible')]),
+          );
+          final cubit = buildCubit(blockFilter: (_) => blocked);
+          addTearDown(cubit.close);
+          final first = cubit.load();
+          firstLoad.add([_videoList('visible')]);
+          await pumpEventQueue();
+          expect(_ids(cubit.state.videoLists), ['visible']);
+
+          blocked = true;
+          final refreshed = cubit.load();
+          expect(cubit.state.videoLists, isEmpty);
+          expect(cubit.state.peopleLists, isEmpty);
+          await refreshed;
+          firstLoad.add([_videoList('visible')]);
+          await firstLoad.close();
+          await first;
+          expect(cubit.state.videoLists, isEmpty);
+          expect(cubit.state.peopleLists, isEmpty);
+
+          blocked = false;
+          await cubit.load();
+          expect(_ids(cubit.state.videoLists), ['visible']);
+          expect(cubit.state.peopleLists.single.list.id, 'crew');
+        },
+      );
     });
 
     group('seeded construction', () {
@@ -235,8 +216,8 @@ void main() {
           cubit.state.peopleStatus,
           equals(ListsDiscoveryColumnStatus.success),
         );
-        expect(cubit.state.videoLists.single.id, equals('fixture'));
-        verifyZeroInteractions(service);
+        expect(_ids(cubit.state.videoLists), equals(['fixture']));
+        verifyZeroInteractions(curatedRepository);
         verifyZeroInteractions(peopleRepository);
       });
 
@@ -262,7 +243,6 @@ void main() {
           expect(cubit.state, seeded);
           expect(cubit.state.videoLists, videos);
           expect(cubit.state.peopleLists, people);
-          verifyZeroInteractions(service);
           verifyZeroInteractions(curatedRepository);
           verifyZeroInteractions(peopleRepository);
         },
@@ -276,21 +256,12 @@ void main() {
             'ignores an older people query after refresh '
             '(old fails: $oldFails, fresh fails: $freshFails)',
             () async {
-              when(
-                () => service.streamPublicListsFromRelays(
-                  limit: any(named: 'limit'),
-                ),
-              ).thenAnswer((_) => const Stream.empty());
+              answerVideos(() => const Stream.empty());
               final oldQuery = Completer<List<PeopleListSearchResult>>();
               final freshQuery = Completer<List<PeopleListSearchResult>>();
               var calls = 0;
-              when(
-                () => peopleRepository.discoverPublicLists(
-                  limit: any(named: 'limit'),
-                  excludeAuthor: any(named: 'excludeAuthor'),
-                ),
-              ).thenAnswer(
-                (_) => calls++ == 0 ? oldQuery.future : freshQuery.future,
+              answerPeople(
+                () => calls++ == 0 ? oldQuery.future : freshQuery.future,
               );
               final cubit = buildCubit();
               addTearDown(cubit.close);
@@ -329,46 +300,28 @@ void main() {
 
       for (final refreshFails in [false, true]) {
         test(
-          'refresh with no video emissions '
+          'a refresh that finds no lists '
           '${refreshFails ? 'retains useful cards on error' : 'clears old cards on success'}',
           () async {
             var calls = 0;
-            when(
-              () => service.streamPublicListsFromRelays(
-                limit: any(named: 'limit'),
-              ),
-            ).thenAnswer((_) {
+            answerVideos(() {
               if (calls++ == 0) return Stream.value([_videoList('old')]);
               return refreshFails
                   ? Stream.error(Exception('refresh failed'))
-                  : const Stream.empty();
+                  : Stream.value(const []);
             });
-            when(
-              () => curatedRepository.resolveListThumbnails(
-                any(),
-                maxThumbnails: any(named: 'maxThumbnails'),
-              ),
-            ).thenAnswer(
-              (invocation) async =>
-                  invocation.positionalArguments.first as List<CuratedList>,
-            );
-            when(
-              () => peopleRepository.discoverPublicLists(
-                limit: any(named: 'limit'),
-                excludeAuthor: any(named: 'excludeAuthor'),
-              ),
-            ).thenAnswer((_) async => const []);
+            answerPeople(() async => const []);
             final cubit = buildCubit();
             addTearDown(cubit.close);
 
             await cubit.load();
-            expect(cubit.state.videoLists.single.id, 'old');
+            expect(_ids(cubit.state.videoLists), ['old']);
             await cubit.load();
 
             expect(cubit.state.videoStatus, ListsDiscoveryColumnStatus.success);
             expect(cubit.state.videoThumbnailsPending, isFalse);
             if (refreshFails) {
-              expect(cubit.state.videoLists.single.id, 'old');
+              expect(_ids(cubit.state.videoLists), ['old']);
             } else {
               expect(cubit.state.videoLists, isEmpty);
               expect(cubit.state.isEmpty, isTrue);
@@ -378,17 +331,10 @@ void main() {
       }
 
       test('closing ignores a live people query already in flight', () async {
-        final videoStream = StreamController<List<CuratedList>>();
-        when(
-          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-        ).thenAnswer((_) => videoStream.stream);
+        final videoStream = StreamController<List<CuratedListSearchResult>>();
+        answerVideos(() => videoStream.stream);
         final peopleQuery = Completer<List<PeopleListSearchResult>>();
-        when(
-          () => peopleRepository.discoverPublicLists(
-            limit: any(named: 'limit'),
-            excludeAuthor: any(named: 'excludeAuthor'),
-          ),
-        ).thenAnswer((_) => peopleQuery.future);
+        answerPeople(() => peopleQuery.future);
         final cubit = buildCubit();
         addTearDown(cubit.close);
         final loading = cubit.load();
@@ -396,46 +342,28 @@ void main() {
 
         await cubit.close();
         final closed = cubit.state;
+        // Still loading, so a late result would change it.
+        expect(closed.peopleStatus, ListsDiscoveryColumnStatus.loading);
+        expect(closed.videoLists, isEmpty);
         peopleQuery.complete([_peopleList('live')]);
         videoStream.add([_videoList('live')]);
         await videoStream.close();
         await loading;
 
         expect(cubit.state, closed);
-        verifyZeroInteractions(curatedRepository);
       });
 
       test(
-        'reads the shared relay window and caps what each column shows',
+        "asks for a column of lists without the viewer's and caps both",
         () async {
-          // The window is wide so real lists surface past the empty default
-          // placeholders; the cap bounds the cards built and the thumbnails
-          // resolved. Sixty lists in, fifty cards out, per column.
-          when(
-            () =>
-                service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-          ).thenAnswer(
-            (_) => Stream.value([
+          answerVideos(
+            () => Stream.value([
               for (var i = 0; i < kListsDiscoveryColumnCap + 10; i++)
                 _videoList('video-$i'),
             ]),
           );
-          when(
-            () => curatedRepository.resolveListThumbnails(
-              any(),
-              maxThumbnails: any(named: 'maxThumbnails'),
-            ),
-          ).thenAnswer(
-            (invocation) async =>
-                invocation.positionalArguments.first as List<CuratedList>,
-          );
-          when(
-            () => peopleRepository.discoverPublicLists(
-              limit: any(named: 'limit'),
-              excludeAuthor: any(named: 'excludeAuthor'),
-            ),
-          ).thenAnswer(
-            (_) async => [
+          answerPeople(
+            () async => [
               for (var i = 0; i < kListsDiscoveryColumnCap + 10; i++)
                 _peopleList('people-$i'),
             ],
@@ -446,12 +374,12 @@ void main() {
 
           await cubit.load();
 
-          final window = verify(
-            () => service.streamPublicListsFromRelays(
-              limit: captureAny(named: 'limit'),
+          verify(
+            () => curatedRepository.discoverLists(
+              limit: kListsDiscoveryColumnCap,
+              excludeAuthor: _viewer,
             ),
-          ).captured.single;
-          expect(window, equals(kPublicListsRelayWindow));
+          ).called(1);
           verify(
             () => peopleRepository.discoverPublicLists(
               limit: kPublicListsRelayWindow,
@@ -460,127 +388,44 @@ void main() {
           ).called(1);
           expect(cubit.state.videoLists, hasLength(kListsDiscoveryColumnCap));
           expect(cubit.state.peopleLists, hasLength(kListsDiscoveryColumnCap));
-          final resolved =
-              verify(
-                    () => curatedRepository.resolveListThumbnails(
-                      captureAny(),
-                      maxThumbnails: any(named: 'maxThumbnails'),
-                    ),
-                  ).captured.single
-                  as List<CuratedList>;
-          expect(resolved, hasLength(kListsDiscoveryColumnCap));
-          expect(kListsDiscoveryColumnCap, lessThan(kPublicListsRelayWindow));
         },
       );
 
-      test('populates both columns, newest first, without own lists', () async {
-        final older = _videoList('older', createdAtYear: 2024);
-        final newer = _videoList('newer');
-        final mine = _videoList('mine', pubkey: _viewer);
-        when(
-          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-        ).thenAnswer((_) => Stream.value([older, mine, newer]));
-        when(
-          () => curatedRepository.resolveListThumbnails(
-            any(),
-            maxThumbnails: any(named: 'maxThumbnails'),
-          ),
-        ).thenAnswer(
-          (invocation) async => [
-            for (final list
-                in invocation.positionalArguments.first as List<CuratedList>)
-              list.copyWith(thumbnailUrls: ['https://example.com/t.jpg']),
-          ],
-        );
-        when(
-          () => peopleRepository.discoverPublicLists(
-            limit: any(named: 'limit'),
-            excludeAuthor: any(named: 'excludeAuthor'),
-          ),
-        ).thenAnswer((_) async => [_peopleList('crew')]);
+      test(
+        "keeps the repository's order and leaves out the viewer's lists",
+        () async {
+          answerVideos(
+            () => Stream.value([
+              _videoList('first'),
+              _videoList('mine', pubkey: _viewer),
+              _videoList('second'),
+            ]),
+          );
+          answerPeople(() async => [_peopleList('crew')]);
 
-        final cubit = buildCubit();
-        addTearDown(cubit.close);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
 
-        await cubit.load();
+          await cubit.load();
 
-        expect(
-          cubit.state.videoStatus,
-          equals(ListsDiscoveryColumnStatus.success),
-        );
-        expect(
-          cubit.state.videoLists.map((l) => l.id),
-          equals(['newer', 'older']),
-        );
-        expect(
-          cubit.state.videoLists.first.thumbnailUrls,
-          equals(['https://example.com/t.jpg']),
-        );
-        expect(
-          cubit.state.peopleStatus,
-          equals(ListsDiscoveryColumnStatus.success),
-        );
-        expect(cubit.state.peopleLists.single.list.name, 'People crew');
-        verify(
-          () => peopleRepository.discoverPublicLists(
-            limit: any(named: 'limit'),
-            excludeAuthor: _viewer,
-          ),
-        ).called(1);
-      });
-
-      test('hides streamed lists that have no videos', () async {
-        final bare = _videoList('bare', videoEventIds: const []);
-        final full = _videoList('full');
-        when(
-          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-        ).thenAnswer((_) => Stream.value([bare, full]));
-        when(
-          () => curatedRepository.resolveListThumbnails(
-            any(),
-            maxThumbnails: any(named: 'maxThumbnails'),
-          ),
-        ).thenAnswer(
-          (invocation) async =>
-              invocation.positionalArguments.first as List<CuratedList>,
-        );
-        when(
-          () => peopleRepository.discoverPublicLists(
-            limit: any(named: 'limit'),
-            excludeAuthor: any(named: 'excludeAuthor'),
-          ),
-        ).thenAnswer((_) async => const []);
-
-        final cubit = buildCubit();
-        addTearDown(cubit.close);
-
-        await cubit.load();
-
-        expect(cubit.state.videoLists.map((l) => l.id), equals(['full']));
-        final resolved =
-            verify(
-                  () => curatedRepository.resolveListThumbnails(
-                    captureAny(),
-                    maxThumbnails: any(named: 'maxThumbnails'),
-                  ),
-                ).captured.single
-                as List<CuratedList>;
-        expect(resolved.map((l) => l.id), equals(['full']));
-      });
+          expect(
+            cubit.state.videoStatus,
+            equals(ListsDiscoveryColumnStatus.success),
+          );
+          expect(_ids(cubit.state.videoLists), equals(['first', 'second']));
+          expect(
+            cubit.state.peopleStatus,
+            equals(ListsDiscoveryColumnStatus.success),
+          );
+          expect(cubit.state.peopleLists.single.list.name, 'People crew');
+        },
+      );
 
       test(
         'fails only the video column when its stream errors empty',
         () async {
-          when(
-            () =>
-                service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-          ).thenAnswer((_) => Stream.error(Exception('relay down')));
-          when(
-            () => peopleRepository.discoverPublicLists(
-              limit: any(named: 'limit'),
-              excludeAuthor: any(named: 'excludeAuthor'),
-            ),
-          ).thenAnswer((_) async => [_peopleList('crew')]);
+          answerVideos(() => Stream.error(Exception('relay down')));
+          answerPeople(() async => [_peopleList('crew')]);
 
           final cubit = buildCubit();
           addTearDown(cubit.close);
@@ -599,63 +444,36 @@ void main() {
         },
       );
 
-      test('keeps streamed lists when the stream errors after data', () async {
-        final controller = StreamController<List<CuratedList>>();
-        when(
-          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-        ).thenAnswer((_) => controller.stream);
-        when(
-          () => curatedRepository.resolveListThumbnails(
-            any(),
-            maxThumbnails: any(named: 'maxThumbnails'),
-          ),
-        ).thenAnswer(
-          (invocation) async =>
-              invocation.positionalArguments.first as List<CuratedList>,
-        );
-        when(
-          () => peopleRepository.discoverPublicLists(
-            limit: any(named: 'limit'),
-            excludeAuthor: any(named: 'excludeAuthor'),
-          ),
-        ).thenAnswer((_) async => const []);
+      test(
+        'keeps the lists and stops the shimmer when the stream errors '
+        'after data',
+        () async {
+          final controller = StreamController<List<CuratedListSearchResult>>();
+          answerVideos(() => controller.stream);
+          answerPeople(() async => const []);
 
-        final cubit = buildCubit();
-        addTearDown(cubit.close);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
 
-        final load = cubit.load();
-        controller.add([_videoList('kept')]);
-        await pumpEventQueue();
-        controller.addError(Exception('relay hiccup'));
-        await controller.close();
-        await load;
+          final load = cubit.load();
+          controller.add([_videoList('kept')]);
+          await pumpEventQueue();
+          controller.addError(Exception('relay hiccup'));
+          await controller.close();
+          await load;
 
-        expect(
-          cubit.state.videoStatus,
-          equals(ListsDiscoveryColumnStatus.success),
-        );
-        expect(cubit.state.videoLists.single.id, equals('kept'));
-      });
+          expect(
+            cubit.state.videoStatus,
+            equals(ListsDiscoveryColumnStatus.success),
+          );
+          expect(_ids(cubit.state.videoLists), equals(['kept']));
+          expect(cubit.state.videoThumbnailsPending, isFalse);
+        },
+      );
 
       test('fails only the people column when its query throws', () async {
-        when(
-          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-        ).thenAnswer((_) => Stream.value([_videoList('one')]));
-        when(
-          () => curatedRepository.resolveListThumbnails(
-            any(),
-            maxThumbnails: any(named: 'maxThumbnails'),
-          ),
-        ).thenAnswer(
-          (invocation) async =>
-              invocation.positionalArguments.first as List<CuratedList>,
-        );
-        when(
-          () => peopleRepository.discoverPublicLists(
-            limit: any(named: 'limit'),
-            excludeAuthor: any(named: 'excludeAuthor'),
-          ),
-        ).thenThrow(Exception('relay down'));
+        answerVideos(() => Stream.value([_videoList('one')]));
+        answerPeople(() async => throw Exception('relay down'));
 
         final cubit = buildCubit();
         addTearDown(cubit.close);
@@ -673,94 +491,39 @@ void main() {
         );
       });
 
-      test('marks thumbnails pending until the resolver returns', () async {
-        when(
-          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-        ).thenAnswer((_) => Stream.value([_videoList('a')]));
-        final resolve = Completer<List<CuratedList>>();
-        when(
-          () => curatedRepository.resolveListThumbnails(
-            any(),
-            maxThumbnails: any(named: 'maxThumbnails'),
-          ),
-        ).thenAnswer((_) => resolve.future);
-        when(
-          () => peopleRepository.discoverPublicLists(
-            limit: any(named: 'limit'),
-            excludeAuthor: any(named: 'excludeAuthor'),
-          ),
-        ).thenAnswer((_) async => []);
+      test('marks thumbnails pending until the stream ends', () async {
+        final controller = StreamController<List<CuratedListSearchResult>>();
+        answerVideos(() => controller.stream);
+        answerPeople(() async => const []);
 
         final cubit = buildCubit();
         addTearDown(cubit.close);
 
         final load = cubit.load();
-        await Future<void>(() {});
-        await Future<void>(() {});
+        controller.add([_videoList('a')]);
+        await pumpEventQueue();
 
         expect(cubit.state.videoLists, hasLength(1));
         expect(cubit.state.videoThumbnailsPending, isTrue);
 
-        resolve.complete([
+        controller.add([
           _videoList('a', thumbnailUrls: const ['https://example.com/t.jpg']),
         ]);
+        await controller.close();
         await load;
 
         expect(cubit.state.videoThumbnailsPending, isFalse);
-        expect(cubit.state.videoLists.single.thumbnailUrls, isNotEmpty);
+        expect(cubit.state.videoLists.single.list.thumbnailUrls, isNotEmpty);
       });
-
-      test(
-        'keeps placeholder cards and stops the shimmer when hydration throws',
-        () async {
-          when(
-            () =>
-                service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-          ).thenAnswer((_) => Stream.value([_videoList('bare')]));
-          when(
-            () => curatedRepository.resolveListThumbnails(
-              any(),
-              maxThumbnails: any(named: 'maxThumbnails'),
-            ),
-          ).thenThrow(Exception('funnelcake down'));
-          when(
-            () => peopleRepository.discoverPublicLists(
-              limit: any(named: 'limit'),
-              excludeAuthor: any(named: 'excludeAuthor'),
-            ),
-          ).thenAnswer((_) async => const []);
-
-          final cubit = buildCubit();
-          addTearDown(cubit.close);
-
-          await cubit.load();
-
-          expect(
-            cubit.state.videoStatus,
-            equals(ListsDiscoveryColumnStatus.success),
-          );
-          expect(cubit.state.videoLists.single.id, equals('bare'));
-          expect(cubit.state.videoLists.single.thumbnailUrls, isEmpty);
-          expect(cubit.state.videoThumbnailsPending, isFalse);
-        },
-      );
 
       test(
         'completes a superseded load future when a refresh cancels it',
         () async {
-          final first = StreamController<List<CuratedList>>();
-          final second = StreamController<List<CuratedList>>();
+          final first = StreamController<List<CuratedListSearchResult>>();
+          final second = StreamController<List<CuratedListSearchResult>>();
           var call = 0;
-          when(
-            () =>
-                service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-          ).thenAnswer((_) => call++ == 0 ? first.stream : second.stream);
-          when(
-            () => peopleRepository.discoverPublicLists(
-              limit: any(named: 'limit'),
-              excludeAuthor: any(named: 'excludeAuthor'),
-            ),
-          ).thenAnswer((_) async => const []);
+          answerVideos(() => call++ == 0 ? first.stream : second.stream);
+          answerPeople(() async => const []);
 
           final cubit = buildCubit();
           addTearDown(cubit.close);
@@ -791,72 +554,10 @@ void main() {
         },
       );
 
-      test('a superseded hydration does not overwrite a newer load', () async {
-        final first = StreamController<List<CuratedList>>();
-        final second = StreamController<List<CuratedList>>();
-        var call = 0;
-        when(
-          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-        ).thenAnswer((_) => call++ == 0 ? first.stream : second.stream);
-        when(
-          () => peopleRepository.discoverPublicLists(
-            limit: any(named: 'limit'),
-            excludeAuthor: any(named: 'excludeAuthor'),
-          ),
-        ).thenAnswer((_) async => const []);
-
-        // The first resolve is still in flight when the refresh lands.
-        final slowResolve = Completer<List<CuratedList>>();
-        var resolves = 0;
-        when(
-          () => curatedRepository.resolveListThumbnails(
-            any(),
-            maxThumbnails: any(named: 'maxThumbnails'),
-          ),
-        ).thenAnswer((invocation) {
-          if (resolves++ == 0) return slowResolve.future;
-          return Future.value(
-            invocation.positionalArguments.first as List<CuratedList>,
-          );
-        });
-
-        final cubit = buildCubit();
-        addTearDown(cubit.close);
-
-        unawaited(cubit.load());
-        await pumpEventQueue();
-        first.add([_videoList('stale')]);
-        await first.close();
-        await pumpEventQueue();
-
-        unawaited(cubit.load());
-        await pumpEventQueue();
-        second.add([_videoList('fresh')]);
-        await second.close();
-        await pumpEventQueue();
-        expect(cubit.state.videoLists.single.id, equals('fresh'));
-
-        slowResolve.complete([_videoList('stale')]);
-        await pumpEventQueue();
-
-        expect(
-          cubit.state.videoLists.single.id,
-          equals('fresh'),
-          reason: 'the first load resolve must not revert the refreshed column',
-        );
-      });
-
       test('drops emissions after close without throwing', () async {
-        final controller = StreamController<List<CuratedList>>();
-        when(
-          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-        ).thenAnswer((_) => controller.stream);
-        when(
-          () => peopleRepository.discoverPublicLists(
-            limit: any(named: 'limit'),
-            excludeAuthor: any(named: 'excludeAuthor'),
-          ),
-        ).thenAnswer((_) async => const []);
+        final controller = StreamController<List<CuratedListSearchResult>>();
+        answerVideos(() => controller.stream);
+        answerPeople(() async => const []);
 
         final cubit = buildCubit();
         final load = cubit.load();
@@ -869,49 +570,6 @@ void main() {
         await expectLater(load, completes);
         await controller.done;
       });
-
-      test(
-        'does not resolve thumbnails for a load closed mid-stream',
-        () async {
-          final controller = StreamController<List<CuratedList>>();
-          when(
-            () =>
-                service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-          ).thenAnswer((_) => controller.stream);
-          when(
-            () => curatedRepository.resolveListThumbnails(
-              any(),
-              maxThumbnails: any(named: 'maxThumbnails'),
-            ),
-          ).thenAnswer(
-            (invocation) async =>
-                invocation.positionalArguments.first as List<CuratedList>,
-          );
-          when(
-            () => peopleRepository.discoverPublicLists(
-              limit: any(named: 'limit'),
-              excludeAuthor: any(named: 'excludeAuthor'),
-            ),
-          ).thenAnswer((_) async => const []);
-
-          final cubit = buildCubit();
-          final load = cubit.load();
-          controller.add([_videoList('streamed')]);
-          await pumpEventQueue();
-          expect(cubit.state.videoLists.single.id, equals('streamed'));
-
-          await cubit.close();
-          await load;
-
-          verifyNever(
-            () => curatedRepository.resolveListThumbnails(
-              any(),
-              maxThumbnails: any(named: 'maxThumbnails'),
-            ),
-          );
-          await controller.close();
-        },
-      );
     });
   });
 }

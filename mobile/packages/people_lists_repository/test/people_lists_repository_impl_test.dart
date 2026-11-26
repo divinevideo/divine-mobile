@@ -2639,6 +2639,18 @@ void main() {
       const thirdOwner =
           '5555555555555555555555555555555555555555555555555555555555555555';
 
+      void failIndex(_MockFunnelcakeApiClient api) {
+        registerFallbackValue(PublicListKind.people);
+        when(
+          () => api.discoverLists(
+            kind: any(named: 'kind'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenThrow(
+          const FunnelcakeApiException(message: 'down', statusCode: 503),
+        );
+      }
+
       test('reads the discovery relays alone, without the cache', () async {
         final client = _MockNostrClient();
         final repository = buildRepository(
@@ -2704,6 +2716,8 @@ void main() {
         );
         final api = _MockFunnelcakeApiClient();
         when(() => api.isAvailable).thenReturn(true);
+        // The index did not answer, so the relays and their author check run.
+        failIndex(api);
         when(() => api.getBulkProfiles(any())).thenAnswer(
           (_) async => BulkProfilesResponse(
             profiles: {
@@ -2753,6 +2767,8 @@ void main() {
         );
         final api = _MockFunnelcakeApiClient();
         when(() => api.isAvailable).thenReturn(true);
+        // The index did not answer, so the relays and their author check run.
+        failIndex(api);
         when(() => api.getBulkProfiles(any())).thenAnswer((invocation) async {
           final asked = invocation.positionalArguments.first as List<String>;
           return BulkProfilesResponse(
@@ -2802,6 +2818,8 @@ void main() {
         );
         final api = _MockFunnelcakeApiClient();
         when(() => api.isAvailable).thenReturn(true);
+        // The index did not answer, so the relays and their author check run.
+        failIndex(api);
         when(() => api.getBulkProfiles(any())).thenThrow(
           const FunnelcakeApiException(
             message: 'Server error',
@@ -4034,6 +4052,106 @@ void main() {
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: true,
             timeout: any(named: 'timeout'),
+          ),
+        ).called(1);
+      });
+    });
+
+    group('discoverPublicLists with the list index', () {
+      const secondOwner =
+          '6666666666666666666666666666666666666666666666666666666666666666';
+
+      late _MockNostrClient client;
+      late _MockFunnelcakeApiClient api;
+
+      PublicListCard card(
+        String dTag, {
+        String pubkey = _ownerPubkey,
+        int memberCount = 2,
+      }) => PublicListCard(
+        kind: 30000,
+        pubkey: pubkey,
+        dTag: dTag,
+        title: 'Crew',
+        itemCount: memberCount,
+        memberCount: memberCount,
+        members: const [_memberA, _memberB],
+        updatedAt: DateTime.utc(2026, 11, 13),
+      );
+
+      void answerIndex(List<PublicListCard> cards) {
+        when(
+          () => api.discoverLists(
+            kind: any(named: 'kind'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) async => ListSearchResponse(cards: cards));
+      }
+
+      setUp(() {
+        registerFallbackValue(PublicListKind.people);
+        client = _MockNostrClient();
+        api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+      });
+
+      test(
+        'answers from the index in its order, reading no relay and asking '
+        'nothing about authors',
+        () async {
+          answerIndex([
+            card('crew', memberCount: 32),
+            card('pals', pubkey: secondOwner),
+          ]);
+          final repository = buildRepository(
+            nostrClient: client,
+            funnelcakeApiClient: api,
+          );
+
+          final results = await repository.discoverPublicLists();
+
+          expect(results.map((r) => r.list.id), ['crew', 'pals']);
+          expect(results.first.memberCount, 32);
+          expect(results.first.list.pubkeys, [_memberA, _memberB]);
+          verify(
+            () => api.discoverLists(kind: PublicListKind.people, limit: 50),
+          ).called(1);
+          verifyNever(() => api.getBulkProfiles(any()));
+          verifyNoMoreInteractions(client);
+        },
+      );
+
+      test("leaves out the viewer's lists and empty ones", () async {
+        answerIndex([
+          card('mine', pubkey: secondOwner),
+          card('empty', memberCount: 0),
+          card('crew'),
+        ]);
+        final repository = buildRepository(
+          nostrClient: client,
+          funnelcakeApiClient: api,
+        );
+
+        final results = await repository.discoverPublicLists(
+          excludeAuthor: secondOwner,
+        );
+
+        expect(results.map((r) => r.list.id), ['crew']);
+      });
+
+      test('asks the index for no more than one page holds', () async {
+        answerIndex([]);
+        final repository = buildRepository(
+          nostrClient: client,
+          funnelcakeApiClient: api,
+        );
+
+        await repository.discoverPublicLists(limit: 500);
+
+        verify(
+          () => api.discoverLists(
+            kind: PublicListKind.people,
+            limit: FunnelcakeApiClient.maxListSearchLimit,
           ),
         ).called(1);
       });

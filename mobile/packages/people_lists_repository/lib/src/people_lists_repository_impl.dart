@@ -31,8 +31,8 @@ const String _logName = 'people_lists_repository.impl';
 /// Read budget for public people-list discovery, search and coordinate reads.
 const kPublicPeopleListsRelayReadTimeout = Duration(seconds: 12);
 
-/// How long a people-list search waits for FunnelCake's list index before the
-/// relay search stands in.
+/// How long a people-list search or discovery waits for FunnelCake's list
+/// index before the relays stand in.
 ///
 /// Shorter than the API client's own budget, which also spans its retries, so
 /// a stalled backend falls back within seconds.
@@ -678,8 +678,22 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       return null;
     }
 
+    final kept = await _keepDivineAuthors(
+      _resultsFromCards(page.cards),
+      keepAuthor: viewerPubkey,
+    );
+    return List.unmodifiable(kept);
+  }
+
+  /// The people lists among [cards] from FunnelCake's list index, in their
+  /// order, filtered as relay results are: no empty, reserved or machinery
+  /// sets, no blocked owners, no repeated coordinates. Each list holds the
+  /// card's preview of at most five members.
+  List<PeopleListSearchResult> _resultsFromCards(
+    Iterable<PublicListCard> cards,
+  ) {
     final results = <String, PeopleListSearchResult>{};
-    for (final card in page.cards) {
+    for (final card in cards) {
       if (card.kind != Nip51PeopleListCodec.kind || card.memberCount <= 0) {
         continue;
       }
@@ -703,11 +717,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       );
       results.putIfAbsent(result.addressableId, () => result);
     }
-    final kept = await _keepDivineAuthors(
-      results.values.toList(),
-      keepAuthor: viewerPubkey,
-    );
-    return List.unmodifiable(kept);
+    return results.values.toList();
   }
 
   @override
@@ -715,6 +725,12 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     int limit = 50,
     String? excludeAuthor,
   }) async {
+    final indexed = await _discoverListIndex(
+      limit: limit,
+      excludeAuthor: excludeAuthor,
+    );
+    if (indexed != null) return indexed;
+
     final results = await _queryPublicLists(
       limit: limit,
       logContext: 'for discovery',
@@ -723,6 +739,45 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     );
     results.sort((a, b) => b.list.updatedAt.compareTo(a.list.updatedAt));
     return List.unmodifiable(results);
+  }
+
+  /// FunnelCake's newest people lists without [excludeAuthor]'s, filtered as
+  /// [_resultsFromCards] filters them, or `null` when the index is
+  /// unconfigured, fails or takes longer than [kPeopleListSearchIndexTimeout].
+  ///
+  /// The index keeps only lists whose owner has posted a video, so the
+  /// [_keepDivineAuthors] round trip is not repeated.
+  Future<List<PeopleListSearchResult>?> _discoverListIndex({
+    required int limit,
+    required String? excludeAuthor,
+  }) async {
+    final api = _funnelcakeApiClient;
+    if (api == null || !api.isAvailable) return null;
+    final ListSearchResponse page;
+    try {
+      page = await api
+          .discoverLists(
+            kind: PublicListKind.people,
+            limit: limit < FunnelcakeApiClient.maxListSearchLimit
+                ? limit
+                : FunnelcakeApiClient.maxListSearchLimit,
+          )
+          .timeout(kPeopleListSearchIndexTimeout);
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'FunnelCake list discovery failed; reading the discovery relays',
+        name: _logName,
+        category: LogCategory.api,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
+    return List.unmodifiable(
+      _resultsFromCards(
+        page.cards.where((card) => card.pubkey != excludeAuthor),
+      ),
+    );
   }
 
   static int _newestFirst(PeopleListSearchResult a, PeopleListSearchResult b) {
