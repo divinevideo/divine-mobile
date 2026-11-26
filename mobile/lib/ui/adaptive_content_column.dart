@@ -2,6 +2,7 @@
 
 import 'dart:math' as math;
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/ui/adaptive_layout.dart';
 
@@ -30,6 +31,12 @@ final class AdaptiveContentWidth {
 
 /// Centers box content within its parent and caps its width.
 ///
+/// The cap applies where [AdaptiveLayout.isLargeScreen]. In a narrower window
+/// or with the large-screen layouts off, [child] lays out exactly as it would
+/// without the column, so phones are unchanged. The column stays in the tree
+/// either way, so resizing a window across [AdaptiveBreakpoints.large] keeps
+/// [child]'s state.
+///
 /// For scrollable content, prefer [SliverAdaptiveContentColumn] inside the
 /// viewport. A [ListView] wrapped in this widget has a narrow viewport on
 /// desktop, so wheel and trackpad scrolling only work over the middle column
@@ -53,9 +60,8 @@ class AdaptiveContentColumn extends StatelessWidget {
   /// Content to lay out within the column.
   final Widget child;
 
-  /// Applies the cap even with the large-screen layouts off. Use this to
-  /// preserve caps that predate the layouts. Otherwise the child is returned
-  /// directly when the layouts are off.
+  /// Applies the cap in every window, even with the large-screen layouts off.
+  /// Use this to preserve caps that predate the layouts.
   final bool capWithoutLargeLayout;
 
   /// Positions the child within the space available to the column.
@@ -67,19 +73,179 @@ class AdaptiveContentColumn extends StatelessWidget {
 
   /// Applies the width cap using the space offered by the parent.
   @override
-  Widget build(BuildContext context) {
-    if (!capWithoutLargeLayout && !context.adaptiveLayout.enabled) {
-      return child;
-    }
+  Widget build(BuildContext context) => _ContentColumn(
+    capped: capWithoutLargeLayout || context.adaptiveLayout.isLargeScreen,
+    maxWidth: width.maxWidth,
+    alignment: alignment,
+    heightFactor: heightFactor,
+    child: child,
+  );
+}
 
-    return Align(
-      alignment: alignment,
-      heightFactor: heightFactor,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: width.maxWidth),
-        child: child,
+/// An [Align] around a [ConstrainedBox] while [capped], and nothing at all
+/// otherwise: one render object for both, so switching keeps the child.
+class _ContentColumn extends SingleChildRenderObjectWidget {
+  const _ContentColumn({
+    required this.capped,
+    required this.maxWidth,
+    required this.alignment,
+    required this.heightFactor,
+    required super.child,
+  });
+
+  final bool capped;
+  final double maxWidth;
+  final AlignmentGeometry alignment;
+  final double? heightFactor;
+
+  @override
+  _RenderContentColumn createRenderObject(BuildContext context) =>
+      _RenderContentColumn(
+        capped: capped,
+        maxWidth: maxWidth,
+        alignment: alignment,
+        heightFactor: heightFactor,
+        textDirection: Directionality.maybeOf(context),
+      );
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderContentColumn renderObject,
+  ) {
+    renderObject
+      ..capped = capped
+      ..maxWidth = maxWidth
+      ..alignment = alignment
+      ..heightFactor = heightFactor
+      ..textDirection = Directionality.maybeOf(context);
+  }
+}
+
+/// Lays its child out as [Align] and [ConstrainedBox] would while [capped],
+/// and passes the incoming constraints straight through otherwise.
+class _RenderContentColumn extends RenderPositionedBox {
+  _RenderContentColumn({
+    required bool capped,
+    required double maxWidth,
+    required super.alignment,
+    required super.heightFactor,
+    required super.textDirection,
+  }) : _capped = capped,
+       _maxWidth = maxWidth;
+
+  bool get capped => _capped;
+  bool _capped;
+  set capped(bool value) {
+    if (value == _capped) return;
+    _capped = value;
+    markNeedsLayout();
+  }
+
+  double get maxWidth => _maxWidth;
+  double _maxWidth;
+  set maxWidth(double value) {
+    if (value == _maxWidth) return;
+    _maxWidth = value;
+    markNeedsLayout();
+  }
+
+  /// What the [ConstrainedBox] inside the [Align] gives the child.
+  BoxConstraints _cappedChildConstraints(BoxConstraints constraints) =>
+      BoxConstraints(maxWidth: _maxWidth).enforce(constraints.loosen());
+
+  /// The size the [Align] takes around a child [childSize] large.
+  Size _cappedSize(BoxConstraints constraints, Size childSize) {
+    final shrinkWrapWidth = constraints.maxWidth == double.infinity;
+    final shrinkWrapHeight =
+        heightFactor != null || constraints.maxHeight == double.infinity;
+    return constraints.constrain(
+      Size(
+        shrinkWrapWidth ? childSize.width : double.infinity,
+        shrinkWrapHeight
+            ? childSize.height * (heightFactor ?? 1)
+            : double.infinity,
       ),
     );
+  }
+
+  double _cappedWidth(double width) =>
+      _capped ? math.min(width, _maxWidth) : width;
+
+  @override
+  double computeMinIntrinsicWidth(double height) =>
+      _cappedWidth(super.computeMinIntrinsicWidth(height));
+
+  @override
+  double computeMaxIntrinsicWidth(double height) =>
+      _cappedWidth(super.computeMaxIntrinsicWidth(height));
+
+  @override
+  double computeMinIntrinsicHeight(double width) =>
+      super.computeMinIntrinsicHeight(_cappedWidth(width));
+
+  @override
+  double computeMaxIntrinsicHeight(double width) =>
+      super.computeMaxIntrinsicHeight(_cappedWidth(width));
+
+  @override
+  @protected
+  Size computeDryLayout(covariant BoxConstraints constraints) {
+    final child = this.child;
+    if (!_capped) {
+      return child?.getDryLayout(constraints) ?? constraints.smallest;
+    }
+    final childSize =
+        child?.getDryLayout(_cappedChildConstraints(constraints)) ?? Size.zero;
+    return _cappedSize(constraints, childSize);
+  }
+
+  @override
+  double? computeDryBaseline(
+    covariant BoxConstraints constraints,
+    TextBaseline baseline,
+  ) {
+    final child = this.child;
+    if (child == null) return null;
+    if (!_capped) return child.getDryBaseline(constraints, baseline);
+    final childConstraints = _cappedChildConstraints(constraints);
+    final childBaseline = child.getDryBaseline(childConstraints, baseline);
+    if (childBaseline == null) return null;
+    final childSize = child.getDryLayout(childConstraints);
+    final offset = resolvedAlignment.alongOffset(
+      (getDryLayout(constraints) - childSize) as Offset,
+    );
+    return childBaseline + offset.dy;
+  }
+
+  @override
+  void performLayout() {
+    final child = this.child;
+    if (!_capped) {
+      if (child == null) {
+        size = constraints.smallest;
+        return;
+      }
+      child.layout(constraints, parentUsesSize: true);
+      (child.parentData! as BoxParentData).offset = Offset.zero;
+      size = constraints.constrain(child.size);
+      return;
+    }
+    if (child == null) {
+      size = _cappedSize(constraints, Size.zero);
+      return;
+    }
+    child.layout(_cappedChildConstraints(constraints), parentUsesSize: true);
+    size = _cappedSize(constraints, child.size);
+    alignChild();
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties
+      ..add(FlagProperty('capped', value: capped, ifTrue: 'capped'))
+      ..add(DoubleProperty('maxWidth', maxWidth));
   }
 }
 
@@ -89,6 +255,9 @@ class AdaptiveContentColumn extends StatelessWidget {
 /// side navigation takes up part of the window. The viewport stays full width,
 /// so its scrollbar can stay at the edge and wheel and trackpad scrolling work
 /// over the empty margins.
+///
+/// Like [AdaptiveContentColumn], it pads only where
+/// [AdaptiveLayout.isLargeScreen], so phones are unchanged.
 class SliverAdaptiveContentColumn extends StatelessWidget {
   /// Creates a width-capped column inside a vertical viewport.
   const SliverAdaptiveContentColumn({
@@ -106,14 +275,14 @@ class SliverAdaptiveContentColumn extends StatelessWidget {
   /// The sliver to center, such as a [SliverList].
   final Widget sliver;
 
-  /// Applies the cap even with the large-screen layouts off. Use this to
-  /// preserve caps that predate the layouts.
+  /// Applies the cap in every window, even with the large-screen layouts off.
+  /// Use this to preserve caps that predate the layouts.
   final bool capWithoutLargeLayout;
 
   /// Pads the content within the viewport when the cap is active.
   @override
   Widget build(BuildContext context) {
-    final cap = capWithoutLargeLayout || context.adaptiveLayout.enabled;
+    final cap = capWithoutLargeLayout || context.adaptiveLayout.isLargeScreen;
     return SliverLayoutBuilder(
       builder: (context, constraints) {
         final inset = cap && constraints.axis == Axis.vertical
