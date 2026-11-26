@@ -8562,7 +8562,8 @@ class DmRepository {
     }
 
     // A group member's row replays the batch's one copy, not a copy of its
-    // own: the other members' rows record it once it lands (#10016).
+    // own. Once it lands, the batch's delivered rows go and its waiting rows
+    // record it (#10016).
     final batchId = _groupBatchOf(row, rumor);
     final result = batchId == null
         ? await _messageService!.publishSelfWrap(
@@ -9915,17 +9916,17 @@ class DmRepository {
     );
   }
 
-  /// Publish the one own copy of group send [sendBatchId], unless one of its
-  /// rows already records it (#10016).
+  /// Publish the one own copy of group send [sendBatchId] (#10016), unless a
+  /// row already records it or no live row is left: a retry finished the
+  /// batch, or the sender cancelled it. A caller whose own attempt delivered
+  /// a member passes [deliveredHere] and still gets the copy after a cancel,
+  /// unless this session already published it.
   ///
   /// The group send and a replay of a member's row both publish through here,
   /// joined under one key per batch. Once the copy lands, the batch records
   /// it before releasing the key: delivered rows are removed and pending
   /// rows are marked. A session that ended meanwhile publishes nothing:
   /// the message service may already be the next account's.
-  ///
-  /// [deliveredHere] is set by a caller whose own attempt delivered a member,
-  /// which owes the copy even if the sender cancelled the batch meanwhile.
   Future<NIP17SendResult> _publishBatchOwnCopy({
     required OutgoingDmsDao dao,
     required String conversationId,
@@ -11188,8 +11189,8 @@ class DmRepository {
             );
       batchHasOwnCopy = ownCopy.success;
     }
-    // Every delivered member carries that outcome: their sends handed the
-    // copy over, so they cannot report it themselves.
+    // Every delivered member carries the batch's outcome, a joined retry's
+    // too: it is one copy for all of them.
     for (var i = 0; i < results.length; i++) {
       final result = results[i];
       if (result is NIP17SendSuccess) {
