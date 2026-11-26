@@ -22,29 +22,12 @@ class ListVideoOrder {
 
   final Map<String, int> _positions = {};
 
-  /// Ranks a cached fallback at the legacy address it resolved, even when
-  /// the list also names the video by its exact address or event id.
-  void placeLegacyMatch(AId address, VideoEvent video) {
-    final position = _positions[address.toAString()];
-    if (position == null) return;
-    _positions.update(
-      _idKey(video.id),
-      (current) => position < current ? position : current,
-      ifAbsent: () => position,
-    );
-  }
-
   /// The position of the first reference that names [video], or null when
   /// none does.
-  int? positionOf(VideoEvent video) {
-    final idPosition = _positions[_idKey(video.id)];
-    final addressPosition = _positions[addressOf(video)?.toAString()];
-    if (idPosition == null) return addressPosition;
-    if (addressPosition == null || idPosition < addressPosition) {
-      return idPosition;
-    }
-    return addressPosition;
-  }
+  int? positionOf(VideoEvent video) => _earlierPosition(
+    _positions[_idKey(video.id)],
+    _positions[addressOf(video)?.toAString()],
+  );
 
   /// The index in [videos] of the video named by [reference], even if the
   /// list also names the video earlier by its other identifier.
@@ -59,11 +42,26 @@ class ListVideoOrder {
 
   /// [videos] in the list's order. A video no reference names keeps its
   /// arrival order after the rest, so nothing resolved is dropped.
-  List<VideoEvent> sort(Iterable<VideoEvent> videos) {
+  /// [legacyMatches] gives cached fallbacks the positions they resolved.
+  List<VideoEvent> sort(
+    Iterable<VideoEvent> videos, {
+    Map<AId, VideoEvent> legacyMatches = const {},
+  }) {
+    final legacyPositions = {
+      for (final MapEntry(key: address, value: video) in legacyMatches.entries)
+        video.id: _positions[address.toAString()],
+    };
     final placed =
         [
           for (final (arrival, video) in videos.indexed)
-            (position: positionOf(video), arrival: arrival, video: video),
+            (
+              position: _earlierPosition(
+                positionOf(video),
+                legacyPositions[video.id],
+              ),
+              arrival: arrival,
+              video: video,
+            ),
         ]..sort((a, b) {
           final (pa, pb) = (a.position, b.position);
           if (pa == pb) return a.arrival.compareTo(b.arrival);
@@ -72,6 +70,11 @@ class ListVideoOrder {
           return pa.compareTo(pb);
         });
     return [for (final entry in placed) entry.video];
+  }
+
+  static int? _earlierPosition(int? first, int? second) {
+    if (first == null) return second;
+    return second == null || first < second ? first : second;
   }
 
   static String? _referenceKey(String reference) {

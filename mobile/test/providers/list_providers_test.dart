@@ -819,6 +819,8 @@ void main() {
       (false, 'keeps a legacy cache hit when the exact address is unavailable'),
     ]) {
       test(description, () async {
+        final relay = StreamController<Event>();
+        addTearDown(relay.close);
         final legacy = _video(
           id: 'legacy-video',
           pubkey: _ownerA,
@@ -835,10 +837,9 @@ void main() {
         when(() => videoService.homeFeedVideos).thenReturn(const []);
         when(() => videoService.profileVideos).thenReturn(const []);
         when(() => videoService.shouldHideVideo(any())).thenReturn(false);
-        when(() => nostrClient.subscribe(any(), closeOnEose: true)).thenAnswer(
-          (_) =>
-              exactAddressExists ? Stream.value(exact) : const Stream.empty(),
-        );
+        when(
+          () => nostrClient.subscribe(any(), closeOnEose: true),
+        ).thenAnswer((_) => relay.stream);
         final container = ProviderContainer(
           overrides: [
             videoEventServiceProvider.overrideWithValue(videoService),
@@ -847,11 +848,23 @@ void main() {
         );
         addTearDown(container.dispose);
         final provider = videoEventsByIdsProvider(['34236:$_ownerA:chapter']);
-        final emitted = await _emittedIds(container, provider, provider.future);
+        final emitted = <List<String>>[];
+        final subscription = container.listen(provider, (_, next) {
+          if (next case AsyncData(:final value)) {
+            emitted.add([for (final video in value) video.id]);
+          }
+        });
+        addTearDown(subscription.close);
+        await pumpEventQueue();
 
+        expect(emitted, [
+          [legacy.id],
+        ]);
+        if (exactAddressExists) relay.add(exact);
+        await relay.close();
+        await pumpEventQueue();
         final expectedId = exactAddressExists ? exact.id : legacy.id;
-        expect(emitted.first, [expectedId]);
-        expect(emitted.last, emitted.first);
+        expect(emitted.last, [expectedId]);
       });
     }
 

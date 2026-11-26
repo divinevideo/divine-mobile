@@ -405,7 +405,7 @@ Stream<List<VideoEvent>> _resolveListVideos({
 
     missingCoords.add(address.toAString());
     // Older Divine lists used 34236 for regular-length addressable videos.
-    // Keep those cache hits available when the exact address cannot resolve.
+    // Show those cache hits while looking for the exact address.
     if (address.kind == NIP71VideoKinds.addressableShortVideo) {
       final legacy =
           cachedAddresses[AId(
@@ -413,9 +413,17 @@ Stream<List<VideoEvent>> _resolveListVideos({
             pubkey: address.pubkey,
             dTag: address.dTag,
           )];
-      if (legacy != null) legacyCacheHits[address] = legacy;
+      if (legacy != null && !videoEventService.shouldHideVideo(legacy)) {
+        legacyCacheHits[address] = legacy;
+      }
     }
   }
+
+  List<VideoEvent> orderedVideos() => order.sort([
+    ...foundVideos,
+    for (final video in legacyCacheHits.values)
+      if (!seenIds.contains(video.id.toLowerCase())) video,
+  ], legacyMatches: legacyCacheHits);
 
   Log.info(
     '📋 Found ${foundVideos.length} videos in cache '
@@ -426,8 +434,8 @@ Stream<List<VideoEvent>> _resolveListVideos({
 
   // Only yield cached videos if we have some - don't yield empty yet
   // (empty yield would show "No videos" instead of loading state)
-  if (foundVideos.isNotEmpty) {
-    yield order.sort(foundVideos);
+  if (foundVideos.isNotEmpty || legacyCacheHits.isNotEmpty) {
+    yield orderedVideos();
   }
 
   // Fetch missing videos from relays
@@ -464,19 +472,27 @@ Stream<List<VideoEvent>> _resolveListVideos({
           );
       await for (final event in eventStream) {
         if (!query.asked(event)) continue;
-        legacyCacheHits.remove(
-          AId(kind: event.kind, pubkey: event.pubkey, dTag: event.dTagValue),
+        final address = AId(
+          kind: event.kind,
+          pubkey: event.pubkey,
+          dTag: event.dTagValue,
         );
-        if (seenIds.contains(event.id.toLowerCase())) continue;
+        final eventId = event.id.toLowerCase();
+        if (seenIds.contains(eventId)) {
+          if (legacyCacheHits.remove(address) != null) yield orderedVideos();
+          continue;
+        }
 
         try {
           // Use permissive mode to accept all NIP-71 video kinds from external sources
           final video = VideoEvent.fromNostrEvent(event, permissive: true);
+          final replacedLegacy = legacyCacheHits.remove(address) != null;
           if (videoEventService.shouldHideVideo(video)) {
+            if (replacedLegacy) yield orderedVideos();
             continue;
           }
           foundVideos.add(video);
-          seenIds.add(event.id.toLowerCase());
+          seenIds.add(eventId);
 
           // Also add to the video event service cache
           videoEventService.addVideoEvent(video);
@@ -488,7 +504,7 @@ Stream<List<VideoEvent>> _resolveListVideos({
           );
 
           // Yield updated list with new video
-          yield order.sort(foundVideos);
+          yield orderedVideos();
         } catch (e) {
           // Log the actual event kind to help diagnose issues
           Log.warning(
@@ -501,17 +517,13 @@ Stream<List<VideoEvent>> _resolveListVideos({
     }
   }
 
-  for (final MapEntry(key: address, value: video) in legacyCacheHits.entries) {
-    order.placeLegacyMatch(address, video);
-    addCachedVideo(video);
-  }
-
+  final ordered = orderedVideos();
   Log.info(
-    '📋 Finished fetching. Total videos: ${foundVideos.length}',
+    '📋 Finished fetching. Total videos: ${ordered.length}',
     name: logName,
     category: LogCategory.video,
   );
 
   // Yield final result
-  yield order.sort(foundVideos);
+  yield ordered;
 }
