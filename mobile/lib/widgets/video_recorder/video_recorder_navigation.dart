@@ -287,6 +287,7 @@ Future<void> offerAutosavedSession(
   // restore or discard runs, and a pop after that would close the recorder.
   var offerOpen = true;
   var actionStarted = false;
+  final recorder = context.read<VideoRecorderBloc>();
   void closeOffer() {
     if (offerOpen && context.mounted) context.pop();
   }
@@ -295,7 +296,7 @@ Future<void> offerAutosavedSession(
     if (actionStarted) return;
     actionStarted = true;
     runDetached(
-      action(),
+      showWithRemoteRecordPaused(recorder, action),
       description,
       logName: 'VideoRecorderNavigation',
       category: LogCategory.video,
@@ -305,7 +306,7 @@ Future<void> offerAutosavedSession(
   // The offer opens over the live preview, often while the camera is still
   // starting, so a volume key press would otherwise start a take behind it.
   await showWithRemoteRecordPaused(
-    context.read<VideoRecorderBloc>(),
+    recorder,
     () => VineBottomSheetPrompt.show<void>(
       context: context,
       sticker: .videoClapBoard,

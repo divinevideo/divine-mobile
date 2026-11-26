@@ -3,7 +3,9 @@
 
 import 'dart:async';
 
+import 'package:divine_camera/divine_camera.dart' show DivineCamera;
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -398,6 +400,11 @@ class _VideoRecorderBlocScope extends ConsumerWidget {
             session: analyticsSession,
           ),
         ),
+        // Only iOS has a remote that mirrors the recorder: the Apple Watch.
+        publishRemoteRecorderState:
+            !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+            ? DivineCamera.instance.updateRemoteRecorderState
+            : null,
         liveChromaKeySupported: ChromaKeyShader.isBackendSupported,
       ),
       child: child,
@@ -534,6 +541,15 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
   /// then show the one-time prompt and offer an autosaved session back.
   Future<void> _openRecorder() async {
     _pauseBackgroundPlayback();
+    // Hold remote input across startup, including the gaps before the
+    // education and recovery sheets have taken their own pause.
+    await showWithRemoteRecordPaused(
+      context.read<VideoRecorderBloc>(),
+      _initializeAndOfferRecovery,
+    );
+  }
+
+  Future<void> _initializeAndOfferRecovery() async {
     final autoStartRecording =
         widget.autoRecord && await _opensStraightToPreview();
     if (!mounted) return;
@@ -735,12 +751,6 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final bloc = context.read<VideoRecorderBloc>();
-    // The Upload tab keeps the camera paused; coming back to the app must not
-    // restart it behind the static explainer.
-    if (state == AppLifecycleState.resumed &&
-        !bloc.state.recorderMode.recordsVideo) {
-      return;
-    }
     bloc.add(VideoRecorderAppLifecycleChanged(state));
   }
 
@@ -770,6 +780,27 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
         context.select(
           (VideoRecorderBloc bloc) => _reactionTakeInFlight(bloc.state),
         );
+    // The Apple Watch mirrors the clip budget, and clips are also added,
+    // deleted and restored without the recorder bloc changing state.
+    ref.listen(
+      clipManagerProvider.select(
+        (clips) => (
+          clips.totalDuration,
+          clips.activeRecordingDuration == Duration.zero,
+        ),
+      ),
+      (_, _) => context.read<VideoRecorderBloc>().addIfOpen(
+        const VideoRecorderRemoteStateRefreshRequested(),
+      ),
+    );
+    // A selected sound turns the remote off, and it can change without the
+    // recorder bloc changing state.
+    ref.listen(
+      videoEditorProvider.select((editor) => editor.selectedSound != null),
+      (_, _) => context.read<VideoRecorderBloc>().addIfOpen(
+        const VideoRecorderRemoteStateRefreshRequested(),
+      ),
+    );
     return BlocProvider<SoundWaveformBloc>(
       // Eager: the create factory installs the selected-sound listener that
       // drives waveform extraction. The only consumer (capture's audio
@@ -800,13 +831,17 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
           );
           if (!state.recorderMode.recordsVideo) {
             context.read<VideoRecorderBloc>().add(
-              const VideoRecorderAppLifecycleChanged(AppLifecycleState.paused),
+              const VideoRecorderAppLifecycleChanged(
+                AppLifecycleState.paused,
+                isTabTransition: true,
+              ),
             );
           } else if (previous != null && !previous.recordsVideo) {
             if (state.isCameraInitialized) {
               context.read<VideoRecorderBloc>().add(
                 const VideoRecorderAppLifecycleChanged(
                   AppLifecycleState.resumed,
+                  isTabTransition: true,
                 ),
               );
             } else {

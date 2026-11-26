@@ -8,6 +8,7 @@ import 'package:divine_camera/src/models/camera_zoom_state.dart';
 import 'package:divine_camera/src/models/flash_mode.dart';
 import 'package:divine_camera/src/models/photo_capture_result.dart';
 import 'package:divine_camera/src/models/remote_record_trigger.dart';
+import 'package:divine_camera/src/models/remote_recorder_state.dart';
 import 'package:divine_camera/src/models/video_quality.dart';
 import 'package:divine_camera/src/models/video_recording_result.dart';
 import 'package:divine_camera/src/models/video_stabilization_mode.dart';
@@ -54,6 +55,16 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
     _onRemoteRecordTrigger = callback;
   }
 
+  /// Number of the recorder state last sent with
+  /// [updateRemoteRecorderState].
+  ///
+  /// The native side hears of a new state only after the recorder has moved
+  /// to it, so it can still forward a watch press made on the state before.
+  /// Such a press repeats the number of the state it was made on, and one
+  /// that is not this number is dropped: a Stop for one take must not stop
+  /// the next.
+  int _remoteStateId = 0;
+
   /// Callback for when the front-camera screen flash turns on or off.
   ValueChanged<bool>? _onScreenFlashChanged;
 
@@ -79,7 +90,7 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
         }
         return null;
       case 'onRemoteRecordTrigger':
-        final triggerType = call.arguments as String?;
+        final triggerType = _currentTriggerType(call.arguments);
         if (triggerType != null && _onRemoteRecordTrigger != null) {
           final trigger = RemoteRecordTrigger.fromNativeString(triggerType);
           _onRemoteRecordTrigger!(trigger);
@@ -96,6 +107,29 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
         if (args != null) {
           _forwardNativeLog(args);
         }
+        return null;
+      default:
+        return null;
+    }
+  }
+
+  /// The trigger an `onRemoteRecordTrigger` call carries, or `null` when it
+  /// carries none or is a watch press made on a state since replaced.
+  ///
+  /// A volume key or Bluetooth button arrives as the trigger's name. A watch
+  /// press arrives with the number of the state it was made on.
+  String? _currentTriggerType(Object? arguments) {
+    switch (arguments) {
+      case final String triggerType:
+        return triggerType;
+      case {'trigger': final String triggerType, 'stateId': final int? stateId}:
+        if (stateId == _remoteStateId) return triggerType;
+        Log.debug(
+          'Watch shutter ignored: $triggerType was pressed on state '
+          '$stateId, the recorder is at $_remoteStateId',
+          name: 'DivineCameraMethodChannel',
+          category: LogCategory.video,
+        );
         return null;
       default:
         return null;
@@ -413,6 +447,17 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
       {'enabled': enabled},
     );
     return result ?? false;
+  }
+
+  @override
+  Future<void> updateRemoteRecorderState(RemoteRecorderState? state) {
+    // Counted before the call is sent, so a press that reaches Dart after
+    // this is checked against the new state.
+    final stateId = ++_remoteStateId;
+    return methodChannel.invokeMethod<void>(
+      'updateRemoteRecorderState',
+      state == null ? null : {...state.toMap(), 'stateId': stateId},
+    );
   }
 
   @override

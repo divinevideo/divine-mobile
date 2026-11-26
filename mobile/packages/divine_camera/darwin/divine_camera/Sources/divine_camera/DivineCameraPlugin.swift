@@ -16,6 +16,14 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
     private var methodChannel: FlutterMethodChannel?
     #if os(iOS)
     private var volumeKeyHandler: VolumeKeyHandler?
+    private var watchRemoteLink: WatchRemoteLink?
+
+    /// Called on the main queue with the recorder state an Apple Watch remote
+    /// can show (`RemoteRecorderState.toMap`), or `nil` when the recorder is
+    /// closed or no paired Watch has the app.
+    ///
+    /// The host app sets this to present the recorder outside the plugin.
+    public static var onWatchRemoteChanged: (([String: Any]?) -> Void)?
     #endif
 
     public static func register(with registrar: FlutterPluginRegistrar) {
@@ -32,6 +40,24 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
         instance.messenger = messenger
         instance.methodChannel = channel
         registrar.addMethodCallDelegate(instance, channel: channel)
+
+        #if os(iOS)
+        // Up from launch so a Watch still showing a recorder from a previous
+        // run of the app learns that it is gone.
+        let watchRemoteLink = WatchRemoteLink(
+            onShutterPress: { [weak instance] arguments in
+                instance?.methodChannel?.invokeMethod("onRemoteRecordTrigger", arguments: arguments)
+            },
+            onWatchRemoteChanged: { state in
+                DivineCameraPlugin.onWatchRemoteChanged?(state)
+            },
+            onWatchAppChanged: { [weak instance] hasWatchApp in
+                instance?.volumeKeyHandler?.setWatchRemoteAvailable(hasWatchApp)
+            }
+        )
+        watchRemoteLink.activate()
+        instance.watchRemoteLink = watchRemoteLink
+        #endif
 
         // Forward curated native diagnostics to Dart's UnifiedLogger so
         // recording issues (e.g. missing audio) land in user bug reports.
@@ -296,6 +322,12 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
             let enabled = args["enabled"] as? Bool ?? true
             setVolumeKeysEnabled(enabled: enabled, result: result)
 
+        case "updateRemoteRecorderState":
+            #if os(iOS)
+            watchRemoteLink?.update(state: call.arguments as? [String: Any])
+            #endif
+            result(nil)
+
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -386,6 +418,7 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
                     }
                 }
             }
+            volumeKeyHandler?.setWatchRemoteAvailable(watchRemoteLink?.hasWatchApp ?? false)
             let success = volumeKeyHandler?.enable() ?? false
             result(success)
         } else {
