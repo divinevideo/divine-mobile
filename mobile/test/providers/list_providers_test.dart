@@ -744,6 +744,117 @@ void main() {
   });
 
   group(videoEventsByIdsProvider, () {
+    test('keeps legacy cache hits in their requested order', () async {
+      final legacy = _video(
+        id: 'legacy-video',
+        pubkey: _ownerA,
+        dTag: 'chapter-1',
+      ).copyWith(eventKind: 34235);
+      final later = _video(
+        id: 'later-video',
+        pubkey: _ownerA,
+        dTag: 'chapter-2',
+      ).copyWith(eventKind: 34236);
+      final videoService = _MockVideoEventService();
+      final nostrClient = _MockNostrClient();
+      registerFallbackValue(legacy);
+      when(() => videoService.discoveryVideos).thenReturn([later, legacy]);
+      when(() => videoService.homeFeedVideos).thenReturn(const []);
+      when(() => videoService.profileVideos).thenReturn(const []);
+      when(() => videoService.shouldHideVideo(any())).thenReturn(false);
+      when(() => nostrClient.subscribe(any(), closeOnEose: true)).thenAnswer(
+        (_) => const Stream.empty(),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          videoEventServiceProvider.overrideWithValue(videoService),
+          nostrServiceProvider.overrideWithValue(nostrClient),
+        ],
+      );
+      addTearDown(container.dispose);
+      final provider = videoEventsByIdsProvider([
+        '34236:$_ownerA:chapter-1',
+        '34236:$_ownerA:chapter-2',
+      ]);
+      final emitted = await _emittedIds(container, provider, provider.future);
+
+      expect(emitted.last, [legacy.id, later.id]);
+    });
+
+    test('matches cached addresses by kind and the entire d-tag', () async {
+      final wrong = _video(
+        id: 'wrong-video',
+        pubkey: _ownerA,
+        dTag: 'chapter',
+      ).copyWith(eventKind: 34235);
+      final expected = _video(
+        id: _allowedVideoId,
+        pubkey: _ownerA,
+        dTag: 'chapter:one',
+      ).copyWith(eventKind: 34236);
+      final videoService = _MockVideoEventService();
+      when(() => videoService.discoveryVideos).thenReturn([wrong, expected]);
+      when(() => videoService.homeFeedVideos).thenReturn(const []);
+      when(() => videoService.profileVideos).thenReturn(const []);
+      when(() => videoService.shouldHideVideo(wrong)).thenReturn(false);
+      when(() => videoService.shouldHideVideo(expected)).thenReturn(false);
+      when(() => videoService.getVideoById(_allowedVideoId))
+          .thenReturn(expected);
+      final container = ProviderContainer(
+        overrides: [videoEventServiceProvider.overrideWithValue(videoService)],
+      );
+      addTearDown(container.dispose);
+      final provider = videoEventsByIdsProvider([
+        _allowedVideoId,
+        '34236:$_ownerA:chapter:one',
+      ]);
+      final subscription = container.listen(provider, (_, _) {});
+      addTearDown(subscription.close);
+
+      expect(await container.read(provider.future), [expected]);
+    });
+
+    for (final (exactAddressExists, description) in [
+      (true, 'prefers the exact relay address over a legacy cache hit'),
+      (false, 'keeps a legacy cache hit when the exact address is unavailable'),
+    ]) {
+      test(description, () async {
+        final legacy = _video(
+          id: 'legacy-video',
+          pubkey: _ownerA,
+          dTag: 'chapter',
+        ).copyWith(eventKind: 34235);
+        final exact = Event(_ownerA, 34236, [
+          ['d', 'chapter'],
+          ['url', 'https://example.com/chapter.mp4'],
+        ], '');
+        final videoService = _MockVideoEventService();
+        final nostrClient = _MockNostrClient();
+        registerFallbackValue(legacy);
+        when(() => videoService.discoveryVideos).thenReturn([legacy]);
+        when(() => videoService.homeFeedVideos).thenReturn(const []);
+        when(() => videoService.profileVideos).thenReturn(const []);
+        when(() => videoService.shouldHideVideo(any())).thenReturn(false);
+        when(() => nostrClient.subscribe(any(), closeOnEose: true)).thenAnswer(
+          (_) =>
+              exactAddressExists ? Stream.value(exact) : const Stream.empty(),
+        );
+        final container = ProviderContainer(
+          overrides: [
+            videoEventServiceProvider.overrideWithValue(videoService),
+            nostrServiceProvider.overrideWithValue(nostrClient),
+          ],
+        );
+        addTearDown(container.dispose);
+        final provider = videoEventsByIdsProvider(['34236:$_ownerA:chapter']);
+        final emitted = await _emittedIds(container, provider, provider.future);
+
+        final expectedId = exactAddressExists ? exact.id : legacy.id;
+        expect(emitted.first, [expectedId]);
+        expect(emitted.last, emitted.first);
+      });
+    }
+
     test('emits the videos in the list order as relays answer', () async {
       final (overrides, fromRelay) = _cacheAnswersBeforeRelay();
       final container = ProviderContainer(overrides: overrides);

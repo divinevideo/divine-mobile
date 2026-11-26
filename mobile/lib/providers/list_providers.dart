@@ -7,7 +7,7 @@ import 'dart:convert';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart'
     show NostrClient, RelaySubscriptionRefusedException;
-import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:nostr_sdk/aid.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -293,206 +293,11 @@ Stream<List<VideoEvent>> _curatedListVideoEvents({
   // Get the video IDs from the curated list
   final videoIds = await videoIdsFuture;
 
-  if (videoIds.isEmpty) {
-    Log.info(
-      '📋 List $listId has no videos',
-      name: 'CuratedListVideoEvents',
-      category: LogCategory.video,
-    );
-    yield [];
-    return;
-  }
-
-  // Cache hits come first and relay results in arrival order, so every
-  // emission is put back into the list's order (#8105).
-  final order = ListVideoOrder(videoIds);
-
-  Log.info(
-    '📋 List has ${videoIds.length} video IDs to fetch',
-    name: 'CuratedListVideoEvents',
-    category: LogCategory.video,
+  yield* _resolveListVideos(
+    videoIds: videoIds,
+    live: live,
+    logName: 'CuratedListVideoEvents',
   );
-
-  // Separate video event IDs from addressable coordinates
-  final eventIds = <String>[];
-  final addressableCoords = <String>[]; // Format: 34236:pubkey:d-tag
-
-  // Simple hex validation for 64-character Nostr event IDs
-  final hexRegex = RegExp(r'^[a-fA-F0-9]{64}$');
-
-  for (final id in videoIds) {
-    if (id.contains(':')) {
-      addressableCoords.add(id);
-    } else if (hexRegex.hasMatch(id)) {
-      eventIds.add(id);
-    }
-  }
-
-  Log.info(
-    '📋 IDs breakdown: ${eventIds.length} event IDs, '
-    '${addressableCoords.length} addressable coords',
-    name: 'CuratedListVideoEvents',
-    category: LogCategory.video,
-  );
-
-  // First check cache via video event service. Null means the provider was
-  // disposed while awaiting the list — abandon the fetch instead of reading a
-  // dead Ref (#7294).
-  final videoEventService = live.videoEventService;
-  if (videoEventService == null) return;
-
-  final foundVideos = <VideoEvent>[];
-  final missingIds = <String>[];
-  final missingCoords = <String>[];
-
-  // Check cache for regular event IDs. Skip blocked authors here too — the
-  // addressable-coord and relay branches already guard, but a plain-event-ID
-  // cache hit would otherwise pass an unfiltered blocked author through (#5104).
-  for (final eventId in eventIds) {
-    final cached = videoEventService.getVideoById(eventId);
-    if (cached == null) {
-      missingIds.add(eventId);
-    } else if (!videoEventService.shouldHideVideo(cached)) {
-      foundVideos.add(cached);
-    }
-  }
-
-  // Check cache for addressable coordinates (kind:pubkey:d-tag)
-  // Combine videos from all subscription types for cache lookup
-  final allCachedVideos = <VideoEvent>{
-    ...videoEventService.discoveryVideos,
-    ...videoEventService.homeFeedVideos,
-    ...videoEventService.profileVideos,
-  }.toList();
-  Log.debug(
-    '📋 Searching ${allCachedVideos.length} cached videos for ${addressableCoords.length} coords',
-    name: 'CuratedListVideoEvents',
-    category: LogCategory.video,
-  );
-
-  for (final coord in addressableCoords) {
-    final parts = coord.split(':');
-    if (parts.length >= 3) {
-      final pubkey = parts[1];
-      final dTag = parts[2];
-
-      final cached = allCachedVideos.where((v) {
-        if (v.pubkey != pubkey) return false;
-        // Check d-tag in rawTags, vineId, or video id
-        final videoDTag = v.rawTags['d'] ?? v.vineId ?? v.id;
-        return videoDTag == dTag;
-      }).firstOrNull;
-
-      if (cached != null) {
-        if (!videoEventService.shouldHideVideo(cached)) {
-          foundVideos.add(cached);
-          Log.debug(
-            '📋 Found addressable video in cache: ${cached.title ?? cached.id}',
-            name: 'CuratedListVideoEvents',
-            category: LogCategory.video,
-          );
-        }
-      } else {
-        Log.debug(
-          '📋 Cache miss for coord: $coord (pubkey=${pubkeyForLogs(pubkey)}, dTag=$dTag)',
-          name: 'CuratedListVideoEvents',
-          category: LogCategory.video,
-        );
-        missingCoords.add(coord);
-      }
-    }
-  }
-
-  Log.info(
-    '📋 Found ${foundVideos.length} videos in cache '
-    '(${missingIds.length} missing IDs, ${missingCoords.length} missing coords)',
-    name: 'CuratedListVideoEvents',
-    category: LogCategory.video,
-  );
-
-  // Yield cached videos immediately (but not empty - keep loading state)
-  if (foundVideos.isNotEmpty) {
-    yield order.sort(foundVideos);
-  }
-
-  // Fetch missing videos from relays
-  if (missingIds.isNotEmpty || missingCoords.isNotEmpty) {
-    Log.info(
-      '📋 Fetching ${missingIds.length} missing IDs + '
-      '${missingCoords.length} missing coords from relays',
-      name: 'CuratedListVideoEvents',
-      category: LogCategory.video,
-    );
-
-    final query = ListVideoRelayQuery(
-      eventIds: missingIds,
-      coordinates: missingCoords,
-    );
-    final filters = query.filters;
-
-    // Null once the provider is disposed — see the cache lookup above.
-    final nostrClient = live.nostrClient;
-    if (nostrClient == null) return;
-
-    if (filters.isNotEmpty) {
-      // A refusal from every relay closes the read early. Log it and keep the
-      // videos already resolved rather than failing the whole provider.
-      final eventStream = nostrClient
-          .subscribe(filters, closeOnEose: true)
-          .handleError(
-            (Object error) => Log.warning(
-              '📋 Relay refused video fetch: $error',
-              name: 'CuratedListVideoEvents',
-              category: LogCategory.video,
-            ),
-            test: (error) => error is RelaySubscriptionRefusedException,
-          );
-      final seenIds = foundVideos.map((v) => v.id.toLowerCase()).toSet();
-
-      await for (final event in eventStream) {
-        if (!query.asked(event)) continue;
-        if (seenIds.contains(event.id.toLowerCase())) continue;
-
-        try {
-          // Use permissive mode to accept all NIP-71 video kinds from curated lists
-          final video = VideoEvent.fromNostrEvent(event, permissive: true);
-          if (videoEventService.shouldHideVideo(video)) {
-            continue;
-          }
-          foundVideos.add(video);
-          seenIds.add(event.id.toLowerCase());
-
-          // Also add to the video event service cache
-          videoEventService.addVideoEvent(video);
-
-          Log.info(
-            '📋 Fetched video (kind ${event.kind}): ${video.title ?? video.id}',
-            name: 'CuratedListVideoEvents',
-            category: LogCategory.video,
-          );
-
-          // Yield updated list with new video
-          yield order.sort(foundVideos);
-        } catch (e) {
-          // Log the actual event kind to help diagnose issues
-          Log.warning(
-            '📋 Failed to parse event ${event.id} (kind ${event.kind}): $e',
-            name: 'CuratedListVideoEvents',
-            category: LogCategory.video,
-          );
-        }
-      }
-    }
-  }
-
-  Log.info(
-    '📋 Finished fetching. Total videos: ${foundVideos.length}',
-    name: 'CuratedListVideoEvents',
-    category: LogCategory.video,
-  );
-
-  // Yield final result
-  yield order.sort(foundVideos);
 }
 
 /// Provider that fetches VideoEvent objects directly from a list of video IDs
@@ -506,19 +311,18 @@ Stream<List<VideoEvent>> videoEventsByIds(Ref ref, List<String> videoIds) {
   // bump this version but emit no granular removed-id signal (#5104).
   ref.watch(blocklistVersionProvider);
 
-  return _videoEventsByIds(videoIds: videoIds, live: _LiveDeps(ref));
+  return _resolveListVideos(
+    videoIds: videoIds,
+    live: _LiveDeps(ref),
+    logName: 'VideoEventsByIds',
+  );
 }
 
-Stream<List<VideoEvent>> _videoEventsByIds({
+Stream<List<VideoEvent>> _resolveListVideos({
   required List<String> videoIds,
   required _LiveDeps live,
+  required String logName,
 }) async* {
-  Log.info(
-    '📋 Fetching ${videoIds.length} videos by IDs',
-    name: 'VideoEventsByIds',
-    category: LogCategory.video,
-  );
-
   if (videoIds.isEmpty) {
     yield [];
     return;
@@ -530,23 +334,23 @@ Stream<List<VideoEvent>> _videoEventsByIds({
 
   // Separate video event IDs from addressable coordinates
   final eventIds = <String>[];
-  final addressableCoords = <String>[]; // Format: 34236:pubkey:d-tag
+  final addressableCoords = <AId>[];
 
   // Simple hex validation for 64-character Nostr event IDs
   final hexRegex = RegExp(r'^[a-fA-F0-9]{64}$');
 
   for (final id in videoIds) {
-    if (id.contains(':')) {
-      addressableCoords.add(id);
-    } else if (hexRegex.hasMatch(id)) {
-      eventIds.add(id);
+    if (hexRegex.hasMatch(id)) {
+      eventIds.add(id.toLowerCase());
+    } else if (ListVideoOrder.parseAddress(id) case final address?) {
+      addressableCoords.add(address);
     }
   }
 
   Log.info(
     '📋 IDs breakdown: ${eventIds.length} event IDs, '
     '${addressableCoords.length} addressable coords',
-    name: 'VideoEventsByIds',
+    name: logName,
     category: LogCategory.video,
   );
 
@@ -557,8 +361,16 @@ Stream<List<VideoEvent>> _videoEventsByIds({
   if (videoEventService == null) return;
 
   final foundVideos = <VideoEvent>[];
+  final seenIds = <String>{};
   final missingIds = <String>[];
   final missingCoords = <String>[];
+
+  void addCachedVideo(VideoEvent video) {
+    if (!videoEventService.shouldHideVideo(video) &&
+        seenIds.add(video.id.toLowerCase())) {
+      foundVideos.add(video);
+    }
+  }
 
   // Check cache for regular event IDs. Skip blocked authors here too — a
   // plain-event-ID cache hit would otherwise pass an unfiltered blocked author
@@ -567,69 +379,48 @@ Stream<List<VideoEvent>> _videoEventsByIds({
     final cached = videoEventService.getVideoById(eventId);
     if (cached == null) {
       missingIds.add(eventId);
-    } else if (!videoEventService.shouldHideVideo(cached)) {
-      foundVideos.add(cached);
+    } else {
+      addCachedVideo(cached);
     }
   }
 
-  // Check cache for addressable coordinates (kind:pubkey:d-tag)
-  // Combine videos from all subscription types for cache lookup
-  final allCachedVideos = <VideoEvent>{
+  final cachedAddresses = <AId, VideoEvent>{};
+  for (final video in [
     ...videoEventService.discoveryVideos,
     ...videoEventService.homeFeedVideos,
     ...videoEventService.profileVideos,
-  }.toList();
-  Log.debug(
-    '📋 Searching ${allCachedVideos.length} cached videos for ${addressableCoords.length} coords',
-    name: 'VideoEventsByIds',
-    category: LogCategory.video,
-  );
+  ]) {
+    if (ListVideoOrder.addressOf(video) case final address?) {
+      cachedAddresses.putIfAbsent(address, () => video);
+    }
+  }
 
-  for (final coord in addressableCoords) {
-    final parts = coord.split(':');
-    if (parts.length >= 3) {
-      final pubkey = parts[1];
-      final dTag = parts[2];
+  final legacyCacheHits = <AId, VideoEvent>{};
+  for (final address in addressableCoords) {
+    final cached = cachedAddresses[address];
+    if (cached != null) {
+      addCachedVideo(cached);
+      continue;
+    }
 
-      // Find video in cache that matches pubkey and d-tag
-      final cached = allCachedVideos.where((v) {
-        if (v.pubkey != pubkey) return false;
-        // Check d-tag in rawTags, vineId, or even the video id itself
-        final videoDTag = v.rawTags['d'] ?? v.vineId ?? v.id;
-        return videoDTag == dTag;
-      }).firstOrNull;
-
-      if (cached != null) {
-        if (!videoEventService.shouldHideVideo(cached)) {
-          foundVideos.add(cached);
-          Log.debug(
-            '📋 Found addressable video in cache: ${cached.title ?? cached.id}',
-            name: 'VideoEventsByIds',
-            category: LogCategory.video,
-          );
-        }
-      } else {
-        // Log what we're looking for vs what's in cache for debugging
-        final matchingPubkey = allCachedVideos
-            .where((v) => v.pubkey == pubkey)
-            .toList();
-        Log.debug(
-          '📋 Cache miss for coord: $coord\n'
-          '   Looking for: pubkey=${pubkeyForLogs(pubkey)}, dTag=$dTag\n'
-          '   Videos by same author: ${matchingPubkey.length}\n'
-          '   Their d-tags: ${matchingPubkey.take(3).map((v) => v.rawTags['d'] ?? v.vineId ?? 'none').toList()}',
-          name: 'VideoEventsByIds',
-          category: LogCategory.video,
-        );
-        missingCoords.add(coord);
-      }
+    missingCoords.add(address.toAString());
+    // Older Divine lists used 34236 for regular-length addressable videos.
+    // Keep those cache hits available when the exact address cannot resolve.
+    if (address.kind == NIP71VideoKinds.addressableShortVideo) {
+      final legacy =
+          cachedAddresses[AId(
+            kind: NIP71VideoKinds.addressableNormalVideo,
+            pubkey: address.pubkey,
+            dTag: address.dTag,
+          )];
+      if (legacy != null) legacyCacheHits[address] = legacy;
     }
   }
 
   Log.info(
     '📋 Found ${foundVideos.length} videos in cache '
     '(${missingIds.length} missing IDs, ${missingCoords.length} missing coords)',
-    name: 'VideoEventsByIds',
+    name: logName,
     category: LogCategory.video,
   );
 
@@ -644,7 +435,7 @@ Stream<List<VideoEvent>> _videoEventsByIds({
     Log.info(
       '📋 Fetching ${missingIds.length} missing event IDs + '
       '${missingCoords.length} missing addressable coords from relays',
-      name: 'VideoEventsByIds',
+      name: logName,
       category: LogCategory.video,
     );
 
@@ -666,15 +457,16 @@ Stream<List<VideoEvent>> _videoEventsByIds({
           .handleError(
             (Object error) => Log.warning(
               '📋 Relay refused video fetch: $error',
-              name: 'VideoEventsByIds',
+              name: logName,
               category: LogCategory.video,
             ),
             test: (error) => error is RelaySubscriptionRefusedException,
           );
-      final seenIds = foundVideos.map((v) => v.id.toLowerCase()).toSet();
-
       await for (final event in eventStream) {
         if (!query.asked(event)) continue;
+        legacyCacheHits.remove(
+          AId(kind: event.kind, pubkey: event.pubkey, dTag: event.dTagValue),
+        );
         if (seenIds.contains(event.id.toLowerCase())) continue;
 
         try {
@@ -691,7 +483,7 @@ Stream<List<VideoEvent>> _videoEventsByIds({
 
           Log.info(
             '📋 Fetched video (kind ${event.kind}): ${video.title ?? video.id}',
-            name: 'VideoEventsByIds',
+            name: logName,
             category: LogCategory.video,
           );
 
@@ -701,7 +493,7 @@ Stream<List<VideoEvent>> _videoEventsByIds({
           // Log the actual event kind to help diagnose issues
           Log.warning(
             '📋 Failed to parse event ${event.id} (kind ${event.kind}): $e',
-            name: 'VideoEventsByIds',
+            name: logName,
             category: LogCategory.video,
           );
         }
@@ -709,9 +501,14 @@ Stream<List<VideoEvent>> _videoEventsByIds({
     }
   }
 
+  for (final MapEntry(key: address, value: video) in legacyCacheHits.entries) {
+    order.placeLegacyMatch(address, video);
+    addCachedVideo(video);
+  }
+
   Log.info(
     '📋 Finished fetching. Total videos: ${foundVideos.length}',
-    name: 'VideoEventsByIds',
+    name: logName,
     category: LogCategory.video,
   );
 

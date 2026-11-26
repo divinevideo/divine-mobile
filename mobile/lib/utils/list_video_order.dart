@@ -2,14 +2,15 @@
 // ABOUTME: order, whatever order the cache and relays returned them in.
 
 import 'package:models/models.dart';
+import 'package:nostr_sdk/aid.dart';
 
 /// Where each video a curated list names sits in the list's own order.
 ///
 /// A list's videos resolve from the cache first and then from relays as they
 /// arrive, so without this the grid and the player follow that timing instead
 /// of the list. A reference is matched the way the list's videos are looked
-/// up: an event id by id, and a `kind:pubkey:d-tag` coordinate by author and
-/// d-tag.
+/// up: an event id by id, and a `kind:pubkey:d-tag` coordinate by kind,
+/// author and d-tag.
 class ListVideoOrder {
   /// The order of [references], a list's event ids and coordinates.
   ListVideoOrder(List<String> references) {
@@ -21,24 +22,39 @@ class ListVideoOrder {
 
   final Map<String, int> _positions = {};
 
+  /// Ranks a cached fallback at the legacy address it resolved, even when
+  /// the list also names the video by its exact address or event id.
+  void placeLegacyMatch(AId address, VideoEvent video) {
+    final position = _positions[address.toAString()];
+    if (position == null) return;
+    _positions.update(
+      _idKey(video.id),
+      (current) => position < current ? position : current,
+      ifAbsent: () => position,
+    );
+  }
+
   /// The position of the first reference that names [video], or null when
   /// none does.
   int? positionOf(VideoEvent video) {
-    int? first;
-    for (final key in _videoKeys(video)) {
-      final position = _positions[key];
-      if (position != null && (first == null || position < first)) {
-        first = position;
-      }
+    final idPosition = _positions[_idKey(video.id)];
+    final addressPosition = _positions[addressOf(video)?.toAString()];
+    if (idPosition == null) return addressPosition;
+    if (addressPosition == null || idPosition < addressPosition) {
+      return idPosition;
     }
-    return first;
+    return addressPosition;
   }
 
-  /// The position of the first reference that names the same video as
-  /// [reference], which is where [positionOf] places that video.
-  int? positionOfReference(String reference) {
+  /// The index in [videos] of the video named by [reference], even if the
+  /// list also names the video earlier by its other identifier.
+  static int indexOfReference(String reference, List<VideoEvent> videos) {
     final key = _referenceKey(reference);
-    return key == null ? null : _positions[key];
+    if (key == null) return -1;
+    return videos.indexWhere(
+      (video) =>
+          _idKey(video.id) == key || addressOf(video)?.toAString() == key,
+    );
   }
 
   /// [videos] in the list's order. A video no reference names keeps its
@@ -60,27 +76,36 @@ class ListVideoOrder {
 
   static String? _referenceKey(String reference) {
     if (!reference.contains(':')) return _idKey(reference);
-    final parts = reference.split(':');
-    if (parts.length < 3) return null;
-    final pubkey = parts[1];
-    final dTag = parts.sublist(2).join(':');
-    if (pubkey.isEmpty || dTag.isEmpty) return null;
-    return _addressKey(pubkey, dTag);
+    return parseAddress(reference)?.toAString();
   }
 
-  /// The keys [video] can be named by. The d-tag candidates are the ones the
-  /// cache lookup accepts, so a video the cache matched is placed too.
-  static Iterable<String> _videoKeys(VideoEvent video) => {
-    _idKey(video.id),
-    for (final dTag in [
-      video.addressableDTag,
-      video.rawTags['d'] ?? video.vineId ?? video.id,
-    ])
-      if (dTag != null && dTag.isNotEmpty) _addressKey(video.pubkey, dTag),
-  };
+  /// Parses an addressable video reference, preserving the full d-tag.
+  static AId? parseAddress(String reference) {
+    final address = AId.fromString(reference);
+    if (address == null ||
+        !NIP71VideoKinds.isAddressableVideoKind(address.kind) ||
+        address.pubkey.isEmpty ||
+        address.dTag.isEmpty) {
+      return null;
+    }
+    return AId(
+      kind: address.kind,
+      pubkey: address.pubkey.toLowerCase(),
+      dTag: address.dTag,
+    );
+  }
 
-  static String _idKey(String id) => 'id:${id.toLowerCase()}';
+  /// The address of a video, including cached videos stored before the kind
+  /// and addressable d-tag were persisted separately.
+  static AId? addressOf(VideoEvent video) {
+    final kind = video.eventKind ?? NIP71VideoKinds.addressableShortVideo;
+    final dTag =
+        video.addressableDTag ?? video.rawTags['d'] ?? video.vineId ?? video.id;
+    if (!NIP71VideoKinds.isAddressableVideoKind(kind) || dTag.isEmpty) {
+      return null;
+    }
+    return AId(kind: kind, pubkey: video.pubkey.toLowerCase(), dTag: dTag);
+  }
 
-  static String _addressKey(String pubkey, String dTag) =>
-      'address:${pubkey.toLowerCase()}:$dTag';
+  static String _idKey(String id) => id.toLowerCase();
 }

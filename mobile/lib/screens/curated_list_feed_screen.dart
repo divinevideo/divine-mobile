@@ -330,11 +330,9 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     if (references == null || position < 0 || position >= references.length) {
       return null;
     }
-    final order = ListVideoOrder(references);
-    final target = order.positionOfReference(references[position]);
-    if (target == null) return null;
-    final index = videos.indexWhere(
-      (video) => order.positionOf(video) == target,
+    final index = ListVideoOrder.indexOfReference(
+      references[position],
+      videos,
     );
     return index < 0 ? null : index;
   }

@@ -1391,6 +1391,22 @@ void main() {
         expect(find.byType(ComposableVideoGrid), findsOneWidget);
       });
 
+      testWidgets('opens a video also listed earlier by event id', (
+        tester,
+      ) async {
+        final video = part(1).copyWith(id: 'a' * 64);
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: [video.id, references.first],
+            videoEvents: [video],
+            initialListIndex: 1,
+          ),
+        );
+        await tester.pump();
+
+        expect(playing(tester), video.id);
+      });
+
       for (final position in [-1, 3]) {
         testWidgets('stays on the grid for the position $position', (
           tester,

@@ -16,6 +16,7 @@ VideoEvent _video({
   String? pubkey,
   String? dTag,
   String? vineId,
+  int? eventKind,
 }) => VideoEvent(
   id: id,
   pubkey: pubkey ?? _author,
@@ -24,6 +25,7 @@ VideoEvent _video({
   timestamp: DateTime.utc(2026, 11, 26),
   videoUrl: 'https://example.com/$id.mp4',
   vineId: vineId,
+  eventKind: eventKind,
   rawTags: dTag == null ? const {} : {'d': dTag},
 );
 
@@ -108,6 +110,19 @@ void main() {
 
         expect(_ids(sorted), equals(['second', 'theirs']));
       });
+
+      test('distinguishes video kinds with the same author and d-tag', () {
+        final order = ListVideoOrder([
+          '34236:$_author:shared',
+          '34235:$_author:shared',
+        ]);
+        final sorted = order.sort([
+          _video(id: 'normal', dTag: 'shared', eventKind: 34235),
+          _video(id: 'short', dTag: 'shared', eventKind: 34236),
+        ]);
+
+        expect(_ids(sorted), equals(['short', 'normal']));
+      });
     });
 
     group('positionOf', () {
@@ -134,10 +149,6 @@ void main() {
           order.positionOf(_video(id: 'first', dTag: 'part-1')),
           equals(0),
         );
-        expect(
-          order.positionOfReference('34236:$_author:part-1'),
-          equals(0),
-        );
       });
 
       test('reads a d-tag that holds a colon whole', () {
@@ -153,11 +164,17 @@ void main() {
         '34236:$_author',
         '34236::part-1',
         '34236:$_author:',
+        'invalid:$_author:part-1',
       ]) {
         test('names nothing with the malformed address $malformed', () {
           final order = ListVideoOrder([malformed]);
 
-          expect(order.positionOfReference(malformed), isNull);
+          expect(
+            ListVideoOrder.indexOfReference(malformed, [
+              _video(id: 'first', dTag: 'part-1'),
+            ]),
+            equals(-1),
+          );
           expect(
             order.positionOf(_video(id: 'first', dTag: 'part-1')),
             isNull,
