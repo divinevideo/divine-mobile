@@ -52,6 +52,7 @@ import 'package:openvine/widgets/video_recorder/modes/together/video_recorder_to
 import 'package:openvine/widgets/video_recorder/modes/upload/video_recorder_upload_stack.dart';
 import 'package:openvine/widgets/video_recorder/remote_record_pause.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_bottom_bar.dart';
+import 'package:openvine/widgets/video_recorder/video_recorder_frame.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_library_button.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_navigation.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -923,54 +924,50 @@ class _VideoRecorderScaffold extends StatelessWidget {
       child: Scaffold(
         backgroundColor: context.vineColors.surfaceContainerHigh,
         resizeToAvoidBottomInset: false,
-        body: Column(
-          children: [
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: switch (context.select(
-                  (VideoRecorderBloc b) => b.state.recorderMode,
-                )) {
-                  .upload => const VideoRecorderUploadStack(),
-                  .capture => VideoRecorderCaptureStack(fromEditor: fromEditor),
-                  // Stop-motion reuses the capture stack — each shutter
-                  // tap adds a still to the session, which joins the
-                  // clip list as one frames-based clip, so the capture
-                  // flow (clips, library, editor, ghost) applies
-                  // unchanged. It only fills the top bar's center slot,
-                  // where capture mode shows its sound chip, with the
-                  // session's remaining-shots budget.
-                  .stopMotion => VideoRecorderCaptureStack(
-                    fromEditor: fromEditor,
-                    topBarCenter: const VideoRecorderStopMotionBudget(),
-                  ),
-                  .classic => const VideoRecorderClassicStack(),
-                  .together => const VideoRecorderTogetherStack(),
-                },
+        // On large screens and the desktop the frame narrows the mode stack
+        // and the bottom bar to the preview, so their controls stay with it.
+        body: VideoRecorderFrame(
+          aspectRatio: context.select(
+            (VideoRecorderBloc b) => b.state.aspectRatio.value,
+          ),
+          content: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: switch (context.select(
+              (VideoRecorderBloc b) => b.state.recorderMode,
+            )) {
+              .upload => const VideoRecorderUploadStack(),
+              .capture => VideoRecorderCaptureStack(fromEditor: fromEditor),
+              // Stop-motion reuses the capture stack — each shutter
+              // tap adds a still to the session, which joins the
+              // clip list as one frames-based clip, so the capture
+              // flow (clips, library, editor, ghost) applies
+              // unchanged. It only fills the top bar's center slot,
+              // where capture mode shows its sound chip, with the
+              // session's remaining-shots budget.
+              .stopMotion => VideoRecorderCaptureStack(
+                fromEditor: fromEditor,
+                topBarCenter: const VideoRecorderStopMotionBudget(),
               ),
-            ),
-
-            if (!lockedMode)
-              const Padding(
-                padding: .symmetric(vertical: 22),
-                child: VideoRecorderBottomBar(),
-              )
-            else
-              // Editor-hosted recorder: no mode wheel and no library
-              // navigation, but the library button still renders as a
-              // read-only capture counter (last still + count badge).
-              const Padding(
-                padding: .symmetric(vertical: 22),
-                child: SafeArea(
-                  top: false,
-                  child: Row(
-                    children: [
-                      VideoRecorderLibraryButton(interactive: false),
-                    ],
-                  ),
-                ),
-              ),
-          ],
+              .classic => const VideoRecorderClassicStack(),
+              .together => const VideoRecorderTogetherStack(),
+            },
+          ),
+          bottomBar: Padding(
+            padding: const .symmetric(vertical: 22),
+            child: lockedMode
+                // Editor-hosted recorder: no mode wheel and no library
+                // navigation, but the library button still renders as a
+                // read-only capture counter (last still + count badge).
+                ? const SafeArea(
+                    top: false,
+                    child: Row(
+                      children: [
+                        VideoRecorderLibraryButton(interactive: false),
+                      ],
+                    ),
+                  )
+                : const VideoRecorderBottomBar(),
+          ),
         ),
       ),
     );

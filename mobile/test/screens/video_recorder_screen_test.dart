@@ -15,9 +15,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show AudioEvent;
+import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/camera_permission/camera_permission_bloc.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
@@ -29,6 +32,7 @@ import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/large_screen_orientation_provider.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
@@ -37,10 +41,17 @@ import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
+import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_actions.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_stack.dart';
+import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_top_bar.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_stop_motion_budget.dart';
+import 'package:openvine/widgets/video_recorder/preview/video_recorder_camera_preview.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_bottom_bar.dart';
+import 'package:openvine/widgets/video_recorder/video_recorder_library_button.dart';
+import 'package:openvine/widgets/video_recorder/video_recorder_mode_selector.dart';
+import 'package:openvine/widgets/video_recorder/video_recorder_record_button.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -166,7 +177,9 @@ Widget buildTestWidget({
   ProviderContainer? container,
   List<Override> overrides = const [],
   Key? recorderKey,
+  bool largeScreenLayout = false,
 }) {
+  final recorder = VideoRecorderView(key: recorderKey);
   final child = MultiBlocProvider(
     providers: [
       BlocProvider<VideoRecorderBloc>.value(value: recorderBloc),
@@ -177,7 +190,7 @@ Widget buildTestWidget({
     child: MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: VideoRecorderView(key: recorderKey),
+      home: largeScreenLayout ? AdaptiveLayoutScope(child: recorder) : recorder,
     ),
   );
 
@@ -189,6 +202,12 @@ Widget buildTestWidget({
     overrides: [
       sharedPreferencesProvider.overrideWithValue(testPrefs),
       ..._stubServiceOverrides(),
+      if (largeScreenLayout) ...[
+        isFeatureEnabledProvider(
+          FeatureFlag.largeScreenLayout,
+        ).overrideWithValue(true),
+        ignoresOrientationLockOnLargeScreensProvider.overrideWithValue(false),
+      ],
       ...overrides,
     ],
     child: child,
@@ -447,25 +466,6 @@ void main() {
         await tester.pump();
 
         expect(find.byType(VideoRecorderBottomBar), findsOneWidget);
-      });
-
-      testWidgets('renders Column with Expanded and bottom bar', (
-        tester,
-      ) async {
-        await tester.pumpWidget(buildTestWidget());
-
-        await tester.pump();
-
-        // Body is a Column with an Expanded child and a Padding child
-        final columnFinder = find.descendant(
-          of: find.byType(Scaffold),
-          matching: find.byType(Column),
-        );
-        expect(columnFinder, findsWidgets);
-
-        final column = tester.widget<Column>(columnFinder.first);
-        expect(column.children.first, isA<Expanded>());
-        expect(column.children.last, isA<Padding>());
       });
     });
 
@@ -748,18 +748,6 @@ void main() {
     });
 
     group('Screen Layout', () {
-      testWidgets('uses Column layout for screen', (tester) async {
-        await tester.pumpWidget(buildTestWidget());
-
-        await tester.pump();
-
-        final columnFinder = find.descendant(
-          of: find.byType(Scaffold),
-          matching: find.byType(Column),
-        );
-        expect(columnFinder, findsWidgets);
-      });
-
       testWidgets('screen takes full available space', (tester) async {
         await tester.pumpWidget(buildTestWidget());
 
@@ -836,36 +824,112 @@ void main() {
       });
     });
 
-    group('Widget Tree Structure', () {
-      testWidgets('capture stack is within Expanded', (tester) async {
-        await tester.pumpWidget(buildTestWidget());
+    group('Layout', () {
+      void setWindow(WidgetTester tester, Size size) {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = size;
+        addTearDown(tester.view.reset);
+      }
 
+      testWidgets('puts the bottom bar below the capture stack across a '
+          'phone', (tester) async {
+        setWindow(tester, const Size(390, 844));
+        await tester.pumpWidget(buildTestWidget());
         await tester.pump();
 
-        // Capture stack should be a descendant of Expanded
-        expect(
-          find.descendant(
-            of: find.byType(Expanded),
-            matching: find.byType(VideoRecorderCaptureStack),
-          ),
-          findsOneWidget,
-        );
+        final stack = tester.getRect(find.byType(VideoRecorderCaptureStack));
+        final bottomBar = tester.getRect(find.byType(VideoRecorderBottomBar));
+        expect(stack.left, 0);
+        expect(stack.width, 390);
+        expect(bottomBar.width, 390);
+        expect(bottomBar.top, greaterThanOrEqualTo(stack.bottom));
       });
 
-      testWidgets('bottom bar is below the capture stack', (tester) async {
-        await tester.pumpWidget(buildTestWidget());
+      void stubAspectRatio(model.AspectRatio aspectRatio) {
+        when(() => recorderBloc.state).thenReturn(
+          VideoRecorderBlocState(
+            isCameraInitialized: true,
+            canRecord: true,
+            aspectRatio: aspectRatio,
+          ),
+        );
+      }
 
+      Rect previewRect(WidgetTester tester) => tester.getRect(
+        find
+            .descendant(
+              of: find.byType(VideoRecorderCameraPreview),
+              matching: find.byType(AspectRatio),
+            )
+            .first,
+      );
+
+      for (final (where, window, aspectRatio) in [
+        (
+          'on a large screen',
+          const Size(834, 1194),
+          model.AspectRatio.vertical,
+        ),
+        (
+          'in a landscape window',
+          const Size(1280, 800),
+          model.AspectRatio.vertical,
+        ),
+        ('on a large screen', const Size(834, 1194), model.AspectRatio.square),
+        (
+          'in a landscape window',
+          const Size(1280, 800),
+          model.AspectRatio.square,
+        ),
+      ]) {
+        testWidgets('keeps the controls on the ${aspectRatio.name} preview '
+            '$where', (tester) async {
+          setWindow(tester, window);
+          stubAspectRatio(aspectRatio);
+          await tester.pumpWidget(buildTestWidget(largeScreenLayout: true));
+          await tester.pump();
+
+          final preview = previewRect(tester);
+          final stack = tester.getRect(find.byType(VideoRecorderCaptureStack));
+          expect(
+            preview.width / preview.height,
+            closeTo(aspectRatio.value, 0.001),
+          );
+          expect(preview.width, closeTo(stack.width, 0.001));
+          for (final control in [
+            find.byType(VideoRecorderCaptureTopBar),
+            find.byType(VideoRecorderCaptureActions),
+            find.byType(RecordButton),
+            find.byType(VideoRecorderModeSelectorWheel),
+            find.byType(VideoRecorderLibraryButton),
+          ]) {
+            final rect = tester.getRect(control);
+            expect(
+              rect.left,
+              greaterThanOrEqualTo(preview.left),
+              reason: '$control',
+            );
+            expect(
+              rect.right,
+              lessThanOrEqualTo(preview.right),
+              reason: '$control',
+            );
+          }
+        });
+      }
+
+      testWidgets('grows a square preview to the height of a landscape '
+          'window', (tester) async {
+        setWindow(tester, const Size(1280, 800));
+        stubAspectRatio(model.AspectRatio.square);
+        await tester.pumpWidget(buildTestWidget(largeScreenLayout: true));
         await tester.pump();
 
-        final columnFinder = find.descendant(
-          of: find.byType(Scaffold),
-          matching: find.byType(Column),
-        );
-        final column = tester.widget<Column>(columnFinder.first);
-
-        // First child is Expanded (capture stack), last is Padding (bottom bar)
-        expect(column.children.first, isA<Expanded>());
-        expect(column.children.last, isA<Padding>());
+        final preview = previewRect(tester);
+        final stack = tester.getRect(find.byType(VideoRecorderCaptureStack));
+        expect(preview.height, closeTo(stack.height, 0.001));
+        expect(preview.width, closeTo(stack.height, 0.001));
+        expect(preview.center.dx, closeTo(640, 0.001));
       });
     });
 

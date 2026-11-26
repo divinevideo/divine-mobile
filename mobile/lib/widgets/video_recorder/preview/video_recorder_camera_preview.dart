@@ -10,11 +10,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/config/screenshot_mode.dart';
+import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/l10n/camera_initialization_error_l10n.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
-import 'package:openvine/ui/adaptive_layout.dart';
-import 'package:openvine/utils/platform_helpers.dart';
 import 'package:openvine/widgets/video_clip/clip_crop_guide.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_backdrop.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_tap_to_pick.dart';
@@ -23,6 +22,7 @@ import 'package:openvine/widgets/video_recorder/preview/video_recorder_dual_came
 import 'package:openvine/widgets/video_recorder/preview/video_recorder_mobile_preview.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_camera_placeholder.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_focus_point.dart';
+import 'package:openvine/widgets/video_recorder/video_recorder_frame.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_ghost_frame.dart';
 
 /// Displays the camera preview with animated aspect ratio changes.
@@ -58,13 +58,9 @@ class VideoRecorderCameraPreview extends StatelessWidget {
         // and with adaptive layouts a large or landscape window, shows the
         // 9:16 frame that is recorded.
         final availableAspectRatio = constraints.biggest.aspectRatio;
-        final layout = context.adaptiveLayout;
         final showsRecordedFrame =
-            isDesktopPlatform ||
-            (layout.enabled &&
-                (layout.isLargeScreen ||
-                    layout.size.width > layout.size.height) &&
-                availableAspectRatio > 9 / 16);
+            recorderShowsRecordedFrame(context) &&
+            availableAspectRatio > 9 / 16;
         final aspectRatioValue = aspectRatio == .vertical
             ? showsRecordedFrame
                   ? 9 / 16
@@ -73,8 +69,10 @@ class VideoRecorderCameraPreview extends StatelessWidget {
 
         return Center(
           child: TweenAnimationBuilder<double>(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeInOut,
+            // In step with the recorder's column, which follows the same
+            // change around the preview.
+            duration: recorderAspectRatioTransition.autoReduceMotion(context),
+            curve: recorderAspectRatioCurve,
             tween: Tween(begin: aspectRatioValue, end: aspectRatioValue),
             builder: (context, aspectRatio, _) {
               return AspectRatio(
