@@ -107,6 +107,14 @@ void main() {
         RoutePaths.curatedListByAuthorFor(pubkey: 'pk', listId: 'my list'),
         equals('/list/pk/my%20list'),
       );
+      expect(
+        RoutePaths.curatedListByAuthorFor(
+          pubkey: 'pk',
+          listId: 'my list',
+          play: 0,
+        ),
+        equals('/list/pk/my%20list?play=0'),
+      );
       final peopleListAuthor = 'a' * 64;
       expect(
         RoutePaths.peopleListByAuthorFor(

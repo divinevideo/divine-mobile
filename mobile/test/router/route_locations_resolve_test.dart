@@ -115,6 +115,11 @@ final _locations = <String, List<String>>{
   'conversationForId': [RoutePaths.conversationForId(_conversationId)],
   'curatedListByAuthorFor': [
     RoutePaths.curatedListByAuthorFor(pubkey: _pubkeyHex, listId: _listId),
+    RoutePaths.curatedListByAuthorFor(
+      pubkey: _pubkeyHex,
+      listId: _listId,
+      play: 0,
+    ),
   ],
   'curatedListFeedForId': [RoutePaths.curatedListFeedForId(_listId)],
   'exploreFeaturedCampaign': [

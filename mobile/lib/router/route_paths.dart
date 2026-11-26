@@ -143,12 +143,18 @@ abstract final class RoutePaths {
   static String collabRoomPartFor(String roomId) =>
       '$collabRoomBase/$roomId/part';
   static String conversationForId(String id) => '$inbox/conversation/$id';
+
+  /// A curated list at the web's address, `/list/{pubkey}/{listId}`. With
+  /// [play], the list opens playing the video at that position in the list.
   static String curatedListByAuthorFor({
     required String pubkey,
     required String listId,
+    int? play,
   }) {
-    return '$curatedListFeedBase/${Uri.encodeComponent(pubkey)}'
+    final path =
+        '$curatedListFeedBase/${Uri.encodeComponent(pubkey)}'
         '/${Uri.encodeComponent(listId)}';
+    return play == null ? path : '$path?play=$play';
   }
 
   /// A people list at the web's address, `/people-lists/{pubkey}/{listId}`,

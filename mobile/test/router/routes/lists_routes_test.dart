@@ -369,6 +369,64 @@ void main() {
       });
     });
 
+    group('play', () {
+      Widget buildAuthored(String location) => build(
+        CuratedListByAuthorScreen.routeName,
+        location,
+        pathParameters: const {
+          'pubkey': syntheticOtherTestPubkey,
+          'listId': 'skate',
+        },
+      );
+
+      testWidgets('opens an authored list playing the requested position', (
+        tester,
+      ) async {
+        await captureContext(tester);
+
+        final screen = buildAuthored(
+          CuratedListByAuthorScreen.pathFor(
+            pubkey: syntheticOtherTestPubkey,
+            listId: 'skate',
+            play: 2,
+          ),
+        );
+
+        expect(
+          screen,
+          isA<CuratedListByAuthorScreen>().having(
+            (s) => s.initialListIndex,
+            'initialListIndex',
+            2,
+          ),
+        );
+      });
+
+      for (final (label, query) in [
+        ('without one', ''),
+        ('for a value that is not a number', '?play=first'),
+      ]) {
+        testWidgets('opens an authored list on its grid $label', (
+          tester,
+        ) async {
+          await captureContext(tester);
+
+          final screen = buildAuthored(
+            '${CuratedListByAuthorScreen.pathFor(pubkey: syntheticOtherTestPubkey, listId: 'skate')}$query',
+          );
+
+          expect(
+            screen,
+            isA<CuratedListByAuthorScreen>().having(
+              (s) => s.initialListIndex,
+              'initialListIndex',
+              isNull,
+            ),
+          );
+        });
+      }
+    });
+
     group('invalid ids', () {
       testWidgets('a curated list shows its own error for an empty id', (
         tester,

@@ -21,6 +21,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/list_video_order.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/utils/share_list_link.dart';
@@ -59,6 +60,7 @@ class CuratedListFeedScreen extends ConsumerStatefulWidget {
     this.videoIds,
     this.authorPubkey,
     this.discoveredList,
+    this.initialListIndex,
     super.key,
   });
 
@@ -79,6 +81,14 @@ class CuratedListFeedScreen extends ConsumerStatefulWidget {
   /// the list is there.
   final CuratedList? discoveredList;
 
+  /// The position in the list to start playback at, as a link's `play`
+  /// parameter asks; null opens the grid.
+  ///
+  /// It is a position in the list, not in the videos that resolved, so it
+  /// waits for that video. When that video, or that position, does not exist,
+  /// the screen stays on the grid rather than playing another one.
+  final int? initialListIndex;
+
   @override
   ConsumerState<CuratedListFeedScreen> createState() =>
       _CuratedListFeedScreenState();
@@ -86,6 +96,12 @@ class CuratedListFeedScreen extends ConsumerStatefulWidget {
 
 class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
   int? _activeVideoIndex;
+
+  /// [CuratedListFeedScreen.initialListIndex] until playback opens there or
+  /// the viewer moves on: backing out, tapping a video, managing the posts or
+  /// refreshing.
+  late int? _pendingListIndex = widget.initialListIndex;
+
   bool _isTogglingSubscription = false;
 
   /// Live while manage-posts mode is active; each entry into the mode gets a
@@ -122,6 +138,11 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     final videosAsync = useFrozenIds
         ? ref.watch(videoEventsByIdsProvider(widget.videoIds!))
         : ref.watch(curatedListVideoEventsProvider(_cacheListId));
+    final pendingIndex = _activeVideoIndex == null
+        ? _pendingPlaybackIndex(videosAsync, useFrozenIds: useFrozenIds)
+        : null;
+    if (pendingIndex != null) _keepPendingPlayback(pendingIndex);
+    final activeVideoIndex = _activeVideoIndex ?? pendingIndex;
 
     // Managing posts needs loaded, non-empty content: an empty list has
     // nothing to remove and an error view has no posts to manage.
@@ -151,7 +172,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     );
 
     final PreferredSizeWidget? appBar;
-    if (_activeVideoIndex != null) {
+    if (activeVideoIndex != null) {
       appBar = null;
     } else if (_managing) {
       appBar = DiVineAppBar(
@@ -228,7 +249,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       appBar: appBar,
       body: _ListBody(
         videosAsync: videosAsync,
-        activeVideoIndex: _activeVideoIndex,
+        activeVideoIndex: activeVideoIndex,
         manageCubit: _manageCubit,
         listName: widget.listName,
         header: _ListHeroHeader(
@@ -249,6 +270,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
           );
           setState(() {
             _activeVideoIndex = index;
+            _pendingListIndex = null;
           });
         },
         onRefresh: _refreshListVideos,
@@ -288,6 +310,47 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
   void _exitVideoMode() {
     setState(() {
       _activeVideoIndex = null;
+      _pendingListIndex = null;
+    });
+  }
+
+  /// Where the video at the pending list position sits in [videosAsync], or
+  /// null while it has not resolved, or when it never will.
+  int? _pendingPlaybackIndex(
+    AsyncValue<List<VideoEvent>> videosAsync, {
+    required bool useFrozenIds,
+  }) {
+    final position = _pendingListIndex;
+    if (position == null || videosAsync.hasError) return null;
+    final videos = videosAsync.value;
+    if (videos == null) return null;
+    final references = useFrozenIds
+        ? widget.videoIds
+        : ref.watch(curatedListVideosProvider(_cacheListId)).value;
+    if (references == null || position < 0 || position >= references.length) {
+      return null;
+    }
+    final order = ListVideoOrder(references);
+    final target = order.positionOfReference(references[position]);
+    if (target == null) return null;
+    final index = videos.indexWhere(
+      (video) => order.positionOf(video) == target,
+    );
+    return index < 0 ? null : index;
+  }
+
+  /// Holds playback once the pending position has opened, so that a later
+  /// emission of the list, such as a reload after a block, does not drop the
+  /// viewer back to the grid.
+  void _keepPendingPlayback(int index) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _pendingListIndex == null || _activeVideoIndex != null) {
+        return;
+      }
+      setState(() {
+        _activeVideoIndex = index;
+        _pendingListIndex = null;
+      });
     });
   }
 
@@ -307,6 +370,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       return;
     }
     setState(() {
+      _pendingListIndex = null;
       _manageCubit = CuratedListManagePostsCubit(
         service: service,
         listId: widget.listId,
@@ -346,6 +410,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
   /// id provider's cached value, which is how a removed post kept its
   /// tile on screen.
   void _refreshListVideos() {
+    _pendingListIndex = null;
     ref
       ..invalidate(curatedListVideosProvider(_cacheListId))
       ..invalidate(curatedListVideoEventsProvider(_cacheListId));

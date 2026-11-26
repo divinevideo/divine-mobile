@@ -28,6 +28,7 @@ class CuratedListByAuthorScreen extends ConsumerWidget {
     required this.authorPubkey,
     required this.listId,
     this.discoveredList,
+    this.initialListIndex,
     super.key,
   });
 
@@ -38,9 +39,17 @@ class CuratedListByAuthorScreen extends ConsumerWidget {
   /// the GoRoute pattern and [pathFor] can never diverge.
   static const path = '${CuratedListFeedScreen.basePath}/:pubkey/:listId';
 
-  /// Build path for a list addressed by author + d-tag.
-  static String pathFor({required String pubkey, required String listId}) =>
-      RoutePaths.curatedListByAuthorFor(pubkey: pubkey, listId: listId);
+  /// Build path for a list addressed by author + d-tag, opening playback at
+  /// list position [play] when given.
+  static String pathFor({
+    required String pubkey,
+    required String listId,
+    int? play,
+  }) => RoutePaths.curatedListByAuthorFor(
+    pubkey: pubkey,
+    listId: listId,
+    play: play,
+  );
 
   /// Author pubkey (lowercase hex).
   final String authorPubkey;
@@ -50,6 +59,9 @@ class CuratedListByAuthorScreen extends ConsumerWidget {
 
   /// Discovery data for a warm route; accepted only for this exact author and ID.
   final CuratedList? discoveredList;
+
+  /// Passed on as [CuratedListFeedScreen.initialListIndex].
+  final int? initialListIndex;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -63,6 +75,7 @@ class CuratedListByAuthorScreen extends ConsumerWidget {
         videoIds: initial.videoEventIds,
         authorPubkey: authorPubkey,
         discoveredList: initial,
+        initialListIndex: initialListIndex,
       );
     }
     final listAsync = ref.watch(
@@ -87,6 +100,7 @@ class CuratedListByAuthorScreen extends ConsumerWidget {
           videoIds: list.videoEventIds,
           authorPubkey: list.pubkey ?? authorPubkey,
           discoveredList: list,
+          initialListIndex: initialListIndex,
         );
       },
       loading: () => const _ListLoadingView(),

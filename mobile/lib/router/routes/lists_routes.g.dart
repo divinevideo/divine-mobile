@@ -94,6 +94,7 @@ mixin $CuratedListByAuthorRouteData on GoRouteData {
       CuratedListByAuthorRouteData(
         pubkey: state.pathParameters['pubkey']!,
         listId: state.pathParameters['listId']!,
+        play: state.uri.queryParameters['play'],
         $extra: state.extra as Object?,
       );
 
@@ -103,6 +104,7 @@ mixin $CuratedListByAuthorRouteData on GoRouteData {
   @override
   String get location => GoRouteData.$location(
     '/list/${Uri.encodeComponent(_self.pubkey)}/${Uri.encodeComponent(_self.listId)}',
+    queryParams: {if (_self.play != null) 'play': _self.play},
   );
 
   @override

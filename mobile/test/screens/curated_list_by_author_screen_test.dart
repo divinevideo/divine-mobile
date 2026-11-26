@@ -48,11 +48,16 @@ void main() {
       when(() => mockService.isSubscribedToList(any())).thenReturn(false);
     });
 
-    Widget buildSubject({MockGoRouter? goRouter, CuratedList? discoveredList}) {
+    Widget buildSubject({
+      MockGoRouter? goRouter,
+      CuratedList? discoveredList,
+      int? initialListIndex,
+    }) {
       final screen = CuratedListByAuthorScreen(
         authorPubkey: _authorPubkey,
         listId: 'my-vines',
         discoveredList: discoveredList,
+        initialListIndex: initialListIndex,
       );
       return ProviderScope(
         overrides: [
@@ -130,6 +135,44 @@ void main() {
         },
       );
     }
+
+    group('requested position', () {
+      final list = CuratedList(
+        id: 'my-vines',
+        name: 'My Vines',
+        videoEventIds: const [],
+        pubkey: _authorPubkey,
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      );
+
+      int? requestedPosition(WidgetTester tester) => tester
+          .widget<CuratedListFeedScreen>(find.byType(CuratedListFeedScreen))
+          .initialListIndex;
+
+      testWidgets('reaches the list warmed from discovery', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(discoveredList: list, initialListIndex: 2),
+        );
+        await tester.pumpAndSettle();
+
+        expect(requestedPosition(tester), equals(2));
+      });
+
+      testWidgets('reaches the list read from relays', (tester) async {
+        when(
+          () => mockService.fetchPublicList(
+            authorPubkey: _authorPubkey,
+            listId: 'my-vines',
+          ),
+        ).thenAnswer((_) async => list);
+
+        await tester.pumpWidget(buildSubject(initialListIndex: 2));
+        await tester.pumpAndSettle();
+
+        expect(requestedPosition(tester), equals(2));
+      });
+    });
 
     testWidgets('renders $CuratedListFeedScreen when the list resolves', (
       tester,
