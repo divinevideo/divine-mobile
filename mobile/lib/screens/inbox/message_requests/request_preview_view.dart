@@ -508,13 +508,13 @@ class _ProfileContent extends StatelessWidget {
   }
 }
 
-class _InvitePreview extends StatelessWidget {
+class _InvitePreview extends ConsumerWidget {
   const _InvitePreview({
     required this.messages,
     required this.senderDisplayName,
     required this.currentPubkey,
     required this.participantPubkeys,
-    this.isGroup = false,
+    required this.isGroup,
   });
 
   final List<DmMessage> messages;
@@ -527,7 +527,7 @@ class _InvitePreview extends StatelessWidget {
   final bool isGroup;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     ({DmMessage message, CollaboratorInvite invite})? inviteMessage;
     for (final message in messages) {
       final invite = CollaboratorInviteParser.parse(message);
@@ -547,24 +547,17 @@ class _InvitePreview extends StatelessWidget {
       counterpartyPubkeys: participantPubkeys,
     );
     final senderPubkey = inviteMessage.message.senderPubkey;
+    final authorName = isGroup && !isSent && senderPubkey.isNotEmpty
+        ? watchDmPeerName(context, ref, senderPubkey).name
+        : senderDisplayName;
     return Padding(
       padding: const EdgeInsets.only(top: 24),
-      child: isGroup && !isSent && senderPubkey.isNotEmpty
-          ? DmPeerNameBuilder(
-              pubkey: senderPubkey,
-              builder: (_, author) => CollaboratorInviteCard(
-                invite: invite,
-                isSent: isSent,
-                collaboratorPubkey: collaboratorPubkey,
-                senderDisplayName: author.name,
-              ),
-            )
-          : CollaboratorInviteCard(
-              invite: invite,
-              isSent: isSent,
-              collaboratorPubkey: collaboratorPubkey,
-              senderDisplayName: senderDisplayName,
-            ),
+      child: CollaboratorInviteCard(
+        invite: invite,
+        isSent: isSent,
+        collaboratorPubkey: collaboratorPubkey,
+        senderDisplayName: authorName,
+      ),
     );
   }
 }
