@@ -2542,6 +2542,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       if (enriched == null || identical(enriched, video)) return video;
 
       changed = true;
+      // Overlapping enrichment reads can miss different events in the batch.
+      if (enriched.seriesCoordinate == null && video.seriesCoordinate != null) {
+        return enriched.copyWith(seriesCoordinate: video.seriesCoordinate);
+      }
       return enriched;
     }).toList();
 

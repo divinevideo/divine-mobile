@@ -1224,6 +1224,71 @@ void main() {
       );
 
       test(
+        'a late partial enrichment keeps the series already loaded',
+        () async {
+          final authors = ['author1'];
+          final episode = createTestVideo('episode');
+          final neighbor = createTestVideo('neighbor');
+          final nextPage = createTestVideo('next-page');
+          final series = '30005:${episode.pubkey}:our-story';
+          final initialEnrichment = Completer<List<VideoEvent>>();
+          final paginationEnrichment = Completer<List<VideoEvent>>();
+
+          when(() => mockFollowRepository.followingPubkeys).thenReturn(authors);
+          when(
+            () => mockVideosRepository.getHomeFeedVideos(
+              authors: authors,
+              videoRefs: any(named: 'videoRefs'),
+              userPubkey: any(named: 'userPubkey'),
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer((invocation) async {
+            if (invocation.namedArguments[#cursor] != null) {
+              return HomeFeedResult(videos: [nextPage], hasMore: false);
+            }
+            return HomeFeedResult(
+              videos: [episode, neighbor],
+              paginationCursor: 'next-page',
+              hasMore: true,
+            );
+          });
+
+          final bloc = VideoFeedBloc(
+            videosRepository: mockVideosRepository,
+            followRepository: mockFollowRepository,
+            curatedListRepository: mockCuratedListRepository,
+            enrichVideos: (videos) => videos.length == 2
+                ? initialEnrichment.future
+                : paginationEnrichment.future,
+          );
+          addTearDown(bloc.close);
+
+          bloc.add(const VideoFeedStarted(mode: FeedMode.following));
+          await pumpEventQueue();
+          bloc.add(const VideoFeedLoadMoreRequested());
+          await pumpEventQueue();
+
+          paginationEnrichment.complete([
+            episode.copyWith(seriesCoordinate: series),
+            neighbor,
+            nextPage,
+          ]);
+          await pumpEventQueue();
+          expect(bloc.state.videos.first.seriesCoordinate, equals(series));
+
+          initialEnrichment.complete([
+            episode,
+            neighbor.copyWith(title: 'Enriched neighbor'),
+          ]);
+          await pumpEventQueue();
+
+          expect(bloc.state.videos[1].title, equals('Enriched neighbor'));
+          expect(bloc.state.videos.first.seriesCoordinate, equals(series));
+        },
+      );
+
+      test(
         'ignores stale background enrichment after switching sources',
         () async {
           final authors = ['author1'];
