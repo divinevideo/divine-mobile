@@ -61,6 +61,10 @@ android {
         implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
         implementation("androidx.appcompat:appcompat:1.7.1")
         implementation("androidx.media:media:1.7.1")
+
+        // Wearable Data Layer for the Wear OS remote shutter. Needs Google
+        // Play services at runtime; WearRemoteLink checks for them first.
+        implementation("com.google.android.gms:play-services-wearable:20.0.1")
         
         // Test dependencies
         testImplementation("org.jetbrains.kotlin:kotlin-test")

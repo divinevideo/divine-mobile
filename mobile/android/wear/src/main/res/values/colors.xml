@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The phone app's launcher background. -->
+    <color name="ic_launcher_background">#27C58B</color>
+</resources>

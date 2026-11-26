@@ -400,9 +400,12 @@ class _VideoRecorderBlocScope extends ConsumerWidget {
             session: analyticsSession,
           ),
         ),
-        // Only iOS has a remote that mirrors the recorder: the Apple Watch.
+        // The watch remotes that mirror the recorder: the Apple Watch app on
+        // iOS and the Wear OS app on Android.
         publishRemoteRecorderState:
-            !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+            !kIsWeb &&
+                (defaultTargetPlatform == TargetPlatform.iOS ||
+                    defaultTargetPlatform == TargetPlatform.android)
             ? DivineCamera.instance.updateRemoteRecorderState
             : null,
         liveChromaKeySupported: ChromaKeyShader.isBackendSupported,
@@ -780,7 +783,7 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
         context.select(
           (VideoRecorderBloc bloc) => _reactionTakeInFlight(bloc.state),
         );
-    // The Apple Watch mirrors the clip budget, and clips are also added,
+    // The watch remote mirrors the clip budget, and clips are also added,
     // deleted and restored without the recorder bloc changing state.
     ref.listen(
       clipManagerProvider.select(

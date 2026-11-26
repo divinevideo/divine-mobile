@@ -35,6 +35,10 @@ class DivineCameraPlugin :
     internal var volumeKeyHandler: VolumeKeyHandler? = null
         private set
 
+    // The Wear OS remote. Only the UI engine attaches to an activity, so a
+    // background engine never answers the watch.
+    private var wearRemoteLink: WearRemoteLink? = null
+
     // Remote record control only holds its media session while the activity
     // is in the foreground (#10196). Stopping releases it, resuming claims it
     // back; a pause alone (notification shade, permission dialog) keeps it.
@@ -47,6 +51,7 @@ class DivineCameraPlugin :
     private val activityLifecycleObserver = object : DefaultLifecycleObserver {
         override fun onResume(owner: LifecycleOwner) {
             volumeKeyHandler?.onBecomeActive()
+            wearRemoteLink?.onResume()
         }
 
         override fun onStop(owner: LifecycleOwner) {
@@ -247,8 +252,8 @@ class DivineCameraPlugin :
                 setVolumeKeysEnabled(enabled, oneShotResult)
             }
 
-            // Only the Apple Watch app mirrors the recorder; nothing to tell here.
             "updateRemoteRecorderState" -> {
+                wearRemoteLink?.update(call.arguments as? Map<*, *>)
                 oneShotResult.success(null)
             }
 
@@ -555,6 +560,7 @@ class DivineCameraPlugin :
                         }
                     }
                 }
+                volumeKeyHandler?.setWatchRemoteAvailable(wearRemoteLink?.hasWatchRemote ?: false)
                 val success = volumeKeyHandler?.enable(appActive = isActivityInForeground) ?: false
                 result.success(success)
             } else {
@@ -578,6 +584,7 @@ class DivineCameraPlugin :
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
         releaseLogSinkIfOwned()
+        stopWearRemoteLink()
         volumeKeyHandler?.release()
         volumeKeyHandler = null
         cameraController?.release()
@@ -594,12 +601,36 @@ class DivineCameraPlugin :
         activityLifecycle = null
     }
 
+    // Up from the first activity so a watch still showing a recorder from an
+    // earlier run of the app learns that it is gone.
+    private fun startWearRemoteLink() {
+        if (wearRemoteLink != null) return
+        wearRemoteLink = WearRemoteLink.create(
+            context,
+            onShutterAction = { action, stateId ->
+                channel.invokeMethod(
+                    "onRemoteRecordTrigger",
+                    mapOf("trigger" to action, WearRemoteProtocol.STATE_ID to stateId)
+                )
+            },
+            onWatchRemoteChanged = { available ->
+                volumeKeyHandler?.setWatchRemoteAvailable(available)
+            }
+        )?.also { it.start() }
+    }
+
+    private fun stopWearRemoteLink() {
+        wearRemoteLink?.stop()
+        wearRemoteLink = null
+    }
+
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
         observeActivityLifecycle(binding)
         // The UI engine is the one that attaches to an Activity, so this is
         // where diagnostics-sink ownership belongs.
         claimLogSink()
+        startWearRemoteLink()
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
@@ -623,6 +654,8 @@ class DivineCameraPlugin :
         // owns the diagnostics sink. Ownership-guarded so a background engine's
         // sink — if one had somehow been installed — isn't cleared here.
         releaseLogSinkIfOwned()
+        // The config-change path keeps the link: the same engine re-attaches.
+        stopWearRemoteLink()
     }
 }
 
