@@ -369,12 +369,11 @@ class SelectListCubit extends Cubit<SelectListState>
     if (_writesPaused() || !state.canSubmit) return null;
     final epoch = _writeEpoch;
     final service = _service;
-    final toAdd = state.listIdsToAdd;
-    final toRemove = state.listIdsToRemove;
-    if (_permissionRecoveryBlocks({...toAdd, ...toRemove})) {
+    final picks = {...state.listIdsToAdd, ...state.listIdsToRemove};
+    if (_permissionRecoveryBlocks(picks)) {
       return _recoveryRequired();
     }
-    if (toAdd.isEmpty && toRemove.isEmpty) {
+    if (picks.isEmpty) {
       emitIfOpen(state.copyWith(status: SelectListStatus.saved));
       return SelectListStatus.saved;
     }
@@ -391,6 +390,10 @@ class SelectListCubit extends Cubit<SelectListState>
         await _olderVersionsLookup;
         if (!isSessionCurrent) return _sessionFailure();
         if (_writeInterrupted(epoch)) return null;
+        // The picker already removed any newly converted series from its
+        // selections while the lookup was running.
+        final offered = state.lists.map((list) => list.id).toSet();
+        failed = picks.difference(offered).where(_becameSeries).length;
       }
       final adds = state.listIdsToAdd;
       final removes = state.listIdsToRemove;

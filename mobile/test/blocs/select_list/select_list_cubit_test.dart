@@ -1860,6 +1860,53 @@ void main() {
         expect(cubit.state.memberListIds, {'older'});
       });
 
+      test('reports a pick that becomes a series while the save waits for '
+          'the lookup and saves the remaining picks', () async {
+        final older = _list('older', videoEventIds: [olderVideoId]);
+        final changing = _list('changing');
+        final ordinary = _list('ordinary');
+        stubLists([older, changing, ordinary]);
+        when(
+          () => service.addVideoToList(any(), any(), allowSeries: false),
+        ).thenAnswer((_) async => true);
+        final lookup = Completer<Map<String, String>>();
+        final cubit = buildResolvingCubit((_) => lookup.future);
+        addTearDown(cubit.close);
+
+        cubit
+          ..toggled(changing.id)
+          ..toggled(ordinary.id);
+        final save = cubit.submitted();
+        stubLists([
+          older,
+          changing.copyWith(
+            preservedTags: const [
+              ['series', 'true'],
+            ],
+          ),
+          ordinary,
+        ]);
+        capturedListener()();
+        lookup.complete({olderVideoId: address});
+
+        expect(await save, SelectListStatus.failure);
+        expect(cubit.state.serviceAvailable, isTrue);
+        verify(
+          () => service.addVideoToList(
+            ordinary.authorScopedId,
+            address,
+            allowSeries: false,
+          ),
+        ).called(1);
+        verifyNever(
+          () => service.addVideoToList(
+            changing.authorScopedId,
+            address,
+            allowSeries: any(named: 'allowSeries'),
+          ),
+        );
+      });
+
       test('saves the picks when the lookup fails', () async {
         stubLists([
           _list('holds', videoEventIds: [address]),
