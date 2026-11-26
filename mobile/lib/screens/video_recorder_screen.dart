@@ -955,9 +955,10 @@ class _VideoRecorderScaffold extends StatelessWidget {
           bottomBar: Padding(
             padding: const .symmetric(vertical: 22),
             child: lockedMode
-                // Editor-hosted recorder: no mode wheel and no library
-                // navigation, but the library button still renders as a
-                // read-only capture counter (last still + count badge).
+                // Locked mode (the editor's camera, a room part): no mode
+                // wheel and no library navigation, but the library button
+                // still renders as a read-only capture counter (newest
+                // thumbnail + count badge).
                 ? const SafeArea(
                     top: false,
                     child: Row(

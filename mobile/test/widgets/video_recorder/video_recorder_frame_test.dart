@@ -1,5 +1,5 @@
 // ABOUTME: Tests for VideoRecorderFrame, which narrows the recorder to the
-// ABOUTME: 9:16 frame it records on large screens and spans the window on phones
+// ABOUTME: preview it records where it frames, and spans the window on phones
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,6 +23,7 @@ void main() {
       double aspectRatio = 9 / 16,
       double bottomBarHeight = 96,
       Widget content = const SizedBox.expand(key: _contentKey),
+      VoidCallback? onBottomBarTap,
     }) async {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = window;
@@ -46,9 +47,13 @@ void main() {
                 child: VideoRecorderFrame(
                   aspectRatio: aspectRatio,
                   content: content,
-                  bottomBar: SizedBox(
-                    key: _bottomBarKey,
-                    height: bottomBarHeight,
+                  bottomBar: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onBottomBarTap,
+                    child: SizedBox(
+                      key: _bottomBarKey,
+                      height: bottomBarHeight,
+                    ),
                   ),
                 ),
               ),
@@ -68,12 +73,12 @@ void main() {
       testWidgets('spans the window on a phone', (tester) async {
         await pumpFrame(
           tester,
-          window: const Size(390, 844),
-          padding: const FakeViewPadding(top: 47, bottom: 34),
+          window: const Size(375, 667),
+          padding: const FakeViewPadding(top: 20),
         );
 
-        expect(contentRect(tester), const Rect.fromLTWH(0, 0, 390, 748));
-        expect(bottomBarRect(tester), const Rect.fromLTWH(0, 748, 390, 96));
+        expect(contentRect(tester), const Rect.fromLTWH(0, 0, 375, 571));
+        expect(bottomBarRect(tester), const Rect.fromLTWH(0, 571, 375, 96));
       });
 
       testWidgets('narrows to the 9:16 preview on a large screen', (
@@ -105,6 +110,21 @@ void main() {
         expect(content.width, closeTo((800 - 96) * 9 / 16, 1e-9));
         expect(content.center.dx, closeTo(640, 1e-9));
         expect(bottomBarRect(tester).width, content.width);
+      });
+
+      testWidgets('keeps the width of a phone in a short window', (
+        tester,
+      ) async {
+        await pumpFrame(
+          tester,
+          window: const Size(1280, 420),
+          padding: const FakeViewPadding(top: 24, bottom: 16),
+        );
+
+        final content = contentRect(tester);
+        expect(content.width, 360);
+        expect(content.center.dx, closeTo(640, 1e-9));
+        expect(bottomBarRect(tester).width, 360);
       });
 
       testWidgets('widens to the largest square for a square preview', (
@@ -181,6 +201,33 @@ void main() {
 
         expect(contentRect(tester).center.dx, closeTo(48 + 1232 / 2, 1e-9));
         expect(contentPadding.left, 0);
+      });
+    });
+
+    group('interactions', () {
+      testWidgets('passes taps to the content and the bottom bar', (
+        tester,
+      ) async {
+        var contentTaps = 0;
+        var bottomBarTaps = 0;
+        await pumpFrame(
+          tester,
+          window: const Size(1280, 800),
+          content: GestureDetector(
+            key: _contentKey,
+            behavior: HitTestBehavior.opaque,
+            onTap: () => contentTaps++,
+          ),
+          onBottomBarTap: () => bottomBarTaps++,
+        );
+
+        await tester.tapAt(contentRect(tester).center);
+        await tester.tapAt(bottomBarRect(tester).center);
+        // Beside the column there is nothing to tap.
+        await tester.tapAt(const Offset(40, 400));
+
+        expect(contentTaps, 1);
+        expect(bottomBarTaps, 1);
       });
     });
 

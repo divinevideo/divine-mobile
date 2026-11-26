@@ -3,11 +3,11 @@
 
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/ui/adaptive_layout.dart';
+import 'package:openvine/utils/platform_helpers.dart';
 
 /// How long the camera preview, and the recorder's column with it, take to
 /// follow a change of the recording's aspect ratio.
@@ -17,41 +17,33 @@ const Duration recorderAspectRatioTransition = Duration(milliseconds: 220);
 /// the recording's aspect ratio along.
 const Curve recorderAspectRatioCurve = Curves.easeInOut;
 
+/// The narrowest the recorder's column gets: the narrowest phones, which its
+/// controls are laid out for. A shorter window keeps this width and shows the
+/// preview narrower inside it rather than squeezing the controls.
+const double _minColumnWidth = 360;
+
 /// Whether the recorder shows exactly the frame it records instead of filling
 /// the window with a vertical preview: on the desktop, and with the
 /// large-screen layouts in a large or a landscape window. A phone, and the
 /// folded iPhone Duo, fill the window even where it is not exactly 9:16.
-///
-/// Reads [defaultTargetPlatform] rather than `dart:io`, so a widget test lays
-/// the recorder out for the platform it emulates, not the machine it runs on.
 bool recorderShowsRecordedFrame(BuildContext context) {
-  if (_isDesktop) return true;
+  if (isDesktopPlatform) return true;
   final layout = context.adaptiveLayout;
   return layout.enabled &&
       (layout.isLargeScreen || layout.size.width > layout.size.height);
 }
 
-bool get _isDesktop =>
-    !kIsWeb &&
-    switch (defaultTargetPlatform) {
-      TargetPlatform.macOS ||
-      TargetPlatform.windows ||
-      TargetPlatform.linux => true,
-      TargetPlatform.android ||
-      TargetPlatform.iOS ||
-      TargetPlatform.fuchsia => false,
-    };
-
 /// Lays out the recorder: the selected mode's [content] above the
 /// [bottomBar].
 ///
-/// On a phone both span the window, as they always have. Where the recorder
-/// shows the frame it records ([recorderShowsRecordedFrame]), both are laid
-/// out in a column as wide as the largest preview of [aspectRatio] that fits,
-/// centered in the window, so the controls each mode lays over or around its
-/// preview, the mode wheel and the library button stay with the preview
-/// instead of at the window's edges. A square recording gets the wider
-/// column, so its preview grows to the window's height too.
+/// Where the recorder fills the window, both span it, as they always have.
+/// Where it shows the frame it records ([recorderShowsRecordedFrame]), both
+/// are laid out in a column as wide as the largest preview of [aspectRatio]
+/// that fits above the bar, centered between the window's side insets, so the
+/// controls each mode lays over or around its preview, the mode wheel and the
+/// library button stay with the preview instead of at the window's edges. The
+/// column is never narrower than the narrowest phones, so a short window
+/// keeps the controls whole and shows the preview narrower inside it.
 class VideoRecorderFrame extends StatelessWidget {
   /// Creates the recorder's layout.
   const VideoRecorderFrame({
@@ -111,9 +103,9 @@ class VideoRecorderFrame extends StatelessWidget {
 /// Lays out exactly two children, the content above the bottom bar, as
 /// described on [VideoRecorderFrame].
 ///
-/// A render object because the frame's width turns on the bottom bar's
-/// height, which a widget cannot read before the bar is laid out at that
-/// width.
+/// A render object rather than a [CustomMultiChildLayout]: the column's width
+/// turns on the bottom bar's height, so the bar is laid out again when that
+/// height changes, and a layout delegate may lay out each child only once.
 class _RecorderFrameLayout extends MultiChildRenderObjectWidget {
   const _RecorderFrameLayout({
     required this.framed,
@@ -242,7 +234,8 @@ class _RenderRecorderFrame extends RenderBox
 
   /// The column's width when the bottom bar is [bottomBarHeight] tall: as
   /// wide as the preview of [aspectRatio] that fits above the bar when
-  /// [framed], and never wider than the space between the side insets.
+  /// [framed] but at least [_minColumnWidth], and never wider than the space
+  /// between the side insets.
   double _columnWidth(double bottomBarHeight) {
     final available = math.max(0.0, size.width - leftInset - rightInset);
     if (!framed) return available;
@@ -250,7 +243,10 @@ class _RenderRecorderFrame extends RenderBox
       0.0,
       size.height - topInset - bottomBarHeight,
     );
-    return math.min(available, previewHeight * aspectRatio);
+    return math.min(
+      available,
+      math.max(_minColumnWidth, previewHeight * aspectRatio),
+    );
   }
 
   /// Lays the bar out [width] wide at its own height, which is unbounded as

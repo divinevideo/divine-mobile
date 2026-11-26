@@ -931,6 +931,20 @@ void main() {
         expect(preview.width, closeTo(stack.height, 0.001));
         expect(preview.center.dx, closeTo(640, 0.001));
       });
+
+      testWidgets('keeps the capture controls whole in a short landscape '
+          'window', (tester) async {
+        setWindow(tester, const Size(1280, 420));
+        tester.view.padding = const FakeViewPadding(top: 24, bottom: 16);
+        await tester.pumpWidget(buildTestWidget(largeScreenLayout: true));
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        final stack = tester.getRect(find.byType(VideoRecorderCaptureStack));
+        final recordButton = tester.getRect(find.byType(RecordButton));
+        expect(recordButton.left, greaterThanOrEqualTo(stack.left));
+        expect(recordButton.right, lessThanOrEqualTo(stack.right));
+      });
     });
 
     group('Screen Integration', () {

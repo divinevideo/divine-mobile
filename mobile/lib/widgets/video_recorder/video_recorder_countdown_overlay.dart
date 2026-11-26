@@ -8,7 +8,7 @@ import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 
-/// Fullscreen overlay displaying the running countdown.
+/// Overlay across the capture stack displaying the running countdown.
 ///
 /// Before a delayed take it dims the preview and blocks touches until the
 /// recording starts. Between the stills of stop-motion's interval loop it

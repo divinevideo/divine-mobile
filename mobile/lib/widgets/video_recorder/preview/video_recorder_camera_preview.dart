@@ -53,10 +53,9 @@ class VideoRecorderCameraPreview extends StatelessWidget {
         final aspectRatio = context.select(
           (VideoRecorderBloc b) => b.state.aspectRatio,
         );
-        // In vertical mode a phone, and the folded iPhone Duo, uses the full
-        // available screen size, even if it's not exactly 16:9. The desktop,
-        // and with adaptive layouts a large or landscape window, shows the
-        // 9:16 frame that is recorded.
+        // A vertical recording fills its box, except where the recorder shows
+        // the frame it records: there it is exactly 9:16, unless the box is
+        // already narrower.
         final availableAspectRatio = constraints.biggest.aspectRatio;
         final showsRecordedFrame =
             recorderShowsRecordedFrame(context) &&
