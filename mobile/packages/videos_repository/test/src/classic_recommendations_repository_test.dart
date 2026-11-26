@@ -357,6 +357,50 @@ void main() {
     );
 
     test(
+      'closing the gate while a playable reply is in flight drops the reply '
+      'instead of showing or replacing it',
+      () async {
+        final nostr = _Nostr();
+        when(() => nostr.publicKey).thenReturn('');
+        var allowed = true;
+        final repository = VideosRepository(
+          nostrClient: nostr,
+          funnelcakeApiClient: api,
+          classicRecommendationsEnabled: true,
+          classicRecommendationsAllowed: () => allowed,
+        );
+        var archiveReads = 0;
+        when(
+          () => api.getClassicVines(
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+          ),
+        ).thenAnswer((_) async {
+          archiveReads++;
+          return [_stats(9)];
+        });
+        final reply = Completer<RecommendationsResponse>();
+        when(
+          () => api.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).thenAnswer((_) => reply.future);
+
+        final inFlight = repository.getClassicRecommendations(request: request);
+        await pumpEventQueue();
+
+        allowed = false;
+        reply.complete(
+          RecommendationsResponse(videos: [_stats(1)], source: 'mixed'),
+        );
+
+        await expectLater(inFlight, throwsA(isA<FunnelcakeException>()));
+        expect(archiveReads, isZero);
+      },
+    );
+
+    test(
       'closing the gate mid-flight supersedes recommendations and stops '
       'top-up reads',
       () async {
