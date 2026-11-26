@@ -95,38 +95,14 @@ void main() {
         );
         expect(find.text('Alice'), findsOneWidget);
         expect(find.text('Bob'), findsOneWidget);
-        expect(
-          avatarIn(tester, 'Alice').imageUrl,
-          'https://example.com/Alice.jpg',
-        );
       });
 
-      testWidgets('a verified NIP-05 as the identifier', (tester) async {
-        await tester.pumpWidget(
-          buildSubject(
-            [alice],
-            overrides: [
-              userProfileReactiveProvider(alice).overrideWith(
-                (ref) => Stream.value(
-                  profileOf(alice, 'Alice', nip05: 'alice@example.com'),
-                ),
-              ),
-              nip05ClaimVerificationProvider(
-                Nip05Claim(pubkey: alice, nip05: 'alice@example.com'),
-              ).overrideWith((ref) async => Nip05VerificationStatus.verified),
-            ],
-          ),
-        );
-        await tester.pump();
-        await tester.pump();
-
-        expect(find.text('alice@example.com'), findsOneWidget);
-        expect(find.text(NostrKeyUtils.encodePubKey(alice)), findsNothing);
-      });
-
-      testWidgets('the npub while the NIP-05 claim is unverified', (
+      // A photo URL and a NIP-05 domain are hosts the member's profile
+      // names, so loading either tells the sender the request was opened.
+      testWidgets('no photo and no NIP-05 lookup, only the npub', (
         tester,
       ) async {
+        var lookups = 0;
         await tester.pumpWidget(
           buildSubject(
             [alice],
@@ -138,18 +114,24 @@ void main() {
               ),
               nip05ClaimVerificationProvider(
                 Nip05Claim(pubkey: alice, nip05: 'alice@example.com'),
-              ).overrideWith((ref) async => Nip05VerificationStatus.failed),
+              ).overrideWith((ref) async {
+                lookups++;
+                return Nip05VerificationStatus.verified;
+              }),
             ],
           ),
         );
         await tester.pump();
         await tester.pump();
 
-        expect(find.text(NostrKeyUtils.encodePubKey(alice)), findsOneWidget);
+        expect(find.text('Alice'), findsOneWidget);
+        expect(avatarIn(tester, 'Alice').imageUrl, isNull);
+        expect(lookups, isZero);
         expect(find.text('alice@example.com'), findsNothing);
+        expect(find.text(NostrKeyUtils.encodePubKey(alice)), findsOneWidget);
       });
 
-      testWidgets('a blocked member marked, without their photo', (
+      testWidgets('a blocked member stays listed and marked', (
         tester,
       ) async {
         final blocklist = ContentBlocklistRepository();
@@ -176,9 +158,8 @@ void main() {
         await tester.pump();
 
         expect(find.text('Alice'), findsOneWidget);
+        expect(find.text('Bob'), findsOneWidget);
         expect(find.text(l10n.profileBlockedLabel), findsOneWidget);
-        expect(avatarIn(tester, 'Alice').imageUrl, isNull);
-        expect(avatarIn(tester, 'Bob').imageUrl, 'https://example.com/Bob.jpg');
       });
 
       // #10151: a room's members are whoever its author listed, so the
@@ -213,7 +194,7 @@ void main() {
           ),
         );
         await tester.pump();
-        // A second frame lets the claim's verification settle.
+        // A second frame lets any verification settle.
         await tester.pump();
 
         expect(find.text(l10n.inboxSupportRowTitle), findsOneWidget);

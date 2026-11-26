@@ -8,7 +8,6 @@ import 'package:models/models.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
@@ -48,13 +47,14 @@ class RequestGroupMembers extends StatelessWidget {
   }
 }
 
-/// One member: avatar, name and identifier, opening their profile on tap.
+/// One member: default avatar, name and npub, opening their profile on tap.
 ///
 /// A room's members are whoever its author listed, so a moderation key here
-/// shows no wordmark and no handle (#10151). A blocked member stays listed,
-/// marked and without a photo, so the viewer knows they are in the room
-/// (#10150). The identifier is the NIP-05 claim only once it verifies for this
-/// key, and the npub until then, as where someone picks a recipient.
+/// shows no wordmark (#10151), and a blocked member stays listed and marked
+/// so the viewer knows they are in the room (#10150). Nothing here contacts a
+/// host the member's profile names: a profile photo is loaded from its URL
+/// and a NIP-05 check asks the claimed domain, which would tell the sender
+/// the request was opened before it is accepted.
 class _GroupMemberRow extends ConsumerWidget {
   const _GroupMemberRow({required this.pubkey});
 
@@ -72,7 +72,6 @@ class _GroupMemberRow extends ConsumerWidget {
     final isBlocked = ref
         .read(contentBlocklistRepositoryProvider)
         .isBlocked(pubkey);
-    final isModerationKey = isModerationAccount(pubkey);
     final moderation = switch (ref.watch(
       moderationPresentationProvider(pubkey),
     )) {
@@ -94,27 +93,8 @@ class _GroupMemberRow extends ConsumerWidget {
     final avatar = dmPeerAvatar(
       isVanished: isVanished,
       moderation: moderation,
-      pictureUrl: isBlocked || isModerationKey ? null : profile?.picture,
     );
-    final claim = dmPeerHandle(
-      isVanished: isVanished,
-      moderation: moderation,
-      handle: isModerationKey ? null : profile?.nip05,
-    );
-    final isVerified =
-        claim != null &&
-        claim.isNotEmpty &&
-        ref
-                .watch(
-                  nip05ClaimVerificationProvider(
-                    Nip05Claim(pubkey: pubkey, nip05: claim),
-                  ),
-                )
-                .asData
-                ?.value ==
-            Nip05VerificationStatus.verified;
     final npub = NostrKeyUtils.encodePubKey(pubkey);
-    final identifier = isVerified ? profile?.shortDisplayNip05 ?? npub : npub;
 
     return MergeSemantics(
       child: Semantics(
@@ -157,7 +137,7 @@ class _GroupMemberRow extends ConsumerWidget {
                         ),
                         if (!isVanished)
                           Text(
-                            identifier,
+                            npub,
                             style: VineTheme.bodySmallFont(
                               color: context.vineColors.onSurfaceVariant,
                             ),

@@ -19,7 +19,6 @@ import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/collaborator_invite.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
@@ -1726,15 +1725,6 @@ void main() {
                 ProfileStats(pubkey: alice, followers: 2100, videoCount: 7),
               ),
             ),
-            for (final member in [alice, bob])
-              nip05ClaimVerificationProvider(
-                Nip05Claim(
-                  pubkey: member,
-                  nip05: member == alice
-                      ? 'alice@example.com'
-                      : 'bob@example.com',
-                ),
-              ).overrideWith((ref) async => Nip05VerificationStatus.pending),
           ],
           home: MockGoRouterProvider(
             goRouter: mockGoRouter,
