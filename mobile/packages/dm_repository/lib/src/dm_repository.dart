@@ -9918,9 +9918,9 @@ class DmRepository {
 
   /// Publish the one own copy of group send [sendBatchId] (#10016), unless a
   /// row already records it or no live row is left: a retry finished the
-  /// batch, or the sender cancelled it. A caller whose own attempt delivered
-  /// a member passes [deliveredHere] and still gets the copy after a cancel,
-  /// unless this session already published it.
+  /// batch, or the sender cancelled it. A caller that saw a member delivered,
+  /// by its own attempt or a retry it joined, passes [deliveredHere] and still
+  /// gets the copy after a cancel, unless this session already published it.
   ///
   /// The group send and a replay of a member's row both publish through here,
   /// joined under one key per batch. Once the copy lands, the batch records
@@ -11182,10 +11182,9 @@ class DmRepository {
               selfWrapRelays: selfWrapRelays,
               generation: generation,
               prebuiltSelfWrap: prebuiltOwnCopy,
-              // A joined retry publishes the copy for the member it reached.
-              deliveredHere: Iterable<int>.generate(results.length).any(
-                (i) => results[i].success && !joinedRecovery.contains(i),
-              ),
+              // A member has it, a joined retry's too, so the copy is due even
+              // after a cancel took the rows. The session set stops a second.
+              deliveredHere: true,
             );
       batchHasOwnCopy = ownCopy.success;
     }

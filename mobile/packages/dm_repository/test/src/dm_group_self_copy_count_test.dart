@@ -31,7 +31,7 @@ class _FakeEvent extends Fake implements Event {}
 class _HookedOutgoingDmsDao extends OutgoingDmsDao {
   _HookedOutgoingDmsDao(super.attachedDatabase);
 
-  void Function()? beforeConversationRead;
+  FutureOr<void> Function()? beforeConversationRead;
   FutureOr<void> Function(String id)? afterRowRead;
   Future<void> Function(String id)? beforeRowDelete;
 
@@ -52,10 +52,10 @@ class _HookedOutgoingDmsDao extends OutgoingDmsDao {
   Future<List<OutgoingDm>> getForConversation({
     required String conversationId,
     required String ownerPubkey,
-  }) {
+  }) async {
     final hook = beforeConversationRead;
     beforeConversationRead = null;
-    hook?.call();
+    await hook?.call();
     return super.getForConversation(
       conversationId: conversationId,
       ownerPubkey: ownerPubkey,
@@ -462,6 +462,59 @@ void main() {
         final ownCopy = await openAsOwner(wrapsTo(owner).single);
         expect(ownCopy?.id, results.first.rumorEventId);
         expect(await queueRows(), isEmpty);
+      });
+
+      test('publishes the sender copy itself when the retry it joined could '
+          'not and a cancel then took the rows', () async {
+        final others = members.take(2).toList();
+        silentRecipients = {others.first};
+        ownCopiesPublish = false;
+        final releaseFirst = Completer<void>();
+        final releaseRetry = Completer<void>();
+        Future<NIP17SendResult>? retry;
+        String? firstRowId;
+        onRecipientPublish = (wrap) async {
+          if (wrapsTo(others.first).contains(wrap) && retry == null) {
+            // The sweep re-drives the last member while the first member's
+            // send is still on the wire, so the send joins that retry.
+            final rows = await queueRows();
+            firstRowId = rows
+                .singleWhere((row) => row.recipientPubkey == others.first)
+                .id;
+            retry = repository.recoverFullSend(
+              rumorId: rows
+                  .singleWhere((row) => row.recipientPubkey == others.last)
+                  .id,
+            );
+            await releaseFirst.future;
+          } else if (wrapsTo(others.last).contains(wrap)) {
+            await releaseRetry.future;
+          }
+        };
+        // The retry's copy fails; the sender cancels before the send's own
+        // attempt at it, which lands.
+        onOwnCopyRefused = () async {
+          onOwnCopyRefused = null;
+          ownCopiesPublish = true;
+          outgoingDao.beforeConversationRead = () =>
+              repository.cancelOutgoingBatch(rumorId: firstRowId!);
+        };
+
+        final send = sendToRoom(others);
+        await pumpEventQueue(times: 100);
+        expect(retry, isNotNull, reason: 'precondition: the retry started');
+        releaseFirst.complete();
+        await pumpEventQueue(times: 100);
+        releaseRetry.complete();
+        await send;
+        await retry;
+
+        expect(
+          wrapsTo(others.last),
+          hasLength(1),
+          reason: 'precondition: the send joined the retry',
+        );
+        expect(wrapsTo(owner), hasLength(1));
       });
 
       test('publishes no second sender copy when a retry published it before '
