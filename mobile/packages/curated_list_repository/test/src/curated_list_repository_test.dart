@@ -8,6 +8,7 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' show Event;
+import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:test/test.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -2333,15 +2334,21 @@ void main() {
 
       void answerRelayWindow(
         List<Event> events, {
-        bool timedOut = false,
+        QueryEnd endedBy = QueryEnd.complete,
+        int answeredRelays = 1,
       }) {
         when(
-          () => nostrClient.queryEventsDetailed(
+          () => nostrClient.readEvents(
             any(),
+            useCache: false,
             timeout: any(named: 'timeout'),
           ),
         ).thenAnswer(
-          (_) async => (events: events, timedOut: timedOut, noRelays: false),
+          (_) async => QueryResult(
+            events: events,
+            endedBy: endedBy,
+            answeredNetworkRelayCount: answeredRelays,
+          ),
         );
       }
 
@@ -2406,8 +2413,9 @@ void main() {
             'https://example.com/preview.jpg',
           ]);
           verifyNever(
-            () => nostrClient.queryEventsDetailed(
+            () => nostrClient.readEvents(
               any(),
+              useCache: false,
               timeout: any(named: 'timeout'),
             ),
           );
@@ -2460,8 +2468,9 @@ void main() {
           ]);
           final filter =
               (verify(
-                        () => nostrClient.queryEventsDetailed(
+                        () => nostrClient.readEvents(
                           captureAny(),
+                          useCache: false,
                           timeout: kPublicCuratedListsRelayReadTimeout,
                         ),
                       ).captured.single
@@ -2482,15 +2491,35 @@ void main() {
         verifyNever(() => funnelcakeApiClient.getVideoStats(any()));
       });
 
-      test('fails when the index is unconfigured and no relay answers', () {
-        when(() => funnelcakeApiClient.isAvailable).thenReturn(false);
-        answerRelayWindow([], timedOut: true);
+      for (final end in [
+        QueryEnd.noRelay,
+        QueryEnd.deadline,
+        QueryEnd.relayClosed,
+        QueryEnd.socketDropped,
+      ]) {
+        test(
+          'fails with no lists or relay answers after ${end.name}',
+          () async {
+            when(() => funnelcakeApiClient.isAvailable).thenReturn(false);
+            answerRelayWindow([], endedBy: end, answeredRelays: 0);
 
-        expect(
-          repository.discoverLists(limit: 50),
-          emitsError(isA<PublicCuratedListReadUnavailableException>()),
+            await expectLater(
+              repository.discoverLists(limit: 50),
+              emitsError(isA<PublicCuratedListReadUnavailableException>()),
+            );
+          },
         );
-      });
+      }
+
+      test(
+        'keeps a successful empty answer when another relay closes',
+        () async {
+          when(() => funnelcakeApiClient.isAvailable).thenReturn(false);
+          answerRelayWindow([], endedBy: QueryEnd.relayClosed);
+
+          expect(await repository.discoverLists(limit: 50).toList(), [isEmpty]);
+        },
+      );
 
       test('leaves out lists by blocked authors from the relays', () async {
         final blockedRepository = CuratedListRepository(

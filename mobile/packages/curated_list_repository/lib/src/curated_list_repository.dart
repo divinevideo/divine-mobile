@@ -553,13 +553,14 @@ class CuratedListRepository {
   /// Throws [PublicCuratedListReadUnavailableException] when no relay
   /// answered and nothing arrived.
   Future<List<CuratedList>> _discoverListsFromRelays() async {
-    final read = await _nostrClient.queryEventsDetailed(
+    final read = await _nostrClient.readEvents(
       [
         Filter(kinds: [_curatedListKind], limit: kPublicListsRelayWindow),
       ],
+      useCache: false,
       timeout: kPublicCuratedListsRelayReadTimeout,
     );
-    if (read.events.isEmpty && (read.timedOut || read.noRelays)) {
+    if (read.events.isEmpty && read.answeredNetworkRelayCount == 0) {
       throw const PublicCuratedListReadUnavailableException();
     }
     return _publicListsWithVideos(read.events)
