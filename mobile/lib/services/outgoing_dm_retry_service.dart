@@ -551,25 +551,31 @@ class OutgoingDmRetryService {
       var stoppedHeld = 0;
       var skippedInterruptedTooYoung = 0;
       if (!abortedNotReady) {
-        var pending = await _dao.getStillPendingForOwner(
+        final pending = await _dao.getStillPendingForOwner(
           _userPubkey,
           environment: _environment,
         );
-        // After a dispatch the arm reads the rows again rather than trusting
-        // this list: a recoverFullSend that joined a group send returns only
-        // once that send has attempted and finalized every member, so the
-        // rows read before it no longer say when each was last tried, and
-        // backing off on them would re-drive members just attempted (#8627).
-        final handled = <String>{};
-        var next = 0;
-        while (next < pending.length) {
-          final row = pending[next++];
-          if (!handled.add(row.id)) continue;
+        var refreshRemaining = false;
+        for (final candidate in pending) {
           // Skip rows already dispatched above (a recipient=failed +
           // self=pending row appears in both filters; the failed arm owns
           // that dispatch). Rows the arms did NOT match — e.g.
           // recipient=pending / self=failed — fall through to this arm.
-          if (dispatchedIds.contains(row.id)) continue;
+          if (dispatchedIds.contains(candidate.id)) continue;
+
+          // A dispatch that joined a group send can return after every
+          // sibling has settled. Re-read each remaining candidate by id to
+          // apply its current backoff without rescanning the queue (#8627).
+          final row = refreshRemaining
+              ? await _dao.getById(candidate.id)
+              : candidate;
+          if (row == null ||
+              row.ownerPubkey != candidate.ownerPubkey ||
+              row.environment != candidate.environment ||
+              (row.recipientWrapStatus != OutgoingWrapStatus.pending &&
+                  row.selfWrapStatus != OutgoingWrapStatus.pending)) {
+            continue;
+          }
 
           // Exhausted guard: a pending row that has burned the retry budget
           // is terminally unconfirmable — a soft-unconfirmed send whose OK
@@ -619,6 +625,7 @@ class OutgoingDmRetryService {
             }
           }
 
+          refreshRemaining = true;
           try {
             final result = await _dmRepository.recoverFullSend(
               rumorId: row.id,
@@ -672,13 +679,6 @@ class OutgoingDmRetryService {
                 ),
               );
             }
-          }
-          if (next < pending.length) {
-            pending = await _dao.getStillPendingForOwner(
-              _userPubkey,
-              environment: _environment,
-            );
-            next = 0;
           }
         }
       }

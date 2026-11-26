@@ -2387,11 +2387,20 @@ void main() {
             retryCount: 1,
             lastAttemptAt: now,
           );
-          var reads = 0;
-          when(() => dao.getStillPendingForOwner(any())).thenAnswer(
-            (_) async =>
-                reads++ == 0 ? [first, second] : [secondAfterGroupSend],
+          final unrelated = _row(
+            id: 'unrelated',
+            recipient: OutgoingWrapStatus.pending,
+            self: OutgoingWrapStatus.pending,
+            queuedAt: queuedAt,
           );
+          when(
+            () => dao.getStillPendingForOwner(any()),
+          ).thenAnswer((_) async => [first, second, unrelated]);
+          when(() => dao.getById(second.id)).thenAnswer(
+            (_) async => secondAfterGroupSend,
+          );
+          when(() => dao.getById(unrelated.id))
+              .thenAnswer((_) async => unrelated);
           when(
             () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
           ).thenAnswer((_) async => _successResult('sibling-1'));
@@ -2404,6 +2413,10 @@ void main() {
           verifyNever(
             () => dmRepository.recoverFullSend(rumorId: 'sibling-2'),
           );
+          verify(
+            () => dmRepository.recoverFullSend(rumorId: 'unrelated'),
+          ).called(1);
+          verify(() => dao.getStillPendingForOwner(any())).called(1);
         },
       );
 
