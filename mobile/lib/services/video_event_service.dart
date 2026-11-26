@@ -5092,7 +5092,12 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
         final subscriptionType = batch[videoId];
         if (subscriptionType == null) continue;
 
-        if (_applyLikeCountToVideo(videoId, likeCount, subscriptionType)) {
+        if (_applyLikeCountToVideo(
+          videoId,
+          likeCount,
+          subscriptionType,
+          onlyRaise: likeCounts.incompleteIds.contains(videoId),
+        )) {
           updatedCount++;
         }
       }
@@ -5118,11 +5123,15 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
 
   /// Apply a like count to a video in all relevant lists.
   /// Returns true if the video was found and updated.
+  ///
+  /// With [onlyRaise] the count is a floor some relay did not settle, so it
+  /// may raise the cached count but never lower it (#9223).
   bool _applyLikeCountToVideo(
     String videoId,
     int likeCount,
-    SubscriptionType subscriptionType,
-  ) {
+    SubscriptionType subscriptionType, {
+    bool onlyRaise = false,
+  }) {
     // Find and update the video in the event list
     final eventList = _eventLists[subscriptionType];
     if (eventList == null) return false;
@@ -5131,6 +5140,9 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     if (index == -1) return false; // Video no longer in list
 
     final videoEvent = eventList[index];
+    if (onlyRaise && likeCount <= (videoEvent.nostrLikeCount ?? 0)) {
+      return false;
+    }
 
     // Direct-replace, not max-merge: unlike the archival originalLikes /
     // originalLoops / originalComments / originalReposts fields (fixed

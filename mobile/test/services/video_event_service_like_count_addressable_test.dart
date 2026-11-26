@@ -183,6 +183,67 @@ void main() {
       },
     );
 
+    group('a batch count some relay did not settle (#9223)', () {
+      Future<int?> cachedAfterBatch({
+        required int cached,
+        required LikeCounts Function(String videoId) batch,
+      }) async {
+        final event = makeEvent('floor-vine');
+        service.handleEventForTesting(event, SubscriptionType.discovery);
+        final video = VideoEvent.fromNostrEvent(event);
+        service.applyLikeCountForTesting(
+          video.id,
+          cached,
+          SubscriptionType.discovery,
+        );
+        expect(
+          service.discoveryVideos
+              .firstWhere((v) => v.id == video.id)
+              .nostrLikeCount,
+          equals(cached),
+        );
+        when(
+          () => mockLikesRepository.getLikeCounts(
+            any(),
+            addressableIds: any(named: 'addressableIds'),
+          ),
+        ).thenAnswer((_) async => batch(video.id));
+
+        await service.flushPendingLikeCountBatchForTesting();
+
+        return service.discoveryVideos
+            .firstWhere((v) => v.id == video.id)
+            .nostrLikeCount;
+      }
+
+      test('does not lower the cached count', () async {
+        final count = await cachedAfterBatch(
+          cached: 10,
+          batch: (id) => LikeCounts(counts: {id: 4}, incompleteIds: {id}),
+        );
+
+        expect(count, equals(10));
+      });
+
+      test('raises the cached count', () async {
+        final count = await cachedAfterBatch(
+          cached: 10,
+          batch: (id) => LikeCounts(counts: {id: 15}, incompleteIds: {id}),
+        );
+
+        expect(count, equals(15));
+      });
+
+      test('a complete batch count still lowers the cached count', () async {
+        final count = await cachedAfterBatch(
+          cached: 10,
+          batch: (id) => LikeCounts(counts: {id: 4}),
+        );
+
+        expect(count, equals(4));
+      });
+    });
+
     test(
       'non-addressable videos are omitted from the addressableIds batch map',
       () async {
