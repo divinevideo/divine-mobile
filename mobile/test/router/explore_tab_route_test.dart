@@ -1,8 +1,10 @@
 // ABOUTME: Tests for /explore/tab/:name URL route and ExploreScreen tab arg
 // ABOUTME: Verifies pathForTab helper, route registration, and initial tab selection
 
+import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -14,16 +16,22 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/classic_vines_provider.dart';
+import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/for_you_provider.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/widgets/classic_vines_tab.dart';
+import 'package:openvine/widgets/video_thumbnail_widget.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
 class _MockVideoEventService extends Mock implements VideoEventService {}
+
+class _MockVideosRepository extends Mock implements VideosRepository {}
 
 class _FakeAppForeground extends AppForeground {
   @override
@@ -37,6 +45,28 @@ class _FakeCuratedListsState extends CuratedListsState {
   @override
   Future<List<CuratedList>> build() async => const [];
 }
+
+class _DelayedFunnelcakeAvailable extends FunnelcakeAvailable {
+  _DelayedFunnelcakeAvailable(this.recheck);
+
+  final Future<bool> recheck;
+  var _checked = false;
+
+  @override
+  Future<bool> build() async {
+    if (_checked) return recheck;
+    _checked = true;
+    return true;
+  }
+}
+
+VideoEvent _classicVideo(String idDigit) => VideoEvent(
+  id: idDigit * 64,
+  pubkey: 'c' * 64,
+  createdAt: 1400000000,
+  content: '',
+  timestamp: DateTime.utc(2014, 5, 13),
+);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -236,6 +266,86 @@ void main() {
   });
 
   group('ExploreScreen initialTabName', () {
+    testWidgets('pull-to-refresh stays on Classics and shows fresh videos', (
+      tester,
+    ) async {
+      final availabilityRecheck = Completer<bool>();
+      final refreshedFeed = Completer<HomeFeedResult>();
+      final initialVideo = _classicVideo('a');
+      final refreshedVideo = _classicVideo('b');
+      final videosRepository = _MockVideosRepository();
+      when(() => videosRepository.getClassicVideos(limit: 50)).thenAnswer(
+        (_) async => HomeFeedResult(videos: [initialVideo], hasMore: false),
+      );
+      when(
+        () => videosRepository.getClassicVideos(limit: 50, skipCache: true),
+      ).thenAnswer((_) => refreshedFeed.future);
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          additionalOverrides: [
+            appForegroundProvider.overrideWith(_FakeAppForeground.new),
+            videoEventServiceProvider.overrideWithValue(videoEventService),
+            routerLocationStreamProvider.overrideWith(
+              (ref) => Stream.value(ExploreScreen.pathForTab('classics')),
+            ),
+            exploreTabVideosProvider.overrideWith((ref) => null),
+            funnelcakeAvailableProvider.overrideWith(
+              () => _DelayedFunnelcakeAvailable(availabilityRecheck.future),
+            ),
+            videosRepositoryProvider.overrideWithValue(videosRepository),
+            forYouAvailableProvider.overrideWithValue(false),
+            curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
+            isFeatureEnabledProvider(
+              FeatureFlag.integratedApps,
+            ).overrideWithValue(false),
+          ],
+          home: const Scaffold(
+            body: ExploreScreen(initialTabName: 'classics'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final classicsTab = find.byType(ClassicVinesTab);
+      Finder thumbnailFor(VideoEvent video) => find.byWidgetPredicate(
+        (widget) => widget is VideoThumbnailWidget && widget.video == video,
+      );
+
+      expect(thumbnailFor(initialVideo), findsOneWidget);
+      verify(() => videosRepository.getClassicVideos(limit: 50)).called(1);
+      await tester.drag(
+        find.descendant(
+          of: classicsTab,
+          matching: find.byType(CustomScrollView),
+        ),
+        const Offset(0, 500),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      expect(classicsTab, findsOneWidget);
+      verify(
+        () => videosRepository.getClassicVideos(limit: 50, skipCache: true),
+      ).called(1);
+
+      final container = ProviderScope.containerOf(tester.element(classicsTab));
+      container.read(funnelcakeAvailableProvider.notifier).refresh();
+      await tester.pump();
+      await tester.pump();
+      expect(container.read(classicVinesAvailableProvider).isLoading, isTrue);
+      expect(thumbnailFor(initialVideo), findsOneWidget);
+
+      refreshedFeed.complete(
+        HomeFeedResult(videos: [refreshedVideo], hasMore: false),
+      );
+      availabilityRecheck.complete(true);
+      await tester.pumpAndSettle();
+
+      expect(thumbnailFor(refreshedVideo), findsOneWidget);
+      verifyNoMoreInteractions(videosRepository);
+    });
+
     testWidgets(
       'with initialTabName="popular" selects the popular tab on mount',
       (tester) async {
