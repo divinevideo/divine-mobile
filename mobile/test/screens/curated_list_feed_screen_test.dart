@@ -1444,6 +1444,47 @@ void main() {
         expect(find.byType(ComposableVideoGrid), findsOneWidget);
       });
 
+      testWidgets('stays on the grid when the requested video has no media', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            videoEvents: [
+              part(1).copyWith(videoUrl: ''),
+              part(2),
+            ],
+            initialListIndex: 0,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(player(), findsNothing);
+        expect(find.byType(DiVineAppBar), findsOneWidget);
+      });
+
+      testWidgets('opens a playable revision after one without media', (
+        tester,
+      ) async {
+        final playable = part(1).copyWith(id: 'part-1-revision');
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            videoEvents: [
+              part(1).copyWith(videoUrl: ''),
+              playable,
+              part(2),
+            ],
+            initialListIndex: 0,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(playing(tester), playable.id);
+      });
+
       testWidgets(
         'stays on the grid when the requested video is known broken',
         (

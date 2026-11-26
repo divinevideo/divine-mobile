@@ -830,6 +830,9 @@ void main() {
           ['d', 'chapter'],
           ['url', 'https://example.com/chapter.mp4'],
         ], '');
+        final withoutMedia = Event(_ownerA, 34236, [
+          ['d', 'chapter'],
+        ], '');
         final videoService = _MockVideoEventService();
         final nostrClient = _MockNostrClient();
         registerFallbackValue(legacy);
@@ -860,7 +863,7 @@ void main() {
         expect(emitted, [
           [legacy.id],
         ]);
-        if (exactAddressExists) relay.add(exact);
+        relay.add(exactAddressExists ? exact : withoutMedia);
         await relay.close();
         await pumpEventQueue();
         final expectedId = exactAddressExists ? exact.id : legacy.id;

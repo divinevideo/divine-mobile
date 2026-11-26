@@ -31,12 +31,18 @@ class ListVideoOrder {
 
   /// The index in [videos] of the video named by [reference], even if the
   /// list also names the video earlier by its other identifier.
-  static int indexOfReference(String reference, List<VideoEvent> videos) {
+  /// [isEligible] can narrow the match to a playable revision.
+  static int indexOfReference(
+    String reference,
+    List<VideoEvent> videos, {
+    bool Function(VideoEvent)? isEligible,
+  }) {
     final key = _referenceKey(reference);
     if (key == null) return -1;
     return videos.indexWhere(
       (video) =>
-          _idKey(video.id) == key || addressOf(video)?.toAString() == key,
+          (_idKey(video.id) == key || addressOf(video)?.toAString() == key) &&
+          (isEligible?.call(video) ?? true),
     );
   }
 

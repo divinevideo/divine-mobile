@@ -3,6 +3,7 @@
 
 import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +21,7 @@ import 'package:openvine/providers/video_address_lookup.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
+import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/list_video_order.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -140,7 +142,8 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         : ref.watch(curatedListVideoEventsProvider(_cacheListId));
     final videos = videosAsync.hasError ? null : videosAsync.value;
     final activeVideoId = _activeVideoId;
-    final pendingIndex = activeVideoId == null && videos != null
+    final pendingIndex =
+        activeVideoId == null && videos != null && !videosAsync.isLoading
         ? _pendingPlaybackIndex(videos, useFrozenIds: useFrozenIds)
         : null;
     if (pendingIndex != null) _keepPendingPlayback(videos![pendingIndex].id);
@@ -334,20 +337,21 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     if (references == null || position < 0 || position >= references.length) {
       return null;
     }
-    final index = ListVideoOrder.indexOfReference(
-      references[position],
-      videos,
-    );
-    if (index < 0) return null;
-
     // Fullscreen drops known-broken videos. Wait for that same filter before
     // opening so it cannot substitute an adjacent part for the requested one.
     final tracker = ref.watch(brokenVideoTrackerProvider);
-    if (tracker.isLoading ||
-        tracker.value?.isVideoBroken(videos[index].id) == true) {
-      return null;
-    }
-    return index;
+    if (tracker.isLoading) return null;
+    final index = ListVideoOrder.indexOfReference(
+      references[position],
+      videos,
+      isEligible: (video) =>
+          tracker.value?.isVideoBroken(video.id) != true &&
+          (video.videoUrl?.trim().isNotEmpty == true ||
+              (!kIsWeb &&
+                  ref.read(mediaCacheProvider).getCachedFileSync(video.id) !=
+                      null)),
+    );
+    return index < 0 ? null : index;
   }
 
   /// Holds playback once the pending position has opened, so that a later

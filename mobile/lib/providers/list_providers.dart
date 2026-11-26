@@ -486,6 +486,11 @@ Stream<List<VideoEvent>> _resolveListVideos({
         try {
           // Use permissive mode to accept all NIP-71 video kinds from external sources
           final video = VideoEvent.fromNostrEvent(event, permissive: true);
+          // A relay reply without media cannot replace a playable cache hit.
+          if (video.videoUrl?.trim().isNotEmpty != true &&
+              legacyCacheHits.containsKey(address)) {
+            continue;
+          }
           final replacedLegacy = legacyCacheHits.remove(address) != null;
           if (videoEventService.shouldHideVideo(video)) {
             if (replacedLegacy) yield orderedVideos();
