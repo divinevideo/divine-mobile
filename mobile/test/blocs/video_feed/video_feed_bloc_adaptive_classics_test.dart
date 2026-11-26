@@ -116,6 +116,7 @@ void main() {
         () => videosRepository.getClassicVideos(
           cursor: any(named: 'cursor'),
           skipCache: any(named: 'skipCache'),
+          archiveOnly: true,
         ),
       ).thenAnswer((call) {
         final cursor = call.namedArguments[#cursor] as String?;
@@ -210,6 +211,107 @@ void main() {
         },
       );
     });
+
+    test(
+      'keeps the archive cursor when the gate closes without a session',
+      () async {
+        final bloc = await startOnClassics();
+        completeFirstArchivePage();
+        await pumpEventQueue();
+
+        gate.add(true);
+        await pumpEventQueue();
+        gate.add(false);
+        await pumpEventQueue();
+
+        expect(bloc.state.paginationCursor, 'archive-2');
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+        expect(archiveCursors, [null, 'archive-2']);
+      },
+    );
+
+    test(
+      'continues on the archive after an exhausted adaptive session closes',
+      () async {
+        final bloc = VideoFeedBloc(
+          videosRepository: videosRepository,
+          followRepository: followRepository,
+          curatedListRepository: curatedListRepository,
+          classicSession: ClassicFeedSession(
+            loadPage: (_) async =>
+                HomeFeedResult(videos: [_video(20)], hasMore: false),
+          ),
+          adaptiveClassicsEnabledStream: gate.stream,
+        );
+        addTearDown(bloc.close);
+        gate.add(true);
+        bloc.add(
+          const VideoFeedStarted(mode: FeedMode.classic, forceMode: true),
+        );
+        await pumpEventQueue();
+        expect(bloc.state.hasMore, isFalse);
+        expect(bloc.state.videos, [_video(20)]);
+
+        completeFirstArchivePage();
+        gate.add(false);
+        await pumpEventQueue();
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+
+        expect(archiveCursors, [null]);
+        expect(bloc.state.videos, [
+          _video(20),
+          _video(1),
+          _video(2),
+          _video(3),
+        ]);
+      },
+    );
+
+    test(
+      'starts archive pagination before the gate-close event is delivered',
+      () async {
+        var allowed = true;
+        final recommendationCursors = <String?>[];
+        final bloc = VideoFeedBloc(
+          videosRepository: videosRepository,
+          followRepository: followRepository,
+          curatedListRepository: curatedListRepository,
+          classicSession: ClassicFeedSession(
+            loadPage: (request) async {
+              recommendationCursors.add(request.cursor);
+              return HomeFeedResult(
+                videos: [_video(20)],
+                paginationCursor: 'recommendation-2',
+                hasMore: true,
+                recommendationPageCount: 1,
+              );
+            },
+          ),
+          adaptiveClassicsEnabledStream: gate.stream,
+          isAdaptiveClassicsAllowed: () => allowed,
+        );
+        addTearDown(bloc.close);
+        gate.add(true);
+        bloc.add(
+          const VideoFeedStarted(mode: FeedMode.classic, forceMode: true),
+        );
+        await pumpEventQueue();
+        expect(bloc.state.paginationCursor, 'recommendation-2');
+
+        completeFirstArchivePage();
+        allowed = false;
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+        gate.add(false);
+        await pumpEventQueue();
+
+        expect(recommendationCursors, [null]);
+        expect(archiveCursors, [null]);
+        expect(bloc.state.paginationCursor, 'archive-2');
+      },
+    );
 
     group('restart cache', () {
       late _MockHomeFeedCache homeFeedCache;

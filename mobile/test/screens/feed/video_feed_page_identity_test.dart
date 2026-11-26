@@ -796,6 +796,7 @@ void main() {
             limit: any(named: 'limit'),
             cursor: any(named: 'cursor'),
             skipCache: any(named: 'skipCache'),
+            archiveOnly: true,
           ),
         ).thenAnswer((_) async {
           archiveCalls++;
@@ -876,6 +877,7 @@ void main() {
             limit: any(named: 'limit'),
             cursor: any(named: 'cursor'),
             skipCache: any(named: 'skipCache'),
+            archiveOnly: true,
           ),
         ).thenAnswer((_) => archiveReply.future);
 
@@ -962,6 +964,7 @@ void main() {
             limit: any(named: 'limit'),
             cursor: any(named: 'cursor'),
             skipCache: any(named: 'skipCache'),
+            archiveOnly: true,
           ),
         ).thenAnswer(
           (_) async =>
@@ -1050,6 +1053,7 @@ void main() {
             limit: any(named: 'limit'),
             cursor: any(named: 'cursor'),
             skipCache: any(named: 'skipCache'),
+            archiveOnly: true,
           ),
         ).thenAnswer(
           (_) async =>
@@ -1143,6 +1147,7 @@ void main() {
             limit: any(named: 'limit'),
             cursor: any(named: 'cursor'),
             skipCache: any(named: 'skipCache'),
+            archiveOnly: true,
           ),
         ).thenAnswer(
           (_) async => HomeFeedResult(

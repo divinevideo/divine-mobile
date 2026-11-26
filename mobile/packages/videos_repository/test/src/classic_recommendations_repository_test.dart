@@ -357,6 +357,36 @@ void main() {
     );
 
     test(
+      'archive-only browsing stays on the archive for an eligible account',
+      () async {
+        final nostr = _Nostr();
+        when(() => nostr.publicKey).thenReturn('');
+        final repository = VideosRepository(
+          nostrClient: nostr,
+          funnelcakeApiClient: api,
+          classicRecommendationsEnabled: true,
+          classicRecommendationsAllowed: () => true,
+        );
+        when(
+          () => api.getClassicVines(
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+          ),
+        ).thenAnswer((_) async => [_stats(9)]);
+
+        final page = await repository.getClassicVideos(archiveOnly: true);
+
+        expect(page.videos.map((video) => video.id), [_id(9)]);
+        verifyNever(
+          () => api.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        );
+      },
+    );
+
+    test(
       'closing the gate while a playable reply is in flight drops the reply '
       'instead of showing or replacing it',
       () async {

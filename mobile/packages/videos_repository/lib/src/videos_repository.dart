@@ -1591,12 +1591,17 @@ class VideosRepository {
   /// Throws [FunnelcakeException] when the viewer, the privacy context or the
   /// `classicRecommendationsAllowed` gate changes while the page is read, or
   /// when an adaptive continuation fails.
+  ///
+  /// [archiveOnly] keeps a caller's archive session on the archive even when
+  /// the account becomes eligible for recommendations.
   Future<HomeFeedResult> getClassicVideos({
     int limit = _defaultLimit,
     String? cursor,
     bool skipCache = false,
+    bool archiveOnly = false,
   }) async {
-    if (!_classicRecommendationsEnabled ||
+    if (archiveOnly ||
+        !_classicRecommendationsEnabled ||
         !(_classicRecommendationsAllowed?.call() ?? true)) {
       return _getClassicArchiveVideos(
         limit: limit,

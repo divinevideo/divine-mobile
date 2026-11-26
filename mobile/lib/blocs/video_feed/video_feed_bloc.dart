@@ -285,13 +285,41 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     );
   }
 
-  Future<void> _detachClassicSession() async {
+  Future<void> _detachClassicSession(Emitter<VideoFeedBlocState> emit) async {
     final subscription = _classicSessionSubscription;
     final session = _classicSession;
+    if (session == null) return;
     _classicSessionSubscription = null;
     _classicSession = null;
+    // Reset the adaptive cursor before disposing so any new pagination reads
+    // start on the archive, including when the adaptive queue was exhausted.
+    if (state.source.type == VideoFeedSourceType.classic) {
+      _paginationGeneration++;
+      if (!_isClosing && !emit.isDone) {
+        emit(
+          state.copyWith(
+            hasMore: true,
+            isLoadingMore: false,
+            clearPaginationCursor: true,
+            coordination: state.coordination.copyWith(
+              classicsSliceFromSession: true,
+            ),
+          ),
+        );
+      }
+    }
     await Future.wait(
-      <Future<void>?>[subscription?.cancel(), session?.dispose()].nonNulls,
+      <Future<void>?>[subscription?.cancel(), session.dispose()].nonNulls,
+    );
+  }
+
+  void _detachClassicSessionIfDisallowed(Emitter<VideoFeedBlocState> emit) {
+    if (_classicSession == null || _isAdaptiveClassicsAllowed) return;
+    runDetached(
+      _detachClassicSession(emit),
+      'detach the Home Classics session',
+      logName: 'VideoFeedBloc',
+      category: LogCategory.video,
     );
   }
 
@@ -302,26 +330,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     if (event.enabled == _adaptiveClassicsEnabled) return;
     _adaptiveClassicsEnabled = event.enabled;
     if (!event.enabled) {
-      // Clear _classicSession synchronously and reset Classics pagination
-      // state before awaiting disposal so in-flight pagination cannot stay
-      // stuck in isLoadingMore and a concurrent refresh cannot have its new
-      // archive cursor clobbered after the await.
-      final detachFuture = _detachClassicSession();
-      if (state.source.type == VideoFeedSourceType.classic) {
-        _paginationGeneration++;
-        if (!_isClosing && !emit.isDone) {
-          emit(
-            state.copyWith(
-              isLoadingMore: false,
-              clearPaginationCursor: true,
-              coordination: state.coordination.copyWith(
-                classicsSliceFromSession: true,
-              ),
-            ),
-          );
-        }
-      }
-      await detachFuture;
+      await _detachClassicSession(emit);
       return;
     }
     // If Home is already loading or showing an archive Classics slice, keep it
@@ -487,7 +496,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       source.type == VideoFeedSourceType.following ||
       (source.type == VideoFeedSourceType.classic &&
           _classicSession == null &&
-          !state.coordination.classicsSliceFromSession);
+          (state.source != source ||
+              !state.coordination.classicsSliceFromSession));
 
   /// Whether [source] can paginate via an opaque server cursor rather than a
   /// `createdAt` "until" timestamp.
@@ -1184,6 +1194,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       listOnlyVideoIds: const {},
       clearPaginationCursor: true,
       currentIndex: 0,
+      coordination: state.coordination.copyWith(
+        classicsSliceFromSession: false,
+      ),
     );
     final servedCache = _emitCachedFeed(
       source,
@@ -1224,6 +1237,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Emitter<VideoFeedBlocState> emit,
   ) async {
     final source = state.source;
+    if (source.type == VideoFeedSourceType.classic) {
+      _detachClassicSessionIfDisallowed(emit);
+    }
     final canContinueEmptyForYou =
         source.type == VideoFeedSourceType.forYou &&
         state.paginationCursor != null;
@@ -1251,21 +1267,26 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       // and the duplicates of what is on screen drop out below. Ending the
       // feed instead would strand it whenever that fresh first load fails.
       final pagesByUntil = !usesCursor && !_isCursorOnly(source);
-      var result = await _fetchVideosForSource(
-        source,
-        // `until` is the oldest loaded video rather than `state.videos.last`,
-        // because the list is not always in `createdAt` order. New reads
-        // `newVideosUntil` instead, so rows its creator limit hid are not
-        // requested again.
-        until: pagesByUntil
-            ? (source.type == VideoFeedSourceType.newVideos
-                  ? state.coordination.newVideosUntil ??
-                        _oldestTimestamp(state.videos)
-                  : _oldestTimestamp(state.videos))
-            : null,
-        paginationCursor: usesCursor ? state.paginationCursor : null,
-        paginationGeneration: paginationGeneration,
-      );
+      final classicSession = source.type == VideoFeedSourceType.classic
+          ? _classicSession
+          : null;
+      var result = classicSession != null
+          ? await classicSession.loadMore()
+          : await _fetchVideosForSource(
+              source,
+              // `until` is the oldest loaded video rather than `state.videos.last`,
+              // because the list is not always in `createdAt` order. New reads
+              // `newVideosUntil` instead, so rows its creator limit hid are not
+              // requested again.
+              until: pagesByUntil
+                  ? (source.type == VideoFeedSourceType.newVideos
+                        ? state.coordination.newVideosUntil ??
+                              _oldestTimestamp(state.videos)
+                        : _oldestTimestamp(state.videos))
+                  : null,
+              paginationCursor: usesCursor ? state.paginationCursor : null,
+              paginationGeneration: paginationGeneration,
+            );
       if (!_canEmitForSource(source, emit) ||
           paginationGeneration != _paginationGeneration) {
         return;
@@ -2209,24 +2230,18 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       // feed cache — which carries no TTL for the home, latest, and
       // recommended first-page entries — so the follow-up fetch answers
       // from the same entry it is meant to refresh.
-      var fetchedClassicSession =
-          source.type == VideoFeedSourceType.classic &&
-              _isAdaptiveClassicsAllowed
+      if (source.type == VideoFeedSourceType.classic) {
+        _detachClassicSessionIfDisallowed(emit);
+      }
+      var fetchedClassicSession = source.type == VideoFeedSourceType.classic
           ? _classicSession
           : null;
-      if (source.type == VideoFeedSourceType.classic &&
-          fetchedClassicSession == null &&
-          _classicSession != null) {
-        _adaptiveClassicsEnabled = false;
-        unawaited(_detachClassicSession());
-      }
       var result = fetchedClassicSession != null
           ? await fetchedClassicSession.loadInitial(refresh: skipCache)
           : await _fetchVideosForSource(
               source,
               skipCache: skipCache,
               revalidate: revalidate,
-              forceArchiveClassics: true,
             );
       if (!canEmit()) return;
 
@@ -2237,16 +2252,14 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       if (fetchedClassicSession != null &&
           (!identical(fetchedClassicSession, _classicSession) ||
               !_isAdaptiveClassicsAllowed)) {
-        if (!_isAdaptiveClassicsAllowed && _classicSession != null) {
-          _adaptiveClassicsEnabled = false;
-          unawaited(_detachClassicSession());
-        }
-        fetchedClassicSession = _isAdaptiveClassicsAllowed
-            ? _classicSession
-            : null;
+        _detachClassicSessionIfDisallowed(emit);
+        fetchedClassicSession = _classicSession;
         result = fetchedClassicSession != null
             ? await fetchedClassicSession.loadInitial(refresh: skipCache)
-            : await _videosRepository.getClassicVideos(skipCache: skipCache);
+            : await _videosRepository.getClassicVideos(
+                skipCache: skipCache,
+                archiveOnly: true,
+              );
         if (!canEmit()) return;
       }
 
@@ -2571,7 +2584,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     bool skipCache = false,
     bool revalidate = false,
     int? paginationGeneration,
-    bool forceArchiveClassics = false,
   }) => switch (source.type) {
     VideoFeedSourceType.forYou =>
       paginationCursor == null
@@ -2625,18 +2637,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     // `revalidate` does not either: the adaptive session keeps its own queue,
     // and the archive-only path's 15-minute first-page cache exists so
     // re-entry resumes the same opening.
-    VideoFeedSourceType.classic => switch (forceArchiveClassics
-        ? null
-        : _classicSession) {
-      null => _videosRepository.getClassicVideos(
-        cursor: paginationCursor,
-        skipCache: skipCache,
-      ),
-      final session =>
-        paginationCursor == null
-            ? session.loadInitial(refresh: skipCache)
-            : session.loadMore(),
-    },
+    VideoFeedSourceType.classic => _videosRepository.getClassicVideos(
+      cursor: paginationCursor,
+      skipCache: skipCache,
+      archiveOnly: true,
+    ),
   };
 
   Future<HomeFeedResult> _fetchHashtagVideos(

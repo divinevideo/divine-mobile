@@ -1857,6 +1857,7 @@ void main() {
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
               skipCache: any(named: 'skipCache'),
+              archiveOnly: true,
             ),
           ).thenAnswer((_) async => HomeFeedResult(videos: videos));
 
@@ -1892,6 +1893,7 @@ void main() {
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
               skipCache: any(named: 'skipCache'),
+              archiveOnly: true,
             ),
           ).called(1);
 
@@ -4208,6 +4210,7 @@ void main() {
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
               skipCache: any(named: 'skipCache'),
+              archiveOnly: true,
             ),
           ).thenAnswer(
             (_) async => HomeFeedResult(
@@ -4241,6 +4244,7 @@ void main() {
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
               skipCache: any(named: 'skipCache'),
+              archiveOnly: true,
             ),
           ).called(1);
           verifyNever(
@@ -4262,6 +4266,7 @@ void main() {
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
               skipCache: any(named: 'skipCache'),
+              archiveOnly: true,
             ),
           ).thenAnswer((invocation) async {
             final cursor =
@@ -4303,6 +4308,7 @@ void main() {
               limit: any(named: 'limit'),
               cursor: 'cursor-2',
               skipCache: any(named: 'skipCache'),
+              archiveOnly: true,
             ),
           ).called(1);
           expect(bloc.state.videos.length, 4);
@@ -5669,6 +5675,7 @@ void main() {
               limit: any(named: 'limit'),
               cursor: any(named: 'cursor'),
               skipCache: any(named: 'skipCache'),
+              archiveOnly: true,
             ),
           );
         },
