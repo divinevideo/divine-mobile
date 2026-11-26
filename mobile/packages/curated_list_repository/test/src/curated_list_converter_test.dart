@@ -1187,6 +1187,7 @@ void main() {
           (['p', ''], sealed: false),
           (['p', person], sealed: true),
           (['p', person, 'wss://relay.example', 'petname'], sealed: true),
+          (['p', '', 'wss://relay.example', 'petname'], sealed: true),
           (['word'], sealed: false),
           (['word', ''], sealed: false),
           (['word', 'secret'], sealed: true),
@@ -1194,6 +1195,7 @@ void main() {
           (['r', 'https://example.com'], sealed: true),
           (['emoji'], sealed: false),
           (['emoji', 'smile', 'https://example.com/smile.png'], sealed: true),
+          (['emoji', '', 'https://example.com/secret.png'], sealed: true),
           (['relay'], sealed: false),
           (['relay', 'wss://relay.example'], sealed: true),
           (['group', ''], sealed: false),
@@ -1231,6 +1233,32 @@ void main() {
             reason: 'sealing $tag keeps the revision readable',
           );
         }
+      });
+
+      test('a private list seals and reads back an item whose first field '
+          'is empty and another is not', () {
+        const tag = ['emoji', '', 'https://example.com/secret.png'];
+        final list = privateList(
+          preservedTags: const [tag],
+        ).copyWith(videoEventIds: const []);
+        final sealedTags = CuratedListConverter.toSealedTags(list);
+        final clearTags = CuratedListConverter.toPrivateMetadataTags(list);
+
+        expect(clearTags, isNot(contains(equals(tag))));
+        expect(
+          CuratedListConverter.hasFullyKnownItemTags(
+            sealedTags,
+            isSealed: true,
+          ),
+          isTrue,
+        );
+        final read = CuratedListConverter.fromEvent(
+          _makeEvent(tags: clearTags, content: _sealedPayload),
+          privateTags: sealedTags,
+          isPrivateEvent: true,
+        )!;
+        expect(read.preservedTags, isEmpty);
+        expect(read.preservedPrivateTags, [tag]);
       });
 
       test('reads nothing but videos from the sealed part, even its first '

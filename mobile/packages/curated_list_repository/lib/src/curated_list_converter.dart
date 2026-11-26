@@ -50,8 +50,8 @@ const Set<String> _nonVideoItemTagNames = {
 ///
 /// A private list seals these with its videos: written in the clear they would
 /// reveal what the list holds, and an `a` or `e` tag there would make readers
-/// take the list for a public one. Any other item with no value, or an empty
-/// one, names nothing and stays in the clear; see `_isSealedItemTag`.
+/// take the list for a public one. One whose fields are all empty carries
+/// nothing and stays in the clear; see `_isSealedItemTag`.
 const Set<String> _itemTagNames = {'a', 'e', ..._nonVideoItemTagNames};
 
 /// Utility for converting between Nostr events and [CuratedList] models.
@@ -285,9 +285,9 @@ abstract final class CuratedListConverter {
 
   /// Whether a private list seals [tag]. An `a` or `e` tag always is; any
   /// other item only when the sealed branch of [hasFullyKnownItemTags] reads
-  /// it back, so a `p` or `word` whose value is empty, which names nothing,
-  /// stays in the clear with its other fields instead of leaving the private
-  /// revision unreadable everywhere.
+  /// it back, which it does once any field is filled in. A `p` or `word`
+  /// whose fields are all empty carries nothing, so it stays in the clear
+  /// instead of leaving the private revision unreadable everywhere.
   static bool _isSealedItemTag(List<String> tag) =>
       _itemTagNames.contains(tag.first) &&
       (tag.first == 'a' ||
@@ -321,7 +321,8 @@ abstract final class CuratedListConverter {
   /// Checks the item structure before a relay snapshot can authorize a write.
   ///
   /// Clear tags other than `e` and `a` are kept as metadata or ignored by the
-  /// decoder. In sealed content every record must be a known item.
+  /// decoder. In sealed content every record must be a known item with a
+  /// field filled in.
   static bool hasFullyKnownItemTags(
     Iterable<List<String>>? tags, {
     bool isSealed = false,
@@ -336,8 +337,7 @@ abstract final class CuratedListConverter {
                 (_videoAddress.hasMatch(tag[1]) || isNonVideoItemTag(tag)),
           _ =>
             !isSealed ||
-                (tag.length >= 2 &&
-                    tag[1].isNotEmpty &&
+                (tag.skip(1).any((field) => field.isNotEmpty) &&
                     isNonVideoItemTag(tag)),
         };
       });
