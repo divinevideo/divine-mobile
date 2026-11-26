@@ -595,6 +595,80 @@ void main() {
         );
         expect(ok, isFalse);
       });
+
+      // A group sibling can record the batch's one own copy on this row
+      // while this row's own attempt is still on the wire (#10016).
+      test('a failed self-wrap does not overwrite a recorded one', () async {
+        await dao.enqueue(makeDm(id: 'aaaa'));
+        expect(
+          await dao.markSelfWrapStatus(
+            id: 'aaaa',
+            status: OutgoingWrapStatus.sent,
+            eventId: 'self-evt-id',
+          ),
+          isTrue,
+        );
+
+        final ok = await dao.markSelfWrapStatus(
+          id: 'aaaa',
+          status: OutgoingWrapStatus.failed,
+          lastError: 'self-wrap relay rejected',
+        );
+
+        expect(ok, isFalse);
+        final fetched = await dao.getById('aaaa');
+        expect(fetched!.selfWrapStatus, OutgoingWrapStatus.sent);
+        expect(fetched.selfWrapEventId, equals('self-evt-id'));
+        expect(fetched.selfWrapLastError, isNull);
+      });
+
+      for (final (from, to) in [
+        (OutgoingWrapStatus.pending, OutgoingWrapStatus.sent),
+        (OutgoingWrapStatus.failed, OutgoingWrapStatus.sent),
+        (OutgoingWrapStatus.pending, OutgoingWrapStatus.failed),
+        (OutgoingWrapStatus.failed, OutgoingWrapStatus.failed),
+      ]) {
+        test('a ${to.name} self-wrap applies over ${from.name}', () async {
+          await dao.enqueue(makeDm(id: 'aaaa', selfStatus: from));
+
+          final ok = await dao.markSelfWrapStatus(
+            id: 'aaaa',
+            status: to,
+            lastError: 'self-wrap attempt',
+          );
+
+          expect(ok, isTrue);
+          final fetched = await dao.getById('aaaa');
+          expect(fetched!.selfWrapStatus, to);
+          expect(fetched.selfWrapLastError, equals('self-wrap attempt'));
+        });
+      }
+
+      test(
+        'a recorded self-wrap does not reopen a cancelled delivery',
+        () async {
+          await dao.enqueue(
+            makeDm(
+              id: 'aaaa',
+              recipientStatus: OutgoingWrapStatus.failed,
+              selfStatus: OutgoingWrapStatus.failed,
+            ),
+          );
+          expect(await dao.markRecipientCancelled('aaaa'), isTrue);
+
+          final ok = await dao.markSelfWrapStatus(
+            id: 'aaaa',
+            status: OutgoingWrapStatus.sent,
+            eventId: 'self-evt-id',
+          );
+
+          expect(ok, isFalse);
+          final fetched = await dao.getById('aaaa');
+          expect(fetched!.recipientWrapStatus, OutgoingWrapStatus.cancelled);
+          expect(fetched.selfWrapStatus, OutgoingWrapStatus.cancelled);
+          expect(fetched.selfWrapEventId, isNull);
+        },
+      );
     });
 
     group('recordUnconfirmedRecipientWrap (#8441)', () {
