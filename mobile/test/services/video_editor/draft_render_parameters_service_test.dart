@@ -612,7 +612,7 @@ void main() {
       bool? decodedAtCapture;
       final stub = _StubLayerRasterizer(
         onContentReady: () =>
-            decodedAtCapture = imageCache.containsKey(imageKey),
+            decodedAtCapture = imageCache.statusForKey(imageKey).keepAlive,
       );
       addTearDown(stub.dispose);
       final meta = StickerData.asset(

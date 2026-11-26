@@ -1,6 +1,7 @@
 // ABOUTME: Widget tests for VideoEditorSticker: bundled raster stickers, the
 // ABOUTME: legacy SVGs older drafts still name, and network stickers.
 
+import 'package:divine_ui/divine_ui.dart' show DivineIcon;
 import 'package:flutter/rendering.dart' show RenderImage;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -74,8 +75,8 @@ void main() {
       testWidgets('decodes a raster sticker at the picker cell size', (
         tester,
       ) async {
-        // A smaller box than the largest picker cell still decodes at that
-        // cell's size, so a precache made before layout shares the entry.
+        // A smaller box still decodes at stickerPickerCellExtent, so a
+        // precache made before layout shares the entry.
         await tester.pumpWidget(buildTestWidget(size: 80));
 
         final image = tester.widget<Image>(find.byType(Image)).image;
@@ -97,6 +98,34 @@ void main() {
                 const AssetImage('assets/divine_stickers/heart.webp'),
               ),
         );
+      });
+
+      testWidgets('draws no warning icon for a sticker it cannot load', (
+        tester,
+      ) async {
+        // A draft shared by DM can name a sticker only a newer build bundles.
+        // An icon in its place would be captured into the published video;
+        // drawing nothing makes the draft render drop the layer and stop.
+        const missingSticker = StickerData.asset(
+          'assets/divine_stickers/not_bundled.webp',
+          description: LocalizedText({'en': 'Missing'}),
+          tags: [],
+          packData: StickerPackData.fallback,
+        );
+        await tester.pumpWidget(
+          buildTestWidget(sticker: missingSticker, enableLimitCacheSize: false),
+        );
+        await tester.runAsync(
+          () => precacheImage(
+            const AssetImage('assets/divine_stickers/not_bundled.webp'),
+            tester.element(find.byType(Image)),
+            onError: (_, _) {},
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byType(DivineIcon), findsNothing);
+        expect(tester.takeException(), isNotNull);
       });
 
       testWidgets('draws a precached raster sticker in its first frame', (

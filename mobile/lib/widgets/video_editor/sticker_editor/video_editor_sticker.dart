@@ -43,12 +43,14 @@ Widget videoEditorStickerWidgetLoader(
 /// name them, so they stay bundled and are drawn as vectors.
 bool isLegacySvgStickerAsset(String assetPath) => assetPath.endsWith('.svg');
 
-/// The largest a cell of the sticker picker's grid gets, in logical pixels.
+/// The sticker picker grid's `maxCrossAxisExtent`, in logical pixels.
+///
+/// A cell can come out wider by up to the grid's 16 px spacing.
 const stickerPickerCellExtent = 120.0;
 
 /// The image the sticker picker draws the raster sticker [assetPath] with.
 ///
-/// It is decoded to fit the largest picker cell rather than the cell it lands
+/// It is decoded for [stickerPickerCellExtent] rather than the cell it lands
 /// in, so [precacheStickerPickerImage] can fill the same cache entry before
 /// the picker is laid out. `fit` keeps the artwork's proportions, and the
 /// default `allowUpscaling: false` never decodes above its 512 px.
@@ -94,7 +96,7 @@ class VideoEditorSticker extends StatelessWidget {
 
   final VoidCallback? onTap;
 
-  /// Whether to limit the image cache size based on the widget's constraints.
+  /// Whether raster stickers are decoded below full size to save memory.
   ///
   /// When `true` (default), raster images are decoded small to reduce memory
   /// usage: asset stickers at the picker's cell size ([stickerPickerImage]),
@@ -188,7 +190,10 @@ class _RasterAssetImage extends StatelessWidget {
       fit: BoxFit.contain,
       // The surrounding Semantics already names the sticker.
       excludeFromSemantics: true,
-      errorBuilder: (_, _, _) => const _ErrorImage(),
+      // No errorBuilder: a sticker that cannot load, such as one a newer
+      // build bundles in a draft shared by DM, has to draw nothing, so a
+      // draft render drops its layer and blocks the publish instead of
+      // baking a warning icon into the video.
     );
   }
 }
