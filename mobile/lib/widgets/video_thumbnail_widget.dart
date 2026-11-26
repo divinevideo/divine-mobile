@@ -96,20 +96,23 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
   }
 
   Widget _buildContent(BoxFit fit) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final blurhash = widget.video.blurhash;
+    final dimFallback =
+        blurhash == null && Theme.of(context).brightness == Brightness.dark;
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Blend the placeholder into a dark surface while the image loads.
-        if (isDark) ColoredBox(color: context.vineColors.surfaceContainerHigh),
+        // A missing video BlurHash uses a shared gradient that can be bright.
+        if (dimFallback)
+          ColoredBox(color: context.vineColors.surfaceContainerHigh),
         BlurhashDisplay(
-          blurhash: widget.video.blurhash,
+          blurhash: blurhash,
           contentType: widget.video.blurhashContentType,
           width: widget.width,
           height: widget.height,
           fit: fit,
-          opacity: isDark ? 0.35 : 1.0,
+          opacity: dimFallback ? 0.35 : 1.0,
         ),
 
         // Actual thumbnail image with error boundary, rendered on top of

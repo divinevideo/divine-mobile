@@ -168,9 +168,31 @@ void main() {
     setUp(() => debugImageCacheOverride = createMockMediaCacheManager());
     tearDown(() => debugImageCacheOverride = null);
 
-    for (final brightness in Brightness.values) {
+    final placeholderCases = [
+      (
+        description: 'dims the generic thumbnail fallback in dark mode',
+        theme: VineTheme.theme,
+        blurhash: null,
+        luminance: inInclusiveRange(0.025, 0.2),
+      ),
+      (
+        description:
+            'keeps the generic thumbnail fallback bright in light mode',
+        theme: VineTheme.lightTheme,
+        blurhash: null,
+        luminance: greaterThan(0.4),
+      ),
+      (
+        description: 'preserves a bright video BlurHash in dark mode',
+        theme: VineTheme.theme,
+        blurhash: '00TQ@?', // A light peach BlurHash.
+        luminance: greaterThan(0.6),
+      ),
+    ];
+
+    for (final testCase in placeholderCases) {
       testWidgets(
-        'renders a theme-appropriate placeholder in ${brightness.name} mode',
+        testCase.description,
         (tester) async {
           final cache = createMockMediaCacheManager();
           final pendingThumbnail = Completer<FileInfo?>();
@@ -179,17 +201,18 @@ void main() {
           ).thenAnswer((_) => pendingThumbnail.future);
           debugImageCacheOverride = cache;
 
-          final isDark = brightness == Brightness.dark;
-          final theme = isDark ? VineTheme.theme : VineTheme.lightTheme;
+          final theme = testCase.theme;
           final video = createTestVideoEvent(
             thumbnailUrl: 'https://example.com/bright-thumbnail.jpg',
-            blurhash: '00TSUA', // A solid white BlurHash.
+            blurhash: testCase.blurhash,
           );
           const previewKey = Key('thumbnail-preview');
           final preview = find.byKey(previewKey);
           await tester.pumpWidget(
             MaterialApp(
               theme: theme,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
               home: Center(
                 child: RepaintBoundary(
                   key: previewKey,
@@ -224,11 +247,8 @@ void main() {
           expect(decodedBlurhash, findsOneWidget);
           final decodedFrame = await _centerLuminance(tester, preview);
 
-          final expectedLuminance = isDark
-              ? inInclusiveRange(0.05, 0.2)
-              : greaterThan(0.8);
-          expect(firstFrame, expectedLuminance, reason: 'initial gradient');
-          expect(decodedFrame, expectedLuminance, reason: 'decoded BlurHash');
+          expect(firstFrame, testCase.luminance, reason: 'initial gradient');
+          expect(decodedFrame, testCase.luminance, reason: 'decoded BlurHash');
         },
       );
     }
