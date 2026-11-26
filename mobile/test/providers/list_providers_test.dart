@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override, ProviderListenable;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive_ce.dart';
 import 'package:mocktail/mocktail.dart';
@@ -93,6 +94,56 @@ VideoEvent _video({
     videoUrl: 'https://example.com/$id.mp4',
     rawTags: dTag == null ? const {} : {'d': dTag},
   );
+}
+
+/// The overrides for a list whose first video only a relay holds and whose
+/// second the cache answers at once, so the cache's video is emitted first.
+///
+/// Returns them with the relay's event, whose video belongs first.
+(List<Override>, Event) _cacheAnswersBeforeRelay() {
+  registerFallbackValue(_video(id: 'fallback', pubkey: _ownerA));
+  final fromRelay = Event(_ownerA, 34236, [
+    ['d', 'part-1'],
+    ['url', 'https://example.com/part-1.mp4'],
+  ], '');
+  final cached = _video(id: _allowedVideoId, pubkey: _ownerA);
+  final videoEventService = _MockVideoEventService();
+  final nostrClient = _MockNostrClient();
+  when(() => videoEventService.discoveryVideos).thenReturn(const []);
+  when(() => videoEventService.homeFeedVideos).thenReturn(const []);
+  when(() => videoEventService.profileVideos).thenReturn(const []);
+  when(
+    () => videoEventService.getVideoById(_allowedVideoId),
+  ).thenReturn(cached);
+  when(() => videoEventService.shouldHideVideo(any())).thenReturn(false);
+  when(
+    () => nostrClient.subscribe(any(), closeOnEose: true),
+  ).thenAnswer((_) => Stream.value(fromRelay));
+  return (
+    [
+      videoEventServiceProvider.overrideWithValue(videoEventService),
+      nostrServiceProvider.overrideWithValue(nostrClient),
+    ],
+    fromRelay,
+  );
+}
+
+/// The video ids of every value [provider] emits until [done] completes.
+Future<List<List<String>>> _emittedIds(
+  ProviderContainer container,
+  ProviderListenable<AsyncValue<List<VideoEvent>>> provider,
+  ProviderListenable<Future<List<VideoEvent>>> done,
+) async {
+  final emitted = <List<String>>[];
+  final subscription = container.listen(provider, (_, next) {
+    if (next case AsyncData(:final value)) {
+      emitted.add([for (final video in value) video.id]);
+    }
+  });
+  addTearDown(subscription.close);
+  await container.read(done);
+  await pumpEventQueue();
+  return emitted;
 }
 
 void main() {
@@ -693,6 +744,21 @@ void main() {
   });
 
   group(videoEventsByIdsProvider, () {
+    test('emits the videos in the list order as relays answer', () async {
+      final (overrides, fromRelay) = _cacheAnswersBeforeRelay();
+      final container = ProviderContainer(overrides: overrides);
+      addTearDown(container.dispose);
+
+      final provider = videoEventsByIdsProvider([
+        '34236:$_ownerA:part-1',
+        _allowedVideoId,
+      ]);
+      final emitted = await _emittedIds(container, provider, provider.future);
+
+      expect(emitted.first, equals([_allowedVideoId]));
+      expect(emitted.last, equals([fromRelay.id, _allowedVideoId]));
+    });
+
     test('uses an EOSE-bounded relay read for missing videos', () async {
       final videoEventService = _MockVideoEventService();
       final nostrClient = _MockNostrClient();
@@ -974,6 +1040,26 @@ void main() {
   });
 
   group(curatedListVideoEventsProvider, () {
+    test('emits the videos in the list order as relays answer', () async {
+      const listId = 'series-list';
+      final (overrides, fromRelay) = _cacheAnswersBeforeRelay();
+      final container = ProviderContainer(
+        overrides: [
+          ...overrides,
+          curatedListVideosProvider(
+            listId,
+          ).overrideWith((ref) => ['34236:$_ownerA:part-1', _allowedVideoId]),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final provider = curatedListVideoEventsProvider(listId);
+      final emitted = await _emittedIds(container, provider, provider.future);
+
+      expect(emitted.first, equals([_allowedVideoId]));
+      expect(emitted.last, equals([fromRelay.id, _allowedVideoId]));
+    });
+
     test('uses an EOSE-bounded relay read for missing videos', () async {
       const listId = 'relay-list';
       final videoEventService = _MockVideoEventService();

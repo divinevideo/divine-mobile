@@ -18,6 +18,7 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/video_event_service.dart'
     show VideoEventService;
 import 'package:openvine/utils/curated_lists_snapshot.dart';
+import 'package:openvine/utils/list_video_order.dart';
 import 'package:openvine/utils/list_video_relay_query.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -302,6 +303,10 @@ Stream<List<VideoEvent>> _curatedListVideoEvents({
     return;
   }
 
+  // Cache hits come first and relay results in arrival order, so every
+  // emission is put back into the list's order (#8105).
+  final order = ListVideoOrder(videoIds);
+
   Log.info(
     '📋 List has ${videoIds.length} video IDs to fetch',
     name: 'CuratedListVideoEvents',
@@ -407,7 +412,7 @@ Stream<List<VideoEvent>> _curatedListVideoEvents({
 
   // Yield cached videos immediately (but not empty - keep loading state)
   if (foundVideos.isNotEmpty) {
-    yield List.from(foundVideos);
+    yield order.sort(foundVideos);
   }
 
   // Fetch missing videos from relays
@@ -467,7 +472,7 @@ Stream<List<VideoEvent>> _curatedListVideoEvents({
           );
 
           // Yield updated list with new video
-          yield List.from(foundVideos);
+          yield order.sort(foundVideos);
         } catch (e) {
           // Log the actual event kind to help diagnose issues
           Log.warning(
@@ -487,7 +492,7 @@ Stream<List<VideoEvent>> _curatedListVideoEvents({
   );
 
   // Yield final result
-  yield foundVideos;
+  yield order.sort(foundVideos);
 }
 
 /// Provider that fetches VideoEvent objects directly from a list of video IDs
@@ -518,6 +523,10 @@ Stream<List<VideoEvent>> _videoEventsByIds({
     yield [];
     return;
   }
+
+  // Cache hits come first and relay results in arrival order, so every
+  // emission is put back into the list's order (#8105).
+  final order = ListVideoOrder(videoIds);
 
   // Separate video event IDs from addressable coordinates
   final eventIds = <String>[];
@@ -627,7 +636,7 @@ Stream<List<VideoEvent>> _videoEventsByIds({
   // Only yield cached videos if we have some - don't yield empty yet
   // (empty yield would show "No videos" instead of loading state)
   if (foundVideos.isNotEmpty) {
-    yield List.from(foundVideos);
+    yield order.sort(foundVideos);
   }
 
   // Fetch missing videos from relays
@@ -687,7 +696,7 @@ Stream<List<VideoEvent>> _videoEventsByIds({
           );
 
           // Yield updated list with new video
-          yield List.from(foundVideos);
+          yield order.sort(foundVideos);
         } catch (e) {
           // Log the actual event kind to help diagnose issues
           Log.warning(
@@ -707,5 +716,5 @@ Stream<List<VideoEvent>> _videoEventsByIds({
   );
 
   // Yield final result
-  yield foundVideos;
+  yield order.sort(foundVideos);
 }
