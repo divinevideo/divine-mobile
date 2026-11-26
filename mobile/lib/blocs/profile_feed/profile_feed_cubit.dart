@@ -1118,6 +1118,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
       final l = left[i];
       final r = right[i];
       if (l.id != r.id) return false;
+      if (l.seriesCoordinate != r.seriesCoordinate) return false;
       if (l.originalLoops != r.originalLoops) return false;
       if (l.rawTags['views'] != r.rawTags['views']) return false;
       if (l.originalLikes != r.originalLikes) return false;
