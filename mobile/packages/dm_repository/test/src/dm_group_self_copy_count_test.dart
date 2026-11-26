@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/native.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -525,6 +526,54 @@ void main() {
           expect(ownCopy?.kind, EventKind.eventDeletion);
         });
       }
+
+      test('publishes one own copy, after the fan-out returned, when every '
+          "member's send outlives its cap", () async {
+        final others = members.take(2).toList();
+        final conversationId = await seedRoom(others);
+        await DirectMessagesDao(db).insertMessage(
+          id: _retractedMessageId,
+          conversationId: conversationId,
+          senderPubkey: owner,
+          content: 'a message to delete for everyone',
+          createdAt: 1700000000,
+          giftWrapId: _retractedMessageWrapId,
+          ownerPubkey: owner,
+        );
+
+        fakeAsync((async) {
+          final okFor = {
+            for (final member in others) member: Completer<void>(),
+          };
+          onRecipientPublish = (wrap) => okFor.entries
+              .firstWhere((entry) => wrapsTo(entry.key).contains(wrap))
+              .value
+              .future;
+
+          unawaited(repository.deleteMessageForEveryone(_retractedMessageId));
+          // Each member's send is cut off at its cap in turn, so the fan-out
+          // returns with no copy due.
+          async
+            ..elapse(Duration.zero)
+            ..elapse(DmBatchSendBudget.messagePublishTimeout)
+            ..elapse(DmBatchSendBudget.messagePublishTimeout);
+          for (final member in others) {
+            expect(wrapsTo(member), hasLength(1), reason: 'precondition');
+          }
+          expect(wrapsTo(owner), isEmpty, reason: 'precondition');
+
+          okFor[others.first]!.complete();
+          async.elapse(Duration.zero);
+          expect(wrapsTo(owner), hasLength(1));
+
+          okFor[others.last]!.complete();
+          async.elapse(Duration.zero);
+          expect(wrapsTo(owner), hasLength(1));
+        });
+
+        final ownCopy = await openAsOwner(wrapsTo(owner).single);
+        expect(ownCopy?.kind, EventKind.eventDeletion);
+      });
     });
 
     group('a reaction (the shape #8446 shipped)', () {
