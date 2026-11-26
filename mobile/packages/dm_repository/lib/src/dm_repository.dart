@@ -1548,9 +1548,8 @@ class DmRepository {
   ///
   /// Returns the release, to call on every path or a joiner waits forever:
   /// with the row's final outcome once the row is finalized, or with a
-  /// failure when the send throws first, as [sendMessage]'s key is. It frees
-  /// the key
-  /// before handing the outcome to joiners, so a retry made by anyone who
+  /// failure when the send throws first. It frees the key before handing
+  /// the outcome to joiners, so a retry made by anyone who
   /// already has the outcome runs its own attempt instead of joining this
   /// finished one. Calls after the first do nothing.
   void Function(NIP17SendResult) _holdRecoveryKey(String key) {
@@ -1563,9 +1562,9 @@ class DmRepository {
     _recoveriesInFlight[key] = held;
     return (outcome) {
       if (completer.isCompleted) return;
-      _recoveriesInFlight.removeWhere(
-        (k, attempt) => k == key && identical(attempt, held),
-      );
+      if (identical(_recoveriesInFlight[key], held)) {
+        final _ = _recoveriesInFlight.remove(key);
+      }
       completer.complete(outcome);
     };
   }
@@ -7780,14 +7779,18 @@ class DmRepository {
   void _continueDelivery<T>(
     Future<T> delivery,
     List<String> queueIds,
-    int generation,
-  ) {
+    int generation, {
+    void Function(T? result, Object? error)? onSettled,
+  }) {
     // Queue writes remain fast even when a previous transport is slow.
     // Serialize initial transports to avoid a multi-share relay/signing burst.
     _backgroundDeliveryTail = () async {
+      T? result;
+      Object? failure;
       try {
-        await delivery;
+        result = await delivery;
       } on Object catch (error, stackTrace) {
+        failure = error;
         Log.error(
           'Background DM delivery failed; durable messages remain queued',
           category: LogCategory.system,
@@ -7810,6 +7813,7 @@ class DmRepository {
           );
         }
       } finally {
+        onSettled?.call(result, failure);
         _notifyRetryableWork();
       }
     }();
@@ -10613,7 +10617,7 @@ class DmRepository {
     // for the whole batch. If a parked row cannot be deleted, stamp that row's
     // id onto its failure so retry re-drives the surviving rumor instead of
     // minting a duplicating fresh fan-out (#7316).
-    if (outgoingDao != null) {
+    Future<List<NIP17SendResult>?> enqueueSiblings(OutgoingDmsDao dao) async {
       for (var i = 0; i < recipientPubkeys.length; i++) {
         if (!isCurrent()) {
           return [
@@ -10623,7 +10627,7 @@ class DmRepository {
         }
         final queueId = queueIds[i];
         try {
-          await outgoingDao.enqueue(
+          await dao.enqueue(
             OutgoingDm(
               id: queueId,
               conversationId: conversationId,
@@ -10658,7 +10662,7 @@ class DmRepository {
           for (var j = 0; j < i; j++) {
             final parkedRumorId = queueIds[j];
             try {
-              await outgoingDao.deleteById(parkedRumorId);
+              await dao.deleteById(parkedRumorId);
             } on Object catch (deleteError, deleteStackTrace) {
               _errorReporter?.call(
                 deleteError,
@@ -10685,32 +10689,47 @@ class DmRepository {
           return unwindResults;
         }
       }
+      return null;
     }
 
-    if (backgroundDelivery && outgoingDao != null) {
-      await _ensureConversationVisibleAfterSendFailure(
-        conversationId: conversationId,
-        participants: participants,
-        isGroup: true,
-        content: content,
-        ownerPubkey: groupRumor.pubkey,
-        expectedGeneration: generation,
-      );
-    }
-    // Hold every sibling's recovery key until its row is finalized, the way
-    // [sendMessage] holds its one key (#10005). In background mode this send
-    // waits behind earlier ones before it publishes anything, and a retry
-    // sweep reaching a row during that wait would otherwise run the attempt
-    // itself and finish it before the loop re-reads the row (#8627). Nothing
-    // holds these keys yet: the batch token makes every queue id new, and the
-    // rows are too young for the sweep.
-    final heldKeys = [
+    // Reserve each recovery key before its queue row can become visible.
+    // Hold it through finalization, including time spent behind earlier
+    // background deliveries (#8627).
+    final heldKeys = {
       if (outgoingDao != null)
-        for (final id in queueIds) _holdRecoveryKey('full:$id'),
-    ];
-    final delivery = _settleHeldKeys(
-      heldKeys,
-      _publishPreparedGroup(
+        for (final id in queueIds.toSet()) id: _holdRecoveryKey('full:$id'),
+    };
+    // On an unexpected background failure, _continueDelivery records the
+    // failed queue rows. Joiners must wait for those writes too.
+    void releaseKeys(List<NIP17SendResult>? results, Object? error) {
+      for (var i = 0; i < queueIds.length; i++) {
+        final release = heldKeys.remove(queueIds[i]);
+        release?.call(
+          results?[i] ?? NIP17SendResult.failure('group send failed: $error'),
+        );
+      }
+    }
+
+    try {
+      if (outgoingDao != null) {
+        final queueFailure = await enqueueSiblings(outgoingDao);
+        if (queueFailure != null) {
+          releaseKeys(queueFailure, null);
+          return queueFailure;
+        }
+      }
+
+      if (backgroundDelivery && outgoingDao != null) {
+        await _ensureConversationVisibleAfterSendFailure(
+          conversationId: conversationId,
+          participants: participants,
+          isGroup: true,
+          content: content,
+          ownerPubkey: groupRumor.pubkey,
+          expectedGeneration: generation,
+        );
+      }
+      final delivery = _publishPreparedGroup(
         recipientPubkeys: recipientPubkeys,
         content: content,
         replyToId: replyToId,
@@ -10725,32 +10744,22 @@ class DmRepository {
         startAfter: backgroundDelivery && outgoingDao != null
             ? _backgroundDeliveryTail
             : null,
-      ),
-    );
-    if (backgroundDelivery && outgoingDao != null) {
-      _continueDelivery(delivery, queueIds, generation);
-      return [for (final id in queueIds) _queuedForDelivery(id)];
-    }
-    return delivery;
-  }
-
-  /// Releases [heldKeys] with each sibling's outcome once [delivery] has
-  /// finalized every row, so a retry that joined a key gets the recorded
-  /// result. A delivery that throws releases them with a failure instead.
-  Future<List<NIP17SendResult>> _settleHeldKeys(
-    List<void Function(NIP17SendResult)> heldKeys,
-    Future<List<NIP17SendResult>> delivery,
-  ) async {
-    try {
-      final results = await delivery;
-      for (var i = 0; i < heldKeys.length; i++) {
-        heldKeys[i](results[i]);
+      );
+      if (backgroundDelivery && outgoingDao != null) {
+        _continueDelivery(
+          delivery,
+          queueIds,
+          generation,
+          onSettled: releaseKeys,
+        );
+        return [for (final id in queueIds) _queuedForDelivery(id)];
       }
+
+      final results = await delivery;
+      releaseKeys(results, null);
       return results;
     } on Object catch (error) {
-      for (final release in heldKeys) {
-        release(NIP17SendResult.failure('group send failed: $error'));
-      }
+      releaseKeys(null, error);
       rethrow;
     }
   }
@@ -10844,11 +10853,10 @@ class DmRepository {
         );
         continue;
       }
-      // This send holds the row's recovery key until the row is finalized
-      // (see [_settleHeldKeys]), so a retry that lands meanwhile joins this
-      // attempt rather than running its own (#8627). A throw from the publish
-      // (a signer failing, say) becomes a plain failure so one sibling cannot
-      // abort the rest of the batch.
+      // This send holds the row's recovery key until the row is finalized,
+      // so a retry that lands meanwhile joins this attempt (#8627). A throw
+      // from the publish (a signer failing, say) becomes a plain failure so
+      // one sibling cannot abort the rest of the batch.
       final inbox = inboxByRecipient[pubkey];
       Future<NIP17SendResult> attempt() async {
         if (_disposed || _resetGeneration != generation) {

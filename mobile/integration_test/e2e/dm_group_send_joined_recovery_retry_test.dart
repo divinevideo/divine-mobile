@@ -234,7 +234,7 @@ void main() {
       'send, which attempts and charges that sibling once',
       (tester) async {
         // The deliverable sibling's OK is delayed so the group loop is parked
-        // on it while the sweep registers the unreadable sibling's recovery.
+        // on it while the retry joins the unreadable sibling's attempt.
         // The unreadable sibling's REQ is swallowed, so every attempt for it
         // ends soft-unconfirmed with its row kept — the outcome #8619 is
         // about.
@@ -287,7 +287,6 @@ void main() {
         );
 
         expect(recovered.retryablePending, isTrue);
-        expect(recovered.queuedRumorId, isNotNull);
         expect(results, hasLength(2));
         expect(results[1].retryablePending, isTrue);
 

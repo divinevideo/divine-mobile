@@ -19,7 +19,7 @@ import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
-/// Holds the first real SQLite conversation read across an account switch.
+/// Holds the first real SQLite conversation read until the test resumes it.
 class _HeldConversationDao extends ConversationsDao {
   _HeldConversationDao(super.attachedDatabase);
 
@@ -47,6 +47,32 @@ class _FailingTransactionConversationsDao extends ConversationsDao {
   @override
   Future<T> runInTransaction<T>(Future<T> Function() action) =>
       Future.error(StateError('database is locked'));
+}
+
+class _HeldFailureOutgoingDmsDao extends OutgoingDmsDao {
+  _HeldFailureOutgoingDmsDao(super.attachedDatabase);
+
+  final started = Completer<void>();
+  final resume = Completer<void>();
+
+  @override
+  Future<bool> markRecipientWrapStatus({
+    required String id,
+    required OutgoingWrapStatus status,
+    String? eventId,
+    String? lastError,
+  }) async {
+    if (status == OutgoingWrapStatus.failed && !started.isCompleted) {
+      started.complete();
+      await resume.future;
+    }
+    return super.markRecipientWrapStatus(
+      id: id,
+      status: status,
+      eventId: eventId,
+      lastError: lastError,
+    );
+  }
 }
 
 class _FakeEvent extends Fake implements Event {}
@@ -787,6 +813,79 @@ void main() {
         expect(row?.recipientWrapStatus, OutgoingWrapStatus.sent);
         expect(row?.selfWrapStatus, OutgoingWrapStatus.failed);
         expect(wrapsTo(peerB), hasLength(1));
+      },
+    );
+
+    test(
+      'a retry before the group send returns joins the queued batch',
+      () async {
+        final conversations = _HeldConversationDao(db);
+        repository = buildRepository(
+          queue: outgoingDao,
+          conversationStore: conversations,
+        );
+        failSelfWraps = true;
+        final send = repository.sendGroupMessage(
+          recipientPubkeys: [peerB, peerC],
+          content: 'group note',
+          backgroundDelivery: true,
+        );
+        await conversations.started.future;
+        final rows = await outgoingDao.getAllForOwner(owner);
+        final row = rows.singleWhere((row) => row.recipientPubkey == peerB);
+
+        discovery.complete();
+        final retry = repository.recoverFullSend(rumorId: row.id);
+        await pumpUntil(() => wrapsTo(peerB).isNotEmpty);
+        final wrapsBeforeSendContinued = wrapsTo(peerB);
+        conversations.resume.complete();
+
+        final queued = await send;
+        final result = await retry;
+        expect(wrapsBeforeSendContinued, isEmpty);
+        expect(queued.first.queuedRumorId, row.id);
+        expect(result.success, isTrue);
+        expect(result.selfWrapPublished, isFalse);
+        expect(wrapsTo(peerB), hasLength(1));
+      },
+    );
+
+    test(
+      'joined background retry waits for failed rows to be finalized',
+      () async {
+        final queue = _HeldFailureOutgoingDmsDao(db);
+        repository = buildRepository(
+          queue: queue,
+          conversationStore: _FailingTransactionConversationsDao(db),
+        );
+        final queued = await repository.sendGroupMessage(
+          recipientPubkeys: [peerB, peerC],
+          content: 'group note',
+          backgroundDelivery: true,
+        );
+        final id = queued.first.queuedRumorId!;
+        final retry = repository.recoverFullSend(rumorId: id).then((
+          result,
+        ) async {
+          final row = await queue.getById(id);
+          return (result, row);
+        });
+
+        discovery.complete();
+        await queue.started.future;
+        try {
+          expect(
+            (await queue.getById(id))?.recipientWrapStatus,
+            OutgoingWrapStatus.pending,
+          );
+          await pumpEventQueue();
+        } finally {
+          queue.resume.complete();
+        }
+        final (result, row) = await retry;
+        expect(result.success, isFalse);
+        expect(row?.recipientWrapStatus, OutgoingWrapStatus.failed);
+        expect(row?.selfWrapStatus, OutgoingWrapStatus.failed);
       },
     );
   });
