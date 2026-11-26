@@ -150,8 +150,12 @@ _MockAudioPlaybackService _stubbedAudioService() {
     () => service.playingStream,
   ).thenAnswer((_) => const Stream<bool>.empty());
   when(
-    () => service.loadAudio(any()),
+    () => service.loadAudio(
+      any(),
+      streamUnlessCached: any(named: 'streamUnlessCached'),
+    ),
   ).thenAnswer((_) async => const Duration(seconds: 5));
+  when(() => service.position).thenReturn(Duration.zero);
   when(() => service.seek(Duration.zero)).thenAnswer((_) async {});
   when(service.play).thenAnswer((_) async {});
   when(service.pause).thenAnswer((_) async {});
@@ -1406,7 +1410,7 @@ void main() {
     });
 
     group('Preview', () {
-      testWidgets('loops, like the video a sound plays under', (tester) async {
+      testWidgets('plays once and goes back to its start', (tester) async {
         final audioService = _stubbedAudioService();
         await tester.pumpWidget(
           buildWidget(
@@ -1416,7 +1420,51 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        verify(() => audioService.setLooping(looping: true)).called(1);
+        verify(() => audioService.setRewindsAtEnd(rewinds: true)).called(1);
+      });
+
+      testWidgets('readies the sounds its list shows before they are tapped', (
+        tester,
+      ) async {
+        final audioService = _stubbedAudioService();
+        final kick = _createTestAudioEvent(
+          id: 'kick',
+          title: 'Big Kick',
+          url: 'https://media.divine.video/kick',
+        ).copyWith(fileSize: 4523);
+        final elsewhere = _createTestAudioEvent(
+          id: 'elsewhere',
+          title: 'Hosted Elsewhere',
+        ).copyWith(fileSize: 4523);
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data([kick, elsewhere]),
+            audioService: audioService,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Big Kick'), findsOneWidget);
+        expect(find.text('Hosted Elsewhere'), findsOneWidget);
+        verify(
+          () => audioService.prefetch(kick.url!, sizeBytes: 4523),
+        ).called(greaterThanOrEqualTo(1));
+        verifyNever(
+          () => audioService.prefetch(
+            elsewhere.url!,
+            sizeBytes: any(named: 'sizeBytes'),
+          ),
+        );
+        verifyNever(
+          () => audioService.loadAudio(
+            any(),
+            streamUnlessCached: any(named: 'streamUnlessCached'),
+          ),
+        );
       });
     });
 
@@ -2676,7 +2724,10 @@ void main() {
         await tester.pump();
 
         verify(
-          () => audioService.loadAudio('https://example.com/audio/sound-2.mp3'),
+          () => audioService.loadAudio(
+            'https://example.com/audio/sound-2.mp3',
+            streamUnlessCached: true,
+          ),
         ).called(1);
         verifyNever(audioService.play);
 
@@ -2684,7 +2735,9 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(audioService.play).called(1);
-        verifyNever(() => audioService.loadAudio(any()));
+        verifyNever(
+          () => audioService.loadAudio(any(), streamUnlessCached: true),
+        );
       });
 
       testWidgets('keeps the later pick when an earlier check answers last', (
@@ -2750,7 +2803,7 @@ void main() {
           final audioService = _stubbedAudioService();
           // Beta Song's file is still on its way when Wednesday is picked back.
           when(
-            () => audioService.loadAudio(betaUrl),
+            () => audioService.loadAudio(betaUrl, streamUnlessCached: true),
           ).thenAnswer((_) => Completer<Duration?>().future);
           await tester.pumpWidget(
             buildWidget(
@@ -2778,7 +2831,10 @@ void main() {
 
           expect(overlay(tester).audio.title, 'Wednesday My Dudes');
           expect(overlay(tester).isLoading, isFalse);
-          verify(() => audioService.loadAudio(wednesdayUrl)).called(2);
+          verify(
+            () =>
+                audioService.loadAudio(wednesdayUrl, streamUnlessCached: true),
+          ).called(2);
           consent.complete(true);
           await tester.pumpAndSettle();
         });
@@ -2789,7 +2845,8 @@ void main() {
           final wednesdayLoad = Completer<Duration?>();
           final audioService = _stubbedAudioService();
           when(
-            () => audioService.loadAudio(wednesdayUrl),
+            () =>
+                audioService.loadAudio(wednesdayUrl, streamUnlessCached: true),
           ).thenAnswer((_) => wednesdayLoad.future);
           await tester.pumpWidget(
             buildWidget(
@@ -2916,12 +2973,16 @@ void main() {
           () => audioService.positionStream,
         ).thenAnswer((_) => const Stream<Duration>.empty());
         when(() => audioService.duration).thenReturn(null);
+        when(() => audioService.position).thenReturn(Duration.zero);
         when(
           () => audioService.seek(Duration.zero),
         ).thenAnswer((_) => Future<void>.value());
         when(audioService.stop).thenAnswer((_) => Future<void>.value());
         when(
-          () => audioService.loadAudio(ownLegacySound.url!),
+          () => audioService.loadAudio(
+            ownLegacySound.url!,
+            streamUnlessCached: true,
+          ),
         ).thenAnswer((_) => Future.value(const Duration(seconds: 5)));
         when(audioService.play).thenAnswer((_) => Future<void>.value());
         when(audioService.pause).thenAnswer((_) => Future<void>.value());
@@ -3315,8 +3376,10 @@ void main() {
 
         expect(find.byType(AudioEditorSelectionOverlay), findsOneWidget);
         verify(
-          () =>
-              audioService.loadAudio('https://example.com/previews/top-1.m4a'),
+          () => audioService.loadAudio(
+            'https://example.com/previews/top-1.m4a',
+            streamUnlessCached: true,
+          ),
         ).called(1);
         verify(audioService.play).called(1);
       });
@@ -3339,67 +3402,78 @@ void main() {
         expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
       });
 
-      testWidgets('shows selected-audio loading before stop completes', (
-        tester,
-      ) async {
-        final audioService = _MockAudioPlaybackService();
-        final stopCompleter = Completer<void>();
-        final sound = _createTestAudioEvent(title: 'Slow Load');
-        Future<void> completeImmediately(Invocation _) => Future<void>.value();
-        Future<Duration> loadDuration(Invocation _) =>
-            Future.value(const Duration(seconds: 5));
-        Future<void> waitForStop(Invocation _) => stopCompleter.future;
+      testWidgets(
+        'shows selected-audio loading before the old preview pauses',
+        (
+          tester,
+        ) async {
+          final audioService = _MockAudioPlaybackService();
+          final pauseCompleter = Completer<void>();
+          final sound = _createTestAudioEvent(title: 'Slow Load');
+          Future<void> completeImmediately(Invocation _) =>
+              Future<void>.value();
+          Future<Duration> loadDuration(Invocation _) =>
+              Future.value(const Duration(seconds: 5));
+          Future<void> waitForPause(Invocation _) => pauseCompleter.future;
 
-        when(() => audioService.isPlaying).thenReturn(false);
-        when(
-          () => audioService.playingStream,
-        ).thenAnswer((_) => const Stream<bool>.empty());
-        when(
-          () => audioService.durationStream,
-        ).thenAnswer((_) => const Stream<Duration?>.empty());
-        when(
-          () => audioService.positionStream,
-        ).thenAnswer((_) => const Stream<Duration>.empty());
-        when(() => audioService.duration).thenReturn(null);
-        when(
-          () => audioService.seek(Duration.zero),
-        ).thenAnswer(completeImmediately);
-        when(audioService.stop).thenAnswer(waitForStop);
-        when(() => audioService.loadAudio(sound.url!)).thenAnswer(loadDuration);
-        when(audioService.play).thenAnswer(completeImmediately);
-        when(audioService.pause).thenAnswer(completeImmediately);
-        when(audioService.dispose).thenAnswer(completeImmediately);
+          when(() => audioService.isPlaying).thenReturn(false);
+          when(
+            () => audioService.playingStream,
+          ).thenAnswer((_) => const Stream<bool>.empty());
+          when(
+            () => audioService.durationStream,
+          ).thenAnswer((_) => const Stream<Duration?>.empty());
+          when(
+            () => audioService.positionStream,
+          ).thenAnswer((_) => const Stream<Duration>.empty());
+          when(() => audioService.duration).thenReturn(null);
+          when(() => audioService.position).thenReturn(Duration.zero);
+          when(
+            () => audioService.seek(Duration.zero),
+          ).thenAnswer(completeImmediately);
+          when(audioService.stop).thenAnswer(completeImmediately);
+          when(
+            () => audioService.loadAudio(sound.url!, streamUnlessCached: true),
+          ).thenAnswer(loadDuration);
+          when(audioService.play).thenAnswer(completeImmediately);
+          when(audioService.pause).thenAnswer(waitForPause);
+          when(audioService.dispose).thenAnswer(completeImmediately);
 
-        await tester.pumpWidget(
-          buildWidget(
-            trendingSoundsAsync: AsyncValue.data([sound]),
-            audioService: audioService,
-          ),
-        );
-        await tester.pumpAndSettle();
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data([sound]),
+              audioService: audioService,
+            ),
+          );
+          await tester.pumpAndSettle();
 
-        final l10n = lookupAppLocalizations(const Locale('en'));
-        await tester.tap(find.text(l10n.exploreTabNew));
-        await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Slow Load'));
-        await tester.pump();
+          await tester.tap(find.text('Slow Load'));
+          await tester.pump();
 
-        expect(
-          tester
-              .widget<AudioEditorSelectionOverlay>(
-                find.byType(AudioEditorSelectionOverlay),
-              )
-              .isLoading,
-          isTrue,
-        );
-        verifyNever(() => audioService.loadAudio(sound.url!));
+          expect(
+            tester
+                .widget<AudioEditorSelectionOverlay>(
+                  find.byType(AudioEditorSelectionOverlay),
+                )
+                .isLoading,
+            isTrue,
+          );
+          verifyNever(
+            () => audioService.loadAudio(sound.url!, streamUnlessCached: true),
+          );
 
-        stopCompleter.complete();
-        await tester.pumpAndSettle();
+          pauseCompleter.complete();
+          await tester.pumpAndSettle();
 
-        verify(() => audioService.loadAudio(sound.url!)).called(1);
-      });
+          verify(
+            () => audioService.loadAudio(sound.url!, streamUnlessCached: true),
+          ).called(1);
+        },
+      );
     });
 
     group('Lifecycle', () {
@@ -3425,9 +3499,11 @@ void main() {
           () => audioService.positionStream,
         ).thenAnswer((_) => const Stream<Duration>.empty());
         when(() => audioService.duration).thenReturn(null);
+        when(() => audioService.position).thenReturn(Duration.zero);
         when(() => audioService.seek(Duration.zero)).thenAnswer(immediate);
         when(audioService.stop).thenAnswer(immediate);
-        when(() => audioService.loadAudio(sound.url!)).thenAnswer(loadDuration);
+        when(() => audioService.loadAudio(sound.url!, streamUnlessCached: true))
+            .thenAnswer(loadDuration);
         // Blocks for the whole "playback" so the preview future is still
         // pending when the sheet is torn down.
         when(audioService.play).thenAnswer(blockOnPlay);
@@ -4162,12 +4238,13 @@ void main() {
         ) async {
           final audioService = _stubbedAudioService();
           const betaUrl = 'https://example.com/audio/sound-2.mp3';
-          when(() => audioService.loadAudio(betaUrl)).thenAnswer(
-            (_) async => throw RemoteAudioDownloadException(
-              Uri.parse(betaUrl),
-              statusCode: 503,
-            ),
-          );
+          when(() => audioService.loadAudio(betaUrl, streamUnlessCached: true))
+              .thenAnswer(
+                (_) async => throw RemoteAudioDownloadException(
+                  Uri.parse(betaUrl),
+                  statusCode: 503,
+                ),
+              );
           await tester.pumpWidget(
             buildWidget(
               trendingSoundsAsync: AsyncValue.data(testSounds),
@@ -4189,7 +4266,9 @@ void main() {
               .onTogglePlayState();
           await tester.pumpAndSettle();
 
-          verify(() => audioService.loadAudio(betaUrl)).called(3);
+          verify(
+            () => audioService.loadAudio(betaUrl, streamUnlessCached: true),
+          ).called(3);
           expect(picks(), [
             {'source': 'newest', 'outcome': 'download_failed', 'searched': 0},
           ]);

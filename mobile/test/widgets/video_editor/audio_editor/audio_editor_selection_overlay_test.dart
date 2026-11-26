@@ -388,7 +388,11 @@ void main() {
         expect(progress(tester), 0.08);
       });
 
-      testWidgets('starts over when the preview loops', (tester) async {
+      // The position is sampled, so playing the preview again can arrive as
+      // a jump back rather than as zero.
+      testWidgets('starts over when the preview plays again from its start', (
+        tester,
+      ) async {
         await tester.pumpWidget(buildWidget(audio: _createTestAudio()));
         await tester.pump();
 

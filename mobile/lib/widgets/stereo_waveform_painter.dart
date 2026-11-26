@@ -87,6 +87,8 @@ class StereoWaveformPainter extends CustomPainter {
     this.audibleDuration,
     this.playbackSpeed = 1,
     this.speedRamp,
+    this.revealedFraction = 1,
+    this.peak,
   });
 
   /// Left channel amplitude data.
@@ -150,6 +152,36 @@ class StereoWaveformPainter extends CustomPainter {
   /// they sound. `null` at a constant speed.
   final VideoSpeedRamp? speedRamp;
 
+  /// The share of the samples, from the start, drawn as the waveform; the
+  /// rest is drawn as the flat bars of a waveform not read yet. Bars just
+  /// before that point rise towards their height, so a waveform shown as it
+  /// is read grows in rather than appearing in blocks.
+  final double revealedFraction;
+
+  /// The loudest sample the bars are scaled against, instead of the loudest
+  /// in [leftChannel] and [rightChannel]. Still floored at
+  /// [WaveformConstants.amplitudeNormalizerFloor].
+  final double? peak;
+
+  /// How many bars before [revealedFraction] rise towards their height.
+  static const _revealRampBars = 6;
+
+  /// The loudest sample in [left] and [right], at least
+  /// [WaveformConstants.amplitudeNormalizerFloor]: what the bars of the two
+  /// channels are scaled against.
+  static double peakOf(Float32List left, Float32List? right) {
+    var peak = WaveformConstants.amplitudeNormalizerFloor;
+    for (final sample in left) {
+      final amplitude = sample.abs();
+      if (amplitude > peak) peak = amplitude;
+    }
+    for (final sample in right ?? const <double>[]) {
+      final amplitude = sample.abs();
+      if (amplitude > peak) peak = amplitude;
+    }
+    return peak;
+  }
+
   /// How long [visibleMs] of the drawn audio plays, in milliseconds.
   double _playbackMsOf(double visibleMs, double maxMs) {
     final ramp = speedRamp;
@@ -188,20 +220,10 @@ class StereoWaveformPainter extends CustomPainter {
   /// straight onto the half-height draw as a barely-there ripple — a perfectly
   /// audible track reads as silent. Normalizing against the whole source
   /// rather than the visible window keeps a trim from restyling the bars.
-  late final double _normalizer = _computeNormalizer();
-
-  double _computeNormalizer() {
-    var peak = WaveformConstants.amplitudeNormalizerFloor;
-    for (final sample in leftChannel) {
-      final amplitude = sample.abs();
-      if (amplitude > peak) peak = amplitude;
-    }
-    for (final sample in rightChannel ?? const <double>[]) {
-      final amplitude = sample.abs();
-      if (amplitude > peak) peak = amplitude;
-    }
-    return peak;
-  }
+  late final double _normalizer = math.max(
+    peak ?? peakOf(leftChannel, rightChannel),
+    WaveformConstants.amplitudeNormalizerFloor,
+  );
 
   /// Maps a raw sample to its share (0..1) of the available half-height.
   ///
@@ -368,6 +390,8 @@ class StereoWaveformPainter extends CustomPainter {
 
     final scaledHalfHeight =
         halfHeight * WaveformConstants.amplitudeScale * heightFactor;
+    final revealedSamples = revealedFraction * leftSamples.length;
+    final rampSamples = _revealRampBars * visibleSampleCount / barCount;
 
     for (var i = 0; i < barCount; i++) {
       final x = i * _barStep;
@@ -391,7 +415,7 @@ class StereoWaveformPainter extends CustomPainter {
           ? _shape(rightSamples[sampleIndex])
           : 0.0;
 
-      final gain = hasFade
+      final fadeGain = hasFade
           ? audioFadeGain(
               position: Duration(
                 microseconds: (i / barCount * visiblePlaybackMs * 1000).round(),
@@ -401,6 +425,10 @@ class StereoWaveformPainter extends CustomPainter {
               fadeOut: fadeOut,
             )
           : 1.0;
+      final revealGain = revealedFraction >= 1
+          ? 1.0
+          : ((revealedSamples - sampleIndex) / rampSamples).clamp(0.0, 1.0);
+      final gain = fadeGain * revealGain;
 
       // Calculate bar heights (minimum for visibility), scaled by animation
       final topHeight = (leftAmp * gain * scaledHalfHeight).clamp(
@@ -450,6 +478,8 @@ class StereoWaveformPainter extends CustomPainter {
         oldDelegate.fadeOut != fadeOut ||
         oldDelegate.audibleDuration != audibleDuration ||
         oldDelegate.playbackSpeed != playbackSpeed ||
-        oldDelegate.speedRamp != speedRamp;
+        oldDelegate.speedRamp != speedRamp ||
+        oldDelegate.revealedFraction != revealedFraction ||
+        oldDelegate.peak != peak;
   }
 }

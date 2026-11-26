@@ -24,6 +24,15 @@ class _FakeHttpHeaders extends Fake implements HttpHeaders {
       name == HttpHeaders.contentTypeHeader ? _contentType : null;
 }
 
+/// Headers of a request, recording what is set on them.
+class _RecordingHttpHeaders extends Fake implements HttpHeaders {
+  final values = <String, Object>{};
+
+  @override
+  void set(String name, Object value, {bool preserveHeaderCase = false}) =>
+      values[name] = value;
+}
+
 class _FakeHttpClientResponse extends Stream<List<int>>
     implements HttpClientResponse {
   _FakeHttpClientResponse(this.statusCode, this._body, {String? contentType})
@@ -193,6 +202,83 @@ void main() {
           );
         },
       );
+    });
+
+    group('fileFor while downloading', () {
+      test('a second request waits for the download under way', () async {
+        final body = StreamController<List<int>>();
+        when(request.close).thenAnswer(
+          (_) async => _FakeHttpClientResponse(HttpStatus.ok, body.stream),
+        );
+        final sounds = cache();
+
+        final first = sounds.fileFor(_soundUrl);
+        final second = sounds.fileFor(_soundUrl);
+        await pumpEventQueue();
+        expect(sounds.isDownloading(_soundUrl), isTrue);
+        body.add(_mp4Bytes);
+        await body.close();
+
+        expect((await second).path, (await first).path);
+        expect(sounds.isDownloading(_soundUrl), isFalse);
+        verify(() => client.getUrl(_soundUrl)).called(1);
+      });
+
+      test('is not downloading a sound nobody asked for', () {
+        expect(cache().isDownloading(_soundUrl), isFalse);
+      });
+    });
+
+    group('warm', () {
+      test('asks for the first byte only and keeps nothing', () async {
+        final headers = _RecordingHttpHeaders();
+        when(() => request.headers).thenReturn(headers);
+        when(request.close).thenAnswer(
+          (_) async => _FakeHttpClientResponse(
+            HttpStatus.partialContent,
+            Stream.value([0]),
+          ),
+        );
+
+        await cache().warm(_soundUrl);
+
+        verify(() => client.getUrl(_soundUrl)).called(1);
+        expect(headers.values, {HttpHeaders.rangeHeader: 'bytes=0-0'});
+        expect(filesInCache(), isEmpty);
+        verify(() => client.close(force: true)).called(1);
+      });
+
+      test('ignores a server it cannot reach', () async {
+        when(
+          () => client.getUrl(any()),
+        ).thenThrow(const SocketException('No route to host'));
+
+        await expectLater(cache().warm(_soundUrl), completes);
+        verify(() => client.close(force: true)).called(1);
+      });
+    });
+
+    group('cachedFileFor', () {
+      test('is null for a sound not downloaded yet', () {
+        final cache = RemoteAudioCache(
+          httpClientFactory: () => throw StateError('no download expected'),
+          directory: directory,
+        );
+
+        expect(cache.cachedFileFor(_soundUrl), isNull);
+      });
+
+      test('is the file an earlier download kept', () async {
+        when(request.close).thenAnswer((_) async => _ok(_mp4Bytes));
+        final downloaded = await cache().fileFor(_soundUrl);
+
+        final kept = RemoteAudioCache(
+          httpClientFactory: () => throw StateError('no download expected'),
+          directory: directory,
+        ).cachedFileFor(_soundUrl);
+
+        expect(kept?.path, downloaded.path);
+      });
     });
 
     group('fileFor failures', () {
