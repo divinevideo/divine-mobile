@@ -552,6 +552,16 @@ void main() {
           expected: '$_sharedVideo\n"A personal note"',
         ),
         (
+          body: '"Quoted note"\n\nhttps://divine.video/video/untitled',
+          structured: false,
+          expected: '$_sharedVideo\n"Quoted note"',
+        ),
+        (
+          body: '"Quoted note"\n\nhttps://divine.video/video/untitled',
+          structured: true,
+          expected: '$_sharedVideo\n"Quoted note"',
+        ),
+        (
           body: 'Read https://divine.video/video/clip when you can',
           structured: false,
           expected: 'Read https://divine.video/video/clip when you can',

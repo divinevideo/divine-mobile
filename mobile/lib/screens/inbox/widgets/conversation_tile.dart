@@ -374,12 +374,9 @@ _PreviewPayload _previewPayload(
       !(slice.hasMore && content.trimRight().endsWith(lines[urlIndex]));
   if (structuredShare || completeUrl) {
     final note = [
-      for (final (index, line) in lines.indexed)
+      for (final line in lines)
         if (!divineVideoUrlLineRegex.hasMatch(line) &&
-            !dmVideoCitationLine.hasMatch(line) &&
-            !(completeUrl &&
-                index == urlIndex - 1 &&
-                dmVideoQuotedTitleLine.hasMatch(line)))
+            !dmVideoCitationLine.hasMatch(line))
           line,
     ];
     return _PreviewPayload(
