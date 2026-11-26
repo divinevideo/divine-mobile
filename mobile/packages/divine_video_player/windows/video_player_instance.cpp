@@ -50,6 +50,9 @@ constexpr uint32_t kTickIntervalMs = 50;
 constexpr uint32_t kTicksPerStateEvent = 4;
 constexpr uint32_t kSetClipsTimeoutMs = 10000;
 constexpr uint32_t kSeekTimeoutMs = 500;
+// A clip switch that has not reported landing by then stops holding later
+// seeks back, which then place themselves by the last clip reported.
+constexpr uint32_t kMoveTimeoutMs = 5000;
 // How long after the load starts playback waits for the optional track-end
 // reads. A read that finishes later is cached for the next load.
 constexpr auto kTrackEndTrimBudget = std::chrono::seconds(1);
@@ -604,9 +607,14 @@ void VideoPlayerInstance::EnsurePlayer() {
         });
       });
   seek_revoker_ = session.SeekCompleted(
-      winrt::auto_revoke, [weak](const MediaPlaybackSession&, auto&&) {
-        PlatformThread::Post([weak]() {
-          if (auto self = weak.lock()) self->OnSeekCompleted();
+      winrt::auto_revoke,
+      [weak, position_writes = position_writes_](const MediaPlaybackSession&,
+                                                 auto&&) {
+        // Read now, not once the post runs: a write made after this seek
+        // completed marks the completion as belonging to an earlier seek.
+        const uint64_t write = position_writes->load();
+        PlatformThread::Post([weak, write]() {
+          if (auto self = weak.lock()) self->OnSeekCompleted(write);
         });
       });
 
@@ -666,6 +674,7 @@ void VideoPlayerInstance::SetClips(const EncodableMap& args, Result result) {
   first_frame_rendered_ = false;
   error_.reset();
   current_index_ = 0;
+  moving_to_.reset();
   pending_seek_.reset();
   target_global_ms_.reset();
 
@@ -869,6 +878,20 @@ void VideoPlayerInstance::OnCurrentItemChanged(uint64_t generation,
                                                int64_t index) {
   if (disposed_ || generation != generation_ || index < 0) return;
   current_index_ = static_cast<size_t>(index);
+  if (moving_to_ && *moving_to_ != current_index_) {
+    // Not the landing of the MoveTo underway, which still decides where the
+    // pending seek goes.
+    ApplyClipSettings();
+    SyncOverlays();
+    SendState();
+    return;
+  }
+  moving_to_.reset();
+  if (pending_seek_ && pending_seek_->index != current_index_ &&
+      pending_seek_->index < items_.size()) {
+    // A seek made during the switch asked for another clip.
+    MoveToClip(pending_seek_->index);
+  }
   ApplyClipSettings();
   position_probe_armed_ = !pending_seek_;
   ApplyPendingSeek();
@@ -884,8 +907,11 @@ void VideoPlayerInstance::OnItemOpened(uint64_t generation, int64_t index,
   }
 }
 
-void VideoPlayerInstance::OnSeekCompleted() {
+void VideoPlayerInstance::OnSeekCompleted(uint64_t write) {
   if (disposed_) return;
+  // Raised for an earlier position write, or before the latest seek has
+  // written its position because it still waits for its clip.
+  if (write != position_writes_->load() || pending_seek_) return;
   target_global_ms_.reset();
   ResolveSeek();
   SyncOverlays();
@@ -989,6 +1015,7 @@ void VideoPlayerInstance::Stop() {
   first_frame_rendered_ = false;
   error_.reset();
   current_index_ = 0;
+  moving_to_.reset();
   pending_seek_.reset();
   target_global_ms_.reset();
   SendState();
@@ -1019,9 +1046,13 @@ void VideoPlayerInstance::SeekToLocation(const Timeline::Location& location,
   position_probe_armed_ = false;
   pending_seek_ = PendingSeek{location.index, location.source_ms};
   target_global_ms_ = timeline_.ToGlobal(location.index, location.source_ms);
-  if (location.index != current_index_ && location.index < items_.size()) {
+  if (moving_to_) {
+    // current_index_ is about to change, so it cannot place this seek. The
+    // switch's CurrentItemChanged applies it or moves on to its clip.
+  } else if (location.index != current_index_ &&
+             location.index < items_.size()) {
     // The position is applied once the item has become current.
-    list_.MoveTo(static_cast<uint32_t>(location.index));
+    MoveToClip(location.index);
   } else {
     ApplyPendingSeek();
   }
@@ -1092,6 +1123,15 @@ void VideoPlayerInstance::ApplyClipSettings() {
   player_.PlaybackSession().PlaybackRate(speed_ * clip.speed);
 }
 
+void VideoPlayerInstance::MoveToClip(size_t index) {
+  moving_to_ = index;
+  const uint64_t move = ++move_token_;
+  StartOneShotTimer(kMoveTimeoutMs, [move](VideoPlayerInstance& self) {
+    if (self.move_token_ == move) self.moving_to_.reset();
+  });
+  list_.MoveTo(static_cast<uint32_t>(index));
+}
+
 void VideoPlayerInstance::ApplyPendingSeek() {
   if (!pending_seek_ || !player_ || !opened_ ||
       pending_seek_->index != current_index_) {
@@ -1100,6 +1140,7 @@ void VideoPlayerInstance::ApplyPendingSeek() {
   const int64_t session_ms =
       SessionMsForSource(pending_seek_->index, pending_seek_->source_ms);
   pending_seek_.reset();
+  position_writes_->fetch_add(1);
   player_.PlaybackSession().Position(FromMs(std::max<int64_t>(0, session_ms)));
 }
 

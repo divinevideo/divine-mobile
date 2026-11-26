@@ -106,7 +106,8 @@ class VideoPlayerInstance
   void OnMediaEnded(uint64_t generation);
   void OnCurrentItemChanged(uint64_t generation, int64_t index);
   void OnItemOpened(uint64_t generation, int64_t index, int64_t duration_ms);
-  void OnSeekCompleted();
+  // `write` is the position write count when Windows raised the completion.
+  void OnSeekCompleted(uint64_t write);
   void OnFirstFrame(uint64_t generation);
   void OnVideoSizeChanged(uint32_t width, uint32_t height);
   void OnTick();
@@ -114,6 +115,8 @@ class VideoPlayerInstance
   void Fail(int32_t hresult, int media_error, const std::string& message);
 
   void ApplyClipSettings();
+  // Switches the list to clip `index`; seeks wait until it lands.
+  void MoveToClip(size_t index);
   void ApplyPendingSeek();
   void DetectPositionMode();
   void ResolveSetClips();
@@ -204,6 +207,10 @@ class VideoPlayerInstance
   double volume_ = 1.0;
   double speed_ = 1.0;
   size_t current_index_ = 0;
+  // The clip of a MoveTo whose CurrentItemChanged has not arrived yet.
+  std::optional<size_t> moving_to_;
+  // Bumped by every MoveTo, so a move's timeout cannot clear a later one.
+  uint64_t move_token_ = 0;
   uint32_t video_width_ = 0;
   uint32_t video_height_ = 0;
   std::optional<PendingSeek> pending_seek_;
@@ -215,6 +222,10 @@ class VideoPlayerInstance
   Result pending_seek_result_;
   // Bumped by every seekTo, so a seek's timeout cannot resolve a later one.
   uint64_t seek_token_ = 0;
+  // Counts session position writes. SeekCompleted handlers read it on the
+  // Media Foundation thread, so it is shared rather than a plain member.
+  std::shared_ptr<std::atomic<uint64_t>> position_writes_ =
+      std::make_shared<std::atomic<uint64_t>>(0);
   uint32_t tick_timer_ = 0;
   uint32_t tick_count_ = 0;
   std::vector<uint32_t> one_shot_timers_;
