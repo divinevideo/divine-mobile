@@ -688,13 +688,33 @@ class RelayPool {
     )[relay.url] = retry;
   }
 
-  /// Lets a publish already re-sent after AUTH on an earlier socket of
-  /// [relayUrl] be re-sent once more after the next socket authenticates: the
-  /// previous socket took its `OK` with it (#11446).
-  void _allowAuthRetryOnNewSocket(String relayUrl) {
-    for (final retries in _authRequiredPublishRetries.values) {
-      retries[relayUrl]?.resent = false;
+  /// Lets an AUTH retry run again after the next writable socket authenticates
+  /// because the previous socket took its `OK` with it (#11446).
+  void _allowAuthRetryOnNewSocket(Relay relay) {
+    for (final entry in _retryEntriesForRelay(relay)) {
+      if (relay.relayStatus.writeAccess) {
+        entry.value.resent = false;
+      } else {
+        _endAuthRetryWithoutWriteAccess(entry.key, relay.url);
+      }
     }
+  }
+
+  void _endAuthRetryWithoutWriteAccess(String eventId, String relayUrl) {
+    // AUTH retry entries are keyed on URL. A read-only connection must not
+    // discard a retry the writable normal or temp connection can still send.
+    if (_relays[relayUrl]?.relayStatus.writeAccess == true ||
+        _tempRelays[relayUrl]?.relayStatus.writeAccess == true) {
+      return;
+    }
+    _endPublishWithoutWriteAccess(eventId, relayUrl);
+  }
+
+  void _endPublishWithoutWriteAccess(String eventId, String relayUrl) {
+    _removeAuthRequiredPublish(eventId, relayUrl);
+    final tracker = _pendingPublishes[eventId];
+    tracker?.clearDeferredRejection(relayUrl);
+    tracker?.onRelayLost(relayUrl);
   }
 
   void _removeAuthRequiredPublish(String eventId, String relayUrl) {
@@ -721,8 +741,13 @@ class RelayPool {
 
   Future<void> _retryAuthRequiredPublishesForRelay(Relay relay) async {
     for (final entry in _retryEntriesForRelay(relay)) {
+      if (!_holdsRelay(relay)) return;
       final eventId = entry.key;
       final retry = entry.value;
+      if (!relay.relayStatus.writeAccess) {
+        _endAuthRetryWithoutWriteAccess(eventId, relay.url);
+        continue;
+      }
       // A resent entry lingers only as the dedup marker; do not push it again
       // on a later AUTH/OK trigger for this relay.
       if (retry.resent) continue;
@@ -750,7 +775,7 @@ class RelayPool {
             deadline: retry.deadline,
           )
           .timeout(timeout, onTimeout: () => false);
-      if (!sent) {
+      if (!sent && _holdsRelay(relay)) {
         // The relay answered — `auth-required` is why we are here — so it is
         // not an unreachable target, whatever happened to the resend. Report
         // what it said, the same as the expired-deadline branch above; a
@@ -2018,6 +2043,11 @@ class RelayPool {
   void _observeRelayStatus(Relay relay) {
     if (_statusObserved[relay] ?? false) return;
     _statusObserved[relay] = true;
+    relay.onPublishReplayDisabled = (eventId) {
+      if (_holdsRelay(relay)) {
+        _endPublishWithoutWriteAccess(eventId, relay.url);
+      }
+    };
     final previous = relay.relayStatusCallback;
     relay.relayStatusCallback = () {
       previous?.call();
@@ -2035,7 +2065,7 @@ class RelayPool {
       _queriesParkedForAuth.remove(relay.url);
       _queriesHeldAfterEose.remove(relay.url);
       _authRejected.remove(relay.url);
-      _allowAuthRetryOnNewSocket(relay.url);
+      _allowAuthRetryOnNewSocket(relay);
       _moveAuthEpochOn(relay.url);
       _settleQueriesBlockedBy(relay);
       _recheckStoredEventsPhasesOf(relay);

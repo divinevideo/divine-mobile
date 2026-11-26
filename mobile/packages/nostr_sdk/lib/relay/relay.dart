@@ -48,6 +48,9 @@ abstract class Relay {
 
   Function(Relay, List<dynamic>)? onMessage;
 
+  /// Reports an unanswered publish discarded because the relay is read-only.
+  void Function(String eventId)? onPublishReplayDisabled;
+
   // subscriptions
   final Map<String, Subscription> _subscriptions = {};
 
@@ -209,6 +212,11 @@ abstract class Relay {
     );
     for (final (:eventId, :publish) in stranded) {
       if (!_publishes.containsKey(eventId)) continue;
+      if (!relayStatus.writeAccess) {
+        forgetPublish(eventId);
+        onPublishReplayDisabled?.call(eventId);
+        continue;
+      }
       try {
         final sent = await send(
           publish.message,
