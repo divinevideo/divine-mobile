@@ -415,19 +415,72 @@ void main() {
         variant: TargetPlatformVariant.only(TargetPlatform.iOS),
       );
 
-      testWidgets('does not request rotation when only the layout is forced', (
-        tester,
-      ) async {
-        await pumpScope(
-          tester,
-          enabled: false,
-          size: _tabletLandscape,
-          display: _tabletLandscape,
-          ignoresOrientationLock: true,
-        );
+      testWidgets(
+        'asks for portrait at startup when only the Android layout is forced',
+        (tester) async {
+          await pumpScope(
+            tester,
+            enabled: false,
+            size: _tabletLandscape,
+            display: _tabletLandscape,
+            ignoresOrientationLock: true,
+          );
 
-        expect(orientationCalls, isEmpty);
-      });
+          expect(orientationCalls, [
+            ['DeviceOrientation.portraitUp'],
+          ]);
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.android),
+      );
+
+      testWidgets(
+        'keeps adaptive framing after storing an Android rotation opt-out',
+        (tester) async {
+          SharedPreferences.setMockInitialValues({});
+          final prefs = await SharedPreferences.getInstance();
+          final container = ProviderContainer(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              ignoresOrientationLockOnLargeScreensProvider.overrideWithValue(
+                true,
+              ),
+            ],
+          );
+          addTearDown(container.dispose);
+
+          late AdaptiveLayout layout;
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: MediaQuery(
+                data: const MediaQueryData(size: _tabletLandscape),
+                child: AdaptiveLayoutScope(
+                  child: Builder(
+                    builder: (context) {
+                      layout = context.adaptiveLayout;
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          expect(layout.isWideLandscape, isTrue);
+          expect(orientationCalls.single, hasLength(4));
+
+          await container
+              .read(featureFlagServiceProvider)
+              .setFlag(FeatureFlag.largeScreenLayout, false);
+          await tester.pump();
+
+          expect(prefs.getBool('ff_largeScreenLayout'), isFalse);
+          expect(layout.isWideLandscape, isTrue);
+          expect(orientationCalls, hasLength(2));
+          expect(orientationCalls.last, ['DeviceOrientation.portraitUp']);
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.android),
+      );
 
       testWidgets('allows rotation on a large screen with the flag on', (
         tester,
