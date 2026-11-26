@@ -544,7 +544,9 @@ void main() {
         (
           body: 'Watch this\n\n"Template title"\n\nhttps://divine.video/video/clip',
           structured: false,
-          expected: '$_sharedVideo\nWatch this',
+          // Preserves quoted lines after removing dmVideoQuotedTitleLine;
+          // Text.rich clips this 3rd line at maxLines: 2.
+          expected: '$_sharedVideo\nWatch this\n"Template title"',
         ),
         (
           body: '"A personal note"\nnostr:nevent1abc',
