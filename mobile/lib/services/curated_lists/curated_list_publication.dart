@@ -155,7 +155,7 @@ extension CuratedListPublication on CuratedListService {
     return false;
   }
 
-  /// Publishes owned lists that have never reached a relay or need retry.
+  /// Publishes owned lists with a readable coordinate that need backup or retry.
   ///
   /// Before private lists were published, they existed only in
   /// SharedPreferences and died with the device; the same is true of any list
@@ -171,6 +171,7 @@ extension CuratedListPublication on CuratedListService {
     final stranded = _lists
         .where(
           (list) =>
+              list.id.isNotEmpty &&
               !list.hasRelayConflict &&
               !_inFlightListPublications.contains(list.authorScopedId) &&
               _relayEvidence.allows(list) &&

@@ -907,6 +907,45 @@ void main() {
         ).thenThrow(ArgumentError.value('', 'dTag'));
       });
 
+      test(
+        'retains its saved draft without stopping other startup backups',
+        () async {
+          final baseline = cached.copyWith(id: '');
+          final edited = baseline.copyWith(name: 'Saved edit');
+          final pending = edited.copyWith(
+            pendingRepublish: true,
+            localEditDraft: CuratedListEditDraft(
+              baseline: baseline,
+              desired: edited,
+            ),
+          );
+          final unpublished = cached.copyWith(clearNostrEventId: true);
+          await prefs.setString(
+            CuratedListService.listsStorageKey,
+            jsonEncode([pending.toJson(), unpublished.toJson()]),
+          );
+          restart();
+          when(
+            () => client.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer((i) => completedOwnedListSnapshot(i, []));
+          answer(
+            () async => (events: <Event>[], timedOut: false, noRelays: false),
+          );
+
+          await service.fetchUserListsFromRelays(force: true);
+
+          expect(
+            published.single.tags,
+            contains(equals(['d', unpublished.id])),
+          );
+          expect(service.getListById(baseline.authorScopedId), pending);
+        },
+      );
+
       test('an edit is refused before the read and keeps no draft', () async {
         expect(await service.addVideoToList('', addedVideo), isFalse);
 
