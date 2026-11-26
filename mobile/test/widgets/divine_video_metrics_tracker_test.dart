@@ -303,8 +303,9 @@ void main() {
           duration: const Duration(seconds: 6),
         );
         final repository = _MockVideosRepository();
-        when(() => repository.fetchLoopCount(_video))
-            .thenAnswer((_) async => 10);
+        when(
+          () => repository.fetchLoopCount(_video),
+        ).thenAnswer((_) async => 10);
         final counts = VideoLoopsCubit(
           video: _video,
           videosRepository: repository,
@@ -1182,6 +1183,107 @@ void main() {
         await controller.close();
       },
     );
+
+    testWidgets(
+      'counts a sub-second clip at most once per second of playback',
+      (tester) async {
+        const clipDuration = Duration(milliseconds: 67);
+        final controller = _stubController(
+          isPlaying: true,
+          duration: clipDuration,
+        );
+        final repository = _MockVideosRepository();
+        when(
+          () => repository.fetchLoopCount(_video),
+        ).thenAnswer((_) async => 488);
+        final counts = VideoLoopsCubit(
+          video: _video,
+          videosRepository: repository,
+          clock: () => now,
+        );
+        addTearDown(counts.close);
+        final active = ValueNotifier(true);
+        final video = ValueNotifier(_video);
+        addTearDown(active.dispose);
+        addTearDown(video.dispose);
+        await tester.pumpWidget(
+          _buildTrackerHarness(
+            authService: authService,
+            analyticsService: analyticsService,
+            seenVideosService: seenVideosService,
+            controller: controller.controller,
+            video: video,
+            isActive: active,
+            clock: () => now,
+            loopCounts: counts,
+          ),
+        );
+        await tester.pump();
+        expect(counts.state.count, 488);
+
+        // The player wraps the clip every 70 ms: 42 wraps in 2.94 s of
+        // playback, which holds only two full seconds.
+        for (var wrap = 0; wrap < 42; wrap++) {
+          for (final position in const [
+            Duration(milliseconds: 60),
+            Duration(milliseconds: 5),
+          ]) {
+            now = now.add(const Duration(milliseconds: 35));
+            controller.setState(
+              DivineVideoPlayerState(
+                status: PlaybackStatus.playing,
+                duration: clipDuration,
+                position: position,
+                isFirstFrameRendered: true,
+              ),
+            );
+            await tester.pump();
+          }
+        }
+
+        expect(counts.state.count, 490);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await controller.close();
+      },
+    );
+
+    testWidgets('reports a sub-second clip as one loop per second watched', (
+      tester,
+    ) async {
+      const clipDuration = Duration(milliseconds: 67);
+      final controller = _stubController(
+        isPlaying: true,
+        duration: clipDuration,
+      );
+      final active = ValueNotifier(true);
+      final video = ValueNotifier(_video);
+      addTearDown(active.dispose);
+      addTearDown(video.dispose);
+      await tester.pumpWidget(
+        _buildTrackerHarness(
+          authService: authService,
+          analyticsService: analyticsService,
+          seenVideosService: seenVideosService,
+          controller: controller.controller,
+          video: video,
+          isActive: active,
+          clock: () => now,
+        ),
+      );
+      await tester.pump();
+
+      now = now.add(const Duration(seconds: 5));
+      await tester.pumpWidget(const SizedBox.shrink());
+
+      final end = _viewEndEvents(analyticsService).single;
+      expect(end.watchDuration, const Duration(seconds: 5));
+      // Watch time over clip length would be 5 s / 67 ms = 74.6 loops.
+      expect(end.loopCount, closeTo(5, 0.001));
+      expect(seenVideosService.records.single.loopCount, 5);
+
+      await controller.close();
+    });
 
     testWidgets(
       'an interrupted session reports the same loops as an uninterrupted one',
