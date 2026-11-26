@@ -7799,6 +7799,14 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'Nhóm này muốn nhắn tin cho bạn, họ đã gửi $messageText.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'Trong nhóm này';
+
+  @override
   String get deleteAccountAccountChanged =>
       'Bạn đã chuyển tài khoản nên không có gì bị xóa. Hãy mở lại mục xóa cho tài khoản bạn muốn gỡ.';
 

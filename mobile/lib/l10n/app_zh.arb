@@ -3819,6 +3819,8 @@
   "messageRequestViewMessagesButton": "查看消息",
   "messageRequestViewProfileButton": "查看主页",
   "messageRequestWantsToMessageYou": "{displayName} 想给你发消息，TA 发送了{messageText}。",
+  "messageRequestGroupWantsToMessageYou": "这个群组想给你发消息，他们发送了{messageText}。",
+  "messageRequestGroupMembersHeading": "群组成员",
   "@messageRequestWantsToMessageYou": {
     "placeholders": {
       "displayName": {

@@ -19,6 +19,7 @@ import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/collaborator_invite.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
@@ -27,6 +28,7 @@ import 'package:openvine/screens/inbox/inbox_page.dart';
 import 'package:openvine/screens/inbox/message_requests/request_preview_view.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/stats_visibility_preferences.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -36,6 +38,7 @@ import '../../../helpers/finders.dart';
 import '../../../helpers/go_router.dart';
 import '../../../helpers/retired_key_custody.dart';
 import '../../../helpers/test_provider_overrides.dart';
+import '../../../helpers/test_pubkeys.dart';
 
 class _MockMessageRequestActionsCubit
     extends MockCubit<MessageRequestActionsState>
@@ -843,7 +846,14 @@ void main() {
           ),
           findsWidgets,
         );
-        expect(find.textContaining(l10n.inboxSupportRowTitle), findsNothing);
+        // The member list names every member, the moderation account's kind-0
+        // name included (#10018); the room itself is not named for it.
+        expect(
+          find.textContaining(
+            l10n.inboxGroupConversationTitle(l10n.inboxSupportRowTitle, 1),
+          ),
+          findsNothing,
+        );
         expect(
           find.byWidgetPredicate(
             (widget) =>
@@ -905,7 +915,12 @@ void main() {
           find.text(l10n.inboxGroupConversationTitle('Bob', 1)),
           findsWidgets,
         );
-        expect(find.textContaining('Alice'), findsNothing);
+        // The blocked member is still listed below, marked (#10018); the room
+        // is not named for them.
+        expect(
+          find.text(l10n.inboxGroupConversationTitle('Alice', 1)),
+          findsNothing,
+        );
       });
 
       testWidgets('an ordinary request keeps the overture framing', (
@@ -1661,6 +1676,250 @@ void main() {
           },
         );
       }
+    });
+
+    // #10018. A group request described one member: their photo, handle,
+    // counts and profile link, under a title that named the room.
+    group('group request', () {
+      final alice = testPubkeyFromSeed(2);
+      final bob = testPubkeyFromSeed(3);
+
+      UserProfile memberProfile(String pubkey, String name) => UserProfile(
+        pubkey: pubkey,
+        displayName: name,
+        picture: 'https://example.com/$name.jpg',
+        nip05: '${name.toLowerCase()}@example.com',
+        rawData: const {},
+        createdAt: DateTime(2026),
+        eventId: 'c' * 64,
+      );
+
+      Widget buildGroupSubject({List<DmMessage> messages = const []}) {
+        when(() => mockPreviewCubit.state).thenReturn(
+          RequestPreviewState(
+            status: RequestPreviewStatus.loaded,
+            messageCount: 3,
+            participantPubkeys: [alice, bob],
+            messages: messages,
+          ),
+        );
+        return testMaterialApp(
+          mockAuthService: mockAuthService,
+          mockNostrService: mockNostrClient,
+          additionalOverrides: [
+            goRouterProvider.overrideWithValue(mockGoRouter),
+            videosRepositoryProvider.overrideWithValue(mockVideosRepository),
+            userProfileReactiveProvider(
+              alice,
+            ).overrideWith(
+              (ref) => Stream.value(memberProfile(alice, 'Alice')),
+            ),
+            userProfileReactiveProvider(
+              bob,
+            ).overrideWith((ref) => Stream.value(memberProfile(bob, 'Bob'))),
+            // What DmPeerNameBuilder names a room's message author from.
+            fetchUserProfileProvider(
+              bob,
+            ).overrideWith((ref) async => memberProfile(bob, 'Bob')),
+            userProfileStatsReactiveProvider(alice).overrideWith(
+              (ref) => Stream.value(
+                ProfileStats(pubkey: alice, followers: 2100, videoCount: 7),
+              ),
+            ),
+            for (final member in [alice, bob])
+              nip05ClaimVerificationProvider(
+                Nip05Claim(
+                  pubkey: member,
+                  nip05: member == alice
+                      ? 'alice@example.com'
+                      : 'bob@example.com',
+                ),
+              ).overrideWith((ref) async => Nip05VerificationStatus.pending),
+          ],
+          home: MockGoRouterProvider(
+            goRouter: mockGoRouter,
+            child: MultiBlocProvider(
+              providers: [
+                BlocProvider<RequestPreviewCubit>.value(
+                  value: mockPreviewCubit,
+                ),
+                BlocProvider<MessageRequestActionsCubit>.value(
+                  value: mockActionsCubit,
+                ),
+                BlocProvider<CollaboratorInviteActionsCubit>.value(
+                  value: mockInviteActionsCubit,
+                ),
+              ],
+              child: const RequestPreviewView(),
+            ),
+          ),
+        );
+      }
+
+      group('renders', () {
+        testWidgets('the room avatar instead of a member photo', (
+          tester,
+        ) async {
+          await tester.pumpWidget(buildGroupSubject());
+          await tester.pump();
+          await tester.pump();
+
+          final header = tester.widget<UserAvatar>(
+            find.byType(UserAvatar).first,
+          );
+          expect(header.imageUrl, isNull);
+          expect(
+            find.descendant(
+              of: find.byType(UserAvatar).first,
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    widget is DivineIcon && widget.icon == DivineIconName.users,
+              ),
+            ),
+            findsOneWidget,
+          );
+        });
+
+        testWidgets("no member's handle, counts or single profile button", (
+          tester,
+        ) async {
+          await tester.pumpWidget(buildGroupSubject());
+          await tester.pump();
+          await tester.pump();
+
+          expect(find.text('alice@example.com'), findsNothing);
+          expect(find.textContaining('2.1K'), findsNothing);
+          expect(
+            find.text(l10n.messageRequestViewProfileButton),
+            findsNothing,
+          );
+        });
+
+        testWidgets('every member under the group heading', (tester) async {
+          await tester.pumpWidget(buildGroupSubject());
+          await tester.pump();
+          await tester.pump();
+
+          expect(
+            find.text(l10n.messageRequestGroupMembersHeading),
+            findsOneWidget,
+          );
+          expect(find.text('Alice'), findsOneWidget);
+          expect(find.text('Bob'), findsOneWidget);
+        });
+
+        testWidgets('the group overture instead of naming one sender', (
+          tester,
+        ) async {
+          await tester.pumpWidget(buildGroupSubject());
+          await tester.pump();
+          await tester.pump();
+
+          expect(
+            find.text(
+              l10n.messageRequestGroupWantsToMessageYou(
+                l10n.messageRequestMessageCount(3),
+              ),
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.text(
+              l10n.messageRequestWantsToMessageYou(
+                l10n.inboxGroupConversationTitle('Alice', 1),
+                l10n.messageRequestMessageCount(3),
+              ),
+            ),
+            findsNothing,
+          );
+        });
+
+        testWidgets('a collaborator invite as from the member who sent it', (
+          tester,
+        ) async {
+          final invite = DmMessage(
+            id: 'e' * 64,
+            conversationId: conversationId,
+            senderPubkey: bob,
+            content: 'You were invited to collaborate.',
+            createdAt: 1700000000,
+            giftWrapId: 'f' * 64,
+            tags: [
+              const ['divine', 'collab-invite'],
+              ['a', '34236:$bob:skate-loop', 'wss://relay.divine.video'],
+              ['p', bob],
+              const ['role', 'Collaborator'],
+              const ['title', 'Skate loop'],
+            ],
+          );
+
+          await tester.pumpWidget(buildGroupSubject(messages: [invite]));
+          await tester.pump();
+          await tester.pump();
+
+          expect(
+            find.text(l10n.inboxCollabInvitePreviewTitleFrom('Bob')),
+            findsOneWidget,
+          );
+        });
+      });
+
+      group('interactions', () {
+        testWidgets("tapping a member opens that member's profile", (
+          tester,
+        ) async {
+          when(() => mockGoRouter.push<void>(any())).thenAnswer((_) async {});
+
+          await tester.pumpWidget(buildGroupSubject());
+          await tester.pump();
+          await tester.pump();
+
+          // The member list sits below the card, under the action bar at the
+          // test surface's height.
+          await tester.ensureVisible(find.text('Bob'));
+          await tester.pump();
+          await tester.tap(find.text('Bob'));
+          await tester.pump();
+
+          verify(
+            () => mockGoRouter.push<void>(
+              any(that: contains(NostrKeyUtils.encodePubKey(bob))),
+            ),
+          ).called(1);
+          verifyNever(
+            () => mockGoRouter.push<void>(
+              any(that: contains(NostrKeyUtils.encodePubKey(alice))),
+            ),
+          );
+        });
+
+        testWidgets('declining confirms without naming a member', (
+          tester,
+        ) async {
+          when(
+            () => mockActionsCubit.declineRequest(any()),
+          ).thenAnswer((_) async => DeclineRequestOutcome.removed);
+          when(mockGoRouter.canPop).thenReturn(true);
+          when(() => mockGoRouter.pop()).thenAnswer((_) async {});
+
+          await tester.pumpWidget(buildGroupSubject());
+          await tester.pump();
+          await tester.pump();
+
+          await tester.tap(
+            find.text(l10n.messageRequestDeclineAndRemoveButton),
+          );
+          await tester.pump();
+
+          expect(find.text(l10n.inboxRemovedConversation), findsOneWidget);
+          expect(
+            find.textContaining(
+              l10n.messageRequestDeclinedSnackbar('Alice').split('Alice').first,
+            ),
+            findsNothing,
+          );
+        });
+      });
     });
   });
 }

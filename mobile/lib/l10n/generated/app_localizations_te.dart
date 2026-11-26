@@ -8075,6 +8075,14 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'ఈ గ్రూప్ మీకు సందేశం పంపాలనుకుంటోంది, వారు పంపారు $messageText.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'ఈ గ్రూప్‌లో';
+
+  @override
   String get deleteAccountAccountChanged =>
       'మీరు ఖాతాలను మార్చారు, కాబట్టి ఏదీ తొలగించబడలేదు. మీరు తీసివేయాలనుకుంటున్న ఖాతా కోసం తొలగింపును మళ్లీ తెరవండి.';
 

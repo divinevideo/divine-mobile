@@ -23,8 +23,10 @@ import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
+import 'package:openvine/screens/inbox/message_requests/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/widgets/conversation_triage_bar.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
+import 'package:openvine/screens/inbox/widgets/dm_peer_name_builder.dart';
 import 'package:openvine/services/collaborator_invite_parser.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/string_utils.dart';
@@ -109,9 +111,11 @@ class RequestPreviewView extends ConsumerWidget {
     ref.watch(blocklistVersionProvider);
     final blocklist = ref.read(contentBlocklistRepositoryProvider);
 
-    // The member the card describes and links to: the peer of a one-to-one,
-    // and a room's first visible member that is not a moderation key, without
-    // Divine's branding (#10151).
+    // The member the card is named for: the peer of a one-to-one, and a
+    // room's first visible member that is not a moderation key, without
+    // Divine's branding (#10151). A room's card describes no single member; it
+    // lists them all (#10018).
+    final isGroup = participantPubkeys.length > 1;
     final named = dmConversationNamedPeer(
       participantPubkeys: participantPubkeys,
       currentUserPubkey: currentPubkey,
@@ -149,7 +153,7 @@ class RequestPreviewView extends ConsumerWidget {
     // `_cacheProfileStatsFromResult` routes `social` / `stats` from
     // `GET /api/users/{pubkey}` into `profile_statistics`, which is where the
     // numbers actually live (#7486).
-    final stats = isDeleted
+    final stats = isDeleted || isGroup
         ? null
         : ref
               .watch(userProfileStatsReactiveProvider(namedPubkey))
@@ -168,7 +172,7 @@ class RequestPreviewView extends ConsumerWidget {
       context,
       participantPubkeys: [currentPubkey, ...participantPubkeys],
       currentUserPubkey: currentPubkey,
-      isGroup: participantPubkeys.length > 1,
+      isGroup: isGroup,
       peerName: peerName,
       subject: subject,
     );
@@ -236,13 +240,14 @@ class RequestPreviewView extends ConsumerWidget {
                 isClosedThread: participantPubkeys.any(
                   isRetiredModerationAccount,
                 ),
-                isGroup: participantPubkeys.length > 1,
+                isGroup: isGroup,
                 participantPubkeys: participantPubkeys,
               ),
             ),
             _ActionButtons(
               participantPubkeys: participantPubkeys,
-              displayName: displayName,
+              // A room's title is not one person's name to decline.
+              displayName: isGroup ? null : displayName,
               subject: subject,
             ),
           ],
@@ -425,11 +430,18 @@ class _ProfileContent extends StatelessWidget {
                   isLoading: isResolving,
                   excludeSemantics: true,
                   child: UserAvatar(
-                    imageUrl: avatar.imageUrl,
+                    // A room is no one member, so it gets the room artwork
+                    // the request row and the thread show (#10018).
+                    imageUrl: isGroup ? null : avatar.imageUrl,
                     name: visualDisplayName,
                     placeholderSeed: otherPubkey,
                     size: 96,
-                    contentOverride: avatar.contentOverride,
+                    contentOverride: isGroup
+                        ? DivineIcon(
+                            icon: DivineIconName.users,
+                            color: context.vineColors.primaryText,
+                          )
+                        : avatar.contentOverride,
                   ),
                 ),
               ),
@@ -447,30 +459,35 @@ class _ProfileContent extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (nip05 != null && nip05.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  nip05,
-                  style: VineTheme.bodySmallFont(
-                    color: context.vineColors.onSurfaceVariant,
+              if (isGroup) ...[
+                const SizedBox(height: 32),
+                RequestGroupMembers(memberPubkeys: participantPubkeys),
+              ] else ...[
+                if (nip05 != null && nip05.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    nip05,
+                    style: VineTheme.bodySmallFont(
+                      color: context.vineColors.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
+                ],
+                _RequestStatsLine(
+                  followerCount: followerCount,
+                  videoCount: videoCount,
+                  totalViews: stats?.totalViews,
+                  isLoading: statsPending,
+                ),
+                const SizedBox(height: 16),
+                _OutlinedActionButton(
+                  label: context.l10n.messageRequestViewProfileButton,
+                  onTap: () => OtherProfileRouteData(
+                    npub: NostrKeyUtils.encodePubKey(otherPubkey),
+                  ).push<void>(context),
                 ),
               ],
-              _RequestStatsLine(
-                followerCount: followerCount,
-                videoCount: videoCount,
-                totalViews: stats?.totalViews,
-                isLoading: statsPending,
-              ),
-              const SizedBox(height: 16),
-              _OutlinedActionButton(
-                label: context.l10n.messageRequestViewProfileButton,
-                onTap: () => OtherProfileRouteData(
-                  npub: NostrKeyUtils.encodePubKey(otherPubkey),
-                ).push<void>(context),
-              ),
               const SizedBox(height: 32),
               if (isClosedThread)
                 _ClosedNoticeDescription(isGroup: isGroup)
@@ -478,12 +495,14 @@ class _ProfileContent extends StatelessWidget {
                 _MessageCountDescription(
                   displayName: displayName,
                   messageCount: messageCount,
+                  isGroup: isGroup,
                 ),
               _InvitePreview(
                 messages: messages,
                 senderDisplayName: displayName,
                 currentPubkey: currentPubkey,
                 participantPubkeys: participantPubkeys,
+                isGroup: isGroup,
               ),
             ],
           ),
@@ -499,12 +518,17 @@ class _InvitePreview extends StatelessWidget {
     required this.senderDisplayName,
     required this.currentPubkey,
     required this.participantPubkeys,
+    this.isGroup = false,
   });
 
   final List<DmMessage> messages;
+
+  /// The one-to-one's peer. A room's title names no sender, so a room's
+  /// invite names the member who sent it, as the thread does (#10018).
   final String senderDisplayName;
   final String currentPubkey;
   final List<String> participantPubkeys;
+  final bool isGroup;
 
   @override
   Widget build(BuildContext context) {
@@ -520,18 +544,31 @@ class _InvitePreview extends StatelessWidget {
     final isSent =
         currentPubkey.isNotEmpty &&
         inviteMessage.message.senderPubkey == currentPubkey;
+    final invite = inviteMessage.invite;
+    final collaboratorPubkey = CollaboratorInvite.collaboratorPubkeyFor(
+      isSent: isSent,
+      currentPubkey: currentPubkey,
+      counterpartyPubkeys: participantPubkeys,
+    );
+    final senderPubkey = inviteMessage.message.senderPubkey;
     return Padding(
       padding: const EdgeInsets.only(top: 24),
-      child: CollaboratorInviteCard(
-        invite: inviteMessage.invite,
-        isSent: isSent,
-        collaboratorPubkey: CollaboratorInvite.collaboratorPubkeyFor(
-          isSent: isSent,
-          currentPubkey: currentPubkey,
-          counterpartyPubkeys: participantPubkeys,
-        ),
-        senderDisplayName: senderDisplayName,
-      ),
+      child: isGroup && !isSent && senderPubkey.isNotEmpty
+          ? DmPeerNameBuilder(
+              pubkey: senderPubkey,
+              builder: (_, author) => CollaboratorInviteCard(
+                invite: invite,
+                isSent: isSent,
+                collaboratorPubkey: collaboratorPubkey,
+                senderDisplayName: author.name,
+              ),
+            )
+          : CollaboratorInviteCard(
+              invite: invite,
+              isSent: isSent,
+              collaboratorPubkey: collaboratorPubkey,
+              senderDisplayName: senderDisplayName,
+            ),
     );
   }
 }
@@ -792,10 +829,14 @@ class _MessageCountDescription extends StatelessWidget {
   const _MessageCountDescription({
     required this.displayName,
     required this.messageCount,
+    required this.isGroup,
   });
 
   final String displayName;
   final int messageCount;
+
+  /// A room's title is not one sender, so a room gets its own sentence.
+  final bool isGroup;
 
   @override
   Widget build(BuildContext context) {
@@ -804,7 +845,12 @@ class _MessageCountDescription extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Text(
-        context.l10n.messageRequestWantsToMessageYou(displayName, msgText),
+        isGroup
+            ? context.l10n.messageRequestGroupWantsToMessageYou(msgText)
+            : context.l10n.messageRequestWantsToMessageYou(
+                displayName,
+                msgText,
+              ),
         style: VineTheme.bodyLargeFont(
           color: context.vineColors.onSurfaceVariant,
         ),
@@ -845,7 +891,9 @@ class _ActionButtons extends StatelessWidget {
   });
 
   final List<String> participantPubkeys;
-  final String displayName;
+
+  /// The person the decline snackbar names; null for a room.
+  final String? displayName;
   final String? subject;
 
   @override
@@ -892,7 +940,8 @@ class _ActionButtons extends StatelessWidget {
 /// such answer yet, so a refusal comes back from the cubit instead.
 ///
 /// [displayName] is null on the unresolved-counterparty states, where there is
-/// no name to put in the confirmation snackbar; the decline still runs.
+/// no name to put in the confirmation snackbar, and for a room, whose title is
+/// not one person's name (#10018); the decline still runs.
 class _DeclineAndRemoveButton extends StatelessWidget {
   const _DeclineAndRemoveButton({this.displayName});
 

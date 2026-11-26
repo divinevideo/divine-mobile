@@ -8032,6 +8032,14 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'Acest grup vrea să-ți trimită un mesaj, au trimis $messageText.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'În acest grup';
+
+  @override
   String get deleteAccountAccountChanged =>
       'Ai schimbat contul, așa că nimic nu a fost șters. Redeschide ștergerea pentru contul pe care vrei să-l elimini.';
 

@@ -5626,6 +5626,20 @@
       }
     }
   },
+  "messageRequestGroupWantsToMessageYou": "This group wants to message you, they've sent {messageText}.",
+  "@messageRequestGroupWantsToMessageYou": {
+    "description": "Sentence under a group message request's card, in place of messageRequestWantsToMessageYou, which names one person. {messageText} is messageRequestMessageCount, for example '3 messages'. 'They' means the group's members.",
+    "placeholders": {
+      "messageText": {
+        "type": "String",
+        "example": "3 messages"
+      }
+    }
+  },
+  "messageRequestGroupMembersHeading": "In this group",
+  "@messageRequestGroupMembersHeading": {
+    "description": "Heading above the list of people in a group message request, shown before the user accepts it. Each row below it is one member and opens their profile."
+  },
   "deleteAccountAccountChanged": "You switched accounts, so nothing was deleted. Reopen delete for the account you want to remove.",
   "@deleteAccountAccountChanged": {
     "description": "Error shown when the signed-in account changed between confirming a deletion and executing it; nothing was deleted."

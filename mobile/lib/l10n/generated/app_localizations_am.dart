@@ -7657,6 +7657,14 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'ይህ ቡድን ሊልክልህ ይፈልጋል፣ $messageText ልከዋል።';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'በዚህ ቡድን ውስጥ';
+
+  @override
   String get deleteAccountAccountChanged =>
       'መለያዎችን ቀይረዋል፣ ስለዚህ ምንም አልተሰረዘም። ለማስወገድ ለሚፈልጉት መለያ ስረዛን እንደገና ይክፈቱ።';
 

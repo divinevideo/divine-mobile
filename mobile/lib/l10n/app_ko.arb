@@ -4886,6 +4886,8 @@
   "messageRequestViewMessagesButton": "메시지 보기",
   "messageRequestViewProfileButton": "프로필 보기",
   "messageRequestWantsToMessageYou": "{displayName}님이 메시지를 보내고 싶어 해요. {messageText}을(를) 보냈어요.",
+  "messageRequestGroupWantsToMessageYou": "이 그룹이 메시지를 보내고 싶어 해요. {messageText}을(를) 보냈어요.",
+  "messageRequestGroupMembersHeading": "이 그룹의 멤버",
   "@messageRequestWantsToMessageYou": {
     "placeholders": {
       "displayName": {

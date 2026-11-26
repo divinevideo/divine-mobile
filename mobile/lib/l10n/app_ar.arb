@@ -5333,6 +5333,8 @@
   "messageRequestViewMessagesButton": "عرض الرسائل",
   "messageRequestViewProfileButton": "عرض الملف الشخصي",
   "messageRequestWantsToMessageYou": "{displayName} يريد مراسلتك، وقد أرسل {messageText}.",
+  "messageRequestGroupWantsToMessageYou": "هذه المجموعة تريد مراسلتك، وقد أرسلوا {messageText}.",
+  "messageRequestGroupMembersHeading": "في هذه المجموعة",
   "@messageRequestWantsToMessageYou": {
     "placeholders": {
       "displayName": {

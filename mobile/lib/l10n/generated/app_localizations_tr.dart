@@ -7764,6 +7764,14 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'Bu grup sana mesaj göndermek istiyor, $messageText gönderdiler.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'Bu grupta';
+
+  @override
   String get deleteAccountAccountChanged =>
       'Hesap değiştirdin, bu yüzden hiçbir şey silinmedi. Kaldırmak istediğin hesap için silme ekranını yeniden aç.';
 
