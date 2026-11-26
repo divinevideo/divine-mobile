@@ -84,6 +84,9 @@ class MockVideoEventService extends Mock implements VideoEventService {
   Stream<String> get removedVideoIds => const Stream<String>.empty();
 
   @override
+  Stream<void> get deletionTombstonesChanged => const Stream<void>.empty();
+
+  @override
   bool isVideoEventKnownDeleted(VideoEvent video) => false;
 }
 

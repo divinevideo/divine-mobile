@@ -434,11 +434,14 @@ final videoDeletionVersionProvider =
 class VideoDeletionVersion extends Notifier<int> {
   @override
   int build() {
-    final subscription = ref
-        .watch(videoEventServiceProvider)
-        .removedVideoIds
-        .listen((_) => state++);
-    ref.onDispose(subscription.cancel);
+    final service = ref.watch(videoEventServiceProvider);
+    final removedSubscription = service.removedVideoIds.listen((_) => state++);
+    final tombstoneSubscription = service.deletionTombstonesChanged.listen(
+      (_) => state++,
+    );
+    ref
+      ..onDispose(removedSubscription.cancel)
+      ..onDispose(tombstoneSubscription.cancel);
     return 0;
   }
 }

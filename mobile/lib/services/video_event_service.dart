@@ -206,6 +206,8 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
   // canonical truth, this stream is a side-channel for "act now" hooks.
   final StreamController<String> _removedVideoIdsController =
       StreamController<String>.broadcast();
+  final StreamController<void> _deletionTombstonesChangedController =
+      StreamController<void>.broadcast();
 
   static const int _eventDeletionKind = 5;
 
@@ -1056,15 +1058,24 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     // Semantics: removal is permanent for the lifetime of this service.
     // Even if subsequent relay queries return the same event id, or another
     // event id for the same addressable video, it will be filtered out.
-    _knownDeletedVideoIds.add(primaryEventId);
-    _knownDeletedVideoIds.addAll(removedVideoIds);
+    var tombstonesChanged = _knownDeletedVideoIds.add(primaryEventId);
+    for (final removedId in removedVideoIds) {
+      if (_knownDeletedVideoIds.add(removedId)) {
+        tombstonesChanged = true;
+      }
+    }
     if (coordinateKey != null) {
       // The NIP-09 request the caller just published carries "now", so every
       // version up to this moment is covered while a later republish is not.
-      _rememberDeletedCoordinate(
+      if (_rememberDeletedCoordinate(
         coordinateKey,
         DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      );
+      )) {
+        tombstonesChanged = true;
+      }
+    }
+    if (tombstonesChanged) {
+      _notifyDeletionTombstonesChanged();
     }
 
     _purgeEventsFromLocalCache({primaryEventId, ...removedVideoIds});
@@ -1124,7 +1135,12 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     Iterable<String> eventIds = const [],
     Map<String, int> addressableDeletedAt = const {},
   }) {
-    _knownDeletedVideoIds.addAll(eventIds.where((id) => id.isNotEmpty));
+    var changed = false;
+    for (final id in eventIds) {
+      if (id.isNotEmpty && _knownDeletedVideoIds.add(id)) {
+        changed = true;
+      }
+    }
 
     for (final entry in addressableDeletedAt.entries) {
       final parsed = AId.fromString(entry.key);
@@ -1134,13 +1150,19 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           parsed.dTag.isEmpty) {
         continue;
       }
-      _rememberDeletedCoordinate(
+      if (_rememberDeletedCoordinate(
         _knownDeletionCoordinateKeyFromParts(
           pubkey: parsed.pubkey,
           stableId: parsed.dTag,
         ),
         entry.value,
-      );
+      )) {
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      _notifyDeletionTombstonesChanged();
     }
   }
 
@@ -1156,11 +1178,19 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
   }
 
   /// Records a coordinate tombstone, keeping the newest deletion when the
-  /// same coordinate is deleted more than once.
-  void _rememberDeletedCoordinate(String coordinateKey, int deletedAt) {
+  /// same coordinate is deleted more than once. Returns `true` when the stored
+  /// tombstone was inserted or advanced.
+  bool _rememberDeletedCoordinate(String coordinateKey, int deletedAt) {
     final known = _knownDeletedVideoCoordinates[coordinateKey];
-    if (known != null && known >= deletedAt) return;
+    if (known != null && known >= deletedAt) return false;
     _knownDeletedVideoCoordinates[coordinateKey] = deletedAt;
+    return true;
+  }
+
+  void _notifyDeletionTombstonesChanged() {
+    if (!_deletionTombstonesChangedController.isClosed) {
+      _deletionTombstonesChangedController.add(null);
+    }
   }
 
   /// Whether [coordinateKey] was deleted by a request at or after
@@ -1569,6 +1599,12 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
   /// so newcomers only receive future emissions; the canonical source of
   /// truth is still the service state plus [isVideoKnownDeleted].
   Stream<String> get removedVideoIds => _removedVideoIdsController.stream;
+
+  /// Fires whenever the service records a new deletion tombstone (by event id
+  /// or addressable coordinate), including remote NIP-09 deletions for videos
+  /// not loaded in any in-memory feed bucket.
+  Stream<void> get deletionTombstonesChanged =>
+      _deletionTombstonesChangedController.stream;
 
   /// Load cached events from database (cache-first strategy)
   ///
@@ -5682,6 +5718,10 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     _runDetached(
       _removedVideoIdsController.close(),
       'close the removed-video stream during disposal',
+    );
+    _runDetached(
+      _deletionTombstonesChangedController.close(),
+      'close the deletion-tombstones-changed stream during disposal',
     );
     super.dispose();
   }

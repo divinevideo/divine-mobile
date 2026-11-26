@@ -348,14 +348,90 @@ void main() {
     });
 
     test('dispose closes the stream', () async {
-      final closed = expectLater(service.removedVideoIds, emitsDone);
+      final closedRemoved = expectLater(service.removedVideoIds, emitsDone);
+      final closedTombstones = expectLater(
+        service.deletionTombstonesChanged,
+        emitsDone,
+      );
       service.dispose();
       // Re-create for tearDown safety — overrides the field.
       service = VideoEventService(
         nostrClient,
         crashReporter: const SilentCrashReporter(),
       );
-      await closed;
+      await closedRemoved;
+      await closedTombstones;
     });
+
+    test(
+      'observed remote a-tag deletion for uncached video notifies '
+      'deletionTombstonesChanged once while removedVideoIds stays empty',
+      () async {
+        const author =
+            'c3dd74d68e414f0305db9f7dc96ec32e616502e6ccf5bbf5739de19a96b67f3e';
+        const dTag = 'dm-only-clip';
+        const deletionId =
+            '7777777777777777777777777777777777777777777777777777777777777777';
+        final uncached = _videoEvent(
+          id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          pubkey: author,
+          dTag: dTag,
+        );
+        final removed = <String>[];
+        var tombstoneSignals = 0;
+        final removedSub = service.removedVideoIds.listen(removed.add);
+        final tombstoneSub = service.deletionTombstonesChanged.listen(
+          (_) => tombstoneSignals++,
+        );
+        addTearDown(() async {
+          await removedSub.cancel();
+          await tombstoneSub.cancel();
+        });
+
+        final deletion = _deletionEvent(
+          id: deletionId,
+          pubkey: author,
+          tags: [
+            ['a', '34236:$author:$dTag'],
+            ['k', '34236'],
+          ],
+        );
+
+        service.handleEventForTesting(deletion, SubscriptionType.profile);
+        await pumpEventQueue();
+
+        expect(removed, isEmpty);
+        expect(service.isVideoEventKnownDeleted(uncached), isTrue);
+        expect(tombstoneSignals, 1);
+
+        // A duplicate or older deletion for the same coordinate is a no-op.
+        service.handleEventForTesting(deletion, SubscriptionType.profile);
+        await pumpEventQueue();
+        expect(tombstoneSignals, 1);
+      },
+    );
+
+    test(
+      'seedKnownDeletionTombstones notifies once per newly added event id',
+      () async {
+        var signals = 0;
+        final sub = service.deletionTombstonesChanged.listen((_) => signals++);
+        addTearDown(sub.cancel);
+
+        service.seedKnownDeletionTombstones(eventIds: const ['vid-a', 'vid-b']);
+        await pumpEventQueue();
+        expect(signals, 1);
+
+        // Seeding already-known ids does not re-emit.
+        service.seedKnownDeletionTombstones(eventIds: const ['vid-a', 'vid-b']);
+        await pumpEventQueue();
+        expect(signals, 1);
+
+        // Adding a new id notifies again.
+        service.seedKnownDeletionTombstones(eventIds: const ['vid-b', 'vid-c']);
+        await pumpEventQueue();
+        expect(signals, 2);
+      },
+    );
   });
 }

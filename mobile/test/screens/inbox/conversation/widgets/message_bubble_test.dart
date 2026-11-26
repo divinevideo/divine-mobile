@@ -48,10 +48,14 @@ class _HidingVideoEventService extends VisibleTestVideoEventService {
 /// Emits a live deletion signal for videos marked deleted after mount.
 class _DeletingVideoEventService extends VisibleTestVideoEventService {
   final _removedIds = StreamController<String>.broadcast();
+  final _tombstonesChanged = StreamController<void>.broadcast();
   final _deletedIds = <String>{};
 
   @override
   Stream<String> get removedVideoIds => _removedIds.stream;
+
+  @override
+  Stream<void> get deletionTombstonesChanged => _tombstonesChanged.stream;
 
   @override
   bool isVideoEventKnownDeleted(VideoEvent video) =>
@@ -62,7 +66,15 @@ class _DeletingVideoEventService extends VisibleTestVideoEventService {
     _removedIds.add(videoId);
   }
 
-  Future<void> close() => _removedIds.close();
+  void markDeletedByTombstone(String videoId) {
+    _deletedIds.add(videoId);
+    _tombstonesChanged.add(null);
+  }
+
+  Future<void> close() async {
+    await _removedIds.close();
+    await _tombstonesChanged.close();
+  }
 }
 
 Finder _divineIcon(DivineIconName icon) => find.byWidgetPredicate(
@@ -2542,6 +2554,42 @@ void main() {
         },
       );
 
+      testWidgets(
+        'switches to the unavailable card when a remote tombstone-only '
+        'deletion arrives while mounted',
+        (tester) async {
+          final videoEventService = _DeletingVideoEventService();
+          addTearDown(videoEventService.close);
+
+          when(
+            () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+              'abc123',
+              fallbackRouteIds: any(named: 'fallbackRouteIds'),
+            ),
+          ).thenAnswer((_) async => testVideo);
+
+          await tester.pumpWidget(
+            buildWithVideoMessage(
+              message: 'https://divine.video/video/abc123',
+              videoEventService: videoEventService,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+
+          videoEventService.markDeletedByTombstone(testVideo.id);
+          await tester.pump();
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(AppLocalizationsEn().notificationsVideoUnavailable),
+            findsOneWidget,
+          );
+          expect(find.byType(VideoThumbnailWidget), findsNothing);
+        },
+      );
+
       testWidgets('shows the unavailable card when video not found', (
         tester,
       ) async {
@@ -3126,6 +3174,43 @@ void main() {
           expect(find.byType(VideoThumbnailWidget), findsOneWidget);
 
           videoEventService.markDeleted(testVideo.id);
+          await tester.pump();
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(AppLocalizationsEn().notificationsVideoUnavailable),
+            findsOneWidget,
+          );
+          expect(find.byType(VideoThumbnailWidget), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'switches the quoted preview to unavailable when a remote '
+        'tombstone-only deletion arrives while mounted',
+        (tester) async {
+          final videoEventService = _DeletingVideoEventService();
+          addTearDown(videoEventService.close);
+
+          when(
+            () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+              _testCoordinate,
+              fallbackRouteIds: any(named: 'fallbackRouteIds'),
+            ),
+          ).thenAnswer((_) async => testVideo);
+
+          await tester.pumpWidget(
+            buildWithQuotedReply(
+              message: 'love this one',
+              quotedVideoRef: quotedRef,
+              videoEventService: videoEventService,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+
+          videoEventService.markDeletedByTombstone(testVideo.id);
           await tester.pump();
           await tester.pumpAndSettle();
 
