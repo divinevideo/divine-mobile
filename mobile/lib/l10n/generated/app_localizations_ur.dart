@@ -7840,6 +7840,14 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'یہ گروپ آپ کو پیغام بھیجنا چاہتا ہے، انہوں نے $messageText بھیجا ہے۔';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'اس گروپ میں';
+
+  @override
   String get deleteAccountAccountChanged =>
       'آپ نے اکاؤنٹ تبدیل کر لیا، اس لیے کچھ حذف نہیں ہوا۔ جس اکاؤنٹ کو ہٹانا چاہتے ہیں اس کے لیے حذف کا آپشن دوبارہ کھولیں۔';
 

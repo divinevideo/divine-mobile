@@ -1,6 +1,8 @@
-// ABOUTME: Widget tests for VideoEditorSticker - displays SVG asset or network stickers.
-// ABOUTME: Tests rendering paths for local SVG assets vs network images.
+// ABOUTME: Widget tests for VideoEditorSticker: bundled raster stickers, the
+// ABOUTME: legacy SVGs older drafts still name, and network stickers.
 
+import 'package:divine_ui/divine_ui.dart' show DivineIcon;
+import 'package:flutter/rendering.dart' show RenderImage;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -12,9 +14,16 @@ import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticke
 void main() {
   group(VideoEditorSticker, () {
     const assetSticker = StickerData.asset(
-      'assets/stickers/test.svg',
-      description: LocalizedText({'en': 'Test sticker'}),
-      tags: ['test'],
+      'assets/divine_stickers/heart.webp',
+      description: LocalizedText({'en': 'Heart'}),
+      tags: ['heart'],
+      packData: StickerPackData.fallback,
+    );
+
+    const legacySvgSticker = StickerData.asset(
+      'assets/stickers/heart.svg',
+      description: LocalizedText({'en': 'Heart'}),
+      tags: ['heart'],
       packData: StickerPackData.fallback,
     );
 
@@ -46,16 +55,122 @@ void main() {
       );
     }
 
-    testWidgets('renders SvgPicture for asset stickers', (tester) async {
-      await tester.pumpWidget(buildTestWidget());
+    group('asset stickers', () {
+      testWidgets('draws a raster sticker as an image', (tester) async {
+        await tester.pumpWidget(buildTestWidget());
 
-      expect(find.byType(SvgPicture), findsOneWidget);
-    });
+        expect(find.byType(Image), findsOneWidget);
+        expect(find.byType(SvgPicture), findsNothing);
+      });
 
-    testWidgets('skips LayoutBuilder for asset stickers', (tester) async {
-      await tester.pumpWidget(buildTestWidget());
+      testWidgets('draws a legacy SVG sticker a draft still names', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildTestWidget(sticker: legacySvgSticker));
 
-      expect(find.byType(LayoutBuilder), findsNothing);
+        expect(find.byType(SvgPicture), findsOneWidget);
+        expect(find.byType(Image), findsNothing);
+      });
+
+      testWidgets('decodes a raster sticker at the picker cell size', (
+        tester,
+      ) async {
+        // A smaller box still decodes at stickerPickerCellExtent, so a
+        // precache made before layout shares the entry.
+        await tester.pumpWidget(buildTestWidget(size: 80));
+
+        final image = tester.widget<Image>(find.byType(Image)).image;
+        final pixels = (stickerPickerCellExtent * tester.view.devicePixelRatio)
+            .ceil();
+        expect(
+          image,
+          isA<ResizeImage>()
+              .having((resize) => resize.width, 'width', pixels)
+              .having((resize) => resize.height, 'height', pixels)
+              .having(
+                (resize) => resize.policy,
+                'policy',
+                ResizeImagePolicy.fit,
+              )
+              .having(
+                (resize) => resize.imageProvider,
+                'imageProvider',
+                const AssetImage('assets/divine_stickers/heart.webp'),
+              ),
+        );
+      });
+
+      testWidgets('draws no warning icon for a sticker it cannot load', (
+        tester,
+      ) async {
+        // A draft shared by DM can name a sticker only a newer build bundles.
+        // An icon in its place would be captured into the published video;
+        // drawing nothing makes the draft render drop the layer and stop.
+        const missingSticker = StickerData.asset(
+          'assets/divine_stickers/not_bundled.webp',
+          description: LocalizedText({'en': 'Missing'}),
+          tags: [],
+          packData: StickerPackData.fallback,
+        );
+        await tester.pumpWidget(
+          buildTestWidget(sticker: missingSticker, enableLimitCacheSize: false),
+        );
+        await tester.runAsync(
+          () => precacheImage(
+            const AssetImage('assets/divine_stickers/not_bundled.webp'),
+            tester.element(find.byType(Image)),
+            onError: (_, _) {},
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byType(DivineIcon), findsNothing);
+        expect(tester.takeException(), isNotNull);
+      });
+
+      testWidgets('draws a precached raster sticker in its first frame', (
+        tester,
+      ) async {
+        // Decodes started by earlier tests finish in real time between tests
+        // and would otherwise already be cached here.
+        final imageCache = PaintingBinding.instance.imageCache
+          ..clear()
+          ..clearLiveImages();
+        addTearDown(imageCache.clear);
+        late BuildContext context;
+        await tester.pumpWidget(
+          Builder(
+            builder: (builderContext) {
+              context = builderContext;
+              return const SizedBox();
+            },
+          ),
+        );
+        await tester.runAsync(
+          () => precacheStickerPickerImage(context, assetSticker.assetPath!),
+        );
+
+        await tester.pumpWidget(buildTestWidget());
+
+        // Without the precache the decode is still running here, and the
+        // picker shows an empty cell that fills in later.
+        expect(
+          tester.renderObject<RenderImage>(find.byType(RawImage)).image,
+          isNotNull,
+        );
+      });
+
+      testWidgets(
+        'decodes a raster sticker at full size without cache sizing',
+        (tester) async {
+          await tester.pumpWidget(buildTestWidget(enableLimitCacheSize: false));
+
+          expect(
+            tester.widget<Image>(find.byType(Image)).image,
+            equals(const AssetImage('assets/divine_stickers/heart.webp')),
+          );
+        },
+      );
     });
 
     testWidgets('uses LayoutBuilder for network stickers with cache sizing', (

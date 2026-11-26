@@ -5451,6 +5451,8 @@
   "messageRequestViewMessagesButton": "Виж съобщенията",
   "messageRequestViewProfileButton": "Виж профила",
   "messageRequestWantsToMessageYou": "{displayName} иска да ти пише, изпрати ти {messageText}.",
+  "messageRequestGroupWantsToMessageYou": "Тази група иска да ти пише, изпратиха ти {messageText}.",
+  "messageRequestGroupMembersHeading": "В тази група",
   "@messageRequestWantsToMessageYou": {
     "placeholders": {
       "displayName": {

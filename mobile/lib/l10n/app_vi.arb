@@ -3819,6 +3819,8 @@
   "messageRequestViewMessagesButton": "Xem tin nhắn",
   "messageRequestViewProfileButton": "Xem hồ sơ",
   "messageRequestWantsToMessageYou": "{displayName} muốn nhắn tin cho bạn, họ đã gửi {messageText}.",
+  "messageRequestGroupWantsToMessageYou": "Nhóm này muốn nhắn tin cho bạn, họ đã gửi {messageText}.",
+  "messageRequestGroupMembersHeading": "Trong nhóm này",
   "@messageRequestWantsToMessageYou": {
     "placeholders": {
       "displayName": {

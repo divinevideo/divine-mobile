@@ -201,10 +201,9 @@ class _AudioSelectionBottomSheetState
   void initState() {
     super.initState();
     _audioService = widget.audioService ?? AudioPlaybackService();
-    // A preview loops like the video it will play under. Played once, it
-    // would also leave its row animating: the player still counts as playing
-    // once it reaches the end.
-    _audioService.setLooping(looping: true);
+    // A preview plays once, then stops and goes back to its start, so its
+    // row and play button stop showing it as playing.
+    _audioService.setRewindsAtEnd(rewinds: true);
     _telemetry =
         widget.telemetry ??
         SoundPickerTelemetry(
@@ -646,10 +645,13 @@ class _AudioSelectionBottomSheetState
     // From here the player no longer holds the sound it held, so a sound
     // picked while this loads is loaded anew rather than played from it.
     _loadedSoundId = null;
-    await _audioService.stop();
+    // Paused rather than stopped: stopping releases the platform player, and
+    // building the next one adds about a tenth of a second to every preview.
+    await _audioService.pause();
     final loadedDuration = sound.isLocalImport && sound.localFilePath != null
         ? await _audioService.loadAudioFromFile(sound.localFilePath!)
-        : await _audioService.loadAudio(sound.url!);
+        // Streamed, so a long song starts without waiting for all of it.
+        : await _audioService.loadAudio(sound.url!, streamUnlessCached: true);
     _loadedSoundId = sound.id;
     if (sound.duration == null && loadedDuration != null) {
       return sound.copyWith(duration: loadedDuration.inMilliseconds / 1000.0);
@@ -688,7 +690,10 @@ class _AudioSelectionBottomSheetState
     );
 
     try {
-      await _audioService.seek(.zero);
+      // A sound just loaded, or played to its end, is at its start already,
+      // and seeking there anyway holds the preview up while the player
+      // buffers again.
+      if (_audioService.position > .zero) await _audioService.seek(.zero);
       var resolvedSound = sound;
       if (shouldReload) {
         if (mounted) setState(() => _isLoadingAudio = true);
@@ -2141,43 +2146,48 @@ class _SoundsContent extends ConsumerWidget {
               final isUnavailable = unavailableSoundIds.contains(audio.id);
               final isSelected =
                   !isUnavailable && audio.id == selectedSound?.id;
-              if (!isSelected) {
-                return AudioListTile(
-                  audio: audio,
-                  displayTitle: displayTitles[audio.id],
-                  cover: _coverFor(audio),
-                  isSelected: false,
-                  isUnavailable: isUnavailable,
-                  videoCount: _videoCountFor(audio),
-                  semanticIdentifier: SemanticIds.audioSoundTile(index),
-                  onTap: () => onSelect(audio),
-                  onShowDetails: _hasDetailsPage(audio)
-                      ? () => onShowDetails(audio)
-                      : null,
-                );
-              }
               // Use selectedSound for the selected entry so any duration
               // backfilled after loading the preview shows up in the
               // subtitle.
-              final displayAudio = selectedSound ?? audio;
-              return StreamBuilder<bool>(
-                stream: audioService.playingStream,
-                initialData: audioService.isPlaying,
-                builder: (context, snapshot) {
-                  return AudioListTile(
-                    audio: displayAudio,
-                    displayTitle: displayTitles[displayAudio.id],
-                    cover: _coverFor(displayAudio),
-                    isSelected: true,
-                    isPlaying: snapshot.data ?? false,
-                    videoCount: _videoCountFor(displayAudio),
-                    semanticIdentifier: SemanticIds.audioSoundTile(index),
-                    onTap: () => onSelect(displayAudio),
-                    onShowDetails: _hasDetailsPage(displayAudio)
-                        ? () => onShowDetails(displayAudio)
-                        : null,
-                  );
-                },
+              final displayAudio = isSelected ? selectedSound ?? audio : audio;
+              return _PrefetchedRow(
+                sound: audio,
+                audioService: audioService,
+                child: isSelected
+                    ? StreamBuilder<bool>(
+                        stream: audioService.playingStream,
+                        initialData: audioService.isPlaying,
+                        builder: (context, snapshot) {
+                          return AudioListTile(
+                            audio: displayAudio,
+                            displayTitle: displayTitles[displayAudio.id],
+                            cover: _coverFor(displayAudio),
+                            isSelected: true,
+                            isPlaying: snapshot.data ?? false,
+                            videoCount: _videoCountFor(displayAudio),
+                            semanticIdentifier: SemanticIds.audioSoundTile(
+                              index,
+                            ),
+                            onTap: () => onSelect(displayAudio),
+                            onShowDetails: _hasDetailsPage(displayAudio)
+                                ? () => onShowDetails(displayAudio)
+                                : null,
+                          );
+                        },
+                      )
+                    : AudioListTile(
+                        audio: audio,
+                        displayTitle: displayTitles[audio.id],
+                        cover: _coverFor(audio),
+                        isSelected: false,
+                        isUnavailable: isUnavailable,
+                        videoCount: _videoCountFor(audio),
+                        semanticIdentifier: SemanticIds.audioSoundTile(index),
+                        onTap: () => onSelect(audio),
+                        onShowDetails: _hasDetailsPage(audio)
+                            ? () => onShowDetails(audio)
+                            : null,
+                      ),
               );
             },
           ),
@@ -2194,6 +2204,54 @@ class _SoundsContent extends ConsumerWidget {
       child: content,
     );
   }
+}
+
+/// A sound's row that readies the sound for its preview when the list first
+/// builds it, which it does as the row nears the screen, so a tap on it
+/// plays without waiting for the network.
+class _PrefetchedRow extends StatefulWidget {
+  const _PrefetchedRow({
+    required this.sound,
+    required this.audioService,
+    required this.child,
+  });
+
+  final AudioEvent sound;
+  final AudioPlaybackService audioService;
+  final Widget child;
+
+  @override
+  State<_PrefetchedRow> createState() => _PrefetchedRowState();
+}
+
+class _PrefetchedRowState extends State<_PrefetchedRow> {
+  @override
+  void initState() {
+    super.initState();
+    _prefetch();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PrefetchedRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.sound.url != widget.sound.url) _prefetch();
+  }
+
+  void _prefetch() {
+    final sound = widget.sound;
+    final url = sound.url;
+    if (url == null || sound.isLocalImport) return;
+    // Like a cover, a sound is fetched before a tap only from Divine's
+    // servers or the song catalog: another host would learn who scrolled
+    // past it.
+    if (!SoundCover.isScreenedHost(url) && !sound.isExternalProviderSound) {
+      return;
+    }
+    widget.audioService.prefetch(url, sizeBytes: sound.fileSize);
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// The space after a list's last row, so it scrolls clear of the card of the

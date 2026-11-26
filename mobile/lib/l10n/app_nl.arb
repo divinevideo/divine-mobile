@@ -5334,6 +5334,8 @@
   "messageRequestViewMessagesButton": "Berichten bekijken",
   "messageRequestViewProfileButton": "Profiel bekijken",
   "messageRequestWantsToMessageYou": "{displayName} wil je een bericht sturen en heeft {messageText} gestuurd.",
+  "messageRequestGroupWantsToMessageYou": "Deze groep wil je een bericht sturen en heeft {messageText} gestuurd.",
+  "messageRequestGroupMembersHeading": "In deze groep",
   "@messageRequestWantsToMessageYou": {
     "placeholders": {
       "displayName": {

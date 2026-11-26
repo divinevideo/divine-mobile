@@ -13204,6 +13204,18 @@ abstract class AppLocalizations {
     String messageText,
   );
 
+  /// Sentence under a group message request's card, in place of messageRequestWantsToMessageYou, which names one person. {messageText} is messageRequestMessageCount, for example '3 messages'. 'They' means the group's members.
+  ///
+  /// In en, this message translates to:
+  /// **'This group wants to message you, they\'ve sent {messageText}.'**
+  String messageRequestGroupWantsToMessageYou(String messageText);
+
+  /// Heading above the list of people in a group message request, shown before the user accepts it. Each row below it is one member and opens their profile.
+  ///
+  /// In en, this message translates to:
+  /// **'In this group'**
+  String get messageRequestGroupMembersHeading;
+
   /// Error shown when the signed-in account changed between confirming a deletion and executing it; nothing was deleted.
   ///
   /// In en, this message translates to:

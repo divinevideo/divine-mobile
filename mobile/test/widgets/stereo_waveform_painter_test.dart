@@ -58,6 +58,25 @@ void main() {
     });
   });
 
+  group('StereoWaveformPainter.peakOf', () {
+    test('is the loudest sample of both channels', () {
+      expect(
+        StereoWaveformPainter.peakOf(
+          Float32List.fromList([0.3, -0.6]),
+          Float32List.fromList([0.7, 0.1]),
+        ),
+        closeTo(0.7, 1e-6),
+      );
+    });
+
+    test('is at least the normalizer floor', () {
+      expect(
+        StereoWaveformPainter.peakOf(Float32List.fromList([0.01]), null),
+        WaveformConstants.amplitudeNormalizerFloor,
+      );
+    });
+  });
+
   group(StereoWaveformPainter, () {
     StereoWaveformPainter createPainter({
       Float32List? leftChannel,
@@ -75,6 +94,8 @@ void main() {
       Duration? audibleDuration,
       double playbackSpeed = 1,
       VideoSpeedRamp? speedRamp,
+      double revealedFraction = 1,
+      double? peak,
     }) {
       return StereoWaveformPainter(
         leftChannel: leftChannel ?? Float32List(0),
@@ -92,6 +113,8 @@ void main() {
         audibleDuration: audibleDuration,
         playbackSpeed: playbackSpeed,
         speedRamp: speedRamp,
+        revealedFraction: revealedFraction,
+        peak: peak,
       );
     }
 
@@ -220,6 +243,23 @@ void main() {
           createPainter(
             audibleDuration: const Duration(seconds: 5),
           ).shouldRepaint(painter),
+          isTrue,
+        );
+      });
+
+      test('returns true when revealedFraction or peak changes', () {
+        final left = Float32List.fromList([0.5]);
+        final painter = createPainter(leftChannel: left);
+
+        expect(
+          createPainter(
+            leftChannel: left,
+            revealedFraction: 0.5,
+          ).shouldRepaint(painter),
+          isTrue,
+        );
+        expect(
+          createPainter(leftChannel: left, peak: 0.8).shouldRepaint(painter),
           isTrue,
         );
       });
@@ -441,6 +481,52 @@ void main() {
         );
 
         expect(render, paints..rrect(rrect: ceilingBar(0)));
+      });
+
+      testWidgets('scales against a given peak instead of its own', (
+        tester,
+      ) async {
+        final render = await pumpPainter(
+          tester,
+          createPainter(
+            leftChannel: Float32List.fromList([0.25, 0.25]),
+            peak: 0.5,
+          ),
+        );
+
+        final arm =
+            math.pow(0.5, WaveformConstants.amplitudeCurve) * scaledHalfHeight;
+        expect(render, paints..rrect(rrect: barAt(0, arm)));
+      });
+
+      testWidgets('draws the part not read yet flat, rising towards the edge', (
+        tester,
+      ) async {
+        final render = await pumpPainter(
+          tester,
+          createPainter(
+            leftChannel: Float32List.fromList(List.filled(64, 0.5)),
+            revealedFraction: 0.5,
+          ),
+        );
+        final bars = <RRect>[];
+        expect(
+          render,
+          paints..everything((method, arguments) {
+            if (method == #drawRRect) bars.add(arguments.first as RRect);
+            return true;
+          }),
+        );
+
+        final edge = bars.length ~/ 2;
+        expect(bars.first, ceilingBar(0));
+        expect(bars[edge - 2].height, lessThan(ceilingBar(0).height));
+        expect(bars[edge - 2].height, greaterThan(bars[edge].height));
+        expect(bars[edge + 1], barAt(edge + 1, WaveformConstants.minBarHeight));
+        expect(
+          bars.last,
+          barAt(bars.length - 1, WaveformConstants.minBarHeight),
+        );
       });
 
       testWidgets('draws a fade in and out as a ramp from the baseline', (

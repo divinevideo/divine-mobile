@@ -7384,6 +7384,14 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return '这个群组想给你发消息，他们发送了$messageText。';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => '群组成员';
+
+  @override
   String get deleteAccountAccountChanged =>
       '你切换了账号，因此没有删除任何内容。请为要删除的账号重新打开删除流程。';
 

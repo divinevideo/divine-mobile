@@ -92,4 +92,51 @@ internal class VolumeKeyHandlerTest {
 
         assertFalse(handler.isMediaSessionClaimed())
     }
+
+    // Wear OS shows a playing media session as media controls over the watch
+    // remote, and their play and pause would start takes.
+    @Test
+    fun watchRemote_keepsTheSessionReleasedUntilItIsGone() {
+        val handler = handler()
+        handler.setWatchRemoteAvailable(true)
+        handler.enable(appActive = true)
+
+        assertFalse(handler.isMediaSessionClaimed())
+        press(handler)
+        assertTrue(triggers.isEmpty())
+
+        handler.setWatchRemoteAvailable(false)
+
+        assertTrue(handler.isMediaSessionClaimed())
+        press(handler)
+        assertEquals(listOf("bluetooth"), triggers)
+    }
+
+    @Test
+    fun watchRemote_appearing_releasesAClaimedSession() {
+        val handler = handler()
+        handler.enable(appActive = true)
+        assertTrue(handler.isMediaSessionClaimed())
+
+        handler.setWatchRemoteAvailable(true)
+
+        assertFalse(handler.isMediaSessionClaimed())
+        handler.onEnterBackground()
+        handler.onBecomeActive()
+        assertFalse(handler.isMediaSessionClaimed())
+    }
+
+    @Test
+    fun watchRemote_goneInTheBackground_waitsForTheForeground() {
+        val handler = handler()
+        handler.setWatchRemoteAvailable(true)
+        handler.enable(appActive = true)
+        handler.onEnterBackground()
+
+        handler.setWatchRemoteAvailable(false)
+
+        assertFalse(handler.isMediaSessionClaimed())
+        handler.onBecomeActive()
+        assertTrue(handler.isMediaSessionClaimed())
+    }
 }

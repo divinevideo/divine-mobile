@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tells the phone a reachable watch has the remote. Matches
+     WearRemoteProtocol.WATCH_CAPABILITY in the phone's camera plugin. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@array/android_wear_capabilities">
+    <string-array name="android_wear_capabilities">
+        <item>divine_remote_shutter</item>
+    </string-array>
+</resources>

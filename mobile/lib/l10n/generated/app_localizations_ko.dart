@@ -7463,6 +7463,14 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return '이 그룹이 메시지를 보내고 싶어 해요. $messageText을(를) 보냈어요.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => '이 그룹의 멤버';
+
+  @override
   String get deleteAccountAccountChanged =>
       '계정이 전환돼서 아무것도 삭제되지 않았어요. 삭제할 계정에서 삭제 화면을 다시 열어주세요.';
 

@@ -5334,6 +5334,8 @@
   "messageRequestViewMessagesButton": "Mesajları görüntüle",
   "messageRequestViewProfileButton": "Profili görüntüle",
   "messageRequestWantsToMessageYou": "{displayName} sana mesaj göndermek istiyor, {messageText} gönderdi.",
+  "messageRequestGroupWantsToMessageYou": "Bu grup sana mesaj göndermek istiyor, {messageText} gönderdiler.",
+  "messageRequestGroupMembersHeading": "Bu grupta",
   "@messageRequestWantsToMessageYou": {
     "placeholders": {
       "displayName": {

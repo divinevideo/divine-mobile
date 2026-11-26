@@ -3819,6 +3819,8 @@
   "messageRequestViewMessagesButton": "پیغامات دیکھیں",
   "messageRequestViewProfileButton": "پروفائل دیکھیں",
   "messageRequestWantsToMessageYou": "{displayName} آپ کو پیغام بھیجنا چاہتا ہے، انہوں نے {messageText} بھیجا ہے۔",
+  "messageRequestGroupWantsToMessageYou": "یہ گروپ آپ کو پیغام بھیجنا چاہتا ہے، انہوں نے {messageText} بھیجا ہے۔",
+  "messageRequestGroupMembersHeading": "اس گروپ میں",
   "@messageRequestWantsToMessageYou": {
     "placeholders": {
       "displayName": {

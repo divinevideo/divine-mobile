@@ -71,7 +71,10 @@ class _FakeAudioPlaybackService extends Fake implements AudioPlaybackService {
   Stream<Duration> get positionStream => positions.stream;
 
   @override
-  Future<Duration?> loadAudio(String url) async {
+  Future<Duration?> loadAudio(
+    String url, {
+    bool streamUnlessCached = false,
+  }) async {
     final hold = _loadHold[url];
     if (hold != null) await hold.future;
     loadedUrls.add(url);

@@ -3819,6 +3819,8 @@
   "messageRequestViewMessagesButton": "Lihat mesej",
   "messageRequestViewProfileButton": "Lihat profil",
   "messageRequestWantsToMessageYou": "{displayName} mahu menghantar mesej kepada anda, mereka telah menghantar {messageText}.",
+  "messageRequestGroupWantsToMessageYou": "Kumpulan ini mahu menghantar mesej kepada anda, mereka telah menghantar {messageText}.",
+  "messageRequestGroupMembersHeading": "Dalam kumpulan ini",
   "@messageRequestWantsToMessageYou": {
     "placeholders": {
       "displayName": {

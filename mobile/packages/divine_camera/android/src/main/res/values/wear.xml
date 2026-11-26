@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lets the Wear OS remote find the phone that runs the recorder. Matches
+     WearRemoteProtocol.PHONE_CAPABILITY. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@array/android_wear_capabilities">
+    <string-array name="android_wear_capabilities">
+        <item>divine_recorder</item>
+    </string-array>
+</resources>

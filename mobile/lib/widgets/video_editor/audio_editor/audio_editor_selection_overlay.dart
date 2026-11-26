@@ -375,8 +375,8 @@ class _PlaybackProgressLineState extends State<_PlaybackProgressLine> {
   /// but the platform only starts rendering audio a moment later and then
   /// reports the true, smaller, position. Drawing that correction would wind
   /// the line back, so the last value holds until playback catches up. A
-  /// position back near the start (a pause, another sound, or the preview
-  /// looping) starts the line over.
+  /// position back near the start (a pause, another sound, the preview
+  /// ending, or playing again) starts the line over.
   double _progress = 0;
 
   static const _progressKey = Key('audio_selection_progress');

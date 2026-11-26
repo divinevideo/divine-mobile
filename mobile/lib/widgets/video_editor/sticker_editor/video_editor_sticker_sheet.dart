@@ -2,6 +2,7 @@
 // ABOUTME: info, social and interactive stickers above a grid of stickers.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -60,6 +61,10 @@ class VideoEditorStickerSheet extends StatelessWidget {
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       child: CustomScrollView(
         controller: scrollController,
+        // Stickers are decoded from WebP when their cell is built, so cells
+        // are built a screen ahead; with the default 250 px they pop in
+        // while scrolling.
+        scrollCacheExtent: const ScrollCacheExtent.viewport(1),
         slivers: [
           // Floating Search Bar Header
           if (enableSearchBar) const _SearchBar(),
@@ -166,7 +171,7 @@ class _StickerGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return SliverGrid(
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 120,
+        maxCrossAxisExtent: stickerPickerCellExtent,
         mainAxisSpacing: 16,
         crossAxisSpacing: 16,
       ),

@@ -5421,6 +5421,8 @@
   "messageRequestViewMessagesButton": "መልእክቶችን ይመልከቱ",
   "messageRequestViewProfileButton": "መገለጫ ይመልከቱ",
   "messageRequestWantsToMessageYou": "{displayName} ሊልክልህ ይፈልጋል፣ {messageText} ልከዋል።",
+  "messageRequestGroupWantsToMessageYou": "ይህ ቡድን ሊልክልህ ይፈልጋል፣ {messageText} ልከዋል።",
+  "messageRequestGroupMembersHeading": "በዚህ ቡድን ውስጥ",
   "@messageRequestWantsToMessageYou": {
     "placeholders": {
       "displayName": {

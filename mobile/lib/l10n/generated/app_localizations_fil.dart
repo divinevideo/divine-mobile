@@ -7893,6 +7893,14 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'Gustong mag-message sa iyo ng grupong ito, nagpadala sila ng $messageText.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'Sa grupong ito';
+
+  @override
   String get deleteAccountAccountChanged =>
       'Nagpalit ka ng account, kaya walang na-delete. Buksan ulit ang pag-delete para sa account na gusto mong alisin.';
 

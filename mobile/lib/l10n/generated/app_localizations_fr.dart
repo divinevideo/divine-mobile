@@ -7958,6 +7958,14 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String messageRequestGroupWantsToMessageYou(String messageText) {
+    return 'Ce groupe veut t\'envoyer un message, ils ont envoyé $messageText.';
+  }
+
+  @override
+  String get messageRequestGroupMembersHeading => 'Dans ce groupe';
+
+  @override
   String get deleteAccountAccountChanged =>
       'Tu as changé de compte, donc rien n\'a été supprimé. Rouvre la suppression pour le compte que tu veux retirer.';
 

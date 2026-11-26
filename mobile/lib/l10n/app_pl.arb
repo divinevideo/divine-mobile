@@ -5334,6 +5334,8 @@
   "messageRequestViewMessagesButton": "Zobacz wiadomości",
   "messageRequestViewProfileButton": "Zobacz profil",
   "messageRequestWantsToMessageYou": "{displayName} chce do ciebie napisać, wysłał {messageText}.",
+  "messageRequestGroupWantsToMessageYou": "Ta grupa chce do ciebie napisać, wysłali {messageText}.",
+  "messageRequestGroupMembersHeading": "W tej grupie",
   "@messageRequestWantsToMessageYou": {
     "placeholders": {
       "displayName": {
