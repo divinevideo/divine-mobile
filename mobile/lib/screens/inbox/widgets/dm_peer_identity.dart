@@ -2,6 +2,7 @@
 // ABOUTME: Vanished first, so a row and the sheet it opens cannot name two
 // ABOUTME: different accounts.
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
@@ -152,6 +153,32 @@ String dmPeerDisplayName(
       ? const ModerationAvatar()
       : null,
 );
+
+/// Avatar artwork for the inbox rows, request preview and empty thread card.
+///
+/// A group has its own icon, regardless of which member supplied its title.
+({String? imageUrl, Widget? contentOverride}) dmConversationAvatar(
+  BuildContext context, {
+  required bool isGroup,
+  required bool isVanished,
+  required ModerationPresentation moderation,
+  String? pictureUrl,
+}) {
+  if (isGroup) {
+    return (
+      imageUrl: null,
+      contentOverride: DivineIcon(
+        icon: DivineIconName.users,
+        color: context.vineColors.primaryText,
+      ),
+    );
+  }
+  return dmPeerAvatar(
+    isVanished: isVanished,
+    moderation: moderation,
+    pictureUrl: pictureUrl,
+  );
+}
 
 /// The handle or NIP-05 line a DM peer surface shows under the name, resolved
 /// the same way [dmPeerDisplayName] resolves the name above it.

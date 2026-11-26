@@ -142,7 +142,9 @@ class ConversationTile extends ConsumerWidget {
 
     // The name above and the artwork here resolve through the same pair of
     // helpers so a row cannot name a peer one way and picture it another.
-    final avatar = dmPeerAvatar(
+    final avatar = dmConversationAvatar(
+      context,
+      isGroup: conversation.isGroup,
       isVanished: isDeleted,
       moderation: moderation,
       pictureUrl: profileAsync.maybeWhen(
@@ -211,20 +213,11 @@ class ConversationTile extends ConsumerWidget {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: UserAvatar(
-                      // A group has no single member's photo to show; the room
-                      // icon matches the room title beside it.
-                      imageUrl: conversation.isGroup ? null : avatar.imageUrl,
+                      imageUrl: avatar.imageUrl,
                       name: visualDisplayName,
                       placeholderSeed: namedPubkey,
                       size: 40,
-                      // Bundled artwork for an official moderation account,
-                      // whose kind-0 picture does not survive the SVG parser.
-                      contentOverride: conversation.isGroup
-                          ? DivineIcon(
-                              icon: DivineIconName.users,
-                              color: context.vineColors.primaryText,
-                            )
-                          : avatar.contentOverride,
+                      contentOverride: avatar.contentOverride,
                     ),
                   ),
                 ),

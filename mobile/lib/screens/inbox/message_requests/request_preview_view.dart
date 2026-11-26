@@ -397,7 +397,9 @@ class _ProfileContent extends StatelessWidget {
         : displayName;
     // Resolved with the name above, so the avatar cannot present a key more
     // officially than its name does.
-    final avatar = dmPeerAvatar(
+    final avatar = dmConversationAvatar(
+      context,
+      isGroup: isGroup,
       isVanished: isVanished,
       moderation: moderation,
       pictureUrl: profile?.picture,
@@ -431,18 +433,11 @@ class _ProfileContent extends StatelessWidget {
                   isLoading: isResolving,
                   excludeSemantics: true,
                   child: UserAvatar(
-                    // A room is no one member, so it gets the room artwork
-                    // the request row and the thread show (#10018).
-                    imageUrl: isGroup ? null : avatar.imageUrl,
+                    imageUrl: avatar.imageUrl,
                     name: visualDisplayName,
                     placeholderSeed: otherPubkey,
                     size: 96,
-                    contentOverride: isGroup
-                        ? DivineIcon(
-                            icon: DivineIconName.users,
-                            color: context.vineColors.primaryText,
-                          )
-                        : avatar.contentOverride,
+                    contentOverride: avatar.contentOverride,
                   ),
                 ),
               ),
