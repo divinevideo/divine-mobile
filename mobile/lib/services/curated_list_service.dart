@@ -457,6 +457,23 @@ class CuratedListService extends ChangeNotifier {
     );
   }
 
+  /// Creates an empty public series named [name] (#8105).
+  ///
+  /// Unlike [createList], which keeps a list on this device when no relay
+  /// takes it, a series no relay accepted is removed again, so a video is only
+  /// ever published into a series that relays already hold.
+  Future<SeriesCreationResult> createSeries(String name) async {
+    if (!_authService.isAuthenticated ||
+        _authService.currentPublicKeyHex?.isNotEmpty != true) {
+      return const SeriesCreationUnauthenticated();
+    }
+    return _serializeListOperation(
+      _createListOperationId,
+      () => _createSeries(name),
+      cancelled: const SeriesCreationFailed(),
+    );
+  }
+
   /// Unreadable accepted evidence must be repaired before changing lists.
   bool get recoveryNeedsRepair {
     if (_cacheStore.hasUnreadableListSnapshot) return true;
