@@ -41,7 +41,10 @@ import 'package:people_lists_repository/people_lists_repository.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
-class _MockVideoEventService extends Mock implements VideoEventService {}
+class _MockVideoEventService extends Mock implements VideoEventService {
+  @override
+  Stream<void> get deletionTombstonesChanged => const Stream<void>.empty();
+}
 
 class _FakeAppForeground extends AppForeground {
   @override
