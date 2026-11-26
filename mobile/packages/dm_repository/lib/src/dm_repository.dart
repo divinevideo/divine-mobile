@@ -9120,18 +9120,20 @@ class DmRepository {
           // still go out.
           final nextProtocol = existing?.dmProtocol ?? 'nip17';
           protocol = nextProtocol;
-          await _upsertSentConversationAndMarkRead(
-            id: row.conversationId,
-            participantPubkeys: participantsJson,
-            isGroup: isGroup,
-            createdAt: existing?.createdAt ?? now,
-            lastMessageId: alreadyPersisted ? null : result.rumorEventId,
-            lastMessageContent: row.content,
-            lastMessageTimestamp: now,
-            lastMessageSenderPubkey: owner,
-            ownerPubkey: owner,
-            dmProtocol: nextProtocol,
-          );
+          if (!alreadyPersisted || existing == null) {
+            await _upsertSentConversationAndMarkRead(
+              id: row.conversationId,
+              participantPubkeys: participantsJson,
+              isGroup: isGroup,
+              createdAt: existing?.createdAt ?? now,
+              lastMessageId: alreadyPersisted ? null : result.rumorEventId,
+              lastMessageContent: row.content,
+              lastMessageTimestamp: alreadyPersisted ? row.createdAt : now,
+              lastMessageSenderPubkey: owner,
+              ownerPubkey: owner,
+              dmProtocol: nextProtocol,
+            );
+          }
 
           if (!isGroupRow) {
             await _directMessagesDao.markRecipientAccepted(
@@ -11013,20 +11015,22 @@ class DmRepository {
           ownerPubkey: owner,
         );
         if (_disposed || _resetGeneration != generation) return;
-        await _upsertSentConversationAndMarkRead(
-          id: conversationId,
-          participantPubkeys: jsonEncode(participants),
-          isGroup: true,
-          createdAt: existingGroup?.createdAt ?? now,
-          lastMessageId: alreadyPersisted
-              ? null
-              : firstLiveSuccess.rumorEventId,
-          lastMessageContent: content,
-          lastMessageTimestamp: now,
-          lastMessageSenderPubkey: owner,
-          ownerPubkey: owner,
-          dmProtocol: existingGroup?.dmProtocol,
-        );
+        if (!alreadyPersisted || existingGroup == null) {
+          await _upsertSentConversationAndMarkRead(
+            id: conversationId,
+            participantPubkeys: jsonEncode(participants),
+            isGroup: true,
+            createdAt: existingGroup?.createdAt ?? now,
+            lastMessageId: alreadyPersisted
+                ? null
+                : firstLiveSuccess.rumorEventId,
+            lastMessageContent: content,
+            lastMessageTimestamp: alreadyPersisted ? batchCreatedAt : now,
+            lastMessageSenderPubkey: owner,
+            ownerPubkey: owner,
+            dmProtocol: existingGroup?.dmProtocol,
+          );
+        }
 
         if (outgoingDao != null) {
           for (final i in liveSuccessIndexes) {
