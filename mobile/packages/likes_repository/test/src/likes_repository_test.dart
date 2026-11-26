@@ -3485,6 +3485,71 @@ void main() {
     });
 
     group('getLikeCounts', () {
+      test(
+        'omits a plain ID when only the addressable query answered',
+        () async {
+          const addressableId = '34236:author:d-tag';
+          const plainId = 'plain-event';
+          final reaction = createMockReaction(
+            id: 'addressable-reaction',
+            targetEventId: testEventId,
+            tags: [
+              ['a', addressableId],
+            ],
+          );
+          when(() => mockNostrClient.readEvents(any())).thenAnswer(
+            (invocation) async {
+              final filters =
+                  invocation.positionalArguments.single as List<Filter>;
+              return filters.single.a != null
+                  ? _answered([reaction])
+                  : const QueryResult(events: [], endedBy: QueryEnd.deadline);
+            },
+          );
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => []);
+
+          repository = createRepository();
+          final result = await repository.getLikeCounts(
+            [plainId, testEventId],
+            addressableIds: {testEventId: addressableId},
+          );
+
+          expect(
+            result,
+            const LikeCounts(
+              counts: {testEventId: 1},
+              incompleteIds: {testEventId},
+            ),
+          );
+        },
+      );
+
+      test('omits IDs from an unanswered batch chunk', () async {
+        final ids = List.generate(501, (i) => 'event-$i');
+        when(() => mockNostrClient.readEvents(any())).thenAnswer(
+          (invocation) async {
+            final filters =
+                invocation.positionalArguments.single as List<Filter>;
+            return filters.single.e!.contains(ids.last)
+                ? _answered([])
+                : const QueryResult(events: [], endedBy: QueryEnd.deadline);
+          },
+        );
+
+        repository = createRepository();
+        final result = await repository.getLikeCounts(ids);
+
+        expect(
+          result,
+          LikeCounts(
+            counts: {ids.last: 0},
+            incompleteIds: {ids.last},
+          ),
+        );
+      });
+
       test('returns empty map for empty input', () async {
         repository = createRepository();
         expect((await repository.getLikeCounts([])).counts, isEmpty);

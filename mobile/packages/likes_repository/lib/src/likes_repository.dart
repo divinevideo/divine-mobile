@@ -94,9 +94,13 @@ typedef _VoteSnapshot = ({
 /// chunk ran out of time or reached no relay.
 typedef _RelayRead = ({List<Event> events, bool isComplete});
 
-/// A count read: its events, whether every relay settled it, and whether any
-/// relay answered at all (#9223).
-typedef _CountRead = ({List<Event> events, bool isComplete, bool anyAnswered});
+/// A count read: its events, whether every relay settled it, and the filter
+/// values a relay answered (#9223).
+typedef _CountRead = ({
+  List<Event> events,
+  bool isComplete,
+  Set<String> answeredValues,
+});
 
 /// One page from Funnelcake after the retraction check. `listedAnyone` says
 /// whether the API listed someone before that check removed anyone.
@@ -1894,7 +1898,7 @@ class LikesRepository {
         addressableIds: {eventId: addressableId},
         waitForEveryRelay: false,
       );
-      if (!resolved.anyAnswered) return null;
+      if (!resolved.answeredEventIds.contains(eventId)) return null;
       count = resolved.likersByEvent[eventId]?.length ?? 0;
       isComplete = resolved.isComplete;
     } else {
@@ -1983,8 +1987,7 @@ class LikesRepository {
         addressableIds: uncachedAddressableIds,
         waitForEveryRelay: false,
       );
-      if (!resolved.anyAnswered) return LikeCounts(counts: counts);
-      for (final id in uncachedIds) {
+      for (final id in resolved.answeredEventIds) {
         final count = resolved.likersByEvent[id]?.length ?? 0;
         counts[id] = count;
         if (resolved.isComplete) {
@@ -1997,7 +2000,9 @@ class LikesRepository {
       }
       return LikeCounts(
         counts: counts,
-        incompleteIds: resolved.isComplete ? const {} : uncachedIds.toSet(),
+        incompleteIds: resolved.isComplete
+            ? const {}
+            : resolved.answeredEventIds,
       );
     }
 
@@ -2008,26 +2013,24 @@ class LikesRepository {
       (chunk) => Filter(kinds: const [EventKind.reaction], e: chunk),
       waitForEveryRelay: false,
     );
-    if (!read.anyAnswered) return LikeCounts(counts: counts);
-
-    // Count reactions per target event from e-tag query
-    final uncachedIdSet = uncachedIds.toSet();
-    for (final id in uncachedIds) {
+    // Count only targets whose chunk received an answer, including zeroes.
+    final answeredIds = read.answeredValues;
+    for (final id in answeredIds) {
       counts[id] = 0;
     }
 
     for (final event in read.events) {
       final targetId = _extractTargetEventId(event);
-      if (targetId != null && uncachedIdSet.contains(targetId)) {
+      if (targetId != null && answeredIds.contains(targetId)) {
         counts[targetId] = (counts[targetId] ?? 0) + 1;
       }
     }
 
     // A read some relay did not settle is a floor: return it, cache nothing.
     if (!read.isComplete) {
-      return LikeCounts(counts: counts, incompleteIds: uncachedIdSet);
+      return LikeCounts(counts: counts, incompleteIds: answeredIds);
     }
-    for (final id in uncachedIds) {
+    for (final id in answeredIds) {
       _writeCachedLikeCount(id, counts[id]!);
     }
     return LikeCounts(counts: counts);
@@ -3290,7 +3293,7 @@ class LikesRepository {
     ({
       Map<String, List<String>> likersByEvent,
       bool isComplete,
-      bool anyAnswered,
+      Set<String> answeredEventIds,
     })
   >
   _fetchResolvedLikersByEvent(
@@ -3302,7 +3305,7 @@ class LikesRepository {
       return (
         likersByEvent: const <String, List<String>>{},
         isComplete: true,
-        anyAnswered: true,
+        answeredEventIds: const <String>{},
       );
     }
 
@@ -3332,7 +3335,11 @@ class LikesRepository {
       ),
     ]);
     final isComplete = reads.every((read) => read.isComplete);
-    final anyAnswered = reads.any((read) => read.anyAnswered);
+    final answeredEventIds = {
+      ...reads[0].answeredValues,
+      for (final coordinate in reads[1].answeredValues)
+        aTagToEventId[coordinate]!,
+    };
 
     final reactionsByTarget = {
       for (final eventId in eventIds) eventId: <String, Event>{},
@@ -3354,7 +3361,7 @@ class LikesRepository {
       return (
         likersByEvent: {for (final eventId in eventIds) eventId: <String>[]},
         isComplete: isComplete,
-        anyAnswered: anyAnswered,
+        answeredEventIds: answeredEventIds,
       );
     }
 
@@ -3369,7 +3376,7 @@ class LikesRepository {
           ),
       },
       isComplete: isComplete,
-      anyAnswered: anyAnswered,
+      answeredEventIds: answeredEventIds,
     );
   }
 
@@ -3442,8 +3449,8 @@ class LikesRepository {
     }.values.toList();
   }
 
-  /// [_queryChunked] that also says whether every chunk's read finished, and
-  /// whether any relay answered at all.
+  /// [_queryChunked] that also reports completeness and which chunks received
+  /// an answer.
   ///
   /// With [waitForEveryRelay] every chunk waits for every relay, so a list
   /// read does not pass a short answer off as the whole one (#10846): a slow
@@ -3463,10 +3470,12 @@ class LikesRepository {
     Filter Function(List<String> chunk) buildFilter, {
     required bool waitForEveryRelay,
   }) async {
-    // Nothing was asked, so nothing answered; a read with no values does not
-    // make its caller incomplete.
     if (values.isEmpty) {
-      return (events: const <Event>[], isComplete: true, anyAnswered: false);
+      return (
+        events: const <Event>[],
+        isComplete: true,
+        answeredValues: const <String>{},
+      );
     }
 
     final chunks = _chunkStrings(values, _reqEidChunkSize);
@@ -3486,7 +3495,10 @@ class LikesRepository {
         isComplete: reads.every(
           (read) => read.isComplete && read.unsentNetworkRelayCount == 0,
         ),
-        anyAnswered: reads.any((read) => read.answeredNetworkRelayCount > 0),
+        answeredValues: {
+          for (var i = 0; i < chunks.length; i++)
+            if (reads[i].answeredNetworkRelayCount > 0) ...chunks[i],
+        },
       );
     }
 
@@ -3498,16 +3510,19 @@ class LikesRepository {
           acceptRelayClosedWhenOthersAnswered: true,
         ),
     ]);
-    final isComplete = results.every(
-      (result) => !result.timedOut && !result.noRelays,
-    );
+    final answeredValues = {
+      for (var i = 0; i < chunks.length; i++)
+        if (!results[i].timedOut && !results[i].noRelays) ...chunks[i],
+    };
     return (
       events: {
         for (final result in results)
           for (final event in result.events) event.id: event,
       }.values.toList(),
-      isComplete: isComplete,
-      anyAnswered: isComplete,
+      isComplete: results.every(
+        (result) => !result.timedOut && !result.noRelays,
+      ),
+      answeredValues: answeredValues,
     );
   }
 
