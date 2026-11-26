@@ -4,6 +4,8 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_riverpod/flutter_riverpod.dart' show Provider;
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart'
     show NostrClient, RelaySubscriptionRefusedException;
@@ -15,6 +17,7 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/video_event_service.dart'
     show VideoEventService;
 import 'package:openvine/utils/curated_lists_snapshot.dart';
@@ -25,6 +28,19 @@ import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 part 'list_providers.g.dart';
+
+/// Checks whether a resolved video is eligible for automatic list playback.
+/// Waits for the same broken-video tracker used by the fullscreen feed.
+final curatedListPlaybackEligibilityProvider =
+    Provider<bool Function(VideoEvent)>((ref) {
+      final tracker = ref.watch(brokenVideoTrackerProvider);
+      if (tracker.isLoading) return (_) => false;
+      final cache = kIsWeb ? null : ref.watch(mediaCacheProvider);
+      return (video) =>
+          tracker.value?.isVideoBroken(video.id) != true &&
+          (video.videoUrl?.trim().isNotEmpty == true ||
+              cache?.getCachedFileSync(video.id) != null);
+    });
 
 /// Provider for videos in a specific curated list
 @riverpod
