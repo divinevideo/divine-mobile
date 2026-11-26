@@ -264,12 +264,21 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         ),
         onExitVideoMode: _exitVideoMode,
         onVideoTap: (videoList, index) {
+          final selected = videoList[index];
+          // Grid filtering can remove videos before the tapped tile. Resolve
+          // its identity in the same list the fullscreen player will use.
+          final sourceIndex =
+              videosAsync.value?.indexWhere(
+                (video) => video.id == selected.id,
+              ) ??
+              -1;
+          if (sourceIndex < 0) return;
           Log.info(
-            'Tapped video in curated list: ${videoList[index].id}',
+            'Tapped video in curated list: ${selected.id}',
             category: LogCategory.ui,
           );
           setState(() {
-            _activeVideoIndex = index;
+            _activeVideoIndex = sourceIndex;
             _pendingListIndex = null;
           });
         },
@@ -334,7 +343,16 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       references[position],
       videos,
     );
-    return index < 0 ? null : index;
+    if (index < 0) return null;
+
+    // Fullscreen drops known-broken videos. Wait for that same filter before
+    // opening so it cannot substitute an adjacent part for the requested one.
+    final tracker = ref.watch(brokenVideoTrackerProvider);
+    if (tracker.isLoading ||
+        tracker.value?.isVideoBroken(videos[index].id) == true) {
+      return null;
+    }
+    return index;
   }
 
   /// Holds playback once the pending position has opened, so that a later

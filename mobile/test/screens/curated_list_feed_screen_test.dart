@@ -20,6 +20,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/services/broken_video_tracker.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
@@ -37,6 +38,8 @@ import '../helpers/test_provider_overrides.dart';
 import '../helpers/test_pubkeys.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
+
+class _MockBrokenVideoTracker extends Mock implements BrokenVideoTracker {}
 
 class _MockVideoVolumeCubit extends MockCubit<VideoVolumeState>
     implements VideoVolumeCubit {}
@@ -1439,6 +1442,65 @@ void main() {
 
         expect(player(), findsNothing);
         expect(find.byType(ComposableVideoGrid), findsOneWidget);
+      });
+
+      testWidgets(
+        'stays on the grid when the requested video is known broken',
+        (
+          tester,
+        ) async {
+          final tracker = _MockBrokenVideoTracker();
+          when(() => tracker.isVideoBroken(part(1).id)).thenReturn(true);
+          when(() => tracker.isVideoBroken(part(2).id)).thenReturn(false);
+          when(() => tracker.brokenVideoIds).thenReturn([part(1).id]);
+          when(() => tracker.markedVideoIds)
+              .thenAnswer((_) => const Stream.empty());
+          await tester.pumpWidget(
+            buildSubject(
+              videoIds: references,
+              videoEvents: [part(1), part(2)],
+              initialListIndex: 0,
+              extraOverrides: [
+                brokenVideoTrackerProvider.overrideWith((_) async => tracker),
+              ],
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          expect(player(), findsNothing);
+          expect(find.byType(DiVineAppBar), findsOneWidget);
+        },
+      );
+
+      testWidgets('plays the selected tile after the grid filters a video', (
+        tester,
+      ) async {
+        final tracker = _MockBrokenVideoTracker();
+        when(() => tracker.isVideoBroken(part(1).id)).thenReturn(true);
+        when(() => tracker.isVideoBroken(part(2).id)).thenReturn(false);
+        when(() => tracker.isVideoBroken(part(3).id)).thenReturn(false);
+        when(() => tracker.brokenVideoIds).thenReturn([part(1).id]);
+        when(() => tracker.markedVideoIds)
+            .thenAnswer((_) => const Stream.empty());
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            videoEvents: [part(1), part(2), part(3)],
+            extraOverrides: [
+              brokenVideoTrackerProvider.overrideWith((_) async => tracker),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        final grid = tester.widget<ComposableVideoGrid>(
+          find.byType(ComposableVideoGrid),
+        );
+        grid.onVideoTap([part(2), part(3)], 1, () => null);
+        await tester.pump();
+
+        expect(playing(tester), part(3).id);
       });
 
       testWidgets('keeps the back button until the requested video arrives', (
