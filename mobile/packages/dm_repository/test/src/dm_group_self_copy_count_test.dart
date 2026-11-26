@@ -105,6 +105,7 @@ void main() {
     late Future<void> Function(String pubkey)? onInboxLookup;
     late FutureOr<void> Function(Event wrap)? onRecipientPublish;
     late Future<void> Function()? onOwnCopyPublish;
+    late Future<void> Function()? onOwnCopyRefused;
     late _HookedOutgoingDmsDao outgoingDao;
     late DmRepository repository;
     late DmReactionsRepository reactions;
@@ -141,6 +142,7 @@ void main() {
       onInboxLookup = null;
       onRecipientPublish = null;
       onOwnCopyPublish = null;
+      onOwnCopyRefused = null;
       outgoingDao = _HookedOutgoingDmsDao(db);
 
       when(() => nostrClient.connectedRelayCount).thenReturn(1);
@@ -232,7 +234,10 @@ void main() {
           targetRelays: any(named: 'targetRelays'),
         ),
       ).thenAnswer((invocation) async {
-        if (!ownCopiesPublish) return const PublishFailed();
+        if (!ownCopiesPublish) {
+          await onOwnCopyRefused?.call();
+          return const PublishFailed();
+        }
         final event = invocation.positionalArguments.first as Event;
         published.add(event);
         await onOwnCopyPublish?.call();
@@ -389,6 +394,27 @@ void main() {
           expect(row.recipientWrapStatus, OutgoingWrapStatus.sent);
           expect(row.selfWrapStatus, OutgoingWrapStatus.failed);
         }
+      });
+
+      test("takes the copy another attempt recorded while the batch's own "
+          'failed', () async {
+        final others = members.take(3).toList();
+        ownCopiesPublish = false;
+        // A retry of a member's row records the batch's copy while this
+        // send's own attempt at it fails.
+        onOwnCopyRefused = () async {
+          for (final row in await queueRows()) {
+            await OutgoingDmsDao(db).markSelfWrapStatus(
+              id: row.id,
+              status: OutgoingWrapStatus.sent,
+            );
+          }
+        };
+
+        final results = await sendToRoom(others);
+
+        expect(results.every((r) => r.selfWrapPublished == true), isTrue);
+        expect(await queueRows(), isEmpty);
       });
 
       test('publishes no own copy when no member is delivered', () async {
@@ -594,6 +620,27 @@ void main() {
         }
         expect(wrapsTo(owner), hasLength(1));
         expect(await queueRows(), isEmpty);
+      });
+
+      test("a member's retry takes the copy another attempt recorded while "
+          'its own failed', () async {
+        final others = members.take(3).toList();
+        recipientOksArrive = false;
+        await sendToRoom(others);
+        final row = (await queueRows()).firstWhere(
+          (row) => row.recipientPubkey == others.first,
+        );
+        recipientOksArrive = true;
+        ownCopiesPublish = false;
+        onOwnCopyRefused = () => OutgoingDmsDao(db).markSelfWrapStatus(
+          id: row.id,
+          status: OutgoingWrapStatus.sent,
+        );
+
+        final result = await repository.recoverFullSend(rumorId: row.id);
+
+        expect(result.success, isTrue);
+        expect(await OutgoingDmsDao(db).getById(row.id), isNull);
       });
 
       test('replays a failed own copy once for the whole batch', () async {
