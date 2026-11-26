@@ -867,6 +867,7 @@ class Nostr {
           rateLimitedRelayCount: outcome.rateLimitedRelayCount,
           closedRelayReasons: outcome.closedRelayReasons,
           possiblyCapped: collectionLimited || outcome.possiblyCapped,
+          hasCapEvidence: collectionLimited || outcome.hasCapEvidence,
           confirmedExhaustive:
               !collectionLimited && outcome.confirmedExhaustive,
         ),

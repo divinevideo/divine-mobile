@@ -75,6 +75,7 @@ class QueryResult {
     this.rateLimitedRelayCount = 0,
     this.closedRelayReasons = const {},
     this.possiblyCapped = false,
+    this.hasCapEvidence = false,
     this.confirmedExhaustive = false,
   });
 
@@ -146,6 +147,11 @@ class QueryResult {
   /// Can be `true` even when [isComplete] is also `true`: a relay can answer
   /// fully within its own cap and still call that "done".
   final bool possiblyCapped;
+
+  /// Whether the read hit a known limit or saw other evidence of a cap, as
+  /// described by [possiblyCapped]. A matching event from a relay with an
+  /// unknown limit is insufficient on its own.
+  final bool hasCapEvidence;
 
   /// `true` when every relay that answered explicitly confirmed it had no
   /// further matching events (a NIP-67 `finish` hint), rather than merely

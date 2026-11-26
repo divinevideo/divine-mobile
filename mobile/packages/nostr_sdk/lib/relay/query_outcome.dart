@@ -24,6 +24,7 @@ class QueryOutcome {
     this.rateLimitedRelayCount = 0,
     this.closedRelayReasons = const {},
     this.possiblyCapped = false,
+    this.hasCapEvidence = false,
     this.confirmedExhaustive = false,
     this.relays = const [],
     this.cappedWithoutEvents = const [],
@@ -62,6 +63,10 @@ class QueryOutcome {
   /// Whether a relay may have withheld matching events because the query
   /// reached that relay's result-size limit; see [QueryResult.possiblyCapped].
   final bool possiblyCapped;
+
+  /// Whether a relay may have withheld events for a reason beyond an unknown
+  /// result limit; see [QueryResult.hasCapEvidence].
+  final bool hasCapEvidence;
 
   /// Whether every relay that answered confirmed, with a NIP-67 `finish`
   /// hint, that it sent every matching stored event; see

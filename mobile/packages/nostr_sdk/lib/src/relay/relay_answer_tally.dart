@@ -84,7 +84,11 @@ class RelayAnswerTally {
   /// NIP-11 document. A relay that publishes none may when those events
   /// reached the filter's `limit` or, with no `limit` either, numbered at
   /// least one.
-  bool mayBeCapped(Relay relay, List<Filter> filters) {
+  bool mayBeCapped(
+    Relay relay,
+    List<Filter> filters, {
+    bool includeUnknownLimit = true,
+  }) {
     if (relay.relayStatus.relayType == RelayType.cache) return false;
     if (outsideFilter > 0 || rejected > 0) return true;
     if (hints.contains(moreHint)) return true;
@@ -95,7 +99,9 @@ class RelayAnswerTally {
       final count = eventsPerFilter[i];
       if (maxLimit != null) {
         if (count >= math.min(limit ?? maxLimit, maxLimit)) return true;
-      } else if (limit != null ? count >= limit : count > 0) {
+      } else if (limit != null
+          ? count >= limit
+          : includeUnknownLimit && count > 0) {
         return true;
       }
     }

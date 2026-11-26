@@ -236,6 +236,13 @@ class QueryOutcomeTracker {
             tally.relay.url: tally.closedReason!,
       },
       possiblyCapped: judgements.keys.any(_isCapped),
+      hasCapEvidence: judgements.keys.any(
+        (tally) => tally.mayBeCapped(
+          tally.relay,
+          _filters,
+          includeUnknownLimit: false,
+        ),
+      ),
       confirmedExhaustive: _confirmedExhaustive(judgements),
       relays: [
         for (final tally in _tallies.values)

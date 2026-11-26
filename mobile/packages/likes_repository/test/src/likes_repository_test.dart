@@ -4116,6 +4116,46 @@ void main() {
       );
 
       test(
+        'keeps a capped batch count of zero incomplete and uncached',
+        () async {
+          const eventId = 'omitted-target';
+          const otherId = 'included-target';
+          when(() => mockNostrClient.readEvents(any())).thenAnswer(
+            (_) async => QueryResult(
+              events: [
+                createMockReaction(
+                  id: 'stored-reaction',
+                  targetEventId: otherId,
+                ),
+              ],
+              endedBy: QueryEnd.complete,
+              answeredNetworkRelayCount: 1,
+              possiblyCapped: true,
+              hasCapEvidence: true,
+            ),
+          );
+          when(() => mockNostrClient.countEvents(any())).thenAnswer(
+            (_) async => const CountResult(count: 4, isComplete: true),
+          );
+
+          repository = createRepository();
+          final counts = await repository.getLikeCounts([eventId, otherId]);
+
+          expect(
+            counts,
+            equals(
+              const LikeCounts(
+                counts: {eventId: 0, otherId: 1},
+                incompleteIds: {eventId, otherId},
+              ),
+            ),
+          );
+          expect(await repository.getLikeCount(eventId), equals(4));
+          verify(() => mockNostrClient.countEvents(any())).called(1);
+        },
+      );
+
+      test(
         'does not cache a count when a readable relay missed the REQ',
         () async {
           var reachable = false;

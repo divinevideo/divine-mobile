@@ -1770,6 +1770,7 @@ class NostrClient {
       rateLimitedRelayCount: network.rateLimitedRelayCount,
       closedRelayReasons: network.closedRelayReasons,
       possiblyCapped: network.possiblyCapped,
+      hasCapEvidence: network.hasCapEvidence,
       confirmedExhaustive: network.confirmedExhaustive,
     );
 

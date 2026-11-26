@@ -3462,9 +3462,8 @@ class LikesRepository {
   /// Without it each chunk settles a window after the first relays answer,
   /// read through `readEvents`. Each chunk must end [QueryEnd.complete]
   /// and reach every readable network relay. A failed send, early settlement,
-  /// CLOSED refusal, dropped socket or deadline leaves a floor (#9223).
-  /// Unlike [_readChunked], a relay that may have stopped at its result-size
-  /// limit still counts as finished.
+  /// CLOSED refusal, dropped socket, deadline or evidence of truncation
+  /// leaves a floor (#9223).
   Future<_CountRead> _queryChunkedDetailed(
     List<String> values,
     Filter Function(List<String> chunk) buildFilter, {
@@ -3493,7 +3492,11 @@ class LikesRepository {
                   for (final event in read.events) event.id: event,
               }.values.toList(),
         isComplete: reads.every(
-          (read) => read.isComplete && read.unsentNetworkRelayCount == 0,
+          (read) =>
+              read.isComplete &&
+              read.answeredNetworkRelayCount > 0 &&
+              read.unsentNetworkRelayCount == 0 &&
+              !read.hasCapEvidence,
         ),
         answeredValues: {
           for (var i = 0; i < chunks.length; i++)
