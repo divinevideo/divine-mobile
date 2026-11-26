@@ -794,6 +794,7 @@ class _ListBody extends ConsumerWidget {
         onExit: onExitVideoMode,
         unavailableMessage: context.l10n.curatedListVideoNotAvailable,
         trafficSource: ViewTrafficSource.search,
+        followListUpdates: true,
       );
     }
 

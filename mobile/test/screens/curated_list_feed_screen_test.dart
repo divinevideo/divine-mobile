@@ -3,18 +3,23 @@
 
 import 'dart:async';
 
+import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/fullscreen_feed/fullscreen_feed_bloc.dart';
+import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
+import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
@@ -32,6 +37,9 @@ import '../helpers/test_provider_overrides.dart';
 import '../helpers/test_pubkeys.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
+
+class _MockVideoVolumeCubit extends MockCubit<VideoVolumeState>
+    implements VideoVolumeCubit {}
 
 class _MockCuratedListService extends Mock implements CuratedListService {
   @override
@@ -1474,6 +1482,53 @@ void main() {
         await tester.pump();
 
         expect(player(), findsOneWidget);
+      });
+
+      testWidgets('adds late parts without changing the playing video', (
+        tester,
+      ) async {
+        final videos = StreamController<List<VideoEvent>>();
+        addTearDown(videos.close);
+        registerFallbackValue(part(1));
+        final videoService = createMockVideoEventService();
+        when(() => videoService.shouldHideVideo(any())).thenReturn(false);
+        final volume = _MockVideoVolumeCubit();
+        when(() => volume.state).thenReturn(const VideoVolumeState());
+        await tester.pumpWidget(
+          BlocProvider<VideoVolumeCubit>.value(
+            value: volume,
+            child: buildSubject(
+              videoIds: references,
+              initialListIndex: 1,
+              overrideVideoEvents: false,
+              extraOverrides: [
+                videoEventServiceProvider.overrideWithValue(videoService),
+                videoEventsByIdsProvider(
+                  references,
+                ).overrideWith((ref) => videos.stream),
+              ],
+            ),
+          ),
+        );
+        videos.add([part(2)]);
+        await tester.pump();
+        await tester.pump();
+
+        FullscreenFeedBloc playback() => tester
+            .element(find.byType(FullscreenFeedContent))
+            .read<FullscreenFeedBloc>();
+        expect(playback().state.currentVideo?.id, part(2).id);
+
+        videos.add([part(1), part(2), part(3)]);
+        await tester.pump();
+        await tester.pump();
+
+        expect(playback().state.videos.map((video) => video.id), [
+          part(1).id,
+          part(2).id,
+          part(3).id,
+        ]);
+        expect(playback().state.currentVideo?.id, part(2).id);
       });
 
       testWidgets('backing out of the requested video lands on the grid', (
