@@ -52,7 +52,7 @@ void main() {
       );
       when(
         () => mockLikesRepository.getLikeCounts(any()),
-      ).thenAnswer((_) async => {});
+      ).thenAnswer((_) async => const LikeCounts(counts: {}));
 
       curationRepository = CurationRepository(
         nostrService: mockNostrService,

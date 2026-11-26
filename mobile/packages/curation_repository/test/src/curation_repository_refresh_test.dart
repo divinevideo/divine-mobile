@@ -76,7 +76,7 @@ void main() {
       ).thenAnswer((_) => const Stream<Event>.empty());
       when(
         () => mockLikesRepository.getLikeCounts(any()),
-      ).thenAnswer((_) async => {});
+      ).thenAnswer((_) async => const LikeCounts(counts: {}));
     });
 
     group('refreshIfNeeded', () {
@@ -204,11 +204,13 @@ void main() {
           when(
             () => mockLikesRepository.getLikeCounts(any()),
           ).thenAnswer(
-            (_) async => {
-              'v1': 10,
-              'v2': 50,
-              'v3': 5,
-            },
+            (_) async => const LikeCounts(
+              counts: {
+                'v1': 10,
+                'v2': 50,
+                'v3': 5,
+              },
+            ),
           );
 
           curationRepository = CurationRepository(

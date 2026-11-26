@@ -36,7 +36,7 @@ void main() {
           any(),
           addressableIds: any(named: 'addressableIds'),
         ),
-      ).thenAnswer((_) async => {});
+      ).thenAnswer((_) async => const LikeCounts(counts: {}));
 
       service = VideoEventService(
         mockNostrClient,

@@ -90,13 +90,13 @@ void main() {
       ).thenAnswer((_) => const Stream<Event>.empty());
       when(
         () => mockLikesRepository.getLikeCounts(any()),
-      ).thenAnswer((_) async => {});
+      ).thenAnswer((_) async => const LikeCounts(counts: {}));
       when(
         () => mockLikesRepository.getLikeCounts(
           any(),
           addressableIds: any(named: 'addressableIds'),
         ),
-      ).thenAnswer((_) async => {});
+      ).thenAnswer((_) async => const LikeCounts(counts: {}));
     });
 
     test(

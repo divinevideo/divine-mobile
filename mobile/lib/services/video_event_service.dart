@@ -5084,10 +5084,8 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
 
       // Apply counts to each video
       var updatedCount = 0;
-      for (final entry in likeCounts.entries) {
-        final videoId = entry.key;
-        final likeCount = entry.value;
-
+      for (final MapEntry(key: videoId, value: likeCount)
+          in likeCounts.counts.entries) {
         // Skip if count is 0 (no change from default)
         if (likeCount == 0) continue;
 

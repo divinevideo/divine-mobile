@@ -111,6 +111,44 @@ void main() {
           noRelays: false,
         ),
       );
+      // Count reads (#9223) read through readEvents with its defaults.
+      when(() => mockNostrClient.readEvents(any())).thenAnswer(
+        (_) async => _answered(responses[callCount++ % responses.length]),
+      );
+    }
+
+    /// Answers count reads (#9223), which go through readEvents, with what the
+    /// test's queryEvents stub returns.
+    void countReadsAnswerLikeQueryEvents() {
+      when(() => mockNostrClient.readEvents(any())).thenAnswer(
+        (invocation) async => _answered(
+          await mockNostrClient.queryEvents(
+            invocation.positionalArguments.first as List<Filter>,
+          ),
+        ),
+      );
+    }
+
+    /// Answers count reads with what the test's queryEventsDetailed stub
+    /// returns; a read that timed out or reached no relay answered nothing.
+    void countReadsAnswerLikeQueryEventsDetailed() {
+      when(() => mockNostrClient.readEvents(any())).thenAnswer((
+        invocation,
+      ) async {
+        final read = await mockNostrClient.queryEventsDetailed(
+          invocation.positionalArguments.first as List<Filter>,
+        );
+        final answered = !read.noRelays && !read.timedOut;
+        return QueryResult(
+          events: read.events,
+          endedBy: read.noRelays
+              ? QueryEnd.noRelay
+              : read.timedOut
+              ? QueryEnd.deadline
+              : QueryEnd.complete,
+          answeredNetworkRelayCount: answered ? 1 : 0,
+        );
+      });
     }
 
     /// Stubs the reads that must tell a complete answer from a short one —
@@ -195,6 +233,18 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => (events: events, timedOut: !finished, noRelays: noRelays),
+      );
+      // Count reads (#9223) go through readEvents.
+      when(() => mockNostrClient.readEvents(any())).thenAnswer(
+        (_) async => QueryResult(
+          events: events,
+          endedBy: noRelays
+              ? QueryEnd.noRelay
+              : finished
+              ? QueryEnd.complete
+              : QueryEnd.deadline,
+          answeredNetworkRelayCount: noRelays || !finished ? 0 : 1,
+        ),
       );
     }
 
@@ -3033,21 +3083,14 @@ void main() {
           ]);
 
           repository = createRepository();
+          countReadsAnswerLikeQueryEventsDetailed();
           final count = await repository.getLikeCount(
             testEventId,
             addressableId: testAddressableId,
           );
 
           expect(count, equals(2));
-          verify(
-            () => mockNostrClient.queryEventsDetailed(
-              any(),
-              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-              acceptRelayClosedWhenOthersAnswered: any(
-                named: 'acceptRelayClosedWhenOthersAnswered',
-              ),
-            ),
-          ).called(2);
+          verify(() => mockNostrClient.readEvents(any())).called(2);
           verify(() => mockNostrClient.queryEvents(any())).called(1);
         },
       );
@@ -3157,6 +3200,7 @@ void main() {
             () => mockNostrClient.queryEvents(any()),
           ).thenAnswer((_) async => <Event>[]);
 
+          countReadsAnswerLikeQueryEventsDetailed();
           repository = createRepository();
           final whileUnfinished = await repository.getLikeCount(
             testEventId,
@@ -3170,6 +3214,69 @@ void main() {
 
           expect(whileUnfinished, isNull);
           expect(onceFinished, equals(2));
+        },
+      );
+
+      test(
+        'returns a count the settle window cut short without caching it '
+        '(#9223)',
+        () async {
+          const testAddressableId = '34236:$testAuthorPubkey:test-d-tag';
+          final reaction = createMockReaction(
+            id: 'reaction_e',
+            targetEventId: testEventId,
+            authorPubkey: 'liker_a_pubkey_1234567890abcdef',
+          );
+          final laterReaction = createMockReaction(
+            id: 'reaction_later',
+            targetEventId: testEventId,
+            authorPubkey: 'liker_b_pubkey_1234567890abcdef',
+          );
+          var settled = false;
+          when(() => mockNostrClient.readEvents(any())).thenAnswer(
+            (_) async => QueryResult(
+              events: <Event>[reaction, if (settled) laterReaction],
+              endedBy: settled ? QueryEnd.complete : QueryEnd.settledEarly,
+              answeredNetworkRelayCount: 1,
+            ),
+          );
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+
+          repository = createRepository();
+          final cutShort = await repository.getLikeCount(
+            testEventId,
+            addressableId: testAddressableId,
+          );
+          settled = true;
+          final onceSettled = await repository.getLikeCount(
+            testEventId,
+            addressableId: testAddressableId,
+          );
+
+          expect(cutShort, equals(1));
+          expect(onceSettled, equals(2));
+        },
+      );
+
+      test(
+        'returns a COUNT a relay did not settle without caching it (#9223)',
+        () async {
+          var calls = 0;
+          when(() => mockNostrClient.countEvents(any())).thenAnswer((_) async {
+            calls++;
+            return calls == 1
+                ? const CountResult(count: 2, isComplete: false)
+                : const CountResult(count: 6, isComplete: true);
+          });
+
+          repository = createRepository();
+
+          expect(await repository.getLikeCount(testEventId), equals(2));
+          expect(await repository.getLikeCount(testEventId), equals(6));
+          expect(await repository.getLikeCount(testEventId), equals(6));
+          verify(() => mockNostrClient.countEvents(any())).called(2);
         },
       );
 
@@ -3196,14 +3303,11 @@ void main() {
 
           expect(count, equals(1));
           verify(
-            () => mockNostrClient.queryEventsDetailed(
+            () => mockNostrClient.readEvents(
               any(),
               requireAllRelaysSettled: any(
                 named: 'requireAllRelaysSettled',
                 that: isFalse,
-              ),
-              acceptRelayClosedWhenOthersAnswered: any(
-                named: 'acceptRelayClosedWhenOthersAnswered',
               ),
             ),
           ).called(2);
@@ -3383,7 +3487,7 @@ void main() {
     group('getLikeCounts', () {
       test('returns empty map for empty input', () async {
         repository = createRepository();
-        expect(await repository.getLikeCounts([]), isEmpty);
+        expect((await repository.getLikeCounts([])).counts, isEmpty);
         verifyNoFallbackReads();
       });
 
@@ -3410,11 +3514,12 @@ void main() {
         );
 
         repository = createRepository();
-        final result = await repository.getLikeCounts([
+        countReadsAnswerLikeQueryEvents();
+        final result = (await repository.getLikeCounts([
           eventId1,
           eventId2,
           eventId3,
-        ]);
+        ])).counts;
 
         expect(result, {eventId1: 2, eventId2: 1, eventId3: 0});
       });
@@ -3432,13 +3537,14 @@ void main() {
           ).thenAnswer((_) async => <Event>[]);
 
           repository = createRepository();
+          countReadsAnswerLikeQueryEvents();
           await repository.getLikeCounts(eventIds);
 
-          final filters =
-              verify(() => mockNostrClient.queryEvents(captureAny())).captured
-                  .cast<List<Filter>>()
-                  .map((filters) => filters.single)
-                  .toList();
+          final filters = verify(() => mockNostrClient.readEvents(captureAny()))
+              .captured
+              .cast<List<Filter>>()
+              .map((filters) => filters.single)
+              .toList();
 
           expect(filters, hasLength(2));
           expect(filters[0].e, hasLength(500));
@@ -3469,15 +3575,7 @@ void main() {
 
           final reactionFilters =
               verify(
-                    () => mockNostrClient.queryEventsDetailed(
-                      captureAny(),
-                      requireAllRelaysSettled: any(
-                        named: 'requireAllRelaysSettled',
-                      ),
-                      acceptRelayClosedWhenOthersAnswered: any(
-                        named: 'acceptRelayClosedWhenOthersAnswered',
-                      ),
-                    ),
+                    () => mockNostrClient.readEvents(captureAny()),
                   ).captured
                   .cast<List<Filter>>()
                   .map((filters) => filters.single)
@@ -3530,7 +3628,8 @@ void main() {
         ).thenAnswer((_) async => [reaction]);
 
         repository = createRepository();
-        final counts = await repository.getLikeCounts(eventIds);
+        countReadsAnswerLikeQueryEvents();
+        final counts = (await repository.getLikeCounts(eventIds)).counts;
 
         expect(counts['event_id_0'], 0);
         expect(counts['event_id_500'], 1);
@@ -3553,7 +3652,11 @@ void main() {
         ).thenAnswer((_) async => [reaction]);
 
         repository = createRepository();
-        final counts = await repository.getLikeCounts([threadRoot, reactedTo]);
+        countReadsAnswerLikeQueryEvents();
+        final counts = (await repository.getLikeCounts([
+          threadRoot,
+          reactedTo,
+        ])).counts;
 
         expect(counts, {threadRoot: 0, reactedTo: 1});
       });
@@ -3573,7 +3676,10 @@ void main() {
         ).thenAnswer((_) async => [mockReaction1, mockReaction2]);
 
         repository = createRepository();
-        expect(await repository.getLikeCounts([eventId]), {eventId: 0});
+        countReadsAnswerLikeQueryEvents();
+        expect((await repository.getLikeCounts([eventId])).counts, {
+          eventId: 0,
+        });
       });
 
       test(
@@ -3619,22 +3725,15 @@ void main() {
           ]);
 
           repository = createRepository();
-          final counts = await repository.getLikeCounts(
+          countReadsAnswerLikeQueryEventsDetailed();
+          final counts = (await repository.getLikeCounts(
             [eventId1, eventId2],
             addressableIds: {eventId1: aTag1, eventId2: aTag2},
-          );
+          )).counts;
 
           // event1 has 1 from e-tag, event2 has 2 from a-tag
           expect(counts, {eventId1: 1, eventId2: 2});
-          verify(
-            () => mockNostrClient.queryEventsDetailed(
-              any(),
-              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-              acceptRelayClosedWhenOthersAnswered: any(
-                named: 'acceptRelayClosedWhenOthersAnswered',
-              ),
-            ),
-          ).called(2);
+          verify(() => mockNostrClient.readEvents(any())).called(2);
           verify(() => mockNostrClient.queryEvents(any())).called(1);
         },
       );
@@ -3688,10 +3787,10 @@ void main() {
         ]);
 
         repository = createRepository();
-        final counts = await repository.getLikeCounts(
+        final counts = (await repository.getLikeCounts(
           [eventId],
           addressableIds: {eventId: aTag},
-        );
+        )).counts;
 
         expect(counts[eventId], equals(4));
       });
@@ -3757,22 +3856,15 @@ void main() {
           ]);
 
           repository = createRepository();
-          final counts = await repository.getLikeCounts(
+          countReadsAnswerLikeQueryEventsDetailed();
+          final counts = (await repository.getLikeCounts(
             [addrEvent, plainEvent],
             addressableIds: {addrEvent: aTag},
-          );
+          )).counts;
 
           expect(counts[plainEvent], equals(1));
           expect(counts[addrEvent], equals(2));
-          verify(
-            () => mockNostrClient.queryEventsDetailed(
-              any(),
-              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-              acceptRelayClosedWhenOthersAnswered: any(
-                named: 'acceptRelayClosedWhenOthersAnswered',
-              ),
-            ),
-          ).called(2);
+          verify(() => mockNostrClient.readEvents(any())).called(2);
           verify(() => mockNostrClient.queryEvents(any())).called(1);
         },
       );
@@ -3797,28 +3889,21 @@ void main() {
           ]);
 
           repository = createRepository();
-          final first = await repository.getLikeCounts(
+          countReadsAnswerLikeQueryEventsDetailed();
+          final first = (await repository.getLikeCounts(
             [eventId],
             addressableIds: {eventId: aTag},
-          );
-          final second = await repository.getLikeCounts(
+          )).counts;
+          final second = (await repository.getLikeCounts(
             [eventId],
             addressableIds: {eventId: aTag},
-          );
+          )).counts;
 
           expect(first[eventId], equals(1));
           expect(second[eventId], equals(1));
           // First batch: e + a + deletion = 3 queries; the second is served
           // from _likeCountCache with no further relay calls.
-          verify(
-            () => mockNostrClient.queryEventsDetailed(
-              any(),
-              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-              acceptRelayClosedWhenOthersAnswered: any(
-                named: 'acceptRelayClosedWhenOthersAnswered',
-              ),
-            ),
-          ).called(2);
+          verify(() => mockNostrClient.readEvents(any())).called(2);
           verify(() => mockNostrClient.queryEvents(any())).called(1);
         },
       );
@@ -3860,18 +3945,124 @@ void main() {
           ).thenAnswer((_) async => <Event>[]);
 
           repository = createRepository();
-          final whileUnfinished = await repository.getLikeCounts(
+          countReadsAnswerLikeQueryEventsDetailed();
+          final whileUnfinished = (await repository.getLikeCounts(
+            [eventId],
+            addressableIds: {eventId: aTag},
+          )).counts;
+          finished = true;
+          final onceFinished = (await repository.getLikeCounts(
+            [eventId],
+            addressableIds: {eventId: aTag},
+          )).counts;
+
+          expect(whileUnfinished, isEmpty);
+          expect(onceFinished, equals({eventId: 2}));
+        },
+      );
+
+      test(
+        'reports addressable ids a relay did not settle as incomplete and '
+        'does not cache them (#9223)',
+        () async {
+          const eventId = 'settle_cut_addr_event_1234567890abcdef0123';
+          const aTag = '34236:author:d-tag';
+          final reaction = createMockReaction(
+            id: 'reaction_e',
+            targetEventId: eventId,
+            authorPubkey: 'liker_a_pubkey_1234567890abcdef',
+          );
+          final laterReaction = createMockReaction(
+            id: 'reaction_later',
+            targetEventId: eventId,
+            authorPubkey: 'liker_b_pubkey_1234567890abcdef',
+          );
+          var settled = false;
+          when(() => mockNostrClient.readEvents(any())).thenAnswer(
+            (_) async => QueryResult(
+              events: <Event>[reaction, if (settled) laterReaction],
+              endedBy: settled ? QueryEnd.complete : QueryEnd.settledEarly,
+              answeredNetworkRelayCount: 1,
+            ),
+          );
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+
+          repository = createRepository();
+          final cutShort = await repository.getLikeCounts(
             [eventId],
             addressableIds: {eventId: aTag},
           );
-          finished = true;
-          final onceFinished = await repository.getLikeCounts(
+          settled = true;
+          final onceSettled = await repository.getLikeCounts(
             [eventId],
             addressableIds: {eventId: aTag},
           );
 
-          expect(whileUnfinished, isEmpty);
-          expect(onceFinished, equals({eventId: 2}));
+          expect(
+            cutShort,
+            equals(
+              const LikeCounts(counts: {eventId: 1}, incompleteIds: {eventId}),
+            ),
+          );
+          expect(onceSettled, equals(const LikeCounts(counts: {eventId: 2})));
+        },
+      );
+
+      test(
+        'reports ids without an addressable id as incomplete when a relay '
+        'did not settle, and does not cache them (#9223)',
+        () async {
+          const eventId = 'settle_cut_plain_event_1234567890abcdef012';
+          when(() => mockNostrClient.readEvents(any())).thenAnswer(
+            (_) async => QueryResult(
+              events: [
+                createMockReaction(id: 'reaction_e', targetEventId: eventId),
+              ],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+            ),
+          );
+          when(() => mockNostrClient.countEvents(any())).thenAnswer(
+            (_) async => const CountResult(count: 4, isComplete: true),
+          );
+
+          repository = createRepository();
+          final counts = await repository.getLikeCounts([eventId]);
+
+          expect(
+            counts,
+            equals(
+              const LikeCounts(counts: {eventId: 1}, incompleteIds: {eventId}),
+            ),
+          );
+          expect(await repository.getLikeCount(eventId), equals(4));
+          verify(() => mockNostrClient.countEvents(any())).called(1);
+        },
+      );
+
+      test(
+        'leaves out ids without an addressable id when no relay answered, '
+        'and caches nothing (#9223)',
+        () async {
+          const eventId = 'unanswered_plain_event_1234567890abcdef012';
+          when(() => mockNostrClient.readEvents(any())).thenAnswer(
+            (_) async => const QueryResult(
+              events: <Event>[],
+              endedBy: QueryEnd.deadline,
+            ),
+          );
+          when(() => mockNostrClient.countEvents(any())).thenAnswer(
+            (_) async => const CountResult(count: 4, isComplete: true),
+          );
+
+          repository = createRepository();
+          final counts = await repository.getLikeCounts([eventId]);
+
+          expect(counts, equals(const LikeCounts(counts: {})));
+          expect(await repository.getLikeCount(eventId), equals(4));
+          verify(() => mockNostrClient.countEvents(any())).called(1);
         },
       );
 
@@ -3892,21 +4083,18 @@ void main() {
           ).thenAnswer((_) async => <Event>[]);
 
           repository = createRepository();
-          final counts = await repository.getLikeCounts(
+          final counts = (await repository.getLikeCounts(
             [eventId],
             addressableIds: {eventId: aTag},
-          );
+          )).counts;
 
           expect(counts, equals({eventId: 1}));
           verify(
-            () => mockNostrClient.queryEventsDetailed(
+            () => mockNostrClient.readEvents(
               any(),
               requireAllRelaysSettled: any(
                 named: 'requireAllRelaysSettled',
                 that: isFalse,
-              ),
-              acceptRelayClosedWhenOthersAnswered: any(
-                named: 'acceptRelayClosedWhenOthersAnswered',
               ),
             ),
           ).called(2);
@@ -3925,6 +4113,7 @@ void main() {
         );
 
         repository = createRepository();
+        countReadsAnswerLikeQueryEvents();
         await repository.getLikeCount(eventId1);
 
         // Now batch-fetch both; only eventId2 should hit relays
@@ -3937,13 +4126,16 @@ void main() {
           () => mockNostrClient.queryEvents(any()),
         ).thenAnswer((_) async => [reactionForId2]);
 
-        final counts = await repository.getLikeCounts([eventId1, eventId2]);
+        final counts = (await repository.getLikeCounts([
+          eventId1,
+          eventId2,
+        ])).counts;
 
         expect(counts[eventId1], equals(5));
         expect(counts[eventId2], equals(1));
         // countEvents called once for getLikeCount; queryEvents once for batch
         verify(() => mockNostrClient.countEvents(any())).called(1);
-        verify(() => mockNostrClient.queryEvents(any())).called(1);
+        verify(() => mockNostrClient.readEvents(any())).called(1);
       });
     });
 
@@ -5899,7 +6091,6 @@ void main() {
           ).thenAnswer((_) async => <Event>[]);
 
           repository = createRepository(funnelcakeApiClient: mockFunnelcake);
-
           expect(
             await repository.getLikeCount(
               targetEventId,
@@ -7592,13 +7783,13 @@ void main() {
           ]);
 
           repository = createRepository();
-          final counts = await repository.getLikeCounts(
+          final counts = (await repository.getLikeCounts(
             [shortVideoId, normalVideoId],
             addressableIds: {
               shortVideoId: legacyCoordinate,
               normalVideoId: coordinate,
             },
-          );
+          )).counts;
 
           expect(counts, equals({shortVideoId: 1, normalVideoId: 0}));
         },
@@ -7729,6 +7920,7 @@ void main() {
           ]);
 
           repository = createRepository();
+          countReadsAnswerLikeQueryEventsDetailed();
           final firstCount = await repository.getLikeCount(
             oldEventId,
             addressableId: coordinate,
@@ -7743,15 +7935,7 @@ void main() {
           );
           expect(secondCount, equals(1));
 
-          verify(
-            () => mockNostrClient.queryEventsDetailed(
-              any(),
-              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-              acceptRelayClosedWhenOthersAnswered: any(
-                named: 'acceptRelayClosedWhenOthersAnswered',
-              ),
-            ),
-          ).called(2);
+          verify(() => mockNostrClient.readEvents(any())).called(2);
           verify(() => mockNostrClient.queryEvents(any())).called(1);
         },
       );
