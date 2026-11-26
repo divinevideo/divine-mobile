@@ -10,7 +10,120 @@ import '../../../tools/import_free_sounds.dart' as cli;
 import '../../../tools/sound_import/import_state.dart';
 import '../../../tools/sound_import/sound_candidate.dart';
 
+/// Collects what the CLI writes to stdout.
+class _CapturedStdout implements Stdout {
+  final buffer = StringBuffer();
+
+  @override
+  void write(Object? object) => buffer.write(object);
+
+  @override
+  void writeln([Object? object = '']) => buffer.writeln(object);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
+  group('prepare command', () {
+    late Directory work;
+
+    setUp(() {
+      work = Directory.systemTemp.createTempSync('sound-import-test-');
+    });
+    tearDown(() {
+      exitCode = 0;
+      work.deleteSync(recursive: true);
+    });
+
+    void prepared(Map<String, ImportRecord> records) {
+      final state = ImportState(File('${work.path}/state.json'), {});
+      final catalog = <Map<String, dynamic>>[];
+      for (final MapEntry(key: id, value: record) in records.entries) {
+        catalog.add(
+          SoundCandidate(
+            id: id,
+            downloadUrl: 'https://source.example/$id.mp3',
+            sourcePage: 'https://source.example/$id',
+            title: id,
+            kind: SoundKind.music,
+            creatorName: 'Test creator',
+            creatorUrl: 'https://source.example',
+            license: SoundLicense.ccBy4,
+          ).toJson(),
+        );
+        state.records[id] = record;
+      }
+      File('${work.path}/catalog.json').writeAsStringSync(jsonEncode(catalog));
+      state.save();
+    }
+
+    Future<String> dryRun(List<String> extra) async {
+      final out = _CapturedStdout();
+      await IOOverrides.runZoned(
+        () => cli.main([
+          'prepare',
+          '--work-dir',
+          work.path,
+          '--dry-run',
+          '--all',
+          ...extra,
+        ]),
+        stdout: () => out,
+      );
+      return out.buffer.toString();
+    }
+
+    test('prepares again a track left too long to upload', () async {
+      ImportRecord record(
+        double seconds, {
+        List<String>? uploadedTo,
+        String? publishedEventId,
+      }) => ImportRecord(
+        status: ImportStatus.prepared,
+        outputSha256: 'f' * 64,
+        durationSeconds: seconds,
+        uploadedTo: uploadedTo,
+        publishedEventId: publishedEventId,
+      );
+      prepared({
+        'too-long': record(1800),
+        'already-cut': record(300.02),
+        'uploaded': record(1800, uploadedTo: ['https://media.example']),
+        'published': record(1800, publishedEventId: 'e' * 64),
+      });
+
+      final output = await dryRun(['--max-duration', '300']);
+
+      expect(output, contains('Would prepare 1 of 1 pending candidates'));
+      expect(output, contains('too-long'));
+    });
+
+    test('leaves prepared tracks alone without a limit', () async {
+      prepared({
+        'too-long': ImportRecord(
+          status: ImportStatus.prepared,
+          outputSha256: 'f' * 64,
+          durationSeconds: 1800,
+        ),
+      });
+
+      expect(
+        await dryRun(const []),
+        contains('Would prepare 0 of 0 pending candidates'),
+      );
+    });
+
+    test('rejects a limit that is not positive, even in a dry run', () async {
+      prepared(const {});
+
+      final output = await dryRun(['--max-duration', '0']);
+
+      expect(exitCode, 64);
+      expect(output, isNot(contains('Would prepare')));
+    });
+  });
+
   group('events command', () {
     late Directory work;
 

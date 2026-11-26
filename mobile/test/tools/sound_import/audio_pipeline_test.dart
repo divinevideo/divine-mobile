@@ -200,6 +200,29 @@ void main() {
         );
       });
 
+      test('measures and encodes the cut, not the whole track', () async {
+        final calls = <List<String>>[];
+        await _prepare(
+          _fakeTools(
+            inputDuration: '3520.656000',
+            trimmedDuration: '3520.410000',
+            truePeak: '-3.20',
+            ffmpegCalls: calls,
+          ),
+          targets: fiveMinutes,
+        );
+
+        String inputOf(List<String> arguments) =>
+            arguments[arguments.indexOf('-i') + 1];
+        final excerpt = calls.singleWhere(
+          (arguments) => arguments.any((value) => value.startsWith('atrim=')),
+        );
+        final measure = calls.singleWhere((args) => args.contains('null'));
+        final encode = calls.singleWhere((args) => args.contains('aac'));
+        expect(inputOf(measure), equals(excerpt.last));
+        expect(inputOf(encode), equals(excerpt.last));
+      });
+
       test('keeps a shorter sound whole', () async {
         final calls = <List<String>>[];
         final outcome = await _prepare(
