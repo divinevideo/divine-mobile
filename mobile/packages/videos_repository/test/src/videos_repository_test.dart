@@ -6773,14 +6773,55 @@ void main() {
             random: _StubRandom(),
           ).getClassicVideos(limit: 20);
 
+          expect(result.videos, hasLength(19));
           expect(result.hasMore, isTrue);
-          expect(result.paginationCursor, 'classic-offset:40');
-          // Both pages are handed back rather than trimmed to `limit`: the
-          // cursor has already advanced past them, so trimming would drop
-          // those videos instead of deferring them to the next page.
-          expect(result.videos, hasLength(39));
+          expect(result.paginationCursor, 'classic-offset:20');
         },
       );
+
+      test('stops reading pages once half the page is filled', () async {
+        // Each archive page is a sequential round trip of several seconds on
+        // a CDN miss, so a page the filters only halved must not wait for
+        // another one before the first screen can render.
+        stubArchiveByOffset(
+          (offset) => offset == 0
+              ? [...archivePage(10), ...nonVinePage(10)]
+              : archivePage(20, startIndex: 10),
+        );
+
+        final result = await buildRepository(
+          random: _StubRandom(),
+        ).getClassicVideos(limit: 20);
+
+        expect(result.videos, hasLength(10));
+        expect(result.paginationCursor, 'classic-offset:20');
+        verify(
+          () => mockFunnelcakeClient.getClassicVines(
+            sort: any(named: 'sort'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            before: any(named: 'before'),
+          ),
+        ).called(1);
+      });
+
+      test('tops up a page filtered below half, without trimming', () async {
+        stubArchiveByOffset(
+          (offset) => offset == 0
+              ? [...archivePage(4), ...nonVinePage(16)]
+              : archivePage(20, startIndex: 4),
+        );
+
+        final result = await buildRepository(
+          random: _StubRandom(),
+        ).getClassicVideos(limit: 20);
+
+        expect(result.paginationCursor, 'classic-offset:40');
+        // Both pages are handed back rather than trimmed to `limit`: the
+        // cursor has already advanced past them, so trimming would drop
+        // those videos instead of deferring them to the next page.
+        expect(result.videos, hasLength(24));
+      });
 
       test('keeps the slice stable across cache-eligible fetches', () async {
         stubArchive(archivePage(20));
@@ -6929,11 +6970,11 @@ void main() {
       });
 
       test('serves the pages that succeeded when a top-up fails', () async {
-        // The first page filters short, so the fetch tops up — and the
+        // The first page filters below half, so the fetch tops up — and the
         // top-up is what fails.
         stubArchiveByOffset((offset) {
           if (offset == 0) {
-            return [...archivePage(12), ...nonVinePage(8)];
+            return [...archivePage(6), ...nonVinePage(14)];
           }
           throw const FunnelcakeNotConfiguredException();
         });
@@ -6943,7 +6984,7 @@ void main() {
 
         final result = await repository.getClassicVideos(limit: 20);
 
-        expect(result.videos, hasLength(12));
+        expect(result.videos, hasLength(6));
         expect(result.hasMore, isFalse);
         expect(result.paginationCursor, isNull);
 

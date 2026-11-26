@@ -149,6 +149,17 @@ const int classicsMaxRandomStartOffset = 2000;
 /// that without turning a single fetch into a crawl through the archive.
 const int _classicsMaxPageFetches = 3;
 
+/// Videos a Classics archive fetch must collect before it stops reading
+/// further archive pages: half of the requested [limit].
+///
+/// Every archive page is a full Funnelcake round trip, several seconds when
+/// it misses the CDN, and the archive's unverified rows take 10–45% out of
+/// each page. Waiting for a full [limit] therefore made nearly every first
+/// load read two or three pages one after another. Half a page already
+/// fills more than a screen of the grid and the feed, and scrolling
+/// paginates for the rest.
+int _classicsFillTarget(int limit) => max(1, (limit + 1) ~/ 2);
+
 /// Result of a hashtag REST feed fetch.
 class HashtagFeedVideosResult {
   /// Creates a successful hashtag feed result.
@@ -1500,9 +1511,11 @@ class VideosRepository {
   /// sessions do not see the same opening run. The next offset rides in
   /// [HomeFeedResult.paginationCursor], so the home feed paginates this like
   /// the For You feed. Filtering can empty an archive page, so up to
-  /// [_classicsMaxPageFetches] pages are read to fill [limit] rather than
-  /// handing back a page a feed cannot paginate out of. A topped-up page can
-  /// therefore exceed [limit]; the cursor advances past every page actually
+  /// [_classicsMaxPageFetches] pages are read until the fetch holds
+  /// [_classicsFillTarget] videos, rather than handing back a page a feed
+  /// cannot paginate out of. It stops there instead of at a full [limit],
+  /// because each further page is another sequential round trip. A topped-up
+  /// page can exceed [limit]; the cursor advances past every page actually
   /// read, so trimming to [limit] would drop those videos rather than defer
   /// them.
   ///
@@ -1557,17 +1570,18 @@ class VideosRepository {
     var failed = false;
     // Deep-fetch budget: when filtering removes many videos we fetch deeper
     // to avoid short pages (heavy users have seen top 500). Variable page
-    // sizes are fine for continuous feeds; we fetch until we have limit or
-    // we've tried enough pages. _classicsMaxPageFetches covers transport
-    // filtering; seen filtering gets the shared seen-only page budget.
+    // sizes are fine for continuous feeds; we fetch until we hold the fill
+    // target or we've tried enough pages. _classicsMaxPageFetches covers
+    // transport filtering; seen filtering gets the shared seen-only budget.
     final maxFetches = _seenVideoLookup == null
         ? _classicsMaxPageFetches
         : maxSeenOnlyFeedPages;
+    final fillTarget = _classicsFillTarget(limit);
 
     try {
       for (
         var fetch = 0;
-        fetch < maxFetches && collected.length < limit && !exhausted;
+        fetch < maxFetches && collected.length < fillTarget && !exhausted;
         fetch++
       ) {
         final stats = await _funnelcakeApiClient.getClassicVines(
@@ -1581,8 +1595,7 @@ class VideosRepository {
         );
 
         // Apply seen filtering per-page: drop recently-seen when lookup
-        // available (inventory is unlimited, so dropping is safe), but only
-        // if we have not already filled limit via filtered results.
+        // available (inventory is unlimited, so dropping is safe).
         final filteredPage = _withoutSeenVideos(
           pageVideos.where((video) => video.countsAsArchiveVine).toList(),
         );
