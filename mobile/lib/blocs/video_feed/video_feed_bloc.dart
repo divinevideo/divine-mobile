@@ -89,7 +89,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Stream<String>? unavailableVideoIds,
   }) : _videosRepository = videosRepository,
        _removalRepository = videosRepository,
-       _classicSession = classicSession,
        _createClassicSession = createClassicSession,
        _isAdaptiveClassicsAllowedCallback = isAdaptiveClassicsAllowed,
        _adaptiveClassicsEnabled = classicSession != null,
@@ -122,7 +121,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
        ),
        super(const VideoFeedBlocState()) {
     on<VideoFeedStarted>(_onStarted);
-    on<VideoFeedClassicsSessionChanged>(_onClassicsSessionChanged);
+    on<_VideoFeedClassicsSessionChanged>(_onClassicsSessionChanged);
     on<_VideoFeedAdaptiveClassicsChanged>(
       _onAdaptiveClassicsChanged,
       transformer: sequential(),
@@ -134,19 +133,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
             event.visible && state.source.type == VideoFeedSourceType.classic,
       );
     });
-    if (_classicSession case final initialSession?) {
-      _classicSessionSubscription = initialSession.stream.skip(1).listen((
-        snapshot,
-      ) {
-        if (!_isClosing &&
-            !isClosed &&
-            identical(_classicSession, initialSession)) {
-          add(
-            VideoFeedClassicsSessionChanged(snapshot, session: initialSession),
-          );
-        }
-      });
-    }
+    _attachClassicSession(classicSession);
     _adaptiveClassicsSubscription = adaptiveClassicsEnabledStream?.listen(
       (enabled) {
         if (!_isClosing && !isClosed) {
@@ -275,9 +262,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       return;
     }
     _classicSession = session;
-    _classicSessionSubscription = session.stream.skip(1).listen((snapshot) {
+    _classicSessionSubscription = session.stream.skip(1).listen((_) {
       if (!_isClosing && !isClosed && identical(_classicSession, session)) {
-        add(VideoFeedClassicsSessionChanged(snapshot, session: session));
+        add(_VideoFeedClassicsSessionChanged(session));
       }
     });
     session.setActive(
@@ -343,13 +330,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   }
 
   void _onClassicsSessionChanged(
-    VideoFeedClassicsSessionChanged event,
+    _VideoFeedClassicsSessionChanged event,
     Emitter<VideoFeedBlocState> emit,
   ) {
     final classicSession = _classicSession;
     if (!_isAdaptiveClassicsAllowed ||
         classicSession == null ||
-        (event.session != null && !identical(event.session, classicSession)) ||
+        !identical(event.session, classicSession) ||
         state.source.type != VideoFeedSourceType.classic ||
         state.status != VideoFeedStatus.success) {
       return;
@@ -2140,10 +2127,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         classicSession != null) {
       classicSession.reapplyFilters();
       _onClassicsSessionChanged(
-        VideoFeedClassicsSessionChanged(
-          classicSession.state,
-          session: classicSession,
-        ),
+        _VideoFeedClassicsSessionChanged(classicSession),
         emit,
       );
       return;

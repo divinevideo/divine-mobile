@@ -309,14 +309,13 @@ final class VideoFeedVideoUnavailable extends VideoFeedEvent {
 }
 
 /// Independent Classics queue changed after request-only feedback.
-final class VideoFeedClassicsSessionChanged extends VideoFeedEvent {
-  const VideoFeedClassicsSessionChanged(this.snapshot, {this.session});
+final class _VideoFeedClassicsSessionChanged extends VideoFeedEvent {
+  const _VideoFeedClassicsSessionChanged(this.session);
 
-  final ClassicFeedSessionState snapshot;
-  final ClassicFeedSession? session;
+  final ClassicFeedSession session;
 
   @override
-  List<Object?> get props => [snapshot, session];
+  List<Object?> get props => [session];
 }
 
 /// Whether Home is visible, independent of transient player overlays.
