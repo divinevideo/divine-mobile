@@ -9,4 +9,5 @@ export 'src/audio_session_wrapper.dart';
 export 'src/audio_source_config.dart';
 export 'src/countdown_sound_service.dart';
 export 'src/remote_audio_cache.dart';
+export 'src/remote_audio_prefetcher.dart';
 export 'src/simple_audio_player.dart';

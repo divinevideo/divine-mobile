@@ -2055,37 +2055,42 @@ class _SoundsContent extends ConsumerWidget {
               final isUnavailable = unavailableSoundIds.contains(audio.id);
               final isSelected =
                   !isUnavailable && audio.id == selectedSound?.id;
-              if (!isSelected) {
-                return AudioListTile(
-                  audio: audio,
-                  displayTitle: displayTitles[audio.id],
-                  cover: _coverFor(audio),
-                  isSelected: false,
-                  isUnavailable: isUnavailable,
-                  videoCount: _videoCountFor(audio),
-                  semanticIdentifier: SemanticIds.audioSoundTile(index),
-                  onTap: () => onSelect(audio),
-                );
-              }
               // Use selectedSound for the selected entry so any duration
               // backfilled after loading the preview shows up in the
               // subtitle.
-              final displayAudio = selectedSound ?? audio;
-              return StreamBuilder<bool>(
-                stream: audioService.playingStream,
-                initialData: audioService.isPlaying,
-                builder: (context, snapshot) {
-                  return AudioListTile(
-                    audio: displayAudio,
-                    displayTitle: displayTitles[displayAudio.id],
-                    cover: _coverFor(displayAudio),
-                    isSelected: true,
-                    isPlaying: snapshot.data ?? false,
-                    videoCount: _videoCountFor(displayAudio),
-                    semanticIdentifier: SemanticIds.audioSoundTile(index),
-                    onTap: () => onSelect(displayAudio),
-                  );
-                },
+              final displayAudio = isSelected ? selectedSound ?? audio : audio;
+              return _PrefetchedRow(
+                sound: audio,
+                audioService: audioService,
+                child: isSelected
+                    ? StreamBuilder<bool>(
+                        stream: audioService.playingStream,
+                        initialData: audioService.isPlaying,
+                        builder: (context, snapshot) {
+                          return AudioListTile(
+                            audio: displayAudio,
+                            displayTitle: displayTitles[displayAudio.id],
+                            cover: _coverFor(displayAudio),
+                            isSelected: true,
+                            isPlaying: snapshot.data ?? false,
+                            videoCount: _videoCountFor(displayAudio),
+                            semanticIdentifier: SemanticIds.audioSoundTile(
+                              index,
+                            ),
+                            onTap: () => onSelect(displayAudio),
+                          );
+                        },
+                      )
+                    : AudioListTile(
+                        audio: audio,
+                        displayTitle: displayTitles[audio.id],
+                        cover: _coverFor(audio),
+                        isSelected: false,
+                        isUnavailable: isUnavailable,
+                        videoCount: _videoCountFor(audio),
+                        semanticIdentifier: SemanticIds.audioSoundTile(index),
+                        onTap: () => onSelect(audio),
+                      ),
               );
             },
           ),
@@ -2102,6 +2107,47 @@ class _SoundsContent extends ConsumerWidget {
       child: content,
     );
   }
+}
+
+/// A sound's row that readies the sound for its preview when the list first
+/// builds it, which it does as the row nears the screen, so a tap on it
+/// plays without waiting for the network.
+class _PrefetchedRow extends StatefulWidget {
+  const _PrefetchedRow({
+    required this.sound,
+    required this.audioService,
+    required this.child,
+  });
+
+  final AudioEvent sound;
+  final AudioPlaybackService audioService;
+  final Widget child;
+
+  @override
+  State<_PrefetchedRow> createState() => _PrefetchedRowState();
+}
+
+class _PrefetchedRowState extends State<_PrefetchedRow> {
+  @override
+  void initState() {
+    super.initState();
+    _prefetch();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PrefetchedRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.sound.url != widget.sound.url) _prefetch();
+  }
+
+  void _prefetch() {
+    final url = widget.sound.url;
+    if (url == null || widget.sound.isLocalImport) return;
+    widget.audioService.prefetch(url, sizeBytes: widget.sound.fileSize);
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// The space after a list's last row, so it scrolls clear of the card of the

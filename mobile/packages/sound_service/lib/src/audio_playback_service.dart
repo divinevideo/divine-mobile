@@ -16,6 +16,7 @@ import 'package:sound_service/src/audio_session_service.dart';
 import 'package:sound_service/src/audio_session_wrapper.dart';
 import 'package:sound_service/src/audio_source_config.dart';
 import 'package:sound_service/src/remote_audio_cache.dart';
+import 'package:sound_service/src/remote_audio_prefetcher.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Service for managing audio playback during lip sync recording mode.
@@ -32,11 +33,13 @@ class AudioPlaybackService {
   /// With [downloadRemoteAudio], an http(s) sound plays from a file the
   /// [remoteAudioCache] downloaded and keeps. It is off on the web, which has
   /// no file system for the cache and whose browser plays the URL itself.
+  /// [remoteAudioPrefetcher] readies sounds for [prefetch] in that cache.
   // coverage:ignore-start
   AudioPlaybackService({
     AudioPlayer? audioPlayer,
     AudioSessionWrapper? audioSessionWrapper,
     RemoteAudioCache? remoteAudioCache,
+    RemoteAudioPrefetcher? remoteAudioPrefetcher,
     bool downloadRemoteAudio = !kIsWeb,
     bool handleAudioSessionActivation = true,
   }) : _audioPlayer =
@@ -49,6 +52,10 @@ class AudioPlaybackService {
        _remoteAudioCache = downloadRemoteAudio
            ? remoteAudioCache ?? RemoteAudioCache()
            : null {
+    final cache = _remoteAudioCache;
+    _prefetcher = cache == null
+        ? null
+        : remoteAudioPrefetcher ?? RemoteAudioPrefetcher(cache: cache);
     _audioSessionService = AudioSessionService(
       audioSessionWrapper: _audioSessionWrapper,
     );
@@ -59,6 +66,7 @@ class AudioPlaybackService {
   final AudioPlayer _audioPlayer;
   final AudioSessionWrapper _audioSessionWrapper;
   final RemoteAudioCache? _remoteAudioCache;
+  late final RemoteAudioPrefetcher? _prefetcher;
   late final AudioSessionService _audioSessionService;
 
   /// BehaviorSubject for headphone connection state.
@@ -358,16 +366,28 @@ class AudioPlaybackService {
     }
   }
 
-  /// [url] as a URI when it is an http(s) sound that is not downloaded yet,
-  /// or `null` when it is local, already kept, or always played by URL (the
-  /// web, which has no cache).
+  /// [url] as a URI when it is an http(s) sound that is not downloaded or
+  /// downloading yet, or `null` when it is local, kept or about to be, or
+  /// always played by URL (the web, which has no cache).
   Uri? _uncachedRemoteUri(String url) {
     final cache = _remoteAudioCache;
     final uri = Uri.parse(url);
     if (cache == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
       return null;
     }
+    // A sound [prefetch] is downloading is small and nearly there, so its
+    // file starts sooner than a stream would.
+    if (cache.isDownloading(uri)) return null;
     return cache.cachedFileFor(uri) == null ? uri : null;
+  }
+
+  /// Readies the remote sound at [url] so it starts at once when it is
+  /// played: a small one, [sizeBytes] long when known, is downloaded, and a
+  /// larger one is warmed on the CDN. Call it for the sounds a list shows.
+  /// Does nothing on the web.
+  void prefetch(String url, {int? sizeBytes}) {
+    if (_isDisposed) return;
+    _prefetcher?.prefetch(Uri.parse(url), sizeBytes: sizeBytes);
   }
 
   /// The player source for a network [uri].
@@ -608,6 +628,7 @@ class AudioPlaybackService {
     if (_isDisposed) return;
 
     _isDisposed = true;
+    _prefetcher?.dispose();
     await _endSubscription?.cancel();
     await _deviceChangeSubscription?.cancel();
     await _headphonesConnectedSubject.close();

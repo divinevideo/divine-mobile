@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:bloc_concurrency/bloc_concurrency.dart';
+import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -39,6 +40,16 @@ class SoundWaveformBloc extends Bloc<SoundWaveformEvent, SoundWaveformState> {
 
   final RemoteAudioCache? _remoteAudioCache;
 
+  /// How many waveform points the editor sends at a time: a quarter of a
+  /// second of audio at its default resolution, so the waveform grows in
+  /// small steps rather than two-second blocks.
+  static const _chunkSize = 12;
+
+  /// The least time between two waveforms emitted while the sound is read.
+  /// The editor reads faster than the screen redraws, and each waveform is a
+  /// copy of every sample.
+  static const _emitInterval = Duration(milliseconds: 32);
+
   /// Emits the waveform as the editor reads it, from the start of the sound
   /// on, so a long song shows its opening seconds at once instead of after
   /// the whole file is read.
@@ -51,12 +62,16 @@ class SoundWaveformBloc extends Bloc<SoundWaveformEvent, SoundWaveformState> {
     try {
       final video = await _videoFor(event);
       final waveform = _ProgressiveWaveform();
+      Stopwatch? sinceEmit;
       await for (final chunk in ProVideoEditor.instance.getWaveformStream(
-        WaveformConfigs(video: video),
+        WaveformConfigs(video: video, chunkSize: _chunkSize),
       )) {
         waveform.add(chunk);
         if (chunk.isComplete) break;
-        emit(waveform.toState(isComplete: false));
+        if (sinceEmit == null || sinceEmit.elapsed >= _emitInterval) {
+          emit(waveform.toState(isComplete: false));
+          sinceEmit = clock.stopwatch()..start();
+        }
       }
       final loaded = waveform.toState(isComplete: true);
       emit(loaded);
@@ -149,6 +164,7 @@ class _ProgressiveWaveform {
       rightChannel: right?.sublist(0, length),
       duration: _duration,
       isComplete: isComplete,
+      readFraction: isComplete || length == 0 ? 1 : _received / length,
     );
   }
 }

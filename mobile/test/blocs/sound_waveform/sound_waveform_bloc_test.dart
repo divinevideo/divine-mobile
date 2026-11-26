@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -47,8 +48,14 @@ class _MockProVideoEditor extends ProVideoEditor {
   /// just the resulting state.
   EditorVideo? lastWaveformSource;
 
+  /// How many points per piece the bloc asked the editor for.
+  int? lastChunkSize;
+
   /// What [getWaveformStream] sends, by default the whole waveform at once.
   List<WaveformChunk>? chunks;
+
+  /// Called before each piece is sent, with the piece's index.
+  void Function(int index)? beforeChunk;
   Object? streamError;
 
   _MockProVideoEditor() {
@@ -68,6 +75,7 @@ class _MockProVideoEditor extends ProVideoEditor {
     NativeLogLevel? nativeLogLevel,
   }) async* {
     lastWaveformSource = configs.video;
+    lastChunkSize = configs.chunkSize;
     if (shouldThrowError) {
       throw Exception('Waveform extraction failed');
     }
@@ -85,7 +93,8 @@ class _MockProVideoEditor extends ProVideoEditor {
             isComplete: true,
           ),
         ];
-    for (final chunk in chunks) {
+    for (final (index, chunk) in chunks.indexed) {
+      beforeChunk?.call(index);
       yield chunk;
     }
     if (streamError case final error?) throw error;
@@ -98,6 +107,7 @@ void main() {
   late _MockProVideoEditor mockProVideoEditor;
   late ProVideoEditor originalProVideoEditor;
   late _MockRemoteAudioCache remoteAudioCache;
+  late DateTime Function() clockNow;
 
   setUpAll(() => registerFallbackValue(Uri()));
 
@@ -326,6 +336,7 @@ void main() {
             rightChannel: Float32List.fromList([0.3, 0.4, 0, 0]),
             duration: const Duration(seconds: 4),
             isComplete: false,
+            readFraction: 0.5,
           ),
           SoundWaveformLoaded(
             leftChannel: Float32List.fromList([0.1, 0.2, 0.5, 0.6]),
@@ -333,6 +344,72 @@ void main() {
             duration: const Duration(seconds: 4),
           ),
         ],
+      );
+
+      // The editor reads faster than the screen redraws, and every state is a
+      // copy of all samples.
+      blocTest<SoundWaveformBloc, SoundWaveformState>(
+        'emits pieces that arrive at once together',
+        setUp: () => mockProVideoEditor.chunks = [
+          _chunk(0, [0.1]),
+          _chunk(1, [0.2]),
+          _chunk(2, [0.3]),
+          _chunk(3, [0.4], isComplete: true),
+        ],
+        // A clock that never moves: every piece arrives at the same moment.
+        build: () => withClock(Clock.fixed(DateTime(2026)), buildBloc),
+        act: (bloc) => bloc.add(longSound),
+        expect: () => [
+          const SoundWaveformLoading(),
+          isA<SoundWaveformLoaded>().having(
+            (state) => state.readFraction,
+            'readFraction',
+            0.25,
+          ),
+          isA<SoundWaveformLoaded>()
+              .having((state) => state.isComplete, 'isComplete', isTrue)
+              .having((state) => state.readFraction, 'readFraction', 1),
+        ],
+      );
+
+      blocTest<SoundWaveformBloc, SoundWaveformState>(
+        'emits each piece that arrives two frames after the last one',
+        setUp: () {
+          var now = DateTime(2026);
+          mockProVideoEditor
+            ..chunks = [
+              _chunk(0, [0.1]),
+              _chunk(1, [0.2]),
+              _chunk(2, [0.3]),
+              _chunk(3, [0.4], isComplete: true),
+            ]
+            ..beforeChunk = (_) =>
+                now = now.add(const Duration(milliseconds: 40));
+          clockNow = () => now;
+        },
+        build: () => withClock(Clock(() => clockNow()), buildBloc),
+        act: (bloc) => bloc.add(longSound),
+        expect: () => [
+          const SoundWaveformLoading(),
+          for (final read in [0.25, 0.5, 0.75])
+            isA<SoundWaveformLoaded>().having(
+              (state) => state.readFraction,
+              'readFraction',
+              read,
+            ),
+          isA<SoundWaveformLoaded>().having(
+            (state) => state.isComplete,
+            'isComplete',
+            isTrue,
+          ),
+        ],
+      );
+
+      blocTest<SoundWaveformBloc, SoundWaveformState>(
+        'asks the editor for pieces of a quarter second',
+        build: buildBloc,
+        act: (bloc) => bloc.add(longSound),
+        verify: (_) => expect(mockProVideoEditor.lastChunkSize, 12),
       );
 
       // The editor ends a waveform where the decoded audio ends, which can
@@ -583,6 +660,30 @@ void main() {
         duration: const Duration(seconds: 5),
       );
       expect(state1, isNot(equals(state2)));
+    });
+
+    test('$SoundWaveformLoaded states read to different points '
+        'are not equal', () {
+      final leftChannel = Float32List.fromList([0.1, 0.5]);
+
+      expect(
+        SoundWaveformLoaded(
+          leftChannel: leftChannel,
+          duration: const Duration(seconds: 5),
+          isComplete: false,
+          readFraction: 0.5,
+        ),
+        isNot(
+          equals(
+            SoundWaveformLoaded(
+              leftChannel: leftChannel,
+              duration: const Duration(seconds: 5),
+              isComplete: false,
+              readFraction: 0.25,
+            ),
+          ),
+        ),
+      );
     });
 
     test('$SoundWaveformError states are equal regardless of cause', () {

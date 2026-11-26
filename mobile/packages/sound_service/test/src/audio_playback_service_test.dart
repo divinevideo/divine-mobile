@@ -37,11 +37,21 @@ File _cachedFileFor(String url) =>
 /// or throws [error] when one is given. The URLs in [kept] count as already
 /// downloaded.
 class _FakeRemoteAudioCache extends Fake implements RemoteAudioCache {
-  _FakeRemoteAudioCache({this.error, this.kept = const {}});
+  _FakeRemoteAudioCache({
+    this.error,
+    this.kept = const {},
+    this.downloading = const {},
+  });
 
   final Exception? error;
   final Set<String> kept;
+
+  /// URLs a prefetch is downloading.
+  final Set<String> downloading;
   final requested = <Uri>[];
+
+  @override
+  bool isDownloading(Uri uri) => downloading.contains(uri.toString());
 
   @override
   Future<File> fileFor(Uri uri) async {
@@ -54,6 +64,19 @@ class _FakeRemoteAudioCache extends Fake implements RemoteAudioCache {
   @override
   File? cachedFileFor(Uri uri) =>
       kept.contains(uri.toString()) ? _cachedFileFor(uri.toString()) : null;
+}
+
+/// Records what the service asks of its prefetcher.
+class _RecordingPrefetcher extends Fake implements RemoteAudioPrefetcher {
+  final asked = <({Uri uri, int? sizeBytes})>[];
+  bool disposed = false;
+
+  @override
+  void prefetch(Uri uri, {int? sizeBytes}) =>
+      asked.add((uri: uri, sizeBytes: sizeBytes));
+
+  @override
+  void dispose() => disposed = true;
 }
 
 /// Holds every download until the test finishes it.
@@ -1076,6 +1099,27 @@ void main() {
     });
 
     test(
+      'loadAudio waits for the download a prefetch started, not a stream',
+      () async {
+        when(
+          () => mockPlayer.setAudioSource(any()),
+        ).thenAnswer((_) async => const Duration(seconds: 1));
+        final cache = _FakeRemoteAudioCache(downloading: {soundUrl});
+        final service = serviceWith(cache);
+
+        await service.loadAudio(soundUrl, streamUnlessCached: true);
+
+        final source =
+            verify(
+                  () => mockPlayer.setAudioSource(captureAny()),
+                ).captured.single
+                as UriAudioSource;
+        expect(source.uri, Uri.file(_cachedFileFor(soundUrl).path));
+        expect(cache.requested, [Uri.parse(soundUrl)]);
+      },
+    );
+
+    test(
       'loadAudio plays a downloaded sound from its file, not its URL',
       () async {
         when(
@@ -1180,6 +1224,55 @@ void main() {
               as UriAudioSource;
       expect(source.uri, Uri.parse(soundUrl));
     });
+
+    test('prefetch hands a remote sound and its size to the prefetcher', () {
+      final prefetcher = _RecordingPrefetcher();
+      final service = AudioPlaybackService(
+        audioPlayer: mockPlayer,
+        audioSessionWrapper: mockSessionWrapper,
+        remoteAudioCache: _FakeRemoteAudioCache(),
+        remoteAudioPrefetcher: prefetcher,
+      );
+      addTearDown(service.dispose);
+
+      service.prefetch(soundUrl, sizeBytes: 4523);
+
+      expect(prefetcher.asked, [(uri: Uri.parse(soundUrl), sizeBytes: 4523)]);
+    });
+
+    test('prefetch does nothing when downloads are off', () {
+      final prefetcher = _RecordingPrefetcher();
+      final service = AudioPlaybackService(
+        audioPlayer: mockPlayer,
+        audioSessionWrapper: mockSessionWrapper,
+        remoteAudioPrefetcher: prefetcher,
+        downloadRemoteAudio: false,
+      );
+      addTearDown(service.dispose);
+
+      service.prefetch(soundUrl, sizeBytes: 4523);
+
+      expect(prefetcher.asked, isEmpty);
+    });
+
+    test(
+      'dispose stops the prefetcher, and prefetch then does nothing',
+      () async {
+        final prefetcher = _RecordingPrefetcher();
+        final service = AudioPlaybackService(
+          audioPlayer: mockPlayer,
+          audioSessionWrapper: mockSessionWrapper,
+          remoteAudioCache: _FakeRemoteAudioCache(),
+          remoteAudioPrefetcher: prefetcher,
+        );
+
+        await service.dispose();
+        service.prefetch(soundUrl);
+
+        expect(prefetcher.disposed, isTrue);
+        expect(prefetcher.asked, isEmpty);
+      },
+    );
 
     test('plays a remote URL directly when downloads are off', () async {
       when(

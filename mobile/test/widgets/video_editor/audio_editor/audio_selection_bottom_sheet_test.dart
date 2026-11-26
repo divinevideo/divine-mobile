@@ -1422,6 +1422,38 @@ void main() {
 
         verify(() => audioService.setRewindsAtEnd(rewinds: true)).called(1);
       });
+
+      testWidgets('readies the sounds its list shows before they are tapped', (
+        tester,
+      ) async {
+        final audioService = _stubbedAudioService();
+        final kick = _createTestAudioEvent(
+          id: 'kick',
+          title: 'Big Kick',
+        ).copyWith(fileSize: 4523);
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data([kick]),
+            audioService: audioService,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Big Kick'), findsOneWidget);
+        verify(
+          () => audioService.prefetch(kick.url!, sizeBytes: 4523),
+        ).called(greaterThanOrEqualTo(1));
+        verifyNever(
+          () => audioService.loadAudio(
+            any(),
+            streamUnlessCached: any(named: 'streamUnlessCached'),
+          ),
+        );
+      });
     });
 
     group('Loading more', () {

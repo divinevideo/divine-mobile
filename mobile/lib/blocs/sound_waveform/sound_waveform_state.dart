@@ -32,6 +32,7 @@ class SoundWaveformLoaded extends SoundWaveformState {
     required this.duration,
     this.rightChannel,
     this.isComplete = true,
+    this.readFraction = 1,
   });
 
   /// Left channel amplitude samples.
@@ -47,6 +48,10 @@ class SoundWaveformLoaded extends SoundWaveformState {
   /// whole [duration], and the samples not read yet are zero.
   final bool isComplete;
 
+  /// How much of the sound has been read, from 0 to 1: the channels hold
+  /// real samples up to this share of their length.
+  final double readFraction;
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -54,7 +59,8 @@ class SoundWaveformLoaded extends SoundWaveformState {
     return _float32ListEquals(leftChannel, other.leftChannel) &&
         _float32ListEquals(rightChannel, other.rightChannel) &&
         duration == other.duration &&
-        isComplete == other.isComplete;
+        isComplete == other.isComplete &&
+        readFraction == other.readFraction;
   }
 
   @override
@@ -63,6 +69,7 @@ class SoundWaveformLoaded extends SoundWaveformState {
     rightChannel == null ? null : Object.hashAll(rightChannel!),
     duration,
     isComplete,
+    readFraction,
   );
 
   /// Props is empty because equality is handled by the overrides

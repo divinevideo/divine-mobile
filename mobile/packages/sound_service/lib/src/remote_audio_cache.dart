@@ -65,6 +65,10 @@ class RemoteAudioCache {
   final HttpClient Function() _httpClientFactory;
   final Directory _directory;
 
+  /// The downloads running, by cache key, so a second request for a sound
+  /// waits for the download already under way instead of starting another.
+  final _downloads = <String, Future<File>>{};
+
   /// How long connecting to the server may take.
   final Duration connectionTimeout;
 
@@ -78,14 +82,28 @@ class RemoteAudioCache {
   final int maxBytes;
 
   /// A local file holding the sound at [uri], downloading it unless an
-  /// earlier call already did.
+  /// earlier call already did. A call while this cache is downloading the
+  /// sound waits for that download.
   ///
   /// Throws [RemoteAudioDownloadException] when the download fails. Nothing
   /// is kept for a failed download, so the next call tries again.
-  Future<File> fileFor(Uri uri) async {
-    final entry = _entryFor(uri);
+  Future<File> fileFor(Uri uri) {
+    final key = _keyFor(uri);
+    final entry = Directory(p.join(_directory.path, key));
     final cached = _cachedFileIn(entry);
-    if (cached != null) return cached;
+    if (cached != null) return Future.value(cached);
+    // removeWhere, not remove: remove returns the removed future, this
+    // one, and whenComplete would wait for it, so for itself, forever.
+    return _downloads[key] ??=
+        _downloadOrThrow(
+          uri,
+          entry,
+        ).whenComplete(
+          () => _downloads.removeWhere((pending, _) => pending == key),
+        );
+  }
+
+  Future<File> _downloadOrThrow(Uri uri, Directory entry) async {
     try {
       return await _download(uri, entry);
     } on RemoteAudioDownloadException {
@@ -98,6 +116,29 @@ class RemoteAudioCache {
   /// The local file holding the sound at [uri] if an earlier [fileFor]
   /// downloaded it, or `null`. Never touches the network.
   File? cachedFileFor(Uri uri) => _cachedFileIn(_entryFor(uri));
+
+  /// Whether this cache is downloading the sound at [uri] right now.
+  bool isDownloading(Uri uri) => _downloads.containsKey(_keyFor(uri));
+
+  /// Asks the server for the first byte of the sound at [uri] and keeps
+  /// nothing, so the CDN in front of it has the sound ready when it plays.
+  ///
+  /// A CDN edge that has not served a sound yet fetches it from the origin
+  /// first, which takes about half a second longer than an edge that has.
+  /// Never throws: a failure only means the sound is fetched cold later.
+  Future<void> warm(Uri uri) async {
+    final client = _httpClientFactory()..connectionTimeout = connectionTimeout;
+    try {
+      final request = await client.getUrl(uri);
+      request.headers.set(HttpHeaders.rangeHeader, 'bytes=0-0');
+      final response = await request.close().timeout(stallTimeout);
+      await response.drain<void>().timeout(stallTimeout);
+    } on Exception {
+      // Warming is only a head start; playing the sound fetches it anyway.
+    } finally {
+      client.close(force: true);
+    }
+  }
 
   Directory _entryFor(Uri uri) =>
       Directory(p.join(_directory.path, _keyFor(uri)));

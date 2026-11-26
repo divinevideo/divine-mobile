@@ -14,6 +14,7 @@ import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/sound_waveform/sound_waveform_bloc.dart';
 import 'package:openvine/blocs/video_editor/audio_timing/audio_timing_cubit.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
@@ -679,11 +680,23 @@ class _AudioWaveformSelector extends StatelessWidget {
         child: ClipRect(
           child: BlocBuilder<SoundWaveformBloc, SoundWaveformState>(
             builder: (context, waveformState) {
-              final (leftChannel, rightChannel) = switch (waveformState) {
-                SoundWaveformLoaded(:final leftChannel, :final rightChannel) =>
-                  (leftChannel, rightChannel),
-                _ => (null, null),
+              final (
+                leftChannel,
+                rightChannel,
+                readFraction,
+              ) = switch (waveformState) {
+                SoundWaveformLoaded(
+                  :final leftChannel,
+                  :final rightChannel,
+                  :final readFraction,
+                ) =>
+                  (leftChannel, rightChannel, readFraction),
+                _ => (null, null, 0.0),
               };
+              final peak = leftChannel == null
+                  ? WaveformConstants.amplitudeNormalizerFloor
+                  : StereoWaveformPainter.peakOf(leftChannel, rightChannel);
+              final reduceMotion = context.reduceMotion;
 
               return Stack(
                 children: [
@@ -726,25 +739,36 @@ class _AudioWaveformSelector extends StatelessWidget {
                           child: ClipRRect(
                             borderRadius: .circular(24),
                             child: SizedBox.expand(
-                              child: CustomPaint(
-                                painter: StereoWaveformPainter(
-                                  leftChannel: leftChannel ?? Float32List(0),
-                                  rightChannel: rightChannel,
-                                  progress: 1.0, // No progress indicator needed
-                                  activeColor: VineTheme.whiteText,
-                                  inactiveColor: VineTheme.whiteText,
-                                  audioDuration: _secondsToDuration(
-                                    audioDurationSecs,
-                                  ),
-                                  // The canvas is `waveformSpanSecs` wide, not
-                                  // one video duration wide — telling the
-                                  // painter otherwise stretches the opening
-                                  // 6.3s across the whole track.
-                                  maxDuration: _secondsToDuration(
-                                    waveformSpanSecs,
-                                  ),
-                                  heightFactor: heightFactor,
-                                ),
+                              child: _WaveformRevealAnimation(
+                                readFraction: readFraction,
+                                peak: peak,
+                                reduceMotion: reduceMotion,
+                                builder: (revealedFraction, peak) =>
+                                    CustomPaint(
+                                      painter: StereoWaveformPainter(
+                                        leftChannel:
+                                            leftChannel ?? Float32List(0),
+                                        rightChannel: rightChannel,
+                                        // No progress indicator needed
+                                        progress: 1.0,
+                                        activeColor: VineTheme.whiteText,
+                                        inactiveColor: VineTheme.whiteText,
+                                        audioDuration: _secondsToDuration(
+                                          audioDurationSecs,
+                                        ),
+                                        // The canvas is `waveformSpanSecs`
+                                        // wide, not one video duration wide —
+                                        // telling the painter otherwise
+                                        // stretches the opening 6.3s across
+                                        // the whole track.
+                                        maxDuration: _secondsToDuration(
+                                          waveformSpanSecs,
+                                        ),
+                                        heightFactor: heightFactor,
+                                        revealedFraction: revealedFraction,
+                                        peak: peak,
+                                      ),
+                                    ),
                               ),
                             ),
                           ),
@@ -774,6 +798,48 @@ class _AudioWaveformSelector extends StatelessWidget {
             },
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Glides the waveform's read edge and its loudest sample to their latest
+/// values, so a waveform shown as it is read grows in smoothly instead of
+/// jumping a piece at a time, and rescales smoothly when a louder passage
+/// arrives.
+class _WaveformRevealAnimation extends StatelessWidget {
+  const _WaveformRevealAnimation({
+    required this.readFraction,
+    required this.peak,
+    required this.reduceMotion,
+    required this.builder,
+  });
+
+  /// How much of the sound has been read, from 0 to 1.
+  final double readFraction;
+
+  /// The loudest sample read so far.
+  final double peak;
+
+  final bool reduceMotion;
+  final Widget Function(double revealedFraction, double peak) builder;
+
+  /// About as long as the editor takes to read the next piece, so the edge
+  /// keeps moving between pieces instead of stopping at each.
+  static const _revealDuration = Duration(milliseconds: 200);
+  static const _rescaleDuration = Duration(milliseconds: 300);
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: readFraction),
+      duration: reduceMotion ? Duration.zero : _revealDuration,
+      builder: (context, revealedFraction, _) => TweenAnimationBuilder<double>(
+        tween: Tween(begin: peak, end: peak),
+        duration: reduceMotion ? Duration.zero : _rescaleDuration,
+        curve: Curves.easeOut,
+        builder: (context, animatedPeak, _) =>
+            builder(revealedFraction, animatedPeak),
       ),
     );
   }
