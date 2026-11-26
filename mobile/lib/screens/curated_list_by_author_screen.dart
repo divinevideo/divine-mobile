@@ -65,11 +65,15 @@ class CuratedListByAuthorScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // GoRouter keeps the page mounted when only the query changes. Give each
+    // playback request its own feed state so it can open at the new position.
+    final feedKey = ValueKey((authorPubkey, listId, initialListIndex));
     final initial = discoveredList;
     if (initial != null &&
         initial.pubkey == authorPubkey &&
         initial.id == listId) {
       return CuratedListFeedScreen(
+        key: feedKey,
         listId: initial.id,
         listName: initial.name,
         videoIds: initial.videoEventIds,
@@ -95,6 +99,7 @@ class CuratedListByAuthorScreen extends ConsumerWidget {
           return const _ListUnavailableView();
         }
         return CuratedListFeedScreen(
+          key: feedKey,
           listId: list.id,
           listName: list.name,
           videoIds: list.videoEventIds,
