@@ -50,7 +50,8 @@ constexpr uint32_t kTickIntervalMs = 50;
 constexpr uint32_t kTicksPerStateEvent = 4;
 constexpr uint32_t kSetClipsTimeoutMs = 10000;
 constexpr uint32_t kSeekTimeoutMs = 500;
-// Optional trim discovery shares this budget across every clip and read.
+// How long after the load starts playback waits for the optional track-end
+// reads. A read that finishes later is cached for the next load.
 constexpr auto kTrackEndTrimBudget = std::chrono::seconds(1);
 // A clip has to start this far into its source before its first reported
 // position can tell whether Windows counts positions from the source start.
@@ -234,17 +235,15 @@ bool WantsCommonTrackEnd(const ClipSpec& clip) {
 }
 
 // The trims trimToCommonTrackEnd asks for. Blocks on file and network reads.
-std::vector<ClipTrim> CommonTrackEndTrims(
-    const std::string& log_target, const std::vector<ClipSpec>& clips,
-    std::chrono::steady_clock::time_point deadline) {
+std::vector<ClipTrim> CommonTrackEndTrims(const std::string& log_target,
+                                          const std::vector<ClipSpec>& clips) {
   std::vector<ClipTrim> trims;
   for (size_t i = 0; i < clips.size(); ++i) {
-    if (std::chrono::steady_clock::now() >= deadline) break;
     const ClipSpec& clip = clips[i];
     if (!WantsCommonTrackEnd(clip)) continue;
     std::optional<TrackEnds> ends;
     try {
-      ends = ReadTrackEnds(clip.uri, clip.http_headers, deadline);
+      ends = ReadTrackEnds(clip.uri, clip.http_headers);
     } catch (const TrackEndsUnavailable& error) {
       NativeLog::Warning(kLoadLog, log_target + ": clip " + std::to_string(i) +
                                        " plays untrimmed, its track ends "
@@ -266,15 +265,14 @@ std::vector<ClipTrim> CommonTrackEndTrims(
 // the extra reads overlap it rather than follow it. The future never blocks
 // in its destructor, unlike std::async's.
 std::future<std::vector<ClipTrim>> StartCommonTrackEndTrims(
-    std::string log_target, std::vector<ClipSpec> clips,
-    std::chrono::steady_clock::time_point deadline) {
+    std::string log_target, std::vector<ClipSpec> clips) {
   auto promise = std::make_shared<std::promise<std::vector<ClipTrim>>>();
   std::future<std::vector<ClipTrim>> trims = promise->get_future();
-  std::thread([promise, deadline, log_target = std::move(log_target),
+  std::thread([promise, log_target = std::move(log_target),
                clips = std::move(clips)]() {
     winrt::init_apartment(winrt::apartment_type::multi_threaded);
     try {
-      promise->set_value(CommonTrackEndTrims(log_target, clips, deadline));
+      promise->set_value(CommonTrackEndTrims(log_target, clips));
     } catch (...) {
       // A clip whose tracks cannot be read plays untrimmed.
       promise->set_value({});
@@ -296,10 +294,11 @@ winrt::fire_and_forget LoadSources(
     std::function<void(std::vector<MediaSource>, std::vector<ClipTrim>)>
         on_ready,
     std::function<void(int32_t, std::string)> on_failed) {
-  const auto trim_deadline = std::chrono::steady_clock::now() + kTrackEndTrimBudget;
+  const auto trim_deadline =
+      std::chrono::steady_clock::now() + kTrackEndTrimBudget;
   std::future<std::vector<ClipTrim>> pending_trims;
   if (std::any_of(clips.begin(), clips.end(), WantsCommonTrackEnd)) {
-    pending_trims = StartCommonTrackEndTrims(log_target, clips, trim_deadline);
+    pending_trims = StartCommonTrackEndTrims(log_target, clips);
   }
   std::vector<MediaSource> sources;
   for (const ClipSpec& clip : clips) {
@@ -323,6 +322,10 @@ winrt::fire_and_forget LoadSources(
     co_await winrt::resume_background();
     if (pending_trims.wait_until(trim_deadline) == std::future_status::ready) {
       trims = pending_trims.get();
+    } else {
+      NativeLog::Info(kLoadLog, log_target +
+                                    ": track ends not read in time, the clips "
+                                    "play untrimmed this load");
     }
   }
   PlatformThread::Post([weak, on_ready, sources = std::move(sources),
