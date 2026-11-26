@@ -2707,7 +2707,7 @@ void main() {
         expect(stats.toVideoEvent().seriesCoordinate, equals(series));
       });
 
-      test('has no series when the row names none', () {
+      test('ignores a series that is not a string', () {
         final stats = VideoStats.fromJson(row(seriesField: 42));
 
         expect(stats.series, isNull);

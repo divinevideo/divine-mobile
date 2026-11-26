@@ -59,6 +59,7 @@ void main() {
       ('has no d-tag', '30005:$author:'),
       ('has no d-tag separator', '30005:$author'),
       ('is a list by someone else', '30005:$someoneElse:our-story'),
+      ('does not start with the kind', 'x30005:$author:our-story'),
     ]) {
       test('ignores an address that $reason', () {
         final episode = video([
@@ -77,6 +78,24 @@ void main() {
       ]);
 
       expect(episode.seriesCoordinate, equals(series));
+    });
+
+    test('takes the first usable address', () {
+      final episode = video([
+        ['a', series, '', videoSeriesTagMarker],
+        ['a', '30005:$author:another-story', '', videoSeriesTagMarker],
+      ]);
+
+      expect(episode.seriesCoordinate, equals(series));
+    });
+
+    test('reads a d-tag that spans lines', () {
+      final coordinate = '30005:$author:our\nstory';
+      final episode = video([
+        ['a', coordinate, '', videoSeriesTagMarker],
+      ]);
+
+      expect(episode.seriesCoordinate, equals(coordinate));
     });
 
     test('keeps its series through a feed snapshot', () {
