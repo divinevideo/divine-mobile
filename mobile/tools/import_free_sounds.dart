@@ -116,6 +116,12 @@ ArgParser _parser() {
       splitCommas: false,
     )
     ..addOption('interval', defaultsTo: '2', help: 'Seconds between downloads.')
+    ..addOption(
+      'max-duration',
+      help:
+          'Seconds. A longer sound keeps only its start, faded out; the '
+          'credit says so. Use it for tracks over the 16 MiB upload limit.',
+    )
     ..addFlag('dry-run', negatable: false);
   parser.addCommand('events')
     ..addOption('blossom', help: 'The server the files are uploaded to.')
@@ -255,7 +261,13 @@ Future<void> _prepare(Directory work, ArgResults args) async {
 
   final sources = Directory('${work.path}/src')..createSync(recursive: true);
   final outputs = Directory('${work.path}/out')..createSync(recursive: true);
-  final pipeline = AudioPipeline();
+  final maxDuration = _intOption(args, 'max-duration');
+  if (maxDuration != null && maxDuration <= 0) {
+    throw const _UsageError('--max-duration must be a positive number.');
+  }
+  final pipeline = AudioPipeline(
+    targets: AudioTargets(maxDurationSeconds: maxDuration?.toDouble()),
+  );
   final downloader = SourceDownloader();
   var lastDownload = DateTime.fromMillisecondsSinceEpoch(0);
   try {
