@@ -44,6 +44,14 @@ void main() {
       expect(episode.seriesCoordinate, isNull);
     });
 
+    test('ignores the series marker on a tag that is not an `a` tag', () {
+      final episode = video([
+        ['e', series, '', videoSeriesTagMarker],
+      ]);
+
+      expect(episode.seriesCoordinate, isNull);
+    });
+
     for (final (reason, coordinate) in [
       ('is not a curated list', '30000:$author:our-story'),
       ('has an uppercase pubkey', '30005:${'A' * 64}:our-story'),
@@ -93,6 +101,21 @@ void main() {
       );
       expect(
         original.copyWith(nostrEventTags: const []).seriesCoordinate,
+        isNull,
+      );
+    });
+
+    test('takes a usable series passed to copyWith', () {
+      final episode = video(const []);
+
+      expect(
+        episode.copyWith(seriesCoordinate: series).seriesCoordinate,
+        equals(series),
+      );
+      expect(
+        episode
+            .copyWith(seriesCoordinate: '30005:$someoneElse:their-story')
+            .seriesCoordinate,
         isNull,
       );
     });
