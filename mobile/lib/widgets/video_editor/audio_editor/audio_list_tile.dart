@@ -11,6 +11,7 @@ class AudioListTile extends StatelessWidget {
     required this.audio,
     required this.isSelected,
     required this.onTap,
+    this.onShowDetails,
     this.displayTitle,
     this.cover,
     this.isPlaying = false,
@@ -24,6 +25,10 @@ class AudioListTile extends StatelessWidget {
   final bool isSelected;
   final bool isPlaying;
   final VoidCallback onTap;
+
+  /// Opens the sound's page, with its credit and licence, on a long press;
+  /// `null` for a sound that has no page to show.
+  final VoidCallback? onShowDetails;
 
   /// Title to show instead of [AudioEvent.title].
   ///
@@ -83,6 +88,8 @@ class AudioListTile extends StatelessWidget {
             ? context.l10n.videoEditorAudioFileMissing
             : null,
         onTap: onTap,
+        onLongPress: onShowDetails,
+        longPressLabel: context.l10n.videoEditorAudioOpenSoundDetails,
       ),
     );
   }

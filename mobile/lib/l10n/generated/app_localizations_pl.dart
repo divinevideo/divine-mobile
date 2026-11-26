@@ -11888,6 +11888,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorAudioUseSound => 'Użyj';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'Otwórz szczegóły dźwięku';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Pliku audio już nie ma na tym urządzeniu';
 

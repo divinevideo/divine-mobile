@@ -72,6 +72,7 @@ void main() {
       bool isUnavailable = false,
       int? videoCount,
       String? semanticIdentifier,
+      VoidCallback? onShowDetails,
     }) {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
@@ -85,6 +86,7 @@ void main() {
             videoCount: videoCount,
             semanticIdentifier: semanticIdentifier,
             onTap: () => tapped = true,
+            onShowDetails: onShowDetails,
           ),
         ),
       );
@@ -429,6 +431,57 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(tapped, isTrue);
+      });
+
+      testWidgets("opens the sound's details on a long press", (tester) async {
+        var opened = false;
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudioEvent(title: 'Anthem'),
+            onShowDetails: () => opened = true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.longPress(find.byType(ListTile));
+        await tester.pumpAndSettle();
+
+        expect(opened, isTrue);
+        expect(tapped, isFalse);
+      });
+
+      // A long press is hard to find with a screen reader, so the row offers
+      // the same as one of its actions.
+      testWidgets("offers the sound's details as a screen-reader action", (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        var opened = false;
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudioEvent(title: 'Anthem'),
+            onShowDetails: () => opened = true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final action = CustomSemanticsAction(
+          label: lookupAppLocalizations(
+            const Locale('en'),
+          ).videoEditorAudioOpenSoundDetails,
+        );
+        expect(
+          tester.getSemantics(find.byType(ListTile)),
+          isSemantics(customActions: [action]),
+        );
+
+        tester.semantics.customAction(
+          find.semantics.byLabel(RegExp('Anthem')),
+          action,
+        );
+        expect(opened, isTrue);
+
+        handle.dispose();
       });
     });
 

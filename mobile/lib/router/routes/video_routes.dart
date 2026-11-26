@@ -201,9 +201,18 @@ class VideoDetailRouteData extends GoRouteData with $VideoDetailRouteData {
   name: SoundDetailScreen.routeName,
 )
 class SoundDetailRouteData extends GoRouteData with $SoundDetailRouteData {
-  const SoundDetailRouteData({required this.id, this.$extra});
+  const SoundDetailRouteData({
+    required this.id,
+    @TypedQueryParameter(name: SoundDetailScreen.purposeQueryParameter)
+    this.purpose,
+    this.$extra,
+  });
 
   final String id;
+
+  /// [SoundDetailScreen.chooseForVideoPurpose] when the editor's sound picker
+  /// opened the page, so Use Sound picks the sound for the video.
+  final String? purpose;
 
   /// The [AudioEvent], or for an original sound a map with `sound` and
   /// `sourceVideo`; absent after a deep link, when the sound loads by [id].
@@ -223,10 +232,15 @@ class SoundDetailRouteData extends GoRouteData with $SoundDetailRouteData {
       sound = extraAs<AudioEvent>(extra['sound']);
       sourceVideo = extraAs<VideoEvent>(extra['sourceVideo']);
     }
+    final choosesForVideo = purpose == SoundDetailScreen.chooseForVideoPurpose;
     if (sound != null) {
-      return SoundDetailScreen(sound: sound, sourceVideo: sourceVideo);
+      return SoundDetailScreen(
+        sound: sound,
+        sourceVideo: sourceVideo,
+        choosesForVideo: choosesForVideo,
+      );
     }
-    return SoundDetailLoader(soundId: id);
+    return SoundDetailLoader(soundId: id, choosesForVideo: choosesForVideo);
   }
 }
 

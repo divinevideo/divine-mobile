@@ -11958,6 +11958,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorAudioUseSound => 'ఉపయోగించు';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'ధ్వని వివరాలను తెరవండి';
+
+  @override
   String get videoEditorAudioFileMissing => 'ఆడియో ఫైల్ ఈ పరికరంలో లేదు';
 
   @override

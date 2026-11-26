@@ -62,6 +62,7 @@ void main() {
       required AudioEvent audio,
       VoidCallback? onTogglePlayState,
       VoidCallback? onTapDone,
+      VoidCallback? onShowDetails,
       SoundCover? cover,
       bool isLoading = false,
       Locale? locale,
@@ -77,6 +78,7 @@ void main() {
             audioService: audioService,
             onTogglePlayState: onTogglePlayState ?? () {},
             onTapDone: onTapDone ?? () {},
+            onShowDetails: onShowDetails,
             isLoading: isLoading,
           ),
         ),
@@ -97,6 +99,32 @@ void main() {
         expect(
           find.bySemanticsIdentifier(SemanticIds.audioSelectionDoneButton),
           findsOneWidget,
+        );
+
+        handle.dispose();
+      });
+
+      testWidgets("reads the sound's title and says a tap opens its details", (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudio(title: 'Track'),
+            onShowDetails: () {},
+          ),
+        );
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          tester.getSemantics(find.text('Track')),
+          isSemantics(
+            label: 'Track\n01:05',
+            hint: l10n.videoEditorAudioOpenSoundDetails,
+            isButton: true,
+            hasTapAction: true,
+          ),
         );
 
         handle.dispose();
@@ -294,6 +322,53 @@ void main() {
         await tester.pump();
 
         expect(done, isTrue);
+      });
+
+      testWidgets("opens the sound's details from its cover and its title", (
+        tester,
+      ) async {
+        var opened = 0;
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudio(title: 'Track'),
+            onShowDetails: () => opened++,
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.byType(SoundCoverImage));
+        await tester.tap(find.text('Track'));
+        await tester.pump();
+
+        expect(opened, equals(2));
+      });
+
+      testWidgets('offers no details for a sound without a page', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(audio: _createTestAudio(title: 'Track')),
+        );
+        await tester.pump();
+
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon &&
+                widget.icon == DivineIconName.caretRight,
+          ),
+          findsNothing,
+        );
+        expect(
+          tester.getSemantics(find.text('Track')),
+          isNot(
+            isSemantics(
+              hint: lookupAppLocalizations(
+                const Locale('en'),
+              ).videoEditorAudioOpenSoundDetails,
+            ),
+          ),
+        );
       });
 
       testWidgets('disables Use while audio is loading', (tester) async {

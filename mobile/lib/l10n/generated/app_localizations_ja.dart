@@ -11113,6 +11113,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorAudioUseSound => '使う';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'サウンドの詳細を開く';
+
+  @override
   String get videoEditorAudioFileMissing => '音声ファイルは端末に残っていません';
 
   @override

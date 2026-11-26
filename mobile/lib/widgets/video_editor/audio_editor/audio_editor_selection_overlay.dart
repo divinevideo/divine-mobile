@@ -1,5 +1,6 @@
 // ABOUTME: The card under the sound picker for the sound picked last: its
-// ABOUTME: cover and details, play/pause, how far it played, and Use.
+// ABOUTME: cover and details (a tap opens its page), play/pause, how far it
+// ABOUTME: played, and Use.
 
 import 'dart:math';
 
@@ -22,6 +23,7 @@ class AudioEditorSelectionOverlay extends StatelessWidget {
     required this.audioService,
     required this.onTogglePlayState,
     required this.onTapDone,
+    this.onShowDetails,
     this.cover,
     this.isLoading = false,
     super.key,
@@ -31,6 +33,10 @@ class AudioEditorSelectionOverlay extends StatelessWidget {
   final AudioPlaybackService audioService;
   final VoidCallback onTogglePlayState;
   final VoidCallback onTapDone;
+
+  /// Opens the sound's page, with its credit and licence, from a tap on its
+  /// cover or details; `null` for a sound that has no page to show.
+  final VoidCallback? onShowDetails;
 
   /// The cover the sound's row shows, or `null` for its colour tile.
   final SoundCover? cover;
@@ -113,13 +119,28 @@ class AudioEditorSelectionOverlay extends StatelessWidget {
                 Row(
                   spacing: _rowSpacing,
                   children: [
-                    SoundCoverImage(
-                      cover: cover,
-                      size: _coverSize,
-                      borderRadius: 12,
-                      colorSeed: audio.id,
+                    Expanded(
+                      child: _ShowDetailsTarget(
+                        onTap: onShowDetails,
+                        child: Row(
+                          spacing: _rowSpacing,
+                          children: [
+                            SoundCoverImage(
+                              cover: cover,
+                              size: _coverSize,
+                              borderRadius: 12,
+                              colorSeed: audio.id,
+                            ),
+                            Expanded(
+                              child: _Details(
+                                audio: audio,
+                                opensDetails: onShowDetails != null,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    Expanded(child: _Details(audio: audio)),
                     _PlayPauseButton(
                       audioService: audioService,
                       isLoading: isLoading,
@@ -172,23 +193,70 @@ class _UseButton extends StatelessWidget {
   }
 }
 
-class _Details extends StatelessWidget {
-  const _Details({required this.audio});
+/// The cover and details of the card, which open the sound's page when
+/// [onTap] is set.
+class _ShowDetailsTarget extends StatelessWidget {
+  const _ShowDetailsTarget({required this.onTap, required this.child});
 
-  final AudioEvent audio;
+  final VoidCallback? onTap;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
+    final onTap = this.onTap;
+    if (onTap == null) return child;
+    // One node read as the title and details, then what a tap does.
+    return MergeSemantics(
+      child: Semantics(
+        button: true,
+        hint: context.l10n.videoEditorAudioOpenSoundDetails,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _Details extends StatelessWidget {
+  const _Details({required this.audio, required this.opensDetails});
+
+  final AudioEvent audio;
+
+  /// Whether a tap opens the sound's page, which a caret after the title
+  /// says.
+  final bool opensDetails;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = Text(
+      audio.title ?? context.l10n.videoEditorAudioUntitledSound,
+      style: VineTheme.titleMediumFont(color: context.vineColors.onSurface),
+      maxLines: 1,
+      overflow: .ellipsis,
+    );
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          audio.title ?? context.l10n.videoEditorAudioUntitledSound,
-          style: VineTheme.titleMediumFont(color: context.vineColors.onSurface),
-          maxLines: 1,
-          overflow: .ellipsis,
-        ),
+        if (opensDetails)
+          Row(
+            spacing: 2,
+            children: [
+              Flexible(child: title),
+              ExcludeSemantics(
+                child: DivineIcon(
+                  icon: .caretRight,
+                  size: 16,
+                  color: context.vineColors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          )
+        else
+          title,
         Text.rich(
           TextSpan(
             style: VineTheme.bodySmallFont(

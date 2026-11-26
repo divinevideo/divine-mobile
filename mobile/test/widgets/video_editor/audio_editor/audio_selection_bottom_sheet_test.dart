@@ -32,6 +32,7 @@ import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/song_catalog_providers.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
+import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/services/audio_file_picker_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/local_audio_import_service.dart';
@@ -227,6 +228,8 @@ void main() {
       Map<String, Completer<List<AudioEvent>>> pendingSearches = const {},
       Map<SoundListOfKind, Completer<PagedSounds>> pendingKindLists = const {},
       bool routed = false,
+      ValueSetter<AudioEvent?>? onPicked,
+      List<GoRouterState>? openedSoundPages,
       SongCatalogRepository? songCatalog,
     }) {
       final blocklist = _MockContentBlocklistRepository();
@@ -402,14 +405,40 @@ void main() {
                   localizationsDelegates: appLocalizationsDelegates,
                   supportedLocales: AppLocalizations.supportedLocales,
                   routerConfig: GoRouter(
-                    initialLocation: '/picker',
+                    // Pushed, as the editor opens it, when a test reads what
+                    // the picker closes with.
+                    initialLocation: onPicked == null ? '/picker' : '/',
                     routes: [
                       GoRoute(
                         path: '/',
-                        builder: (_, _) => const SizedBox(),
+                        builder: (_, _) => onPicked == null
+                            ? const SizedBox()
+                            : _PickerLauncher(onPicked: onPicked),
                         routes: [
                           GoRoute(path: 'picker', builder: (_, _) => picker),
                         ],
+                      ),
+                      // Stands in for the sound's page: Use Sound closes it
+                      // with `true`, as the real one does.
+                      GoRoute(
+                        path: SoundDetailScreen.path,
+                        builder: (context, state) {
+                          openedSoundPages?.add(state);
+                          return Scaffold(
+                            body: Column(
+                              children: [
+                                TextButton(
+                                  onPressed: () => context.pop(true),
+                                  child: const Text('Use on sound page'),
+                                ),
+                                TextButton(
+                                  onPressed: () => context.pop(),
+                                  child: const Text('Back from sound page'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -1465,6 +1494,238 @@ void main() {
             streamUnlessCached: any(named: 'streamUnlessCached'),
           ),
         );
+      });
+    });
+
+    group('Sound details', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      Finder cardTitle(String title) => find.descendant(
+        of: find.byType(AudioEditorSelectionOverlay),
+        matching: find.text(title),
+      );
+
+      testWidgets("opens the picked sound's page from its card with the "
+          'preview paused, and attaches the sound from there', (tester) async {
+        final audioService = _stubbedAudioService();
+        final opened = <GoRouterState>[];
+        final picked = <AudioEvent?>[];
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            audioService: audioService,
+            routed: true,
+            onPicked: picked.add,
+            openedSoundPages: opened,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Beta Song'));
+        await tester.pumpAndSettle();
+        clearInteractions(audioService);
+
+        await tester.tap(cardTitle('Beta Song'));
+        await tester.pumpAndSettle();
+
+        verify(audioService.pause).called(greaterThanOrEqualTo(1));
+        expect(opened, hasLength(1));
+        expect(opened.single.uri.toString(), '/sound/sound-2?for=video');
+        expect(
+          opened.single.extra,
+          isA<AudioEvent>().having((sound) => sound.id, 'id', 'sound-2'),
+        );
+
+        await tester.tap(find.text('Use on sound page'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AudioSelectionBottomSheet), findsNothing);
+        expect(picked.map((sound) => sound?.id), ['sound-2']);
+      });
+
+      testWidgets('keeps the tab, search and pick, with the keyboard down, on '
+          "coming back from a sound's page", (tester) async {
+        final picked = <AudioEvent?>[];
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            audioService: _stubbedAudioService(),
+            routed: true,
+            onPicked: picked.add,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).first, 'beta');
+        await tester.pumpAndSettle(const Duration(milliseconds: 400));
+        await tester.tap(find.text('Beta Song'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(cardTitle('Beta Song'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Back from sound page'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AudioSelectionBottomSheet), findsOneWidget);
+        expect(
+          tester
+              .widget<TextField>(find.byType(TextField).first)
+              .controller!
+              .text,
+          'beta',
+        );
+        // New, narrowed to the search: For you lists none of these.
+        expect(
+          find.descendant(
+            of: find.byType(AudioListTile),
+            matching: find.text('Beta Song'),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Alpha Track'), findsNothing);
+        expect(cardTitle('Beta Song'), findsOneWidget);
+        expect(picked, isEmpty);
+        // The keyboard stays down instead of covering the list again.
+        expect(
+          tester
+              .widget<EditableText>(find.byType(EditableText).first)
+              .focusNode
+              .hasFocus,
+          isFalse,
+        );
+      });
+
+      testWidgets('attaches a sound whose page a long press on its row '
+          'opened', (tester) async {
+        final opened = <GoRouterState>[];
+        final picked = <AudioEvent?>[];
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            audioService: _stubbedAudioService(),
+            routed: true,
+            onPicked: picked.add,
+            openedSoundPages: opened,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Beta Song'));
+        await tester.pumpAndSettle();
+
+        await tester.longPress(find.text('Gamma Beat'));
+        await tester.pumpAndSettle();
+        expect(opened.single.pathParameters['id'], 'sound-3');
+
+        await tester.tap(find.text('Use on sound page'));
+        await tester.pumpAndSettle();
+
+        expect(picked.map((sound) => sound?.id), ['sound-3']);
+      });
+
+      // Its preview terms forbid changes, so its page would call it credit
+      // only, with no Use Sound, although the picker attaches it.
+      testWidgets('opens no page for a song from the catalog', (tester) async {
+        final songCatalog = _MockSongCatalogRepository();
+        when(songCatalog.fetchTrendingSongs).thenAnswer(
+          (_) async => [_createTestSong(id: 'top-1', title: 'Night Drive')],
+        );
+        final opened = <GoRouterState>[];
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            audioService: _stubbedAudioService(),
+            songCatalog: songCatalog,
+            routed: true,
+            openedSoundPages: opened,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.videoEditorAudioCategorySongs));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Night Drive'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(cardTitle('Night Drive'));
+        await tester.pumpAndSettle();
+
+        expect(opened, isEmpty);
+        expect(_divineIcon(DivineIconName.caretRight), findsNothing);
+        expect(
+          tester
+              .widget<AudioListTile>(find.byType(AudioListTile))
+              .onShowDetails,
+          isNull,
+        );
+      });
+
+      // The page plays its own preview, so one here that finishes loading
+      // meanwhile would play under it.
+      testWidgets("starts no preview while a sound's page is open", (
+        tester,
+      ) async {
+        final audioService = _stubbedAudioService();
+        final consent = Completer<bool>();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            audioService: audioService,
+            pendingConsent: consent,
+            routed: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Beta Song'));
+        // The card slides in, and its loading ring spins until the check
+        // answers, so nothing settles.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.tap(cardTitle('Beta Song'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.text('Back from sound page'), findsOneWidget);
+
+        consent.complete(true);
+        await tester.pump();
+        await tester.pump();
+
+        verify(
+          () => audioService.loadAudio(any(), streamUnlessCached: true),
+        ).called(1);
+        verifyNever(audioService.play);
+      });
+
+      testWidgets('previews another sound after coming back from a page', (
+        tester,
+      ) async {
+        final audioService = _stubbedAudioService();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            audioService: audioService,
+            routed: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Beta Song'));
+        await tester.pumpAndSettle();
+        await tester.tap(cardTitle('Beta Song'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Back from sound page'));
+        await tester.pumpAndSettle();
+        clearInteractions(audioService);
+
+        await tester.tap(find.text('Gamma Beat'));
+        await tester.pumpAndSettle();
+
+        verify(audioService.play).called(1);
       });
     });
 
@@ -4370,6 +4631,30 @@ void main() {
       });
     });
   });
+}
+
+/// Opens the picker the way the editor does, by pushing it, and hands on
+/// what it closed with.
+class _PickerLauncher extends StatefulWidget {
+  const _PickerLauncher({required this.onPicked});
+
+  final ValueSetter<AudioEvent?> onPicked;
+
+  @override
+  State<_PickerLauncher> createState() => _PickerLauncherState();
+}
+
+class _PickerLauncherState extends State<_PickerLauncher> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(context.push<AudioEvent>('/picker').then(widget.onPicked));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox();
 }
 
 /// Fake TrendingSounds notifier for testing: its first page is

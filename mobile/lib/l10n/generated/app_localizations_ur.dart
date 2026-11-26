@@ -11664,6 +11664,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorAudioUseSound => 'استعمال کریں';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'آواز کی تفصیلات کھولیں';
+
+  @override
   String get videoEditorAudioFileMissing => 'آڈیو فائل اب اس ڈیوائس پر نہیں ہے';
 
   @override

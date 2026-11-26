@@ -11666,6 +11666,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorAudioUseSound => 'Guna';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'Buka butiran bunyi';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Fail audio sudah tiada pada peranti ini';
 

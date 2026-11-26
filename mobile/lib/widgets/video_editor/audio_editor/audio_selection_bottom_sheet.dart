@@ -34,6 +34,8 @@ import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/song_catalog_providers.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
+import 'package:openvine/router/routes/video_routes.dart';
+import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
 import 'package:openvine/services/local_audio_import_service.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -157,6 +159,12 @@ class _AudioSelectionBottomSheetState
   _SoundSearch? _awaitedSearch;
   ProviderSubscription<AsyncValue<PagedSounds>>? _answerListener;
   bool _isLoadingAudio = false;
+
+  /// Whether a sound's page is open over the picker, or the sound chosen
+  /// there is being attached. The page plays its own preview, and attaching
+  /// may open the segment screen, so a preview here that finishes loading
+  /// meanwhile stays paused.
+  bool _showsDetails = false;
 
   /// How tall the card of the picked sound is, so the lists can scroll
   /// their last rows clear of it.
@@ -705,6 +713,7 @@ class _AudioSelectionBottomSheetState
       setState(() {
         _selectedItem = resolvedSound;
       });
+      if (_showsDetails) return;
       // Blocks here for the entire duration of playback — only
       // releases once the song finishes playing to the end or was paused.
       await _audioService.play();
@@ -736,12 +745,8 @@ class _AudioSelectionBottomSheetState
     // never reach the resolver. Everything else — including the creator's own
     // sounds — is decided by `audioReuseConsentProvider`, which owns the owner
     // exception this call site used to be missing.
-    final needsConsent =
-        !sound.isBundled &&
-        !sound.isLocalImport &&
-        !sound.isExternalProviderSound;
     var preview = sound;
-    if (needsConsent) {
+    if (_needsReuseConsent(sound)) {
       // A sound the check refuses must not play, so the preview waits for it,
       // with the row picked and the overlay loading. The file loads
       // meanwhile, and a sound picked from a list hands the check the source
@@ -777,6 +782,63 @@ class _AudioSelectionBottomSheetState
       _selectedItem = preview;
     });
     await _togglePlayPause(enforcePlay: true);
+  }
+
+  /// Whether reusing [sound] needs its creator's consent, which
+  /// `audioReuseConsentProvider` decides, including the owner exception.
+  /// Bundled, imported and provider-catalog sounds carry their own terms.
+  static bool _needsReuseConsent(AudioEvent sound) =>
+      !sound.isBundled &&
+      !sound.isLocalImport &&
+      !sound.isExternalProviderSound;
+
+  /// Opens [sound]'s page over the picker, with the preview paused, and
+  /// attaches the sound if Use Sound is tapped there.
+  ///
+  /// The picker stays underneath, so its tab, search and pick are as they
+  /// were on coming back.
+  Future<void> _showDetails(AudioEvent sound) async {
+    if (_showsDetails) return;
+    _showsDetails = true;
+    // Coming back would otherwise focus the search again and raise the
+    // keyboard over the list.
+    FocusManager.instance.primaryFocus?.unfocus();
+    try {
+      await _audioService.pause();
+      if (!mounted) return;
+      final chosen = await SoundDetailRouteData(
+        id: sound.id,
+        purpose: SoundDetailScreen.chooseForVideoPurpose,
+        $extra: sound,
+      ).push<bool>(context);
+      if (chosen == true && mounted) await _chooseSound(sound);
+    } finally {
+      _showsDetails = false;
+    }
+  }
+
+  /// Attaches [sound], chosen on its page, as Use does for the picked sound.
+  Future<void> _chooseSound(AudioEvent sound) async {
+    // A long-pressed row, or the card tapped while it fades out after an
+    // unpick, can be a sound other than the picked one.
+    if (_selectedItem?.id != sound.id) {
+      _pick = _Pick(
+        soundId: sound.id,
+        source: _pickSourceOf(_category),
+        searched: _searchQuery.isNotEmpty,
+      );
+      setState(() {
+        _selectedItem = sound;
+        _isLoadingAudio = false;
+      });
+    }
+    if (_needsReuseConsent(sound)) {
+      // Decided already for the page's Use Sound, so this answers at once.
+      final canReuse = await ref.read(audioReuseConsentProvider(sound).future);
+      if (!mounted || _selectedItem?.id != sound.id) return;
+      if (!canReuse) return _refuseReuse(sound);
+    }
+    await _handleDoneSelection();
   }
 
   /// Leaves no sound picked and stops the preview. A reuse check or a file
@@ -1363,6 +1425,7 @@ class _AudioSelectionBottomSheetState
                 selectedSound: _selectedItem,
                 audioService: _audioService,
                 onSelect: _selectSound,
+                onShowDetails: _showDetails,
                 usageCounts: {
                   ...?forYouAsync.value?.usageCounts,
                   ...?forYouFound?.pages.usageCounts,
@@ -1416,6 +1479,7 @@ class _AudioSelectionBottomSheetState
                   selectedSound: _selectedItem,
                   audioService: _audioService,
                   onSelect: _selectSound,
+                  onShowDetails: _showDetails,
                   usageCounts: {
                     ...?popular?.usageCounts,
                     ...?found?.pages.usageCounts,
@@ -1478,6 +1542,7 @@ class _AudioSelectionBottomSheetState
                   selectedSound: _selectedItem,
                   audioService: _audioService,
                   onSelect: _selectSound,
+                  onShowDetails: _showDetails,
                   usageCounts: found == null
                       ? usageCounts
                       : {...?usageCounts, ...found.pages.usageCounts},
@@ -1520,6 +1585,7 @@ class _AudioSelectionBottomSheetState
               selectedSound: _selectedItem,
               audioService: _audioService,
               onSelect: _selectSound,
+              onShowDetails: _showDetails,
             ),
           // My sounds is where the user's own files live, so importing one
           // stays its first row.
@@ -1546,6 +1612,7 @@ class _AudioSelectionBottomSheetState
             selectedSound: _selectedItem,
             audioService: _audioService,
             onSelect: _selectSound,
+            onShowDetails: _showDetails,
             // A saved entry whose file is gone stays listed but
             // cannot be chosen: selecting it would attach a source
             // that plays nothing to the draft (#8023).
@@ -1618,6 +1685,13 @@ class _AudioSelectionBottomSheetState
                       isLoading: _isLoadingAudio,
                       onTapDone: _handleDoneSelection,
                       onTogglePlayState: _togglePlayPause,
+                      onShowDetails: switch (_selectedItem!) {
+                        // Bound now: the card stays tappable while it fades
+                        // out after the sound is unpicked.
+                        final selected when _hasDetailsPage(selected) =>
+                          () => _showDetails(selected),
+                        _ => null,
+                      },
                     )
                   : const SizedBox.shrink(),
             ),
@@ -1637,6 +1711,15 @@ class _AudioSelectionBottomSheetState
     );
   }
 }
+
+/// Whether [sound] has a page to open from the picker: not a file imported
+/// from the device, which has no credit to show, nor a provider's sound whose
+/// terms forbid changes, such as a song preview from the catalog. Its page
+/// would call it credit only, with no Use Sound, although the picker
+/// attaches it.
+bool _hasDetailsPage(AudioEvent sound) =>
+    !sound.isLocalImport &&
+    sound.externalSource?.license.allowsDerivatives != false;
 
 /// The cover of a song from the catalog: the artwork the catalog lists it
 /// with, or `null` for any other sound.
@@ -1662,6 +1745,7 @@ class _SongsTab extends StatefulWidget {
     required this.selectedSound,
     required this.audioService,
     required this.onSelect,
+    required this.onShowDetails,
   });
 
   /// What to search the catalog for; blank lists the most played songs.
@@ -1677,6 +1761,9 @@ class _SongsTab extends StatefulWidget {
   final AudioEvent? selectedSound;
   final AudioPlaybackService audioService;
   final ValueChanged<AudioEvent> onSelect;
+
+  /// See [_SoundsContent.onShowDetails].
+  final ValueChanged<AudioEvent> onShowDetails;
 
   @override
   State<_SongsTab> createState() => _SongsTabState();
@@ -1735,6 +1822,7 @@ class _SongsTabState extends State<_SongsTab> {
           selectedSound: widget.selectedSound,
           audioService: widget.audioService,
           onSelect: widget.onSelect,
+          onShowDetails: widget.onShowDetails,
           emptyState: _SearchEmptyState(hasQuery: state.query.isNotEmpty),
         );
       },
@@ -1942,6 +2030,7 @@ class _SoundsContent extends ConsumerWidget {
     required this.selectedSound,
     required this.audioService,
     required this.onSelect,
+    required this.onShowDetails,
     this.displayTitles = const {},
     this.covers = const {},
     this.coversBySourceVideo = const {},
@@ -1964,6 +2053,9 @@ class _SoundsContent extends ConsumerWidget {
   final AudioEvent? selectedSound;
   final AudioPlaybackService audioService;
   final ValueChanged<AudioEvent> onSelect;
+
+  /// Opens a sound's page, on a long press of its row.
+  final ValueChanged<AudioEvent> onShowDetails;
 
   /// Row titles that override the sound's own, keyed by `AudioEvent.id`.
   ///
@@ -2078,6 +2170,9 @@ class _SoundsContent extends ConsumerWidget {
                               index,
                             ),
                             onTap: () => onSelect(displayAudio),
+                            onShowDetails: _hasDetailsPage(displayAudio)
+                                ? () => onShowDetails(displayAudio)
+                                : null,
                           );
                         },
                       )
@@ -2090,6 +2185,9 @@ class _SoundsContent extends ConsumerWidget {
                         videoCount: _videoCountFor(audio),
                         semanticIdentifier: SemanticIds.audioSoundTile(index),
                         onTap: () => onSelect(audio),
+                        onShowDetails: _hasDetailsPage(audio)
+                            ? () => onShowDetails(audio)
+                            : null,
                       ),
               );
             },

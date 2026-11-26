@@ -9221,6 +9221,10 @@
   "@videoEditorAudioUseSound": {
     "description": "Button on the card for the picked sound in the sound picker that adds the sound to the video."
   },
+  "videoEditorAudioOpenSoundDetails": "Open sound details",
+  "@videoEditorAudioOpenSoundDetails": {
+    "description": "Screen-reader hint on the cover and title of the picked sound's card in the video editor's sound picker, and the screen-reader action (also reached by a long press) on each sound row that has a page, which imported files and catalog songs whose licence forbids changes do not. Opens the sound's page with its creator, licence and source, where it can be chosen for the video."
+  },
   "videoEditorAudioFileMissing": "Audio file is gone from this device",
   "@videoEditorAudioFileMissing": {
     "description": "Subtitle on a saved sound whose imported audio file is no longer on the device, in the video editor's sound picker and in My Sounds in the Library. The entry stays listed but cannot be selected or played, because attaching it would put a dead source on the draft. It deliberately stops short of telling the user to remove the entry: removal publishes a tombstone that deletes it on every synced device, where the file may still be present."

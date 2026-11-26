@@ -11840,6 +11840,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorAudioUseSound => 'Utiliser';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'Ouvrir les détails du son';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Fichier audio absent de cet appareil';
 

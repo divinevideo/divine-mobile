@@ -11565,6 +11565,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorAudioUseSound => 'Gunakan';
 
   @override
+  String get videoEditorAudioOpenSoundDetails => 'Buka detail suara';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'File audio sudah tidak ada di perangkat';
 
