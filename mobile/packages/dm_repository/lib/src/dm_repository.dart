@@ -1489,6 +1489,10 @@ class DmRepository {
   final Map<String, Future<NIP17SendResult>> _recoveriesInFlight =
       <String, Future<NIP17SendResult>>{};
 
+  /// Group send batches whose own copy this account's session published
+  /// (#10016). A cancel can take every row that would record it.
+  final Set<String> _publishedBatchOwnCopies = <String>{};
+
   /// Rumor ids whose ORIGINAL [sendMessage] attempt is still running. Its
   /// queue row stays `pending` from enqueue until the attempt finalizes,
   /// which the row alone cannot tell apart from a send that ended held and
@@ -1700,6 +1704,7 @@ class DmRepository {
     _dismissalSubscription = null;
     _pendingReadCursors.clear();
     _earlyDeletions.clear();
+    _publishedBatchOwnCopies.clear();
     _endLiveSubscriptions();
     _liveCatchUp?.cancelHoldLimit();
     _liveCatchUp = null;
@@ -8996,6 +9001,7 @@ class DmRepository {
                 rumor: rumor,
                 selfWrapRelays: selfWrapRelays,
                 prebuiltSelfWrap: prebuiltOwnCopy,
+                deliveredHere: true,
               )).success,
             )
           : delivered;
@@ -9890,6 +9896,7 @@ class DmRepository {
     required Event rumor,
     required List<String>? selfWrapRelays,
     Event? prebuiltSelfWrap,
+    bool deliveredHere = false,
   }) {
     if (row.selfWrapStatus == OutgoingWrapStatus.sent) {
       return Future.value(_batchOwnCopyRecorded(rumor));
@@ -9904,6 +9911,7 @@ class DmRepository {
       generation: _resetGeneration,
       prebuiltSelfWrap: prebuiltSelfWrap,
       callerRowId: row.id,
+      deliveredHere: deliveredHere,
     );
   }
 
@@ -9915,6 +9923,9 @@ class DmRepository {
   /// it before releasing the key: delivered rows are removed and pending
   /// rows are marked. A session that ended meanwhile publishes nothing:
   /// the message service may already be the next account's.
+  ///
+  /// [deliveredHere] is set by a caller whose own attempt delivered a member,
+  /// which owes the copy even if the sender cancelled the batch meanwhile.
   Future<NIP17SendResult> _publishBatchOwnCopy({
     required OutgoingDmsDao dao,
     required String conversationId,
@@ -9925,6 +9936,7 @@ class DmRepository {
     required int generation,
     Event? prebuiltSelfWrap,
     String? callerRowId,
+    bool deliveredHere = false,
   }) {
     return _joinOrStartRecovery('self-batch:$sendBatchId', () async {
       Future<List<OutgoingDm>?> readRows() => _batchRows(
@@ -9952,7 +9964,13 @@ class DmRepository {
               row.recipientWrapStatus != OutgoingWrapStatus.blocked &&
               (callerRowId == null || row.id == callerRowId),
         )) {
-          return _queuedForDelivery(callerRowId ?? rumor.id);
+          if (!deliveredHere) {
+            return _queuedForDelivery(callerRowId ?? rumor.id);
+          }
+          // A retry may have published it before a cancel took its rows.
+          if (_publishedBatchOwnCopies.contains(sendBatchId)) {
+            return _batchOwnCopyRecorded(rumor);
+          }
         }
       }
       final published = await _messageService!.publishSelfWrap(
@@ -9961,6 +9979,7 @@ class DmRepository {
         prebuiltSelfWrap: prebuiltSelfWrap,
       );
       if (!published.success) return published;
+      _publishedBatchOwnCopies.add(sendBatchId);
       try {
         await _conversationsDao.runInTransaction(() async {
           // A recipient may have finished while the copy was on the wire.
@@ -11162,6 +11181,10 @@ class DmRepository {
               selfWrapRelays: selfWrapRelays,
               generation: generation,
               prebuiltSelfWrap: prebuiltOwnCopy,
+              // A joined retry publishes the copy for the member it reached.
+              deliveredHere: Iterable<int>.generate(results.length).any(
+                (i) => results[i].success && !joinedRecovery.contains(i),
+              ),
             );
       batchHasOwnCopy = ownCopy.success;
     }

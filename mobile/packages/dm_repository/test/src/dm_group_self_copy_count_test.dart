@@ -401,8 +401,8 @@ void main() {
         expect(wrapsTo(owner), isEmpty);
       });
 
-      test('publishes no sender copy if the batch is cancelled before the '
-          'deferred publish', () async {
+      test('publishes one sender copy if the batch is cancelled while a '
+          "member's publish is on the wire", () async {
         final others = members.take(2).toList();
         final lastPublish = Completer<void>();
         final finishLastPublish = Completer<void>();
@@ -419,9 +419,47 @@ void main() {
         expect(await queueRows(), isEmpty);
 
         finishLastPublish.complete();
+        final results = await send;
+
+        expect(results.every((r) => r.success), isTrue);
+        final ownCopy = await openAsOwner(wrapsTo(owner).single);
+        expect(ownCopy?.id, results.first.rumorEventId);
+        expect(await queueRows(), isEmpty);
+      });
+
+      test('publishes no second sender copy when a retry published it before '
+          'the batch was cancelled', () async {
+        final others = members.take(2).toList();
+        final lastPublish = Completer<void>();
+        final finishLastPublish = Completer<void>();
+        onRecipientPublish = (wrap) async {
+          if (!wrapsTo(others.last).contains(wrap)) return;
+          lastPublish.complete();
+          await finishLastPublish.future;
+        };
+
+        final send = sendToRoom(others);
+        await lastPublish.future;
+        final rows = await queueRows();
+        final first = rows.singleWhere(
+          (row) => row.recipientPubkey == others.first,
+        );
+        final last = rows.singleWhere(
+          (row) => row.recipientPubkey == others.last,
+        );
+        // The sweep re-drives the member the send already reached, and its
+        // retry publishes the batch's copy and stores the message.
+        expect(
+          (await repository.recoverFullSend(rumorId: first.id)).success,
+          isTrue,
+        );
+        expect(wrapsTo(owner), hasLength(1));
+        expect(await repository.cancelOutgoingBatch(rumorId: last.id), 1);
+
+        finishLastPublish.complete();
         await send;
 
-        expect(wrapsTo(owner), isEmpty);
+        expect(wrapsTo(owner), hasLength(1));
       });
     });
 
@@ -736,6 +774,34 @@ void main() {
           expect(wrapsTo(owner), hasLength(1));
         },
       );
+
+      test('a retry that delivers a member publishes the sender copy after '
+          'the batch is cancelled', () async {
+        final others = members.take(2).toList();
+        recipientOksArrive = false;
+        await sendToRoom(others);
+        expect(wrapsTo(owner), isEmpty);
+        final row = (await queueRows()).singleWhere(
+          (row) => row.recipientPubkey == others.first,
+        );
+        recipientOksArrive = true;
+        final retryOnWire = Completer<void>();
+        final finishRetry = Completer<void>();
+        onRecipientPublish = (wrap) async {
+          if (wrapsTo(others.first).length != 2) return;
+          retryOnWire.complete();
+          await finishRetry.future;
+        };
+
+        final retry = repository.recoverFullSend(rumorId: row.id);
+        await retryOnWire.future;
+        expect(await repository.cancelOutgoingBatch(rumorId: row.id), 2);
+        finishRetry.complete();
+        await retry;
+
+        final ownCopy = await openAsOwner(wrapsTo(owner).single);
+        expect(ownCopy?.id, row.rumorId);
+      });
 
       for (final retryIsRefused in [false, true]) {
         test(
