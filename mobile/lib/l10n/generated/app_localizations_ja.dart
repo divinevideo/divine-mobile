@@ -10,6 +10,21 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'このメッセージを開くために $account に切り替えますか？';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'ダイレクトメッセージ';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      '送信者の名前やメッセージの内容を含めずに通知します。';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'このメッセージは表示できません。';
+
+  @override
   String get devOptionsClipRecovery => 'クリップの復旧';
 
   @override

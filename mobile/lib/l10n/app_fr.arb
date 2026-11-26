@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Passer au compte {account} pour ouvrir ce message ?",
+  "notificationSettingsDirectMessages": "Messages privés",
+  "notificationSettingsDirectMessagesSubtitle": "Afficher une notification sans le nom de l’expéditeur ni le contenu du message.",
+  "dmNotificationMessageUnavailable": "Ce message est indisponible.",
   "@@locale": "fr",
   "videoEditorSocialStickerPoll": "Sondage",
   "videoEditorSocialStickerQuiz": "Quiz",

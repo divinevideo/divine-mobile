@@ -10,6 +10,21 @@ class AppLocalizationsMs extends AppLocalizations {
   AppLocalizationsMs([String locale = 'ms']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Tukar kepada $account untuk membuka mesej ini?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Mesej langsung';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Paparkan pemberitahuan tanpa nama pengirim atau kandungan mesej.';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'Mesej ini tidak tersedia.';
+
+  @override
   String get devOptionsClipRecovery => 'Pemulihan klip';
 
   @override

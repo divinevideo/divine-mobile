@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Treci la contul {account} pentru a deschide acest mesaj?",
+  "notificationSettingsDirectMessages": "Mesaje directe",
+  "notificationSettingsDirectMessagesSubtitle": "Afișează o notificare fără numele expeditorului sau textul mesajului.",
+  "dmNotificationMessageUnavailable": "Acest mesaj nu este disponibil.",
   "@@locale": "ro",
   "videoEditorSocialStickerPoll": "Sondaj",
   "videoEditorSocialStickerQuiz": "Quiz",

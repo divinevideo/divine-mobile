@@ -32,6 +32,7 @@ void main() {
     required String? eventId,
     required String? notificationType,
     required String? senderPubkey,
+    String? receiverPubkey,
     String? tapTargetType,
     String? tapTargetValue,
   }) => app.pushNotificationTapTarget(
@@ -40,11 +41,34 @@ void main() {
     eventId: eventId,
     notificationType: notificationType,
     senderPubkey: senderPubkey,
+    receiverPubkey: receiverPubkey,
     tapTargetType: tapTargetType,
     tapTargetValue: tapTargetValue,
   );
 
   group('pushNotificationTapTarget', () {
+    test('direct messages never enter the video or actor fallback', () {
+      final owner = 'a' * 64;
+      final wrap = 'b' * 64;
+      for (final id in [wrap, null, 'bad']) {
+        final result = pushTarget(
+          referencedAddress: videoCoordinate,
+          referencedEventId: videoEvent,
+          eventId: id,
+          notificationType: 'directMessage',
+          senderPubkey: actor,
+          receiverPubkey: owner,
+        );
+        expect(
+          result.target,
+          id == wrap
+              ? OpenDirectMessageTarget(receiverPubkey: owner, giftWrapId: wrap)
+              : const OpenMessagesTarget(),
+        );
+        expect(result.videoCoordinate, isNull);
+        expect(result.targetEventId, isNull);
+      }
+    });
     test(
       'activity digest opens the inbox despite carrying a trigger event',
       () {

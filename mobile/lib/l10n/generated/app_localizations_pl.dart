@@ -10,6 +10,22 @@ class AppLocalizationsPl extends AppLocalizations {
   AppLocalizationsPl([String locale = 'pl']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Przełączyć się na konto $account, aby otworzyć tę wiadomość?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Wiadomości prywatne';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Pokazuj powiadomienie bez nazwy nadawcy i treści wiadomości.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Ta wiadomość jest niedostępna.';
+
+  @override
   String get devOptionsClipRecovery => 'Odzyskiwanie klipów';
 
   @override

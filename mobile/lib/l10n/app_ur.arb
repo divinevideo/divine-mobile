@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "یہ پیغام کھولنے کے لیے {account} پر سوئچ کریں؟",
+  "notificationSettingsDirectMessages": "براہ راست پیغامات",
+  "notificationSettingsDirectMessagesSubtitle": "بھیجنے والے کا نام یا پیغام کا متن دکھائے بغیر اطلاع دیں۔",
+  "dmNotificationMessageUnavailable": "یہ پیغام دستیاب نہیں ہے۔",
   "@@locale": "ur",
   "videoEditorSocialStickerPoll": "پول",
   "videoEditorSocialStickerQuiz": "کوئز",

@@ -10,6 +10,21 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'هل تريد التبديل إلى $account لفتح هذه الرسالة؟';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'الرسائل الخاصة';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'عرض تنبيه خاص دون اسم المرسِل أو نص الرسالة.';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'هذه الرسالة غير متاحة.';
+
+  @override
   String get devOptionsClipRecovery => 'استرداد المقاطع';
 
   @override

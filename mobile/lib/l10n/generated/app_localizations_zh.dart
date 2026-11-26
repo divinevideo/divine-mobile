@@ -10,6 +10,21 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return '切换到 $account 以打开这条消息吗？';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => '私信';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      '显示通知，但不显示发送者姓名或消息内容。';
+
+  @override
+  String get dmNotificationMessageUnavailable => '这条消息无法查看。';
+
+  @override
   String get devOptionsClipRecovery => '片段恢复';
 
   @override

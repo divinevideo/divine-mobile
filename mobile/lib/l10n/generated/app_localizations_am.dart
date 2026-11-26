@@ -10,6 +10,21 @@ class AppLocalizationsAm extends AppLocalizations {
   AppLocalizationsAm([String locale = 'am']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'ይህን መልዕክት ለመክፈት ወደ $account ይቀየር?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'የግል መልዕክቶች';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'የላኪውን ስም ወይም መልዕክቱን ሳያሳዩ የግል ማሳወቂያ ያሳዩ።';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'ይህ መልዕክት አይገኝም።';
+
+  @override
   String get devOptionsClipRecovery => 'የክሊፕ መልሶ ማግኛ';
 
   @override

@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Byt till {account} för att öppna det här meddelandet?",
+  "notificationSettingsDirectMessages": "Direktmeddelanden",
+  "notificationSettingsDirectMessagesSubtitle": "Visa en avisering utan avsändarens namn eller meddelandets innehåll.",
+  "dmNotificationMessageUnavailable": "Det här meddelandet är inte tillgängligt.",
   "@@locale": "sv",
   "videoEditorSocialStickerPoll": "Omröstning",
   "videoEditorSocialStickerQuiz": "Quiz",

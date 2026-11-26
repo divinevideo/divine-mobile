@@ -23,6 +23,12 @@ void main() {
             appVersion: '1.2.3',
           );
 
+          expect(
+            metadata.supportsDirectMessageRouting,
+            !kIsWeb &&
+                (platform == TargetPlatform.android ||
+                    platform == TargetPlatform.iOS),
+          );
           expect(metadata.platform, switch (platform) {
             TargetPlatform.iOS => 'ios',
             TargetPlatform.android => 'android',

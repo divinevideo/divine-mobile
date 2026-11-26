@@ -9,6 +9,7 @@ import 'dart:math';
 
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
+import 'package:drift/native.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -208,6 +209,7 @@ class _InMemoryProcessedGiftWrapsDao extends Mock
   Future<void> record({
     required String giftWrapId,
     required String ownerPubkey,
+    DmVerifiedDuplicate? verifiedDuplicate,
   }) async {
     recorded.add(giftWrapId);
     _owners.putIfAbsent(giftWrapId, () => <String>{}).add(ownerPubkey);
@@ -14805,6 +14807,52 @@ void main() {
           await secondDrain;
 
           expect(secondWorker.closeCount, 1);
+        },
+      );
+
+      test(
+        'verified inbound wraps for one rumor resolve the same row',
+        () async {
+          final db = AppDatabase.test(NativeDatabase.memory());
+          addTearDown(db.close);
+          final rumor = rumorFor('shared video', createdAt: 1700000500);
+          final wraps = [
+            for (final time in [1700000000, 1700000001])
+              await _buildGiftWrap(
+                rumor: rumor,
+                senderPrivateKey: senderPriv,
+                recipientPubkey: recipientPub,
+                outerCreatedAt: time,
+              ),
+          ];
+          stubDrainPage(wraps);
+          final repository = DmRepository(
+            nostrClient: mockNostrClient,
+            messageService: mockMessageService,
+            directMessagesDao: db.directMessagesDao,
+            conversationsDao: db.conversationsDao,
+            processedGiftWrapsDao: db.processedGiftWrapsDao,
+            userPubkey: recipientPub,
+            signer: _IsolateLocalSigner(recipientPriv),
+            syncState: drainPending(),
+            watchWrapAudience: (_) => Stream.value((
+              hidden: <String>{},
+              followed: {senderPub},
+              supportPubkey: null,
+            )),
+          );
+          addTearDown(repository.stopListening);
+          await repository.backfillHistoryIfNeeded();
+          for (final wrap in wraps) {
+            final result = await repository
+                .watchWrapLookup(ownerPubkey: recipientPub, giftWrapId: wrap.id)
+                .first;
+            expect(result, isA<DmWrapFound>());
+            expect((result as DmWrapFound).messageId, rumor.id);
+            expect(result.isRequest, isFalse);
+          }
+          expect(await db.select(db.directMessages).get(), hasLength(1));
+          expect(await db.processedGiftWrapsDao.count(), 1);
         },
       );
 

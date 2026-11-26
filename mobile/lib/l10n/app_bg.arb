@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Да се превключи ли към {account}, за да се отвори това съобщение?",
+  "notificationSettingsDirectMessages": "Лични съобщения",
+  "notificationSettingsDirectMessagesSubtitle": "Показвай известие без името на подателя или текста на съобщението.",
+  "dmNotificationMessageUnavailable": "Това съобщение не е достъпно.",
   "@@locale": "bg",
   "videoEditorSocialStickerPoll": "Анкета",
   "videoEditorSocialStickerQuiz": "Куиз",

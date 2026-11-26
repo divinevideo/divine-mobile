@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Lumipat sa {account} para buksan ang mensaheng ito?",
+  "notificationSettingsDirectMessages": "Mga direktang mensahe",
+  "notificationSettingsDirectMessagesSubtitle": "Magpakita ng abiso nang walang pangalan ng nagpadala o teksto ng mensahe.",
+  "dmNotificationMessageUnavailable": "Hindi available ang mensaheng ito.",
   "@@locale": "fil",
   "videoEditorSocialStickerPoll": "Poll",
   "videoEditorSocialStickerQuiz": "Quiz",

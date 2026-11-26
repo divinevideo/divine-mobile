@@ -10,6 +10,22 @@ class AppLocalizationsSv extends AppLocalizations {
   AppLocalizationsSv([String locale = 'sv']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Byt till $account för att öppna det här meddelandet?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Direktmeddelanden';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Visa en avisering utan avsändarens namn eller meddelandets innehåll.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Det här meddelandet är inte tillgängligt.';
+
+  @override
   String get devOptionsClipRecovery => 'Klippåterställning';
 
   @override

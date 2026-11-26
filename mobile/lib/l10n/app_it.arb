@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Passare a {account} per aprire questo messaggio?",
+  "notificationSettingsDirectMessages": "Messaggi diretti",
+  "notificationSettingsDirectMessagesSubtitle": "Mostra una notifica senza il nome del mittente o il testo del messaggio.",
+  "dmNotificationMessageUnavailable": "Questo messaggio non è disponibile.",
   "@@locale": "it",
   "videoEditorSocialStickerPoll": "Sondaggio",
   "videoEditorSocialStickerQuiz": "Quiz",

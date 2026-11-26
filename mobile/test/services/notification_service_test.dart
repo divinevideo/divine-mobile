@@ -819,6 +819,40 @@ void main() {
     });
 
     test(
+      'a DM tap keeps its receiver on warm and terminated local launches',
+      () async {
+        final owner = 'a' * 64;
+        final wrap = 'b' * 64;
+        final payload = jsonEncode(
+          localNotificationTapPayload({
+            'type': 'directMessage',
+            'eventId': wrap,
+            'receiverPubkey': owner,
+          }),
+        );
+        when(() => plugin.getNotificationAppLaunchDetails()).thenAnswer(
+          (_) async => NotificationAppLaunchDetails(
+            true,
+            notificationResponse: NotificationResponse(
+              notificationResponseType:
+                  NotificationResponseType.selectedNotification,
+              payload: payload,
+            ),
+          ),
+        );
+        service.debugConfigurePlugin(plugin);
+        final warm = service.notificationTapStream.first;
+        service.handleNotificationTapPayload(payload);
+        final cold = await service.takeLaunchNotificationTap();
+        for (final tap in [await warm, cold!]) {
+          expect(tap.notificationType, 'directMessage');
+          expect(tap.receiverPubkey, owner);
+          expect(tap.eventId, wrap);
+        }
+      },
+    );
+
+    test(
       'routes a local notification that launched the app (cold start)',
       () async {
         when(() => plugin.getNotificationAppLaunchDetails()).thenAnswer(

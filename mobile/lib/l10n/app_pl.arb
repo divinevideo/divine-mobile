@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Przełączyć się na konto {account}, aby otworzyć tę wiadomość?",
+  "notificationSettingsDirectMessages": "Wiadomości prywatne",
+  "notificationSettingsDirectMessagesSubtitle": "Pokazuj powiadomienie bez nazwy nadawcy i treści wiadomości.",
+  "dmNotificationMessageUnavailable": "Ta wiadomość jest niedostępna.",
   "@@locale": "pl",
   "videoEditorSocialStickerPoll": "Ankieta",
   "videoEditorSocialStickerQuiz": "Quiz",

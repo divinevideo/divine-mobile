@@ -20,6 +20,7 @@ dependencies:
     path: ../nostr_client
   nostr_sdk:
     path: ../nostr_sdk
+  rxdart: ^0.28.0
   shared_preferences: ^2.5.3
   unified_logger:
     path: ../unified_logger

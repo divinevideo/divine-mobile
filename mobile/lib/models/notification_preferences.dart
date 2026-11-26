@@ -9,6 +9,7 @@ enum NotificationPreference {
   repostsEnabled,
   newPostsEnabled,
   campaignsEnabled,
+  directMessagesEnabled,
 }
 
 /// User preferences for push notification types.
@@ -25,6 +26,7 @@ class NotificationPreferences extends Equatable {
     this.repostsEnabled = true,
     this.newPostsEnabled = true,
     this.campaignsEnabled = false,
+    this.directMessagesEnabled = false,
   });
 
   /// Create preferences from a list of enabled Nostr event kinds.
@@ -34,6 +36,7 @@ class NotificationPreferences extends Equatable {
   /// - 1: text notes (comments and mentions)
   /// - 3: contact list (follows)
   /// - 16: reposts
+  /// - 1059: private direct-message alerts, by explicit account opt-in
   /// - 34236: videos from creators the user subscribed to ("bells")
   ///
   /// Comments and mentions both use kind 1. When kind 1 is present,
@@ -53,6 +56,7 @@ class NotificationPreferences extends Equatable {
       mentionsEnabled: kinds.contains(1),
       repostsEnabled: kinds.contains(16),
       newPostsEnabled: kinds.contains(newPostKind),
+      directMessagesEnabled: kinds.contains(directMessageKind),
     );
   }
 
@@ -65,6 +69,7 @@ class NotificationPreferences extends Equatable {
       repostsEnabled: json['repostsEnabled'] as bool? ?? true,
       newPostsEnabled: json['newPostsEnabled'] as bool? ?? true,
       campaignsEnabled: json['campaignsEnabled'] as bool? ?? false,
+      directMessagesEnabled: json['directMessagesEnabled'] == true,
     );
   }
 
@@ -73,6 +78,7 @@ class NotificationPreferences extends Equatable {
   /// Distinct from kind 1, so muting mentions does not mute new-post pushes
   /// even though video mentions also arrive on kind 34236 events.
   static const int newPostKind = 34236;
+  static const int directMessageKind = 1059;
 
   final bool likesEnabled;
   final bool commentsEnabled;
@@ -86,6 +92,9 @@ class NotificationPreferences extends Equatable {
   /// Whether the user explicitly opted into engagement campaign pushes.
   final bool campaignsEnabled;
 
+  /// Whether this account explicitly chose generic private message alerts.
+  final bool directMessagesEnabled;
+
   /// Convert to the kinds list format expected by the push service.
   ///
   /// Returns deduplicated list of Nostr event kinds.
@@ -96,6 +105,7 @@ class NotificationPreferences extends Equatable {
     if (followsEnabled) kinds.add(3);
     if (repostsEnabled) kinds.add(16);
     if (newPostsEnabled) kinds.add(newPostKind);
+    if (directMessagesEnabled) kinds.add(directMessageKind);
     return kinds.toList()..sort();
   }
 
@@ -108,6 +118,7 @@ class NotificationPreferences extends Equatable {
       'repostsEnabled': repostsEnabled,
       'newPostsEnabled': newPostsEnabled,
       'campaignsEnabled': campaignsEnabled,
+      'directMessagesEnabled': directMessagesEnabled,
     };
   }
 
@@ -119,6 +130,7 @@ class NotificationPreferences extends Equatable {
     bool? repostsEnabled,
     bool? newPostsEnabled,
     bool? campaignsEnabled,
+    bool? directMessagesEnabled,
   }) {
     return NotificationPreferences(
       likesEnabled: likesEnabled ?? this.likesEnabled,
@@ -128,6 +140,8 @@ class NotificationPreferences extends Equatable {
       repostsEnabled: repostsEnabled ?? this.repostsEnabled,
       newPostsEnabled: newPostsEnabled ?? this.newPostsEnabled,
       campaignsEnabled: campaignsEnabled ?? this.campaignsEnabled,
+      directMessagesEnabled:
+          directMessagesEnabled ?? this.directMessagesEnabled,
     );
   }
 
@@ -140,5 +154,6 @@ class NotificationPreferences extends Equatable {
     repostsEnabled,
     newPostsEnabled,
     campaignsEnabled,
+    directMessagesEnabled,
   ];
 }

@@ -10,6 +10,22 @@ class AppLocalizationsIt extends AppLocalizations {
   AppLocalizationsIt([String locale = 'it']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Passare a $account per aprire questo messaggio?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Messaggi diretti';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Mostra una notifica senza il nome del mittente o il testo del messaggio.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Questo messaggio non è disponibile.';
+
+  @override
   String get devOptionsClipRecovery => 'Recupero clip';
 
   @override

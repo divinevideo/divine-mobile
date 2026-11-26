@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Beralih ke {account} untuk membuka pesan ini?",
+  "notificationSettingsDirectMessages": "Pesan langsung",
+  "notificationSettingsDirectMessagesSubtitle": "Tampilkan notifikasi tanpa nama pengirim atau isi pesan.",
+  "dmNotificationMessageUnavailable": "Pesan ini tidak tersedia.",
   "@@locale": "id",
   "videoEditorSocialStickerPoll": "Polling",
   "videoEditorSocialStickerQuiz": "Kuis",

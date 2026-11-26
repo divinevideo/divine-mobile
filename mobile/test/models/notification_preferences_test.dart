@@ -14,6 +14,24 @@ void main() {
       expect(prefs.campaignsEnabled, isFalse);
     });
 
+    test('DM alerts require an explicit choice across JSON and kind 1059', () {
+      final legacy = NotificationPreferences.fromJson(const {
+        'likesEnabled': true,
+      });
+      expect(legacy.toKindsList(), isNot(contains(1059)));
+      final optedIn = NotificationPreferences.fromJson(const {
+        'directMessagesEnabled': true,
+      });
+      expect(optedIn.toKindsList(), contains(1059));
+      expect(
+        NotificationPreferences.fromKindsList(const [1059])
+            .toJson()['directMessagesEnabled'],
+        isTrue,
+      );
+      expect(NotificationPreferences.fromJson(optedIn.toJson()), optedIn);
+      expect(legacy, isNot(optedIn));
+    });
+
     group('toKindsList', () {
       test('returns all kinds when all enabled', () {
         const prefs = NotificationPreferences();

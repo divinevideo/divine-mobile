@@ -10,6 +10,21 @@ class AppLocalizationsId extends AppLocalizations {
   AppLocalizationsId([String locale = 'id']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Beralih ke $account untuk membuka pesan ini?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Pesan langsung';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Tampilkan notifikasi tanpa nama pengirim atau isi pesan.';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'Pesan ini tidak tersedia.';
+
+  @override
   String get devOptionsClipRecovery => 'Pemulihan klip';
 
   @override

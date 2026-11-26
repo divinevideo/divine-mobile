@@ -198,17 +198,28 @@ String _minorAccountReviewReturnLocation(GoRouterState state) {
   return minorAccountReviewReturnLocationForTest(state.uri);
 }
 
-String? _moderationConversationId(
-  AuthService authService,
-  MinorReviewCase? reviewCase,
-) {
+String? _inboxDmTapToken(Uri uri) {
+  if (uri.path != RoutePaths.inbox) return null;
+  final token = uri.queryParameters['dmTap'];
+  return (token == null || token.isEmpty) ? null : token;
+}
+
+String? _inboxDmTapTokenFromParam(String? location) {
+  if (location == null || location.isEmpty) return null;
+  final uri = Uri.tryParse(location);
+  return uri == null ? null : _inboxDmTapToken(uri);
+}
+
+String? moderationConversationIdFor({
+  required String? currentPubkey,
+  required MinorReviewCase? reviewCase,
+}) {
   if (reviewCase == null) return null;
   if (reviewCase.moderationConversationId != null &&
       reviewCase.moderationConversationId!.isNotEmpty) {
     return reviewCase.moderationConversationId;
   }
 
-  final currentPubkey = authService.currentPublicKeyHex;
   final moderationPubkey = reviewCase.moderationConversationPubkey;
   if (currentPubkey == null ||
       currentPubkey.isEmpty ||
@@ -219,6 +230,14 @@ String? _moderationConversationId(
 
   return DmRepository.computeConversationId([currentPubkey, moderationPubkey]);
 }
+
+String? _moderationConversationId(
+  AuthService authService,
+  MinorReviewCase? reviewCase,
+) => moderationConversationIdFor(
+  currentPubkey: authService.currentPublicKeyHex,
+  reviewCase: reviewCase,
+);
 
 bool _isAuthEntryLocation(String location) {
   return location == WelcomeScreen.path ||
@@ -619,7 +638,12 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
     // through the review screen risks a loading-screen ↔ review-screen
     // loop (issue #5195).
     if (reviewStatus?.isRestricted == true) {
-      return MinorAccountReviewScreen.path;
+      final dmTap = _inboxDmTapTokenFromParam(
+        state.uri.queryParameters['from'],
+      );
+      return dmTap != null
+          ? MinorAccountReviewRouteData(dmTap: dmTap).location
+          : MinorAccountReviewScreen.path;
     }
     return _minorAccountReviewReturnLocation(state);
   }
@@ -671,6 +695,7 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
         !isPublicReviewRoute &&
         !isPublicParentConsentRoute &&
         !isPublicUnder13Route) {
+      final dmTap = _inboxDmTapToken(state.uri);
       Log.info(
         'Router redirect: restricted account on '
         '${redactUriStringForLogs(location)} — '
@@ -678,7 +703,9 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
         name: 'AppRouter',
         category: LogCategory.auth,
       );
-      return MinorAccountReviewScreen.path;
+      return dmTap != null
+          ? MinorAccountReviewRouteData(dmTap: dmTap).location
+          : MinorAccountReviewScreen.path;
     }
   }
 

@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "ይህን መልዕክት ለመክፈት ወደ {account} ይቀየር?",
+  "notificationSettingsDirectMessages": "የግል መልዕክቶች",
+  "notificationSettingsDirectMessagesSubtitle": "የላኪውን ስም ወይም መልዕክቱን ሳያሳዩ የግል ማሳወቂያ ያሳዩ።",
+  "dmNotificationMessageUnavailable": "ይህ መልዕክት አይገኝም።",
   "@@locale": "am",
   "videoEditorSocialStickerPoll": "ድምፅ መስጫ",
   "videoEditorSocialStickerQuiz": "ፈተና",

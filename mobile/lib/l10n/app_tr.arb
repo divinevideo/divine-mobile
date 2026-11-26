@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "Bu mesajı açmak için {account} hesabına geçilsin mi?",
+  "notificationSettingsDirectMessages": "Özel mesajlar",
+  "notificationSettingsDirectMessagesSubtitle": "Gönderenin adını veya mesaj içeriğini göstermeden bildirim gönder.",
+  "dmNotificationMessageUnavailable": "Bu mesaj kullanılamıyor.",
   "@@locale": "tr",
   "videoEditorSocialStickerPoll": "Anket",
   "videoEditorSocialStickerQuiz": "Test",

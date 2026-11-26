@@ -10,6 +10,21 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Switch to $account to open this message?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Direct messages';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Show a private alert without the sender’s name or message.';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'This message is unavailable.';
+
+  @override
   String get devOptionsClipRecovery => 'Clip Recovery';
 
   @override

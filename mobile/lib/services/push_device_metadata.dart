@@ -43,6 +43,10 @@ class PushDeviceMetadata {
   final String? installChannel;
   final String? appVersion;
 
+  /// Native clients with a receiver-aware notification router can follow a DM.
+  bool get supportsDirectMessageRouting =>
+      !kIsWeb && (platform == 'ios' || platform == 'android');
+
   Map<String, String> toJson() => {
     'platform': ?platform,
     'installChannel': ?installChannel,

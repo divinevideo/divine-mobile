@@ -1,4 +1,8 @@
 {
+  "dmNotificationSwitchAccountPrompt": "切换到 {account} 以打开这条消息吗？",
+  "notificationSettingsDirectMessages": "私信",
+  "notificationSettingsDirectMessagesSubtitle": "显示通知，但不显示发送者姓名或消息内容。",
+  "dmNotificationMessageUnavailable": "这条消息无法查看。",
   "@@locale": "zh",
   "videoEditorSocialStickerPoll": "投票",
   "videoEditorSocialStickerQuiz": "测验",

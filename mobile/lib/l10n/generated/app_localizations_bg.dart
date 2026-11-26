@@ -10,6 +10,22 @@ class AppLocalizationsBg extends AppLocalizations {
   AppLocalizationsBg([String locale = 'bg']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Да се превключи ли към $account, за да се отвори това съобщение?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Лични съобщения';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Показвай известие без името на подателя или текста на съобщението.';
+
+  @override
+  String get dmNotificationMessageUnavailable =>
+      'Това съобщение не е достъпно.';
+
+  @override
   String get devOptionsClipRecovery => 'Възстановяване на клипове';
 
   @override

@@ -10,6 +10,21 @@ class AppLocalizationsVi extends AppLocalizations {
   AppLocalizationsVi([String locale = 'vi']) : super(locale);
 
   @override
+  String dmNotificationSwitchAccountPrompt(String account) {
+    return 'Chuyển sang $account để mở tin nhắn này?';
+  }
+
+  @override
+  String get notificationSettingsDirectMessages => 'Tin nhắn trực tiếp';
+
+  @override
+  String get notificationSettingsDirectMessagesSubtitle =>
+      'Hiện thông báo mà không hiển thị tên người gửi hay nội dung tin nhắn.';
+
+  @override
+  String get dmNotificationMessageUnavailable => 'Tin nhắn này không khả dụng.';
+
+  @override
   String get devOptionsClipRecovery => 'Khôi phục clip';
 
   @override

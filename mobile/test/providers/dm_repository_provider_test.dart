@@ -9,6 +9,7 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -20,6 +21,7 @@ import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/services/feature_flag_service.dart';
+import 'package:openvine/notifications/routing/dm_message_visibility.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
@@ -49,6 +51,8 @@ class _MockNostrClient extends Mock implements NostrClient {}
 class _MockAuthService extends Mock implements AuthService {}
 
 class _MockFeatureFlagService extends Mock implements FeatureFlagService {}
+
+class _MockFollowRepository extends Mock implements FollowRepository {}
 
 class _FakeFilter extends Fake implements nostr_filter.Filter {}
 
@@ -153,12 +157,15 @@ void main() {
     ProviderContainer createContainer({
       required NostrSessionReadiness readiness,
       FeatureFlagService? featureFlagService,
+      FollowRepository? followRepository,
     }) {
       return ProviderContainer(
         overrides: [
           accountDmStateProvider.overrideWithValue(null),
           if (featureFlagService != null)
             featureFlagServiceProvider.overrideWithValue(featureFlagService),
+          if (followRepository != null)
+            followRepositoryProvider.overrideWithValue(followRepository),
           nostrServiceProvider.overrideWithValue(mockNostrClient),
           authServiceProvider.overrideWithValue(mockAuthService),
           currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
@@ -485,6 +492,248 @@ void main() {
       ).captured;
       expect(closed, unorderedEquals(opened));
     });
+
+    test(
+      'seeds wrap audience from cached follows before FollowRepository '
+      'finishes initializing',
+      () async {
+        await prefs.setString('blocklist_active_pubkey', testPubkey);
+        await prefs.setString(
+          FollowingCacheRecord.storageKey(testPubkey),
+          FollowingCacheRecord(pubkeys: [_ordinaryPeerPubkey]).encode(),
+        );
+        final follows = _MockFollowRepository();
+        final followInitCompleter = Completer<void>();
+        final followingController = StreamController<List<String>>.broadcast();
+        addTearDown(followingController.close);
+
+        when(() => follows.isInitialized).thenReturn(false);
+        when(follows.initialize).thenAnswer((_) => followInitCompleter.future);
+        when(() => follows.followingPubkeys).thenReturn(const <String>[]);
+        when(() => follows.followingStream).thenAnswer(
+          (_) => followingController.stream,
+        );
+
+        await database.conversationsDao.upsertConversation(
+          id: 'follow-cache-room',
+          participantPubkeys: '["$testPubkey","$_ordinaryPeerPubkey"]',
+          isGroup: false,
+          createdAt: 100,
+          ownerPubkey: testPubkey,
+        );
+        await database.directMessagesDao.insertMessage(
+          id: 'follow-cache-rumor',
+          conversationId: 'follow-cache-room',
+          senderPubkey: _ordinaryPeerPubkey,
+          content: 'Hello from cached followed peer',
+          createdAt: 100,
+          giftWrapId: 'follow-cache-wrap',
+          ownerPubkey: testPubkey,
+        );
+
+        final container = createContainer(
+          readiness: NostrSessionReadiness.nostrReady(
+            pubkey: testPubkey,
+            client: mockNostrClient,
+          ),
+          followRepository: follows,
+        );
+        addTearDown(container.dispose);
+        final repository = container.read(dmRepositoryProvider);
+        addTearDown(repository.stopListening);
+
+        final emissions = <DmWrapLookup>[];
+        final subscription = repository
+            .watchWrapLookup(
+              ownerPubkey: testPubkey,
+              giftWrapId: 'follow-cache-wrap',
+            )
+            .listen(emissions.add);
+        addTearDown(subscription.cancel);
+
+        await pumpEventQueue();
+        verify(follows.initialize).called(1);
+        expect(followInitCompleter.isCompleted, isFalse);
+        expect(emissions.last, isA<DmWrapFound>());
+        final initial = emissions.last as DmWrapFound;
+        expect(initial.isRequest, isFalse);
+        expect(initial.messageId, 'follow-cache-rumor');
+
+        followingController.add(const []);
+        await pumpEventQueue();
+
+        expect(emissions.last, isA<DmWrapFound>());
+        expect((emissions.last as DmWrapFound).isRequest, isTrue);
+      },
+    );
+
+    test(
+      'does not leave unfollowed or hidden-member group wraps pending when '
+      'FollowRepository is uninitialized without cache',
+      () async {
+        await prefs.setString('blocklist_active_pubkey', testPubkey);
+        const visibleStranger =
+            '1111111111111111111111111111111111111111111111111111111111111111';
+        const mutedPeer =
+            '2222222222222222222222222222222222222222222222222222222222222222';
+        final follows = _MockFollowRepository();
+        final followInitCompleter = Completer<void>();
+        final followingController = StreamController<List<String>>.broadcast();
+        addTearDown(followingController.close);
+
+        when(() => follows.isInitialized).thenReturn(false);
+        when(follows.initialize).thenAnswer((_) => followInitCompleter.future);
+        when(() => follows.followingPubkeys).thenReturn(const <String>[]);
+        when(() => follows.followingStream).thenAnswer(
+          (_) => followingController.stream,
+        );
+
+        await database.conversationsDao.upsertConversation(
+          id: 'stranger-dm-room',
+          participantPubkeys: '["$testPubkey","$visibleStranger"]',
+          isGroup: false,
+          createdAt: 100,
+          ownerPubkey: testPubkey,
+        );
+        await database.directMessagesDao.insertMessage(
+          id: 'stranger-dm-rumor',
+          conversationId: 'stranger-dm-room',
+          senderPubkey: visibleStranger,
+          content: 'Unfollowed 1:1 request',
+          createdAt: 100,
+          giftWrapId: 'stranger-dm-wrap',
+          ownerPubkey: testPubkey,
+        );
+
+        await database.conversationsDao.upsertConversation(
+          id: 'hidden-group-room',
+          participantPubkeys: '["$testPubkey","$visibleStranger","$mutedPeer"]',
+          isGroup: true,
+          createdAt: 100,
+          ownerPubkey: testPubkey,
+        );
+        await database.directMessagesDao.insertMessage(
+          id: 'hidden-group-rumor',
+          conversationId: 'hidden-group-room',
+          senderPubkey: visibleStranger,
+          content: 'Group request with muted co-participant',
+          createdAt: 100,
+          giftWrapId: 'hidden-group-wrap',
+          ownerPubkey: testPubkey,
+        );
+
+        final container = createContainer(
+          readiness: NostrSessionReadiness.nostrReady(
+            pubkey: testPubkey,
+            client: mockNostrClient,
+          ),
+          followRepository: follows,
+        );
+        addTearDown(container.dispose);
+        await container
+            .read(contentBlocklistRepositoryProvider)
+            .blockUser(mutedPeer);
+        final repository = container.read(dmRepositoryProvider);
+        addTearDown(repository.stopListening);
+
+        final strangerLookup = await repository
+            .watchWrapLookup(
+              ownerPubkey: testPubkey,
+              giftWrapId: 'stranger-dm-wrap',
+            )
+            .first;
+        final groupLookup = await repository
+            .watchWrapLookup(
+              ownerPubkey: testPubkey,
+              giftWrapId: 'hidden-group-wrap',
+            )
+            .first;
+
+        expect(strangerLookup, isA<DmWrapFound>());
+        expect((strangerLookup as DmWrapFound).isRequest, isTrue);
+        expect(
+          shouldDisplayDmAlert(
+            strangerLookup,
+            owner: testPubkey,
+            restricted: false,
+            allowedPeer: (_) => false,
+            visible: (_, _, _) => false,
+          ),
+          isFalse,
+        );
+
+        expect(groupLookup, isA<DmWrapSuppressed>());
+        expect(
+          shouldDisplayDmAlert(
+            groupLookup,
+            owner: testPubkey,
+            restricted: false,
+            allowedPeer: (_) => false,
+            visible: (_, _, _) => false,
+          ),
+          isFalse,
+        );
+      },
+    );
+
+    test(
+      'ignores stale cached follows once FollowRepository is initialized',
+      () async {
+        await prefs.setString('blocklist_active_pubkey', testPubkey);
+        await prefs.setString(
+          FollowingCacheRecord.storageKey(testPubkey),
+          FollowingCacheRecord(pubkeys: [_ordinaryPeerPubkey]).encode(),
+        );
+        final follows = _MockFollowRepository();
+        final followingController = StreamController<List<String>>.broadcast();
+        addTearDown(followingController.close);
+
+        when(() => follows.isInitialized).thenReturn(true);
+        when(() => follows.followingPubkeys).thenReturn(const <String>[]);
+        when(() => follows.followingStream).thenAnswer(
+          (_) => followingController.stream,
+        );
+
+        await database.conversationsDao.upsertConversation(
+          id: 'stale-cache-room',
+          participantPubkeys: '["$testPubkey","$_ordinaryPeerPubkey"]',
+          isGroup: false,
+          createdAt: 100,
+          ownerPubkey: testPubkey,
+        );
+        await database.directMessagesDao.insertMessage(
+          id: 'stale-cache-rumor',
+          conversationId: 'stale-cache-room',
+          senderPubkey: _ordinaryPeerPubkey,
+          content: 'Unfollowed peer despite stale disk cache',
+          createdAt: 100,
+          giftWrapId: 'stale-cache-wrap',
+          ownerPubkey: testPubkey,
+        );
+
+        final container = createContainer(
+          readiness: NostrSessionReadiness.nostrReady(
+            pubkey: testPubkey,
+            client: mockNostrClient,
+          ),
+          followRepository: follows,
+        );
+        addTearDown(container.dispose);
+        final repository = container.read(dmRepositoryProvider);
+        addTearDown(repository.stopListening);
+
+        final lookup = await repository
+            .watchWrapLookup(
+              ownerPubkey: testPubkey,
+              giftWrapId: 'stale-cache-wrap',
+            )
+            .first;
+
+        verifyNever(follows.initialize);
+        expect(lookup, isA<DmWrapFound>());
+        expect((lookup as DmWrapFound).isRequest, isTrue);
+      },
+    );
   });
 }
 

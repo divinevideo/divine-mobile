@@ -23,6 +23,7 @@ mixin $ConversationRouteData on GoRouteData {
   static ConversationRouteData _fromState(GoRouterState state) =>
       ConversationRouteData(
         id: state.pathParameters['id']!,
+        messageId: state.uri.queryParameters['messageId'],
         $extra: state.extra as Object?,
       );
 
@@ -31,6 +32,7 @@ mixin $ConversationRouteData on GoRouteData {
   @override
   String get location => GoRouteData.$location(
     '/inbox/conversation/${Uri.encodeComponent(_self.id)}',
+    queryParams: {if (_self.messageId != null) 'messageId': _self.messageId},
   );
 
   @override
