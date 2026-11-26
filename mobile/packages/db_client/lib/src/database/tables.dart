@@ -918,6 +918,10 @@ class DirectMessages extends Table {
   /// turn out to advertise no inbox, and wraps the retraction again only once
   /// their inbox is found.
   ///
+  /// Under the sender's own hex pubkey, never a recipient, the record names
+  /// the sender's own copy once one lands (#10016), so a retry publishes no
+  /// other.
+  ///
   /// Lives as long as the rumor it was recorded for: cleared when the
   /// retraction is confirmed or a different kind-5 replaces it, and kept,
   /// like the rumor, by a blocked one.

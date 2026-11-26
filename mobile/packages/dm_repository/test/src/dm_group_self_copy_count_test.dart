@@ -103,6 +103,7 @@ void main() {
     late bool recipientOksArrive;
     late Set<String> unreadableInboxes;
     late Set<String> refusingRecipients;
+    late Set<String> silentRecipients;
     late Future<void> Function(String pubkey)? onInboxLookup;
     late FutureOr<void> Function(Event wrap)? onRecipientPublish;
     late Future<void> Function()? onOwnCopyPublish;
@@ -140,6 +141,7 @@ void main() {
       recipientOksArrive = true;
       unreadableInboxes = {};
       refusingRecipients = {};
+      silentRecipients = {};
       onInboxLookup = null;
       onRecipientPublish = null;
       onOwnCopyPublish = null;
@@ -221,11 +223,19 @@ void main() {
             noResponseFrom: const [],
           );
         }
+        final answered =
+            recipientOksArrive &&
+            !event.tags.any(
+              (tag) =>
+                  tag.length >= 2 &&
+                  tag[0] == 'p' &&
+                  silentRecipients.contains(tag[1]),
+            );
         return PublishOutcome(
           eventId: event.id,
-          acceptedBy: recipientOksArrive ? targets : const [],
+          acceptedBy: answered ? targets : const [],
           rejectedBy: const {},
-          noResponseFrom: recipientOksArrive ? const [] : targets,
+          noResponseFrom: answered ? const [] : targets,
         );
       });
       // The sender's own copy.
@@ -526,6 +536,77 @@ void main() {
           expect(ownCopy?.kind, EventKind.eventDeletion);
         });
       }
+
+      test('publishes no new own copy when a retry finds the last one '
+          'recorded', () async {
+        final others = members.take(2).toList();
+        final conversationId = await seedRoom(others);
+        await DirectMessagesDao(db).insertMessage(
+          id: _retractedMessageId,
+          conversationId: conversationId,
+          senderPubkey: owner,
+          content: 'a message to delete for everyone',
+          createdAt: 1700000000,
+          giftWrapId: _retractedMessageWrapId,
+          ownerPubkey: owner,
+        );
+        silentRecipients = {others.last};
+
+        await repository.deleteMessageForEveryone(_retractedMessageId);
+        for (
+          var turn = 0;
+          turn < 400 &&
+              (others.any((pubkey) => wrapsTo(pubkey).isEmpty) ||
+                  wrapsTo(owner).isEmpty);
+          turn++
+        ) {
+          await pumpEventQueue();
+        }
+        await pumpEventQueue(times: 100);
+        expect(wrapsTo(owner), hasLength(1), reason: 'precondition');
+
+        for (var retry = 0; retry < 2; retry++) {
+          await repository.retryMessageDeletion(rumorId: _retractedMessageId);
+        }
+
+        expect(wrapsTo(others.first), hasLength(1));
+        expect(wrapsTo(others.last), hasLength(3));
+        expect(wrapsTo(owner), hasLength(1));
+      });
+
+      test('replays an own copy that failed once, on the next retry', () async {
+        final others = members.take(2).toList();
+        final conversationId = await seedRoom(others);
+        await DirectMessagesDao(db).insertMessage(
+          id: _retractedMessageId,
+          conversationId: conversationId,
+          senderPubkey: owner,
+          content: 'a message to delete for everyone',
+          createdAt: 1700000000,
+          giftWrapId: _retractedMessageWrapId,
+          ownerPubkey: owner,
+        );
+        silentRecipients = {others.last};
+        ownCopiesPublish = false;
+
+        await repository.deleteMessageForEveryone(_retractedMessageId);
+        for (
+          var turn = 0;
+          turn < 400 && others.any((pubkey) => wrapsTo(pubkey).isEmpty);
+          turn++
+        ) {
+          await pumpEventQueue();
+        }
+        await pumpEventQueue(times: 100);
+        expect(wrapsTo(owner), isEmpty, reason: 'precondition');
+
+        ownCopiesPublish = true;
+        await repository.retryMessageDeletion(rumorId: _retractedMessageId);
+        expect(wrapsTo(owner), hasLength(1));
+
+        await repository.retryMessageDeletion(rumorId: _retractedMessageId);
+        expect(wrapsTo(owner), hasLength(1));
+      });
 
       test('publishes one own copy, after the fan-out returned, when every '
           "member's send outlives its cap", () async {

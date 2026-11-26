@@ -11916,9 +11916,10 @@ class DmRepository {
   }
 
   /// Publish the sender's own copy of retraction [deletion], once for its
-  /// whole fan-out (#10016). Never throws: a copy that fails, throws or
-  /// outlives [_messagePublishTimeout] is logged and dropped.
-  Future<void> _publishRetractionOwnCopy({
+  /// whole fan-out (#10016), and return whether it landed. Never throws: a
+  /// copy that fails, throws or outlives [_messagePublishTimeout] is logged
+  /// and dropped.
+  Future<bool> _publishRetractionOwnCopy({
     required Event deletion,
     required List<String>? targetRelays,
     required Event? prebuiltSelfWrap,
@@ -11938,11 +11939,13 @@ class DmRepository {
           category: LogCategory.system,
         );
       }
+      return published.success;
     } on Object catch (e) {
       Log.warning(
         'Own copy of retraction ${deletion.id} failed: $e',
         category: LogCategory.system,
       );
+      return false;
     }
   }
 
@@ -11994,7 +11997,9 @@ class DmRepository {
   /// is due or a recipient counts as delivered with no send, as a reaction's
   /// is (#8446). It used to be one per recipient (#10016). A copy handed over
   /// by a send that outlived its cap, after this returned, is published
-  /// detached. Its outcome never changes the result.
+  /// detached. Its outcome never changes the result. A copy that lands while
+  /// the row is left to be retried is recorded in [heldWraps] under the
+  /// sender's key, and a retry that finds it publishes no other.
   Future<({NIP17SendResult result, bool anyRecipientAccepted})>
   _fanOutDeletion({
     required String rumorId,
@@ -12031,6 +12036,9 @@ class DmRepository {
     final failures = <NIP17SendFailure>[];
     // The members this attempt delivered to, and the wrap each has (#10012).
     final deliveredWraps = <String, String>{};
+    // An earlier attempt's own copy, under the sender's key: recipients never
+    // include the sender.
+    final ownCopyRecorded = heldWraps[deletion.pubkey]?.delivered == true;
     var ownCopyDue = false;
     var withheldOwnCopy = false;
     var returned = false;
@@ -12040,11 +12048,23 @@ class DmRepository {
       // this returns: an account switch meanwhile replaces the message
       // service, which would wrap this account's retraction as the next one's.
       if (_ingestSessionEnded(deletion.pubkey, generation)) return;
-      await _publishRetractionOwnCopy(
+      final published = await _publishRetractionOwnCopy(
         deletion: deletion,
         targetRelays: selfWrapTargets,
         prebuiltSelfWrap: prebuiltOwnCopy,
       );
+      // Only a row left to be retried needs it, so its retries publish none.
+      if (published && failures.isNotEmpty) {
+        await _recordDeletionWraps(
+          rumorId,
+          what: 'the own copy',
+          write: () => _directMessagesDao.recordDeliveredDeletionWraps(
+            rumorId,
+            wraps: {deletion.pubkey: prebuiltOwnCopy?.id ?? deletion.id},
+            ownerPubkey: deletion.pubkey,
+          ),
+        );
+      }
     }
 
     void onOwnCopyDue(Event? prebuiltSelfWrap) {
@@ -12060,6 +12080,7 @@ class DmRepository {
         }
         return;
       }
+      if (ownCopyRecorded) return;
       prebuiltOwnCopy ??= prebuiltSelfWrap;
       if (ownCopyDue) return;
       ownCopyDue = true;
