@@ -355,6 +355,7 @@ Stream<List<VideoEvent>> _listVideos({
   if (videoEventService == null) return;
 
   final foundVideos = <VideoEvent>[];
+  final seenVideoKeys = <String>{};
   final missingRefs = <String>[];
 
   // Every subscription's pool, for the coordinates (kind:pubkey:d-tag).
@@ -387,7 +388,8 @@ Stream<List<VideoEvent>> _listVideos({
     }
     if (pooled == null) {
       missingRefs.add(ref);
-    } else if (!videoEventService.shouldHideVideo(pooled)) {
+    } else if (!videoEventService.shouldHideVideo(pooled) &&
+        seenVideoKeys.add(pooled.feedDedupKey)) {
       foundVideos.add(pooled);
     }
   }
@@ -413,7 +415,6 @@ Stream<List<VideoEvent>> _listVideos({
     final repository = live.videosRepository;
     if (repository == null) return;
 
-    final seenIds = {for (final video in foundVideos) video.id.toLowerCase()};
     try {
       await for (final videos in repository.watchVideosForList(
         missingRefs,
@@ -421,8 +422,10 @@ Stream<List<VideoEvent>> _listVideos({
       )) {
         final shownBefore = foundVideos.length;
         for (final video in videos) {
-          if (!seenIds.add(video.id.toLowerCase())) continue;
-          if (videoEventService.shouldHideVideo(video)) continue;
+          if (videoEventService.shouldHideVideo(video) ||
+              !seenVideoKeys.add(video.feedDedupKey)) {
+            continue;
+          }
           foundVideos.add(video);
           videoEventService.addVideoEvent(video);
         }

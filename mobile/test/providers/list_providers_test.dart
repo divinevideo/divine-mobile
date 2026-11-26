@@ -837,6 +837,32 @@ void main() {
       verify(() => videoEventService.addVideoEvent(fetched)).called(1);
     });
 
+    test(
+      'keeps one tile when successive reads resolve different revisions',
+      () async {
+        const dTag = 'clip';
+        final first = _video(
+          id: _allowedVideoId,
+          pubkey: _ownerA,
+        ).copyWith(addressableDTag: dTag);
+        final second = _video(
+          id: missingVideoId,
+          pubkey: _ownerA,
+        ).copyWith(addressableDTag: dTag);
+        answerRepository(
+          Stream.fromIterable([
+            [first],
+            [second],
+          ]),
+        );
+
+        final states = await collect(['34236:$_ownerA:$dTag', _allowedVideoId]);
+
+        expect(idsOf(states).last, [_allowedVideoId]);
+        verifyNever(() => videoEventService.addVideoEvent(second));
+      },
+    );
+
     test('leaves out a video the read finds that the viewer hides', () async {
       final fetched = _video(id: missingVideoId, pubkey: _blockedAuthor);
       when(() => videoEventService.shouldHideVideo(fetched)).thenReturn(true);
