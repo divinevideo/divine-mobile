@@ -9913,9 +9913,8 @@ class DmRepository {
   /// The group send and a replay of a member's row both publish through here,
   /// joined under one key per batch. Once the copy lands, the batch records
   /// it before releasing the key: delivered rows are removed and pending
-  /// rows are marked. [callerRowId] is marked too so its caller can finalize
-  /// it. A session that ended meanwhile publishes nothing: the
-  /// message service may already be the next account's.
+  /// rows are marked. A session that ended meanwhile publishes nothing:
+  /// the message service may already be the next account's.
   Future<NIP17SendResult> _publishBatchOwnCopy({
     required OutgoingDmsDao dao,
     required String conversationId,
@@ -9928,13 +9927,14 @@ class DmRepository {
     String? callerRowId,
   }) {
     return _joinOrStartRecovery('self-batch:$sendBatchId', () async {
-      final rows = await _batchRows(
+      Future<List<OutgoingDm>?> readRows() => _batchRows(
         dao: dao,
         conversationId: conversationId,
         ownerPubkey: ownerPubkey,
         sendBatchId: sendBatchId,
         rumorId: rumor.id,
       );
+      final rows = await readRows();
       if (_ingestSessionEnded(ownerPubkey, generation)) {
         return _queuedForDelivery(callerRowId ?? rumor.id);
       }
@@ -9962,18 +9962,22 @@ class DmRepository {
       );
       if (!published.success) return published;
       try {
-        for (final row in rows ?? const <OutgoingDm>[]) {
-          if (row.id != callerRowId &&
-              row.recipientWrapStatus == OutgoingWrapStatus.sent) {
-            await dao.deleteById(row.id);
-          } else {
-            await dao.markSelfWrapStatus(
-              id: row.id,
-              status: OutgoingWrapStatus.sent,
-              eventId: published.messageEventId,
-            );
+        await _conversationsDao.runInTransaction(() async {
+          // A recipient may have finished while the copy was on the wire.
+          // Any delivered row can go directly, without ever being sent/sent.
+          final liveRows = await readRows();
+          for (final row in liveRows ?? const <OutgoingDm>[]) {
+            if (row.recipientWrapStatus == OutgoingWrapStatus.sent) {
+              await dao.deleteById(row.id);
+            } else {
+              await dao.markSelfWrapStatus(
+                id: row.id,
+                status: OutgoingWrapStatus.sent,
+                eventId: published.messageEventId,
+              );
+            }
           }
-        }
+        });
       } on Object catch (e) {
         // A row left unmarked replays the copy once more; the delivery stands
         // either way.

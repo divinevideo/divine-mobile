@@ -32,12 +32,19 @@ class _HookedOutgoingDmsDao extends OutgoingDmsDao {
 
   void Function()? beforeConversationRead;
   FutureOr<void> Function(String id)? afterRowRead;
+  Future<void> Function(String id)? beforeRowDelete;
 
   @override
   Future<OutgoingDm?> getById(String id) async {
     final row = await super.getById(id);
     await afterRowRead?.call(id);
     return row;
+  }
+
+  @override
+  Future<int> deleteById(String id) async {
+    await beforeRowDelete?.call(id);
+    return super.deleteById(id);
   }
 
   @override
@@ -562,6 +569,32 @@ void main() {
 
         expect(wrapsTo(owner), hasLength(1));
         expect(await queueRows(), isEmpty);
+      });
+
+      test('a sender-copy recovery removes delivered rows without persisting '
+          'a terminal queue row first', () async {
+        ownCopiesPublish = false;
+        await sendToRoom(members.take(2).toList());
+        final rows = await queueRows();
+        expect(rows, hasLength(2));
+        ownCopiesPublish = true;
+        final statesBeforeDelete = <OutgoingWrapStatus>[];
+        outgoingDao.beforeRowDelete = (id) async {
+          final row = await outgoingDao.getById(id);
+          if (row != null) statesBeforeDelete.add(row.selfWrapStatus);
+        };
+
+        expect(
+          (await repository.recoverSelfWrap(rumorId: rows.first.id)).success,
+          isTrue,
+        );
+
+        expect(statesBeforeDelete, [
+          OutgoingWrapStatus.failed,
+          OutgoingWrapStatus.failed,
+        ]);
+        expect(await queueRows(), isEmpty);
+        expect(wrapsTo(owner), hasLength(1));
       });
 
       test(
