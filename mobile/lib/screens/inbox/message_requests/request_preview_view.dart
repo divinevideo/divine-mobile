@@ -950,9 +950,7 @@ class _DeclineAndRemoveButton extends StatelessWidget {
         final messenger = ScaffoldMessenger.of(context);
         final errorText = context.l10n.commonSomethingWentWrong;
         final name = displayName;
-        // A resolved counterparty names them in the confirmation; the
-        // unresolved states have no name, so fall back to the name-free
-        // "Removed conversation" rather than staying silent (#7881 review).
+        // Group and unresolved requests use the generic confirmation.
         final successText = name == null
             ? context.l10n.inboxRemovedConversation
             : context.l10n.messageRequestDeclinedSnackbar(name);
