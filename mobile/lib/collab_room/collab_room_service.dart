@@ -14,7 +14,7 @@ import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:path/path.dart' as p;
 
 /// A part's video uploaded, its key not handed to anyone yet.
-typedef CollabRoomUpload = ({String url, DmFileMetadata metadata});
+typedef CollabRoomUpload = DmVideoUpload;
 
 /// A room message could not be delivered, or a part could not be uploaded or
 /// read back.
@@ -320,15 +320,15 @@ class CollabRoomService {
     File video, {
     void Function(double fraction)? onProgress,
   }) async {
-    final upload = await _videos.uploadVideo(
-      videoFile: video,
-      mimeType: 'video/mp4',
-      onUploadProgress: onProgress,
-    );
-    if (upload == null) {
+    try {
+      return await _videos.uploadVideo(
+        videoFile: video,
+        mimeType: 'video/mp4',
+        onUploadProgress: onProgress,
+      );
+    } on DmVideoUploadFailed {
       throw const CollabRoomException('The part could not be uploaded');
     }
-    return upload;
   }
 
   /// Hands in [upload], from [uploadPart], as the account's part of [room].
@@ -346,10 +346,9 @@ class CollabRoomService {
       throw const CollabRoomException('The room no longer takes this part');
     }
     if (!room.isAuthor) {
-      final result = await _videos.sendUploadedVideo(
+      final result = await _videos.publishVideo(
         recipientPubkey: room.authorPubkey,
-        url: upload.url,
-        metadata: upload.metadata,
+        uploaded: upload,
         extraTags: collabRoomTags(
           roomId: room.id,
           type: CollabRoomMessageType.part,
@@ -370,8 +369,8 @@ class CollabRoomService {
     }
     final part = CollabRoomPart(
       pubkey: room.ownerPubkey,
-      url: upload.url,
-      metadata: upload.metadata,
+      url: upload.fileUrl,
+      metadata: upload.fileMetadata,
     );
     await publish(
       room,

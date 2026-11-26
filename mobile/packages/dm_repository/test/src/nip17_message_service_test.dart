@@ -1807,6 +1807,84 @@ void main() {
     });
 
     group('sendPrivateMessage', () {
+      test(
+        'builds the rumor with the given createdAt, so sending the same '
+        'message again keeps its rumor id',
+        () async {
+          when(() => mockNostrClient.publishEvent(any())).thenAnswer(
+            (invocation) async => PublishSuccess(
+              event: invocation.positionalArguments[0] as Event,
+            ),
+          );
+          const fileUrl = 'https://media.example/blob';
+          const tags = [
+            ['file-type', 'video/mp4'],
+          ];
+          const createdAt = 1700000000;
+
+          Future<NIP17SendResult> send() => service.sendPrivateMessage(
+            recipientPubkey: _recipientPubkey,
+            content: fileUrl,
+            eventKind: EventKind.fileMessage,
+            additionalTags: tags,
+            createdAt: createdAt,
+          );
+          final first = await send();
+          final second = await send();
+
+          expect(first.rumorEventId, isNotNull);
+          expect(second.rumorEventId, equals(first.rumorEventId));
+          expect(
+            first.rumorEventId,
+            equals(
+              Event(
+                _testPublicKey,
+                EventKind.fileMessage,
+                [
+                  ['p', _recipientPubkey],
+                  ...tags,
+                ],
+                fileUrl,
+                createdAt: createdAt,
+              ).id,
+            ),
+          );
+        },
+      );
+
+      test(
+        'stamps a rumor built without createdAt with the time now',
+        () async {
+          when(() => mockNostrClient.publishEvent(any())).thenAnswer(
+            (invocation) async => PublishSuccess(
+              event: invocation.positionalArguments[0] as Event,
+            ),
+          );
+          int nowSeconds() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          String rumorIdAt(int createdAt) => Event(
+            _testPublicKey,
+            EventKind.privateDirectMessage,
+            [
+              ['p', _recipientPubkey],
+            ],
+            'Test message',
+            createdAt: createdAt,
+          ).id;
+
+          final before = nowSeconds();
+          final result = await service.sendPrivateMessage(
+            recipientPubkey: _recipientPubkey,
+            content: 'Test message',
+          );
+          final after = nowSeconds();
+
+          expect(
+            result.rumorEventId,
+            isIn([for (var t = before; t <= after; t++) rumorIdAt(t)]),
+          );
+        },
+      );
+
       test('returns success with gift wrap event details', () async {
         when(() => mockNostrClient.publishEvent(any())).thenAnswer(
           (invocation) async =>
