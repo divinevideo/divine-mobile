@@ -55,13 +55,15 @@ class VideoRecorderCameraPreview extends StatelessWidget {
         );
         // In vertical mode a phone, and the folded iPhone Duo, uses the full
         // available screen size, even if it's not exactly 16:9. The desktop,
-        // and with the large-screen layouts a large screen (the open iPhone
-        // Duo, iPads), shows the 9:16 frame that is recorded instead of more
-        // than lands in it.
+        // and with adaptive layouts a large or landscape window, shows the
+        // 9:16 frame that is recorded.
         final availableAspectRatio = constraints.biggest.aspectRatio;
+        final layout = context.adaptiveLayout;
         final showsRecordedFrame =
             isDesktopPlatform ||
-            (context.adaptiveLayout.isLargeScreen &&
+            (layout.enabled &&
+                (layout.isLargeScreen ||
+                    layout.size.width > layout.size.height) &&
                 availableAspectRatio > 9 / 16);
         final aspectRatioValue = aspectRatio == .vertical
             ? showsRecordedFrame

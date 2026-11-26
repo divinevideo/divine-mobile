@@ -1,6 +1,8 @@
 // ABOUTME: Window-size layout classes for tablets and foldables, gated on the
 // ABOUTME: Large Screen Layout flag, and the orientation policy that goes with them
 
+import 'dart:math' as math;
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +10,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/providers/large_screen_orientation_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -42,13 +45,16 @@ typedef StatusBarColumn = ({double width, bool onRight});
 /// The layout class of the current window.
 ///
 /// Everything is off unless [enabled], which follows
-/// [FeatureFlag.largeScreenLayout]: with the flag off every window lays out
-/// as it did before the flag existed.
+/// [FeatureFlag.largeScreenLayout] (see [AdaptiveLayoutScope] for the one
+/// exception): with the flag off every window lays out as it did before the
+/// flag existed.
 @immutable
 class AdaptiveLayout {
   const AdaptiveLayout({required this.enabled, required this.size});
 
-  /// Whether the large-screen layouts may be used at all.
+  /// Whether the large-screen layouts may be used at all: the flag is on, or
+  /// the app runs on a large display whose platform ignores its portrait
+  /// lock.
   final bool enabled;
 
   /// The size of the window the app is drawn in.
@@ -118,6 +124,13 @@ extension AdaptiveLayoutContext on BuildContext {
 /// and a window whose shorter side is at least
 /// [AdaptiveBreakpoints.large], the app may rotate; everywhere else, and while
 /// a [PortraitOrientationLock] is mounted, it stays in portrait as before.
+///
+/// The layouts are also on, whatever the flag, on a display at least
+/// [AdaptiveBreakpoints.large] across whose platform ignores the portrait
+/// lock ([ignoresOrientationLockOnLargeScreensProvider]): Android 16 tablets
+/// and unfolded foldables rotate the app regardless, and the phone layout
+/// in a landscape window crops a vertical video to a strip and shows a
+/// landscape camera preview for a portrait recording.
 class AdaptiveLayoutScope extends ConsumerStatefulWidget {
   const AdaptiveLayoutScope({required this.child, super.key});
 
@@ -192,14 +205,20 @@ class _AdaptiveLayoutScopeState extends ConsumerState<AdaptiveLayoutScope> {
 
   @override
   Widget build(BuildContext context) {
-    final enabled = ref.watch(
+    final flagEnabled = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.largeScreenLayout),
     );
+    final enabled =
+        flagEnabled ||
+        (ref.watch(ignoresOrientationLockOnLargeScreensProvider) &&
+            _isOnLargeDisplay(context));
     // Before any orientation request, so the delegate's mask already allows
     // what Dart asks for.
-    _reportToSystem(enabled);
+    _reportToSystem(flagEnabled);
+    // The display fallback only changes layout. The system can still honor
+    // portrait lock when its aspect-ratio settings override the default.
     _rotationWanted =
-        enabled &&
+        flagEnabled &&
         (_systemKeepsSmallScreensPortrait ||
             MediaQuery.sizeOf(context).shortestSide >=
                 AdaptiveBreakpoints.large);
@@ -216,12 +235,59 @@ class _AdaptiveLayoutScopeState extends ConsumerState<AdaptiveLayoutScope> {
 /// The orientation startup locks the app to (see `app_bootstrap.dart`).
 const List<DeviceOrientation> _portraitOnly = [DeviceOrientation.portraitUp];
 
+/// Whether this context's display is at least [AdaptiveBreakpoints.large]
+/// across its shorter side, which is where Android 16 stops honouring the
+/// portrait lock.
+///
+/// Also reads the window, which rebuilds the scope when folding or resizing
+/// changes it, and stands in for a display that reports no size.
+bool _isOnLargeDisplay(BuildContext context) {
+  final window = MediaQuery.sizeOf(context);
+  final display = View.maybeOf(context)?.display;
+  final displayShortestSide = display == null || display.devicePixelRatio <= 0
+      ? 0.0
+      : display.size.shortestSide / display.devicePixelRatio;
+  return math.max(displayShortestSide, window.shortestSide) >=
+      AdaptiveBreakpoints.large;
+}
+
 /// Reports the large-screen layouts to the iOS app delegate
-/// (`AppDelegate.swift`), whose orientation mask depends on them.
+/// (`AppDelegate.swift`), whose orientation mask depends on them, and asks the
+/// Android activity (`MainActivity.kt`) whether the system ignores the
+/// portrait lock on large displays.
 @visibleForTesting
 const MethodChannel largeScreenLayoutChannel = MethodChannel(
   'divine/large_screen_layout',
 );
+
+/// Whether the platform ignores the app's portrait lock on large displays:
+/// Android 16 does for apps that target API 36 (see
+/// [ignoresOrientationLockOnLargeScreensProvider]).
+///
+/// Asked once at startup. False on every other platform, and when the
+/// activity cannot answer, so the layouts then follow the flag alone.
+Future<bool> resolveIgnoresOrientationLockOnLargeScreens() async {
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
+  try {
+    return await largeScreenLayoutChannel.invokeMethod<bool>(
+          'ignoresOrientationLockOnLargeScreens',
+        ) ??
+        false;
+  } on PlatformException catch (error, stackTrace) {
+    Log.warning(
+      'Could not ask whether the system ignores the portrait lock',
+      name: 'AdaptiveLayoutScope',
+      category: LogCategory.ui,
+      error: error,
+      stackTrace: stackTrace,
+    );
+    return false;
+  } on MissingPluginException {
+    // An activity without the channel (an older native shell) predates the
+    // question and keeps its lock.
+    return false;
+  }
+}
 
 /// Whether the platform itself keeps screens smaller than
 /// [AdaptiveBreakpoints.large] in portrait once the flag is on.

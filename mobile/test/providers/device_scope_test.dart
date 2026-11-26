@@ -19,6 +19,7 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/device_scope.dart';
 import 'package:openvine/providers/documents_path_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
+import 'package:openvine/providers/large_screen_orientation_provider.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
 import 'package:openvine/providers/player_cache_budget_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
@@ -65,6 +66,7 @@ void main() {
       logMessageBatcher: logMessageBatcher,
       installSource: InstallSource.playStore,
       shorebirdAvailable: true,
+      ignoresOrientationLockOnLargeScreens: true,
       playerCacheBudgetBytes: 32 * 1024 * 1024,
     );
   });
@@ -215,6 +217,16 @@ void main() {
 
       expect(a.read(shorebirdAvailableProvider), isTrue);
       expect(b.read(shorebirdAvailableProvider), isTrue);
+    });
+
+    test('every container reads the same orientation lock answer', () {
+      final a = buildAccountContainer(deviceScope);
+      addTearDown(a.dispose);
+      final b = buildAccountContainer(deviceScope);
+      addTearDown(b.dispose);
+
+      expect(a.read(ignoresOrientationLockOnLargeScreensProvider), isTrue);
+      expect(b.read(ignoresOrientationLockOnLargeScreensProvider), isTrue);
     });
 
     test('every container reads the same player cache budget override', () {
