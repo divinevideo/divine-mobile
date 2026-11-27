@@ -5024,8 +5024,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     // Track addressable ID so the batch fetch can also query by 'a' tag.
     // This ensures reactions on any version of a replaced video (e.g. after a
     // metadata edit that changes the event ID) are included in the count.
-    // Preserve the addressable identity alongside the current event ID so the
-    // batch can count reactions across edited versions of the same video.
     final addressableId = videoEvent.addressableId;
     if (addressableId != null) {
       _pendingLikeCountAddressableIds[videoEvent.id] = addressableId;
@@ -5084,17 +5082,17 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
 
       // Apply counts to each video
       var updatedCount = 0;
-      for (final entry in likeCounts.entries) {
-        final videoId = entry.key;
-        final likeCount = entry.value;
-
-        // Skip if count is 0 (no change from default)
-        if (likeCount == 0) continue;
-
+      for (final MapEntry(key: videoId, value: likeCount)
+          in likeCounts.counts.entries) {
         final subscriptionType = batch[videoId];
         if (subscriptionType == null) continue;
 
-        if (_applyLikeCountToVideo(videoId, likeCount, subscriptionType)) {
+        if (_applyLikeCountToVideo(
+          videoId,
+          likeCount,
+          subscriptionType,
+          onlyRaise: likeCounts.incompleteIds.contains(videoId),
+        )) {
           updatedCount++;
         }
       }
@@ -5120,11 +5118,15 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
 
   /// Apply a like count to a video in all relevant lists.
   /// Returns true if the video was found and updated.
+  ///
+  /// With [onlyRaise] the count is a floor some relay did not settle, so it
+  /// may raise the cached count but never lower it (#9223).
   bool _applyLikeCountToVideo(
     String videoId,
     int likeCount,
-    SubscriptionType subscriptionType,
-  ) {
+    SubscriptionType subscriptionType, {
+    bool onlyRaise = false,
+  }) {
     // Find and update the video in the event list
     final eventList = _eventLists[subscriptionType];
     if (eventList == null) return false;
@@ -5133,6 +5135,9 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     if (index == -1) return false; // Video no longer in list
 
     final videoEvent = eventList[index];
+    if (onlyRaise && likeCount <= (videoEvent.nostrLikeCount ?? 0)) {
+      return false;
+    }
 
     // Direct-replace, not max-merge: unlike the archival originalLikes /
     // originalLoops / originalComments / originalReposts fields (fixed

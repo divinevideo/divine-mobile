@@ -210,6 +210,14 @@ class QueryOutcomeTracker {
                 entry.key.relay.relayStatus.relayType != RelayType.cache,
           )
           .length,
+      unsentNetworkRelayCount: _tallies.values
+          .where(
+            (tally) =>
+                !tally.tookPart &&
+                tally.relay.relayStatus.readAccess &&
+                tally.relay.relayStatus.relayType != RelayType.cache,
+          )
+          .length,
       unansweredRelayCount: judgements.values
           .where((judgement) => judgement.standing == _Standing.noAnswer)
           .length,
@@ -228,6 +236,13 @@ class QueryOutcomeTracker {
             tally.relay.url: tally.closedReason!,
       },
       possiblyCapped: judgements.keys.any(_isCapped),
+      hasCapEvidence: judgements.keys.any(
+        (tally) => tally.mayBeCapped(
+          tally.relay,
+          _filters,
+          includeUnknownLimit: false,
+        ),
+      ),
       confirmedExhaustive: _confirmedExhaustive(judgements),
       relays: [
         for (final tally in _tallies.values)

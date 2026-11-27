@@ -677,7 +677,9 @@ void main() {
         await sendEvents(relay, 2);
         await relay.deliver(['EOSE', _queryId]);
 
-        expect((await outcome.future).possiblyCapped, isTrue);
+        final result = await outcome.future;
+        expect(result.possiblyCapped, isTrue);
+        expect(result.hasCapEvidence, isTrue);
       });
 
       test('with no filter limit, is clear below a known max_limit', () async {
@@ -706,7 +708,9 @@ void main() {
         await sendEvents(relay, 1);
         await relay.deliver(['EOSE', _queryId]);
 
-        expect((await outcome.future).possiblyCapped, isTrue);
+        final result = await outcome.future;
+        expect(result.possiblyCapped, isTrue);
+        expect(result.hasCapEvidence, isFalse);
       });
 
       test('with no filter limit and no known max_limit, is clear with no '

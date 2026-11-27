@@ -684,7 +684,7 @@ abstract class Relay {
     _countQueries.clear();
     _countRequests.clear();
     for (final completer in pending) {
-      completer.completeError(CountNotSupportedException(reason));
+      completer.completeError(CountCommandUnknownException(reason));
     }
   }
 

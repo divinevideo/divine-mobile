@@ -107,6 +107,8 @@ class _ScriptedRelay extends Relay {
   /// Subscription ids of the `REQ`s this relay was sent, in order.
   final List<String> reqSubIds = [];
 
+  bool acceptRequests = true;
+
   /// The filters of each of those `REQ`s, in the same order.
   final List<List<Map<String, dynamic>>> reqFilters = [];
 
@@ -133,6 +135,7 @@ class _ScriptedRelay extends Relay {
       reqFilters.add([
         for (final filter in message.skip(2)) filter as Map<String, dynamic>,
       ]);
+      return acceptRequests;
     }
     return true;
   }
@@ -460,6 +463,34 @@ void main() {
         expect(result.events, hasLength(2));
       },
     );
+
+    test('reports an unsent REQ to a readable network relay', () async {
+      final nostr = _newNostr();
+      addTearDown(nostr.close);
+      final answering = _ScriptedRelay('wss://answers.example');
+      final unreachable = _ScriptedRelay('wss://unreachable.example')
+        ..acceptRequests = false;
+      final writeOnly = _ScriptedRelay('wss://write-only.example');
+      writeOnly.relayStatus.readAccess = false;
+      for (final relay in [answering, unreachable, writeOnly]) {
+        expect(await nostr.relayPool.add(relay), isTrue);
+      }
+      final client = _clientOver(
+        nostr,
+        connectedRelays: [answering.url, writeOnly.url],
+      );
+
+      final pending = client.readEvents([_textNotes()], useCache: false);
+      final subId = await answering.awaitReq(0);
+      await answering.deliver(['EOSE', subId]);
+      final result = await pending;
+
+      expect(result.endedBy, QueryEnd.complete);
+      expect(result.answeredNetworkRelayCount, 1);
+      expect(result.unsentNetworkRelayCount, 1);
+      expect(unreachable.reqSubIds, [subId]);
+      expect(writeOnly.reqSubIds, isEmpty);
+    });
 
     test(
       'merges a cached row without making a cut-short read complete',

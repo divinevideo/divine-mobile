@@ -3266,7 +3266,13 @@ class RelayPool {
 
       log('📊 COUNT response: $count (approximate: $approximate)');
 
-      final response = CountResponse(count: count, approximate: approximate);
+      // One relay's own answer is all that relay holds; the pool decides
+      // whether the request as a whole settled.
+      final response = CountResponse(
+        count: count,
+        approximate: approximate,
+        isComplete: true,
+      );
 
       relay.completeCountQuery(subscriptionId, response);
     } else if (messageType == 'CLOSED') {
@@ -4783,6 +4789,11 @@ class RelayPool {
   /// ([Relay.countUnsupported]) is skipped. A missing NIP-45 advertisement
   /// is inconclusive because some relays answer COUNT without listing it.
   ///
+  /// The result is [CountResponse.isComplete] only when every relay asked
+  /// answered or replied that it does not know COUNT. A relay that timed out,
+  /// refused with CLOSED, could not be sent the COUNT or failed otherwise
+  /// makes it incomplete: the largest answer is then only a floor.
+  ///
   /// Throws [CountNotSentException] when no relay accepted the COUNT, and
   /// [CountNotSupportedException] when relays accepted it but none answered
   /// in time, whether by timing out, refusing with CLOSED or replying that
@@ -4867,6 +4878,9 @@ class RelayPool {
     }
 
     var acceptedByAny = false;
+    // Set when a relay that may hold matching events did not settle the
+    // COUNT, so the largest answer is only a floor.
+    var unsettled = false;
     final futures = <Future<CountResponse?>>[];
     for (var i = 0; i < eligibleRelays.length; i++) {
       final relay = eligibleRelays[i];
@@ -4894,6 +4908,7 @@ class RelayPool {
               relay.url,
               'COUNT $relaySubId not sent',
             );
+            unsettled = true;
             return null;
           }
           acceptedByAny = true;
@@ -4918,11 +4933,16 @@ class RelayPool {
             'Relay did not answer COUNT $relaySubId within '
             '${answerBudget.inMilliseconds} ms',
           );
+          unsettled = true;
+          return null;
+        } on CountCommandUnknownException catch (e) {
+          // The relay cannot count at all, so its silence costs nothing.
+          log('📊 COUNT unknown to ${relay.url}: $e');
           return null;
         } on CountNotSupportedException catch (e) {
-          // A CLOSED refusal or an unknown-command NOTICE, which its handler
-          // has already reported.
+          // A CLOSED refusal, which its handler has already reported.
           log('📊 COUNT refused by ${relay.url}: $e');
+          unsettled = true;
           return null;
         } catch (e) {
           log('📊 COUNT failed on ${relay.url}: $e');
@@ -4936,6 +4956,7 @@ class RelayPool {
             relay.url,
             'COUNT $relaySubId failed (${e.runtimeType})',
           );
+          unsettled = true;
           return null;
         }
       }());
@@ -4954,7 +4975,11 @@ class RelayPool {
       throw CountNotSupportedException('No relay responded to COUNT');
     }
 
-    return best;
+    return CountResponse(
+      count: best.count,
+      approximate: best.approximate,
+      isComplete: !unsettled,
+    );
   }
 
   /// Returns the relays with a saved copy of this subscription, keyed by URL.

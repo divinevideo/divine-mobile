@@ -263,6 +263,8 @@ class RepostsRepository {
   /// Returns `null` when no relay answered. Nothing is cached then, so the
   /// next call asks again.
   ///
+  /// A count another relay did not settle is returned but not cached either.
+  ///
   /// Note: This counts all reposts from all users, not just the current user's.
   Future<int?> getRepostCount(String addressableId) async {
     // Use local cache if available (set by recent toggle operations or a
@@ -291,6 +293,8 @@ class RepostsRepository {
   /// Returns `null` when no relay answered. Nothing is cached then, so the
   /// next call asks again.
   ///
+  /// A count another relay did not settle is returned but not cached either.
+  ///
   /// Note: This counts all reposts from all users, not just the current user's.
   Future<int?> getRepostCountByEventId(String eventId) async {
     if (_localCountCache.containsKey(eventId)) {
@@ -314,7 +318,9 @@ class RepostsRepository {
     } on CountUnavailableException {
       return null;
     }
-    _cacheRepostCount(cacheKey, result.count);
+    // A relay that did not settle may hold reposts this count lacks, so show
+    // it but ask again next time.
+    if (result.isComplete) _cacheRepostCount(cacheKey, result.count);
     return result.count;
   }
 

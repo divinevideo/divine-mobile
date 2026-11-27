@@ -1,6 +1,6 @@
 # iOS Build Troubleshooting
 
-When iOS build fails with "Could not resolve package dependencies" and Firebase plugins require different FlutterFire versions (`'X' depends on 'flutterfire' A-firebase-core-swift and 'Y' depends on 'flutterfire' B-firebase-core-swift`), there are two distinct causes. Diagnose which one you have before fixing. A third, unrelated failure shape — every plugin "requires minimum platform version 15.0/16.0 ... but this target supports 13" — is covered last.
+When iOS build fails with "Could not resolve package dependencies" and Firebase plugins require different FlutterFire versions (`'X' depends on 'flutterfire' A-firebase-core-swift and 'Y' depends on 'flutterfire' B-firebase-core-swift`), there are two distinct causes. Diagnose which one you have before fixing. A third, unrelated failure shape — every plugin "requires minimum platform version 15.0/16.0 ... but this target supports 13" — is covered after them, and a Watch companion app build failure is covered last.
 
 ## Cause 1: misaligned Firebase plugin versions (check this first)
 
@@ -48,3 +48,19 @@ grep -A1 "platforms:" ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwift
 The grep must show `16.0` or newer. If it still shows an older version, run the build command again — Flutter can skip its own bump when `xcodebuild -showBuildSettings` exceeds its 60-second timeout on a cold machine.
 
 Do not add a Flutter command to `mobile/pre_build_ios.sh`: it runs as a pre-action of the shared Runner scheme on every Xcode build, so a `flutter pub get` there re-lowered the floor mid-build and made every Xcode build and Profile run fail this way. The script now repairs the manifest directly and syncs CocoaPods. CI performs the same repair separately in `codemagic.yaml` before archiving.
+
+## Cause 4: A Watch companion app requires a simulator device ID
+
+Since the Apple Watch app (#11134) embeds `DivineWatch.app` in Runner, a simulator build without a target device stops with:
+
+```
+Watch companion app found. No simulator device ID has been set. A device ID is required to build an app with a watchOS companion app.
+```
+
+This failure leaves no new `Runner.app`. Build and install with a named simulator:
+
+```bash
+flutter run -d <simulator-udid>
+```
+
+Find the UDID with `xcrun simctl list devices booted`.

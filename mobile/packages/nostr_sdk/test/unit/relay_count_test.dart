@@ -46,7 +46,7 @@ void main() {
 
     test('completeCountQuery completes the future with response', () async {
       final future = relay.registerCountQuery('sub1');
-      const response = CountResponse(count: 42);
+      const response = CountResponse(count: 42, isComplete: true);
 
       relay.completeCountQuery('sub1', response);
 
@@ -59,7 +59,10 @@ void main() {
       relay.registerCountQuery('sub1');
       expect(relay.hasCountQuery('sub1'), isTrue);
 
-      relay.completeCountQuery('sub1', const CountResponse(count: 10));
+      relay.completeCountQuery(
+        'sub1',
+        const CountResponse(count: 10, isComplete: true),
+      );
 
       expect(relay.hasCountQuery('sub1'), isFalse);
     });
@@ -95,7 +98,10 @@ void main() {
       expect(relay.hasCountQuery('sub1'), isTrue);
       expect(relay.hasCountQuery('sub2'), isTrue);
 
-      relay.completeCountQuery('sub1', const CountResponse(count: 10));
+      relay.completeCountQuery(
+        'sub1',
+        const CountResponse(count: 10, isComplete: true),
+      );
 
       expect(relay.hasCountQuery('sub1'), isFalse);
       expect(relay.hasCountQuery('sub2'), isTrue);
@@ -105,7 +111,7 @@ void main() {
 
       relay.completeCountQuery(
         'sub2',
-        const CountResponse(count: 20, approximate: true),
+        const CountResponse(count: 20, approximate: true, isComplete: true),
       );
 
       final result2 = await future2;
@@ -115,7 +121,10 @@ void main() {
 
     test('completing non-existent query does nothing', () {
       // Should not throw
-      relay.completeCountQuery('nonexistent', const CountResponse(count: 0));
+      relay.completeCountQuery(
+        'nonexistent',
+        const CountResponse(count: 0, isComplete: true),
+      );
     });
 
     test('failing non-existent query does nothing', () {
