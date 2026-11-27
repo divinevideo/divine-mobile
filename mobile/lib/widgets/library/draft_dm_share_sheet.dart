@@ -20,10 +20,9 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/screens/inbox/new_message_sheet.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
-import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/email_confirmation/email_confirmation_gate.dart';
+import 'package:openvine/widgets/email_confirmation/email_confirmation_share_prompt.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:unified_logger/unified_logger.dart';
 
 /// Selects one recipient, confirms what is shared, then opens the chat.
 Future<void> showDraftDmShare(
@@ -123,32 +122,18 @@ Future<void> showDraftDmShare(
 }
 
 @visibleForTesting
-class DraftDmShareConfirmation extends StatefulWidget {
+class DraftDmShareConfirmation extends StatelessWidget {
   const DraftDmShareConfirmation({required this.draftId, super.key});
 
   final String draftId;
 
   @override
-  State<DraftDmShareConfirmation> createState() =>
-      _DraftDmShareConfirmationState();
-}
-
-class _DraftDmShareConfirmationState extends State<DraftDmShareConfirmation> {
-  String? _resendAccount;
-
-  @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final emailConfirmation = context
-        .select<
-          EmailConfirmationCubit?,
-          ({String? account, EmailConfirmationResendStatus resendStatus})?
-        >((cubit) {
-          final state = cubit?.state;
-          if (state == null || !state.isUnconfirmed) return null;
-          return (account: state.account, resendStatus: state.resendStatus);
-        });
-    final emailConfirmationRequired = emailConfirmation != null;
+    final emailConfirmationRequired = context
+        .select<EmailConfirmationCubit?, bool>(
+          (cubit) => cubit?.state.isUnconfirmed ?? false,
+        );
 
     return BlocConsumer<DraftDmShareCubit, DraftDmShareState>(
       listener: (context, state) {
@@ -174,13 +159,6 @@ class _DraftDmShareConfirmationState extends State<DraftDmShareConfirmation> {
             l10n.dmSendBlockedRetiredMessage,
           _ => null,
         };
-        final account = emailConfirmation?.account;
-        final resendStatus = emailConfirmation?.resendStatus;
-        final canResend =
-            account != null &&
-            resendStatus != EmailConfirmationResendStatus.sending;
-        final resendOutcome = account == _resendAccount ? resendStatus : null;
-
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -194,36 +172,7 @@ class _DraftDmShareConfirmationState extends State<DraftDmShareConfirmation> {
               ),
               if (emailConfirmationRequired) ...[
                 const SizedBox(height: 12),
-                Semantics(
-                  liveRegion: true,
-                  child: DivineSnackbarContainer(
-                    label: switch (resendOutcome) {
-                      EmailConfirmationResendStatus.sent =>
-                        l10n.emailConfirmationResendSent,
-                      EmailConfirmationResendStatus.failed =>
-                        l10n.emailConfirmationResendFailed,
-                      _ => l10n.emailConfirmationSendBlocked,
-                    },
-                    error:
-                        resendOutcome == EmailConfirmationResendStatus.failed,
-                    actionLabel: canResend
-                        ? l10n.emailConfirmationResendButton
-                        : null,
-                    onActionPressed: canResend
-                        ? () {
-                            setState(() => _resendAccount = account);
-                            runDetached(
-                              context.read<EmailConfirmationCubit>().resend(
-                                account: account,
-                              ),
-                              'resend confirmation email from draft share sheet',
-                              logName: 'DraftDmShareSheet',
-                              category: LogCategory.auth,
-                            );
-                          }
-                        : null,
-                  ),
-                ),
+                const EmailConfirmationSharePrompt(),
               ],
               if (error != null) ...[
                 const SizedBox(height: 12),
@@ -252,7 +201,7 @@ class _DraftDmShareConfirmationState extends State<DraftDmShareConfirmation> {
                 onPressed: preparing || emailConfirmationRequired
                     ? null
                     : () => unawaited(
-                        context.read<DraftDmShareCubit>().send(widget.draftId),
+                        context.read<DraftDmShareCubit>().send(draftId),
                       ),
               ),
               const SizedBox(height: 8),

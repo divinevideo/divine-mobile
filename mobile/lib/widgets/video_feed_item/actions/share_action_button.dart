@@ -39,6 +39,7 @@ import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/utils/watermark_text_resolver.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
+import 'package:openvine/widgets/email_confirmation/email_confirmation_share_prompt.dart';
 import 'package:openvine/widgets/find_people_sheet.dart';
 import 'package:openvine/widgets/save_original_progress_sheet.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -681,7 +682,10 @@ class _UnifiedShareSheetView extends StatelessWidget {
                         ),
                       ),
                     if (emailConfirmationRequired)
-                      const _ShareEmailConfirmationPrompt()
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: EmailConfirmationSharePrompt(),
+                      )
                     else if (state.attemptedRecipients.isNotEmpty)
                       _MessageInput(
                         controller: messageController,
@@ -725,58 +729,6 @@ class _UnifiedShareSheetView extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Keeps the email prompt and its resend feedback above the modal barrier.
-class _ShareEmailConfirmationPrompt extends StatefulWidget {
-  const _ShareEmailConfirmationPrompt();
-
-  @override
-  State<_ShareEmailConfirmationPrompt> createState() =>
-      _ShareEmailConfirmationPromptState();
-}
-
-class _ShareEmailConfirmationPromptState
-    extends State<_ShareEmailConfirmationPrompt> {
-  String? _resendAccount;
-
-  @override
-  Widget build(BuildContext context) {
-    final (account, resendStatus) = context.select(
-      (EmailConfirmationCubit cubit) =>
-          (cubit.state.account, cubit.state.resendStatus),
-    );
-    final l10n = context.l10n;
-    final canResend =
-        account != null &&
-        resendStatus != EmailConfirmationResendStatus.sending;
-    final outcome = account == _resendAccount ? resendStatus : null;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: DivineSnackbarContainer(
-        label: switch (outcome) {
-          EmailConfirmationResendStatus.sent =>
-            l10n.emailConfirmationResendSent,
-          EmailConfirmationResendStatus.failed =>
-            l10n.emailConfirmationResendFailed,
-          _ => l10n.emailConfirmationSendBlocked,
-        },
-        error: outcome == EmailConfirmationResendStatus.failed,
-        actionLabel: canResend ? l10n.emailConfirmationResendButton : null,
-        onActionPressed: canResend
-            ? () {
-                setState(() => _resendAccount = account);
-                _runShareDetached(
-                  context.read<EmailConfirmationCubit>().resend(
-                    account: account,
-                  ),
-                  'resend confirmation email from share sheet',
-                );
-              }
-            : null,
       ),
     );
   }
