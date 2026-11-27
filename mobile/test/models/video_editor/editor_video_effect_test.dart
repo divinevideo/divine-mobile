@@ -30,18 +30,20 @@ void main() {
       }
     });
 
-    test('keeps onBeat when it is moved', () {
-      const entry = EditorVideoEffect(id: 'zoom', effect: zoom, onBeat: true);
-
-      expect(
-        entry
-            .retimed(
-              startTime: const Duration(seconds: 1),
-              endTime: const Duration(seconds: 2),
-            )
-            .onBeat,
-        isTrue,
+    test('keeps built-in settings and onBeat when it is moved', () {
+      const effect = VideoEffect.zoomPulse(
+        intensity: 0.5,
+        params: {VideoEffectParams.tempo: 1.5},
       );
+      const entry = EditorVideoEffect(id: 'zoom', effect: effect, onBeat: true);
+
+      final moved = entry.retimed(
+        startTime: const Duration(seconds: 1),
+        endTime: const Duration(seconds: 2),
+      );
+
+      expect(moved.onBeat, isTrue);
+      expect(moved.effect!.params, effect.params);
     });
   });
 
@@ -241,6 +243,47 @@ void main() {
         ),
         isNull,
       );
+    });
+
+    test('keeps settings in both pieces of a cut exclusive effect', () {
+      for (final entry in [
+        const EditorVideoEffect(
+          id: 'strobe',
+          effect: VideoEffect.strobe(params: {VideoEffectParams.tempo: 0.6}),
+        ),
+        EditorVideoEffect.of(
+          id: 'echo',
+          type: EditorEffectType.echo,
+          intensity: 0.6,
+          settings: const {EffectSettingKeys.spacing: 1.8},
+        ),
+      ]) {
+        final result = withoutExclusiveOverlaps(
+          [
+            entry,
+            EditorVideoEffect.of(
+              id: 'replacement',
+              type: entry.type,
+              intensity: 1,
+              startTime: s(2),
+              endTime: s(4),
+            ),
+          ],
+          keepId: 'replacement',
+          createId: () => 'tail',
+        )!;
+
+        expect(result[0].endTime, s(2));
+        expect(result[1].startTime, s(4));
+        expect(result[1].endTime, isNull);
+        for (final piece in result.take(2)) {
+          expect(
+            piece.effect?.params ?? piece.custom!.params,
+            entry.effect?.params ?? entry.custom!.params,
+            reason: '${entry.type.name} ${piece.id}',
+          );
+        }
+      }
     });
 
     test('groups the flashing effects and the Time effects, and no other', () {

@@ -1185,19 +1185,23 @@ class EditorVideoEffect extends Equatable {
   /// Returns a copy placed at [startTime] until [endTime].
   EditorVideoEffect retimed({
     required Duration startTime,
-    required Duration endTime,
+    required Duration? endTime,
   }) {
-    final custom = this.custom;
-    if (custom == null) {
-      return EditorVideoEffect.of(
+    if (effect case final builtIn?) {
+      return EditorVideoEffect(
         id: id,
-        type: type,
-        intensity: intensity,
-        startTime: startTime,
-        endTime: endTime,
-        onBeat: onBeat,
+        effect: VideoEffect(
+          type: builtIn.type,
+          intensity: builtIn.intensity,
+          startTime: startTime,
+          endTime: endTime,
+          triggers: builtIn.triggers,
+          params: builtIn.params,
+        ),
+        onBeat: _onBeat,
       );
     }
+    final custom = this.custom!;
     return EditorVideoEffect.custom(
       id: id,
       custom: CustomVideoEffect(
@@ -2248,14 +2252,7 @@ List<EditorVideoEffect>? withoutExclusiveOverlaps(
     if (keptEnd != null &&
         (end == null || end - keptEnd >= minimumVideoEffectPiece)) {
       result.add(
-        EditorVideoEffect.of(
-          id: createId(),
-          type: entry.type,
-          intensity: entry.intensity,
-          startTime: keptEnd,
-          endTime: end,
-          onBeat: entry.onBeat,
-        ),
+        entry.retimed(startTime: keptEnd, endTime: end).withId(createId()),
       );
     }
   }
