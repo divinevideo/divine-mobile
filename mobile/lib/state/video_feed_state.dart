@@ -14,6 +14,7 @@ class VideoFeedState extends Equatable {
     this.isLoadingMore = false,
     this.isRefreshing = false,
     this.isInitialLoad = false,
+    this.containsRecommendations = false,
     this.error,
     this.lastUpdated,
     Map<String, Set<String>> videoListSources = const {},
@@ -44,6 +45,9 @@ class VideoFeedState extends Equatable {
   /// When true and videos is empty, show loading indicator instead of empty
   /// state
   final bool isInitialLoad;
+
+  /// Whether the current window includes videos from a recommendation page.
+  final bool containsRecommendations;
 
   /// Error message if any
   final String? error;
@@ -90,6 +94,7 @@ class VideoFeedState extends Equatable {
     bool? isLoadingMore,
     bool? isRefreshing,
     bool? isInitialLoad,
+    bool? containsRecommendations,
     Object? error = unsetCopyWithArgument,
     Object? lastUpdated = unsetCopyWithArgument,
     Map<String, Set<String>>? videoListSources,
@@ -103,6 +108,8 @@ class VideoFeedState extends Equatable {
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       isRefreshing: isRefreshing ?? this.isRefreshing,
       isInitialLoad: isInitialLoad ?? this.isInitialLoad,
+      containsRecommendations:
+          containsRecommendations ?? this.containsRecommendations,
       error: identical(error, unsetCopyWithArgument)
           ? this.error
           : error as String?,
@@ -125,6 +132,7 @@ class VideoFeedState extends Equatable {
     isLoadingMore,
     isRefreshing,
     isInitialLoad,
+    containsRecommendations,
     error,
     lastUpdated,
     _videoListSources,

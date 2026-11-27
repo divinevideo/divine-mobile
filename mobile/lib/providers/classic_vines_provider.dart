@@ -40,9 +40,6 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
   String? _paginationCursor;
   int _feedGeneration = 0;
 
-  /// Whether the loaded window came from the recommendation endpoint.
-  bool _showsRecommendations = false;
-
   /// The account gate and other inputs the previous build ran with.
   bool? _builtAdaptive;
   Object? _builtInputs;
@@ -94,7 +91,7 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
     if (gateChangedAlone &&
         current != null &&
         current.videos.isNotEmpty &&
-        !(_showsRecommendations && !adaptive)) {
+        !current.containsRecommendations) {
       return current;
     }
     _feedGeneration++;
@@ -110,7 +107,8 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
       // Preserve existing data during background — don't wipe the feed
       if (state.hasValue && state.value != null) {
         final existing = state.value!;
-        if (existing.videos.isNotEmpty) {
+        if (existing.videos.isNotEmpty &&
+            (adaptive || !existing.containsRecommendations)) {
           return existing.copyWith(
             videos: _filterRepositoryVideos(
               existing.videos,
@@ -195,7 +193,6 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
 
     VideoFeedState restFeedState({required HomeFeedResult result}) {
       _paginationCursor = result.paginationCursor;
-      _showsRecommendations = result.recommendationPageCount > 0;
 
       Log.info(
         '🎬 ClassicVinesFeed: Loaded ${result.videos.length} videos '
@@ -206,6 +203,7 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
 
       return VideoFeedState(
         videos: result.videos,
+        containsRecommendations: result.recommendationPageCount > 0,
         hasMoreContent: result.hasMore ?? false,
         lastUpdated: DateTime.now(),
       );
@@ -289,7 +287,6 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
 
     // Take top entries then shuffle for variety
     final topClassics = classicVideos.take(_pageSize).toList()..shuffle();
-    _showsRecommendations = false;
 
     if (topClassics.isEmpty && preserveCurrentOnEmptyFallback) {
       final failure = restError;
@@ -325,8 +322,17 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
       // A refresh supersedes any page load in flight, whose result is then
       // discarded; restoring its flag after a failed refresh would block
       // every later load.
-      getCurrentState: () =>
-          state.whenData((current) => current.copyWith(isLoadingMore: false)),
+      getCurrentState: () {
+        if (_hideRankedWindow(
+          state,
+          isAdaptive: () => ref.read(adaptiveClassicsEnabledProvider),
+        )) {
+          return const AsyncLoading();
+        }
+        return state.whenData(
+          (current) => current.copyWith(isLoadingMore: false),
+        );
+      },
       isMounted: () => ref.mounted && generation == _feedGeneration,
       setState: (s) {
         if (ref.mounted && generation == _feedGeneration) {
@@ -348,7 +354,11 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
       return;
     }
     final currentState = state.value!;
-    if (currentState.isLoadingMore) {
+    if (currentState.isLoadingMore ||
+        _hideRankedWindow(
+          state,
+          isAdaptive: () => ref.read(adaptiveClassicsEnabledProvider),
+        )) {
       return;
     }
 
@@ -391,6 +401,9 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
       state = AsyncData(
         VideoFeedState(
           videos: allVideos,
+          containsRecommendations:
+              currentState.containsRecommendations ||
+              (filteredVideos.isNotEmpty && page.recommendationPageCount > 0),
           hasMoreContent: page.hasMore ?? false,
           lastUpdated: DateTime.now(),
         ),
@@ -436,22 +449,46 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
   }
 }
 
+bool _hideRankedWindow(
+  AsyncValue<VideoFeedState> feed, {
+  required bool Function() isAdaptive,
+}) =>
+    feed.value?.containsRecommendations == true &&
+    (feed.isReloading || !isAdaptive());
+
+/// The same view is used by the grid and its fullscreen feed bridge. Riverpod
+/// can retain the previous window while replacing it after a dependency
+/// change. Publish an empty loading window so the bridge also drops its replay.
+@riverpod
+AsyncValue<VideoFeedState> visibleClassicVinesFeed(Ref ref) {
+  final feed = ref.watch(classicVinesFeedProvider);
+  if (_hideRankedWindow(
+    feed,
+    isAdaptive: () => ref.watch(adaptiveClassicsEnabledProvider),
+  )) {
+    return const AsyncData(
+      VideoFeedState(videos: [], hasMoreContent: false, isInitialLoad: true),
+    );
+  }
+  return feed;
+}
+
 /// Provider to check if classic vines feed is loading
 @riverpod
 bool classicVinesFeedLoading(Ref ref) {
-  final asyncState = ref.watch(classicVinesFeedProvider);
+  final asyncState = ref.watch(visibleClassicVinesFeedProvider);
   if (asyncState.isLoading) return true;
 
   final state = asyncState.hasValue ? asyncState.value : null;
   if (state == null) return false;
 
-  return state.isLoadingMore;
+  return state.isInitialLoad || state.isLoadingMore;
 }
 
 /// Provider to get current classic vines feed video count
 @riverpod
 int classicVinesFeedCount(Ref ref) {
-  final asyncState = ref.watch(classicVinesFeedProvider);
+  final asyncState = ref.watch(visibleClassicVinesFeedProvider);
   return asyncState.hasValue ? (asyncState.value?.videos.length ?? 0) : 0;
 }
 
@@ -496,7 +533,7 @@ class ClassicViner {
 /// Also triggers profile prefetching for Viners without avatars.
 @riverpod
 Future<List<ClassicViner>> topClassicViners(Ref ref) async {
-  final classicVinesAsync = ref.watch(classicVinesFeedProvider);
+  final classicVinesAsync = ref.watch(visibleClassicVinesFeedProvider);
 
   // Wait for classic vines to load - check if has value
   if (!classicVinesAsync.hasValue || classicVinesAsync.value == null) {

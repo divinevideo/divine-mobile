@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +14,7 @@ import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/classic_vines_provider.dart';
 import 'package:openvine/providers/curation_providers.dart';
+import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/analytics_service.dart';
@@ -340,6 +342,88 @@ void main() {
           await container.pump();
 
           expect(await gridIds(container), ['archive']);
+        },
+      );
+
+      test('a failed refresh preserves the ranked window provenance', () async {
+        var ordinaryReads = 0;
+        when(
+          () => mockVideosRepository.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer((invocation) async {
+          if (invocation.namedArguments[#skipCache] == true) {
+            throw StateError('Temporary refresh failure');
+          }
+          return ordinaryReads++ == 0
+              ? HomeFeedResult(
+                  videos: [_videoEvent('ranked')],
+                  recommendationPageCount: 1,
+                )
+              : HomeFeedResult(videos: [_videoEvent('archive')]);
+        });
+        final container = createContainer(eligible: true);
+        addTearDown(container.dispose);
+        await container.read(funnelcakeAvailableProvider.future);
+        expect(await gridIds(container), ['ranked']);
+
+        await container.read(classicVinesFeedProvider.notifier).refresh();
+        expect(await gridIds(container), ['ranked']);
+
+        container.read(_eligibilityProvider.notifier).eligible = false;
+        await container.pump();
+
+        expect(await gridIds(container), ['archive']);
+      });
+
+      test(
+        'revocation clears ranked grid and replay while the archive is pending',
+        () async {
+          final archive = Completer<HomeFeedResult>();
+          final ranked = _videoEvent('ranked');
+          var reads = 0;
+          when(
+            () => mockVideosRepository.getClassicVideos(
+              limit: any(named: 'limit'),
+              cursor: any(named: 'cursor'),
+              skipCache: any(named: 'skipCache'),
+            ),
+          ).thenAnswer((_) async {
+            if (reads++ == 0) {
+              return HomeFeedResult(
+                videos: [ranked],
+                hasMore: true,
+                recommendationPageCount: 1,
+              );
+            }
+            return archive.future;
+          });
+          final container = createContainer(eligible: true);
+          addTearDown(container.dispose);
+          await container.read(funnelcakeAvailableProvider.future);
+          expect(await gridIds(container), ['ranked']);
+
+          final repository = container.read(feedRepositoryProvider);
+          final source = ClassicVinesViewSource(anchor: ranked);
+          expect(await repository.watchView(source).first, [ranked]);
+          expect(container.read(classicVinesFeedCountProvider), 1);
+
+          container.read(_eligibilityProvider.notifier).eligible = false;
+          await container.pump();
+
+          expect(reads, 2);
+          expect(await repository.watchView(source).first, isEmpty);
+          expect(await repository.watchHasMore(source).first, isFalse);
+          expect(container.read(classicVinesFeedCountProvider), 0);
+
+          final archived = _videoEvent('archive');
+          archive.complete(HomeFeedResult(videos: [archived]));
+          expect(await gridIds(container), ['archive']);
+          await container.pump();
+          expect(await repository.watchView(source).first, [archived]);
+          expect(container.read(classicVinesFeedCountProvider), 1);
         },
       );
 
