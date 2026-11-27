@@ -4,6 +4,7 @@
 // ABOUTME: (event IDs + addressable coordinates).
 
 import 'package:equatable/equatable.dart';
+import 'package:models/src/nip71_video_kinds.dart';
 import 'package:text_sanitizer/text_sanitizer.dart';
 
 /// Ordering options for playlist playback.
@@ -279,6 +280,24 @@ class CuratedList extends Equatable {
 
   static bool _isSeriesMarker(List<String> tag) =>
       tag.length >= 2 && tag[0] == 'series' && tag[1] == 'true';
+
+  /// The episodes of a series in its creator's order: the list's kind-34236
+  /// addresses by the list's own author.
+  ///
+  /// Anything else on the list, such as another creator's video or a video
+  /// referenced by event id, is not an episode. Empty for a list whose author
+  /// is not known yet.
+  List<String> get seriesEpisodes {
+    final owner = pubkey;
+    if (owner == null || owner.isEmpty) return const [];
+    final prefix =
+        '${NIP71VideoKinds.addressableShortVideo}:${owner.toLowerCase()}:';
+    return [
+      for (final reference in videoEventIds)
+        if (reference.length > prefix.length && reference.startsWith(prefix))
+          reference,
+    ];
+  }
 
   /// Creates a copy of this list with the given fields replaced.
   ///
