@@ -9,11 +9,34 @@ import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/account_state_write_barrier.dart';
+import 'package:openvine/services/classics_warmup.dart';
 
 /// DeviceScope shares this instance across account-container swaps.
 final accountStateWriteBarrierProvider = Provider<AccountStateWriteBarrier>(
   (_) => AccountStateWriteBarrier(),
 );
+
+/// Owns one Classics progress writer for an account in the current scope.
+final classicsWarmupWriterProvider = Provider.family<ClassicsWarmup, String>((
+  ref,
+  viewer,
+) {
+  final writer = ClassicsWarmup(ref.watch(sharedPreferencesProvider), viewer);
+  final close = ref
+      .read(accountStateWriteBarrierProvider)
+      .register(
+        viewer,
+        writer.close,
+      );
+  ref.onDispose(() {
+    runProviderDetached(
+      close(),
+      'close Classics warmup',
+      logName: 'ClassicsWarmup',
+    );
+  });
+  return writer;
+});
 
 final accountPreferenceStoreProvider = Provider<AccountPreferenceStore>((ref) {
   final store = AccountPreferenceStore(ref.watch(sharedPreferencesProvider));

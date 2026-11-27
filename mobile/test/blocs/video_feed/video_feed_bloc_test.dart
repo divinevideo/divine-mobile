@@ -1852,10 +1852,9 @@ void main() {
         });
         final prefs = await SharedPreferences.getInstance();
         await ClassicsWarmup.enroll(prefs, viewer);
+        final warmup = ClassicsWarmup(prefs, viewer);
         for (var i = 0; i < 99; i++) {
-          await ClassicsWarmup.recordView(
-            prefs,
-            viewer,
+          await warmup.recordView(
             i.toRadixString(16).padLeft(64, '0'),
           );
         }
@@ -1901,7 +1900,7 @@ void main() {
         expect(first.state.mode, FeedMode.classic);
         expect(prefs.getString(modeKey), isNull);
 
-        await ClassicsWarmup.recordView(prefs, viewer, 'f' * 64);
+        await warmup.recordView('f' * 64);
         expect(first.state.mode, FeedMode.classic);
         final next = await startHome();
         expect(next.state.mode, FeedMode.forYou);

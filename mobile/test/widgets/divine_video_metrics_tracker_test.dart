@@ -14,11 +14,13 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/video_loops/video_loops_cubit.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/models/view_traffic_source.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/router/route_extra_codec.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/services/account_state_write_barrier.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
@@ -27,6 +29,8 @@ import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/widgets/divine_video_metrics_tracker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
+
+import '../helpers/test_provider_overrides.dart' show MockSharedPreferences;
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
@@ -330,6 +334,90 @@ void main() {
       now = now.add(const Duration(seconds: 1));
       await tester.pumpWidget(const SizedBox.shrink());
       expect(_prefs.getStringList(key), [_video.id]);
+    });
+
+    testWidgets('counts a republished video once toward Classics warmup', (
+      tester,
+    ) async {
+      final viewer = authService.currentPublicKeyHex!;
+      await ClassicsWarmup.enroll(_prefs, viewer);
+      final first = _video.copyWith(addressableDTag: 'same-clip');
+      final revised = first.copyWith(id: _secondVideo.id);
+      expect(first.id, isNot(revised.id));
+      expect(first.feedDedupKey, revised.feedDedupKey);
+
+      final controller = _stubController(isPlaying: true);
+      addTearDown(controller.close);
+      for (final video in [first, revised]) {
+        await tester.pumpWidget(
+          _buildTracker(
+            authService: authService,
+            analyticsService: analyticsService,
+            seenVideosService: seenVideosService,
+            controller: controller.controller,
+            isActive: true,
+            clock: () => now,
+            video: video,
+          ),
+        );
+        now = now.add(const Duration(seconds: 1));
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
+
+      expect(
+        _prefs.getStringList(ClassicsWarmup.storageKey(viewer)),
+        hasLength(1),
+      );
+    });
+
+    testWidgets('account cleanup drains warmup writes and stops the writer', (
+      tester,
+    ) async {
+      final viewer = authService.currentPublicKeyHex!;
+      final key = ClassicsWarmup.storageKey(viewer);
+      final prefs = MockSharedPreferences();
+      when(() => prefs.getStringList(key)).thenReturn(const []);
+      final nativeWrite = Completer<bool>();
+      when(() => prefs.setStringList(key, any())).thenAnswer(
+        (_) => nativeWrite.future,
+      );
+      _prefs = prefs;
+      final barrier = AccountStateWriteBarrier();
+      final controller = _stubController(isPlaying: true);
+      addTearDown(controller.close);
+      addTearDown(() {
+        if (!nativeWrite.isCompleted) nativeWrite.complete(true);
+      });
+
+      Future<void> watch(VideoEvent video) async {
+        await tester.pumpWidget(
+          _buildTracker(
+            authService: authService,
+            analyticsService: analyticsService,
+            seenVideosService: seenVideosService,
+            controller: controller.controller,
+            isActive: true,
+            clock: () => now,
+            video: video,
+            writeBarrier: barrier,
+          ),
+        );
+        now = now.add(const Duration(seconds: 16));
+        await tester.pump(const Duration(seconds: 16));
+      }
+
+      await watch(_video);
+      verify(() => prefs.setStringList(key, [_video.id])).called(1);
+      var drained = false;
+      final stopping = barrier.stop(viewer).then((_) => drained = true);
+      await tester.pump();
+      expect(drained, isFalse);
+      nativeWrite.complete(true);
+      await stopping;
+      expect(drained, isTrue);
+
+      await watch(_secondVideo);
+      verifyNever(() => prefs.setStringList(key, [_secondVideo.id]));
     });
 
     testWidgets('active tracker sends view_start once playback starts', (
@@ -1726,10 +1814,14 @@ Widget _buildTracker({
   bool fromMessage = false,
   AnalyticsEventSink? legacyAnalytics,
   VideoLoopsCubit? loopCounts,
+  VideoEvent? video,
+  AccountStateWriteBarrier? writeBarrier,
 }) {
   return ProviderScope(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(_prefs),
+      if (writeBarrier != null)
+        accountStateWriteBarrierProvider.overrideWithValue(writeBarrier),
       authServiceProvider.overrideWithValue(authService),
       analyticsServiceProvider.overrideWithValue(analyticsService),
       seenVideosServiceProvider.overrideWithValue(seenVideosService),
@@ -1740,7 +1832,7 @@ Widget _buildTracker({
     child: Directionality(
       textDirection: TextDirection.ltr,
       child: DivineVideoMetricsTracker(
-        video: _video,
+        video: video ?? _video,
         loopCounts: loopCounts,
         controller: controller,
         isActive: isActive,

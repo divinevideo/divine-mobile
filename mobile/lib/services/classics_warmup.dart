@@ -5,7 +5,14 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// The default Home feed for a new account follows its first 100 distinct
 /// watched videos. Only the completion marker is retained after the cutover.
-abstract final class ClassicsWarmup {
+final class ClassicsWarmup {
+  ClassicsWarmup(this._prefs, this._viewer);
+
+  final SharedPreferences _prefs;
+  final String _viewer;
+  Future<void> _writes = Future<void>.value();
+  bool _closed = false;
+
   static const storagePrefix = 'classics_warmup_';
   static const _viewTarget = 100;
   static const _completed = 'complete';
@@ -26,26 +33,31 @@ abstract final class ClassicsWarmup {
     await _save(prefs, pubkey, []);
   }
 
-  static Future<void> recordView(
-    SharedPreferences prefs,
-    String pubkey,
-    String videoId,
-  ) async {
-    final views = prefs.getStringList(storageKey(pubkey));
-    if (views == null ||
-        views.contains(_completed) ||
-        views.contains(videoId)) {
-      return;
-    }
-    await _save(
-      prefs,
-      pubkey,
-      views.length + 1 >= _viewTarget ? [_completed] : [...views, videoId],
-    );
+  /// Records a logical video once and serializes the native writes.
+  Future<void> recordView(String videoKey) {
+    if (_closed) return Future<void>.value();
+    _writes = _writes.then((_) async {
+      final views = _prefs.getStringList(storageKey(_viewer));
+      if (views == null ||
+          views.contains(_completed) ||
+          views.contains(videoKey)) {
+        return;
+      }
+      await _save(
+        _prefs,
+        _viewer,
+        views.length + 1 >= _viewTarget ? [_completed] : [...views, videoKey],
+      );
+    });
+    return _writes;
   }
 
-  // SharedPreferences updates its in-isolate cache before sending the write,
-  // so adjacent reports deduplicate against the newest pending progress.
+  /// Prevents new writes and waits for any native write before account cleanup.
+  Future<void> close() {
+    _closed = true;
+    return _writes;
+  }
+
   static Future<void> _save(
     SharedPreferences prefs,
     String pubkey,

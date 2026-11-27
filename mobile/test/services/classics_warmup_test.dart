@@ -27,18 +27,20 @@ void main() {
   group('recordView', () {
     test('graduates after 100 distinct views and releases the IDs', () async {
       await ClassicsWarmup.enroll(prefs, viewer);
+      final warmup = ClassicsWarmup(prefs, viewer);
+      final otherWarmup = ClassicsWarmup(prefs, otherViewer);
       for (var i = 0; i < 99; i++) {
         final videoId = i.toRadixString(16).padLeft(64, '0');
-        await ClassicsWarmup.recordView(prefs, viewer, videoId);
-        await ClassicsWarmup.recordView(prefs, viewer, videoId);
-        await ClassicsWarmup.recordView(prefs, otherViewer, videoId);
+        await warmup.recordView(videoId);
+        await warmup.recordView(videoId);
+        await otherWarmup.recordView(videoId);
       }
 
       await prefs.reload();
       expect(ClassicsWarmup.startsInClassics(prefs, viewer), isTrue);
       expect(ClassicsWarmup.isEnrolled(prefs, otherViewer), isFalse);
 
-      await ClassicsWarmup.recordView(prefs, viewer, 'f' * 64);
+      await warmup.recordView('f' * 64);
       await prefs.reload();
       expect(ClassicsWarmup.isEnrolled(prefs, viewer), isTrue);
       expect(ClassicsWarmup.startsInClassics(prefs, viewer), isFalse);
@@ -48,7 +50,7 @@ void main() {
       );
 
       await ClassicsWarmup.enroll(prefs, viewer);
-      await ClassicsWarmup.recordView(prefs, viewer, 'c' * 64);
+      await warmup.recordView('c' * 64);
       expect(ClassicsWarmup.startsInClassics(prefs, viewer), isFalse);
     });
   });

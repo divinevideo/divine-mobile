@@ -11,12 +11,14 @@ import 'package:openvine/blocs/video_loops/video_loops_cubit.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/models/view_traffic_source.dart'
     show ViewTrafficSource;
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/classics_warmup.dart';
 import 'package:openvine/services/seen_videos_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/playback_loops.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -90,6 +92,7 @@ class _DivineVideoMetricsTrackerState
   /// remount re-watch report its own start.
   String? _sessionToken;
   String? _playbackViewer;
+  ClassicsWarmup? _warmup;
 
   /// Whether playback has actually started at least once in this session.
   /// The view is counted at that moment, not at mount: a scroll-past that
@@ -338,7 +341,11 @@ class _DivineVideoMetricsTrackerState
     _hasStartedPlayback = true;
     if (!_canReport) return;
     _sessionToken = const Uuid().v4();
-    _playbackViewer = _authService.currentPublicKeyHex;
+    final viewer = _authService.currentPublicKeyHex;
+    _playbackViewer = viewer;
+    if (viewer != null && ClassicsWarmup.startsInClassics(_prefs, viewer)) {
+      _warmup = ref.read(classicsWarmupWriterProvider(viewer));
+    }
 
     unawaited(
       _analyticsService
@@ -427,10 +434,17 @@ class _DivineVideoMetricsTrackerState
     if (deltaSeconds <= 0 && fractionalLoops <= 0) return;
 
     final viewer = _playbackViewer;
-    if (viewer != null &&
+    final warmup = _warmup;
+    if (warmup != null &&
+        viewer != null &&
         viewer == _authService.currentPublicKeyHex &&
         (cumulativeSeconds >= 1 || cumulativeLoops >= 1)) {
-      unawaited(ClassicsWarmup.recordView(_prefs, viewer, video.id));
+      runDetached(
+        warmup.recordView(video.feedDedupKey),
+        'record a Classics warmup view',
+        logName: 'ClassicsWarmup',
+        category: LogCategory.storage,
+      );
     }
 
     unawaited(
@@ -618,6 +632,7 @@ class _DivineVideoMetricsTrackerState
   void _resetViewSession() {
     _sessionToken = null;
     _playbackViewer = null;
+    _warmup = null;
     _hasStartedPlayback = false;
     _mountedAt = _isTracking ? widget._clock() : null;
     _playIntervalStartedAt = null;

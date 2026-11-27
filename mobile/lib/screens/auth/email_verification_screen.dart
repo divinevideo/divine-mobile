@@ -171,12 +171,20 @@ class _EmailVerificationScreenState
       category: LogCategory.auth,
     );
     _cubit.stopPolling();
-    await _clearPendingVerification();
-    if (!mounted) return;
     final viewer = ref.read(authServiceProvider).currentPublicKeyHex;
     final prefs = ref.read(sharedPreferencesProvider);
+    final enrolled = ClassicsWarmup.isEnrolled(prefs, viewer);
+    final pendingService = ref.read(pendingVerificationServiceProvider);
+    final pending = enrolled && !widget.isPollingMode
+        ? await pendingService.load()
+        : null;
+    await pendingService.clear();
+    if (!mounted) return;
+    final newRegistration =
+        widget.isPollingMode ||
+        (pending != null && pending.ownerPublicKeyHex == null);
     context.go(
-      ClassicsWarmup.isEnrolled(prefs, viewer)
+      enrolled && newRegistration
           ? RoutePaths.videoFeedForIndex(0)
           : ExploreScreen.pathForTab('popular'),
     );

@@ -456,6 +456,46 @@ void main() {
         expect(find.text('Home feed'), findsOneWidget);
       });
 
+      testWidgets('owner-bound verification keeps the Explore destination', (
+        tester,
+      ) async {
+        final viewer = 'a' * 64;
+        final prefs = createMockSharedPreferences();
+        when(() => prefs.containsKey(ClassicsWarmup.storageKey(viewer)))
+            .thenReturn(true);
+        when(() => mockAuthService.currentPublicKeyHex).thenReturn(viewer);
+        when(() => mockAuthService.isAnonymous).thenReturn(true);
+        when(() => mockAuthService.authState)
+            .thenReturn(AuthState.authenticated);
+        when(() => mockPendingVerification.load()).thenAnswer(
+          (_) async => PendingVerification(
+            deviceCode: 'secure-device-code',
+            verifier: 'secure-verifier',
+            email: 'user@example.com',
+            createdAt: DateTime.now(),
+            ownerPublicKeyHex: viewer,
+          ),
+        );
+        await tester.pumpWidget(
+          createTestWidget(restored: true, prefs: prefs),
+        );
+        await tester.pump();
+        verify(
+          () => mockCubit.startPolling(
+            deviceCode: 'secure-device-code',
+            verifier: 'secure-verifier',
+            email: 'user@example.com',
+            newlyRegistered: false,
+          ),
+        ).called(1);
+
+        when(() => mockAuthService.isAnonymous).thenReturn(false);
+        authStateController.add(AuthState.authenticated);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Explore popular'), findsOneWidget);
+      });
+
       testWidgets('auth success navigates to the Popular explore tab by URL', (
         tester,
       ) async {
