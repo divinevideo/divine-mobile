@@ -388,11 +388,9 @@ class VideoMetadataUpdateService {
       }
 
       final video = VideoEvent.fromNostrEvent(latest, permissive: true);
-      // The editor caps its visible tags. The merge starts from all signed
-      // tags so an unrelated edit keeps tags beyond that cap.
-      final latestHashtags = video.hashtags
-          .map(HashtagExtractor.normalizeVideoHashtag)
-          .whereType<String>()
+      // The merge starts from every signed tag, including legacy tags above
+      // the current publish limit.
+      final latestHashtags = HashtagExtractor.normalizeHashtags(video.hashtags)
           .toSet();
       final latestEditorState = editorStateFromPublishedVideo(
         video,

@@ -89,7 +89,7 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
   }) : _hashtagRepository = hashtagRepository,
        super(
          TagsPickerState(
-           selectedTags: HashtagExtractor.normalizeVideoHashtags(
+           selectedTags: HashtagExtractor.normalizeHashtags(
              initialTags,
            ).toSet(),
            stickerTags: stickerTags,

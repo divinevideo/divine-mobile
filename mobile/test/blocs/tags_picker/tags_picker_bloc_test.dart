@@ -39,6 +39,26 @@ void main() {
       await bloc.close();
     });
 
+    blocTest<TagsPickerBloc, TagsPickerState>(
+      'keeps legacy tags and requires six removals before adding to fifteen',
+      build: () => createBloc(initial: {for (var i = 0; i < 15; i++) 'tag$i'}),
+      act: (bloc) {
+        expect(bloc.state.selectedTags, hasLength(15));
+        expect(bloc.state.tagsToRemoveForRoom, 6);
+        bloc.add(const TagsPickerTagsAdded(['replacement']));
+        for (var i = 0; i < 6; i++) {
+          bloc.add(TagsPickerTagRemoved('tag$i'));
+        }
+        bloc.add(const TagsPickerTagsAdded(['replacement']));
+      },
+      verify: (bloc) {
+        expect(bloc.state.selectedTags, {
+          for (var i = 6; i < 15; i++) 'tag$i',
+          'replacement',
+        });
+      },
+    );
+
     group('TagsPickerTagsAdded', () {
       blocTest<TagsPickerBloc, TagsPickerState>(
         'sanitizes tokens (strips non-alphanumeric)',
@@ -632,8 +652,7 @@ void main() {
             ...ten.map((t) => t.toUpperCase()),
           },
         );
-        expect(bloc.state.selectedTags, hasLength(10));
-        expect(bloc.state.selectedTags, contains('funnydivines'));
+        expect(bloc.state.selectedTags, {'funnydivines', ...ten});
         expect(bloc.state.selectedTags, isNot(contains(tooLong)));
         await bloc.close();
       });

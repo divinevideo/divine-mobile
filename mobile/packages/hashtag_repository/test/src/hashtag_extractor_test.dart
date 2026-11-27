@@ -47,6 +47,21 @@ void main() {
       });
     });
 
+    group('normalizeHashtags', () {
+      test('preserves legacy overflow while normalizing and deduplicating', () {
+        final tags = [for (var i = 0; i < 15; i++) 'tag$i'];
+        expect(
+          HashtagExtractor.normalizeHashtags([
+            '#TAG0',
+            ...tags,
+            tooLong,
+            '',
+          ]),
+          tags,
+        );
+      });
+    });
+
     group('normalizeVideoHashtags', () {
       test('drops invalid tags and case-insensitive duplicates', () {
         expect(

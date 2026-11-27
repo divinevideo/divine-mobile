@@ -1018,6 +1018,39 @@ void main() {
         );
       });
 
+      for (final removeCount in [1, 6]) {
+        test(
+          'saves exactly the remaining legacy tags after $removeCount removals',
+          () async {
+            final tags = [for (var i = 0; i < 15; i++) 'tag$i'];
+            final opened = _testVideo(
+              extraTags: [
+                for (final tag in tags) ['t', tag],
+              ],
+            );
+            final remaining = editorStateFromPublishedVideo(opened).tags
+                .difference(tags.take(removeCount).toSet());
+            if (removeCount == 6) remaining.add('replacement');
+            final result = await updateFromRelay(
+              originalVideo: opened,
+              editorState: editorStateFromPublishedVideo(opened)
+                  .copyWith(tags: remaining),
+              initialCollaboratorPubkeys: const {},
+            );
+            expect(result, isA<VideoUpdateSuccess>());
+            expect(
+              capturedTags
+                  .where((tag) => tag.first == 't')
+                  .map((tag) => tag[1]),
+              unorderedEquals([
+                ...tags.skip(removeCount),
+                if (removeCount == 6) 'replacement',
+              ]),
+            );
+          },
+        );
+      }
+
       test(
         'keeps signed hashtags beyond the limit in a title-only edit',
         () async {

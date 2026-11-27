@@ -23,7 +23,7 @@ VideoEditorProviderState editorStateFromPublishedVideo(VideoEvent video) {
     description: content,
     // Older events can carry mixed-case or over-long tags, and caption
     // hashtag extraction compares against normalized ones.
-    tags: HashtagExtractor.normalizeVideoHashtags(video.hashtags).toSet(),
+    tags: HashtagExtractor.normalizeHashtags(video.hashtags).toSet(),
     contentWarnings: video.contentWarningLabels
         .map(ContentLabel.fromValue)
         .whereType<ContentLabel>()

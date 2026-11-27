@@ -54,6 +54,36 @@ void main() {
       expect(find.text('flutter, dart'), findsOneWidget);
     });
 
+    testWidgets('renders every legacy tag in the tile and picker', (
+      tester,
+    ) async {
+      final tags = {for (var i = 0; i < 15; i++) 'tag$i'};
+      await tester.pumpWidget(
+        _buildTestApp(
+          hashtagRepository: hashtagRepository,
+          videoEditorState: VideoEditorProviderState(tags: tags),
+        ),
+      );
+      expect(find.text(tags.join(', ')), findsOneWidget);
+      await tester.tap(find.byType(VideoMetadataSelectionTile));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      for (final tag in tags) {
+        expect(find.text(tag), findsOneWidget);
+      }
+      final field = find.byType(TextField).last;
+      await tester.enterText(field, 'replacement');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(
+        find.text(l10n.videoMetadataTagsPickerTagLimitRemoveCount(10, 6)),
+        findsOneWidget,
+      );
+      expect(tester.widget<TextField>(field).controller!.text, 'replacement');
+      await tester.pump(const Duration(milliseconds: 400));
+    });
+
     testWidgets('renders the tags the post carries, sticker ones first', (
       tester,
     ) async {
@@ -85,9 +115,9 @@ void main() {
         ),
       );
 
-      // A post carries ten tags, so the last typed one does not make it.
+      // The tile exposes every selected tag so none are hidden from editing.
       expect(
-        find.text(['sticker', ...tags.take(9)].join(', ')),
+        find.text(['sticker', ...tags].join(', ')),
         findsOneWidget,
       );
     });
