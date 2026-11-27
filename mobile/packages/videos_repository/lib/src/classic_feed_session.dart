@@ -130,7 +130,14 @@ class ClassicFeedSession {
   bool _active = true;
   bool _refreshRequested = false;
   bool _retryOnResume = false;
+  bool _revoked = false;
   bool _disposed = false;
+
+  /// Whether [revokePersonalization] ended personalization for this session.
+  ///
+  /// A loader reads this to keep the remaining pages on the archive even if
+  /// the account becomes eligible again while the session is open.
+  bool get personalizationRevoked => _revoked;
 
   /// Latest queue, available synchronously for a selected tile.
   ClassicFeedSessionState get state => _updates.value;
@@ -221,7 +228,7 @@ class ClassicFeedSession {
   void recordInteraction(ClassicFeedInteraction interaction) {
     if (_disposed ||
         !_active ||
-        !_canPersonalize() ||
+        !_personalizationAllowed ||
         !state.videos.any((video) => video.id == interaction.videoId)) {
       return;
     }
@@ -314,13 +321,44 @@ class ClassicFeedSession {
   void resetContext() {
     if (_disposed) return;
     _generation++;
-    _adaptiveAvailable = true;
+    _adaptiveAvailable = !_revoked;
     _seed = generateRecommendationSessionSeed();
     _interactions.clear();
     _recentIds.clear();
     _emit(clearCursor: true, hasMore: true);
     if (_started && _active) _requestAdaptation();
   }
+
+  /// Ends personalization when the account stops being eligible for it.
+  ///
+  /// The videos the viewer has reached stay, so whatever is playing keeps
+  /// playing if it still passes the content filters. Ranked videos not yet
+  /// reached are dropped, along with the in-flight read, the recent context
+  /// and the adaptive cursor. Later feedback and navigation no longer adapt the
+  /// queue, and the next page is read without personal context, so the loader
+  /// can serve it from the archive. Irreversible for this session.
+  void revokePersonalization() {
+    if (_disposed || _revoked) return;
+    _revoked = true;
+    _generation++;
+    _adaptiveAvailable = false;
+    _refreshRequested = false;
+    _retryOnResume = false;
+    _interactions.clear();
+    _recentIds.clear();
+    if (state.videos.isNotEmpty) {
+      _applyQueueFilters(
+        state.videos.take(_furthestIndex + 1).toList(),
+        keepUnavailablePrefix: true,
+      );
+    }
+    _emit(clearCursor: true, hasMore: true);
+    // Started directly rather than through [loadMore], so the read is pending
+    // before this returns. A superseded read still in flight discards itself.
+    if (_started && _active) unawaited(_start());
+  }
+
+  bool get _personalizationAllowed => !_revoked && _canPersonalize();
 
   void _reach(String id) {
     _recentIds
@@ -350,7 +388,7 @@ class ClassicFeedSession {
     bool replaceAll = false,
   }) {
     final generation = _generation;
-    final allowed = _canPersonalize();
+    final allowed = _personalizationAllowed;
     final videos = state.videos;
     final anchor = videos.isEmpty ? null : videos[state.currentIndex].id;
     final request = ClassicRecommendationsRequest(
@@ -391,7 +429,7 @@ class ClassicFeedSession {
       if (_disposed || !_active || generation != _generation) {
         return _result(const []);
       }
-      _adaptiveAvailable = result.recommendationPageCount > 0;
+      _adaptiveAvailable = !_revoked && result.recommendationPageCount > 0;
       reapplyFilters();
       final existing = state.videos;
       final protectedCount = replaceAll
