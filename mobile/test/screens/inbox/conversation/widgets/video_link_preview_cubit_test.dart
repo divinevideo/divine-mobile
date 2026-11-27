@@ -293,5 +293,103 @@ void main() {
         expect(cubit.state, isA<VideoLinkPreviewLoading>());
       });
     });
+
+    group('videoToOpen', () {
+      test('returns the resolved video', () async {
+        when(
+          () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+            'test-id',
+            fallbackRouteIds: any(named: 'fallbackRouteIds'),
+          ),
+        ).thenAnswer((_) async => testVideo);
+        final cubit = createCubit();
+        addTearDown(cubit.close);
+        await cubit.resolved;
+
+        expect(await cubit.videoToOpen(), same(testVideo));
+      });
+
+      test('returns nothing for a video moderation hides', () async {
+        when(
+          () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+            'test-id',
+            fallbackRouteIds: any(named: 'fallbackRouteIds'),
+          ),
+        ).thenAnswer((_) async => testVideo);
+        final cubit = VideoLinkPreviewCubit(
+          target: const DmVideoTarget(stableId: 'test-id'),
+          videosRepository: mockVideosRepository,
+          isHidden: (video) => video.id == testVideo.id,
+        );
+        addTearDown(cubit.close);
+        await cubit.resolved;
+
+        expect(cubit.state, isA<VideoLinkPreviewResolved>());
+        expect(cubit.hides(testVideo), isTrue);
+        expect(await cubit.videoToOpen(), isNull);
+      });
+
+      test('waits for the pending lookup while the card loads', () async {
+        final stats = Completer<VideoEvent?>();
+        final playable = Completer<VideoEvent?>();
+        when(
+          () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+            'test-id',
+            fallbackRouteIds: any(named: 'fallbackRouteIds'),
+          ),
+        ).thenAnswer((_) => stats.future);
+        when(
+          () => mockVideosRepository.pendingPlayableRoute(
+            'test-id',
+            expectedAuthor: any(named: 'expectedAuthor'),
+          ),
+        ).thenAnswer((_) => playable.future);
+        final cubit = createCubit();
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+
+        final opening = cubit.videoToOpen();
+        playable.complete(testVideo);
+
+        expect(await opening, same(testVideo));
+        expect(cubit.state, isA<VideoLinkPreviewLoading>());
+        stats.complete(testVideo);
+      });
+
+      test(
+        'drops the open when the account changes during the lookup',
+        () async {
+          final stats = Completer<VideoEvent?>();
+          final playable = Completer<VideoEvent?>();
+          when(
+            () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+              'test-id',
+              fallbackRouteIds: any(named: 'fallbackRouteIds'),
+            ),
+          ).thenAnswer((_) => stats.future);
+          when(
+            () => mockVideosRepository.pendingPlayableRoute(
+              'test-id',
+              expectedAuthor: any(named: 'expectedAuthor'),
+            ),
+          ).thenAnswer((_) => playable.future);
+          var account = 'first';
+          final cubit = VideoLinkPreviewCubit(
+            target: const DmVideoTarget(stableId: 'test-id'),
+            videosRepository: mockVideosRepository,
+            currentAccount: () => account,
+          );
+          addTearDown(cubit.close);
+          await pumpEventQueue();
+
+          final opening = cubit.videoToOpen();
+          account = 'second';
+          playable.complete(testVideo);
+
+          expect(await opening, isNull);
+          stats.complete(testVideo);
+        },
+      );
+    });
   });
 }

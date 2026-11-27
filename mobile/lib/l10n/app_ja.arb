@@ -2131,6 +2131,7 @@
   "inboxCollabInviteAcceptedStatus": "承認済み",
   "inboxCollabInviteCardTitle": "コラボ招待",
   "inboxCollabInviteIgnoredStatus": "無視済み",
+  "inboxSharedVideoPreview": "動画をシェアしました",
   "inboxConversationCollabInvitePreview": "コラボ招待",
   "@inboxConversationCollabInvitePreview": {
     "description": "Substituted for the legacy NIP-04 plaintext invite copy when shown as the most-recent-message preview in the DM conversation list."

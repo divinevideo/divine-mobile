@@ -6215,6 +6215,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'ግብዣ ተልኳል።';
 
   @override
+  String get inboxSharedVideoPreview => 'ቪዲዮ አጋርቷል';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'የተባባሪ ግብዣ';
 
   @override

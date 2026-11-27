@@ -6,7 +6,7 @@ Only external video Copy/Share via, post-publish Share, a DM's Copy video URL an
 
 ShortLinkClient sends JSON to https://gateway.divine.video/api/links without an Authorization header. Transport and response reading share a two-second budget. Invalid mapping, quota, network, timeout and gateway-disabled responses fall back to the full URL. It refuses redirects, bounds responses to 4096 bytes and caches only exact validated successes, at most 100 per client. Provider disposal closes pending requests and clears cached mappings. No account state, feature-flag service or signing service is needed.
 
-Repeated Copy/Share via events are dropped while the same action is pending. Action results from a dismissed modal cannot pop the source page or trigger a late platform share. Post-publish Share closes its sheet first, so its platform share can open up to two seconds after the tap while the link shortens. No new UI state or translations are introduced.
+Video Copy link and Share via hand off the cached short URL or the full canonical URL immediately. Only an explicit external action warms the cache for a later tap. A native share includes a thumbnail only when a usable file has already been found in the local cache. Action results from a dismissed modal cannot pop the source page or trigger a late platform share. Post-publish Share closes its sheet first, so its platform share can open up to two seconds after the tap while the link shortens.
 
 Receiving is already merged separately. This client behavior takes effect in the next app build; Android association changes also require a native store release. Public links redirect to canonical web URLs for clients without short-link handling. Disabling creation at the gateway preserves existing public redirects.
 

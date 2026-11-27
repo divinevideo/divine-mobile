@@ -6353,6 +6353,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'تم إرسال الدعوة';
 
   @override
+  String get inboxSharedVideoPreview => 'تمت مشاركة فيديو';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'دعوة للتعاون';
 
   @override

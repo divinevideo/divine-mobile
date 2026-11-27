@@ -62,13 +62,16 @@ void main() {
           return http.Response(mapping(), 201);
         });
         final client = ShortLinkClient(client: transport);
+        expect(client.cachedShortUrl(target), isNull);
         expect(
           await Future.wait([client.shorten(target), client.shorten(target)]),
           [short, short],
         );
         expect(await client.shorten(target), short);
+        expect(client.cachedShortUrl(target), short);
         expect(requests, 1);
         client.close();
+        expect(client.cachedShortUrl(target), isNull);
         transport.close();
       },
     );

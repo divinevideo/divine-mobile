@@ -150,6 +150,7 @@ DmConversation _withVisibleActivity(
   }
   return conversation.copyWith(
     lastMessageContent: visible.lastMessageContent,
+    lastMessageIsVideoShare: visible.lastMessageIsVideoShare,
     lastMessageTimestamp: timestamp,
     lastMessageSenderPubkey: visible.lastMessageSenderPubkey,
     isRead: isRead,

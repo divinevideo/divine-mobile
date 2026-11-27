@@ -6287,6 +6287,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'Undangan terkirim';
 
   @override
+  String get inboxSharedVideoPreview => 'Membagikan video';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'Undangan kolaborasi';
 
   @override

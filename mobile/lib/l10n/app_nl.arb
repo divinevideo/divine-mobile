@@ -2141,6 +2141,7 @@
   "inboxCollabInviteAcceptedStatus": "Geaccepteerd",
   "inboxCollabInviteCardTitle": "Uitnodiging om samen te werken",
   "inboxCollabInviteIgnoredStatus": "Genegeerd",
+  "inboxSharedVideoPreview": "Heeft een video gedeeld",
   "inboxConversationCollabInvitePreview": "Uitnodiging om samen te werken",
   "@inboxConversationCollabInvitePreview": {
     "description": "Substituted for the legacy NIP-04 plaintext invite copy when shown as the most-recent-message preview in the DM conversation list."

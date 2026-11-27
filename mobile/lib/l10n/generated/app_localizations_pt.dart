@@ -6421,6 +6421,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'Convite enviado';
 
   @override
+  String get inboxSharedVideoPreview => 'Compartilhou um vídeo';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'Convite para colaborar';
 
   @override

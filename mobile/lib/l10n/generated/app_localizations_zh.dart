@@ -5982,6 +5982,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get inboxCollabInviteSentStatus => '邀请已发送';
 
   @override
+  String get inboxSharedVideoPreview => '分享了一个视频';
+
+  @override
   String get inboxConversationCollabInvitePreview => '合作邀请';
 
   @override

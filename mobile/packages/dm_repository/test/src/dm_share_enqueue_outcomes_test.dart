@@ -22,6 +22,7 @@ class _UnwritableConversations extends ConversationsDao {
     required bool isGroup,
     required int createdAt,
     String? lastMessageContent,
+    String? lastMessageId,
     int? lastMessageTimestamp,
     int? lastMessageCreatedAt,
     String? lastMessageSenderPubkey,

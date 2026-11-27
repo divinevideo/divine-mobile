@@ -88,7 +88,10 @@ class _MockRepostsRepository extends Mock implements RepostsRepository {}
 class _MockVideoResponsesRepository extends Mock
     implements VideoResponsesRepository {}
 
-class _MockVideoEventService extends Mock implements VideoEventService {}
+class _MockVideoEventService extends Mock implements VideoEventService {
+  @override
+  Stream<void> get deletionTombstonesChanged => const Stream<void>.empty();
+}
 
 /// Signs in a viewer who is neither the creator nor a collaborator.
 List<Override> _thirdPartyViewerOverrides({

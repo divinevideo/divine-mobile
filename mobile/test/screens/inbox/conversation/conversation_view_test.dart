@@ -270,6 +270,7 @@ void main() {
       );
 
       final app = testMaterialApp(
+        mockVideoEventService: VisibleTestVideoEventService(),
         mockAuthService: mockAuthService,
         mockNostrService: mockNostrClient,
         mockFollowRepository: followRepository,

@@ -6372,6 +6372,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'دعوت بھیج دی گئی';
 
   @override
+  String get inboxSharedVideoPreview => 'ایک ویڈیو شیئر کی';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'شریک کار دعوت';
 
   @override

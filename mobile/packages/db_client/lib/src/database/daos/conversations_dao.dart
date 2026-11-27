@@ -10,22 +10,32 @@ import 'package:drift/drift.dart';
 
 part 'conversations_dao.g.dart';
 
+/// Citation tags and the local conversation snapshot they describe.
+typedef ConversationPreviewTags = ({
+  String? messageId,
+  String content,
+  int timestamp,
+  String sender,
+  String tags,
+});
+
 @DriftAccessor(tables: [Conversations])
 class ConversationsDao extends DatabaseAccessor<AppDatabase>
     with _$ConversationsDaoMixin {
   ConversationsDao(super.attachedDatabase);
 
-  static const String _latestMessagePreviewCase = '''
+  static String _previewContent(String row) =>
+      '''
 CASE
-  WHEN dm.message_kind = 15 THEN
+  WHEN $row.message_kind = 15 THEN
     CASE
-      WHEN dm.file_type IS NULL THEN 'Sent a file'
-      WHEN dm.file_type LIKE 'image/%' THEN 'Sent a photo'
-      WHEN dm.file_type LIKE 'video/%' THEN 'Sent a video'
-      WHEN dm.file_type LIKE 'audio/%' THEN 'Sent an audio message'
+      WHEN $row.file_type IS NULL THEN 'Sent a file'
+      WHEN $row.file_type LIKE 'image/%' THEN 'Sent a photo'
+      WHEN $row.file_type LIKE 'video/%' THEN 'Sent a video'
+      WHEN $row.file_type LIKE 'audio/%' THEN 'Sent an audio message'
       ELSE 'Sent a file'
     END
-  ELSE dm.content
+  ELSE $row.content
 END
 ''';
 
@@ -98,6 +108,7 @@ END
     required bool isGroup,
     required int createdAt,
     String? lastMessageContent,
+    String? lastMessageId,
     int? lastMessageTimestamp,
     int? lastMessageCreatedAt,
     String? lastMessageSenderPubkey,
@@ -157,6 +168,7 @@ END
       isGroup: Value(isGroup),
       createdAt: createdAt,
       lastMessageContent: Value(lastMessageContent),
+      lastMessageId: Value(lastMessageId),
       lastMessageTimestamp: Value(lastMessageTimestamp),
       lastMessageCreatedAt: Value(lastMessageCreatedAt),
       lastMessageSenderPubkey: Value(lastMessageSenderPubkey),
@@ -245,6 +257,10 @@ END
           lastMessageTimestamp: excl.lastMessageTimestamp.iif(
             previewCondition,
             old.lastMessageTimestamp,
+          ),
+          lastMessageId: excl.lastMessageId.iif(
+            previewCondition,
+            old.lastMessageId,
           ),
           lastMessageContent: excl.lastMessageContent.iif(
             previewCondition,
@@ -860,6 +876,7 @@ $table.conversation_id = ?1
     final row = await customSelect(
       '''
 SELECT newest.content AS content,
+       newest.tags_json AS tags_json,
        newest.created_at AS created_at,
        newest.sender_pubkey AS sender_pubkey,
        EXISTS (
@@ -874,7 +891,8 @@ SELECT newest.content AS content,
        ) AS has_unread
 FROM (SELECT 1) AS anchor
 LEFT JOIN (
-  SELECT $_latestMessagePreviewCase AS content,
+  SELECT ${_previewContent('dm')} AS content,
+         CASE WHEN dm.reply_to_id IS NULL AND dm.message_kind = 14 THEN dm.tags_json END AS tags_json,
          dm.created_at AS created_at,
          dm.sender_pubkey AS sender_pubkey
   FROM direct_messages dm
@@ -893,10 +911,77 @@ LEFT JOIN (
     ).getSingle();
     return (
       content: row.readNullable<String>('content'),
+      tagsJson: row.readNullable<String>('tags_json'),
       createdAt: row.readNullable<int>('created_at'),
       senderPubkey: row.readNullable<String>('sender_pubkey'),
       hasUnread: row.read<bool>('has_unread'),
     );
+  }
+
+  /// Reads the citation tags for the exact row behind each local inbox
+  /// snapshot. Old snapshots may outlive message history after sign-out.
+  /// Only a matching, visible non-reply text message can supply tags.
+  Future<Map<String, ConversationPreviewTags>> latestPreviewTags(
+    Iterable<String> ids, {
+    required String ownerPubkey,
+  }) async {
+    final results = <String, ConversationPreviewTags>{};
+    final keys = ids.toList();
+    const shown = DirectMessagesDao.retractionsShownToSender;
+    final visible =
+        '''
+(m.owner_pubkey = ?1 OR (COALESCE(m.owner_pubkey, '') = ''
+  AND NOT EXISTS (SELECT 1 FROM direct_messages owned
+                  WHERE owned.id = m.id AND owned.owner_pubkey = ?1)))
+AND (m.is_deleted = 0 OR (m.sender_pubkey = ?1 AND
+  m.deletion_publish_status IN (${shown.map((s) => "'$s'").join(', ')})))
+''';
+    for (var start = 0; start < keys.length; start += 400) {
+      final batch = keys.skip(start).take(400).toList();
+      final rows = await customSelect(
+        '''
+SELECT c.id, c.last_message_id, c.last_message_content AS content,
+       c.last_message_timestamp AS created_at,
+       c.last_message_sender_pubkey AS sender_pubkey, dm.tags_json
+FROM conversations c JOIN direct_messages dm ON dm.rowid = CASE
+  WHEN c.last_message_id IS NOT NULL THEN (
+    SELECT m.rowid FROM direct_messages m WHERE m.id = c.last_message_id
+      AND m.conversation_id = c.id AND $visible
+  )
+  ELSE (
+    -- Earlier snapshots have no ID. Identical text from the same sender in
+    -- the same second is ambiguous even if only one row has citation tags.
+    SELECT MIN(m.rowid) FROM direct_messages m WHERE m.conversation_id = c.id
+      AND m.created_at = c.last_message_timestamp
+      AND m.sender_pubkey = c.last_message_sender_pubkey
+      AND (${_previewContent('m')}) = c.last_message_content AND $visible
+    HAVING COUNT(*) = 1
+  )
+END
+WHERE c.id IN (${List.filled(batch.length, '?').join(', ')})
+  AND (c.owner_pubkey = ?1 OR (COALESCE(c.owner_pubkey, '') = ''
+    AND NOT EXISTS (SELECT 1 FROM conversations owned
+                    WHERE owned.id = c.id AND owned.owner_pubkey = ?1)))
+  AND dm.tags_json IS NOT NULL AND dm.reply_to_id IS NULL AND dm.message_kind = 14
+  AND dm.content = c.last_message_content
+  AND dm.sender_pubkey = c.last_message_sender_pubkey
+''',
+        variables: [
+          Variable(ownerPubkey),
+          for (final id in batch) Variable(id),
+        ],
+      ).get();
+      for (final row in rows) {
+        results[row.read<String>('id')] = (
+          messageId: row.readNullable<String>('last_message_id'),
+          content: row.read<String>('content'),
+          timestamp: row.read<int>('created_at'),
+          sender: row.read<String>('sender_pubkey'),
+          tags: row.read<String>('tags_json'),
+        );
+      }
+    }
+    return results;
   }
 
   /// Get unread conversation count.
@@ -1100,9 +1185,9 @@ LEFT JOIN (
     final shownInThread =
         '(dm.is_deleted = 0 OR (dm.sender_pubkey = c.owner_pubkey '
         'AND dm.deletion_publish_status IN ($shownStatuses)))';
-    final latestPreviewContentSubquery =
+    String latestField(String expression) =>
         '''
-SELECT $_latestMessagePreviewCase
+SELECT $expression
 FROM direct_messages dm
 WHERE dm.conversation_id = c.id
   AND $shownInThread
@@ -1110,31 +1195,16 @@ WHERE dm.conversation_id = c.id
 ORDER BY dm.created_at DESC, dm.id DESC
 LIMIT 1
 ''';
-    final latestTimestampSubquery =
-        '''
-SELECT dm.created_at
-FROM direct_messages dm
-WHERE dm.conversation_id = c.id
-  AND $shownInThread
-  AND $latestMessageOwnerFilter
-ORDER BY dm.created_at DESC, dm.id DESC
-LIMIT 1
-''';
-    final latestSenderSubquery =
-        '''
-SELECT dm.sender_pubkey
-FROM direct_messages dm
-WHERE dm.conversation_id = c.id
-  AND $shownInThread
-  AND $latestMessageOwnerFilter
-ORDER BY dm.created_at DESC, dm.id DESC
-LIMIT 1
-''';
+    final latestIdSubquery = latestField('dm.id');
+    final latestPreviewContentSubquery = latestField(_previewContent('dm'));
+    final latestTimestampSubquery = latestField('dm.created_at');
+    final latestSenderSubquery = latestField('dm.sender_pubkey');
 
     return customUpdate(
       '''
       UPDATE conversations AS c
-      SET last_message_content = ($latestPreviewContentSubquery),
+      SET last_message_id = ($latestIdSubquery),
+          last_message_content = ($latestPreviewContentSubquery),
           last_message_timestamp = ($latestTimestampSubquery),
           last_message_sender_pubkey = ($latestSenderSubquery),
           last_message_created_at = NULL,
@@ -1159,7 +1229,7 @@ LIMIT 1
       ''',
       variables: [
         if (ownerPubkey != null) ...[
-          for (var i = 0; i < 9; i++) Variable(ownerPubkey),
+          for (var i = 0; i < 10; i++) Variable(ownerPubkey),
         ],
       ],
       updates: {attachedDatabase.conversations},
@@ -1176,6 +1246,7 @@ LIMIT 1
 /// `content`, `createdAt` and `senderPubkey` are all null when no such message
 /// is stored.
 typedef ConversationVisibleActivity = ({
+  String? tagsJson,
   String? content,
   int? createdAt,
   String? senderPubkey,

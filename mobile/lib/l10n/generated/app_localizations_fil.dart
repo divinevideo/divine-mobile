@@ -6404,6 +6404,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'Naipadala ang imbitasyon';
 
   @override
+  String get inboxSharedVideoPreview => 'Nagbahagi ng video';
+
+  @override
   String get inboxConversationCollabInvitePreview =>
       'Imbitasyon bilang collaborator';
 

@@ -256,6 +256,7 @@ void main() {
           lastMessageContent: 'from the visible member',
           lastMessageTimestamp: 1700000100,
           lastMessageSenderPubkey: visibleMember,
+          lastMessageIsVideoShare: false,
           hasUnread: false,
         ));
 
@@ -282,6 +283,7 @@ void main() {
           lastMessageContent: null,
           lastMessageTimestamp: null,
           lastMessageSenderPubkey: null,
+          lastMessageIsVideoShare: false,
           hasUnread: false,
         ));
 
@@ -305,6 +307,7 @@ void main() {
         lastMessageContent: 'from the visible member',
         lastMessageTimestamp: 1700000100,
         lastMessageSenderPubkey: visibleMember,
+        lastMessageIsVideoShare: false,
         hasUnread: true,
       ));
 
@@ -318,6 +321,7 @@ void main() {
         lastMessageContent: 'from the visible member',
         lastMessageTimestamp: 1700000100,
         lastMessageSenderPubkey: visibleMember,
+        lastMessageIsVideoShare: false,
         hasUnread: true,
       ));
 
@@ -332,6 +336,7 @@ void main() {
         lastMessageContent: null,
         lastMessageTimestamp: null,
         lastMessageSenderPubkey: null,
+        lastMessageIsVideoShare: false,
         hasUnread: false,
       ));
 
@@ -350,6 +355,7 @@ void main() {
         lastMessageContent: 'from the visible member',
         lastMessageTimestamp: 1700000100,
         lastMessageSenderPubkey: visibleMember,
+        lastMessageIsVideoShare: false,
         hasUnread: false,
       ));
 
@@ -365,6 +371,7 @@ void main() {
           lastMessageContent: null,
           lastMessageTimestamp: null,
           lastMessageSenderPubkey: null,
+          lastMessageIsVideoShare: false,
           hasUnread: false,
         ));
         final stored = room().copyWith(currentUserHasSent: true);
@@ -462,6 +469,7 @@ void main() {
         lastMessageContent: 'from the visible member',
         lastMessageTimestamp: 1700000100,
         lastMessageSenderPubkey: visibleMember,
+        lastMessageIsVideoShare: false,
         hasUnread: false,
       ));
       // Long enough that an unstable sort reorders equal rows.

@@ -86,8 +86,7 @@ class ShareSheetShareViaTriggered extends ShareSheetActionResult {
   /// The share URL to pass as text to the platform share sheet.
   final String shareUrl;
 
-  /// Local file path of the downloaded thumbnail image, or `null` if
-  /// the download failed or no thumbnail was available.
+  /// A ready local thumbnail, if the cache found one before the tap.
   final String? thumbnailPath;
 
   /// Video title used as the share sheet title / Android `EXTRA_TITLE`.
@@ -109,6 +108,7 @@ class ShareSheetState extends Equatable {
     this.refusedRecipients = const [],
     this.sendFailed = false,
     this.ownerExpired = false,
+    this.readyThumbnailPath,
     this.actionResult,
   }) : attemptedRecipients = selectedRecipients;
 
@@ -154,6 +154,10 @@ class ShareSheetState extends Equatable {
   /// set, and the sheet refuses every further load, selection and send.
   final bool ownerExpired;
 
+  /// A local image-cache file for the video's thumbnail, once the lookup that
+  /// starts with the sheet finds one. Share via attaches it when it is set.
+  final String? readyThumbnailPath;
+
   /// One-shot action result for BlocListener consumption.
   /// Cleared on next state emission.
   final ShareSheetActionResult? actionResult;
@@ -174,6 +178,7 @@ class ShareSheetState extends Equatable {
     bool? isSending,
     List<ShareDeliveryRecipient>? refusedRecipients,
     bool? sendFailed,
+    String? readyThumbnailPath,
     ShareSheetActionResult? actionResult,
     bool clearActionResult = false,
   }) {
@@ -187,6 +192,7 @@ class ShareSheetState extends Equatable {
       refusedRecipients: refusedRecipients ?? this.refusedRecipients,
       sendFailed: sendFailed ?? this.sendFailed,
       ownerExpired: ownerExpired,
+      readyThumbnailPath: readyThumbnailPath ?? this.readyThumbnailPath,
       actionResult: clearActionResult
           ? null
           : (actionResult ?? this.actionResult),
@@ -204,6 +210,7 @@ class ShareSheetState extends Equatable {
     refusedRecipients,
     sendFailed,
     ownerExpired,
+    readyThumbnailPath,
     actionResult,
   ];
 }

@@ -6535,6 +6535,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'Invitație trimisă';
 
   @override
+  String get inboxSharedVideoPreview => 'A distribuit un videoclip';
+
+  @override
   String get inboxConversationCollabInvitePreview => 'Invitație de colaborare';
 
   @override

@@ -541,6 +541,7 @@ typedef DmInboxLookup = ({List<String>? relays, DmInboxResolution state});
 /// than the viewer wrote after both the conversation's read cursor and the
 /// viewer's own newest message.
 typedef DmVisibleActivity = ({
+  bool lastMessageIsVideoShare,
   String? lastMessageContent,
   int? lastMessageTimestamp,
   String? lastMessageSenderPubkey,
@@ -5343,6 +5344,7 @@ class DmRepository {
             participantPubkeys: jsonEncode(participants),
             isGroup: isGroup,
             createdAt: existing?.createdAt ?? persistedCreatedAt,
+            lastMessageId: rumor.id,
             lastMessageContent: previewContent,
             lastMessageTimestamp: persistedCreatedAt,
             // Unbounded on purpose: only the read-cursor pin reads it, and it
@@ -6270,6 +6272,7 @@ class DmRepository {
           participantPubkeys: jsonEncode(participants),
           isGroup: false,
           createdAt: existing?.createdAt ?? persistedCreatedAt,
+          lastMessageId: nip04Event.id,
           lastMessageContent: plaintext,
           lastMessageTimestamp: persistedCreatedAt,
           // Unbounded on purpose: only the read-cursor pin reads it, and it
@@ -7281,6 +7284,7 @@ class DmRepository {
     required int lastMessageTimestamp,
     required String lastMessageSenderPubkey,
     String? lastMessageContent,
+    String? lastMessageId,
     String? ownerPubkey,
     String? dmProtocol,
   }) async {
@@ -7289,6 +7293,7 @@ class DmRepository {
       participantPubkeys: participantPubkeys,
       isGroup: isGroup,
       createdAt: createdAt,
+      lastMessageId: lastMessageId,
       lastMessageContent: lastMessageContent,
       lastMessageTimestamp: lastMessageTimestamp,
       lastMessageSenderPubkey: lastMessageSenderPubkey,
@@ -7986,6 +7991,7 @@ class DmRepository {
             participantPubkeys: jsonEncode(participants),
             isGroup: false,
             createdAt: existingSend?.createdAt ?? now,
+            lastMessageId: rumor.id,
             lastMessageContent: content,
             lastMessageTimestamp: now,
             lastMessageSenderPubkey: owner,
@@ -9162,17 +9168,20 @@ class DmRepository {
           // still go out.
           final nextProtocol = existing?.dmProtocol ?? 'nip17';
           protocol = nextProtocol;
-          await _upsertSentConversationAndMarkRead(
-            id: row.conversationId,
-            participantPubkeys: participantsJson,
-            isGroup: isGroup,
-            createdAt: existing?.createdAt ?? now,
-            lastMessageContent: row.content,
-            lastMessageTimestamp: now,
-            lastMessageSenderPubkey: owner,
-            ownerPubkey: owner,
-            dmProtocol: nextProtocol,
-          );
+          if (!alreadyPersisted || existing == null) {
+            await _upsertSentConversationAndMarkRead(
+              id: row.conversationId,
+              participantPubkeys: participantsJson,
+              isGroup: isGroup,
+              createdAt: existing?.createdAt ?? now,
+              lastMessageId: alreadyPersisted ? null : result.rumorEventId,
+              lastMessageContent: row.content,
+              lastMessageTimestamp: alreadyPersisted ? row.createdAt : now,
+              lastMessageSenderPubkey: owner,
+              ownerPubkey: owner,
+              dmProtocol: nextProtocol,
+            );
+          }
 
           if (!isGroupRow) {
             await _directMessagesDao.markRecipientAccepted(
@@ -11380,17 +11389,22 @@ class DmRepository {
           ownerPubkey: owner,
         );
         if (_disposed || _resetGeneration != generation) return;
-        await _upsertSentConversationAndMarkRead(
-          id: conversationId,
-          participantPubkeys: jsonEncode(participants),
-          isGroup: true,
-          createdAt: existingGroup?.createdAt ?? now,
-          lastMessageContent: content,
-          lastMessageTimestamp: now,
-          lastMessageSenderPubkey: owner,
-          ownerPubkey: owner,
-          dmProtocol: existingGroup?.dmProtocol,
-        );
+        if (!alreadyPersisted || existingGroup == null) {
+          await _upsertSentConversationAndMarkRead(
+            id: conversationId,
+            participantPubkeys: jsonEncode(participants),
+            isGroup: true,
+            createdAt: existingGroup?.createdAt ?? now,
+            lastMessageId: alreadyPersisted
+                ? null
+                : firstLiveSuccess.rumorEventId,
+            lastMessageContent: content,
+            lastMessageTimestamp: alreadyPersisted ? batchCreatedAt : now,
+            lastMessageSenderPubkey: owner,
+            ownerPubkey: owner,
+            dmProtocol: existingGroup?.dmProtocol,
+          );
+        }
 
         if (outgoingDao != null) {
           for (final i in liveSuccessIndexes) {
@@ -12385,6 +12399,7 @@ class DmRepository {
         participantPubkeys: conversation.participantPubkeys,
         isGroup: conversation.isGroup,
         createdAt: conversation.createdAt,
+        lastMessageId: latest.id,
         lastMessageContent: previewContent,
         lastMessageTimestamp: latest.createdAt,
         lastMessageSenderPubkey: latest.senderPubkey,
@@ -12546,6 +12561,7 @@ class DmRepository {
           participantPubkeys: jsonEncode(participants),
           isGroup: false,
           createdAt: existingFile?.createdAt ?? now,
+          lastMessageId: result.rumorEventId,
           lastMessageContent: _filePreviewText(fileMetadata.fileType),
           lastMessageTimestamp: now,
           lastMessageSenderPubkey: _userPubkey,
@@ -13032,6 +13048,7 @@ class DmRepository {
     final owner = _ownerPubkey;
     if (owner == null) return Stream.value(const <DmConversation>[]);
     return _watchConversationRows(
+      owner,
       () => _conversationsDao.watchAllConversations(
         limit: limit,
         ownerPubkey: owner,
@@ -13052,7 +13069,9 @@ class DmRepository {
       conversationId,
       ownerPubkey: owner,
     );
-    return row == null ? null : _conversationFromRow(row);
+    return row == null
+        ? null
+        : (await _withPreviewCitations([row], owner)).single;
   }
 
   /// Get all conversations.
@@ -13063,7 +13082,7 @@ class DmRepository {
     final rows = await _conversationsDao.getAllConversations(
       ownerPubkey: owner,
     );
-    return rows.map(_conversationFromRow).toList();
+    return _withPreviewCitations(rows, owner);
   }
 
   /// For each conversation in [excludedSendersByConversation], what its inbox
@@ -13090,6 +13109,7 @@ class DmRepository {
       for (final MapEntry(key: id, value: row) in rows.entries)
         id: (
           lastMessageContent: row.content,
+          lastMessageIsVideoShare: _hasVideoCitation(row.tagsJson),
           lastMessageTimestamp: row.createdAt,
           lastMessageSenderPubkey: row.senderPubkey,
           hasUnread: row.hasUnread,
@@ -13122,6 +13142,7 @@ class DmRepository {
     final owner = _ownerPubkey;
     if (owner == null) return Stream.value(const <DmConversation>[]);
     return _watchConversationRows(
+      owner,
       () => _conversationsDao.watchAcceptedConversations(
         limit: limit,
         ownerPubkey: owner,
@@ -13149,6 +13170,7 @@ class DmRepository {
     final owner = _ownerPubkey;
     if (owner == null) return Stream.value(const <DmConversation>[]);
     return _watchConversationRows(
+      owner,
       () => _conversationsDao.watchPotentialRequestConversations(
         ownerPubkey: owner,
         unreadOnly: unreadOnly,
@@ -14291,14 +14313,47 @@ class DmRepository {
   }
 
   Stream<List<DmConversation>> _watchConversationRows(
+    String owner,
     Stream<List<ConversationRow>> Function() watchRows,
   ) {
     final maintenance = _ensurePostAuthMaintenance();
     return Stream.fromFuture(
-      maintenance,
-    ).asyncExpand((_) => watchRows()).map((streamRows) {
-      return streamRows.map(_conversationFromRow).toList();
-    });
+          maintenance,
+        )
+        .asyncExpand((_) => watchRows())
+        .asyncMap((rows) => _withPreviewCitations(rows, owner));
+  }
+
+  bool _hasVideoCitation(String? tagsJson) =>
+      tagsJson != null &&
+      DmSharedVideoCitation.parse(_parseTagsJson(tagsJson)) != null;
+
+  Future<List<DmConversation>> _withPreviewCitations(
+    List<ConversationRow> rows,
+    String owner,
+  ) async {
+    final withPreview = rows.where(
+      (r) =>
+          r.lastMessageTimestamp != null &&
+          r.lastMessageContent != null &&
+          r.lastMessageSenderPubkey != null,
+    );
+    if (withPreview.isEmpty) return rows.map(_conversationFromRow).toList();
+    final tags = await _conversationsDao.latestPreviewTags(
+      withPreview.map((r) => r.id),
+      ownerPubkey: owner,
+    );
+    return rows.map((row) {
+      final snapshot = tags[row.id];
+      final isShare =
+          snapshot != null &&
+          snapshot.messageId == row.lastMessageId &&
+          snapshot.timestamp == row.lastMessageTimestamp &&
+          snapshot.content == row.lastMessageContent &&
+          snapshot.sender == row.lastMessageSenderPubkey &&
+          _hasVideoCitation(snapshot.tags);
+      return _conversationFromRow(row, lastMessageIsVideoShare: isShare);
+    }).toList();
   }
 
   // -------------------------------------------------------------------------
@@ -15123,6 +15178,7 @@ class DmRepository {
         participantPubkeys: jsonEncode(home.participants),
         isGroup: home.participants.length > 2,
         createdAt: existing?.createdAt ?? moving.first.createdAt,
+        lastMessageId: newest.id,
         lastMessageContent: newest.messageKind == EventKind.fileMessage
             ? _filePreviewText(newest.fileType)
             : newest.content,
@@ -15273,7 +15329,10 @@ class DmRepository {
     return 'Sent a file';
   }
 
-  DmConversation _conversationFromRow(ConversationRow row) {
+  DmConversation _conversationFromRow(
+    ConversationRow row, {
+    bool lastMessageIsVideoShare = false,
+  }) {
     final pubkeys = (jsonDecode(row.participantPubkeys) as List<dynamic>)
         .cast<String>();
     return DmConversation(
@@ -15282,6 +15341,7 @@ class DmRepository {
       isGroup: row.isGroup,
       createdAt: row.createdAt,
       lastMessageContent: row.lastMessageContent,
+      lastMessageIsVideoShare: lastMessageIsVideoShare,
       lastMessageTimestamp: row.lastMessageTimestamp,
       lastMessageSenderPubkey: row.lastMessageSenderPubkey,
       subject: row.subject,

@@ -2141,6 +2141,7 @@
   "inboxCollabInviteAcceptedStatus": "Accepterad",
   "inboxCollabInviteCardTitle": "Inbjudan att samarbeta",
   "inboxCollabInviteIgnoredStatus": "Ignorerad",
+  "inboxSharedVideoPreview": "Delade en video",
   "inboxConversationCollabInvitePreview": "Inbjudan att samarbeta",
   "@inboxConversationCollabInvitePreview": {
     "description": "Substituted for the legacy NIP-04 plaintext invite copy when shown as the most-recent-message preview in the DM conversation list."

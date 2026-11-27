@@ -202,69 +202,76 @@ void main() {
       );
     });
 
-    testWidgets('delayed double copy does not pop source', (tester) async {
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      final pending = Completer<String>();
-      when(() => mockVideoSharingService.generateShareUrl(any()))
-          .thenReturn('https://divine.video/video/synthetic');
-      when(() => mockVideoSharingService.shortenExternalUrl(any()))
-          .thenAnswer((_) => pending.future);
-      final router = GoRouter(
-        initialLocation: '/source',
-        routes: [
-          GoRoute(
-            path: '/source',
-            builder: (_, _) => const Scaffold(body: Text('origin')),
-          ),
-          GoRoute(
-            path: '/video',
-            builder: (_, _) =>
-                Scaffold(body: ShareActionButton(video: testVideo)),
-          ),
-        ],
-      );
-      await tester.pumpWidget(
-        testProviderScope(
-          additionalOverrides: [
-            userRankingSignalsLoaderProvider.overrideWithValue(
-              mockRankingSignalsLoader,
+    testWidgets(
+      'two pending copies preserve the source',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final pending = Completer<String>();
+        when(() => mockVideoSharingService.generateShareUrl(any()))
+            .thenReturn('https://divine.video/video/synthetic');
+        when(() => mockVideoSharingService.shortenExternalUrl(any()))
+            .thenAnswer((_) => pending.future);
+        final router = GoRouter(
+          initialLocation: '/source',
+          routes: [
+            GoRoute(
+              path: '/source',
+              builder: (_, _) => const Scaffold(body: Text('origin')),
             ),
-            videoSharingServiceProvider.overrideWith(
-              (ref) => mockVideoSharingService,
+            GoRoute(
+              path: '/video',
+              builder: (_, _) =>
+                  Scaffold(body: ShareActionButton(video: testVideo)),
             ),
           ],
-          mockAuthService: createMockAuthService(),
-          mockProfileRepository: mockProfileRepository,
-          child: MaterialApp.router(
-            routerConfig: router,
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
+        );
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              userRankingSignalsLoaderProvider.overrideWithValue(
+                mockRankingSignalsLoader,
+              ),
+              videoSharingServiceProvider.overrideWith(
+                (ref) => mockVideoSharingService,
+              ),
+            ],
+            mockAuthService: createMockAuthService(),
+            mockProfileRepository: mockProfileRepository,
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      unawaited(router.push<void>('/video'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byType(ShareActionButton));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.shareSheetCopy));
-      await tester.pump();
-      await tester.tap(find.text(l10n.shareSheetCopy));
-      await tester.pump();
-      pending.complete('https://divine.video/l/Abc12345');
-      await tester.pumpAndSettle();
-      final sourcePresent = find
-          .byType(ShareActionButton)
-          .evaluate()
-          .isNotEmpty;
-      await tester.pumpWidget(const SizedBox());
-      router.dispose();
-      expect(
-        sourcePresent,
-        isTrue,
-        reason: 'double Copy must only dismiss the share sheet',
-      );
-    });
+        );
+        await tester.pumpAndSettle();
+        unawaited(router.push<void>('/video'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(ShareActionButton));
+        await tester.pumpAndSettle();
+        verifyNever(() => mockVideoSharingService.shortenExternalUrl(any()));
+        await tester.tap(find.text(l10n.shareSheetCopy));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.shareSheetCopy), findsNothing);
+        await tester.tap(find.byType(ShareActionButton));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.shareSheetCopy));
+        await tester.pump();
+        pending.complete('https://divine.video/l/Abc12345');
+        await tester.pumpAndSettle();
+        final sourcePresent = find
+            .byType(ShareActionButton)
+            .evaluate()
+            .isNotEmpty;
+        await tester.pumpWidget(const SizedBox());
+        router.dispose();
+        expect(
+          sourcePresent,
+          isTrue,
+          reason: 'double Copy must only dismiss the share sheet',
+        );
+      },
+    );
 
     testWidgets('copy completion after dismissal does not pop source', (
       tester,
@@ -314,9 +321,9 @@ void main() {
       await tester.tap(find.byType(ShareActionButton));
       await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.shareSheetCopy));
-      await tester.pump();
-      router.pop();
-      await tester.pump();
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.shareSheetCopy), findsNothing);
+      verify(() => mockVideoSharingService.shortenExternalUrl(any())).called(1);
       pending.complete('https://divine.video/l/Abc12345');
       await tester.pumpAndSettle();
       final sourcePresent = find
@@ -404,46 +411,45 @@ void main() {
     });
 
     group('share menu', () {
-      testWidgets('records governed share intent without blocking the sheet', (
-        tester,
-      ) async {
-        final pending = Completer<void>();
-        final analytics = RecordingConsumptionAnalytics(
-          pending: pending.future,
-        );
-        addTearDown(analytics.dispose);
-        final sink = _RecordingAnalyticsSink();
-        await tester.pumpWidget(
-          testMaterialApp(
-            home: Scaffold(body: ShareActionButton(video: testVideo)),
-            additionalOverrides: [
-              videoSharingServiceProvider.overrideWith(
-                (ref) => mockVideoSharingService,
-              ),
-              consumptionAnalyticsTrackerProvider.overrideWithValue(
-                ConsumptionAnalyticsTracker(analytics: () => analytics),
-              ),
-              analyticsEventSinkProvider.overrideWithValue(sink),
-            ],
-            mockAuthService: createMockAuthService(),
-            mockProfileRepository: mockProfileRepository,
-          ),
-        );
-        await tester.tap(find.byType(ShareActionButton));
-        await tester.pumpAndSettle();
-        expect(find.text('Share with'), findsOneWidget);
-        expect(analytics.eventNames, ['engagement_recorded']);
-        expect(analytics.parameters.single, {
-          'action': 'share_tapped',
-          'content_id': testVideo.id,
-        });
-        expect(
-          sink.events.where((event) => event.name == 'share_tapped'),
-          isEmpty,
-        );
-        pending.complete();
-        await tester.pump();
-      });
+      testWidgets(
+        'opens the sheet without emitting content-attributed share analytics',
+        (
+          tester,
+        ) async {
+          final pending = Completer<void>();
+          final analytics = RecordingConsumptionAnalytics(
+            pending: pending.future,
+          );
+          addTearDown(analytics.dispose);
+          final sink = _RecordingAnalyticsSink();
+          await tester.pumpWidget(
+            testMaterialApp(
+              home: Scaffold(body: ShareActionButton(video: testVideo)),
+              additionalOverrides: [
+                videoSharingServiceProvider.overrideWith(
+                  (ref) => mockVideoSharingService,
+                ),
+                consumptionAnalyticsTrackerProvider.overrideWithValue(
+                  ConsumptionAnalyticsTracker(analytics: () => analytics),
+                ),
+                analyticsEventSinkProvider.overrideWithValue(sink),
+              ],
+              mockAuthService: createMockAuthService(),
+              mockProfileRepository: mockProfileRepository,
+            ),
+          );
+          await tester.tap(find.byType(ShareActionButton));
+          await tester.pumpAndSettle();
+          expect(find.text('Share with'), findsOneWidget);
+          expect(analytics.eventNames, isEmpty);
+          expect(
+            sink.events.where((event) => event.name == 'share_tapped'),
+            isEmpty,
+          );
+          pending.complete();
+          await tester.pump();
+        },
+      );
 
       testWidgets('shows Share with section', (tester) async {
         final mockAuth = createMockAuthService();

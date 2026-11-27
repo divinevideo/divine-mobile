@@ -6532,6 +6532,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get inboxCollabInviteSentStatus => 'Zaproszenie wysłane';
 
   @override
+  String get inboxSharedVideoPreview => 'Udostępniono film';
+
+  @override
   String get inboxConversationCollabInvitePreview =>
       'Zaproszenie do współpracy';
 

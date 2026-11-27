@@ -139,12 +139,11 @@ void main() {
     );
 
     test(
-      'confirmed likes tune recommendations while share intent does not',
+      'confirmed likes tune recommendations until the reaction is retracted',
       () async {
         await analytics.initialize();
         final tracker = ConsumptionAnalyticsTracker(analytics: () => analytics);
         await tracker.reactionSent(targetVideoId: _videoId);
-        await tracker.shareTapped(targetVideoId: _videoId);
         await Future<void>.value();
         expect(
           outcomes.whereType<ClassicFeedInteraction>().map((v) => v.signal),

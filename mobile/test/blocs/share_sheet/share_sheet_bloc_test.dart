@@ -8,6 +8,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:dm_repository/dm_repository.dart'
     show ShareSessionEndedException;
 import 'package:file/file.dart';
+import 'package:file/local.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -33,8 +34,6 @@ class _MockRankingSignalsLoader extends Mock
     implements UserRankingSignalsLoader {}
 
 class _MockCacheManager extends Mock implements BaseCacheManager {}
-
-class _MockFile extends Mock implements File {}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
 
@@ -2444,8 +2443,8 @@ void main() {
         setUp: () {
           when(() => mockSharingService.generateShareUrl(any()))
               .thenReturn('https://divine.video/video/synthetic');
-          when(() => mockSharingService.shortenExternalUrl(any()))
-              .thenAnswer((_) async => 'https://divine.video/l/Abc12345');
+          when(() => mockSharingService.cachedShortUrl(any()))
+              .thenReturn('https://divine.video/l/Abc12345');
         },
         build: createBloc,
         act: (bloc) => bloc.add(const ShareSheetCopyLinkRequested()),
@@ -2462,8 +2461,10 @@ void main() {
         ],
       );
       blocTest<ShareSheetBloc, ShareSheetState>(
-        'emits $ShareSheetCopiedToClipboard with generated URL',
+        'copy emits the canonical URL while shortening remains pending',
         setUp: () {
+          when(() => mockSharingService.shortenExternalUrl(any()))
+              .thenAnswer((_) => Completer<String>().future);
           when(
             () => mockSharingService.generateShareUrl(any()),
           ).thenReturn('https://divine.video/video/test-id');
@@ -2514,7 +2515,46 @@ void main() {
 
       setUp(() {
         mockCacheManager = _MockCacheManager();
+        testVideo = testVideo.copyWith(
+          thumbnailUrl: 'https://example.com/thumb.jpg',
+        );
       });
+
+      // A real image-cache file, so the share sees what the disk holds.
+      File stubCachedThumbnail() {
+        final dir = const LocalFileSystem().systemTempDirectory.createTempSync(
+          'share_sheet_thumb',
+        );
+        addTearDown(() => dir.deleteSync(recursive: true));
+        final file = dir.childFile('thumb.jpg')..writeAsBytesSync([0xff]);
+        when(() => mockCacheManager.getFileFromCache(any())).thenAnswer(
+          (_) async => FileInfo(
+            file,
+            FileSource.Cache,
+            DateTime(2030),
+            'https://example.com/thumb.jpg',
+          ),
+        );
+        return file;
+      }
+
+      late File cachedThumbnail;
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'keeps the prepared local thumbnail in state',
+        setUp: () => cachedThumbnail = stubCachedThumbnail(),
+        build: () => createBloc(cacheManager: mockCacheManager),
+        act: (_) => pumpEventQueue(),
+        expect: () => [
+          isA<ShareSheetState>()
+              .having(
+                (s) => s.readyThumbnailPath,
+                'readyThumbnailPath',
+                cachedThumbnail.path,
+              )
+              .having((s) => s.actionResult, 'actionResult', isNull),
+        ],
+      );
 
       blocTest<ShareSheetBloc, ShareSheetState>(
         'emits $ShareSheetShareViaTriggered with shareUrl and thumbnailPath',
@@ -2524,22 +2564,20 @@ void main() {
             title: 'Test Video',
             thumbnailUrl: 'https://example.com/thumb.jpg',
           ));
-          final mockFile = _MockFile();
-          when(() => mockFile.path).thenReturn('/tmp/cached_thumb');
-          // Stub copy to return a file at the destination path.
-          when(() => mockFile.copy(any())).thenAnswer((inv) async {
-            final dest = inv.positionalArguments[0] as String;
-            final copied = _MockFile();
-            when(() => copied.path).thenReturn(dest);
-            return copied;
-          });
-          when(
-            () => mockCacheManager.getSingleFile(any()),
-          ).thenAnswer((_) async => mockFile);
+          cachedThumbnail = stubCachedThumbnail();
         },
         build: () => createBloc(cacheManager: mockCacheManager),
-        act: (bloc) => bloc.add(const ShareSheetShareViaRequested()),
+        act: (bloc) async {
+          // Let the optional local preparation finish before this tap.
+          await pumpEventQueue();
+          bloc.add(const ShareSheetShareViaRequested());
+        },
         expect: () => [
+          isA<ShareSheetState>().having(
+            (s) => s.readyThumbnailPath,
+            'readyThumbnailPath',
+            cachedThumbnail.path,
+          ),
           isA<ShareSheetState>().having(
             (s) => s.actionResult,
             'actionResult',
@@ -2552,7 +2590,7 @@ void main() {
                 .having(
                   (r) => r.thumbnailPath,
                   'thumbnailPath',
-                  endsWith('divine_share_thumb.jpg'),
+                  cachedThumbnail.path,
                 )
                 .having((r) => r.title, 'title', 'Test Video')
                 .having((r) => r.subject, 'subject', 'Test Video'),
@@ -2561,7 +2599,40 @@ void main() {
       );
 
       blocTest<ShareSheetBloc, ShareSheetState>(
-        'emits with null thumbnailPath when thumbnail download fails',
+        'shares the link alone when the cache evicted the prepared thumbnail',
+        setUp: () {
+          when(() => mockSharingService.generateShareData(any())).thenReturn((
+            shareUrl: 'https://divine.video/video/test-id',
+            title: 'Test Video',
+            thumbnailUrl: 'https://example.com/thumb.jpg',
+          ));
+          cachedThumbnail = stubCachedThumbnail();
+        },
+        build: () => createBloc(cacheManager: mockCacheManager),
+        act: (bloc) async {
+          await pumpEventQueue();
+          expect(bloc.state.readyThumbnailPath, cachedThumbnail.path);
+          cachedThumbnail.deleteSync();
+          bloc.add(const ShareSheetShareViaRequested());
+        },
+        skip: 1,
+        expect: () => [
+          isA<ShareSheetState>().having(
+            (s) => s.actionResult,
+            'actionResult',
+            isA<ShareSheetShareViaTriggered>()
+                .having(
+                  (r) => r.shareUrl,
+                  'shareUrl',
+                  'https://divine.video/video/test-id',
+                )
+                .having((r) => r.thumbnailPath, 'thumbnailPath', isNull),
+          ),
+        ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'emits with null thumbnailPath when thumbnail cache lookup fails',
         setUp: () {
           when(() => mockSharingService.generateShareData(any())).thenReturn((
             shareUrl: 'https://divine.video/video/test-id',
@@ -2569,7 +2640,7 @@ void main() {
             thumbnailUrl: 'https://example.com/thumb.jpg',
           ));
           when(
-            () => mockCacheManager.getSingleFile(any()),
+            () => mockCacheManager.getFileFromCache(any()),
           ).thenThrow(Exception('network error'));
         },
         build: () => createBloc(cacheManager: mockCacheManager),
@@ -2587,6 +2658,37 @@ void main() {
                 .having((r) => r.thumbnailPath, 'thumbnailPath', isNull),
           ),
         ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'share via hands off immediately with pending thumbnail and shortener',
+        setUp: () {
+          when(() => mockCacheManager.getFileFromCache(any()))
+              .thenAnswer((_) => Completer<FileInfo?>().future);
+          when(() => mockSharingService.shortenExternalUrl(any()))
+              .thenAnswer((_) => Completer<String>().future);
+          when(() => mockSharingService.generateShareData(any())).thenReturn((
+            shareUrl: 'https://divine.video/video/test-id',
+            title: 'Test Video',
+            thumbnailUrl: 'https://example.com/thumb.jpg',
+          ));
+        },
+        build: () => createBloc(cacheManager: mockCacheManager),
+        act: (bloc) => bloc.add(const ShareSheetShareViaRequested()),
+        expect: () => [
+          isA<ShareSheetState>().having(
+            (s) => s.actionResult,
+            'share via',
+            isA<ShareSheetShareViaTriggered>()
+                .having(
+                  (r) => r.shareUrl,
+                  'url',
+                  'https://divine.video/video/test-id',
+                )
+                .having((r) => r.thumbnailPath, 'attachment', isNull),
+          ),
+        ],
+        verify: (_) => verifyNever(() => mockCacheManager.getSingleFile(any())),
       );
 
       blocTest<ShareSheetBloc, ShareSheetState>(

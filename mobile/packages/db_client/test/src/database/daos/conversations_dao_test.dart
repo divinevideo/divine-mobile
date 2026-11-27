@@ -626,6 +626,7 @@ void main() {
             'participant_pubkeys',
             'is_group',
             'last_message_content',
+            'last_message_id',
             'last_message_timestamp',
             'last_message_sender_pubkey',
             'last_message_created_at',

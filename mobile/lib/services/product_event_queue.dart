@@ -135,13 +135,22 @@ class ProductEventQueue {
     if (claimed.isEmpty) return;
 
     final events = <Map<String, Object?>>[];
+    final publishable = <PendingProductEvent>[];
+    final oldShareIntents = <PendingProductEvent>[];
     try {
       for (final row in claimed) {
-        events.add(
-          Map<String, Object?>.from(
-            jsonDecode(row.payloadJson) as Map<String, dynamic>,
-          ),
-        );
+        final payload = jsonDecode(row.payloadJson) as Map<String, dynamic>;
+        // Before this version a share tap could be waiting offline with a
+        // content ID and the signing account. Never transmit it on upgrade.
+        if (payload case {
+          'event_name': 'engagement_recorded',
+          'properties': {'action': 'share_tapped'},
+        }) {
+          oldShareIntents.add(row);
+        } else {
+          publishable.add(row);
+          events.add(payload);
+        }
       }
     } catch (_) {
       for (final row in claimed) {
@@ -149,6 +158,10 @@ class ProductEventQueue {
       }
       return;
     }
+    for (final row in oldShareIntents) {
+      await _dao.deleteById(row.id);
+    }
+    if (publishable.isEmpty) return;
 
     final result = ownerPubkey == null
         ? await _ingestClient.publishAnonymousBatch(events)
@@ -156,7 +169,7 @@ class ProductEventQueue {
             events,
             subjectPubkey: ownerPubkey,
           );
-    await _applyResult(claimed, result);
+    await _applyResult(publishable, result);
   }
 
   Future<void> _applyResult(

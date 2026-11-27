@@ -25,6 +25,15 @@ void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
   late SchemaVerifier verifier;
 
+  // Validate the historical schema before using today's conversation writer.
+  Future<void> upgradeForCurrentConversationWrites(
+    QueryExecutor connection,
+  ) async {
+    final current = AppDatabase(connection);
+    addTearDown(current.close);
+    await verifier.migrateAndValidate(current, current.schemaVersion);
+  }
+
   setUpAll(() {
     verifier = SchemaVerifier(GeneratedHelper());
   });
@@ -269,6 +278,7 @@ void main() {
         addTearDown(db.close);
 
         await verifier.migrateAndValidate(db, 28);
+        await upgradeForCurrentConversationWrites(schema.newConnection());
         await db.conversationsDao.upsertConversation(
           id: 'upgraded',
           participantPubkeys: '["a","b"]',
@@ -292,6 +302,7 @@ void main() {
         addTearDown(db.close);
 
         await verifier.migrateAndValidate(db, 27);
+        await upgradeForCurrentConversationWrites(schema.newConnection());
         await db.conversationsDao.upsertConversation(
           id: 'upgraded',
           participantPubkeys: '["a","b"]',
@@ -467,8 +478,27 @@ void main() {
       expect(message.recipientAcceptedEnvironment, 'staging');
     });
 
-    test('current schema version is 39', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 39);
+    test('current schema version is 40', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 40);
+    });
+
+    test('v40 preserves a legacy preview without asserting a message ID', () async {
+      final schema = await verifier.schemaAt(39);
+      schema.rawDatabase.execute(
+        'INSERT INTO conversations (id, participant_pubkeys, created_at, owner_pubkey, '
+        'last_message_content, last_message_timestamp, last_message_sender_pubkey) '
+        'VALUES (?,?,?,?,?,?,?)',
+        ['room', '[]', 10, 'owner', 'kept preview', 10, 'sender'],
+      );
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+      await verifier.migrateAndValidate(db, 40);
+      final row = await db.conversationsDao.getConversation(
+        'room',
+        ownerPubkey: 'owner',
+      );
+      expect(row?.lastMessageContent, 'kept preview');
+      expect(row?.lastMessageId, isNull);
     });
 
     test('v34 gives a queued DM a place for an unconfirmed recipient wrap, '
@@ -943,6 +973,7 @@ void main() {
           [(owner, 200, '["m1"]'), (otherOwner, 300, '["m2","m3"]')],
         );
 
+        await upgradeForCurrentConversationWrites(schema.newConnection());
         await db.conversationsDao.upsertConversation(
           id: openId,
           participantPubkeys: '["$owner","${'b' * 64}"]',
@@ -1158,6 +1189,7 @@ void main() {
               giftWrapId: 'f' * 64,
               ownerPubkey: owner,
             );
+            await upgradeForCurrentConversationWrites(schema.newConnection());
             await db.conversationsDao.upsertConversation(
               id: conversationId,
               participantPubkeys: '["$owner"]',

@@ -54,7 +54,6 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:openvine/widgets/watermark_download_progress_sheet.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:skeletonizer/skeletonizer.dart';
-import 'package:unified_logger/unified_logger.dart';
 
 part 'share_sheet_header.dart';
 part 'share_sheet_message_input.dart';
@@ -122,18 +121,6 @@ class ShareActionButton extends StatelessWidget {
       labelWhenZero: context.l10n.videoActionShareLabel,
       onPressed: () {
         onInteracted?.call();
-        unawaited(
-          ProviderScope.containerOf(context, listen: false)
-              .read(consumptionAnalyticsTrackerProvider)
-              .shareTapped(
-                targetVideoId: video.id,
-              ),
-        );
-        Log.info(
-          'Share button tapped for ${video.id}',
-          name: 'ShareActionButton',
-          category: LogCategory.ui,
-        );
         ShareActionButton.showShareSheet(context, video);
       },
     );
@@ -396,6 +383,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
           Clipboard.setData(ClipboardData(text: text)),
           'copy share value to clipboard',
         );
+        _warmShortLink(text);
         dismissSheet(context);
         messenger.showSnackBar(DivineSnackbarContainer.snackBar(snackText));
       case ShareSheetShareViaTriggered(
@@ -417,6 +405,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
           ),
           'present platform share sheet',
         );
+        _warmShortLink(shareUrl);
       case ShareSheetActionFailure():
         messenger.showSnackBar(
           DivineSnackbarContainer.snackBar(
@@ -425,6 +414,14 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
           ),
         );
     }
+  }
+
+  // Called only after the clipboard/platform sheet handoff has started.
+  void _warmShortLink(String url) {
+    _runShareDetached(
+      widget.videoSharingService.shortenExternalUrl(url).then<void>((_) {}),
+      'warm external short link',
+    );
   }
 
   Future<void> _handleFindPeople() async {

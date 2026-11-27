@@ -190,6 +190,7 @@ class VideoDetailRouteData extends GoRouteData with $VideoDetailRouteData {
       fallbackVideoIds: routeExtra?.fallbackVideoIds ?? const [],
       initialVideo: routeExtra?.initialVideo,
       dmReplyContext: routeExtra?.dmReplyContext,
+      fromMessage: routeExtra?.fromMessage ?? false,
       focusCommentId: routeExtra?.focusCommentId,
     );
   }

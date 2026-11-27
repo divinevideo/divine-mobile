@@ -7,8 +7,11 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/route_extra_codec.dart';
+import 'package:openvine/screens/feed/dm_reply_context.dart';
+import 'package:openvine/screens/video_detail_screen.dart';
 
 class _FeedArgs {
   _FeedArgs(this.label);
@@ -80,6 +83,44 @@ void main() {
             jsonDecode(jsonEncode(codec.encode(value))),
           );
           expect(roundTripped, equals(value), reason: 'value: $value');
+        }
+      });
+
+      test('restores only the video origin across a fresh registry', () {
+        for (final fromMessage in [false, true]) {
+          final extra = VideoDetailRouteExtra(
+            fromMessage: fromMessage,
+            initialVideo: VideoEvent(
+              id: 'private-clip',
+              pubkey: 'private-creator',
+              createdAt: 10,
+              content: 'private-caption',
+              timestamp: DateTime.fromMillisecondsSinceEpoch(10000),
+            ),
+            focusCommentId: 'private-comment',
+            fallbackVideoIds: const ['private-video'],
+            dmReplyContext: const DmReplyContext(
+              conversationId: 'private-thread',
+              participantPubkeys: ['private-participant'],
+              isGroup: false,
+              sharedReelMessageId: 'private-message',
+              messageAuthorPubkey: 'private-author',
+              hintName: 'private-name',
+              isOwnMessage: false,
+            ),
+          );
+          final encoded = codec.encode(extra);
+          expect(codec.decode(encoded), same(extra));
+          final saved = jsonEncode(encoded);
+          expect(saved, isNot(contains('private-')));
+          final restored = RouteExtraCodec().decode(
+            jsonDecode(saved),
+          ) as VideoDetailRouteExtra?;
+          expect(restored?.fromMessage, fromMessage);
+          expect(restored?.initialVideo, isNull);
+          expect(restored?.dmReplyContext, isNull);
+          expect(restored?.focusCommentId, isNull);
+          expect(restored?.fallbackVideoIds, isEmpty);
         }
       });
 

@@ -2141,6 +2141,7 @@
   "inboxCollabInviteAcceptedStatus": "Acceptată",
   "inboxCollabInviteCardTitle": "Invitație de colaborare",
   "inboxCollabInviteIgnoredStatus": "Ignorată",
+  "inboxSharedVideoPreview": "A distribuit un videoclip",
   "inboxConversationCollabInvitePreview": "Invitație de colaborare",
   "@inboxConversationCollabInvitePreview": {
     "description": "Substituted for the legacy NIP-04 plaintext invite copy when shown as the most-recent-message preview in the DM conversation list."

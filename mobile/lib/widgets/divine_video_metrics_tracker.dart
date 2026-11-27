@@ -29,6 +29,7 @@ class DivineVideoMetricsTracker extends ConsumerStatefulWidget {
     this.position = 0,
     this.trafficSource = ViewTrafficSource.unknown,
     this.sourceDetail,
+    this.fromMessage = false,
     this.loopCounts,
     @visibleForTesting DateTime Function()? clock,
     super.key,
@@ -59,6 +60,9 @@ class DivineVideoMetricsTracker extends ConsumerStatefulWidget {
   final ViewTrafficSource trafficSource;
   final String? sourceDetail;
 
+  /// Suppresses attributed playback for the clip opened from a private message.
+  final bool fromMessage;
+
   /// Shared with the overlay; omitted by hosts without a public loop count.
   final VideoLoopsCubit? loopCounts;
   final DateTime Function() _clock;
@@ -70,6 +74,11 @@ class DivineVideoMetricsTracker extends ConsumerStatefulWidget {
 
 class _DivineVideoMetricsTrackerState
     extends ConsumerState<DivineVideoMetricsTracker> {
+  // Keep local loop and seen state working for shared clips, but never send
+  // playback or impression events that could identify the clip in a message.
+  late ViewTrafficSource _sessionSource;
+  late bool _canReport;
+
   bool get _isTracking => widget.isActive && widget.isFeedVisible;
 
   /// Identifies this mount's viewing session so the view_start dedupe in
@@ -132,6 +141,8 @@ class _DivineVideoMetricsTrackerState
   @override
   void initState() {
     super.initState();
+    _sessionSource = widget.trafficSource;
+    _canReport = !widget.fromMessage;
     _analyticsService = ref.read(analyticsServiceProvider);
     _analyticsServiceSubscription = ref.listenManual<AnalyticsService>(
       analyticsServiceProvider,
@@ -146,7 +157,10 @@ class _DivineVideoMetricsTrackerState
   void didUpdateWidget(DivineVideoMetricsTracker oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final videoChanged = oldWidget.video.id != widget.video.id;
+    final videoChanged =
+        oldWidget.video.id != widget.video.id ||
+        oldWidget.trafficSource != widget.trafficSource ||
+        oldWidget.fromMessage != widget.fromMessage;
     final controllerChanged = oldWidget.controller != widget.controller;
     final wasTracking = oldWidget.isActive && oldWidget.isFeedVisible;
     final becameInactive = wasTracking && !_isTracking;
@@ -157,6 +171,8 @@ class _DivineVideoMetricsTrackerState
         oldWidget.video,
         productEndReason: ProductAnalyticsV2PlaybackEndReason.navigation,
       );
+      _sessionSource = widget.trafficSource;
+      _canReport = !widget.fromMessage;
       _resetTracking();
     } else if (becameInactive) {
       // Either way the visible segment ends, so report the delta so far.
@@ -293,6 +309,7 @@ class _DivineVideoMetricsTrackerState
   void _onPlaybackStarted() {
     if (_hasStartedPlayback) return;
     _hasStartedPlayback = true;
+    if (!_canReport) return;
     _sessionToken = const Uuid().v4();
 
     unawaited(
@@ -303,7 +320,7 @@ class _DivineVideoMetricsTrackerState
             source: 'mobile',
             eventType: 'view_start',
             sessionToken: _sessionToken,
-            trafficSource: widget.trafficSource,
+            trafficSource: _sessionSource,
             sourceDetail: widget.sourceDetail,
           )
           .catchError((Object e) {
@@ -368,7 +385,7 @@ class _DivineVideoMetricsTrackerState
   }
 
   void _reportWatchSegment(VideoEvent video, Duration? totalDuration) {
-    if (!_hasStartedPlayback) return;
+    if (!_hasStartedPlayback || !_canReport) return;
 
     // Both figures are derived from the session totals and only then split
     // into a delta. Taking a per-segment maximum instead would double-credit
@@ -397,7 +414,7 @@ class _DivineVideoMetricsTrackerState
                     totalDuration > Duration.zero &&
                     deltaSeconds * Duration.millisecondsPerSecond >=
                         totalDuration.inMilliseconds * 0.9),
-            trafficSource: widget.trafficSource,
+            trafficSource: _sessionSource,
             sourceDetail: widget.sourceDetail,
           )
           .catchError((Object e) {
@@ -419,7 +436,7 @@ class _DivineVideoMetricsTrackerState
     ProductAnalyticsV2PlaybackEndReason endReason,
   ) {
     final playbackSessionId = _productPlaybackSessionId;
-    if (playbackSessionId == null) return;
+    if (playbackSessionId == null || !_canReport) return;
 
     final watched = _watchTotal - _productWatchRecorded;
     final cumulativeLoops = _cumulativeLoops(totalDuration).floor();
@@ -434,7 +451,7 @@ class _DivineVideoMetricsTrackerState
           .recordPlaybackSession(
             playbackSessionId: playbackSessionId,
             contentId: video.id,
-            surface: _productSurface(widget.trafficSource),
+            surface: _productSurface(_sessionSource),
             durationMs: durationMs,
             watchedMs: watched.inMilliseconds,
             loopCount: loops < 0 ? 0 : loops,
@@ -457,7 +474,8 @@ class _DivineVideoMetricsTrackerState
   }
 
   void _updateProductImpressionTimer() {
-    final qualifies = _isTracking && widget.visibilityRatio >= 0.5;
+    final qualifies =
+        _canReport && _isTracking && widget.visibilityRatio >= 0.5;
     if (_hasRecordedProductImpression || !qualifies) {
       _productImpressionTimer?.cancel();
       _productImpressionTimer = null;
@@ -480,7 +498,7 @@ class _DivineVideoMetricsTrackerState
         _analyticsService
             .recordContentImpression(
               contentId: contentId,
-              surface: _productSurface(widget.trafficSource),
+              surface: _productSurface(_sessionSource),
               position: widget.position < 0 ? 0 : widget.position,
               visibleMs: 1000,
             )
