@@ -35,6 +35,7 @@ class DivineSnackbarContainer extends StatelessWidget {
     Duration? duration,
     EdgeInsetsGeometry? margin,
     EdgeInsetsGeometry? padding,
+    VoidCallback? onVisible,
   }) => SnackBar(
     duration: duration ?? const Duration(seconds: 4),
     backgroundColor: VineTheme.transparent,
@@ -42,6 +43,7 @@ class DivineSnackbarContainer extends StatelessWidget {
     padding: padding ?? EdgeInsets.zero,
     behavior: SnackBarBehavior.floating,
     margin: margin,
+    onVisible: onVisible,
     content: DivineSnackbarContainer(
       label: message,
       error: error,

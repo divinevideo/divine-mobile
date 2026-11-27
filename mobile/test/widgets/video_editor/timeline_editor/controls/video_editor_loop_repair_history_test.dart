@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:loop_alignment_repository/loop_alignment_repository.dart';
@@ -305,9 +306,8 @@ void main() {
               recorded.captured.single as VideoEditorAuditionStarted;
           expect(started.owner, isNotNull);
           await tester.pumpAndSettle();
-          final undo = tester
-              .widget<SnackBarAction>(find.byType(SnackBarAction))
-              .onPressed;
+          expect(find.byType(DivineSnackbarContainer), findsOneWidget);
+          expect(find.text('Undo'), findsOneWidget);
           // Align loop remains available while its own seam preview is playing.
           playerStates.add(
             VideoEditorMainState(
@@ -333,13 +333,12 @@ void main() {
               ),
             );
             await tester.pumpAndSettle();
+            expect(find.text('Loop smoothed'), findsNothing);
             verifyNever(
               () => main.add(any(that: isA<VideoEditorAuditionEnded>())),
             );
             Navigator.of(screenContext).pop();
             await tester.pumpAndSettle();
-            undo();
-            verify(editor.undoAction).called(1);
             return;
           }
           when(
@@ -360,11 +359,501 @@ void main() {
               onProgress: any(named: 'onProgress'),
             ),
           ).called(1);
-          undo();
-          verify(editor.undoAction).called(1);
+          expect(find.text('Loop smoothed'), findsNothing);
           await tester.pumpWidget(const SizedBox.shrink());
         },
       );
     }
+  });
+
+  group('LoopRepairResultListener snackbar lifecycle', () {
+    Future<
+      ({
+        _Editor editor,
+        _Main main,
+        StreamController<VideoEditorMainState> playerStates,
+        ClipEditorBloc clipBloc,
+        Completer<LoopRepairResult> gate,
+        DivineVideoClip clip,
+        GlobalKey<ScaffoldMessengerState> messengerKey,
+      })
+    >
+    pumpEditor(
+      WidgetTester tester, {
+      bool accessibleNavigation = false,
+      Widget Function(BuildContext context, Widget editorBody)? wrapHome,
+    }) async {
+      final clip = DivineVideoClip(
+        id: 'a',
+        video: EditorVideo.file('/documents/a.mp4'),
+        duration: const Duration(seconds: 4),
+        trimStart: const Duration(seconds: 1),
+        trimEnd: const Duration(seconds: 1),
+        recordedAt: DateTime(2026),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+      );
+      final clipBloc = ClipEditorBloc(
+        onFinalClipInvalidated: () {},
+        saveClipToLibrary: ({required clip}) async => false,
+      );
+      final initialized = clipBloc.stream.firstWhere((s) => s.clips.isNotEmpty);
+      clipBloc.add(ClipEditorInitialized([clip]));
+      await tester.pump();
+      await initialized;
+      final main = _Main();
+      final draw = _Draw();
+      final tune = _Tune();
+      when(() => draw.state).thenReturn(const VideoEditorDrawState());
+      when(() => tune.state).thenReturn(
+        VideoEditorTuneState(adjustments: VideoEditorConstants.tuneAdjustments),
+      );
+      final playerStates = StreamController<VideoEditorMainState>.broadcast();
+      whenListen(
+        main,
+        playerStates.stream,
+        initialState: const VideoEditorMainState(isPlayerReady: true),
+      );
+      final overlays = TimelineOverlayBloc();
+      final editor = _Editor();
+      final stateManager = StateManager(
+        onStateHistoryChange: () {},
+        activeBackgroundImage: null,
+      );
+      when(() => editor.mounted).thenReturn(true);
+      when(() => editor.activeLayers).thenReturn([]);
+      when(() => editor.stateManager).thenReturn(stateManager);
+      when(() => editor.setState(any())).thenAnswer(
+        (c) => (c.positionalArguments.single as VoidCallback)(),
+      );
+      when(
+        () => editor.addHistory(
+          layers: any(named: 'layers'),
+          filters: any(named: 'filters'),
+          meta: any(named: 'meta'),
+          newLayer: any(named: 'newLayer'),
+          transformConfigs: any(named: 'transformConfigs'),
+          tuneAdjustments: any(named: 'tuneAdjustments'),
+          blur: any(named: 'blur'),
+          heroScreenshotRequired: any(named: 'heroScreenshotRequired'),
+          blockCaptureScreenshot: any(named: 'blockCaptureScreenshot'),
+        ),
+      ).thenAnswer((_) {});
+      final repository = MockLoopAlignmentRepository();
+      final gate = Completer<LoopRepairResult>();
+      when(
+        () => repository.repair(
+          any(),
+          taskId: any(named: 'taskId'),
+          onProgress: any(named: 'onProgress'),
+        ),
+      ).thenAnswer((_) => gate.future);
+      when(() => repository.cancel(any())).thenAnswer((_) async {});
+      when(() => repository.discard(any())).thenAnswer((_) async {});
+      final cubit = LoopSuggestionCubit(repository: repository);
+      final messengerKey = GlobalKey<ScaffoldMessengerState>();
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        final closing = Future.wait([
+          cubit.close(),
+          clipBloc.close(),
+          overlays.close(),
+          playerStates.close(),
+        ]);
+        var closed = false;
+        unawaited(closing.then((_) => closed = true));
+        for (var i = 0; i < 20 && !closed; i++) {
+          await tester.pump();
+        }
+        expect(closed, isTrue, reason: 'Editor blocs must finish shutdown');
+        await closing;
+      });
+      final editorBody = VideoEditorScope(
+        editorKey: GlobalKey<ProImageEditorState>(),
+        editorOverride: editor,
+        removeAreaKey: GlobalKey(),
+        originalClipAspectRatio: 9 / 16,
+        bodySizeNotifier: ValueNotifier(const Size(400, 600)),
+        zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
+        playTimeNotifier: ValueNotifier(Duration.zero),
+        playheadAdvancingNotifier: ValueNotifier(false),
+        fromLibrary: false,
+        onOpenCamera: () {},
+        onOpenClipsEditor: () {},
+        onAddStickers: () {},
+        onOpenMusicLibrary: () {},
+        onOpenVoiceOver: () {},
+        onOpenCaptions: () {},
+        onOpenEffects: () {},
+        onAddEditTextLayer: ([layer]) async => null,
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider<ClipEditorBloc>.value(value: clipBloc),
+            BlocProvider<VideoEditorMainBloc>.value(value: main),
+            BlocProvider<TimelineOverlayBloc>.value(value: overlays),
+            BlocProvider.value(value: cubit),
+            BlocProvider<VideoEditorDrawBloc>.value(value: draw),
+            BlocProvider<VideoEditorTuneBloc>.value(value: tune),
+          ],
+          child: LoopRepairResultListener(
+            child: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => alignEditorLoop(context),
+                child: const Text('Align loop'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          scaffoldMessengerKey: messengerKey,
+          theme: VineTheme.theme,
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              accessibleNavigation: accessibleNavigation,
+            ),
+            child: child!,
+          ),
+          home: Builder(
+            builder: (context) =>
+                wrapHome?.call(context, editorBody) ??
+                Scaffold(body: editorBody),
+          ),
+        ),
+      );
+      return (
+        editor: editor,
+        main: main,
+        playerStates: playerStates,
+        clipBloc: clipBloc,
+        gate: gate,
+        clip: clip,
+        messengerKey: messengerKey,
+      );
+    }
+
+    Future<void> triggerSmooth(
+      WidgetTester tester,
+      Completer<LoopRepairResult> gate,
+      DivineVideoClip clip,
+    ) async {
+      await tester.tap(find.text('Align loop'));
+      await tester.pump();
+      gate.complete(repairedLoopResult([clip]));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'uses DivineSnackbarContainer and auto-dismisses after its duration',
+      (tester) async {
+        final (
+          :editor,
+          :main,
+          :playerStates,
+          :clipBloc,
+          :gate,
+          :clip,
+          :messengerKey,
+        ) = await pumpEditor(
+          tester,
+        );
+        await triggerSmooth(tester, gate, clip);
+
+        expect(find.byType(DivineSnackbarContainer), findsOneWidget);
+        expect(find.text('Loop smoothed'), findsOneWidget);
+        final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+        expect(snackBar.action, isNull);
+        expect(snackBar.persist, isFalse);
+
+        await tester.pump(const Duration(seconds: 5));
+        await tester.pumpAndSettle();
+        expect(find.text('Loop smoothed'), findsNothing);
+      },
+    );
+
+    testWidgets('dismiss button clears the snackbar without undoing', (
+      tester,
+    ) async {
+      final (
+        :editor,
+        :main,
+        :playerStates,
+        :clipBloc,
+        :gate,
+        :clip,
+        :messengerKey,
+      ) = await pumpEditor(
+        tester,
+      );
+      await triggerSmooth(tester, gate, clip);
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.bySemanticsLabel(l10n.commonClose));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Loop smoothed'), findsNothing);
+      verifyNever(editor.undoAction);
+    });
+
+    testWidgets('subsequent clip edits dismiss the Undo snackbar', (
+      tester,
+    ) async {
+      final (
+        :editor,
+        :main,
+        :playerStates,
+        :clipBloc,
+        :gate,
+        :clip,
+        :messengerKey,
+      ) = await pumpEditor(
+        tester,
+      );
+      await triggerSmooth(tester, gate, clip);
+      expect(find.text('Loop smoothed'), findsOneWidget);
+
+      clipBloc.add(
+        ClipEditorInitialized([
+          clip.copyWith(trimEnd: const Duration(milliseconds: 500)),
+        ]),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Loop smoothed'), findsNothing);
+    });
+
+    testWidgets(
+      'Undo ends the active seam preview, dismisses the snackbar, and undoes once',
+      (tester) async {
+        final (
+          :editor,
+          :main,
+          :playerStates,
+          :clipBloc,
+          :gate,
+          :clip,
+          :messengerKey,
+        ) = await pumpEditor(
+          tester,
+        );
+        await triggerSmooth(tester, gate, clip);
+
+        playerStates.add(const VideoEditorMainState());
+        await tester.pump();
+        playerStates.add(const VideoEditorMainState(isPlayerReady: true));
+        await tester.pump();
+        final started =
+            verify(
+                  () => main.add(
+                    captureAny(that: isA<VideoEditorAuditionStarted>()),
+                  ),
+                ).captured.single
+                as VideoEditorAuditionStarted;
+
+        await tester.tap(find.text('Undo'));
+        await tester.pump();
+        // A rapid second tap while exiting must be a no-op.
+        if (find.text('Undo').evaluate().isNotEmpty) {
+          await tester.tap(find.text('Undo'), warnIfMissed: false);
+          await tester.pump();
+        }
+        await tester.pumpAndSettle();
+
+        expect(find.text('Loop smoothed'), findsNothing);
+        verify(editor.undoAction).called(1);
+        verify(
+          () => main.add(VideoEditorAuditionEnded(owner: started.owner)),
+        ).called(1);
+      },
+    );
+
+    testWidgets(
+      'Undo tapped before entrance completes undoes once and closes immediately',
+      (tester) async {
+        final (
+          :editor,
+          :main,
+          :playerStates,
+          :clipBloc,
+          :gate,
+          :clip,
+          :messengerKey,
+        ) = await pumpEditor(
+          tester,
+          accessibleNavigation: true,
+        );
+
+        await tester.tap(find.text('Align loop'));
+        await tester.pump();
+        gate.complete(repairedLoopResult([clip]));
+        // Pump without settling so entrance (< 250ms) has not fired onVisible,
+        // while accessibleNavigation renders the banner immediately.
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Undo'), findsOneWidget);
+
+        await tester.tap(find.text('Undo'));
+        await tester.pump();
+
+        expect(find.text('Loop smoothed'), findsNothing);
+        verify(editor.undoAction).called(1);
+      },
+    );
+
+    testWidgets(
+      'Undo is ignored if a clip edit invalidates the snackbar before entrance completes',
+      (tester) async {
+        final (
+          :editor,
+          :main,
+          :playerStates,
+          :clipBloc,
+          :gate,
+          :clip,
+          :messengerKey,
+        ) = await pumpEditor(
+          tester,
+          accessibleNavigation: true,
+        );
+
+        await tester.tap(find.text('Align loop'));
+        await tester.pump();
+        gate.complete(repairedLoopResult([clip]));
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Undo'), findsOneWidget);
+
+        clipBloc.add(
+          ClipEditorInitialized([
+            clip.copyWith(trimEnd: const Duration(milliseconds: 500)),
+          ]),
+        );
+        await tester.pump();
+
+        if (find.text('Undo').evaluate().isNotEmpty) {
+          await tester.tap(find.text('Undo'));
+          await tester.pump();
+        }
+        await tester.pumpAndSettle();
+
+        expect(find.text('Loop smoothed'), findsNothing);
+        verifyNever(editor.undoAction);
+      },
+    );
+
+    testWidgets('dismisses the snackbar when navigating to the next screen', (
+      tester,
+    ) async {
+      final (
+        :editor,
+        :main,
+        :playerStates,
+        :clipBloc,
+        :gate,
+        :clip,
+        :messengerKey,
+      ) = await pumpEditor(
+        tester,
+      );
+      await triggerSmooth(tester, gate, clip);
+      expect(find.text('Loop smoothed'), findsOneWidget);
+
+      final navigator = Navigator.of(tester.element(find.text('Align loop')));
+      navigator.push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('Publish screen')),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Publish screen'), findsOneWidget);
+      expect(find.text('Loop smoothed'), findsNothing);
+    });
+
+    testWidgets(
+      'dismisses the snackbar when the editor is disposed under accessibleNavigation',
+      (tester) async {
+        final showEditor = ValueNotifier<bool>(true);
+        addTearDown(showEditor.dispose);
+        final (
+          :editor,
+          :main,
+          :playerStates,
+          :clipBloc,
+          :gate,
+          :clip,
+          :messengerKey,
+        ) = await pumpEditor(
+          tester,
+          accessibleNavigation: true,
+          wrapHome: (context, editorBody) => ValueListenableBuilder<bool>(
+            valueListenable: showEditor,
+            builder: (_, active, _) => Scaffold(
+              body: active ? editorBody : const Text('Profile screen'),
+            ),
+          ),
+        );
+        await triggerSmooth(tester, gate, clip);
+        expect(find.text('Loop smoothed'), findsOneWidget);
+
+        showEditor.value = false;
+        await tester.pumpAndSettle();
+
+        expect(find.text('Profile screen'), findsOneWidget);
+        expect(find.text('Loop smoothed'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'leaves an unrelated front snackbar alone when queued behind it and does not linger after navigation',
+      (tester) async {
+        final (
+          :editor,
+          :main,
+          :playerStates,
+          :clipBloc,
+          :gate,
+          :clip,
+          :messengerKey,
+        ) = await pumpEditor(
+          tester,
+        );
+
+        messengerKey.currentState!.showSnackBar(
+          DivineSnackbarContainer.snackBar(
+            'Other notice',
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Other notice'), findsOneWidget);
+
+        await triggerSmooth(tester, gate, clip);
+        // Queued behind 'Other notice'.
+        expect(find.text('Other notice'), findsOneWidget);
+        expect(find.text('Loop smoothed'), findsNothing);
+
+        final navigator = Navigator.of(tester.element(find.text('Align loop')));
+        navigator.push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('Publish screen')),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Unrelated front snackbar is still untouched while visible.
+        expect(find.text('Other notice'), findsOneWidget);
+
+        // Once the front snackbar expires, the stale loop-repair snackbar
+        // closes itself instead of lingering on the Publish screen.
+        await tester.pump(const Duration(seconds: 3));
+        await tester.pumpAndSettle();
+        expect(find.text('Other notice'), findsNothing);
+        expect(find.text('Loop smoothed'), findsNothing);
+      },
+    );
   });
 }
