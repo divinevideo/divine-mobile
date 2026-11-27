@@ -26,6 +26,9 @@ uniform vec2 uSize;
 // How far the picture turns into bricks, 0 to 1.
 uniform float uIntensity;
 
+// How large the bricks are, as a share of the default.
+uniform float uBrick;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -43,7 +46,7 @@ void main() {
   vec2 fragCoord = FlutterFragCoord().xy;
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
   float s = min(uSize.x, uSize.y);
-  float c = max(6.0, s / 28.0);
+  float c = max(6.0, s / 28.0 * uBrick);
   vec2 cell = floor(p / c);
   vec2 middle = (cell + 0.5) * c;
   vec3 ink = 0.25 * (tap(middle + vec2(-0.25, -0.25) * c) + tap(middle + vec2(0.25, -0.25) * c) +

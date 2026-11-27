@@ -13,16 +13,22 @@ import pro_video_editor
 /// middle, and each slightly lighter or darker than its neighbours. The panes
 /// stay in place while the picture moves under them.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
-/// far the picture turns into glass).
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+/// the picture turns into glass), `size` (0.5–2.5: how large the panes are, as
+/// a share of the default) and `outline` (0.3–3: how wide the lead between them
+/// is, as a share of the default).
 final class StainedGlassVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.stainedGlass"
 
   private let intensity: Double
+  private let pane: Double
+  private let lead: Double
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
+    pane = Self.readNumber(params, "size", fallback: 1, in: 0.5...2.5)
+    lead = Self.readNumber(params, "outline", fallback: 1, in: 0.3...3)
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -35,7 +41,7 @@ final class StainedGlassVideoEffect: ShaderVideoEffect {
   }
 
   override func values(effectTimeUs: Int64) -> [Double]? {
-    intensity > 0 ? [intensity] : nil
+    intensity > 0 ? [intensity] + [pane, lead] : nil
   }
 
   static let function = "divineStainedGlass"
@@ -63,10 +69,13 @@ final class StainedGlassVideoEffect: ShaderVideoEffect {
     ) {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
-      float intensity = u[3].x;
+      float2 uSize = f.size;
+      float uIntensity = u[3].x;
+      float uPane = u[3].y;
+      float uLead = u[3].z;
       float2 p = pixelOf(u, gid, target.get_height());
-      float s = min(f.size.x, f.size.y);
-      float g = max(8.0, s / 16.0);
+      float s = min(uSize.x, uSize.y);
+      float g = max(8.0, s / 16.0 * uPane);
       float2 q = p / g;
       float2 cell = floor(q);
       float2 inSquare = q - cell;
@@ -101,10 +110,10 @@ final class StainedGlassVideoEffect: ShaderVideoEffect {
       float tint = 0.9 + 0.2 * hash2(cell + best + 17.0).x;
       float shine = 1.15 - 0.35 * sqrt(nearest);
       float3 glass = clamp(mix(float3(luma(pane)), pane, 1.4) * tint * shine, 0.0, 1.0);
-      float lead = max(1.0, s / 400.0);
+      float lead = max(1.0, s / 400.0) * uLead;
       float edge = 1.0 - smoothstep(lead - 0.75, lead + 0.75, border * g);
       float3 window = mix(glass, float3(0.06, 0.06, 0.07), edge);
-      target.write(float4(mix(color, window, intensity), 1.0), gid);
+      target.write(float4(mix(color, window, uIntensity), 1.0), gid);
     }
     """
 }

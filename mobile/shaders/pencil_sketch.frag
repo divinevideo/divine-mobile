@@ -23,6 +23,12 @@ uniform vec2 uSize;
 // How far the picture turns into the sketch, 0 to 1.
 uniform float uIntensity;
 
+// How close together the hatching lies, as a share of the default.
+uniform float uDensity;
+
+// How dark the outlines are, as a share of the default.
+uniform float uOutline;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -68,14 +74,14 @@ void main() {
   float gy = tl + 2.0 * tc + tr - bl - 2.0 * bc - br;
   float outline = smoothstep(0.2, 0.7, length(vec2(gx, gy)));
   float l = (luma(color) + tl + tc + tr + ml + mr + bl + bc + br) / 9.0;
-  float g = max(3.0, s / 160.0);
+  float g = max(3.0, s / 160.0 / uDensity);
   float w = max(1.0, s / 900.0);
   float a = hatch(p, vec2(0.70710678, 0.70710678), g, w) * (1.0 - smoothstep(0.62, 0.82, l));
   float b = hatch(p, vec2(0.70710678, -0.70710678), g, w) * (1.0 - smoothstep(0.35, 0.55, l));
   float c = hatch(p, vec2(0.25881905, 0.96592583), g, w) * (1.0 - smoothstep(0.12, 0.3, l));
   float shade = 1.0 - (1.0 - a) * (1.0 - b) * (1.0 - c);
   float tooth = grain(floor(p / e));
-  float mark = 1.0 - (1.0 - 0.7 * shade * (0.8 + 0.2 * tooth)) * (1.0 - 0.85 * outline);
+  float mark = 1.0 - (1.0 - 0.7 * shade * (0.8 + 0.2 * tooth)) * (1.0 - min(0.85 * outline * uOutline, 1.0));
   vec3 paper = vec3(0.97, 0.95, 0.91) * (0.97 + 0.03 * tooth);
   vec3 sketch = mix(paper, vec3(0.2, 0.2, 0.22), mark);
   fragColor = vec4(mix(color, sketch, uIntensity), 1.0);

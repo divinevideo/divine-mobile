@@ -7,6 +7,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/effect_settings_catalog.dart';
 import 'package:openvine/models/video_editor/hit_timing_settings.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -498,6 +499,58 @@ void main() {
       for (final (index, effect) in effects.indexed)
         EditorVideoEffect(id: 'effect_$index', effect: effect),
     ], map);
+
+    test('keeps the params of every effect, on its own clock, on the beat or '
+        'ended before the loop point', () {
+      const params = {VideoEffectParams.tempo: 0.5};
+      final onOutput = mapped([
+        const VideoEffect.strobe(params: params),
+        const VideoEffect.glitch(
+          startTime: Duration(milliseconds: 1300),
+          params: {VideoEffectParams.distance: 2},
+        ),
+      ], compressed);
+
+      expect(onOutput.first.params, params);
+      expect(onOutput.last.params, {VideoEffectParams.distance: 2});
+      final onBeat = videoEffectsOnOutput(
+        [
+          const EditorVideoEffect(
+            id: 'pulse',
+            effect: VideoEffect.zoomPulse(params: params),
+            onBeat: true,
+          ),
+        ],
+        plain,
+        beats: [ms(500), ms(1500)],
+      );
+      expect(onBeat.single.params, params);
+    });
+
+    test('keeps a slower strobe at three flashes a second or fewer, wherever '
+        'it is split', () {
+      for (final tempo in [0.5, 0.75, 0.9]) {
+        for (var split = 50; split < 6000; split += 250) {
+          final onOutput = mapped([
+            VideoEffect(
+              type: VideoEffectType.strobe,
+              endTime: ms(split),
+              params: {VideoEffectParams.tempo: tempo},
+            ),
+            VideoEffect(
+              type: VideoEffectType.strobe,
+              startTime: ms(split),
+              params: {VideoEffectParams.tempo: tempo},
+            ),
+          ], compressed);
+          expect(
+            mostFlashesPerSecond(onOutput, compressed),
+            lessThanOrEqualTo(3),
+            reason: 'tempo $tempo split at $split ms',
+          );
+        }
+      }
+    });
 
     test('starts a flashing effect on the next whole second', () {
       final onOutput = mapped([
@@ -1564,6 +1617,13 @@ void main() {
           'fast', () {
         expect(tunnelStepDuration(0.2), greaterThan(tunnelStepDuration(0.9)));
       });
+
+      test('takes half as long at twice the speed', () {
+        expect(
+          tunnelStepDuration(0.875, speed: 2),
+          const Duration(milliseconds: 600),
+        );
+      });
     });
 
     group('tunnelPeriodUs', () {
@@ -1580,6 +1640,18 @@ void main() {
         endTime: endTime,
         onBeat: onBeat,
       ).custom!;
+
+      test('fits steps of the speed set into the window', () {
+        final fast = EditorVideoEffect.of(
+          id: 'tunnel',
+          type: EditorEffectType.tunnel,
+          intensity: 0.7,
+          settings: const {EffectSettingKeys.speed: 2.0},
+        ).custom!;
+
+        // 6 s hold 8.2 steps of 0.73 s at twice the pace, so 8 of 0.75 s.
+        expect(tunnelPeriodUs(fast, plain), 750000);
+      });
 
       test('fits a whole number of steps into a tunnel over the whole '
           'video, so it zooms on across the loop', () {

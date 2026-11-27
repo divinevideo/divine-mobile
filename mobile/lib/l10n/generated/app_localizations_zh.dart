@@ -9239,9 +9239,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorFilterCategoryTints => '色调';
 
   @override
-  String get videoEditorDropsSettingsTitle => '调节水滴';
-
-  @override
   String get videoEditorDropsCountLabel => '数量';
 
   @override
@@ -9296,12 +9293,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String videoEditorEffectSeconds(double seconds) {
-    final intl.NumberFormat secondsNumberFormat =
-        intl.NumberFormat.decimalPattern(localeName);
-    final String secondsString = secondsNumberFormat.format(seconds);
-
-    return '$secondsString 秒';
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds 秒';
   }
 
   @override
@@ -9336,6 +9329,156 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorEffectLookReset => '重置外观';
+
+  @override
+  String get videoEditorEffectTimingTitle => '时机';
+
+  @override
+  String get videoEditorEffectTimingReset => '重置时机';
+
+  @override
+  String get videoEditorEffectMotionTitle => '运动';
+
+  @override
+  String get videoEditorEffectMotionReset => '重置运动';
+
+  @override
+  String get videoEditorEffectSettingFocus => '焦点';
+
+  @override
+  String get videoEditorEffectSettingWidth => '宽度';
+
+  @override
+  String get videoEditorEffectSettingDirection => '方向';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => '水平';
+
+  @override
+  String get videoEditorEffectSettingVertical => '垂直';
+
+  @override
+  String get videoEditorEffectSettingClockwise => '顺时针';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => '逆时针';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => '放大';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => '缩小';
+
+  @override
+  String get videoEditorEffectSettingSpacing => '间距';
+
+  @override
+  String get videoEditorEffectSettingAngle => '角度';
+
+  @override
+  String get videoEditorEffectSettingHue => '色相';
+
+  @override
+  String get videoEditorEffectSettingLength => '长度';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => '灵敏度';
+
+  @override
+  String get videoEditorEffectSettingPosition => '位置';
+
+  @override
+  String get videoEditorEffectSettingWind => '风';
+
+  @override
+  String get videoEditorEffectSettingDotSize => '圆点大小';
+
+  @override
+  String get videoEditorEffectSettingOutline => '轮廓';
+
+  @override
+  String get videoEditorEffectSettingLevels => '层级';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => '像素大小';
+
+  @override
+  String get videoEditorEffectSettingOffset => '偏移';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => '笔刷大小';
+
+  @override
+  String get videoEditorEffectSettingDensity => '密度';
+
+  @override
+  String get videoEditorEffectSettingGrain => '颗粒';
+
+  @override
+  String get videoEditorEffectSettingGrid => '网格';
+
+  @override
+  String get videoEditorEffectSettingLayers => '层数';
+
+  @override
+  String get videoEditorEffectSettingShadow => '阴影';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => '第一种油墨';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => '第二种油墨';
+
+  @override
+  String get videoEditorEffectSettingColors => '颜色';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => '原色';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => '单色';
+
+  @override
+  String get videoEditorEffectSettingDelay => '延迟';
+
+  @override
+  String get videoEditorEffectSettingDown => '向下';
+
+  @override
+  String get videoEditorEffectSettingUp => '向上';
+
+  @override
+  String get videoEditorEffectSettingRight => '向右';
+
+  @override
+  String get videoEditorEffectSettingLeft => '向左';
+
+  @override
+  String get videoEditorEffectSettingFrequency => '频率';
+
+  @override
+  String get videoEditorEffectSettingDistance => '距离';
+
+  @override
+  String get videoEditorEffectSettingScanlines => '扫描线';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => '颗粒大小';
+
+  @override
+  String get videoEditorEffectSettingSepia => '棕褐色';
+
+  @override
+  String get videoEditorEffectSettingFlicker => '闪烁';
+
+  @override
+  String get videoEditorEffectSettingVignette => '暗角';
+
+  @override
+  String get videoEditorEffectSettingTempo => '节奏';
+
+  @override
+  String get videoEditorEffectSettingWavelength => '波长';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

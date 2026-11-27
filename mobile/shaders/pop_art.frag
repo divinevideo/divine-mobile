@@ -26,6 +26,9 @@ uniform vec2 uSize;
 // How far the copies turn into the print, 0 to 1.
 uniform float uIntensity;
 
+// How many copies line up along each side, 1 to 4.
+uniform float uGrid;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -47,13 +50,14 @@ vec3 pick(float i, vec3 a, vec3 b, vec3 c, vec3 d) {
 void main() {
   vec2 fragCoord = FlutterFragCoord().xy;
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
-  vec2 halfSize = 0.5 * uSize;
-  vec2 quadrant = step(halfSize, p);
-  vec2 local = mix(p, (p - halfSize * quadrant) * 2.0, step(0.0001, uIntensity));
+  vec2 tile = uSize / uGrid;
+  vec2 quadrant = min(floor(p / tile), uGrid - 1.0);
+  vec2 local = mix(p, (p - tile * quadrant) * uGrid, step(0.0001, uIntensity));
   vec3 copy = tap(local);
   float l = luma(copy);
   float level = smoothstep(0.28, 0.32, l) + smoothstep(0.58, 0.62, l);
   float i = quadrant.x + 2.0 * quadrant.y;
+  i -= 4.0 * floor(i / 4.0);
   vec3 dark = pick(i, vec3(0.1, 0.1, 0.35), vec3(0.3, 0.05, 0.4), vec3(0.55, 0.0, 0.1),
     vec3(0.0, 0.25, 0.3));
   vec3 mid = pick(i, vec3(1.0, 0.2, 0.6), vec3(1.0, 0.5, 0.1), vec3(0.45, 0.85, 0.2),

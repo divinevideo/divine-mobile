@@ -9876,9 +9876,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Оттенъци';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'Настройка на капките';
-
-  @override
   String get videoEditorDropsCountLabel => 'Брой';
 
   @override
@@ -9935,12 +9932,8 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String videoEditorEffectSeconds(double seconds) {
-    final intl.NumberFormat secondsNumberFormat =
-        intl.NumberFormat.decimalPattern(localeName);
-    final String secondsString = secondsNumberFormat.format(seconds);
-
-    return '$secondsString с';
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds с';
   }
 
   @override
@@ -9976,6 +9969,156 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorEffectLookReset => 'Нулирай външния вид';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'Тайминг';
+
+  @override
+  String get videoEditorEffectTimingReset => 'Нулирай тайминга';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'Движение';
+
+  @override
+  String get videoEditorEffectMotionReset => 'Нулирай движението';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'Фокус';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'Ширина';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'Посока';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'Хоризонтално';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'Вертикално';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'По часовника';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'Обратно на часовника';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'Приближаване';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'Отдалечаване';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'Разстояние';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'Ъгъл';
+
+  @override
+  String get videoEditorEffectSettingHue => 'Нюанс';
+
+  @override
+  String get videoEditorEffectSettingLength => 'Дължина';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'Чувствителност';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'Позиция';
+
+  @override
+  String get videoEditorEffectSettingWind => 'Вятър';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'Размер на точките';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'Контур';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'Нива';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'Размер на пикселите';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'Отместване';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'Размер на четката';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'Плътност';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'Зърно';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'Решетка';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'Слоеве';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'Сянка';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'Първо мастило';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'Второ мастило';
+
+  @override
+  String get videoEditorEffectSettingColors => 'Цветове';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'Оригинални';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'Един цвят';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'Закъснение';
+
+  @override
+  String get videoEditorEffectSettingDown => 'Надолу';
+
+  @override
+  String get videoEditorEffectSettingUp => 'Нагоре';
+
+  @override
+  String get videoEditorEffectSettingRight => 'Надясно';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'Наляво';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'Честота';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'Разстояние';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'Сканиращи линии';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'Размер на зърното';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'Сепия';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'Трептене';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'Винетка';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'Темпо';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'Дължина на вълната';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

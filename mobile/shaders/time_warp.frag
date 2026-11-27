@@ -16,11 +16,16 @@
 // Engine-set: the size of the bound texture. Must be the first uniform.
 uniform vec2 uSize;
 
-// How many bands back the bottom of the picture lies, 0 to 7.
+// How many bands back the far edge of the picture lies, 0 to 7.
 uniform float uDepth;
 
 // How far the picture moves each frame, as a share of its width.
 uniform float uShift;
+
+// How far a point lies towards the far edge, from 0 at the present one, as
+// dot(uv, uAxis.xy) + uAxis.z for a point uv in shares of the frame with y
+// up: (0, -1, 1) when the top is now and the bottom furthest back.
+uniform vec3 uAxis;
 
 uniform sampler2D uTexture;
 
@@ -41,7 +46,7 @@ float band(float t, float k) {
 void main() {
   vec2 fragCoord = FlutterFragCoord().xy;
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
-  float t = (1.0 - p.y / uSize.y) * uDepth;
+  float t = (dot(p / uSize, uAxis.xy) + uAxis.z) * uDepth;
   vec3 color = vec3(0.0);
   for (int k = 0; k < 8; k++) {
     float frames = 2.0 * float(k);

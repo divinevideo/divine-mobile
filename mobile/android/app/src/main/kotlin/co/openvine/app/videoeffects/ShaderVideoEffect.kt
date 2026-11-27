@@ -4,6 +4,8 @@ import ch.waio.pro_video_editor.effects.CustomVideoEffectFrame
 import ch.waio.pro_video_editor.effects.CustomVideoEffectRenderer
 import ch.waio.pro_video_editor.effects.CustomVideoEffectShader
 import com.divinevideo.divine_video_player.VideoFrameEffect
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * An effect Divine draws with one fragment shader over the current frame, in
@@ -72,6 +74,54 @@ abstract class ShaderVideoEffect(fragmentShader: String) :
 
         /** The intensity a new effect starts at, as in the Dart editor. */
         const val DEFAULT_INTENSITY = 0.7f
+
+        /**
+         * Reads the number [key] from [params], clamped to [min]–[max], or
+         * [fallback] when it is missing. The Dart effect settings catalog
+         * stores each setting with the same range and default.
+         */
+        fun numberOf(
+            params: Map<String, Any?>,
+            key: String,
+            fallback: Float,
+            min: Float,
+            max: Float,
+        ): Float =
+            (params[key] as? Number)?.toFloat()?.takeUnless { it.isNaN() }?.coerceIn(min, max)
+                ?: fallback
+
+        /**
+         * Where the effect sits, from `centerX` and `centerY`: shares of the
+         * frame's width from its left edge and of its height from its top
+         * edge, the middle unless the user moved it.
+         */
+        fun centerOf(params: Map<String, Any?>): FloatArray = floatArrayOf(
+            numberOf(params, "centerX", 0.5f, 0f, 1f),
+            numberOf(params, "centerY", 0.5f, 0f, 1f),
+        )
+
+        /**
+         * Reads the colour [key] from [params], an ARGB integer, as red, green
+         * and blue from 0 to 1, or those of [fallback] when it is missing.
+         */
+        fun colorOf(params: Map<String, Any?>, key: String, fallback: Long): FloatArray {
+            val argb = (params[key] as? Number)?.toLong() ?: fallback
+            return floatArrayOf(
+                ((argb shr 16) and 0xFF) / 255f,
+                ((argb shr 8) and 0xFF) / 255f,
+                (argb and 0xFF) / 255f,
+            )
+        }
+
+        /** The cosine and sine of [degrees]. */
+        fun turnOf(degrees: Float): FloatArray {
+            val radians = Math.toRadians(degrees.toDouble())
+            return floatArrayOf(cos(radians).toFloat(), sin(radians).toFloat())
+        }
+
+        /** `direction`: -1 for an effect the user turned the other way, 1 otherwise. */
+        fun directionOf(params: Map<String, Any?>): Float =
+            if (((params["direction"] as? Number)?.toFloat() ?: 1f) < 0f) -1f else 1f
 
         // Pixel coordinates need highp: mediump cannot address a 1080p frame
         // to the pixel.

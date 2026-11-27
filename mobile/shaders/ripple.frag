@@ -22,6 +22,17 @@ uniform float uIntensity;
 // Seconds since the effect started.
 uniform float uTime;
 
+// Where the effect sits, as shares of the width from the left and of the
+// height from the top.
+uniform vec2 uCenter;
+
+// How far apart the rings are, as a share of the default tenth of the shorter
+// side.
+uniform float uSpacing;
+
+// How fast the rings travel, as a share of the default; 0 holds them still.
+uniform float uSpeed;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -34,11 +45,11 @@ vec3 tap(vec2 q) {
 void main() {
   vec2 fragCoord = FlutterFragCoord().xy;
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
-  vec2 c = uSize * 0.5;
+  vec2 c = vec2(uCenter.x, 1.0 - uCenter.y) * uSize;
   vec2 d = p - c;
   float r = length(d);
   float s = min(uSize.x, uSize.y);
-  float phase = 6.2832 * fract(r / (0.1 * s) - fract(uTime * 0.75));
+  float phase = 6.2832 * fract(r / (0.1 * uSpacing * s) - fract(uTime * 0.75 * uSpeed));
   float fade = smoothstep(0.0, 0.2 * s, r);
   float push = 0.012 * s * uIntensity * fade * sin(phase);
   vec2 q = c + d * (1.0 - 0.025 * uIntensity) + d / max(r, 0.001) * push;

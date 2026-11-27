@@ -45,6 +45,47 @@ class ShaderVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
     min(1, max(0, (params["intensity"] as? NSNumber)?.doubleValue ?? defaultIntensity))
   }
 
+  /// Reads the number `key` from `params`, clamped to `range`, or `fallback`
+  /// when it is missing. The Dart effect settings catalog stores each setting
+  /// with the same range and default.
+  static func readNumber(
+    _ params: [String: Any], _ key: String, fallback: Double, in range: ClosedRange<Double>
+  ) -> Double {
+    guard let value = (params[key] as? NSNumber)?.doubleValue, !value.isNaN else {
+      return fallback
+    }
+    return min(range.upperBound, max(range.lowerBound, value))
+  }
+
+  /// Where the effect sits, from `centerX` and `centerY`: shares of the
+  /// frame's width from its left edge and of its height from its top edge,
+  /// the middle unless the user moved it.
+  static func readCenter(_ params: [String: Any]) -> [Double] {
+    [
+      readNumber(params, "centerX", fallback: 0.5, in: 0...1),
+      readNumber(params, "centerY", fallback: 0.5, in: 0...1),
+    ]
+  }
+
+  /// Reads the colour `key` from `params`, an ARGB integer, as red, green and
+  /// blue from 0 to 1, or those of `fallback` when it is missing.
+  static func readColor(_ params: [String: Any], _ key: String, fallback: Int64) -> [Double] {
+    let argb = (params[key] as? NSNumber)?.int64Value ?? fallback
+    return [16, 8, 0].map { Double((argb >> $0) & 0xFF) / 255 }
+  }
+
+  /// The cosine and sine of `degrees`.
+  static func turn(degrees: Double) -> [Double] {
+    let radians = degrees * .pi / 180
+    return [cos(radians), sin(radians)]
+  }
+
+  /// `direction`: -1 for an effect the user turned the other way, 1
+  /// otherwise.
+  static func readDirection(_ params: [String: Any]) -> Double {
+    ((params["direction"] as? NSNumber)?.doubleValue ?? 1) < 0 ? -1 : 1
+  }
+
   /// The values the kernel reads after the frame's layout, for a frame
   /// `effectTimeUs` after the effect started, or `nil` to leave the frame as
   /// it is.

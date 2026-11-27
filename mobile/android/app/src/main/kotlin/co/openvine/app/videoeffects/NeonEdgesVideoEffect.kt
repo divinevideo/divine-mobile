@@ -14,15 +14,26 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * colour that turns with the outline's direction, so a grey picture glows in
  * every colour.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
- * far the picture turns into neon).
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+ * the picture turns into neon), `width` (0.5–3: how wide the glow reaches, as a
+ * share of the default), `single` (1 to glow in one colour rather than the
+ * picture's own) and `color` (that colour, as an ARGB integer).
  */
 class NeonEdgesVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
     private val intensity = intensityOf(params)
 
+    private val width = numberOf(params, "width", 1f, 0.5f, 3f)
+
+    private val single = if ((params["single"] as? Number)?.toInt() == 1) 1f else 0f
+
+    private val color = colorOf(params, "color", 0xFF00E5FF)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uIntensity", intensity)
+        shader.setFloat("uWidth", width)
+        shader.setFloat("uSingle", single)
+        shader.setFloats("uColor", color)
     }
 
     companion object {
@@ -41,11 +52,15 @@ class NeonEdgesVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGME
         // `atan(0, 0)`, which GLSL leaves undefined.
         private const val FRAGMENT_SHADER = ShaderVideoEffect.PRELUDE + """
 uniform float uIntensity;
+uniform float uWidth;
+uniform float uSingle;
+uniform vec3 uColor;
 
 float luma(vec3 c) {
   return dot(c, vec3(0.299, 0.587, 0.114));
 }
 
+// How the brightness changes across `p`, from taps `d` pixels to each side.
 vec2 slope(vec2 p, float d) {
   return vec2(
     luma(tap(p + vec2(d, 0.0))) - luma(tap(p - vec2(d, 0.0))),
@@ -55,7 +70,7 @@ vec2 slope(vec2 p, float d) {
 void main() {
   vec2 p = vTexCoord * uSize;
   float s = min(uSize.x, uSize.y);
-  float e = max(1.0, s / 540.0);
+  float e = max(1.0, s / 540.0) * uWidth;
   vec3 color = tap(p);
   vec2 near = slope(p, e);
   vec2 mid = slope(p, 3.0 * e);
@@ -71,7 +86,7 @@ void main() {
   float lo = min(min(color.r, color.g), color.b);
   float hi = max(max(color.r, color.g), color.b);
   vec3 own = (color - lo) / max(hi - lo, 0.001);
-  vec3 tint = mix(turning, own, smoothstep(0.08, 0.25, hi - lo));
+  vec3 tint = uSingle > 0.5 ? uColor : mix(turning, own, smoothstep(0.08, 0.25, hi - lo));
   vec3 neon = clamp(tint * glow + 0.6 * core * core, 0.0, 1.0);
   gl_FragColor = vec4(mix(color, neon, uIntensity), 1.0);
 }

@@ -13,16 +13,22 @@ import pro_video_editor
 /// common video size, no pixel centre lands right on a cell's edge, so no
 /// cell depends on how the GPU rounds there.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
-/// far the picture turns into pixel art).
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+/// the picture turns into pixel art), `size` (0.5–4: how large the pixels are,
+/// as a share of the default) and `levels` (2–15: how many shades red and green
+/// each take; blue takes three sevenths as many).
 final class EightBitVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.eightBit"
 
   private let intensity: Double
+  private let pixel: Double
+  private let levels: Double
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
+    pixel = Self.readNumber(params, "size", fallback: 1, in: 0.5...4)
+    levels = Self.readNumber(params, "levels", fallback: 7, in: 2...15).rounded()
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -35,7 +41,7 @@ final class EightBitVideoEffect: ShaderVideoEffect {
   }
 
   override func values(effectTimeUs: Int64) -> [Double]? {
-    intensity > 0 ? [intensity] : nil
+    intensity > 0 ? [intensity] + [pixel, levels] : nil
   }
 
   static let function = "divineEightBit"
@@ -58,21 +64,23 @@ final class EightBitVideoEffect: ShaderVideoEffect {
     ) {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
-      float intensity = u[3].x;
+      float2 uSize = f.size;
+      float uIntensity = u[3].x;
+      float uPixel = u[3].y;
+      float uLevels = u[3].z;
       float2 p = pixelOf(u, gid, target.get_height());
-      float s = min(f.size.x, f.size.y);
-      float cell = max(1.0, s / 100.0);
+      float s = min(uSize.x, uSize.y);
+      float cell = max(1.0, s / 100.0 * uPixel);
       float2 index = floor(p / cell);
       float2 centre = (index + 0.5) * cell;
       float q = 0.25 * cell;
       float3 color = tap(frame, f, p);
-      float3 block = 0.25 * (tap(frame, f, centre + float2(-q, -q)) +
-        tap(frame, f, centre + float2(q, -q)) + tap(frame, f, centre + float2(-q, q)) +
-        tap(frame, f, centre + float2(q, q)));
+      float3 block = 0.25 * (tap(frame, f, centre + float2(-q, -q)) + tap(frame, f, centre + float2(q, -q)) +
+        tap(frame, f, centre + float2(-q, q)) + tap(frame, f, centre + float2(q, q)));
       float threshold = 0.25 * bayer(0.5 * index) + bayer(index);
-      float3 levels = float3(7.0, 7.0, 3.0);
+      float3 levels = float3(uLevels, uLevels, max(1.0, floor(uLevels * 3.0 / 7.0 + 0.5)));
       float3 shade = clamp(floor(block * levels + threshold), float3(0.0), levels) / levels;
-      target.write(float4(mix(color, shade, intensity), 1.0), gid);
+      target.write(float4(mix(color, shade, uIntensity), 1.0), gid);
     }
     """
 }

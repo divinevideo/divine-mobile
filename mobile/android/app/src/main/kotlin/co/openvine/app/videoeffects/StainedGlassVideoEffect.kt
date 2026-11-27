@@ -16,15 +16,23 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * middle, and each slightly lighter or darker than its neighbours. The panes
  * stay in place while the picture moves under them.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
- * far the picture turns into glass).
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+ * the picture turns into glass), `size` (0.5–2.5: how large the panes are, as a
+ * share of the default) and `outline` (0.3–3: how wide the lead between them
+ * is, as a share of the default).
  */
 class StainedGlassVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
     private val intensity = intensityOf(params)
 
+    private val pane = numberOf(params, "size", 1f, 0.5f, 2.5f)
+
+    private val lead = numberOf(params, "outline", 1f, 0.3f, 3f)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uIntensity", intensity)
+        shader.setFloat("uPane", pane)
+        shader.setFloat("uLead", lead)
     }
 
     companion object {
@@ -43,6 +51,8 @@ class StainedGlassVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRA
         // particles use it.
         private const val FRAGMENT_SHADER = ShaderVideoEffect.PRELUDE + """
 uniform float uIntensity;
+uniform float uPane;
+uniform float uLead;
 
 float luma(vec3 c) {
   return dot(c, vec3(0.299, 0.587, 0.114));
@@ -57,7 +67,7 @@ vec2 hash2(vec2 q) {
 void main() {
   vec2 p = vTexCoord * uSize;
   float s = min(uSize.x, uSize.y);
-  float g = max(8.0, s / 16.0);
+  float g = max(8.0, s / 16.0 * uPane);
   vec2 q = p / g;
   vec2 cell = floor(q);
   vec2 inSquare = q - cell;
@@ -92,7 +102,7 @@ void main() {
   float tint = 0.9 + 0.2 * hash2(cell + best + 17.0).x;
   float shine = 1.15 - 0.35 * sqrt(nearest);
   vec3 glass = clamp(mix(vec3(luma(pane)), pane, 1.4) * tint * shine, 0.0, 1.0);
-  float lead = max(1.0, s / 400.0);
+  float lead = max(1.0, s / 400.0) * uLead;
   float edge = 1.0 - smoothstep(lead - 0.75, lead + 0.75, border * g);
   vec3 window = mix(glass, vec3(0.06, 0.06, 0.07), edge);
   gl_FragColor = vec4(mix(color, window, uIntensity), 1.0);

@@ -28,6 +28,9 @@ uniform float uPhase;
 uniform float uStep;
 uniform float uMix;
 
+// How large the spots are, as a share of the default.
+uniform float uSpotSize;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -59,7 +62,7 @@ void main() {
   float index = floor(turn / cell + 0.5 * odd);
   float centreTurn = (index + 0.5 - 0.5 * odd) * cell - spin;
   vec2 centre = ball + (ring + 0.5) * spacing * vec2(sin(centreTurn), -cos(centreTurn));
-  float size = 0.018 * l * (0.75 + 0.5 * fract(index * 0.618034 + ring * 0.371));
+  float size = 0.018 * l * uSpotSize * (0.75 + 0.5 * fract(index * 0.618034 + ring * 0.371));
   vec2 q = (p - centre) / size;
   float r2 = dot(q, q);
   float spot = exp(-r2 * r2 * r2);

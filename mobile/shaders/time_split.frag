@@ -22,6 +22,10 @@ uniform float uStrength;
 // How far the picture moves each frame, as a share of its width.
 uniform float uShift;
 
+// How far back green and blue lag, as a share of the default three and six
+// frames.
+uniform float uDelay;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -40,6 +44,6 @@ void main() {
   vec2 fragCoord = FlutterFragCoord().xy;
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
   vec3 now = tap(p);
-  vec3 split = vec3(now.r, earlier(p, 3.0).g, earlier(p, 6.0).b);
+  vec3 split = vec3(now.r, earlier(p, 3.0 * uDelay).g, earlier(p, 6.0 * uDelay).b);
   fragColor = vec4(mix(now, split, uStrength), 1.0);
 }

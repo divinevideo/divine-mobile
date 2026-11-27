@@ -3,6 +3,7 @@ package co.openvine.app.videoeffects
 import ch.waio.pro_video_editor.effects.CustomVideoEffectShader
 import ch.waio.pro_video_editor.effects.CustomVideoEffects
 import com.divinevideo.divine_video_player.VideoFrameEffects
+import kotlin.math.roundToInt
 
 /**
  * Laser: thin coloured beams fan out from the top of the picture and sweep
@@ -15,12 +16,13 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * the source, and the beams take two colours in turn, half the hue circle
  * apart, which change together; see [PartyLights].
  *
- * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
- * dim the picture gets and how bright the beams are) and, for an effect on
- * the beat, `beatsUs`: the beats, in microseconds after the effect's start.
- * On the beat the colours change and the fan swings the other way on each
- * beat; otherwise the colours change every one and a half seconds and it
- * swings on steadily.
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how dim
+ * the picture gets and how bright the beams are), `count` (1–9: how many beams
+ * the fan has), `speed` (0–3: how fast the fan swings, as a share of the
+ * default; 0 holds it still) and, for an effect on the beat, `beatsUs`: the
+ * beats, in microseconds after the effect's start. On the beat the colours
+ * change and the fan swings the other way on each beat; otherwise the colours
+ * change every one and a half seconds and it swings on steadily.
  */
 class LaserVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
@@ -28,12 +30,17 @@ class LaserVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_S
 
     private val beatsUs = BlurHits.beatsOf(params)
 
+    private val beams = numberOf(params, "count", 7f, 1f, 9f).roundToInt().toFloat()
+
+    private val speed = numberOf(params, "speed", 1f, 0f, 3f)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         val lights = PartyLights.at(beatsUs, effectTimeUs)
         shader.setFloat("uIntensity", intensity)
-        shader.setFloat("uPhase", lights.phase)
+        shader.setFloat("uPhase", lights.phase * speed)
         shader.setFloat("uStep", lights.step)
         shader.setFloat("uMix", lights.mix)
+        shader.setFloat("uBeams", beams)
     }
 
     companion object {
@@ -53,6 +60,7 @@ uniform float uIntensity;
 uniform float uPhase;
 uniform float uStep;
 uniform float uMix;
+uniform float uBeams;
 
 void main() {
   vec2 p = vTexCoord * uSize;
@@ -67,8 +75,9 @@ void main() {
   float core = 0.0022 * l;
   float glow = 0.012 * l;
   vec3 light = vec3(0.0);
-  for (int i = 0; i < 7; i++) {
-    float across = dist * abs(sin(angle - aim - (float(i) - 3.0) * spread));
+  for (int i = 0; i < 9; i++) {
+    if (float(i) >= uBeams) break;
+    float across = dist * abs(sin(angle - aim - (float(i) - 0.5 * (uBeams - 1.0)) * spread));
     float beam = exp(-across * across / (core * core)) + 0.35 * exp(-across / glow);
     light += beam * mix(first, second, float(i) - 2.0 * floor(float(i) / 2.0));
   }

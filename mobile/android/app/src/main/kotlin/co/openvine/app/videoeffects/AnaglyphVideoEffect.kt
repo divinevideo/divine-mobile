@@ -14,15 +14,19 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * seem to stand in front of the screen through the glasses; without them,
  * each shape gets a red fringe on one side and a cyan one on the other.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
- * far apart the copies are and how far the colours turn red and cyan).
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+ * apart the copies are and how far the colours turn red and cyan), `offset`
+ * (0–3: how far the two eyes' copies part, as a share of the default).
  */
 class AnaglyphVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
     private val intensity = intensityOf(params)
 
+    private val offset = numberOf(params, "offset", 1f, 0f, 3f)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uIntensity", intensity)
+        shader.setFloat("uOffset", offset)
     }
 
     companion object {
@@ -38,6 +42,7 @@ class AnaglyphVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMEN
         // `s` is the frame's shorter side; each copy moves a share of it.
         private const val FRAGMENT_SHADER = ShaderVideoEffect.PRELUDE + """
 uniform float uIntensity;
+uniform float uOffset;
 
 float luma(vec3 c) {
   return dot(c, vec3(0.299, 0.587, 0.114));
@@ -46,7 +51,7 @@ float luma(vec3 c) {
 void main() {
   vec2 p = vTexCoord * uSize;
   float s = min(uSize.x, uSize.y);
-  vec2 shift = vec2(0.014 * s * uIntensity, 0.0);
+  vec2 shift = vec2(0.014 * s * uIntensity * uOffset, 0.0);
   vec3 color = tap(p);
   vec3 left = tap(p - shift);
   vec3 right = tap(p + shift);

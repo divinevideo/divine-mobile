@@ -12,8 +12,9 @@ import pro_video_editor
 /// evenest, for hard edges, deepens the colours and lights the patches' edges
 /// from the top left like thick paint, with fine bristle marks.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
-/// far the picture turns into paint).
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+/// the picture turns into paint), `size` (0.5–3: how large the brush strokes
+/// are, as a share of the default).
 final class PaintVideoEffect: ShaderVideoEffect {
   /// How the picture is painted; the raw value is what the shader mixes by.
   enum Style: Double, CaseIterable {
@@ -31,10 +32,12 @@ final class PaintVideoEffect: ShaderVideoEffect {
 
   private let style: Style
   private let intensity: Double
+  private let brush: Double
 
   init(style: Style, params: [String: Any]) {
     self.style = style
     intensity = Self.readIntensity(params)
+    brush = Self.readNumber(params, "size", fallback: 1, in: 0.5...3)
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -53,7 +56,7 @@ final class PaintVideoEffect: ShaderVideoEffect {
   }
 
   override func values(effectTimeUs: Int64) -> [Double]? {
-    intensity > 0 ? [intensity, style.rawValue] : nil
+    intensity > 0 ? [intensity, style.rawValue, brush] : nil
   }
 
   static let function = "divinePaint"
@@ -73,6 +76,7 @@ final class PaintVideoEffect: ShaderVideoEffect {
       return fract((r.x + r.y) * r.z);
     }
 
+    // Value noise: the hash on a grid, blended smoothly between its points.
     static float noise(float2 q) {
       float2 i = floor(q);
       float2 f = q - i;
@@ -90,11 +94,13 @@ final class PaintVideoEffect: ShaderVideoEffect {
     ) {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
-      float intensity = u[3].x;
-      float style = u[3].y;
+      float2 uSize = f.size;
+      float uIntensity = u[3].x;
+      float uStyle = u[3].y;
+      float uBrush = u[3].z;
       float2 p = pixelOf(u, gid, target.get_height());
-      float s = min(f.size.x, f.size.y);
-      float e = max(1.0, s / 360.0);
+      float s = min(uSize.x, uSize.y);
+      float e = max(1.0, s / 360.0 * uBrush);
       float3 m0 = float3(0.0);
       float3 m1 = float3(0.0);
       float3 m2 = float3(0.0);
@@ -120,7 +126,7 @@ final class PaintVideoEffect: ShaderVideoEffect {
       }
       float4 mean = sum / 16.0;
       float4 deviation = sqrt(max(squares / 16.0 - mean * mean, 0.0));
-      float4 k = 1.0 / (1.0 + pow(deviation * 40.0, float4(mix(3.0, 8.0, style))));
+      float4 k = 1.0 / (1.0 + pow(deviation * 40.0, float4(mix(3.0, 8.0, uStyle))));
       float3 painted = (m0 * k.x + m1 * k.y + m2 * k.z + m3 * k.w) / (16.0 * dot(k, float4(1.0)));
       float lo = min(min(mean.x, mean.y), min(mean.z, mean.w));
       float hi = max(max(mean.x, mean.y), max(mean.z, mean.w));
@@ -134,8 +140,8 @@ final class PaintVideoEffect: ShaderVideoEffect {
       float bristle = noise(float2(dot(p, float2(0.8, 0.6)) / e, dot(p, float2(-0.6, 0.8)) / (6.0 * e)));
       float light = clamp(relief * (0.96 + 0.08 * bristle), 0.85, 1.15);
       float3 oil = clamp(mix(float3(luma(painted)), painted, 1.3) * light, 0.0, 1.0);
-      float3 art = mix(wash, oil, style);
-      target.write(float4(mix(tap(frame, f, p), art, intensity), 1.0), gid);
+      float3 art = mix(wash, oil, uStyle);
+      target.write(float4(mix(tap(frame, f, p), art, uIntensity), 1.0), gid);
     }
     """
 }

@@ -8,10 +8,12 @@ import com.divinevideo.divine_video_player.VideoFrameEffect
 import com.divinevideo.divine_video_player.VideoFrameEffects
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
 /**
  * The echo trail (#9708): moving subjects leave fading copies of where they
- * were 100 ms, 200 ms, ... ago, as many as the intensity asks for.
+ * were 100 ms, 200 ms, ... ago, or that times the spacing set, as many as the
+ * intensity asks for.
  *
  * Every copy is an earlier source frame of the same clip, which
  * pro_video_editor hands over, so the export looks the same however the clip
@@ -19,9 +21,10 @@ import kotlin.math.roundToInt
  * through divine_video_player, whose earlier frames come from what the
  * player showed, or are decoded after a seek.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1):
- * more and stronger copies. Each copy lightens the frame, so the subject
- * stays solid where the copies overlap it.
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: more and
+ * stronger copies) and `spacing` (0.4–3: how far apart in time the copies lie,
+ * as a share of the default tenth of a second). Each copy lightens the frame,
+ * so the subject stays solid where the copies overlap it.
  */
 class EchoVideoEffect(params: Map<String, Any?>) : CustomVideoEffectRenderer(), VideoFrameEffect {
 
@@ -34,7 +37,10 @@ class EchoVideoEffect(params: Map<String, Any?>) : CustomVideoEffectRenderer(), 
         (0.25f + 0.55f * intensity) * (0.55f + 0.25f * intensity).pow(k)
     }
 
-    override val historyOffsetsUs = LongArray(copies) { (it + 1) * SPACING_US }
+    /** How far apart the copies lie in time: a tenth of a second times `spacing`. */
+    private val spacingUs = SPACING_US * ShaderVideoEffect.numberOf(params, "spacing", 1f, 0.4f, 3f)
+
+    override val historyOffsetsUs = LongArray(copies) { ((it + 1) * spacingUs).roundToLong() }
 
     // The copies fade anyway; half size takes a quarter of the memory.
     override val historyScale = 0.5f

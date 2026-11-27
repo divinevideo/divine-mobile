@@ -9905,9 +9905,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Tinte';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'Regola le gocce';
-
-  @override
   String get videoEditorDropsCountLabel => 'Numero';
 
   @override
@@ -9964,12 +9961,8 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String videoEditorEffectSeconds(double seconds) {
-    final intl.NumberFormat secondsNumberFormat =
-        intl.NumberFormat.decimalPattern(localeName);
-    final String secondsString = secondsNumberFormat.format(seconds);
-
-    return '$secondsString s';
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds s';
   }
 
   @override
@@ -10005,6 +9998,156 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get videoEditorEffectLookReset => 'Ripristina aspetto';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'Tempi';
+
+  @override
+  String get videoEditorEffectTimingReset => 'Ripristina tempi';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'Movimento';
+
+  @override
+  String get videoEditorEffectMotionReset => 'Ripristina movimento';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'Messa a fuoco';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'Larghezza';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'Direzione';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'Orizzontale';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'Verticale';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'Orario';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'Antiorario';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'Zoom avanti';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'Zoom indietro';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'Spaziatura';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'Angolo';
+
+  @override
+  String get videoEditorEffectSettingHue => 'Tonalità';
+
+  @override
+  String get videoEditorEffectSettingLength => 'Lunghezza';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'Sensibilità';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'Posizione';
+
+  @override
+  String get videoEditorEffectSettingWind => 'Vento';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'Dimensione dei punti';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'Contorno';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'Livelli';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'Dimensione pixel';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'Spostamento';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'Dimensione pennello';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'Densità';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'Grana';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'Griglia';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'Strati';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'Ombra';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'Primo inchiostro';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'Secondo inchiostro';
+
+  @override
+  String get videoEditorEffectSettingColors => 'Colori';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'Originali';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'Un colore';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'Ritardo';
+
+  @override
+  String get videoEditorEffectSettingDown => 'Verso il basso';
+
+  @override
+  String get videoEditorEffectSettingUp => 'Verso l\'alto';
+
+  @override
+  String get videoEditorEffectSettingRight => 'Verso destra';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'Verso sinistra';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'Frequenza';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'Distanza';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'Linee di scansione';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'Dimensione della grana';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'Seppia';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'Sfarfallio';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'Vignettatura';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'Tempo';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'Lunghezza d\'onda';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

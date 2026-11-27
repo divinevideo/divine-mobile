@@ -25,6 +25,13 @@ uniform vec2 uSize;
 // How far the picture turns into paper, 0 to 1.
 uniform float uIntensity;
 
+// How many sheets the picture is cut into, 2 to 8.
+uniform float uLayers;
+
+// How far the sheets stand apart, which sets how long their shadows are, as
+// a share of the default.
+uniform float uDepth;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -52,9 +59,9 @@ vec3 soft(vec2 q, float e) {
   return (tap(q) + ring) / 9.0;
 }
 
-// Which of the four layers a colour lies on, 0 the lowest.
-float layer(vec3 c) {
-  return min(floor(clamp(luma(c), 0.0, 1.0) * 4.0), 3.0);
+// Which of the n layers a colour lies on, 0 the lowest.
+float layer(vec3 c, float n) {
+  return min(floor(clamp(luma(c), 0.0, 1.0) * n), n - 1.0);
 }
 
 void main() {
@@ -62,16 +69,16 @@ void main() {
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
   float s = min(uSize.x, uSize.y);
   float e = max(1.5, s / 180.0);
-  vec2 toLight = vec2(-0.70710678, 0.70710678) * e;
+  vec2 toLight = vec2(-0.70710678, 0.70710678) * e * uDepth;
   vec3 here = soft(p, e);
-  float h = layer(here);
-  float near = layer(soft(p + toLight, e));
-  float far = layer(soft(p + 2.0 * toLight, e));
+  float h = layer(here, uLayers);
+  float near = layer(soft(p + toLight, e), uLayers);
+  float far = layer(soft(p + 2.0 * toLight, e), uLayers);
   float shadow = max(step(h + 0.5, near) * 0.7, step(h + 0.5, far) * 0.35);
   float lit = step(near + 0.5, h);
   float l = luma(here);
   vec3 hue = (here - l) * 0.8;
-  float sheetLuma = 0.16 + 0.24 * h;
+  float sheetLuma = 0.16 + 0.72 * h / (uLayers - 1.0);
   vec3 sheet = clamp(sheetLuma + hue * min(sheetLuma / max(l, 0.05), 1.5), 0.0, 1.0);
   float fibre = 0.97 + 0.03 * grain(floor(p / max(1.0, s / 540.0)));
   vec3 paper = clamp(sheet * (1.0 - 0.4 * shadow) * (1.0 + 0.12 * lit) * fibre, 0.0, 1.0);

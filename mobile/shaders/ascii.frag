@@ -23,6 +23,13 @@ uniform vec2 uSize;
 // How far the picture turns into characters, 0 to 1.
 uniform float uIntensity;
 
+// How large the characters are, as a share of the default.
+uniform float uChar;
+
+// 1 to draw the characters in uColor, 0 in the picture's own colours.
+uniform float uSingle;
+uniform vec3 uColor;
+
 uniform sampler2D uTexture;
 
 // The glyph atlas, with bilinear filtering.
@@ -46,7 +53,7 @@ void main() {
   vec2 fragCoord = FlutterFragCoord().xy;
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
   float s = min(uSize.x, uSize.y);
-  float c = max(8.0, s / 60.0);
+  float c = max(8.0, s / 60.0 * uChar);
   vec2 cell = floor(p / c);
   vec2 middle = (cell + 0.5) * c;
   vec3 ink = 0.25 * (tap(middle + vec2(-0.25, -0.25) * c) + tap(middle + vec2(0.25, -0.25) * c) +
@@ -57,6 +64,6 @@ void main() {
   vec2 atlas = vec2(kGlyphs * kGlyphSize, kGlyphSize);
   float glyph = texture(uGlyphs, vec2(level * kGlyphSize + texel.x, texel.y) / atlas).r;
   float hi = max(max(ink.r, ink.g), ink.b);
-  vec3 ascii = clamp(ink / max(hi, 0.25), 0.0, 1.0) * glyph;
+  vec3 ascii = (uSingle > 0.5 ? uColor : clamp(ink / max(hi, 0.25), 0.0, 1.0)) * glyph;
   fragColor = vec4(mix(tap(p), ascii, uIntensity), 1.0);
 }
