@@ -1565,8 +1565,8 @@ class ProfileRepository implements ProfileReader {
   /// Throws [NoRelaysConnectedException] when no relays are connected.
   /// Throws [ProfilePublishFailedException] when relays were reached but none
   /// confirmed the event (rejection, timeout, or a send failure such as the
-  /// signer returning null), and — before publishing anything — when the
-  /// current Kind 0 could not be read from the connected relays. A Kind 0
+  /// signer returning null). Throws [ProfilePublishSeedUnavailableException]
+  /// before publishing when the current Kind 0 cannot safely seed the save. A Kind 0
   /// replaces the previous one whole, so publishing from a local copy that
   /// cannot carry its tags would erase them; the save is deferred for the
   /// caller, or the durable pending-save retry, to try again.
@@ -1883,8 +1883,8 @@ class ProfileRepository implements ProfileReader {
   /// - the local seed is strictly newer and can carry the relay copy's tags,
   ///   or carries the same timestamp and strictly more meaningful keys.
   ///
-  /// Throws [ProfilePublishFailedException], before anything is published,
-  /// when the relay read is inconclusive — it timed out, was refused, reached
+  /// Throws [ProfilePublishSeedUnavailableException] before anything is
+  /// published when the relay read is inconclusive — it timed out, was refused, reached
   /// no relay, threw, or ran past [_publishSeedRelayTimeout] — or when the
   /// local seed is newer but has no tags while the relay copy does, meaning
   /// the relays have not indexed the newer copy yet. The profile cache stores
@@ -1964,14 +1964,17 @@ class ProfileRepository implements ProfileReader {
   ///
   /// [drivePendingSave] maps it to a retryable outcome, so an editor save
   /// stays queued and the durable retry tries again later.
-  ProfilePublishFailedException _deferSave(String pubkey, String reason) {
+  ProfilePublishSeedUnavailableException _deferSave(
+    String pubkey,
+    String reason,
+  ) {
     Log.warning(
       'Deferring profile save for ${pubkeyForLogs(pubkey)}: $reason. '
       'Publishing now could erase what only the relay copy holds.',
       name: 'ProfileRepository.saveProfileEvent',
       category: LogCategory.relay,
     );
-    return const ProfilePublishFailedException(
+    return const ProfilePublishSeedUnavailableException(
       'Failed to publish profile. Please try again.',
     );
   }

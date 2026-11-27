@@ -164,6 +164,8 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
         error,
         stackTrace,
       );
+    } on ProfilePublishSeedUnavailableException catch (error, stackTrace) {
+      _revert(previous, RemixSettingsSaveStatus.failedRead, error, stackTrace);
     } on ProfilePublishFailedException catch (error, stackTrace) {
       _revert(
         previous,

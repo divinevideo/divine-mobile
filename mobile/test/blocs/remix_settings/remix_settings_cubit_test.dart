@@ -669,6 +669,45 @@ void main() {
       tearDown(() => db.close());
 
       test(
+        'classifies an inconclusive publish-seed read as a read failure',
+        () async {
+          var reads = 0;
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              useCache: false,
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer((_) async {
+            reads++;
+            return (
+              events: [
+                Event(_pubkey, 0, const [], '{"display_name":"Creator"}'),
+              ],
+              timedOut: reads >= 3,
+              noRelays: false,
+            );
+          });
+          final cubit = buildPublishingCubit();
+          addTearDown(cubit.close);
+          await cubit.load();
+
+          await cubit.setAllowVideoReuse(false);
+
+          expect(cubit.state.saveStatus, RemixSettingsSaveStatus.failedRead);
+          expect(cubit.state.allowVideoReuse, isTrue);
+          expect(savedProfiles, isEmpty);
+          verifyNever(
+            () => client.sendProfileAwaitOk(
+              profileContent: any(named: 'profileContent'),
+              tags: any(named: 'tags'),
+              requireDefaultRelay: any(named: 'requireDefaultRelay'),
+            ),
+          );
+        },
+      );
+
+      test(
         'reverts the switch when only a relay other than the default one '
         'accepts the save',
         () async {
