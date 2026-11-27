@@ -124,7 +124,7 @@ jobs:
           tar -czf "../desktop-${{ matrix.platform }}-${{ matrix.architecture }}.tar.gz" \
             -C "$(dirname "$DESKTOP_BUNDLE")" "$(basename "$DESKTOP_BUNDLE")"
       - name: Preserve native build for validation
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-${{ matrix.platform }}-${{ matrix.architecture }}-${{ github.sha }}
           retention-days: 7
