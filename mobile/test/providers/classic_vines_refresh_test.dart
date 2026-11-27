@@ -55,7 +55,7 @@ class _Eligibility extends Notifier<bool> {
   @override
   bool build() => initial;
 
-  set eligible(bool value) => state = value;
+  void setEligible(bool value) => state = value;
 }
 
 final _eligibilityProvider = NotifierProvider<_Eligibility, bool>(
@@ -295,7 +295,7 @@ void main() {
           await container.read(funnelcakeAvailableProvider.future);
           expect(await gridIds(container), ['archive']);
 
-          container.read(_eligibilityProvider.notifier).eligible = true;
+          container.read(_eligibilityProvider.notifier).setEligible(true);
           await container.pump();
 
           expect(await gridIds(container), ['archive']);
@@ -338,7 +338,7 @@ void main() {
           await container.read(funnelcakeAvailableProvider.future);
           expect(await gridIds(container), ['ranked']);
 
-          container.read(_eligibilityProvider.notifier).eligible = false;
+          container.read(_eligibilityProvider.notifier).setEligible(false);
           await container.pump();
 
           expect(await gridIds(container), ['archive']);
@@ -372,7 +372,7 @@ void main() {
         await container.read(classicVinesFeedProvider.notifier).refresh();
         expect(await gridIds(container), ['ranked']);
 
-        container.read(_eligibilityProvider.notifier).eligible = false;
+        container.read(_eligibilityProvider.notifier).setEligible(false);
         await container.pump();
 
         expect(await gridIds(container), ['archive']);
@@ -410,7 +410,7 @@ void main() {
           expect(await repository.watchView(source).first, [ranked]);
           expect(container.read(classicVinesFeedCountProvider), 1);
 
-          container.read(_eligibilityProvider.notifier).eligible = false;
+          container.read(_eligibilityProvider.notifier).setEligible(false);
           await container.pump();
 
           expect(reads, 2);
@@ -440,7 +440,7 @@ void main() {
         await container.read(funnelcakeAvailableProvider.future);
         expect(await gridIds(container), ['archive']);
 
-        container.read(_eligibilityProvider.notifier).eligible = false;
+        container.read(_eligibilityProvider.notifier).setEligible(false);
         await container.pump();
 
         expect(await gridIds(container), ['archive']);
@@ -470,7 +470,7 @@ void main() {
         addTearDown(container.dispose);
         await container.read(funnelcakeAvailableProvider.future);
         await gridIds(container);
-        container.read(_eligibilityProvider.notifier).eligible = true;
+        container.read(_eligibilityProvider.notifier).setEligible(true);
         await container.pump();
         expect(await gridIds(container), ['archive']);
 
