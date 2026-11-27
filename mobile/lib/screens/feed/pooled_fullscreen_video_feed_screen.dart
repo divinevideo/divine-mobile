@@ -372,7 +372,9 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
         dmReplyContext: dmReplyContext,
         fromMessage: fromMessage,
         loadMoreOnEndSwipe:
-            source is SingleVideoViewSource || source is HashtagViewSource,
+            source is SingleVideoViewSource ||
+            source is HashtagViewSource ||
+            source is ClassicVinesViewSource,
         initialVideoKey: switch (source) {
           SingleVideoViewSource(:final video) => video.feedDedupKey,
           _ => null,

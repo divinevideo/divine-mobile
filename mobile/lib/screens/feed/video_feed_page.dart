@@ -671,7 +671,10 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                               hasMore: state.hasMore,
                               isLoadingMore: state.isLoadingMore,
                               prefetchOnMount: isForYou,
-                              loadMoreOnEndSwipe: isForYou,
+                              loadMoreOnEndSwipe:
+                                  isForYou ||
+                                  state.source.type ==
+                                      VideoFeedSourceType.classic,
                               trafficSource: ViewTrafficSource.home,
                               // Every feed mode renders through this one page and
                               // reports source=home, so without this detail the

@@ -96,7 +96,7 @@ class _Eligibility extends Notifier<bool> {
   @override
   bool build() => initial;
 
-  set eligible(bool value) => state = value;
+  void setEligible(bool value) => state = value;
 }
 
 final _eligibilityProvider = NotifierProvider<_Eligibility, bool>(
@@ -924,7 +924,7 @@ void main() {
 
           ProviderScope.containerOf(
             tester.element(find.byType(FullscreenFeedContent)),
-          ).read(_eligibilityProvider.notifier).eligible = false;
+          ).read(_eligibilityProvider.notifier).setEligible(false);
           await tester.pump();
           await tester.pump();
           await tester.pump();
@@ -1014,7 +1014,7 @@ void main() {
 
         ProviderScope.containerOf(
           tester.element(find.byType(FullscreenFeedContent)),
-        ).read(_eligibilityProvider.notifier).eligible = true;
+        ).read(_eligibilityProvider.notifier).setEligible(true);
         gridWindow.add([ranked]);
         await tester.pump();
         await tester.pump();
@@ -1027,6 +1027,12 @@ void main() {
         );
         expect(nativeFeed(tester).videos, [videos.first, archive]);
         expect(bloc.state.currentVideo, archive);
+        expect(
+          tester
+              .widget<FullscreenFeedContent>(find.byType(FullscreenFeedContent))
+              .loadMoreOnEndSwipe,
+          isTrue,
+        );
         verify(
           () => repository.getClassicVideos(
             limit: any(named: 'limit'),
