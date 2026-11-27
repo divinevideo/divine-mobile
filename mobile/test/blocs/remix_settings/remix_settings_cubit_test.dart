@@ -852,6 +852,36 @@ void main() {
         expect(savedProfiles.single.rawTags, isEmpty);
       });
 
+      test('keeps a profile first published after the setting loads', () async {
+        stubDefaultRelayPublish((event) => PublishSuccess(event: event));
+        final cubit = buildPublishingCubit();
+        addTearDown(cubit.close);
+        await cubit.load();
+
+        final firstProfile = Event(
+          _pubkey,
+          0,
+          const [],
+          '{"display_name":"Creator","about":"New bio"}',
+        );
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async =>
+              (events: [firstProfile], timedOut: false, noRelays: false),
+        );
+
+        await cubit.setAllowVideoReuse(false);
+
+        expect(savedProfiles.single.displayName, 'Creator');
+        expect(savedProfiles.single.about, 'New bio');
+        expect(savedProfiles.single.allowsVideoReuse, isFalse);
+      });
+
       test(
         'reverts the switch when only a relay other than the default one '
         'accepts the save',

@@ -1058,6 +1058,7 @@ class ProfileRepository implements ProfileReader {
     required String pubkey,
     bool requireRawKind0 = false,
     List<Duration> rawKind0RetryDelays = const [],
+    bool recheckMissingRawProfile = false,
   }) {
     if (_vanished.contains(pubkey)) {
       revalidateVanishOnce(pubkey);
@@ -1068,6 +1069,7 @@ class ProfileRepository implements ProfileReader {
       pubkey: pubkey,
       requireRawKind0: requireRawKind0,
       rawKind0RetryDelays: rawKind0RetryDelays,
+      recheckMissingRawProfile: recheckMissingRawProfile,
     );
   }
 
@@ -1086,8 +1088,11 @@ class ProfileRepository implements ProfileReader {
     required String pubkey,
     bool requireRawKind0 = false,
     List<Duration> rawKind0RetryDelays = const [],
+    bool recheckMissingRawProfile = false,
   }) {
-    if (requireRawKind0 && _rawKind0ConfirmedMissing.contains(pubkey)) {
+    if (requireRawKind0 &&
+        !recheckMissingRawProfile &&
+        _rawKind0ConfirmedMissing.contains(pubkey)) {
       return Future.value((profile: null, conclusive: true));
     }
 
@@ -1604,7 +1609,10 @@ class ProfileRepository implements ProfileReader {
     // otherwise the cached profile for the signing key — competes with the
     // relay copy on recency. A relay read that fails or times out defers the
     // save instead (see [_resolvePublishSeed]).
-    final seed = await _resolvePublishSeed(currentProfile);
+    final seed = await _resolvePublishSeed(
+      currentProfile,
+      recheckMissingRawProfile: useLatestProfileFields,
+    );
 
     final newContent = Map<String, dynamic>.from(seed?.rawData ?? const {});
 
@@ -1918,7 +1926,10 @@ class ProfileRepository implements ProfileReader {
   /// the local seed is newer but has no tags while the relay copy does, meaning
   /// the relays have not indexed the newer copy yet. The profile cache stores
   /// no tags, so publishing in either case could erase the tags on relays.
-  Future<UserProfile?> _resolvePublishSeed(UserProfile? currentProfile) async {
+  Future<UserProfile?> _resolvePublishSeed(
+    UserProfile? currentProfile, {
+    required bool recheckMissingRawProfile,
+  }) async {
     // `??` short-circuits, so the signer is consulted only when the caller gave
     // us no profile to take a pubkey from.
     final pubkey = currentProfile?.pubkey ?? _signerPubkeyOrNull();
@@ -1935,6 +1946,9 @@ class ProfileRepository implements ProfileReader {
         await _readFreshProfile(
           pubkey: pubkey,
           requireRawKind0: true,
+          // A remix setting load can cache a miss before the creator
+          // publishes their first Kind 0 on another device.
+          recheckMissingRawProfile: recheckMissingRawProfile,
         ).timeout(
           _publishSeedRelayTimeout,
           onTimeout: () => (profile: null, conclusive: false),
