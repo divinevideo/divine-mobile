@@ -17165,22 +17165,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get menuBarHelp => 'مساعدة';
 
   @override
-  String get contentPreferencesAudioInputDevice => 'جهاز إدخال الصوت';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'تلقائي (موصى به)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'يختار تلقائيًا أفضل ميكروفون';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'حدد إدخال الصوت';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'ميكروفون غير معروف';
-
-  @override
   String get emailConfirmationTitle => 'تأكيد البريد الإلكتروني';
 
   @override

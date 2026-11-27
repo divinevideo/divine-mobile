@@ -17021,22 +17021,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get menuBarHelp => 'Bantuan';
 
   @override
-  String get contentPreferencesAudioInputDevice => 'Perangkat Masukan Audio';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Otomatis (direkomendasikan)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'Pilih mikrofon terbaik secara otomatis';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Pilih Masukan Audio';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Mikrofon Tidak Dikenal';
-
-  @override
   String get emailConfirmationTitle => 'Konfirmasi emailmu';
 
   @override

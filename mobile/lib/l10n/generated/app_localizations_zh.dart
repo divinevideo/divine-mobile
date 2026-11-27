@@ -16146,21 +16146,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get menuBarHelp => '帮助';
 
   @override
-  String get contentPreferencesAudioInputDevice => '音频输入设备';
-
-  @override
-  String get contentPreferencesAutoRecommended => '自动（推荐）';
-
-  @override
-  String get contentPreferencesAutoSelectsBest => '自动选择最佳麦克风';
-
-  @override
-  String get contentPreferencesSelectAudioInput => '选择音频输入';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => '未知麦克风';
-
-  @override
   String get emailConfirmationTitle => '确认你的邮箱';
 
   @override

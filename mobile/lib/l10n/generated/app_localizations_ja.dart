@@ -16344,21 +16344,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get menuBarHelp => 'ヘルプ';
 
   @override
-  String get contentPreferencesAudioInputDevice => '音声入力デバイス';
-
-  @override
-  String get contentPreferencesAutoRecommended => '自動 (おすすめ)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest => '最適なマイクを自動で選ぶよ';
-
-  @override
-  String get contentPreferencesSelectAudioInput => '音声入力を選ぶ';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => '不明なマイク';
-
-  @override
   String get emailConfirmationTitle => 'メールアドレスの認証';
 
   @override

@@ -17286,22 +17286,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get menuBarHelp => 'Помощ';
 
   @override
-  String get contentPreferencesAudioInputDevice => 'Аудио вход';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Автоматично (препоръчано)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'Автоматично избира най-добрия микрофон';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Избери аудио вход';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Неизвестен микрофон';
-
-  @override
   String get emailConfirmationTitle => 'Потвърди имейла си';
 
   @override

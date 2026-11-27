@@ -16363,21 +16363,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get menuBarHelp => '도움말';
 
   @override
-  String get contentPreferencesAudioInputDevice => '오디오 입력 장치';
-
-  @override
-  String get contentPreferencesAutoRecommended => '자동 (추천)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest => '가장 좋은 마이크를 자동으로 고르주세요';
-
-  @override
-  String get contentPreferencesSelectAudioInput => '오디오 입력 선택';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => '알 수 없는 마이크';
-
-  @override
   String get emailConfirmationTitle => '이메일 인증하기';
 
   @override

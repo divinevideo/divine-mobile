@@ -17355,23 +17355,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get menuBarHelp => 'Aiuto';
 
   @override
-  String get contentPreferencesAudioInputDevice =>
-      'Dispositivo di ingresso audio';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Auto (consigliato)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'Seleziona automaticamente il microfono migliore';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Seleziona ingresso audio';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Microfono sconosciuto';
-
-  @override
   String get emailConfirmationTitle => 'Conferma la tua email';
 
   @override

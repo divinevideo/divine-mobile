@@ -16719,22 +16719,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get menuBarHelp => 'እገዛ';
 
   @override
-  String get contentPreferencesAudioInputDevice => 'የድምጽ ግቤት መሣሪያ';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'ራስ-ሰር (የሚመከር)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'በጣም ጥሩውን ማይክሮፎን በራስ-ሰር ይመርጣል';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'የድምጽ ግቤትን ይምረጡ';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'ያልታወቀ ማይክሮፎን';
-
-  @override
   String get emailConfirmationTitle => 'ኢሜይልዎን ያረጋግጡ';
 
   @override

@@ -12821,13 +12821,9 @@
   "updateNotNow": "Not now",
   "updateAction": "Update",
   "announcementViewContest": "View contest",
-  "@announcementViewContest": {
-    "description": "Button opening an official contest after its native announcement description."
-  },
+  "@announcementViewContest": {"description": "Button opening an official contest after its native announcement description."},
   "featuredFeedUnavailable": "This featured feed is no longer available.",
-  "@featuredFeedUnavailable": {
-    "description": "Safe destination when a campaign points to a missing, ended, or disabled featured feed."
-  },
+  "@featuredFeedUnavailable": {"description": "Safe destination when a campaign points to a missing, ended, or disabled featured feed."},
   "updateNewIn": "New in {version}:",
   "@updateNewIn": {
     "description": "Heading before highlights for an available app update.",
@@ -14026,9 +14022,7 @@
   "@inviteFriendsLinkNote": {
     "description": "Note under the invite message explaining that the Divine download link is always appended. {url} is the link; keep it unchanged.",
     "placeholders": {
-      "url": {
-        "type": "String"
-      }
+      "url": {"type": "String"}
     }
   },
   "inviteFriendsShare": "Share",
@@ -14564,11 +14558,6 @@
   "@menuBarHelp": {
     "description": "macOS menu bar: title of the Help menu, as in other Mac apps."
   },
-  "contentPreferencesAudioInputDevice": "Audio Input Device",
-  "contentPreferencesAutoRecommended": "Auto (recommended)",
-  "contentPreferencesAutoSelectsBest": "Automatically selects the best microphone",
-  "contentPreferencesSelectAudioInput": "Select Audio Input",
-  "contentPreferencesUnknownMicrophone": "Unknown Microphone",
   "emailConfirmationTitle": "Confirm your email",
   "@emailConfirmationTitle": {
     "description": "Label on the own-profile pill and title of the prompt asking an account that signed up without confirming its email to click the confirmation link."

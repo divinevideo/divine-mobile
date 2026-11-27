@@ -17151,22 +17151,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get menuBarHelp => 'Hjälp';
 
   @override
-  String get contentPreferencesAudioInputDevice => 'Ljudingångsenhet';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Auto (rekommenderas)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'Väljer automatiskt den bästa mikrofonen';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Välj ljudingång';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Okänd mikrofon';
-
-  @override
   String get emailConfirmationTitle => 'Bekräfta din e-post';
 
   @override

@@ -17479,22 +17479,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get menuBarHelp => 'Pomoc';
 
   @override
-  String get contentPreferencesAudioInputDevice => 'Urządzenie wejścia audio';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Automatycznie (zalecane)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'Automatycznie wybiera najlepszy mikrofon';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Wybierz wejście audio';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Nieznany mikrofon';
-
-  @override
   String get emailConfirmationTitle => 'Potwierdź swój e-mail';
 
   @override

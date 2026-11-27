@@ -17054,22 +17054,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get menuBarHelp => 'Yardım';
 
   @override
-  String get contentPreferencesAudioInputDevice => 'Ses Giriş Cihazı';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Otomatik (önerilen)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'En iyi mikrofonu otomatik olarak seçer';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Ses Girişi Seç';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Bilinmeyen Mikrofon';
-
-  @override
   String get emailConfirmationTitle => 'E-postanı doğrula';
 
   @override

@@ -17281,22 +17281,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get menuBarHelp => 'Tulong';
 
   @override
-  String get contentPreferencesAudioInputDevice => 'Device para sa audio input';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Auto (inirerekomenda)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'Awtomatikong pumipili ng pinakamagandang microphone';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Pumili ng Audio Input';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Hindi Kilalang Microphone';
-
-  @override
   String get emailConfirmationTitle => 'I-confirm ang email mo';
 
   @override

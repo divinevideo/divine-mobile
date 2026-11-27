@@ -28687,36 +28687,6 @@ abstract class AppLocalizations {
   /// **'Help'**
   String get menuBarHelp;
 
-  /// No description provided for @contentPreferencesAudioInputDevice.
-  ///
-  /// In en, this message translates to:
-  /// **'Audio Input Device'**
-  String get contentPreferencesAudioInputDevice;
-
-  /// No description provided for @contentPreferencesAutoRecommended.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto (recommended)'**
-  String get contentPreferencesAutoRecommended;
-
-  /// No description provided for @contentPreferencesAutoSelectsBest.
-  ///
-  /// In en, this message translates to:
-  /// **'Automatically selects the best microphone'**
-  String get contentPreferencesAutoSelectsBest;
-
-  /// No description provided for @contentPreferencesSelectAudioInput.
-  ///
-  /// In en, this message translates to:
-  /// **'Select Audio Input'**
-  String get contentPreferencesSelectAudioInput;
-
-  /// No description provided for @contentPreferencesUnknownMicrophone.
-  ///
-  /// In en, this message translates to:
-  /// **'Unknown Microphone'**
-  String get contentPreferencesUnknownMicrophone;
-
   /// Label on the own-profile pill and title of the prompt asking an account that signed up without confirming its email to click the confirmation link.
   ///
   /// In en, this message translates to:

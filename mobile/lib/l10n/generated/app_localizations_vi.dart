@@ -17073,21 +17073,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get menuBarHelp => 'Trợ giúp';
 
   @override
-  String get contentPreferencesAudioInputDevice => 'Thiết bị thu âm';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Tự động (khuyên dùng)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest => 'Tự động chọn micro tốt nhất';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Chọn nguồn âm thanh';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Micro không xác định';
-
-  @override
   String get emailConfirmationTitle => 'Xác nhận email của bạn';
 
   @override

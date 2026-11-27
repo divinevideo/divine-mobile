@@ -17131,22 +17131,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get menuBarHelp => 'Bantuan';
 
   @override
-  String get contentPreferencesAudioInputDevice => 'Peranti Input Audio';
-
-  @override
-  String get contentPreferencesAutoRecommended => 'Auto (disyorkan)';
-
-  @override
-  String get contentPreferencesAutoSelectsBest =>
-      'Memilih mikrofon terbaik secara automatik';
-
-  @override
-  String get contentPreferencesSelectAudioInput => 'Pilih Input Audio';
-
-  @override
-  String get contentPreferencesUnknownMicrophone => 'Mikrofon Tidak Diketahui';
-
-  @override
   String get emailConfirmationTitle => 'Sahkan e-mel anda';
 
   @override
