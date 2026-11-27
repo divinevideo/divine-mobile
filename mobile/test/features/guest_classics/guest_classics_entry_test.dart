@@ -35,7 +35,12 @@ GuestClassicsManifest manifest(
 }, now: _now)!;
 
 class _NativePlayback {
-  _NativePlayback(this.tester, {this.holdSource}) {
+  _NativePlayback(
+    this.tester, {
+    this.holdSource,
+    this.holdLooping,
+    this.holdVolume,
+  }) {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     const global = MethodChannel('divine_video_player');
     _channels.add(global);
@@ -52,8 +57,12 @@ class _NativePlayback {
             if (method.method == 'setClips' && holdSource != null) {
               await holdSource!.future;
             }
+            if (method.method == 'setLooping' && holdLooping != null) {
+              await holdLooping!.future;
+            }
             if (method.method == 'setVolume') {
               volumes.add(method.arguments['volume'] as double);
+              if (holdVolume != null) await holdVolume!.future;
             }
             return null;
           });
@@ -70,6 +79,8 @@ class _NativePlayback {
   }
   final WidgetTester tester;
   final Completer<void>? holdSource;
+  final Completer<void>? holdLooping;
+  final Completer<void>? holdVolume;
   TestDefaultBinaryMessenger get messenger =>
       tester.binding.defaultBinaryMessenger;
   final _channels = <MethodChannel>[];
@@ -180,6 +191,42 @@ void main() {
         await tester.pump();
         expect(observed, [GuestClassicsObservation.firstFrame]);
         expect(find.byType(DivineVideoPlayer), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'resuming during native setup waits for muted volume before playing',
+      (tester) async {
+        final looping = Completer<void>();
+        final volume = Completer<void>();
+        final native = _NativePlayback(
+          tester,
+          holdLooping: looping,
+          holdVolume: volume,
+        );
+        addTearDown(tester.binding.resetInternalState);
+        await openGuest(tester, (_, {required muted}) async => manifest([1]));
+        expect(native.calls, containsAllInOrder(['setClips', 'setLooping']));
+        expect(native.volumes, isEmpty);
+
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        await tester.pump();
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        expect(native.calls, isNot(contains('play')));
+
+        looping.complete();
+        await tester.pump();
+        expect(native.volumes, [0.0]);
+        expect(native.calls, isNot(contains('play')));
+
+        volume.complete();
+        await tester.pumpAndSettle();
+        expect(native.calls.where((method) => method == 'play'), hasLength(1));
       },
     );
 

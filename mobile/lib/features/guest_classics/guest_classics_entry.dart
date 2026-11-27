@@ -470,7 +470,8 @@ class _GuestPlayerState extends State<_GuestPlayer> {
     } else if (!_reported) {
       _watchdog ??= Timer(const Duration(seconds: 6), _fail);
     }
-    if (_player.isInitialized) {
+    // _start handles playback after the native volume has been set.
+    if (_ready && _allowed) {
       unawaited(
         (widget.paused ? _player.pause() : _player.play()).catchError(
           (Object _) => _fail(),
