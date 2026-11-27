@@ -40,11 +40,17 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
   String? _paginationCursor;
   int _feedGeneration = 0;
 
+  /// Whether the loaded window came from the recommendation endpoint.
+  bool _showsRecommendations = false;
+
+  /// The account gate and other inputs the previous build ran with.
+  bool? _builtAdaptive;
+  Object? _builtInputs;
+
   @override
   Future<VideoFeedState> build() async {
-    _feedGeneration++;
-    _paginationCursor = null;
-    if (ref.watch(adaptiveClassicsEnabledProvider)) {
+    final adaptive = ref.watch(adaptiveClassicsEnabledProvider);
+    if (adaptive) {
       final analytics = ref.watch(analyticsServiceProvider);
       final privacy = analytics.privacyChanges.listen((_) {
         _feedGeneration++;
@@ -54,14 +60,45 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
       ref.onDispose(() => unawaited(privacy.cancel()));
     }
     // Watch content filter version — rebuilds when preferences change.
-    ref.watch(contentFilterVersionProvider);
-    ref.watch(divineHostFilterVersionProvider);
-
     // Watch blocklist version — rebuilds when block/unblock actions occur.
-    ref.watch(blocklistVersionProvider);
-
-    // Watch appReady gate
+    // Watch appReady gate.
     final isAppReady = ref.watch(appReadyProvider);
+    // A personalized grid must not carry another account's cursor forward.
+    final authState = isAppReady ? ref.watch(currentAuthStateProvider) : null;
+    final funnelcakeAvailable =
+        isAppReady &&
+        ref.watch(
+          funnelcakeAvailableProvider.select(
+            (availability) => availability.value ?? false,
+          ),
+        );
+    final inputs = (
+      ref.watch(contentFilterVersionProvider),
+      ref.watch(divineHostFilterVersionProvider),
+      ref.watch(blocklistVersionProvider),
+      isAppReady,
+      authState,
+      funnelcakeAvailable,
+    );
+    final gateChangedAlone =
+        _builtAdaptive != null &&
+        _builtAdaptive != adaptive &&
+        inputs == _builtInputs;
+    _builtAdaptive = adaptive;
+    _builtInputs = inputs;
+    final current = state.value;
+    // Eligibility changing on its own keeps a loaded archive window and its
+    // cursor, so an open archive-mode player is not reloaded under the viewer;
+    // the next refresh picks up the new mode. Only a ranked window is replaced
+    // when eligibility ends.
+    if (gateChangedAlone &&
+        current != null &&
+        current.videos.isNotEmpty &&
+        !(_showsRecommendations && !adaptive)) {
+      return current;
+    }
+    _feedGeneration++;
+    _paginationCursor = null;
 
     Log.info(
       '🎬 ClassicVinesFeed: Building feed (appReady: $isAppReady)',
@@ -84,16 +121,6 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
       }
       return const VideoFeedState(videos: [], hasMoreContent: false);
     }
-
-    // A personalized grid must not carry another account's cursor forward.
-    ref.watch(currentAuthStateProvider);
-    final funnelcakeAvailable = ref.watch(
-      funnelcakeAvailableProvider.select(
-        (availability) => availability.value ?? false,
-      ),
-    );
-
-    _paginationCursor = null;
 
     return _loadFirstPage(funnelcakeAvailable: funnelcakeAvailable);
   }
@@ -168,6 +195,7 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
 
     VideoFeedState restFeedState({required HomeFeedResult result}) {
       _paginationCursor = result.paginationCursor;
+      _showsRecommendations = result.recommendationPageCount > 0;
 
       Log.info(
         '🎬 ClassicVinesFeed: Loaded ${result.videos.length} videos '
@@ -261,6 +289,7 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
 
     // Take top entries then shuffle for variety
     final topClassics = classicVideos.take(_pageSize).toList()..shuffle();
+    _showsRecommendations = false;
 
     if (topClassics.isEmpty && preserveCurrentOnEmptyFallback) {
       final failure = restError;
@@ -393,6 +422,7 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
       nextCursor: result.nextCursor,
       paginationCursor: result.paginationCursor,
       hasMore: result.hasMore,
+      recommendationPageCount: result.recommendationPageCount,
     );
   }
 

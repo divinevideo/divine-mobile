@@ -44,6 +44,22 @@ class _TestFunnelcakeAvailable extends FunnelcakeAvailable {
 
 Completer<bool>? _loadingAvailabilityCompleter;
 
+/// Stands in for the account gate so a test can change eligibility mid-run.
+class _Eligibility extends Notifier<bool> {
+  _Eligibility({required this.initial});
+
+  final bool initial;
+
+  @override
+  bool build() => initial;
+
+  set eligible(bool value) => state = value;
+}
+
+final _eligibilityProvider = NotifierProvider<_Eligibility, bool>(
+  () => _Eligibility(initial: false),
+);
+
 class _LoadingFunnelcakeAvailable extends FunnelcakeAvailable {
   @override
   Future<bool> build() async => _loadingAvailabilityCompleter!.future;
@@ -98,11 +114,19 @@ void main() {
     ProviderContainer createContainer({
       VideosRepository Function()? repository,
       bool adaptiveClassics = false,
+      bool? eligible,
     }) {
       return ProviderContainer(
         overrides: [
           appReadyProvider.overrideWithValue(true),
-          if (adaptiveClassics)
+          if (eligible != null) ...[
+            _eligibilityProvider.overrideWith(
+              () => _Eligibility(initial: eligible),
+            ),
+            adaptiveClassicsEnabledProvider.overrideWith(
+              (ref) => ref.watch(_eligibilityProvider),
+            ),
+          ] else if (adaptiveClassics)
             adaptiveClassicsEnabledProvider.overrideWithValue(true),
           analyticsServiceProvider.overrideWithValue(analytics),
           currentAuthStateProvider.overrideWith(_TestCurrentAuth.new),
@@ -228,6 +252,150 @@ void main() {
         );
       },
     );
+
+    group('account gate changes', () {
+      void stubPages(List<HomeFeedResult> firstPages) {
+        var index = 0;
+        when(
+          () => mockVideosRepository.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer((invocation) async {
+          if (invocation.namedArguments[#cursor] != null) {
+            return HomeFeedResult(
+              videos: [_videoEvent('next-page')],
+              hasMore: false,
+            );
+          }
+          return firstPages[index++];
+        });
+      }
+
+      Future<List<String>> gridIds(ProviderContainer container) async =>
+          (await container.read(
+            classicVinesFeedProvider.future,
+          )).videos.map((video) => video.id).toList();
+
+      test(
+        'keeps an archive grid and its cursor when eligibility arrives',
+        () async {
+          stubPages([
+            HomeFeedResult(
+              videos: [_videoEvent('archive')],
+              paginationCursor: 'classic-offset:50',
+              hasMore: true,
+            ),
+          ]);
+          final container = createContainer(eligible: false);
+          addTearDown(container.dispose);
+          await container.read(funnelcakeAvailableProvider.future);
+          expect(await gridIds(container), ['archive']);
+
+          container.read(_eligibilityProvider.notifier).eligible = true;
+          await container.pump();
+
+          expect(await gridIds(container), ['archive']);
+          await container.read(classicVinesFeedProvider.notifier).loadMore();
+          expect(await gridIds(container), ['archive', 'next-page']);
+          verify(
+            () => mockVideosRepository.getClassicVideos(
+              limit: any(named: 'limit'),
+              skipCache: any(named: 'skipCache'),
+            ),
+          ).called(1);
+          verify(
+            () => mockVideosRepository.getClassicVideos(
+              limit: any(named: 'limit'),
+              cursor: 'classic-offset:50',
+              skipCache: any(named: 'skipCache'),
+            ),
+          ).called(1);
+        },
+      );
+
+      test(
+        'replaces a personalized grid with the archive when eligibility ends',
+        () async {
+          stubPages([
+            HomeFeedResult(
+              videos: [_videoEvent('ranked')],
+              paginationCursor: 'adaptive',
+              hasMore: true,
+              recommendationPageCount: 1,
+            ),
+            HomeFeedResult(
+              videos: [_videoEvent('archive')],
+              paginationCursor: 'classic-offset:50',
+              hasMore: true,
+            ),
+          ]);
+          final container = createContainer(eligible: true);
+          addTearDown(container.dispose);
+          await container.read(funnelcakeAvailableProvider.future);
+          expect(await gridIds(container), ['ranked']);
+
+          container.read(_eligibilityProvider.notifier).eligible = false;
+          await container.pump();
+
+          expect(await gridIds(container), ['archive']);
+        },
+      );
+
+      test('keeps an archive grid when eligibility ends', () async {
+        stubPages([
+          HomeFeedResult(
+            videos: [_videoEvent('archive')],
+            paginationCursor: 'classic-offset:50',
+            hasMore: true,
+          ),
+        ]);
+        final container = createContainer(eligible: true);
+        addTearDown(container.dispose);
+        await container.read(funnelcakeAvailableProvider.future);
+        expect(await gridIds(container), ['archive']);
+
+        container.read(_eligibilityProvider.notifier).eligible = false;
+        await container.pump();
+
+        expect(await gridIds(container), ['archive']);
+        verify(
+          () => mockVideosRepository.getClassicVideos(
+            limit: any(named: 'limit'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).called(1);
+      });
+
+      test('a privacy reset still reloads a grid it kept', () async {
+        stubPages([
+          HomeFeedResult(
+            videos: [_videoEvent('archive')],
+            paginationCursor: 'classic-offset:50',
+            hasMore: true,
+          ),
+          HomeFeedResult(
+            videos: [_videoEvent('ranked')],
+            paginationCursor: 'adaptive',
+            hasMore: true,
+            recommendationPageCount: 1,
+          ),
+        ]);
+        final container = createContainer(eligible: false);
+        addTearDown(container.dispose);
+        await container.read(funnelcakeAvailableProvider.future);
+        await gridIds(container);
+        container.read(_eligibilityProvider.notifier).eligible = true;
+        await container.pump();
+        expect(await gridIds(container), ['archive']);
+
+        privacyChanges.add(null);
+        await container.pump();
+
+        expect(await gridIds(container), ['ranked']);
+      });
+    });
 
     test('loads the first classics page through the repository', () async {
       final container = createContainer();
