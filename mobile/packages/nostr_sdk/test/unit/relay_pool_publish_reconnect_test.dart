@@ -74,9 +74,11 @@ class _Rig {
 
   /// What `RelayManager` does to every relay on a forced reconnect: drop the
   /// object for the url and add a new one in its place.
-  void replace() {
+  void replace({bool writeAccess = true}) {
     pool.remove(_url);
-    unawaited(pool.add(_relay(), autoSubscribe: true));
+    final replacement = _relay();
+    replacement.relayStatus.writeAccess = writeAccess;
+    unawaited(pool.add(replacement, autoSubscribe: true));
     async.flushMicrotasks();
   }
 
@@ -193,6 +195,24 @@ void main() {
         });
       });
 
+      test('ends unanswered when the replacement is read-only', () {
+        fakeAsync((async) {
+          final rig = _Rig(async);
+          final note = _note();
+          final publish = _startPublish(rig, note);
+          final old = rig.socket;
+          expect(_published(old), [note.id]);
+
+          async.elapse(_reconnectAt);
+          rig.replace(writeAccess: false);
+
+          expect(rig.socket, isNot(same(old)));
+          expect(_published(rig.socket), isEmpty);
+          expect(publish.outcome?.noResponseFrom, [_url]);
+          expect(publish.tookFor, _reconnectAt);
+        });
+      });
+
       test('ends at once, unanswered, when the relay is removed with '
           'nothing in its place', () {
         fakeAsync((async) {
@@ -280,6 +300,86 @@ void main() {
           rig.accept(second, note);
           async.elapse(_timeout);
           expect(publish.outcome!.acceptedBy, [_url]);
+        });
+      });
+
+      test('ends an AUTH retry when the replacement is read-only', () {
+        fakeAsync((async) {
+          final rig = _Rig(async);
+          final note = _note();
+          final publish = _startPublish(rig, note);
+          final old = rig.socket;
+          rig
+            ..deliver(old, ['OK', note.id, false, 'auth-required: auth'])
+            ..challenge(old);
+          expect(_published(old), [note.id, note.id]);
+
+          async.elapse(_reconnectAt);
+          rig.replace(writeAccess: false);
+          rig.challenge(rig.socket);
+
+          expect(_published(rig.socket), isEmpty);
+          expect(publish.outcome?.noResponseFrom, [_url]);
+          expect(publish.tookFor, _reconnectAt);
+        });
+      });
+
+      test('ends an AUTH retry when write access changes before AUTH OK', () {
+        fakeAsync((async) {
+          final rig = _Rig(async);
+          final note = _note();
+          final publish = _startPublish(rig, note);
+          final old = rig.socket;
+          rig
+            ..deliver(old, ['OK', note.id, false, 'auth-required: auth'])
+            ..challenge(old);
+          expect(_published(old), [note.id, note.id]);
+
+          async.elapse(_reconnectAt);
+          rig.replace();
+          expect(publish.outcome, isNull);
+          rig.pool.getRelay(_url)!.relayStatus.writeAccess = false;
+          rig.challenge(rig.socket);
+
+          expect(_published(rig.socket), isEmpty);
+          expect(publish.outcome?.noResponseFrom, [_url]);
+          expect(publish.tookFor, _reconnectAt);
+        });
+      });
+
+      test('keeps the AUTH retry on a writable peer of a read-only relay', () {
+        fakeAsync((async) {
+          final rig = _Rig(async);
+          final note = _note();
+          final publish = _startPublish(rig, note);
+          final writable = rig.socket;
+          rig.deliver(writable, ['OK', note.id, false, 'auth-required: auth']);
+
+          unawaited(
+            rig.pool.add(
+              RelayBase(
+                _url,
+                RelayStatus(
+                  _url,
+                  relayType: RelayType.cache,
+                  writeAccess: false,
+                ),
+                channelFactory: rig.factory,
+              ),
+              relayType: RelayType.cache,
+            ),
+          );
+          async.flushMicrotasks();
+          final readOnly = rig.socket;
+          expect(readOnly, isNot(same(writable)));
+          rig.challenge(readOnly);
+          expect(_published(readOnly), isEmpty);
+          expect(publish.outcome, isNull);
+
+          rig.challenge(writable);
+          expect(_published(writable), [note.id, note.id]);
+          rig.accept(writable, note);
+          expect(publish.outcome?.acceptedBy, [_url]);
         });
       });
 
@@ -371,6 +471,25 @@ void main() {
 
           expect(publish.outcome!.acceptedBy, [_url]);
           expect(publish.outcome!.noResponseFrom, isEmpty);
+        });
+      });
+
+      test('ends unanswered when write access was disabled', () {
+        fakeAsync((async) {
+          final rig = _Rig(async);
+          final note = _note();
+          final publish = _startPublish(rig, note);
+          final old = rig.socket;
+          expect(_published(old), [note.id]);
+
+          async.elapse(_reconnectAt);
+          rig.pool.getRelay(_url)!.relayStatus.writeAccess = false;
+          unawaited(old.closeFromRemote());
+          async.elapse(_answerDelay);
+
+          expect(rig.sockets, hasLength(2));
+          expect(_published(rig.socket), isEmpty);
+          expect(publish.outcome?.noResponseFrom, [_url]);
         });
       });
 

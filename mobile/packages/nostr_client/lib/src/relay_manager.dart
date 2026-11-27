@@ -860,9 +860,15 @@ class RelayManager {
       if (_relayFactory != null) {
         relay = _relayFactory(url);
       } else {
+        // The replacement may inherit unanswered publishes, so preserve the
+        // existing write policy when recreating its socket.
+        final previous = _relayPool.getRelay(url);
         relay = RelayBase(
           url,
-          RelayStatus(url),
+          RelayStatus(
+            url,
+            writeAccess: previous?.relayStatus.writeAccess ?? true,
+          ),
           channelFactory: _config.webSocketChannelFactory,
           diagnosticsSink: _diagnosticsSink,
         );

@@ -3,6 +3,8 @@
 // ABOUTME: connection (#11343, #11446).
 
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:clock/clock.dart';
 import 'package:fake_async/fake_async.dart';
@@ -264,6 +266,85 @@ _Publish _startPublish(FakeAsync async, _Harness h) {
 
 void main() {
   group('$NostrClient forceReconnectAll (#11343, #11446)', () {
+    test(
+      'preserves write access when the default relay is recreated',
+      () async {
+        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        final url = 'ws://127.0.0.1:${server.port}';
+        final sockets = <WebSocket>[];
+        final events = <List<String>>[];
+        final firstWrite = Completer<void>();
+        final replacementBarrier = Completer<void>();
+        server.listen((request) async {
+          if (!WebSocketTransformer.isUpgradeRequest(request)) {
+            request.response.statusCode = HttpStatus.notFound;
+            await request.response.close();
+            return;
+          }
+          final socket = await WebSocketTransformer.upgrade(request);
+          final socketEvents = <String>[];
+          sockets.add(socket);
+          events.add(socketEvents);
+          socket.listen((raw) {
+            final frame = jsonDecode(raw as String) as List<dynamic>;
+            if (frame.first == 'EVENT') {
+              final event = frame[1] as Map<String, dynamic>;
+              socketEvents.add(event['id'] as String);
+              if (!firstWrite.isCompleted) firstWrite.complete();
+            } else if (frame.first == 'CLOSE' && frame[1] == 'test-barrier') {
+              replacementBarrier.complete();
+            }
+          });
+        });
+
+        final nostr = Nostr(
+          LocalNostrSigner(_key),
+          [],
+          (url) => RelayBase(url, RelayStatus(url)),
+        );
+        final manager = RelayManager(
+          config: RelayManagerConfig(defaultRelayUrl: url),
+          relayPool: nostr.relayPool,
+        );
+        final client = NostrClient.forTesting(
+          nostr: nostr,
+          relayManager: manager,
+        );
+        addTearDown(() async {
+          await client.dispose();
+          for (final socket in sockets) {
+            await socket.close();
+          }
+          await server.close(force: true);
+        });
+
+        await manager.initialize();
+        final event = _note(url);
+        final publish = client.publishEventAwaitOk(event, timeout: _timeout);
+        await firstWrite.future.timeout(_answerDelay);
+        final old = nostr.relayPool.getRelay(url)!;
+        old.relayStatus.writeAccess = false;
+
+        expect(
+          await client.forceReconnectAll(),
+          ForceReconnectOutcome.completed,
+        );
+        final replacement = nostr.relayPool.getRelay(url)!;
+        expect(replacement, isNot(same(old)));
+        // This frame follows any replay on the same socket, so the server can
+        // confirm absence without waiting for the publish deadline.
+        expect(await replacement.send(['CLOSE', 'test-barrier']), isTrue);
+        await replacementBarrier.future.timeout(_answerDelay);
+
+        expect(events, [
+          [event.id],
+          isEmpty,
+        ]);
+        expect(replacement.relayStatus.writeAccess, isFalse);
+        expect((await publish).noResponseFrom, [url]);
+      },
+    );
+
     group('a read still waiting for its answer', () {
       test('is answered when nothing reconnects, as a control', () {
         fakeAsync((async) {

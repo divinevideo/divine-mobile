@@ -74,10 +74,9 @@ _MockRelayBase _createPooledRelay(
   required bool healthy,
 }) {
   final relay = _MockRelayBase();
-  final status = _MockRelayStatus();
+  final status = RelayStatus(url)..connected = connected;
   when(() => relay.url).thenReturn(url);
   when(() => relay.relayStatus).thenReturn(status);
-  when(() => status.connected).thenReturn(connected);
   when(relay.checkHealth).thenReturn(healthy);
   return relay;
 }
