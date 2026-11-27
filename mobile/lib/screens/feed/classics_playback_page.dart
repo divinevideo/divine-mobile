@@ -19,6 +19,7 @@ class ClassicsPlaybackPage extends ConsumerWidget {
     required this.anchor,
     required this.screen,
     required this.adaptive,
+    required this.archiveSeed,
     super.key,
   });
 
@@ -27,6 +28,9 @@ class ClassicsPlaybackPage extends ConsumerWidget {
 
   /// Whether the route was eligible for adaptation when the clip opened.
   final bool adaptive;
+
+  /// The grid's known archive clips available without a network request.
+  final List<VideoEvent> archiveSeed;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -42,7 +46,7 @@ class ClassicsPlaybackPage extends ConsumerWidget {
       create: (_) {
         late final ClassicFeedSession session;
         session = ClassicFeedSession(
-          initialVideos: [anchor],
+          initialVideos: [anchor, if (!adaptive) ...archiveSeed],
           loadPage: (request) {
             // Once the account stops being eligible the queue continues on
             // the archive, without a viewer or ranking context.
@@ -72,7 +76,7 @@ class ClassicsPlaybackPage extends ConsumerWidget {
           filter: repository.applyContentPreferences,
         );
         // A queue re-created after eligibility ended starts on the archive.
-        if (!isAdaptiveAllowed()) session.revokePersonalization();
+        if (adaptive && !isAdaptiveAllowed()) session.revokePersonalization();
         return ClassicsFeedCubit(session: session);
       },
       child: _ClassicsPlaybackView(

@@ -977,7 +977,7 @@ void main() {
             archiveOnly: true,
           ),
         ).thenAnswer(
-          (_) async => HomeFeedResult(videos: [archive], hasMore: false),
+          (_) async => const HomeFeedResult(videos: [], hasMore: false),
         );
         await tester.pumpWidget(
           BlocProvider<VideoVolumeCubit>.value(
@@ -990,7 +990,10 @@ void main() {
                 repository: repository,
               ),
               home: PooledFullscreenVideoFeedScreen(
-                source: ClassicVinesViewSource(anchor: videos.first),
+                source: ClassicVinesViewSource(
+                  anchor: videos.first,
+                  archiveSeed: [archive],
+                ),
                 feedRepository: StreamFeedRepository(
                   videos: gridWindow.stream,
                   hasMore: Stream.value(false),

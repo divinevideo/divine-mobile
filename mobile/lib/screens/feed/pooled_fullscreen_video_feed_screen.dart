@@ -276,8 +276,15 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (source case ClassicVinesViewSource(anchor: final anchor?)) {
-      return _SelectedClassicRoute(anchor: anchor, screen: this);
+    if (source case ClassicVinesViewSource(
+      anchor: final anchor?,
+      :final archiveSeed,
+    )) {
+      return _SelectedClassicRoute(
+        anchor: anchor,
+        archiveSeed: archiveSeed,
+        screen: this,
+      );
     }
     final mediaCache = kIsWeb ? null : ref.read(mediaCacheProvider);
     final blossomAuthService = ref.read(blossomAuthServiceProvider);
@@ -395,9 +402,14 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
 /// the archive ([ClassicsPlaybackPage]); an archive route stays on the archive
 /// until the viewer opens another classic.
 class _SelectedClassicRoute extends ConsumerStatefulWidget {
-  const _SelectedClassicRoute({required this.anchor, required this.screen});
+  const _SelectedClassicRoute({
+    required this.anchor,
+    required this.archiveSeed,
+    required this.screen,
+  });
 
   final VideoEvent anchor;
+  final List<VideoEvent> archiveSeed;
   final PooledFullscreenVideoFeedScreen screen;
 
   @override
@@ -417,6 +429,7 @@ class _SelectedClassicRouteState extends ConsumerState<_SelectedClassicRoute> {
   @override
   Widget build(BuildContext context) => ClassicsPlaybackPage(
     anchor: widget.anchor,
+    archiveSeed: widget.archiveSeed,
     screen: widget.screen,
     adaptive: _adaptive,
   );

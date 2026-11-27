@@ -251,10 +251,11 @@ class _ClassicVinesContentState extends ConsumerState<_ClassicVinesContent>
               final selected = videos[index];
               final visible = ref.read(visibleClassicVinesFeedProvider).value;
               // A pointer can hit the previous grid before Flutter redraws it.
-              if (visible == null ||
-                  !visible.videos.any((video) => video.id == selected.id)) {
-                return;
-              }
+              if (visible == null) return;
+              final selectedIndex = visible.videos.indexWhere(
+                (video) => video.id == selected.id,
+              );
+              if (selectedIndex < 0) return;
               Log.info(
                 '🎯 ClassicVinesTab TAP: gridIndex=$index, '
                 'videoId=${selected.id}',
@@ -264,7 +265,14 @@ class _ClassicVinesContentState extends ConsumerState<_ClassicVinesContent>
                 PooledFullscreenVideoFeedRouteData(
                   video: selected.id,
                   $extra: PooledFullscreenVideoFeedArgs(
-                    source: ClassicVinesViewSource(anchor: selected),
+                    source: ClassicVinesViewSource(
+                      anchor: selected,
+                      archiveSeed: visible.containsRecommendations
+                          ? const []
+                          : List.unmodifiable(
+                              visible.videos.skip(selectedIndex + 1),
+                            ),
+                    ),
                     feedRepository: ref.read(feedRepositoryProvider),
                     initialIndex: 0,
                     initialVideoId: selected.id,
