@@ -816,7 +816,7 @@ void main() {
         expect(requests.last.anchorVideoId, isNull);
       });
 
-      test('stops adapting to feedback and navigation', () async {
+      test('keeps the archive cursor when privacy context changes', () async {
         final requests = <ClassicRecommendationsRequest>[];
         final session = ClassicFeedSession(
           initialVideos: [_video(1)],
@@ -832,6 +832,7 @@ void main() {
         session.revokePersonalization();
         await session.settled;
         final afterRevocation = requests.length;
+        expect(session.state.cursor, 'offset');
 
         session
           ..recordInteraction(
@@ -845,7 +846,7 @@ void main() {
         await session.settled;
 
         expect(requests, hasLength(afterRevocation));
-        expect(session.state.cursor, isNull);
+        expect(session.state.cursor, 'offset');
       });
 
       test(

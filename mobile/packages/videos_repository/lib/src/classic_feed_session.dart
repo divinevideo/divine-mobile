@@ -319,9 +319,9 @@ class ClassicFeedSession {
 
   /// Rotates the request context at account or consent boundaries.
   void resetContext() {
-    if (_disposed) return;
+    if (_disposed || _revoked) return;
     _generation++;
-    _adaptiveAvailable = !_revoked;
+    _adaptiveAvailable = true;
     _seed = generateRecommendationSessionSeed();
     _interactions.clear();
     _recentIds.clear();

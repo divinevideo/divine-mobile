@@ -87,6 +87,13 @@ class _KnownViewerSession extends NostrSession {
       const NostrSessionReadiness.identityKnown(pubkey: _classicsViewer);
 }
 
+class _PrivacyChangingAnalytics extends RecordingConsumptionAnalytics {
+  final changes = StreamController<void>.broadcast();
+
+  @override
+  Stream<void> get privacyChanges => changes.stream;
+}
+
 /// Stands in for the Keycast eligibility answer behind the account gate.
 class _Eligibility extends Notifier<bool> {
   _Eligibility({required this.initial});
@@ -962,6 +969,8 @@ void main() {
         addTearDown(nativePlayer.dispose);
         final videos = createTestVideos(count: 2);
         final repository = classicsRepository();
+        final analytics = _PrivacyChangingAnalytics();
+        addTearDown(analytics.changes.close);
         final archive = videos[1];
         final ranked = createTestVideoEvent(
           id: 'a' * 64,
@@ -985,10 +994,10 @@ void main() {
             child: testMaterialApp(
               mockProfileRepository: mockProfileRepository,
               mockNip05VerificationService: mockNip05VerificationService,
-              additionalOverrides: gateOverrides(
-                eligible: false,
-                repository: repository,
-              ),
+              additionalOverrides: [
+                ...gateOverrides(eligible: false, repository: repository),
+                analyticsServiceProvider.overrideWithValue(analytics),
+              ],
               home: PooledFullscreenVideoFeedScreen(
                 source: ClassicVinesViewSource(
                   anchor: videos.first,
@@ -1019,6 +1028,7 @@ void main() {
           tester.element(find.byType(FullscreenFeedContent)),
         ).read(_eligibilityProvider.notifier).setEligible(true);
         gridWindow.add([ranked]);
+        analytics.changes.add(null);
         await tester.pump();
         await tester.pump();
 

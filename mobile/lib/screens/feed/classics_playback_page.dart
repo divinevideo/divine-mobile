@@ -47,7 +47,7 @@ class ClassicsPlaybackPage extends ConsumerWidget {
         late final ClassicFeedSession session;
         session = ClassicFeedSession(
           initialVideos: [anchor, if (!adaptive) ...archiveSeed],
-          loadPage: (request) {
+          loadPage: (request) async {
             // Once the account stops being eligible the queue continues on
             // the archive, without a viewer or ranking context.
             if (session.personalizationRevoked || !isAdaptiveAllowed()) {
@@ -59,7 +59,7 @@ class ClassicsPlaybackPage extends ConsumerWidget {
             }
             final contextId = analytics.privacyGeneration;
             final allowed = analytics.initializedAnalyticsConsent;
-            return repository.getClassicRecommendations(
+            final result = await repository.getClassicRecommendations(
               request: request,
               userPubkey: allowed ? viewer : null,
               isCurrent: () =>
@@ -67,11 +67,20 @@ class ClassicsPlaybackPage extends ConsumerWidget {
                   contextId == analytics.privacyGeneration &&
                   allowed == analytics.initializedAnalyticsConsent,
             );
+            // A selected clip can still continue through the archive already
+            // loaded by Explore if both recommendation and archive reads fail.
+            if (request.cursor == null &&
+                result.videos.isEmpty &&
+                result.hasMore == false &&
+                archiveSeed.isNotEmpty) {
+              return HomeFeedResult(videos: archiveSeed, hasMore: false);
+            }
+            return result;
           },
           canPersonalize: () =>
               isAdaptiveAllowed() && analytics.initializedAnalyticsConsent,
-          feedback: analytics.recommendationFeedback,
-          privacyChanges: analytics.privacyChanges,
+          feedback: adaptive ? analytics.recommendationFeedback : null,
+          privacyChanges: adaptive ? analytics.privacyChanges : null,
           removedVideoIds: repository.removedVideoIds,
           filter: repository.applyContentPreferences,
         );
