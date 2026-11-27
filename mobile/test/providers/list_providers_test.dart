@@ -267,19 +267,19 @@ void main() {
         );
         final queries = <List<String>>[];
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenAnswer((i) async {
+        ).thenAnswer((i) {
           final authors = i.namedArguments[#authorPubkeys] as List<String>;
           queries.add(List.of(authors));
-          return [
+          return Stream.value([
             for (final author in authors)
               _video(
                 id: author == _ownerB ? fetchedId : strangerId,
                 pubkey: author,
               ),
-          ];
+          ]);
         });
         final container = buildContainer();
         await repository.syncOwner(ownerPubkey: _ownerA);
@@ -374,10 +374,10 @@ void main() {
       'reuses the feed after unchanged members are decoded from cache',
       () async {
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenAnswer((_) async => const []);
+        ).thenAnswer((_) => Stream.value(const []));
         final initial = UserList(
           id: 'crew',
           name: 'Old name',
@@ -395,7 +395,7 @@ void main() {
         await collect(container, renamed.pubkeys);
 
         verify(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
         ).called(1);
@@ -406,10 +406,10 @@ void main() {
       'reuses reordered members without changing the caller roster',
       () async {
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenAnswer((_) async => const []);
+        ).thenAnswer((_) => Stream.value(const []));
         final members = [_ownerB, _ownerA, _ownerB];
         final container = buildContainer();
 
@@ -418,7 +418,7 @@ void main() {
 
         expect(members, [_ownerB, _ownerA, _ownerB]);
         final queriedMembers = verify(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: captureAny(named: 'authorPubkeys'),
           ),
         ).captured;
@@ -430,17 +430,17 @@ void main() {
 
     test('fetches a different feed when membership changes', () async {
       when(
-        () => videosRepository.getVideosByAuthors(
+        () => videosRepository.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
-      ).thenAnswer((_) async => const []);
+      ).thenAnswer((_) => Stream.value(const []));
       final container = buildContainer();
 
       await collect(container, [_ownerA]);
       await collect(container, [_ownerA, _ownerB]);
 
       verify(
-        () => videosRepository.getVideosByAuthors(
+        () => videosRepository.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
       ).called(2);
@@ -448,17 +448,17 @@ void main() {
 
     test('keeps delimiter-containing malformed rosters separate', () async {
       when(
-        () => videosRepository.getVideosByAuthors(
+        () => videosRepository.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
-      ).thenAnswer((_) async => const []);
+      ).thenAnswer((_) => Stream.value(const []));
       final container = buildContainer();
 
       await collect(container, [_ownerA, _ownerB]);
       await collect(container, ['$_ownerA,$_ownerB']);
 
       verify(
-        () => videosRepository.getVideosByAuthors(
+        () => videosRepository.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
       ).called(2);
@@ -470,10 +470,10 @@ void main() {
         pubkey: _ownerA,
       );
       when(
-        () => videosRepository.getVideosByAuthors(
+        () => videosRepository.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
-      ).thenAnswer((_) async => [fetched]);
+      ).thenAnswer((_) => Stream.value([fetched]));
 
       final states = await collect(buildContainer(), [_ownerA, _ownerB]);
 
@@ -485,7 +485,7 @@ void main() {
       );
       final asked =
           verify(
-                () => videosRepository.getVideosByAuthors(
+                () => videosRepository.watchVideosByAuthors(
                   authorPubkeys: captureAny(named: 'authorPubkeys'),
                 ),
               ).captured.single
@@ -512,10 +512,10 @@ void main() {
           createdAt: 200,
         );
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenAnswer((_) async => [fetched]);
+        ).thenAnswer((_) => Stream.value([fetched]));
 
         final states = await collect(
           buildContainer(pooled: [pooledMember, stranger]),
@@ -543,10 +543,10 @@ void main() {
         final pooled = _video(id: id, pubkey: _ownerA, createdAt: 100);
         final fetched = _video(id: id, pubkey: _ownerA, createdAt: 200);
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenAnswer((_) async => [fetched]);
+        ).thenAnswer((_) => Stream.value([fetched]));
 
         final states = await collect(buildContainer(pooled: [pooled]), [
           _ownerA,
@@ -575,10 +575,10 @@ void main() {
           createdAt: 200,
         ).copyWith(addressableDTag: 'clip');
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenAnswer((_) async => [edited]);
+        ).thenAnswer((_) => Stream.value([edited]));
 
         final states = await collect(buildContainer(pooled: [previous]), [
           _ownerA,
@@ -617,10 +617,12 @@ void main() {
           createdAt: 200,
         );
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenAnswer((_) async => [fetchedMember].where(visible).toList());
+        ).thenAnswer(
+          (_) => Stream.value([fetchedMember].where(visible).toList()),
+        );
         final container = buildContainer(pooled: [pooledMember]);
         final states = await collect(container, [_ownerA, _ownerB]);
         expect(idsOf(states).last, equals([fetchedId, pooledId]));
@@ -643,15 +645,17 @@ void main() {
       when(() => rebuilt.applyContentPreferences(any()))
           .thenAnswer(passThrough);
       when(
-        () => videosRepository.getVideosByAuthors(
+        () => videosRepository.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
-      ).thenAnswer((_) async => [_video(id: beforeId, pubkey: _ownerA)]);
+      ).thenAnswer(
+        (_) => Stream.value([_video(id: beforeId, pubkey: _ownerA)]),
+      );
       when(
-        () => rebuilt.getVideosByAuthors(
+        () => rebuilt.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
-      ).thenAnswer((_) async => [_video(id: afterId, pubkey: _ownerA)]);
+      ).thenAnswer((_) => Stream.value([_video(id: afterId, pubkey: _ownerA)]));
       final active = NotifierProvider<_ActiveRepository, VideosRepository>(
         () => _ActiveRepository(videosRepository),
       );
@@ -672,6 +676,67 @@ void main() {
     });
 
     test(
+      "merges each set the repository emits, Funnelcake's then the relays'",
+      () async {
+        const relayOnlyId =
+            '0000000000000000000000000000000000000000000000000000000000000bbd';
+        final indexed = _video(id: fetchedId, pubkey: _ownerA, createdAt: 100);
+        final relayOnly = _video(
+          id: relayOnlyId,
+          pubkey: _ownerB,
+          createdAt: 200,
+        );
+        when(
+          () => videosRepository.watchVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenAnswer(
+          (_) => Stream.fromIterable([
+            [indexed],
+            [relayOnly, indexed],
+          ]),
+        );
+
+        final states = await collect(buildContainer(), [_ownerA, _ownerB]);
+
+        expect(
+          idsOf(states),
+          equals([
+            [fetchedId],
+            [relayOnlyId, fetchedId],
+          ]),
+        );
+      },
+    );
+
+    test(
+      'keeps the fetched videos when the read fails after they showed',
+      () async {
+        final indexed = _video(id: fetchedId, pubkey: _ownerA);
+        Stream<List<VideoEvent>> showsThenFails() async* {
+          yield [indexed];
+          throw Exception('relay down');
+        }
+
+        when(
+          () => videosRepository.watchVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenAnswer((_) => showsThenFails());
+
+        final states = await collect(buildContainer(), [_ownerA]);
+
+        expect(states.last.hasError, isFalse);
+        expect(
+          idsOf(states),
+          equals([
+            [fetchedId],
+          ]),
+        );
+      },
+    );
+
+    test(
       'keeps the pooled videos when the fetch fails after the first paint',
       () async {
         final pooledMember = _video(
@@ -679,10 +744,10 @@ void main() {
           pubkey: _ownerA,
         );
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenThrow(Exception('relay down'));
+        ).thenAnswer((_) => Stream.error(Exception('relay down')));
 
         final states = await collect(buildContainer(pooled: [pooledMember]), [
           _ownerA,
@@ -700,10 +765,10 @@ void main() {
 
     test('surfaces the failure when nothing is pooled', () async {
       when(
-        () => videosRepository.getVideosByAuthors(
+        () => videosRepository.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
-      ).thenThrow(Exception('relay down'));
+      ).thenAnswer((_) => Stream.error(Exception('relay down')));
 
       final states = await collect(buildContainer(), [_ownerA]);
 
@@ -713,7 +778,7 @@ void main() {
       expect(states.last, isA<AsyncError<List<VideoEvent>>>());
       expect(idsOf(states), isEmpty);
       verify(
-        () => videosRepository.getVideosByAuthors(
+        () => videosRepository.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
       ).called(1);
@@ -727,10 +792,10 @@ void main() {
           pubkey: _ownerA,
         );
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenThrow(StateError('bug'));
+        ).thenAnswer((_) => Stream.error(StateError('bug')));
 
         final states = await collect(buildContainer(pooled: [pooledMember]), [
           _ownerA,

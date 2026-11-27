@@ -368,8 +368,8 @@ void main() {
       );
       const error = RelayReadUnavailableException('the read timed out');
       when(
-        () => repository.getVideosByAuthors(authorPubkeys: list.pubkeys),
-      ).thenThrow(error);
+        () => repository.watchVideosByAuthors(authorPubkeys: list.pubkeys),
+      ).thenAnswer((_) => Stream.error(error));
 
       await tester.pumpWidget(
         testProviderScope(
@@ -395,8 +395,8 @@ void main() {
 
       final retriedRead = Completer<List<VideoEvent>>();
       when(
-        () => repository.getVideosByAuthors(authorPubkeys: list.pubkeys),
-      ).thenAnswer((_) => retriedRead.future);
+        () => repository.watchVideosByAuthors(authorPubkeys: list.pubkeys),
+      ).thenAnswer((_) => Stream.fromFuture(retriedRead.future));
       await tester.tap(find.text(l10n.commonRetry));
       await tester.pump();
       await tester.pump();
@@ -408,7 +408,7 @@ void main() {
       expect(find.text(l10n.peopleListsFailedToLoadVideos), findsNothing);
       expect(find.text(l10n.commonRetry), findsNothing);
       verify(
-        () => repository.getVideosByAuthors(authorPubkeys: list.pubkeys),
+        () => repository.watchVideosByAuthors(authorPubkeys: list.pubkeys),
       ).called(2);
     });
 
@@ -580,15 +580,17 @@ void main() {
               invocation.positionalArguments.single as List<VideoEvent>,
         );
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenAnswer((_) async {
+        ).thenAnswer((_) {
           attempts++;
           if (attempts == 1) {
-            throw const RelayReadUnavailableException('relay down');
+            return Stream.error(
+              const RelayReadUnavailableException('relay down'),
+            );
           }
-          return retryResult.future;
+          return Stream.fromFuture(retryResult.future);
         });
 
         await tester.pumpWidget(
@@ -690,10 +692,10 @@ void main() {
         );
         final videosRepository = _MockVideosRepository();
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenAnswer((_) async => const []);
+        ).thenAnswer((_) => Stream.value(const []));
 
         await tester.pumpWidget(
           testProviderScope(

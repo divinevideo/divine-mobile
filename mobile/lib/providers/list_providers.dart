@@ -93,15 +93,15 @@ Duration? _noAutomaticRetry(int retryCount, Object error) => null;
 /// Provider for the videos published by the members of a user list.
 ///
 /// The members' newest videos come from
-/// [VideosRepository.getVideosByAuthors]: Funnelcake first, the relays when
-/// it fails or holds none of their videos. Whatever the feed pool already
-/// holds from those members shows first, so a list of followed people paints
-/// before the round trip returns; the fetched set is then merged in. A fetch
-/// that fails after that first paint keeps the pooled videos; one that fails
+/// [VideosRepository.watchVideosByAuthors]: Funnelcake's as soon as they
+/// arrive, then the relays' merged in. Whatever the feed pool already holds
+/// from those members shows first, so a list of followed people paints
+/// before the round trip returns; each fetched set is then merged in. A
+/// fetch that fails after a first paint keeps what is shown; one that fails
 /// with nothing to show surfaces the error at once, with no automatic retry,
 /// so a network failure never reads as "no videos yet" or as endless loading.
 /// Only an [Exception] is absorbed that way: an [Error] is a bug and
-/// surfaces whatever is pooled.
+/// surfaces whatever is shown.
 ///
 /// It re-runs when the blocklist changes, as the other list providers here
 /// do (#5104), and when the repository is rebuilt for a filter change or an
@@ -146,29 +146,33 @@ Stream<List<VideoEvent>> _userListMemberVideos(
   );
   if (seeded.isNotEmpty) yield seeded;
 
-  final List<VideoEvent> fetched;
+  var shown = seeded.length;
   try {
-    fetched = await repository.getVideosByAuthors(authorPubkeys: pubkeys);
+    await for (final fetched in repository.watchVideosByAuthors(
+      authorPubkeys: pubkeys,
+    )) {
+      // Keyed like the repository's own merge: an edit keeps the d-tag and
+      // mints a new event id, so the pool can hold the revision the fetch
+      // replaced.
+      final seenKeys = fetched.map((video) => video.feedDedupKey).toSet();
+      final merged = _newestFirst([
+        ...fetched,
+        for (final video in seeded)
+          if (seenKeys.add(video.feedDedupKey)) video,
+      ]);
+      shown = merged.length;
+      yield merged;
+    }
   } on Exception catch (error, stackTrace) {
-    if (seeded.isEmpty) rethrow;
+    if (shown == 0) rethrow;
     Log.warning(
-      'Member videos fetch failed; keeping ${seeded.length} pooled videos',
+      'Member videos fetch failed; keeping $shown videos shown',
       name: 'ListProviders',
       category: LogCategory.relay,
       error: error,
       stackTrace: stackTrace,
     );
-    return;
   }
-
-  // Keyed like the repository's own merge: an edit keeps the d-tag and mints
-  // a new event id, so the pool can hold the revision the fetch replaced.
-  final seenKeys = fetched.map((video) => video.feedDedupKey).toSet();
-  yield _newestFirst([
-    ...fetched,
-    for (final video in seeded)
-      if (seenKeys.add(video.feedDedupKey)) video,
-  ]);
 }
 
 List<VideoEvent> _newestFirst(List<VideoEvent> videos) =>
