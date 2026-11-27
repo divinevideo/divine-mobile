@@ -10027,6 +10027,41 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Nuanțe';
 
   @override
+  String get videoEditorFilterSettingsOpen => 'Setări filtru';
+
+  @override
+  String get videoEditorFilterLightTitle => 'Lumină';
+
+  @override
+  String get videoEditorFilterLightReset => 'Resetează lumina';
+
+  @override
+  String get videoEditorFilterColorReset => 'Resetează culoarea';
+
+  @override
+  String get videoEditorFilterOverlayTitle => 'Suprapunere';
+
+  @override
+  String get videoEditorFilterOverlayReset => 'Resetează suprapunerea';
+
+  @override
+  String get videoEditorFilterCastTitle => 'Dominantă de culoare';
+
+  @override
+  String get videoEditorFilterCastReset => 'Resetează dominanta de culoare';
+
+  @override
+  String get videoEditorFilterBalanceTitle => 'Balans de culoare';
+
+  @override
+  String get videoEditorFilterBalanceReset => 'Resetează balansul de culoare';
+
+  @override
+  String videoEditorFilterSettingsNumberedTitle(String title, String number) {
+    return '$title $number';
+  }
+
+  @override
   String get videoEditorDropsCountLabel => 'Număr';
 
   @override
@@ -10270,6 +10305,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorEffectSettingWavelength => 'Lungime de undă';
+
+  @override
+  String get videoEditorEffectSettingStrength => 'Intensitate';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

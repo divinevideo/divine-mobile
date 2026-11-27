@@ -9900,6 +9900,41 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Оттенъци';
 
   @override
+  String get videoEditorFilterSettingsOpen => 'Настройки на филтъра';
+
+  @override
+  String get videoEditorFilterLightTitle => 'Светлина';
+
+  @override
+  String get videoEditorFilterLightReset => 'Нулирай светлината';
+
+  @override
+  String get videoEditorFilterColorReset => 'Нулирай цвета';
+
+  @override
+  String get videoEditorFilterOverlayTitle => 'Наслагване';
+
+  @override
+  String get videoEditorFilterOverlayReset => 'Нулирай наслагването';
+
+  @override
+  String get videoEditorFilterCastTitle => 'Цветен оттенък';
+
+  @override
+  String get videoEditorFilterCastReset => 'Нулирай цветния оттенък';
+
+  @override
+  String get videoEditorFilterBalanceTitle => 'Цветови баланс';
+
+  @override
+  String get videoEditorFilterBalanceReset => 'Нулирай цветовия баланс';
+
+  @override
+  String videoEditorFilterSettingsNumberedTitle(String title, String number) {
+    return '$title $number';
+  }
+
+  @override
   String get videoEditorDropsCountLabel => 'Брой';
 
   @override
@@ -10143,6 +10178,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorEffectSettingWavelength => 'Дължина на вълната';
+
+  @override
+  String get videoEditorEffectSettingStrength => 'Сила';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

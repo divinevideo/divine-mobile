@@ -4203,9 +4203,17 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               onUndo: () => _syncDrawCapabilities(scope, drawBloc),
             ),
             filterEditorCallbacks: FilterEditorCallbacks(
-              onInit: () {
-                final filterBloc = context.read<VideoEditorFilterBloc>();
-                filterBloc.add(const VideoEditorFilterEditorInitialized());
+              // A session that changes a committed filter starts on it; the
+              // overlay controls keep the preview in step from then on.
+              onAfterViewInit: () {
+                final edited = context
+                    .read<VideoEditorFilterBloc>()
+                    .state
+                    .edited;
+                if (edited == null) return;
+                scope.filterEditor
+                  ?..setFilter(edited.filter)
+                  ..setFilterOpacity(edited.opacity);
               },
             ),
             tuneEditorCallbacks: TuneEditorCallbacks(

@@ -10070,6 +10070,41 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'రంగులు';
 
   @override
+  String get videoEditorFilterSettingsOpen => 'ఫిల్టర్ సెట్టింగ్‌లు';
+
+  @override
+  String get videoEditorFilterLightTitle => 'వెలుతురు';
+
+  @override
+  String get videoEditorFilterLightReset => 'వెలుతురును రీసెట్ చేయి';
+
+  @override
+  String get videoEditorFilterColorReset => 'రంగును రీసెట్ చేయి';
+
+  @override
+  String get videoEditorFilterOverlayTitle => 'ఓవర్‌లే';
+
+  @override
+  String get videoEditorFilterOverlayReset => 'ఓవర్‌లేను రీసెట్ చేయి';
+
+  @override
+  String get videoEditorFilterCastTitle => 'రంగు ఛాయ';
+
+  @override
+  String get videoEditorFilterCastReset => 'రంగు ఛాయను రీసెట్ చేయి';
+
+  @override
+  String get videoEditorFilterBalanceTitle => 'రంగుల సమతుల్యత';
+
+  @override
+  String get videoEditorFilterBalanceReset => 'రంగుల సమతుల్యతను రీసెట్ చేయి';
+
+  @override
+  String videoEditorFilterSettingsNumberedTitle(String title, String number) {
+    return '$title $number';
+  }
+
+  @override
   String get videoEditorDropsCountLabel => 'సంఖ్య';
 
   @override
@@ -10312,6 +10347,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorEffectSettingWavelength => 'తరంగదైర్ఘ్యం';
+
+  @override
+  String get videoEditorEffectSettingStrength => 'తీవ్రత';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

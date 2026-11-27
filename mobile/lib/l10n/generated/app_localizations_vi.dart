@@ -9764,6 +9764,41 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Tông màu';
 
   @override
+  String get videoEditorFilterSettingsOpen => 'Cài đặt bộ lọc';
+
+  @override
+  String get videoEditorFilterLightTitle => 'Ánh sáng';
+
+  @override
+  String get videoEditorFilterLightReset => 'Đặt lại ánh sáng';
+
+  @override
+  String get videoEditorFilterColorReset => 'Đặt lại màu';
+
+  @override
+  String get videoEditorFilterOverlayTitle => 'Lớp phủ';
+
+  @override
+  String get videoEditorFilterOverlayReset => 'Đặt lại lớp phủ';
+
+  @override
+  String get videoEditorFilterCastTitle => 'Ám màu';
+
+  @override
+  String get videoEditorFilterCastReset => 'Đặt lại ám màu';
+
+  @override
+  String get videoEditorFilterBalanceTitle => 'Cân bằng màu';
+
+  @override
+  String get videoEditorFilterBalanceReset => 'Đặt lại cân bằng màu';
+
+  @override
+  String videoEditorFilterSettingsNumberedTitle(String title, String number) {
+    return '$title $number';
+  }
+
+  @override
   String get videoEditorDropsCountLabel => 'Số lượng';
 
   @override
@@ -10006,6 +10041,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorEffectSettingWavelength => 'Bước sóng';
+
+  @override
+  String get videoEditorEffectSettingStrength => 'Cường độ';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

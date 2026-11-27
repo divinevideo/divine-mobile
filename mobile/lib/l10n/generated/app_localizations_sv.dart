@@ -9810,6 +9810,41 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Toner';
 
   @override
+  String get videoEditorFilterSettingsOpen => 'Filterinställningar';
+
+  @override
+  String get videoEditorFilterLightTitle => 'Ljus';
+
+  @override
+  String get videoEditorFilterLightReset => 'Återställ ljus';
+
+  @override
+  String get videoEditorFilterColorReset => 'Återställ färg';
+
+  @override
+  String get videoEditorFilterOverlayTitle => 'Överlägg';
+
+  @override
+  String get videoEditorFilterOverlayReset => 'Återställ överlägg';
+
+  @override
+  String get videoEditorFilterCastTitle => 'Färgstick';
+
+  @override
+  String get videoEditorFilterCastReset => 'Återställ färgstick';
+
+  @override
+  String get videoEditorFilterBalanceTitle => 'Färgbalans';
+
+  @override
+  String get videoEditorFilterBalanceReset => 'Återställ färgbalans';
+
+  @override
+  String videoEditorFilterSettingsNumberedTitle(String title, String number) {
+    return '$title $number';
+  }
+
+  @override
   String get videoEditorDropsCountLabel => 'Antal';
 
   @override
@@ -10053,6 +10088,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorEffectSettingWavelength => 'Våglängd';
+
+  @override
+  String get videoEditorEffectSettingStrength => 'Styrka';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

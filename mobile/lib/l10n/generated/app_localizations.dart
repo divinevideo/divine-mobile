@@ -16545,6 +16545,72 @@ abstract class AppLocalizations {
   /// **'Tints'**
   String get videoEditorFilterCategoryTints;
 
+  /// Label and tooltip of the button under the opacity slider of the video editor's colour filter editor that shows the picked filter's settings in place of the filter picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter settings'**
+  String get videoEditorFilterSettingsOpen;
+
+  /// Title of the card in a colour filter's settings with its brightness, exposure, contrast and fade.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get videoEditorFilterLightTitle;
+
+  /// Button that puts a colour filter's brightness, exposure, contrast and fade back to the filter's own values.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset light'**
+  String get videoEditorFilterLightReset;
+
+  /// Button that puts a colour filter's temperature, tint, saturation, hue and sepia back to the filter's own values.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset color'**
+  String get videoEditorFilterColorReset;
+
+  /// Title of the card in a colour filter's settings with the colour the filter lays over the picture, and how much of it.
+  ///
+  /// In en, this message translates to:
+  /// **'Overlay'**
+  String get videoEditorFilterOverlayTitle;
+
+  /// Button that puts a colour filter's overlay colour and its strength back to the filter's own.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset overlay'**
+  String get videoEditorFilterOverlayReset;
+
+  /// Title of the card in a colour filter's settings with the colour the filter adds to the whole picture, such as the red of a red tint, and how strongly.
+  ///
+  /// In en, this message translates to:
+  /// **'Color cast'**
+  String get videoEditorFilterCastTitle;
+
+  /// Button that puts a colour filter's added colour and its strength back to the filter's own.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset color cast'**
+  String get videoEditorFilterCastReset;
+
+  /// Title of the card in a colour filter's settings with how much of each colour the filter keeps, set as one colour, and how strongly.
+  ///
+  /// In en, this message translates to:
+  /// **'Color balance'**
+  String get videoEditorFilterBalanceTitle;
+
+  /// Button that puts a colour filter's colour balance and its strength back to the filter's own.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset color balance'**
+  String get videoEditorFilterBalanceReset;
+
+  /// Title of a card in a colour filter's settings when the filter has more than one card of the same kind, such as two overlays: the card's title and its number, for example 'Overlay 2'. The number is already written in the locale's digits.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} {number}'**
+  String videoEditorFilterSettingsNumberedTitle(String title, String number);
+
   /// Slider label in the Drops effect settings: how many glass drops float over the video (1 to 5).
   ///
   /// In en, this message translates to:
@@ -17012,6 +17078,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Wavelength'**
   String get videoEditorEffectSettingWavelength;
+
+  /// Slider label in a colour filter's settings: how strongly the filter's colour shows.
+  ///
+  /// In en, this message translates to:
+  /// **'Strength'**
+  String get videoEditorEffectSettingStrength;
 
   /// Name of a video effect on the timeline, and what screen readers announce for it, when the effect fires on the beat of the music. {effect} is the effect's name, for example 'Zoom Pulse on the beat'. Keep it short.
   ///

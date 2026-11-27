@@ -9727,6 +9727,41 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Tonlar';
 
   @override
+  String get videoEditorFilterSettingsOpen => 'Filtre ayarları';
+
+  @override
+  String get videoEditorFilterLightTitle => 'Işık';
+
+  @override
+  String get videoEditorFilterLightReset => 'Işığı sıfırla';
+
+  @override
+  String get videoEditorFilterColorReset => 'Rengi sıfırla';
+
+  @override
+  String get videoEditorFilterOverlayTitle => 'Kaplama';
+
+  @override
+  String get videoEditorFilterOverlayReset => 'Kaplamayı sıfırla';
+
+  @override
+  String get videoEditorFilterCastTitle => 'Renk kayması';
+
+  @override
+  String get videoEditorFilterCastReset => 'Renk kaymasını sıfırla';
+
+  @override
+  String get videoEditorFilterBalanceTitle => 'Renk dengesi';
+
+  @override
+  String get videoEditorFilterBalanceReset => 'Renk dengesini sıfırla';
+
+  @override
+  String videoEditorFilterSettingsNumberedTitle(String title, String number) {
+    return '$title $number';
+  }
+
+  @override
   String get videoEditorDropsCountLabel => 'Sayı';
 
   @override
@@ -9969,6 +10004,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorEffectSettingWavelength => 'Dalga boyu';
+
+  @override
+  String get videoEditorEffectSettingStrength => 'Yoğunluk';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

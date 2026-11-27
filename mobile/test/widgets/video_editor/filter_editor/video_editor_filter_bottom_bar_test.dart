@@ -13,8 +13,10 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/editor_filter_category.dart';
+import 'package:openvine/models/video_editor/filter_settings.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/widgets/video_editor/filter_editor/video_editor_filter_bottom_bar.dart';
+import 'package:openvine/widgets/video_editor/filter_editor/video_editor_filter_settings_panel.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/video_editor_category_picker.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -25,15 +27,6 @@ class _MockProImageEditorState extends Mock implements ProImageEditorState {
   String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) =>
       '_MockProImageEditorState';
 }
-
-class _MockFilterEditorState extends Mock implements FilterEditorState {
-  @override
-  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) =>
-      '_MockFilterEditorState';
-}
-
-class _MockFilterEditorKey extends Mock
-    implements GlobalKey<FilterEditorState> {}
 
 class _MockStateManager extends Mock implements StateManager {}
 
@@ -306,21 +299,46 @@ void main() {
         );
       });
 
-      testWidgets('tapping a filter shows it in the editor', (tester) async {
+      testWidgets('shows the settings of the picked filter while they are '
+          'open, and the picker again once they close', (tester) async {
         usePhoneSize(tester);
-        final filterEditor = _MockFilterEditorState();
-        final filterEditorKey = _MockFilterEditorKey();
-        when(() => filterEditorKey.currentState).thenReturn(filterEditor);
-        final editor = _MockProImageEditorState();
-        when(() => editor.filterEditor).thenReturn(filterEditorKey);
-        when(() => editor.stateManager).thenReturn(_MockStateManager());
-        final natural = EditorFilterCategory.natural.filters;
-        await tester.pumpWidget(buildWidget(editor: editor));
+        final crema = editorFilterNamed('Crema')!;
+        await tester.pumpWidget(buildWidget());
 
-        await tester.tap(tile(natural[1].name));
-        await tester.pump();
+        bloc
+          ..add(VideoEditorFilterSelected(crema))
+          ..add(const VideoEditorFilterSettingsToggled(open: true));
+        await tester.pumpAndSettle();
 
-        verify(() => filterEditor.setFilter(natural[1])).called(1);
+        expect(find.byType(VideoEditorFilterSettingsPanel), findsOneWidget);
+        expect(find.byType(SliverGrid), findsNothing);
+
+        bloc.add(const VideoEditorFilterSettingsToggled(open: false));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(VideoEditorFilterSettingsPanel), findsNothing);
+        expect(tile(crema.name), findsOneWidget);
+      });
+
+      testWidgets('opens at the category of the filter an edit starts on', (
+        tester,
+      ) async {
+        usePhoneSize(tester);
+        final ruby = editorFilterNamed('Ruby')!;
+        final widget = buildWidget();
+        bloc.add(
+          VideoEditorFilterSessionStarted(
+            filterId: 'filter-1',
+            filter: EditedFilter(preset: ruby),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.pumpWidget(widget);
+        await tester.pumpAndSettle();
+
+        expect(highlighted(tester), EditorFilterCategory.tints);
+        expect(tile(ruby.name), findsOneWidget);
       });
     });
 

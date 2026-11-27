@@ -9262,6 +9262,41 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorFilterCategoryTints => '色调';
 
   @override
+  String get videoEditorFilterSettingsOpen => '滤镜设置';
+
+  @override
+  String get videoEditorFilterLightTitle => '光线';
+
+  @override
+  String get videoEditorFilterLightReset => '重置光线';
+
+  @override
+  String get videoEditorFilterColorReset => '重置颜色';
+
+  @override
+  String get videoEditorFilterOverlayTitle => '叠加';
+
+  @override
+  String get videoEditorFilterOverlayReset => '重置叠加';
+
+  @override
+  String get videoEditorFilterCastTitle => '偏色';
+
+  @override
+  String get videoEditorFilterCastReset => '重置偏色';
+
+  @override
+  String get videoEditorFilterBalanceTitle => '色彩平衡';
+
+  @override
+  String get videoEditorFilterBalanceReset => '重置色彩平衡';
+
+  @override
+  String videoEditorFilterSettingsNumberedTitle(String title, String number) {
+    return '$title $number';
+  }
+
+  @override
   String get videoEditorDropsCountLabel => '数量';
 
   @override
@@ -9502,6 +9537,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorEffectSettingWavelength => '波长';
+
+  @override
+  String get videoEditorEffectSettingStrength => '强度';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

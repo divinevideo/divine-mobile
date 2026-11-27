@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
+import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
@@ -23,6 +24,7 @@ import 'package:openvine/models/video_editor/clip_speed_choice.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_mask.dart';
+import 'package:openvine/models/video_editor/filter_settings.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 import 'package:openvine/models/video_editor/layer_style.dart';
@@ -39,6 +41,7 @@ import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_reatta
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_transform.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/exclusive_effect_snack_bar.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
+import 'package:openvine/widgets/video_editor/filter_editor/open_filter_editor.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_layer_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor.dart';
@@ -552,7 +555,10 @@ class _CaptionOverlayControls extends StatelessWidget {
   }
 }
 
-/// Controls for filter overlays: delete, duplicate, split, and done.
+/// Controls for filter overlays: delete, edit, duplicate, split, and done.
+///
+/// Edit reopens the filter editor on this filter, keeping its window; only a
+/// filter committed with its settings (see [EditedFilter]) can be reopened.
 class _FilterOverlayControls extends StatelessWidget {
   const _FilterOverlayControls({required this.item});
 
@@ -560,8 +566,21 @@ class _FilterOverlayControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scope = VideoEditorScope.of(context);
+    final committed = scope.editor?.stateManager.activeFilters
+        .where((filter) => filter.id == item.id)
+        .firstOrNull;
+    final canEdit =
+        committed != null && EditedFilter.fromMeta(committed.meta) != null;
     return VideoEditorTimelineControls(
       onDelete: () => _removeFilter(context: context),
+      onEdit: canEdit
+          ? () => openFilterEditor(
+              context.read<VideoEditorFilterBloc>(),
+              scope,
+              editFilterId: item.id,
+            )
+          : null,
       onDuplicated: () => _duplicateFilter(context: context),
       onSplit: () => _splitFilter(context: context),
       onDone: () => TimelineOverlayControls._deselect(context),

@@ -1,298 +1,250 @@
-// ABOUTME: Tests for VideoEditorFilterBloc - filter selection, opacity, and cancel.
-// ABOUTME: Covers initial state, filter events, and state transitions.
+// ABOUTME: Tests for VideoEditorFilterBloc: sessions, the picked filter, its
+// ABOUTME: opacity and its settings.
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
-import 'package:openvine/models/video_editor/editor_filter_category.dart';
+import 'package:openvine/models/video_editor/filter_settings.dart';
+import 'package:pro_image_editor/pro_image_editor.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+  final crema = PresetFilters.crema;
+  final clarendon = PresetFilters.clarendon;
+  final cremaLight = filterSettingsCardsOf(crema).first;
 
-  final filters = [
-    for (final category in EditorFilterCategory.values) ...category.filters,
-  ];
-
-  group('VideoEditorFilterBloc', () {
-    VideoEditorFilterBloc buildBloc() {
-      return VideoEditorFilterBloc();
-    }
-
-    test('initial state has no filter selected', () async {
-      final bloc = buildBloc();
-      expect(bloc.state.selectedFilter, isNull);
-      expect(bloc.state.opacity, 1.0);
-      expect(bloc.state.hasFilter, isFalse);
-      await bloc.close();
-    });
-
-    group('VideoEditorFilterSelected', () {
-      final testFilter = filters[1];
+  group(VideoEditorFilterBloc, () {
+    group('$VideoEditorFilterSessionStarted', () {
+      blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
+        'starts a new filter with nothing picked',
+        build: VideoEditorFilterBloc.new,
+        seed: () => VideoEditorFilterState(
+          selectedFilter: crema,
+          opacity: 0.4,
+          settingValues: const {'temperature': -0.1},
+          isSettingsOpen: true,
+        ),
+        act: (bloc) => bloc.add(const VideoEditorFilterSessionStarted()),
+        expect: () => [const VideoEditorFilterState()],
+      );
 
       blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
-        'emits state with selected filter',
-        build: buildBloc,
-        act: (bloc) => bloc.add(VideoEditorFilterSelected(testFilter)),
+        'starts on a committed filter as it was set up',
+        build: VideoEditorFilterBloc.new,
+        act: (bloc) => bloc.add(
+          VideoEditorFilterSessionStarted(
+            filterId: 'filter-1',
+            filter: EditedFilter(
+              preset: crema,
+              values: const {'temperature': -0.1},
+              opacity: 0.6,
+            ),
+          ),
+        ),
         expect: () => [
-          isA<VideoEditorFilterState>().having(
-            (s) => s.selectedFilter,
-            'selectedFilter',
-            testFilter,
+          VideoEditorFilterState(
+            selectedFilter: crema,
+            opacity: 0.6,
+            settingValues: const {'temperature': -0.1},
+            editingFilterId: 'filter-1',
           ),
         ],
       );
 
       blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
-        'updates selected filter when changed',
-        build: buildBloc,
+        'adds a new filter when the committed one has no settings',
+        build: VideoEditorFilterBloc.new,
+        act: (bloc) => bloc.add(
+          const VideoEditorFilterSessionStarted(filterId: 'filter-1'),
+        ),
+        expect: () => [const VideoEditorFilterState()],
+      );
+    });
+
+    group('$VideoEditorFilterSelected', () {
+      blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
+        'picks a preset at its own values',
+        build: VideoEditorFilterBloc.new,
         seed: () => VideoEditorFilterState(
-          selectedFilter: filters[1],
+          selectedFilter: crema,
+          settingValues: const {'temperature': -0.1},
+        ),
+        act: (bloc) => bloc.add(VideoEditorFilterSelected(clarendon)),
+        expect: () => [VideoEditorFilterState(selectedFilter: clarendon)],
+      );
+
+      blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
+        'keeps the settings when the picked preset is tapped again',
+        build: VideoEditorFilterBloc.new,
+        seed: () => VideoEditorFilterState(
+          selectedFilter: crema,
+          settingValues: const {'temperature': -0.1},
+        ),
+        act: (bloc) => bloc.add(VideoEditorFilterSelected(crema)),
+        expect: () => const <VideoEditorFilterState>[],
+      );
+    });
+
+    group('$VideoEditorFilterOpacityChanged', () {
+      blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
+        'sets the opacity',
+        build: VideoEditorFilterBloc.new,
+        seed: () => VideoEditorFilterState(selectedFilter: crema),
+        act: (bloc) => bloc.add(const VideoEditorFilterOpacityChanged(0.3)),
+        expect: () => [
+          VideoEditorFilterState(selectedFilter: crema, opacity: 0.3),
+        ],
+      );
+    });
+
+    group('$VideoEditorFilterSettingChanged', () {
+      blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
+        'changes a setting, brought into its range',
+        build: VideoEditorFilterBloc.new,
+        seed: () => VideoEditorFilterState(selectedFilter: crema),
+        act: (bloc) => bloc
+          ..add(const VideoEditorFilterSettingChanged('temperature', -0.1))
+          ..add(const VideoEditorFilterSettingChanged('brightness', 5.0)),
+        expect: () => [
+          VideoEditorFilterState(
+            selectedFilter: crema,
+            settingValues: const {'temperature': -0.1},
+          ),
+          VideoEditorFilterState(
+            selectedFilter: crema,
+            settingValues: const {'temperature': -0.1, 'brightness': 0.3},
+          ),
+        ],
+      );
+
+      blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
+        "drops a change back to the preset's own value",
+        build: VideoEditorFilterBloc.new,
+        seed: () => VideoEditorFilterState(
+          selectedFilter: crema,
+          settingValues: const {'saturation': 0.2},
         ),
         act: (bloc) => bloc.add(
-          VideoEditorFilterSelected(filters[2]),
+          const VideoEditorFilterSettingChanged('saturation', -0.05),
         ),
+        expect: () => [VideoEditorFilterState(selectedFilter: crema)],
+      );
+
+      blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
+        'ignores a key the picked filter has no setting for',
+        build: VideoEditorFilterBloc.new,
+        seed: () => VideoEditorFilterState(selectedFilter: crema),
+        act: (bloc) =>
+            bloc.add(const VideoEditorFilterSettingChanged('step9.color', 0)),
+        expect: () => const <VideoEditorFilterState>[],
+      );
+
+      blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
+        'ignores a setting while nothing is picked',
+        build: VideoEditorFilterBloc.new,
+        act: (bloc) =>
+            bloc.add(const VideoEditorFilterSettingChanged('brightness', 0.1)),
+        expect: () => const <VideoEditorFilterState>[],
+      );
+    });
+
+    group('$VideoEditorFilterSettingsReset', () {
+      blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
+        'puts back the settings of one card only',
+        build: VideoEditorFilterBloc.new,
+        seed: () => VideoEditorFilterState(
+          selectedFilter: crema,
+          settingValues: const {'brightness': 0.1, 'temperature': -0.1},
+        ),
+        act: (bloc) => bloc.add(VideoEditorFilterSettingsReset(cremaLight)),
         expect: () => [
-          isA<VideoEditorFilterState>().having(
-            (s) => s.selectedFilter,
-            'selectedFilter',
-            filters[2],
+          VideoEditorFilterState(
+            selectedFilter: crema,
+            settingValues: const {'temperature': -0.1},
           ),
         ],
       );
     });
 
-    group('VideoEditorFilterOpacityChanged', () {
+    group('$VideoEditorFilterSettingsToggled', () {
       blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
-        'emits state with updated opacity',
-        build: buildBloc,
-        act: (bloc) => bloc.add(const VideoEditorFilterOpacityChanged(0.5)),
+        'opens and closes the settings',
+        build: VideoEditorFilterBloc.new,
+        seed: () => VideoEditorFilterState(selectedFilter: crema),
+        act: (bloc) => bloc
+          ..add(const VideoEditorFilterSettingsToggled(open: true))
+          ..add(const VideoEditorFilterSettingsToggled(open: false)),
         expect: () => [
-          isA<VideoEditorFilterState>().having(
-            (s) => s.opacity,
-            'opacity',
-            0.5,
-          ),
-        ],
-      );
-
-      blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
-        'updates opacity when filter is selected',
-        build: buildBloc,
-        seed: () => VideoEditorFilterState(
-          selectedFilter: filters[1],
-        ),
-        act: (bloc) => bloc.add(const VideoEditorFilterOpacityChanged(0.5)),
-        expect: () => [
-          isA<VideoEditorFilterState>().having(
-            (s) => s.opacity,
-            'opacity',
-            0.5,
-          ),
+          VideoEditorFilterState(selectedFilter: crema, isSettingsOpen: true),
+          VideoEditorFilterState(selectedFilter: crema),
         ],
       );
     });
 
-    group('VideoEditorFilterCancelled', () {
+    group('session end', () {
+      final editing = VideoEditorFilterState(
+        selectedFilter: crema,
+        opacity: 0.5,
+        settingValues: const {'temperature': -0.1},
+        isSettingsOpen: true,
+        editingFilterId: 'filter-1',
+      );
+
       blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
-        'restores to initial values from when editor was opened',
-        build: buildBloc,
-        seed: () => VideoEditorFilterState(
-          selectedFilter: filters[2],
-          opacity: 0.5,
-          initialSelectedFilter: filters[1],
-          initialOpacity: 0.8,
-        ),
+        '$VideoEditorFilterCancelled clears the session',
+        build: VideoEditorFilterBloc.new,
+        seed: () => editing,
         act: (bloc) => bloc.add(const VideoEditorFilterCancelled()),
-        expect: () => [
-          isA<VideoEditorFilterState>()
-              .having(
-                (s) => s.selectedFilter,
-                'selectedFilter',
-                filters[1],
-              )
-              .having((s) => s.opacity, 'opacity', 0.8),
-        ],
+        expect: () => [const VideoEditorFilterState()],
       );
 
       blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
-        'discards a pick made in a session that opened with none',
-        build: buildBloc,
-        seed: () => VideoEditorFilterState(
-          selectedFilter: filters[1],
-          appliedFilters: [filters[0], filters[2]],
-          initialAppliedFilters: [filters[0]],
-        ),
-        act: (bloc) => bloc.add(const VideoEditorFilterCancelled()),
-        expect: () => [
-          isA<VideoEditorFilterState>()
-              .having((s) => s.hasFilter, 'hasFilter', isFalse)
-              .having((s) => s.appliedFilters, 'appliedFilters', [
-                filters[0],
-              ]),
-        ],
-      );
-    });
-
-    group('VideoEditorFilterConfirmed', () {
-      blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
-        'applies the pick and clears the selection',
-        build: buildBloc,
-        seed: () => VideoEditorFilterState(
-          selectedFilter: filters[1],
-          appliedFilters: [filters[0]],
-        ),
+        '$VideoEditorFilterConfirmed clears the session',
+        build: VideoEditorFilterBloc.new,
+        seed: () => editing,
         act: (bloc) => bloc.add(const VideoEditorFilterConfirmed()),
-        expect: () => [
-          isA<VideoEditorFilterState>()
-              .having((s) => s.hasFilter, 'hasFilter', isFalse)
-              .having((s) => s.appliedFilters, 'appliedFilters', [
-                filters[0],
-                filters[1],
-              ]),
-        ],
-      );
-
-      blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
-        'applies nothing when nothing is picked',
-        build: buildBloc,
-        seed: () => VideoEditorFilterState(appliedFilters: [filters[0]]),
-        act: (bloc) => bloc.add(const VideoEditorFilterConfirmed()),
-        expect: () => <VideoEditorFilterState>[],
-      );
-    });
-
-    group('VideoEditorFilterEditorInitialized', () {
-      blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
-        'stores current values as initial values for cancel',
-        build: buildBloc,
-        seed: () => VideoEditorFilterState(
-          selectedFilter: filters[1],
-          opacity: 0.7,
-        ),
-        act: (bloc) => bloc.add(const VideoEditorFilterEditorInitialized()),
-        expect: () => [
-          isA<VideoEditorFilterState>()
-              .having(
-                (s) => s.initialSelectedFilter,
-                'initialSelectedFilter',
-                filters[1],
-              )
-              .having((s) => s.initialOpacity, 'initialOpacity', 0.7)
-              // Current values unchanged
-              .having(
-                (s) => s.selectedFilter,
-                'selectedFilter',
-                filters[1],
-              )
-              .having((s) => s.opacity, 'opacity', 0.7),
-        ],
+        expect: () => [const VideoEditorFilterState()],
       );
     });
   });
 
-  group('VideoEditorFilterState', () {
-    test('hasFilter returns false when selectedFilter is null', () {
-      const state = VideoEditorFilterState();
-      expect(state.hasFilter, isFalse);
+  group(VideoEditorFilterState, () {
+    test('shows the settings only while open for a filter that has some', () {
+      expect(
+        VideoEditorFilterState(
+          selectedFilter: crema,
+          isSettingsOpen: true,
+        ).showsSettings,
+        isTrue,
+      );
+      expect(
+        VideoEditorFilterState(selectedFilter: crema).showsSettings,
+        isFalse,
+      );
+      expect(
+        VideoEditorFilterState(
+          selectedFilter: PresetFilters.none,
+          isSettingsOpen: true,
+        ).showsSettings,
+        isFalse,
+      );
     });
 
-    test('hasFilter returns true when a real filter is selected', () {
+    test('edited is the picked preset with its settings and opacity', () {
       final state = VideoEditorFilterState(
-        selectedFilter: filters[1],
-      );
-      expect(state.hasFilter, isTrue);
-    });
-
-    test('copyWith creates new state with updated values', () {
-      const original = VideoEditorFilterState();
-
-      final updated = original.copyWith(
-        selectedFilter: filters[1],
-        opacity: 0.5,
+        selectedFilter: crema,
+        opacity: 0.4,
+        settingValues: const {'temperature': -0.1},
       );
 
-      expect(updated.selectedFilter, equals(filters[1]));
-      expect(updated.opacity, 0.5);
-      // Original unchanged
-      expect(original.selectedFilter, isNull);
-      expect(original.opacity, 1.0);
-    });
-
-    test('copyWith preserves values when not specified', () {
-      final filter = filters[1];
-      final original = VideoEditorFilterState(
-        selectedFilter: filter,
-        opacity: 0.7,
+      expect(
+        state.edited,
+        EditedFilter(
+          preset: crema,
+          values: const {'temperature': -0.1},
+          opacity: 0.4,
+        ),
       );
-
-      final updated = original.copyWith();
-
-      expect(updated.selectedFilter, equals(original.selectedFilter));
-      expect(updated.opacity, equals(original.opacity));
-    });
-
-    test('props contains all fields for equality', () {
-      final state = VideoEditorFilterState(
-        selectedFilter: filters[1],
-        opacity: 0.5,
-        initialSelectedFilter: filters[2],
-        initialOpacity: 0.8,
-      );
-
-      expect(state.props, [
-        filters[1],
-        0.5,
-        filters[2],
-        0.8,
-        const <dynamic>[],
-        const <dynamic>[],
-      ]);
-    });
-
-    test('equality works correctly', () {
-      final state1 = VideoEditorFilterState(
-        selectedFilter: filters[1],
-        opacity: 0.5,
-      );
-      final state2 = VideoEditorFilterState(
-        selectedFilter: filters[1],
-        opacity: 0.5,
-      );
-      final state3 = VideoEditorFilterState(
-        selectedFilter: filters[2],
-        opacity: 0.5,
-      );
-
-      expect(state1, equals(state2));
-      expect(state1, isNot(equals(state3)));
-    });
-  });
-
-  group('VideoEditorFilterEvent', () {
-    test('VideoEditorFilterSelected props contains filter', () {
-      final filter = filters[1];
-      final event = VideoEditorFilterSelected(filter);
-      expect(event.props, [filter]);
-    });
-
-    test('VideoEditorFilterOpacityChanged props contains opacity', () {
-      const event = VideoEditorFilterOpacityChanged(0.75);
-      expect(event.props, [0.75]);
-    });
-
-    test('VideoEditorFilterCancelled props is empty', () {
-      const event = VideoEditorFilterCancelled();
-      expect(event.props, isEmpty);
-    });
-
-    test('event equality works correctly', () {
-      final filter = filters[1];
-      final event1 = VideoEditorFilterSelected(filter);
-      final event2 = VideoEditorFilterSelected(filter);
-      final event3 = VideoEditorFilterSelected(filters[2]);
-
-      expect(event1, equals(event2));
-      expect(event1, isNot(equals(event3)));
+      expect(const VideoEditorFilterState().edited, isNull);
     });
   });
 }

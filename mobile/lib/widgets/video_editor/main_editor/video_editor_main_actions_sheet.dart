@@ -8,11 +8,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
+import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
+import 'package:openvine/widgets/video_editor/filter_editor/open_filter_editor.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_loop_repair_listener.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/open_tune_editor.dart';
@@ -46,6 +48,7 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
     final clipEditorBloc = context.read<ClipEditorBloc>();
     final tuneBloc = context.read<VideoEditorTuneBloc>();
     final drawBloc = context.read<VideoEditorDrawBloc>();
+    final filterBloc = context.read<VideoEditorFilterBloc>();
 
     return VineBottomSheet.show(
       context: context,
@@ -56,8 +59,9 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
       showHeaderDivider: false,
       // The sheet opens on a separate route, outside the editor's
       // MultiBlocProvider, so re-provide every bloc the actions read —
-      // including the tune bloc the Adjust action needs and the draw bloc
-      // the Draw and Blur actions open the draw editor with.
+      // including the tune bloc the Adjust action needs, the filter bloc the
+      // Filter action starts its session on and the draw bloc the Draw and
+      // Blur actions open the draw editor with.
       body: SingleChildScrollView(
         child: MultiBlocProvider(
           providers: [
@@ -67,6 +71,7 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
             BlocProvider<ClipEditorBloc>.value(value: clipEditorBloc),
             BlocProvider<VideoEditorTuneBloc>.value(value: tuneBloc),
             BlocProvider<VideoEditorDrawBloc>.value(value: drawBloc),
+            BlocProvider<VideoEditorFilterBloc>.value(value: filterBloc),
           ],
           child: VideoEditorMainActionsSheet(
             scope: scope,
@@ -169,8 +174,9 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
         label: context.l10n.videoEditorFilterLabel,
         semanticLabel: context.l10n.videoEditorOpenFilterSemanticLabel,
         onTap: () {
+          final filterBloc = context.read<VideoEditorFilterBloc>();
           Navigator.pop(context);
-          scope.editor?.openFilterEditor();
+          openFilterEditor(filterBloc, scope);
         },
       ),
       _ItemButton(

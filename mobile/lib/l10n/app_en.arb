@@ -7460,6 +7460,58 @@
   "@videoEditorFilterCategoryTints": {
     "description": "Name of a group in the colour filter picker of the video editor: filters that lay one strong colour, such as red or blue, over the whole picture."
   },
+  "videoEditorFilterSettingsOpen": "Filter settings",
+  "@videoEditorFilterSettingsOpen": {
+    "description": "Label and tooltip of the button under the opacity slider of the video editor's colour filter editor that shows the picked filter's settings in place of the filter picker."
+  },
+  "videoEditorFilterLightTitle": "Light",
+  "@videoEditorFilterLightTitle": {
+    "description": "Title of the card in a colour filter's settings with its brightness, exposure, contrast and fade."
+  },
+  "videoEditorFilterLightReset": "Reset light",
+  "@videoEditorFilterLightReset": {
+    "description": "Button that puts a colour filter's brightness, exposure, contrast and fade back to the filter's own values."
+  },
+  "videoEditorFilterColorReset": "Reset color",
+  "@videoEditorFilterColorReset": {
+    "description": "Button that puts a colour filter's temperature, tint, saturation, hue and sepia back to the filter's own values."
+  },
+  "videoEditorFilterOverlayTitle": "Overlay",
+  "@videoEditorFilterOverlayTitle": {
+    "description": "Title of the card in a colour filter's settings with the colour the filter lays over the picture, and how much of it."
+  },
+  "videoEditorFilterOverlayReset": "Reset overlay",
+  "@videoEditorFilterOverlayReset": {
+    "description": "Button that puts a colour filter's overlay colour and its strength back to the filter's own."
+  },
+  "videoEditorFilterCastTitle": "Color cast",
+  "@videoEditorFilterCastTitle": {
+    "description": "Title of the card in a colour filter's settings with the colour the filter adds to the whole picture, such as the red of a red tint, and how strongly."
+  },
+  "videoEditorFilterCastReset": "Reset color cast",
+  "@videoEditorFilterCastReset": {
+    "description": "Button that puts a colour filter's added colour and its strength back to the filter's own."
+  },
+  "videoEditorFilterBalanceTitle": "Color balance",
+  "@videoEditorFilterBalanceTitle": {
+    "description": "Title of the card in a colour filter's settings with how much of each colour the filter keeps, set as one colour, and how strongly."
+  },
+  "videoEditorFilterBalanceReset": "Reset color balance",
+  "@videoEditorFilterBalanceReset": {
+    "description": "Button that puts a colour filter's colour balance and its strength back to the filter's own."
+  },
+  "videoEditorFilterSettingsNumberedTitle": "{title} {number}",
+  "@videoEditorFilterSettingsNumberedTitle": {
+    "description": "Title of a card in a colour filter's settings when the filter has more than one card of the same kind, such as two overlays: the card's title and its number, for example 'Overlay 2'. The number is already written in the locale's digits.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "number": {
+        "type": "String"
+      }
+    }
+  },
   "videoEditorDropsCountLabel": "Number",
   "@videoEditorDropsCountLabel": {
     "description": "Slider label in the Drops effect settings: how many glass drops float over the video (1 to 5)."
@@ -7783,6 +7835,10 @@
   "videoEditorEffectSettingWavelength": "Wavelength",
   "@videoEditorEffectSettingWavelength": {
     "description": "Slider label in a video effect's settings: how tall the wave effect's waves are."
+  },
+  "videoEditorEffectSettingStrength": "Strength",
+  "@videoEditorEffectSettingStrength": {
+    "description": "Slider label in a colour filter's settings: how strongly the filter's colour shows."
   },
   "videoEditorEffectOnBeatLabel": "{effect} on the beat",
   "@videoEditorEffectOnBeatLabel": {

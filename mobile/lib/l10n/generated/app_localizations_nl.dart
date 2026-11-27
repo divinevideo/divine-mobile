@@ -9855,6 +9855,41 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Tinten';
 
   @override
+  String get videoEditorFilterSettingsOpen => 'Filterinstellingen';
+
+  @override
+  String get videoEditorFilterLightTitle => 'Licht';
+
+  @override
+  String get videoEditorFilterLightReset => 'Licht herstellen';
+
+  @override
+  String get videoEditorFilterColorReset => 'Kleur herstellen';
+
+  @override
+  String get videoEditorFilterOverlayTitle => 'Overlay';
+
+  @override
+  String get videoEditorFilterOverlayReset => 'Overlay herstellen';
+
+  @override
+  String get videoEditorFilterCastTitle => 'Kleurzweem';
+
+  @override
+  String get videoEditorFilterCastReset => 'Kleurzweem herstellen';
+
+  @override
+  String get videoEditorFilterBalanceTitle => 'Kleurbalans';
+
+  @override
+  String get videoEditorFilterBalanceReset => 'Kleurbalans herstellen';
+
+  @override
+  String videoEditorFilterSettingsNumberedTitle(String title, String number) {
+    return '$title $number';
+  }
+
+  @override
   String get videoEditorDropsCountLabel => 'Aantal';
 
   @override
@@ -10097,6 +10132,9 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorEffectSettingWavelength => 'Golflengte';
+
+  @override
+  String get videoEditorEffectSettingStrength => 'Sterkte';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

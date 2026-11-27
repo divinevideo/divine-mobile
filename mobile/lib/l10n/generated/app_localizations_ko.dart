@@ -9366,6 +9366,41 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorFilterCategoryTints => '틴트';
 
   @override
+  String get videoEditorFilterSettingsOpen => '필터 설정';
+
+  @override
+  String get videoEditorFilterLightTitle => '라이트';
+
+  @override
+  String get videoEditorFilterLightReset => '라이트 초기화';
+
+  @override
+  String get videoEditorFilterColorReset => '컬러 초기화';
+
+  @override
+  String get videoEditorFilterOverlayTitle => '오버레이';
+
+  @override
+  String get videoEditorFilterOverlayReset => '오버레이 초기화';
+
+  @override
+  String get videoEditorFilterCastTitle => '색조';
+
+  @override
+  String get videoEditorFilterCastReset => '색조 초기화';
+
+  @override
+  String get videoEditorFilterBalanceTitle => '컬러 밸런스';
+
+  @override
+  String get videoEditorFilterBalanceReset => '컬러 밸런스 초기화';
+
+  @override
+  String videoEditorFilterSettingsNumberedTitle(String title, String number) {
+    return '$title $number';
+  }
+
+  @override
   String get videoEditorDropsCountLabel => '개수';
 
   @override
@@ -9606,6 +9641,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorEffectSettingWavelength => '파장';
+
+  @override
+  String get videoEditorEffectSettingStrength => '강도';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

@@ -17,6 +17,7 @@ import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/blocs/video_editor/audio_visualizer/video_editor_audio_visualizer_cubit.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
+import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
@@ -34,7 +35,9 @@ import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_speed_choice.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/editor_filter_category.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/filter_settings.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/layer_style.dart';
 import 'package:openvine/models/video_editor/saved_title_style.dart';
@@ -55,9 +58,9 @@ import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_edi
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_voice_effect_sheet.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show AudioVisualizerStyle, ChromaKey, EditorVideo;
+import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 import 'package:riverpod/misc.dart' show Override;
 import 'package:sound_service/sound_service.dart';
 
@@ -120,6 +123,7 @@ void main() {
       _MockVideoEditorMainBloc mainBloc, {
       _MockClipEditorBloc? clipBloc,
       VideoEditorEffectsCubit? effectsCubit,
+      VideoEditorFilterBloc? filterBloc,
       List<Override> overrides = const [],
       bool routed = false,
       ValueNotifier<Duration>? playTime,
@@ -133,6 +137,8 @@ void main() {
               BlocProvider<ClipEditorBloc>.value(value: clipBloc),
             if (effectsCubit != null)
               BlocProvider<VideoEditorEffectsCubit>.value(value: effectsCubit),
+            if (filterBloc != null)
+              BlocProvider<VideoEditorFilterBloc>.value(value: filterBloc),
             BlocProvider(create: (_) => VideoEditorAudioVisualizerCubit()),
             BlocProvider.value(value: clipboard),
           ],
@@ -1553,6 +1559,70 @@ void main() {
             () => overlayBloc.add(captureAny()),
           ).captured.whereType<TimelineOverlayItemSelected>().last;
           expect(addEvent.itemId, startsWith('layer-a_copy_'));
+        },
+      );
+
+      testWidgets(
+        'edit reopens the filter editor on a filter committed with its '
+        'settings',
+        (tester) async {
+          final filterBloc = VideoEditorFilterBloc();
+          addTearDown(filterBloc.close);
+          final committed = EditedFilter(
+            preset: editorFilterNamed('Crema')!,
+            values: const {'temperature': -0.1},
+            opacity: 0.7,
+          );
+          final filterA = FilterState(
+            id: 'filter-a',
+            name: 'Crema',
+            meta: committed.toMeta(),
+          );
+          when(() => mockStateManager.activeFilters).thenReturn([filterA]);
+          when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+          const item = TimelineOverlayItem(
+            id: 'filter-a',
+            type: TimelineOverlayType.filter,
+            startTime: Duration.zero,
+            endTime: Duration(seconds: 5),
+          );
+          await tester.pumpWidget(
+            buildWithEditor(item, mockEditor, mainBloc, filterBloc: filterBloc),
+          );
+
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.videoEditorEditSelectedItemSemanticLabel,
+            ),
+          );
+          await tester.pump();
+
+          verify(() => mockEditor.openFilterEditor()).called(1);
+          expect(filterBloc.state.editingFilterId, 'filter-a');
+          expect(filterBloc.state.edited, committed);
+        },
+      );
+
+      testWidgets(
+        'offers no edit for a filter committed without its settings',
+        (tester) async {
+          final filterA = FilterState(id: 'filter-a', name: 'Crema');
+          when(() => mockStateManager.activeFilters).thenReturn([filterA]);
+          when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+          const item = TimelineOverlayItem(
+            id: 'filter-a',
+            type: TimelineOverlayType.filter,
+            startTime: Duration.zero,
+            endTime: Duration(seconds: 5),
+          );
+          await tester.pumpWidget(buildWithEditor(item, mockEditor, mainBloc));
+
+          expect(
+            find.bySemanticsLabel(
+              l10n.videoEditorEditSelectedItemSemanticLabel,
+            ),
+            findsNothing,
+          );
         },
       );
 

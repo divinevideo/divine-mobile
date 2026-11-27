@@ -1,5 +1,6 @@
 // ABOUTME: Bottom bar of the video editor's filter editor: a category picker
-// ABOUTME: of preview tiles, each showing its filter on the first clip.
+// ABOUTME: of preview tiles, each showing its filter on the first clip, or the
+// ABOUTME: picked filter's settings.
 
 import 'dart:io';
 
@@ -7,15 +8,21 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
+import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/editor_filter_category.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/widgets/video_editor/filter_editor/video_editor_filter_settings_panel.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/video_editor_category_picker.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// Bottom bar of the filter editor: a [VideoEditorCategoryPicker] of the
-/// colour filters, one section per [EditorFilterCategory].
+/// colour filters, one section per [EditorFilterCategory]. Opened on a filter
+/// of the timeline, the grid starts at that filter's section. While the
+/// picked filter's settings are open (see
+/// [VideoEditorFilterState.showsSettings]), the
+/// [VideoEditorFilterSettingsPanel] takes the picker's place.
 ///
 /// Each tile shows its filter on the first clip's thumbnail, over the tune
 /// adjustments and blur already applied.
@@ -35,38 +42,50 @@ class VideoEditorFilterBottomBar extends ConsumerWidget {
     final selectedName = context.select(
       (VideoEditorFilterBloc b) => b.state.selectedFilter?.name,
     );
+    final showsSettings = context.select(
+      (VideoEditorFilterBloc b) => b.state.showsSettings,
+    );
     final scope = VideoEditorScope.of(context);
     final stateManager = scope.editor?.stateManager;
-    return VideoEditorCategoryPicker<EditorFilterCategory, FilterModel>(
-      sections: _sections,
-      categoryLabel: _categoryLabel,
-      isSelected: (filter) => filter.name == selectedName,
-      tileBuilder: (context, filter, isSelected) =>
-          VideoEditorCategoryPickerTile(
-            label: filter.name,
-            isSelected: isSelected,
-            onTap: () {
-              context.read<VideoEditorFilterBloc>().add(
-                VideoEditorFilterSelected(filter),
-              );
-              scope.filterEditor?.setFilter(filter);
-            },
-            preview: thumbnailPath == null || thumbnailPath.isEmpty
-                ? const SizedBox.expand()
-                : FilteredWidget(
-                    // Also the size the thumbnail is decoded at.
-                    width: VideoEditorCategoryPickerTile.previewSize,
-                    height: VideoEditorCategoryPickerTile.previewSize,
-                    enableCachedSize: true,
-                    // A preview needs none of the editor's configurations.
-                    configs: const ProImageEditorConfigs(),
-                    filters: filter.filters,
-                    tuneAdjustments: stateManager?.activeTuneAdjustments ?? [],
-                    blurFactor: stateManager?.activeBlur ?? 0,
-                    fit: .cover,
-                    image: EditorImage(file: File(thumbnailPath)),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200).autoReduceMotion(context),
+      child: showsSettings
+          ? const VideoEditorFilterSettingsPanel()
+          : VideoEditorCategoryPicker<EditorFilterCategory, FilterModel>(
+              sections: _sections,
+              categoryLabel: _categoryLabel,
+              initialCategory: selectedName == null
+                  ? null
+                  : editorFilterCategoryOf(selectedName),
+              isSelected: (filter) => filter.name == selectedName,
+              tileBuilder: (context, filter, isSelected) =>
+                  VideoEditorCategoryPickerTile(
+                    label: filter.name,
+                    isSelected: isSelected,
+                    // The filter editor previews the pick through the overlay
+                    // controls, which follow the bloc.
+                    onTap: () => context.read<VideoEditorFilterBloc>().add(
+                      VideoEditorFilterSelected(filter),
+                    ),
+                    preview: thumbnailPath == null || thumbnailPath.isEmpty
+                        ? const SizedBox.expand()
+                        : FilteredWidget(
+                            // Also the size the thumbnail is decoded at.
+                            width: VideoEditorCategoryPickerTile.previewSize,
+                            height: VideoEditorCategoryPickerTile.previewSize,
+                            enableCachedSize: true,
+                            // A preview needs none of the editor's
+                            // configurations.
+                            configs: const ProImageEditorConfigs(),
+                            filters: filter.filters,
+                            tuneAdjustments:
+                                stateManager?.activeTuneAdjustments ?? [],
+                            blurFactor: stateManager?.activeBlur ?? 0,
+                            fit: .cover,
+                            image: EditorImage(file: File(thumbnailPath)),
+                          ),
                   ),
-          ),
+            ),
     );
   }
 }

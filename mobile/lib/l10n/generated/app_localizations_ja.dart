@@ -9347,6 +9347,41 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'ティント';
 
   @override
+  String get videoEditorFilterSettingsOpen => 'フィルター設定';
+
+  @override
+  String get videoEditorFilterLightTitle => 'ライト';
+
+  @override
+  String get videoEditorFilterLightReset => 'ライトをリセット';
+
+  @override
+  String get videoEditorFilterColorReset => 'カラーをリセット';
+
+  @override
+  String get videoEditorFilterOverlayTitle => 'オーバーレイ';
+
+  @override
+  String get videoEditorFilterOverlayReset => 'オーバーレイをリセット';
+
+  @override
+  String get videoEditorFilterCastTitle => '色味';
+
+  @override
+  String get videoEditorFilterCastReset => '色味をリセット';
+
+  @override
+  String get videoEditorFilterBalanceTitle => 'カラーバランス';
+
+  @override
+  String get videoEditorFilterBalanceReset => 'カラーバランスをリセット';
+
+  @override
+  String videoEditorFilterSettingsNumberedTitle(String title, String number) {
+    return '$title $number';
+  }
+
+  @override
   String get videoEditorDropsCountLabel => '数';
 
   @override
@@ -9587,6 +9622,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorEffectSettingWavelength => '波長';
+
+  @override
+  String get videoEditorEffectSettingStrength => '強さ';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {
