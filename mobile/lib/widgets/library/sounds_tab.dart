@@ -29,6 +29,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/audio/sound_list_tile.dart';
 import 'package:openvine/widgets/library/saved_sound_details_editor.dart';
 import 'package:openvine/widgets/library/saved_sound_tile.dart';
+import 'package:openvine/widgets/search_clear_button.dart';
 import 'package:sound_service/sound_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -422,8 +423,8 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
       title: SavedSoundMenuHeader(
         sound: sound,
         cover: view.cover,
-        isMissingFile: view.isMissingFile,
         kind: view.kind,
+        isMissingFile: view.isMissingFile,
         cannotBeReused: view.cannotBeReused,
       ),
       options: [
@@ -760,6 +761,14 @@ class _SearchInput extends StatelessWidget {
               color: context.vineColors.onSurfaceMuted,
             ),
           ),
+          suffixIconConstraints: const BoxConstraints(),
+          suffixIcon: Padding(
+            padding: const EdgeInsetsDirectional.only(end: 4),
+            child: SearchClearButton(
+              controller: controller,
+              onCleared: () => onChanged(''),
+            ),
+          ),
           filled: true,
           fillColor: context.vineColors.surfaceContainer,
           border: OutlineInputBorder(
@@ -779,6 +788,7 @@ class _SearchInput extends StatelessWidget {
 /// How a saved sound's row shows it, which its actions menu repeats.
 typedef _SavedSoundView = ({
   SoundCover? cover,
+  SoundKind? kind,
   bool isMissingFile,
   bool cannotBeReused,
 });
@@ -788,7 +798,6 @@ typedef _OpenMore = Future<void> Function(
   _SavedSoundView view,
 );
 
-  SoundKind? kind,
 /// Saved-sound list as a [SliverMainAxisGroup] so its filters and rows
 /// scroll as one with the search field above them.
 ///
@@ -829,6 +838,7 @@ class _SavedSoundsSection extends ConsumerWidget {
     final sourceCovers = sourcesLookup.hasError ? null : sourcesLookup.value;
     // Whose own sounds stay usable follows account changes, as in the picker.
     final viewer = ref.watch(currentAccountIdProvider);
+    final library = ref.watch(soundLibraryServiceProvider).value;
     return SliverMainAxisGroup(
       slivers: [
         if (hashtags.isNotEmpty)
@@ -838,7 +848,6 @@ class _SavedSoundsSection extends ConsumerWidget {
               selectedHashtag: state.selectedHashtag,
             ),
           ),
-    final library = ref.watch(soundLibraryServiceProvider).value;
         SliverList.builder(
           itemCount: sounds.length,
           itemBuilder: (context, index) {
@@ -850,6 +859,7 @@ class _SavedSoundsSection extends ConsumerWidget {
             );
             final view = (
               cover: cover,
+              kind: sound.audio.kindIn(library),
               isMissingFile: state.isMissingFile(sound),
               cannotBeReused: SoundCover.cannotBeReused(
                 sound.audio,
@@ -859,8 +869,8 @@ class _SavedSoundsSection extends ConsumerWidget {
             );
             return SavedSoundTile(
               sound: sound,
-              kind: sound.audio.kindIn(library),
               cover: cover,
+              kind: view.kind,
               isMissingFile: view.isMissingFile,
               cannotBeReused: view.cannotBeReused,
               isPreviewing: isPreviewing,
@@ -870,7 +880,6 @@ class _SavedSoundsSection extends ConsumerWidget {
               onPreview: () => onPreview(sound),
               onOpenMore: () => onOpenMore(sound, view),
             );
-              kind: view.kind,
           },
         ),
       ],
