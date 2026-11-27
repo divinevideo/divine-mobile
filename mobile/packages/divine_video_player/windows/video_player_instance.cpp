@@ -1127,13 +1127,18 @@ void VideoPlayerInstance::MoveToClip(size_t index) {
   moving_to_ = index;
   const uint64_t move = ++move_token_;
   StartOneShotTimer(kMoveTimeoutMs, [move](VideoPlayerInstance& self) {
-    if (self.move_token_ == move) self.moving_to_.reset();
+    if (self.move_token_ != move || !self.moving_to_) return;
+    // No landing arrived, so the seek held for it goes to the playing clip.
+    self.moving_to_.reset();
+    self.ApplyPendingSeek();
   });
   list_.MoveTo(static_cast<uint32_t>(index));
 }
 
 void VideoPlayerInstance::ApplyPendingSeek() {
-  if (!pending_seek_ || !player_ || !opened_ ||
+  // While a MoveTo is in flight current_index_ is about to change, so it
+  // cannot place the seek; the landing in OnCurrentItemChanged applies it.
+  if (!pending_seek_ || !player_ || !opened_ || moving_to_ ||
       pending_seek_->index != current_index_) {
     return;
   }
