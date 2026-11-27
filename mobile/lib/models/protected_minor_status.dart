@@ -19,7 +19,6 @@ class ProtectedMinorStatus {
   const ProtectedMinorStatus({
     required this.kind,
     this.verifiedMinorAt,
-    this.verifiedMinorReported = true,
   });
 
   factory ProtectedMinorStatus.unknown() =>
@@ -34,22 +33,14 @@ class ProtectedMinorStatus {
         verifiedMinorAt: verifiedMinorAt,
       );
 
-  /// Maps a Keycast account status to protected-minor state. A null status
-  /// (fetch failed / unavailable) is preserved as unknown so enforcement
-  /// layers can choose their own fail-safe behavior; `verified_minor == false`
-  /// is the only confirmed not-protected response. A reply without the flag
-  /// also maps to not-protected, as it always has for the content and DM
-  /// protections, but with [verifiedMinorReported] false so features that need
-  /// an explicit answer can refuse it.
+  /// Maps an explicit Keycast verdict to protected-minor state. Missing or
+  /// unavailable verdicts stay unknown so enforcement retains its fallback.
   factory ProtectedMinorStatus.fromKeycast(KeycastAccountStatus? status) {
-    if (status == null) {
+    if (status == null || !status.verifiedMinorReported) {
       return ProtectedMinorStatus.unknown();
     }
     if (!status.verifiedMinor) {
-      return ProtectedMinorStatus(
-        kind: ProtectedMinorStatusKind.notProtected,
-        verifiedMinorReported: status.verifiedMinorReported,
-      );
+      return ProtectedMinorStatus.notProtected();
     }
     return ProtectedMinorStatus.protected(
       verifiedMinorAt: status.verifiedMinorAt,
@@ -59,13 +50,9 @@ class ProtectedMinorStatus {
   final ProtectedMinorStatusKind kind;
   final DateTime? verifiedMinorAt;
 
-  /// Whether Keycast's reply carried an explicit `verified_minor`; see
-  /// [KeycastAccountStatus.verifiedMinorReported].
-  final bool verifiedMinorReported;
-
   /// An explicit Keycast answer that the account is not a protected minor.
   bool get isConfirmedNotProtected =>
-      kind == ProtectedMinorStatusKind.notProtected && verifiedMinorReported;
+      kind == ProtectedMinorStatusKind.notProtected;
 
   bool get isProtectedMinor => kind == ProtectedMinorStatusKind.protected;
   bool get isKnown => kind != ProtectedMinorStatusKind.unknown;

@@ -20,15 +20,15 @@ class KeycastAccountStatus {
 
   factory KeycastAccountStatus.fromJson(Map<String, dynamic> json) {
     final verifiedMinorAtRaw = json['verified_minor_at'] as String?;
-    final verifiedMinor = json['verified_minor'];
+    final verifiedMinor = json['verified_minor'] as bool?;
     return KeycastAccountStatus(
       email: json['email'] as String? ?? '',
       emailVerified: json['email_verified'] as bool? ?? false,
       publicKey: json['public_key'] as String? ?? '',
       accountStatus: json['account_status'] as String?,
       suspendedReason: json['suspended_reason'] as String?,
-      verifiedMinor: verifiedMinor is bool && verifiedMinor,
-      verifiedMinorReported: verifiedMinor is bool,
+      verifiedMinor: verifiedMinor ?? false,
+      verifiedMinorReported: verifiedMinor != null,
       verifiedMinorAt: verifiedMinorAtRaw == null
           ? null
           : DateTime.tryParse(verifiedMinorAtRaw),
@@ -65,8 +65,7 @@ class KeycastAccountStatus {
   /// [verifiedMinorReported] before treating `false` as a confirmed answer.
   final bool verifiedMinor;
 
-  /// Whether the reply carried a boolean `verified_minor` at all. A missing or
-  /// malformed flag is not a confirmation that the account is not a minor.
+  /// Whether the reply carried an explicit boolean `verified_minor`.
   final bool verifiedMinorReported;
   final DateTime? verifiedMinorAt;
 }

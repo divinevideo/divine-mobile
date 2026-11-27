@@ -51,16 +51,16 @@ void main() {
       expect(status.verifiedMinorReported, isTrue);
     });
 
-    test('does not report a verified_minor that is not a boolean', () {
-      final status = KeycastAccountStatus.fromJson({
-        'email': 'a@b.com',
-        'email_verified': true,
-        'public_key': 'abc',
-        'verified_minor': 'false',
-      });
-
-      expect(status.verifiedMinor, isFalse);
-      expect(status.verifiedMinorReported, isFalse);
+    test('rejects a verified_minor that is not a boolean', () {
+      expect(
+        () => KeycastAccountStatus.fromJson({
+          'email': 'a@b.com',
+          'email_verified': true,
+          'public_key': 'abc',
+          'verified_minor': 'false',
+        }),
+        throwsA(isA<TypeError>()),
+      );
     });
 
     test('keeps verified_minor true but null timestamp on a bad date', () {

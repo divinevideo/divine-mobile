@@ -57,23 +57,14 @@ void main() {
       expect(s.verifiedMinorAt, at);
     });
 
-    test('an explicit verified_minor false is reported', () {
+    test('a reply without verified_minor maps to unknown', () {
       final status = ProtectedMinorStatus.fromKeycast(
-        _status(verifiedMinor: false),
+        _status(verifiedMinor: false, verifiedMinorReported: false),
       );
-      expect(status.verifiedMinorReported, isTrue);
-    });
 
-    test(
-      'a reply without verified_minor stays not protected but unreported',
-      () {
-        final status = ProtectedMinorStatus.fromKeycast(
-          _status(verifiedMinor: false, verifiedMinorReported: false),
-        );
-        expect(status.kind, ProtectedMinorStatusKind.notProtected);
-        expect(status.verifiedMinorReported, isFalse);
-      },
-    );
+      expect(status.kind, ProtectedMinorStatusKind.unknown);
+      expect(status.isConfirmedNotProtected, isFalse);
+    });
 
     test('verified_minor false -> not protected', () {
       final status = ProtectedMinorStatus.fromKeycast(
@@ -81,6 +72,7 @@ void main() {
       );
 
       expect(status.kind, ProtectedMinorStatusKind.notProtected);
+      expect(status.isConfirmedNotProtected, isTrue);
       expect(status.isKnown, isTrue);
       expect(status.isProtectedMinor, isFalse);
     });

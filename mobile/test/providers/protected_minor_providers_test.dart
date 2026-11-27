@@ -289,6 +289,54 @@ void main() {
       },
     );
 
+    for (final (description, flag) in [
+      ('missing', ''),
+      ('malformed', ',"verified_minor":"false"'),
+    ]) {
+      test('a $description Keycast verdict preserves known protection', () async {
+        const pubkey =
+            'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+        const stickyKey = 'protected_minor_sticky_$pubkey';
+        SharedPreferences.setMockInitialValues({stickyKey: true});
+        final prefs = await SharedPreferences.getInstance();
+        final oauth = KeycastOAuth(
+          config: const OAuthConfig(
+            serverUrl: 'https://login.divine.video',
+            clientId: 'c',
+            redirectUri: 'divine://cb',
+          ),
+          storage: MemoryKeycastStorage(),
+          httpClient: MockClient((_) async {
+            return http.Response(
+              '{"email":"a","email_verified":true,"public_key":"$pubkey"$flag}',
+              200,
+            );
+          }),
+        );
+
+        final authService = _MockAuthService();
+        when(() => authService.currentPublicKeyHex).thenReturn(pubkey);
+        when(authService.activeAccountKeycastToken)
+            .thenAnswer((_) async => 'tok');
+        final container = ProviderContainer(
+          overrides: [
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+            authServiceProvider.overrideWithValue(authService),
+            oauthClientProvider.overrideWithValue(oauth),
+            sharedPreferencesProvider.overrideWithValue(prefs),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final status = await container.read(
+          protectedMinorStatusProvider.future,
+        );
+        expect(container.read(isProtectedMinorProvider), isTrue);
+        expect(prefs.getBool(stickyKey), isTrue);
+        expect(status.kind, ProtectedMinorStatusKind.unknown);
+      });
+    }
+
     test(
       'isProtectedMinorProvider: authenticated unknown for a never-seen account '
       'does NOT over-restrict (stays not-protected)',
