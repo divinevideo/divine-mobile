@@ -854,18 +854,38 @@ class _PlainLinkText extends StatelessWidget {
 /// a narrow band. Only the leaves the silhouettes mark are bones; the seams
 /// and outlines between them keep painting so the structure shows.
 class ListSkeletonizer extends StatelessWidget {
-  const ListSkeletonizer({required this.child, this.enabled = true, super.key});
+  const ListSkeletonizer({
+    required this.child,
+    this.enabled = true,
+    this.switchDuration,
+    super.key,
+  });
 
   final Widget child;
 
   /// Whether the bones paint; `false` shows [child] as it is.
   final bool enabled;
 
+  /// How long the bones and the loaded content cross-fade when [enabled]
+  /// changes; null switches at once, and so does reduced motion.
+  ///
+  /// The cross-fade runs only when this same instance flips [enabled], so a
+  /// caller that wants it keeps one skeletonizer around both states.
+  final Duration? switchDuration;
+
   @override
   Widget build(BuildContext context) {
+    final switchDuration = this.switchDuration;
     return Skeletonizer(
       enabled: enabled,
       ignoreContainers: true,
+      enableSwitchAnimation: switchDuration != null,
+      switchAnimationConfig: SwitchAnimationConfig(
+        duration:
+            switchDuration == null || MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : switchDuration,
+      ),
       effect: vineSkeletonEffectOf(
         context,
         baseColor: context.vineColors.containerLow,
@@ -876,6 +896,18 @@ class ListSkeletonizer extends StatelessWidget {
       child: child,
     );
   }
+}
+
+/// The video fan of [DivineListMedia.videos] as bones, for a card that puts
+/// its own footer under the same fan.
+///
+/// Paints as bones under an enclosing [ListSkeletonizer].
+class DivineListFanSkeleton extends StatelessWidget {
+  const DivineListFanSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      _FanFrame(slotBuilder: (_) => const _FanSlotBone());
 }
 
 /// The card's silhouette while its list is still on its way.
@@ -915,9 +947,7 @@ class DivineListThumbnailSkeleton extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         switch (_kind) {
-          _ListKind.videos => _FanFrame(
-            slotBuilder: (_) => const _FanSlotBone(),
-          ),
+          _ListKind.videos => const DivineListFanSkeleton(),
           _ListKind.people => _CollageFrame(
             tileBuilder: (slot, seams) => _TileBone(slot: slot, seams: seams),
           ),

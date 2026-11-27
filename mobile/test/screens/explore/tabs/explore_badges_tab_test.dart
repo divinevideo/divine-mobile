@@ -25,6 +25,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/widgets/badges/badge_community_card.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -142,7 +143,9 @@ void main() {
           home: const Scaffold(body: ExploreBadgesTab()),
         ),
       );
-      await tester.pumpAndSettle();
+      // The gallery shimmers while visibility is pending, so it never settles.
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
       final cubit = tester
           .element(find.byType(ExploreBadgesView))
           .read<ExploreBadgesCubit>();
@@ -212,7 +215,10 @@ void main() {
               ),
             ),
           );
-          await tester.pumpAndSettle();
+          // The gallery shimmers while visibility is pending, so it never
+          // settles.
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
           final error = Exception(
             'badge visibility unavailable ($failBeforeMount)',
           );
@@ -431,6 +437,114 @@ void main() {
       await tester.pumpWidget(buildSubject());
       expect(find.bySemanticsLabel(l10n.commonLoading), findsOneWidget);
       semantics.dispose();
+    });
+
+    group('loading placeholders', () {
+      final skeletonizer = find.byWidgetPredicate(
+        (widget) => widget is Skeletonizer,
+      );
+
+      testWidgets('show the clip stack in a color the panel does not use', (
+        tester,
+      ) async {
+        when(() => cubit.state).thenReturn(
+          const ExploreBadgesState(status: ExploreBadgesStatus.loading),
+        );
+        await tester.pumpWidget(buildSubject());
+
+        expect(find.byType(DivineListFanSkeleton), findsWidgets);
+        final effect =
+            tester.widget<Skeletonizer>(skeletonizer).effect! as ShimmerEffect;
+        // Explore draws its panel in surfaceContainerHigh in dark mode, so
+        // placeholders in that color made the loading gallery look empty.
+        final panel = tester
+            .element(find.byType(ExploreBadgesView))
+            .vineColors
+            .surfaceContainerHigh;
+        expect(effect.colors, everyElement(isNot(panel)));
+      });
+
+      testWidgets('cross-fade into the cards within 100 ms', (tester) async {
+        final states = StreamController<ExploreBadgesState>();
+        addTearDown(states.close);
+        whenListen(
+          cubit,
+          states.stream,
+          initialState: const ExploreBadgesState(
+            status: ExploreBadgesStatus.loading,
+          ),
+        );
+        await tester.pumpWidget(buildSubject());
+
+        states.add(
+          ExploreBadgesState(
+            status: ExploreBadgesStatus.loaded,
+            definitions: [_definition],
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(find.byType(DivineListFanSkeleton), findsWidgets);
+        expect(find.byType(BadgeCommunityCard), findsOneWidget);
+
+        await tester.pump(const Duration(milliseconds: 60));
+        expect(find.byType(DivineListFanSkeleton), findsNothing);
+        expect(find.byType(BadgeCommunityCard), findsOneWidget);
+      });
+
+      testWidgets('give way at once under reduced motion', (tester) async {
+        final states = StreamController<ExploreBadgesState>();
+        addTearDown(states.close);
+        whenListen(
+          cubit,
+          states.stream,
+          initialState: const ExploreBadgesState(
+            status: ExploreBadgesStatus.loading,
+          ),
+        );
+        await tester.pumpWidget(
+          MediaQuery(
+            data: const MediaQueryData(disableAnimations: true),
+            child: buildSubject(),
+          ),
+        );
+
+        states.add(
+          ExploreBadgesState(
+            status: ExploreBadgesStatus.loaded,
+            definitions: [_definition],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byType(DivineListFanSkeleton), findsNothing);
+        expect(find.byType(BadgeCommunityCard), findsOneWidget);
+      });
+
+      testWidgets('do not cover a failed visibility check', (tester) async {
+        var retried = false;
+        when(() => cubit.state).thenReturn(
+          const ExploreBadgesState(status: ExploreBadgesStatus.loading),
+        );
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: Scaffold(
+              body: BlocProvider<ExploreBadgesCubit>.value(
+                value: cubit,
+                child: ExploreBadgesView(
+                  isVisibilityPending: true,
+                  onVisibilityRetry: () => retried = true,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text(l10n.commonRetry));
+
+        expect(retried, isTrue);
+      });
     });
 
     testWidgets('the explainer opens the exact external badges website', (
