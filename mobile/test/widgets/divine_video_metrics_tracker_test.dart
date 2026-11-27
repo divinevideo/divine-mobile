@@ -1294,6 +1294,45 @@ void main() {
       await controller.close();
     });
 
+    testWidgets('seen history counts whole watched seconds for a short clip', (
+      tester,
+    ) async {
+      final controller = _stubController(
+        isPlaying: true,
+        duration: subSecondClip,
+      );
+      final active = ValueNotifier(true);
+      final video = ValueNotifier(_video);
+      addTearDown(active.dispose);
+      addTearDown(video.dispose);
+      addTearDown(controller.close);
+      await tester.pumpWidget(
+        _buildTrackerHarness(
+          authService: authService,
+          analyticsService: analyticsService,
+          seenVideosService: seenVideosService,
+          controller: controller.controller,
+          video: video,
+          isActive: active,
+          clock: () => now,
+        ),
+      );
+
+      now = now.add(const Duration(milliseconds: 600));
+      active.value = false;
+      await tester.pump();
+      expect(seenVideosService.records.single.loopCount, 0);
+
+      active.value = true;
+      await tester.pump();
+      now = now.add(const Duration(milliseconds: 1600));
+      await tester.pumpWidget(const SizedBox.shrink());
+
+      final seen = seenVideosService.records.single;
+      expect(seen.loopCount, 1);
+      expect(seen.watchDuration, const Duration(milliseconds: 2200));
+    });
+
     testWidgets(
       'a pause does not count toward the second between sub-second loops',
       (tester) async {

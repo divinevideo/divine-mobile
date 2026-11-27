@@ -561,9 +561,15 @@ class _DivineVideoMetricsTrackerState
     if (widget._clock().difference(mountedAt) <= Duration.zero) return;
 
     final deltaWatch = _watchTotal - _seenWatchRecorded;
-    // Round the cumulative figure, not each delta, so repeated partial
-    // segments cannot each round down to zero and lose the pass.
-    final cumulativeSeenLoops = _cumulativeLoops(totalDuration).round();
+    // Convert the cumulative figure to whole loops so partial segments can
+    // contribute to the next loop. Short clips round down to keep a revisit
+    // of less than a second from adding a whole loop to the history.
+    final loops = _cumulativeLoops(totalDuration);
+    final isShortClip =
+        totalDuration != null &&
+        totalDuration > Duration.zero &&
+        totalDuration < minimumLoopDuration;
+    final cumulativeSeenLoops = isShortClip ? loops.floor() : loops.round();
     final deltaLoops = cumulativeSeenLoops - _seenLoopsRecorded;
 
     if (_hasRecordedImpression &&
