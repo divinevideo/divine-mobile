@@ -1562,14 +1562,17 @@ class ProfileRepository implements ProfileReader {
   /// default relay's `OK true`: remix consent readers settle on that relay's
   /// kind 0, so a save other relays accepted but it did not is a failure.
   ///
+  /// Set [useLatestProfileFields] for a settings-only save that should take
+  /// display name, bio, website, picture and banner from the resolved seed.
+  ///
   /// Throws [NoRelaysConnectedException] when no relays are connected.
   /// Throws [ProfilePublishFailedException] when relays were reached but none
   /// confirmed the event (rejection, timeout, or a send failure such as the
   /// signer returning null). Throws [ProfilePublishSeedUnavailableException]
-  /// before publishing when the current Kind 0 cannot safely seed the save. A Kind 0
-  /// replaces the previous one whole, so publishing from a local copy that
-  /// cannot carry its tags would erase them; the save is deferred for the
-  /// caller, or the durable pending-save retry, to try again.
+  /// before publishing when the current Kind 0 cannot safely seed the save.
+  /// A Kind 0 replaces the previous one whole, so publishing from a local
+  /// copy that cannot carry its tags would erase them. The save is deferred
+  /// for the caller or the durable pending-save retry to try again.
   Future<UserProfile> saveProfileEvent({
     required String displayName,
     String? about,
@@ -1582,6 +1585,7 @@ class ProfileRepository implements ProfileReader {
     Iterable<MonetizationLink>? monetizationLinks,
     bool? allowVideoReuse,
     UserProfile? currentProfile,
+    bool useLatestProfileFields = false,
   }) async {
     // External NIP-05 takes precedence when provided.
     final resolvedNip05 =
@@ -1601,27 +1605,43 @@ class ProfileRepository implements ProfileReader {
 
     final newContent = Map<String, dynamic>.from(seed?.rawData ?? const {});
 
-    // Editable fields — caller's value is authoritative. Empty / null means
-    // "user cleared this field" → remove the key. The form pre-populates
-    // these fields so the user sees what they're editing; an empty submit
-    // is intentional.
-    newContent['display_name'] = displayName;
-    if (about != null && about.isNotEmpty) {
+    // A settings-only save applies the normalized fields from the resolved
+    // seed so it keeps changes made to the profile since the caller's read.
+    // For editor saves, the submitted form fields are authoritative.
+    final fields = useLatestProfileFields
+        ? (
+            displayName: seed?.displayName ?? seed?.name ?? '',
+            about: seed?.about,
+            website: seed?.website,
+            picture: seed?.picture,
+            banner: seed?.banner,
+          )
+        : (
+            displayName: displayName,
+            about: about,
+            website: website,
+            picture: picture,
+            banner: banner,
+          );
+    newContent['display_name'] = fields.displayName;
+    if (fields.about case final about? when about.isNotEmpty) {
       newContent['about'] = about;
     } else {
       newContent.remove('about');
     }
-    if (website != null && website.isNotEmpty) {
-      newContent['website'] = website;
-    } else if (website != null) {
-      newContent.remove('website');
+    if (fields.website case final website?) {
+      if (website.isNotEmpty) {
+        newContent['website'] = website;
+      } else {
+        newContent.remove('website');
+      }
     }
-    if (picture != null && picture.isNotEmpty) {
+    if (fields.picture case final picture? when picture.isNotEmpty) {
       newContent['picture'] = picture;
     } else {
       newContent.remove('picture');
     }
-    if (banner != null && banner.isNotEmpty) {
+    if (fields.banner case final banner? when banner.isNotEmpty) {
       newContent['banner'] = banner;
     } else {
       newContent.remove('banner');
@@ -1884,9 +1904,9 @@ class ProfileRepository implements ProfileReader {
   ///   or carries the same timestamp and strictly more meaningful keys.
   ///
   /// Throws [ProfilePublishSeedUnavailableException] before anything is
-  /// published when the relay read is inconclusive — it timed out, was refused, reached
-  /// no relay, threw, or ran past [_publishSeedRelayTimeout] — or when the
-  /// local seed is newer but has no tags while the relay copy does, meaning
+  /// published when the relay read is inconclusive (timeout, refusal, no
+  /// relay, exception, or [_publishSeedRelayTimeout]). It also throws when
+  /// the local seed is newer but has no tags while the relay copy does, meaning
   /// the relays have not indexed the newer copy yet. The profile cache stores
   /// no tags, so publishing in either case could erase the tags on relays.
   Future<UserProfile?> _resolvePublishSeed(UserProfile? currentProfile) async {

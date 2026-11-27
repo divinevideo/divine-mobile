@@ -95,6 +95,7 @@ void main() {
     void stubSave(Future<UserProfile> Function(bool? allow) answer) {
       when(
         () => repository.saveProfileEvent(
+          useLatestProfileFields: true,
           displayName: any(named: 'displayName'),
           about: any(named: 'about'),
           website: any(named: 'website'),
@@ -275,6 +276,7 @@ void main() {
         verify: (_) {
           verify(
             () => repository.saveProfileEvent(
+              useLatestProfileFields: true,
               displayName: 'Creator',
               about: 'bio',
               website: 'https://creator.example',
@@ -310,6 +312,7 @@ void main() {
         },
         verify: (_) => verify(
           () => repository.saveProfileEvent(
+            useLatestProfileFields: true,
             displayName: 'Renamed',
             about: 'new bio',
             website: 'https://creator.example',
@@ -347,6 +350,7 @@ void main() {
         ],
         verify: (_) => verify(
           () => repository.saveProfileEvent(
+            useLatestProfileFields: true,
             displayName: '',
             allowVideoReuse: false,
           ),
@@ -367,6 +371,7 @@ void main() {
         },
         verify: (_) => verify(
           () => repository.saveProfileEvent(
+            useLatestProfileFields: true,
             displayName: 'Creator',
             about: 'bio',
             website: 'https://creator.example',
@@ -406,6 +411,7 @@ void main() {
         verify: (_) {
           verifyNever(
             () => repository.saveProfileEvent(
+              useLatestProfileFields: true,
               displayName: any(named: 'displayName'),
               about: any(named: 'about'),
               website: any(named: 'website'),
@@ -449,6 +455,7 @@ void main() {
           ).called(2);
           verify(
             () => repository.saveProfileEvent(
+              useLatestProfileFields: true,
               displayName: 'Creator',
               about: 'new bio',
               website: 'https://creator.example',
@@ -482,6 +489,7 @@ void main() {
         ],
         verify: (_) => verifyNever(
           () => repository.saveProfileEvent(
+            useLatestProfileFields: true,
             displayName: any(named: 'displayName'),
             about: any(named: 'about'),
             website: any(named: 'website'),
@@ -505,6 +513,7 @@ void main() {
 
         verifyNever(
           () => repository.saveProfileEvent(
+            useLatestProfileFields: true,
             displayName: any(named: 'displayName'),
             about: any(named: 'about'),
             website: any(named: 'website'),
@@ -564,6 +573,7 @@ void main() {
         expect: () => const <RemixSettingsState>[],
         verify: (_) => verifyNever(
           () => repository.saveProfileEvent(
+            useLatestProfileFields: true,
             displayName: any(named: 'displayName'),
             allowVideoReuse: any(named: 'allowVideoReuse'),
             currentProfile: any(named: 'currentProfile'),
@@ -706,6 +716,48 @@ void main() {
           );
         },
       );
+
+      test('preserves profile details from the newer publish seed', () async {
+        final earlier = Event(
+          _pubkey,
+          0,
+          const [],
+          '{"display_name":"Creator","about":"Old bio","picture":"old"}',
+          createdAt: 1790000000,
+        );
+        final later = Event(
+          _pubkey,
+          0,
+          const [],
+          '{"display_name":"New name","about":"New bio"}',
+          createdAt: 1790000001,
+        );
+        var reads = 0;
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => (
+            events: [if (++reads <= 2) earlier else later],
+            timedOut: false,
+            noRelays: false,
+          ),
+        );
+        stubDefaultRelayPublish((event) => PublishSuccess(event: event));
+        final cubit = buildPublishingCubit();
+        addTearDown(cubit.close);
+        await cubit.load();
+
+        await cubit.setAllowVideoReuse(false);
+
+        expect(savedProfiles.single.displayName, 'New name');
+        expect(savedProfiles.single.about, 'New bio');
+        expect(savedProfiles.single.picture, isNull);
+        expect(savedProfiles.single.allowsVideoReuse, isFalse);
+      });
 
       test(
         'reverts the switch when only a relay other than the default one '

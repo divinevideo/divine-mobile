@@ -55,6 +55,7 @@ void main() {
     void stubSave(Future<UserProfile> Function() answer) {
       when(
         () => repository.saveProfileEvent(
+          useLatestProfileFields: true,
           displayName: any(named: 'displayName'),
           about: any(named: 'about'),
           website: any(named: 'website'),
@@ -247,6 +248,7 @@ void main() {
 
         verify(
           () => repository.saveProfileEvent(
+            useLatestProfileFields: true,
             displayName: 'Creator',
             about: any(named: 'about'),
             website: any(named: 'website'),
@@ -288,6 +290,7 @@ void main() {
         expect(find.text(l10n.profileSetupPublishFailed), findsNothing);
         verifyNever(
           () => repository.saveProfileEvent(
+            useLatestProfileFields: true,
             displayName: any(named: 'displayName'),
             about: any(named: 'about'),
             website: any(named: 'website'),
