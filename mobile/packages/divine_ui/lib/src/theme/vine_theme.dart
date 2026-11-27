@@ -1335,6 +1335,47 @@ class VineTheme {
   /// Accent purple color.
   static const Color accentPurple = Color(0xFF8568FF);
 
+  /// Fixed gradients for dark-mode video thumbnails without a BlurHash.
+  static const List<
+    ({
+      Color base,
+      Color tint,
+      Color glow,
+      Alignment tintCenter,
+      Alignment glowCenter,
+    })
+  >
+  darkThumbnailPlaceholderPalettes = [
+    (
+      base: Color(0xFF3F354C),
+      tint: Color(0xFF784C74),
+      glow: Color(0xFFA96E7B),
+      tintCenter: Alignment(0.54, -0.24),
+      glowCenter: Alignment(-0.66, -0.76),
+    ),
+    (
+      base: Color(0xFF293E51),
+      tint: Color(0xFF626885),
+      glow: Color(0xFF6A98AA),
+      tintCenter: Alignment(-0.9, -0.24),
+      glowCenter: Alignment(0.72, -0.64),
+    ),
+    (
+      base: Color(0xFF544638),
+      tint: Color(0xFF8A5E50),
+      glow: Color(0xFF9A835B),
+      tintCenter: Alignment(0.8, 0.14),
+      glowCenter: Alignment(-0.54, -0.44),
+    ),
+    (
+      base: Color(0xFF273D37),
+      tint: Color(0xFF5A756F),
+      glow: Color(0xFF648E77),
+      tintCenter: Alignment(-0.78, -0.88),
+      glowCenter: Alignment(0.26, -0.3),
+    ),
+  ];
+
   /// Fully transparent color sentinel.
   static const Color transparent = Color(0x00000000);
 

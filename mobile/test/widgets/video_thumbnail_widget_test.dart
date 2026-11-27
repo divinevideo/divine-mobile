@@ -4,6 +4,8 @@ import 'dart:ui' as ui;
 import 'package:blurhash_service/blurhash_service.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart' show SynchronousFuture;
+import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
+import 'package:flutter_cache_manager/flutter_cache_manager.dart' show FileInfo;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -35,6 +37,23 @@ Finder _divineIcon(DivineIconName name) =>
 
 double _thumbnailAspectRatio(WidgetTester tester) =>
     tester.widget<AspectRatio>(find.byType(AspectRatio)).aspectRatio;
+
+Future<Color> _centerColor(WidgetTester tester, Finder finder) async {
+  final boundary = tester.renderObject<RenderRepaintBoundary>(finder);
+  final image = boundary.toImageSync();
+  try {
+    final pixels = (await tester.runAsync(image.toByteData))!;
+    final center = ((image.height ~/ 2) * image.width + image.width ~/ 2) * 4;
+    return Color.fromARGB(
+      pixels.getUint8(center + 3),
+      pixels.getUint8(center),
+      pixels.getUint8(center + 1),
+      pixels.getUint8(center + 2),
+    );
+  } finally {
+    image.dispose();
+  }
+}
 
 /// An [ImageProvider] that synchronously yields a pre-built [ui.Image] so a
 /// widget test can drive the image stream without an async decode.
@@ -148,6 +167,140 @@ void main() {
     // cascade in the merged VGV optimizer isolate (#5159).
     setUp(() => debugImageCacheOverride = createMockMediaCacheManager());
     tearDown(() => debugImageCacheOverride = null);
+
+    testWidgets(
+      'uses stable, distinct color clouds for dark thumbnails without BlurHashes',
+      (tester) async {
+        final first = createTestVideoEvent(id: 'a'.padLeft(64, '0'));
+        final second = createTestVideoEvent(id: 'b'.padLeft(64, '0'));
+        final firstTile = find.byKey(ValueKey(first.id));
+        final secondTile = find.byKey(ValueKey(second.id));
+
+        Future<void> pumpThumbnails(List<VideoEvent> videos) {
+          return tester.pumpWidget(
+            MaterialApp(
+              theme: VineTheme.theme,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final video in videos)
+                      RepaintBoundary(
+                        key: ValueKey(video.id),
+                        child: SizedBox(
+                          width: 60,
+                          height: 90,
+                          child: VideoThumbnailWidget(video: video),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        await pumpThumbnails([first, second]);
+        final firstColor = await _centerColor(tester, firstTile);
+        final secondColor = await _centerColor(tester, secondTile);
+
+        expect(firstColor, isNot(secondColor));
+        expect(firstColor.computeLuminance(), inInclusiveRange(0.025, 0.25));
+        expect(secondColor.computeLuminance(), inInclusiveRange(0.025, 0.25));
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await pumpThumbnails([second, first]);
+        expect(await _centerColor(tester, firstTile), firstColor);
+        expect(await _centerColor(tester, secondTile), secondColor);
+      },
+    );
+
+    final placeholderCases = [
+      (
+        description:
+            'keeps the generic thumbnail fallback bright in light mode',
+        theme: VineTheme.lightTheme,
+        blurhash: null,
+        luminance: greaterThan(0.4),
+      ),
+      (
+        description: 'preserves a bright video BlurHash in dark mode',
+        theme: VineTheme.theme,
+        blurhash: '00TQ@?', // A light peach BlurHash.
+        luminance: greaterThan(0.6),
+      ),
+    ];
+
+    for (final testCase in placeholderCases) {
+      testWidgets(
+        testCase.description,
+        (tester) async {
+          final cache = createMockMediaCacheManager();
+          final pendingThumbnail = Completer<FileInfo?>();
+          when(
+            () => cache.getFileFromCache(any()),
+          ).thenAnswer((_) => pendingThumbnail.future);
+          debugImageCacheOverride = cache;
+
+          final theme = testCase.theme;
+          final video = createTestVideoEvent(
+            thumbnailUrl: 'https://example.com/bright-thumbnail.jpg',
+            blurhash: testCase.blurhash,
+          );
+          const previewKey = Key('thumbnail-preview');
+          final preview = find.byKey(previewKey);
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: theme,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Center(
+                child: RepaintBoundary(
+                  key: previewKey,
+                  child: SizedBox(
+                    width: 60,
+                    height: 90,
+                    child: ColoredBox(
+                      color: theme
+                          .extension<VineThemeColors>()!
+                          .surfaceContainerHigh,
+                      child: VideoThumbnailWidget(video: video),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          final firstFrame = (await _centerColor(
+            tester,
+            preview,
+          )).computeLuminance();
+          final decodedBlurhash = find.descendant(
+            of: find.byType(BlurhashDisplay),
+            matching: find.byType(CustomPaint),
+          );
+          for (
+            var attempt = 0;
+            attempt < 50 && decodedBlurhash.evaluate().isEmpty;
+            attempt++
+          ) {
+            await tester.runAsync(pumpEventQueue);
+            await tester.pump();
+          }
+          expect(decodedBlurhash, findsOneWidget);
+          final decodedFrame = (await _centerColor(
+            tester,
+            preview,
+          )).computeLuminance();
+
+          expect(firstFrame, testCase.luminance, reason: 'initial gradient');
+          expect(decodedFrame, testCase.luminance, reason: 'decoded BlurHash');
+        },
+      );
+    }
 
     testWidgets('builds widget tree correctly when thumbnail URL exists', (
       tester,
