@@ -23,6 +23,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/external_link_launcher.dart';
 import 'package:openvine/widgets/badges/badge_community_card.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import 'package:text_sanitizer/text_sanitizer.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -151,134 +152,145 @@ class ExploreBadgesView extends StatelessWidget {
                 state.status == ExploreBadgesStatus.loading;
             final definitions = state.visibleDefinitions;
             final rowCount = (definitions.length / columns).ceil();
+            final failed =
+                onVisibilityRetry != null ||
+                (!isVisibilityPending &&
+                    state.status == ExploreBadgesStatus.failure);
             return RefreshIndicator(
               color: VineTheme.onPrimary,
               backgroundColor: VineTheme.vineGreen,
               onRefresh: cubit.refresh,
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  if (onVisibilityRetry != null ||
-                      (!isVisibilityPending &&
-                          state.status == ExploreBadgesStatus.failure))
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          spacing: 16,
-                          children: [
-                            Text(
-                              context.l10n.badgesLoadError,
-                              style: VineTheme.bodyMediumFont(
-                                color: context.vineColors.onSurface,
-                              ),
-                            ),
-                            DivineButton(
-                              onPressed: onVisibilityRetry ?? cubit.load,
-                              label: context.l10n.commonRetry,
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  else if (!loading && definitions.isEmpty)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          spacing: 16,
-                          children: [
-                            Text(
-                              context.l10n.badgeDiscoveryEmpty,
-                              textAlign: TextAlign.center,
-                              style: VineTheme.bodyMediumFont(
-                                color: context.vineColors.onSurfaceVariant,
-                              ),
-                            ),
-                            DivineButton(
-                              onPressed: cubit.load,
-                              label: context.l10n.commonRetry,
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  else if (loading)
-                    SliverToBoxAdapter(
-                      child: Semantics(
-                        label: context.l10n.commonLoading,
-                        container: true,
-                        liveRegion: true,
-                        excludeSemantics: true,
+              // One skeletonizer around both states, so the placeholders
+              // cross-fade into the cards instead of being swapped out.
+              child: ListSkeletonizer(
+                enabled: loading && !failed,
+                switchDuration: _skeletonSwitchDuration,
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    if (failed)
+                      SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: const EdgeInsets.all(24),
                           child: Column(
-                            spacing: 20,
-                            children: List.generate(
-                              3,
-                              (_) => Row(
-                                spacing: 16,
-                                children: List.generate(
-                                  columns,
-                                  (_) => const Expanded(
-                                    child: _BadgeCardSkeleton(),
+                            spacing: 16,
+                            children: [
+                              Text(
+                                context.l10n.badgesLoadError,
+                                style: VineTheme.bodyMediumFont(
+                                  color: context.vineColors.onSurface,
+                                ),
+                              ),
+                              DivineButton(
+                                onPressed: onVisibilityRetry ?? cubit.load,
+                                label: context.l10n.commonRetry,
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else if (!loading && definitions.isEmpty)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            spacing: 16,
+                            children: [
+                              Text(
+                                context.l10n.badgeDiscoveryEmpty,
+                                textAlign: TextAlign.center,
+                                style: VineTheme.bodyMediumFont(
+                                  color: context.vineColors.onSurfaceVariant,
+                                ),
+                              ),
+                              DivineButton(
+                                onPressed: cubit.load,
+                                label: context.l10n.commonRetry,
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else if (loading)
+                      SliverToBoxAdapter(
+                        child: Semantics(
+                          label: context.l10n.commonLoading,
+                          container: true,
+                          liveRegion: true,
+                          excludeSemantics: true,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Column(
+                              spacing: 20,
+                              children: List.generate(
+                                3,
+                                (_) => Row(
+                                  spacing: 16,
+                                  children: List.generate(
+                                    columns,
+                                    (_) => const Expanded(
+                                      child: _BadgeCardSkeleton(),
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      sliver: SliverList.separated(
-                        itemCount: rowCount,
-                        separatorBuilder: (_, _) => const SizedBox(height: 20),
-                        itemBuilder: (context, row) {
-                          final first = row * columns;
-                          final rowDefinitions = definitions
-                              .skip(first)
-                              .take(columns);
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            spacing: 16,
-                            children: [
-                              for (final definition in rowDefinitions)
-                                Expanded(
-                                  key: ValueKey(definition.coordinate),
-                                  child: _BadgePreviewCard(
-                                    definition: definition,
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: SliverList.separated(
+                          itemCount: rowCount,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 20),
+                          itemBuilder: (context, row) {
+                            final first = row * columns;
+                            final rowDefinitions = definitions
+                                .skip(first)
+                                .take(columns);
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              spacing: 16,
+                              children: [
+                                for (final definition in rowDefinitions)
+                                  Expanded(
+                                    key: ValueKey(definition.coordinate),
+                                    child: _BadgePreviewCard(
+                                      definition: definition,
+                                    ),
                                   ),
-                                ),
-                              for (
-                                var i = rowDefinitions.length;
-                                i < columns;
-                                i++
+                                for (
+                                  var i = rowDefinitions.length;
+                                  i < columns;
+                                  i++
+                                )
+                                  const Expanded(child: SizedBox.shrink()),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child:
+                            !loading &&
+                                onVisibilityRetry == null &&
+                                state.hasMore
+                            ? DivineButton(
+                                onPressed: cubit.showMore,
+                                label: context.l10n.profileShowMore,
+                                type: DivineButtonType.secondary,
                               )
-                                const Expanded(child: SizedBox.shrink()),
-                            ],
-                          );
-                        },
+                            : const SizedBox(height: 8),
                       ),
                     ),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child:
-                          !loading && onVisibilityRetry == null && state.hasMore
-                          ? DivineButton(
-                              onPressed: cubit.showMore,
-                              label: context.l10n.profileShowMore,
-                              type: DivineButtonType.secondary,
-                            )
-                          : const SizedBox(height: 8),
-                    ),
-                  ),
-                  if (!loading)
-                    const SliverToBoxAdapter(child: _BadgeDiscoveryHeader()),
-                ],
+                    if (!loading)
+                      const SliverToBoxAdapter(child: _BadgeDiscoveryHeader()),
+                  ],
+                ),
               ),
             );
           },
@@ -408,6 +420,9 @@ class _BadgeClips extends StatelessWidget {
 
 const _badgeWebsite = 'badges.divine.video';
 
+/// How long the loading placeholders cross-fade into the badge cards.
+const _skeletonSwitchDuration = Duration(milliseconds: 100);
+
 class _BadgeDiscoveryHeader extends ConsumerWidget {
   const _BadgeDiscoveryHeader();
 
@@ -474,37 +489,54 @@ class _BadgeDiscoveryHeader extends ConsumerWidget {
   );
 }
 
+/// A badge card's silhouette: the clip fan, then [BadgeCommunityCard]'s
+/// compact footer, so the rows keep their height when the cards fade in.
 class _BadgeCardSkeleton extends StatelessWidget {
   const _BadgeCardSkeleton();
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    spacing: 8,
-    children: [
-      AspectRatio(
-        aspectRatio: badgeArtworkAspectRatio,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: context.vineColors.surfaceContainerHigh,
-            borderRadius: BorderRadius.circular(16),
-          ),
+  Widget build(BuildContext context) {
+    final colors = context.vineColors;
+    // The styles only size the bones; the colours match the real card's.
+    final bodyStyle = VineTheme.bodySmallFont(color: colors.onSurfaceVariant);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 8,
+      children: [
+        const DivineListFanSkeleton(),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              spacing: 8,
+              children: [
+                SizedBox(
+                  width: 64,
+                  child: AspectRatio(
+                    aspectRatio: badgeArtworkAspectRatio,
+                    child: Bone(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+                Expanded(
+                  child: Bone.multiText(
+                    style: VineTheme.titleSmallFont(color: colors.onSurface),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Bone.multiText(style: bodyStyle),
+            const SizedBox(height: 8),
+            Row(
+              spacing: 6,
+              children: [
+                const Bone.circle(size: 20),
+                Bone.text(words: 2, style: bodyStyle),
+              ],
+            ),
+          ],
         ),
-      ),
-      FractionallySizedBox(
-        widthFactor: .8,
-        child: ColoredBox(
-          color: context.vineColors.surfaceContainerHigh,
-          child: const SizedBox(height: 20),
-        ),
-      ),
-      FractionallySizedBox(
-        widthFactor: .6,
-        child: ColoredBox(
-          color: context.vineColors.surfaceContainerHigh,
-          child: const SizedBox(height: 14),
-        ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }
