@@ -3,14 +3,16 @@
 
 /// Account status returned by Keycast's `GET /api/user/account`.
 ///
-/// [verifiedMinor] is the durable approved-minor (13-15) flag and is always
-/// present; [verifiedMinorAt] is set only when the account was flagged.
+/// [verifiedMinor] is the durable approved-minor (13-15) flag, which Keycast
+/// sends on every reply; [verifiedMinorReported] says whether this one carried
+/// it. [verifiedMinorAt] is set only when the account was flagged.
 class KeycastAccountStatus {
   const KeycastAccountStatus({
     required this.email,
     required this.emailVerified,
     required this.publicKey,
     required this.verifiedMinor,
+    this.verifiedMinorReported = true,
     this.accountStatus,
     this.suspendedReason,
     this.verifiedMinorAt,
@@ -18,13 +20,15 @@ class KeycastAccountStatus {
 
   factory KeycastAccountStatus.fromJson(Map<String, dynamic> json) {
     final verifiedMinorAtRaw = json['verified_minor_at'] as String?;
+    final verifiedMinor = json['verified_minor'];
     return KeycastAccountStatus(
       email: json['email'] as String? ?? '',
       emailVerified: json['email_verified'] as bool? ?? false,
       publicKey: json['public_key'] as String? ?? '',
       accountStatus: json['account_status'] as String?,
       suspendedReason: json['suspended_reason'] as String?,
-      verifiedMinor: json['verified_minor'] as bool? ?? false,
+      verifiedMinor: verifiedMinor is bool && verifiedMinor,
+      verifiedMinorReported: verifiedMinor is bool,
       verifiedMinorAt: verifiedMinorAtRaw == null
           ? null
           : DateTime.tryParse(verifiedMinorAtRaw),
@@ -56,6 +60,13 @@ class KeycastAccountStatus {
 
   /// Durable approved-minor (13-15) flag. Independent of [accountStatus] —
   /// an approved minor is active, so this can be true on a normal account.
+  ///
+  /// Reads `false` when the reply did not carry the flag; check
+  /// [verifiedMinorReported] before treating `false` as a confirmed answer.
   final bool verifiedMinor;
+
+  /// Whether the reply carried a boolean `verified_minor` at all. A missing or
+  /// malformed flag is not a confirmation that the account is not a minor.
+  final bool verifiedMinorReported;
   final DateTime? verifiedMinorAt;
 }

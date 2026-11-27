@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/models/protected_minor_status.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -78,6 +79,26 @@ void main() {
         expect(
           await _settledGate(container, confirmedNotProtectedMinorProvider),
           isTrue,
+        );
+      },
+    );
+
+    test(
+      'is false when Keycast answers without a verified_minor field',
+      () async {
+        final container = _container(
+          authState: AuthState.authenticated,
+          status: () async => ProtectedMinorStatus.fromKeycast(
+            KeycastAccountStatus.fromJson(const {
+              'email': 'a@b.com',
+              'email_verified': true,
+              'public_key': 'abc',
+            }),
+          ),
+        );
+        expect(
+          await _settledGate(container, confirmedNotProtectedMinorProvider),
+          isFalse,
         );
       },
     );

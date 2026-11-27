@@ -200,8 +200,7 @@ class _ConfirmedNotProtectedMinorNotifier
       final previous = stateOrNull;
       final sameAuthSession =
           previous != null && previous.resetCount == resetCount;
-      final retainedNotProtected =
-          live.value?.kind == ProtectedMinorStatusKind.notProtected;
+      final retainedNotProtected = live.value?.isConfirmedNotProtected ?? false;
       return (
         resetCount: resetCount,
         confirmed:
@@ -214,7 +213,8 @@ class _ConfirmedNotProtectedMinorNotifier
     );
     return (
       resetCount: resetCount,
-      confirmed: trusted?.kind == ProtectedMinorStatusKind.notProtected,
+      // A reply without an explicit verified_minor is not a confirmation.
+      confirmed: trusted?.isConfirmedNotProtected ?? false,
     );
   }
 }

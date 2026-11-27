@@ -19,6 +19,7 @@ class ProtectedMinorStatus {
   const ProtectedMinorStatus({
     required this.kind,
     this.verifiedMinorAt,
+    this.verifiedMinorReported = true,
   });
 
   factory ProtectedMinorStatus.unknown() =>
@@ -36,13 +37,19 @@ class ProtectedMinorStatus {
   /// Maps a Keycast account status to protected-minor state. A null status
   /// (fetch failed / unavailable) is preserved as unknown so enforcement
   /// layers can choose their own fail-safe behavior; `verified_minor == false`
-  /// is the only confirmed not-protected response.
+  /// is the only confirmed not-protected response. A reply without the flag
+  /// also maps to not-protected, as it always has for the content and DM
+  /// protections, but with [verifiedMinorReported] false so features that need
+  /// an explicit answer can refuse it.
   factory ProtectedMinorStatus.fromKeycast(KeycastAccountStatus? status) {
     if (status == null) {
       return ProtectedMinorStatus.unknown();
     }
     if (!status.verifiedMinor) {
-      return ProtectedMinorStatus.notProtected();
+      return ProtectedMinorStatus(
+        kind: ProtectedMinorStatusKind.notProtected,
+        verifiedMinorReported: status.verifiedMinorReported,
+      );
     }
     return ProtectedMinorStatus.protected(
       verifiedMinorAt: status.verifiedMinorAt,
@@ -51,6 +58,14 @@ class ProtectedMinorStatus {
 
   final ProtectedMinorStatusKind kind;
   final DateTime? verifiedMinorAt;
+
+  /// Whether Keycast's reply carried an explicit `verified_minor`; see
+  /// [KeycastAccountStatus.verifiedMinorReported].
+  final bool verifiedMinorReported;
+
+  /// An explicit Keycast answer that the account is not a protected minor.
+  bool get isConfirmedNotProtected =>
+      kind == ProtectedMinorStatusKind.notProtected && verifiedMinorReported;
 
   bool get isProtectedMinor => kind == ProtectedMinorStatusKind.protected;
   bool get isKnown => kind != ProtectedMinorStatusKind.unknown;
