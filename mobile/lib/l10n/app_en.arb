@@ -2909,6 +2909,10 @@
   "@remixStartFailed": {
     "description": "Snackbar shown when Remix in the video info sheet could not bring the video into the clip library; the user can try again."
   },
+  "remixSettingSaveFailed": "Couldn't update your remix setting. Try again.",
+  "@remixSettingSaveFailed": {
+    "description": "Error when saving the account-wide remix setting fails, including a failed profile read before publishing."
+  },
   "remixSettingAllowTitle": "Let people remix my videos",
   "@remixSettingAllowTitle": {
     "description": "Settings switch title: when off, nobody else can use the signed-in creator's videos as clips."

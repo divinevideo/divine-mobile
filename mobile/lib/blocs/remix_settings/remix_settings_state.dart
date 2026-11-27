@@ -7,7 +7,13 @@ enum RemixSettingsLoadStatus { initial, loading, ready, failure }
 
 /// Where the last save stands. A failed save carries its cause in the value,
 /// so a failure cannot exist without one.
-enum RemixSettingsSaveStatus { idle, saving, failedNoRelays, failedPublish }
+enum RemixSettingsSaveStatus {
+  idle,
+  saving,
+  failedRead,
+  failedNoRelays,
+  failedPublish,
+}
 
 class RemixSettingsState extends Equatable {
   const RemixSettingsState({

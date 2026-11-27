@@ -4043,6 +4043,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get remixStartFailed => 'Không bắt đầu được bản remix. Hãy thử lại.';
 
   @override
+  String get remixSettingSaveFailed =>
+      'Không thể cập nhật cài đặt remix của bạn. Hãy thử lại.';
+
+  @override
   String get remixSettingAllowTitle =>
       'Cho phép người khác remix video của tôi';
 

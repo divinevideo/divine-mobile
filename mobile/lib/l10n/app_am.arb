@@ -1820,6 +1820,7 @@
   "remixBlockedByCreator": "ይህ ፈጣሪ መቀላቀልን አይፈቅድም።",
   "remixConsentCheckFailed": "ይህ ቪዲዮ መቀላቀል ይችል እንደሆነ ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።",
   "remixStartFailed": "ሪሚክሱን መጀመር አልተቻለም። እንደገና ይሞክሩ።",
+  "remixSettingSaveFailed": "የሪሚክስ ቅንብርዎን ማዘመን አልተቻለም። እንደገና ይሞክሩ።",
   "remixSettingAllowTitle": "ሌሎች ቪዲዮዎቼን እንዲቀላቅሉ መፍቀድ",
   "remixSettingAllowSubtitle": "ሌሎች ቪዲዮዎችዎን በራሳቸው ልጥፎች ውስጥ እንደ ቅንጥብ መጠቀም ይችላሉ።",
   "videoMetadataClipCreditRow": "የ{name} ክሊፕ ይጠቀማል",

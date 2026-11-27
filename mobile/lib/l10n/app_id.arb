@@ -1461,6 +1461,7 @@
   "remixBlockedByCreator": "Kreator ini tidak mengizinkan remix.",
   "remixConsentCheckFailed": "Tidak bisa memeriksa apakah video ini boleh di-remix. Coba lagi.",
   "remixStartFailed": "Tidak bisa memulai remix. Coba lagi.",
+  "remixSettingSaveFailed": "Pengaturan remix kamu gagal diperbarui. Coba lagi.",
   "remixSettingAllowTitle": "Izinkan orang lain me-remix videoku",
   "remixSettingAllowSubtitle": "Orang lain bisa memakai videomu sebagai klip di postingan mereka sendiri.",
   "videoMetadataClipCreditRow": "Menggunakan klip dari {name}",

@@ -1461,6 +1461,7 @@
   "remixBlockedByCreator": "Bu içerik üreticisi remikse izin vermiyor.",
   "remixConsentCheckFailed": "Bu videonun remikslenip remikslenemeyeceği kontrol edilemedi. Tekrar dene.",
   "remixStartFailed": "Remiks başlatılamadı. Tekrar dene.",
+  "remixSettingSaveFailed": "Remiks ayarın güncellenemedi. Tekrar dene.",
   "remixSettingAllowTitle": "Başkalarının videolarımı remikslemesine izin ver",
   "remixSettingAllowSubtitle": "Başkaları videolarını kendi gönderilerinde klip olarak kullanabilir.",
   "videoMetadataClipCreditRow": "{name} kullanıcısının bir klibini kullanıyor",

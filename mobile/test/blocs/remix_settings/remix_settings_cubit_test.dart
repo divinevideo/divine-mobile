@@ -71,6 +71,7 @@ void main() {
         () => repository.readFreshProfile(
           pubkey: _pubkey,
           requireRawKind0: true,
+          rawKind0RetryDelays: any(named: 'rawKind0RetryDelays'),
         ),
       ).thenAnswer((_) => answer());
     }
@@ -94,6 +95,8 @@ void main() {
     void stubSave(Future<UserProfile> Function(bool? allow) answer) {
       when(
         () => repository.saveProfileEvent(
+          useLatestProfileFields: true,
+          shouldPublish: any(named: 'shouldPublish'),
           displayName: any(named: 'displayName'),
           about: any(named: 'about'),
           website: any(named: 'website'),
@@ -134,6 +137,7 @@ void main() {
           () => repository.readFreshProfile(
             pubkey: _pubkey,
             requireRawKind0: true,
+            rawKind0RetryDelays: any(named: 'rawKind0RetryDelays'),
           ),
         ).called(1),
       );
@@ -273,6 +277,8 @@ void main() {
         verify: (_) {
           verify(
             () => repository.saveProfileEvent(
+              useLatestProfileFields: true,
+              shouldPublish: any(named: 'shouldPublish'),
               displayName: 'Creator',
               about: 'bio',
               website: 'https://creator.example',
@@ -308,6 +314,8 @@ void main() {
         },
         verify: (_) => verify(
           () => repository.saveProfileEvent(
+            useLatestProfileFields: true,
+            shouldPublish: any(named: 'shouldPublish'),
             displayName: 'Renamed',
             about: 'new bio',
             website: 'https://creator.example',
@@ -345,6 +353,8 @@ void main() {
         ],
         verify: (_) => verify(
           () => repository.saveProfileEvent(
+            useLatestProfileFields: true,
+            shouldPublish: any(named: 'shouldPublish'),
             displayName: '',
             allowVideoReuse: false,
           ),
@@ -365,6 +375,8 @@ void main() {
         },
         verify: (_) => verify(
           () => repository.saveProfileEvent(
+            useLatestProfileFields: true,
+            shouldPublish: any(named: 'shouldPublish'),
             displayName: 'Creator',
             about: 'bio',
             website: 'https://creator.example',
@@ -391,16 +403,21 @@ void main() {
           await cubit.setAllowVideoReuse(false);
         },
         skip: 3,
-        errors: () => [isA<ProfilePublishFailedException>()],
-        expect: () => const [
-          RemixSettingsState(
-            loadStatus: RemixSettingsLoadStatus.ready,
-            saveStatus: RemixSettingsSaveStatus.failedPublish,
-          ),
+        errors: () => [isA<Exception>()],
+        expect: () => [
+          isA<RemixSettingsState>()
+              .having((s) => s.allowVideoReuse, 'rollback', isTrue)
+              .having(
+                (s) => s.saveStatus,
+                'failure phase',
+                RemixSettingsSaveStatus.failedRead,
+              ),
         ],
         verify: (_) {
           verifyNever(
             () => repository.saveProfileEvent(
+              useLatestProfileFields: true,
+              shouldPublish: any(named: 'shouldPublish'),
               displayName: any(named: 'displayName'),
               about: any(named: 'about'),
               website: any(named: 'website'),
@@ -413,6 +430,109 @@ void main() {
           expect(savedProfiles, isEmpty);
         },
       );
+
+      blocTest<RemixSettingsCubit, RemixSettingsState>(
+        'can save after an inconclusive read without reloading the screen',
+        setUp: () {
+          stubReads([
+            (profile: _profile(), conclusive: true),
+            (profile: null, conclusive: false),
+            (profile: _profile(about: 'new bio'), conclusive: true),
+          ]);
+          stubSave((allow) async => _profile(allowVideoReuse: allow));
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.setAllowVideoReuse(false);
+          expect(cubit.state.saveStatus, RemixSettingsSaveStatus.failedRead);
+          await cubit.setAllowVideoReuse(false);
+        },
+        errors: () => [isA<Exception>()],
+        verify: (cubit) {
+          expect(cubit.state.allowVideoReuse, isFalse);
+          expect(cubit.state.saveStatus, RemixSettingsSaveStatus.idle);
+          verify(
+            () => repository.readFreshProfile(
+              pubkey: _pubkey,
+              requireRawKind0: true,
+              rawKind0RetryDelays: const [Duration(milliseconds: 250)],
+            ),
+          ).called(2);
+          verify(
+            () => repository.saveProfileEvent(
+              useLatestProfileFields: true,
+              shouldPublish: any(named: 'shouldPublish'),
+              displayName: 'Creator',
+              about: 'new bio',
+              website: 'https://creator.example',
+              picture: 'https://cdn.example/p.png',
+              banner: '#112233',
+              allowVideoReuse: false,
+              currentProfile: _profile(about: 'new bio'),
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<RemixSettingsCubit, RemixSettingsState>(
+        'refuses to publish when the save read belongs to another account',
+        setUp: () => stubReads([
+          (profile: _profile(), conclusive: true),
+          (profile: _profile(pubkey: 'd' * 64), conclusive: true),
+        ]),
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.setAllowVideoReuse(false);
+        },
+        skip: 3,
+        errors: () => [isA<Exception>()],
+        expect: () => const [
+          RemixSettingsState(
+            loadStatus: RemixSettingsLoadStatus.ready,
+            saveStatus: RemixSettingsSaveStatus.failedRead,
+          ),
+        ],
+        verify: (_) => verifyNever(
+          () => repository.saveProfileEvent(
+            useLatestProfileFields: true,
+            shouldPublish: any(named: 'shouldPublish'),
+            displayName: any(named: 'displayName'),
+            about: any(named: 'about'),
+            website: any(named: 'website'),
+            picture: any(named: 'picture'),
+            banner: any(named: 'banner'),
+            allowVideoReuse: any(named: 'allowVideoReuse'),
+            currentProfile: any(named: 'currentProfile'),
+          ),
+        ),
+      );
+
+      test('does not publish if closed during the save read', () async {
+        final read = Completer<FreshProfileRead>();
+        final cubit = buildCubit();
+        await cubit.load();
+        stubReadResult(() => read.future);
+        final save = cubit.setAllowVideoReuse(false);
+        await cubit.close();
+        read.complete((profile: _profile(), conclusive: true));
+        await save;
+
+        verifyNever(
+          () => repository.saveProfileEvent(
+            useLatestProfileFields: true,
+            shouldPublish: any(named: 'shouldPublish'),
+            displayName: any(named: 'displayName'),
+            about: any(named: 'about'),
+            website: any(named: 'website'),
+            picture: any(named: 'picture'),
+            banner: any(named: 'banner'),
+            allowVideoReuse: any(named: 'allowVideoReuse'),
+            currentProfile: any(named: 'currentProfile'),
+          ),
+        );
+      });
 
       blocTest<RemixSettingsCubit, RemixSettingsState>(
         'reverts the switch when the publish is rejected',
@@ -462,6 +582,8 @@ void main() {
         expect: () => const <RemixSettingsState>[],
         verify: (_) => verifyNever(
           () => repository.saveProfileEvent(
+            useLatestProfileFields: true,
+            shouldPublish: any(named: 'shouldPublish'),
             displayName: any(named: 'displayName'),
             allowVideoReuse: any(named: 'allowVideoReuse'),
             currentProfile: any(named: 'currentProfile'),
@@ -502,6 +624,7 @@ void main() {
         when(
           () => client.sendProfileAwaitOk(
             profileContent: any(named: 'profileContent'),
+            tags: any(named: 'tags'),
             requireDefaultRelay: true,
           ),
         ).thenAnswer(
@@ -509,7 +632,7 @@ void main() {
             Event(
               _pubkey,
               0,
-              const [],
+              invocation.namedArguments[#tags] as List<List<String>>,
               jsonEncode(invocation.namedArguments[#profileContent]),
             ),
           ),
@@ -565,6 +688,199 @@ void main() {
       });
 
       tearDown(() => db.close());
+
+      test(
+        'classifies an inconclusive publish-seed read as a read failure',
+        () async {
+          var reads = 0;
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              useCache: false,
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer((_) async {
+            reads++;
+            return (
+              events: [
+                Event(_pubkey, 0, const [], '{"display_name":"Creator"}'),
+              ],
+              timedOut: reads >= 3,
+              noRelays: false,
+            );
+          });
+          final cubit = buildPublishingCubit();
+          addTearDown(cubit.close);
+          await cubit.load();
+
+          await cubit.setAllowVideoReuse(false);
+
+          expect(cubit.state.saveStatus, RemixSettingsSaveStatus.failedRead);
+          expect(cubit.state.allowVideoReuse, isTrue);
+          expect(savedProfiles, isEmpty);
+          verifyNever(
+            () => client.sendProfileAwaitOk(
+              profileContent: any(named: 'profileContent'),
+              tags: any(named: 'tags'),
+              requireDefaultRelay: any(named: 'requireDefaultRelay'),
+            ),
+          );
+        },
+      );
+
+      test('preserves profile details from the newer publish seed', () async {
+        final earlier = Event(
+          _pubkey,
+          0,
+          const [],
+          '{"display_name":"Creator","about":"Old bio","picture":"old"}',
+          createdAt: 1790000000,
+        );
+        final later = Event(
+          _pubkey,
+          0,
+          const [],
+          '{"display_name":"New name","about":"New bio"}',
+          createdAt: 1790000001,
+        );
+        var reads = 0;
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => (
+            events: [if (++reads <= 2) earlier else later],
+            timedOut: false,
+            noRelays: false,
+          ),
+        );
+        stubDefaultRelayPublish((event) => PublishSuccess(event: event));
+        final cubit = buildPublishingCubit();
+        addTearDown(cubit.close);
+        await cubit.load();
+
+        await cubit.setAllowVideoReuse(false);
+
+        expect(savedProfiles.single.displayName, 'New name');
+        expect(savedProfiles.single.about, 'New bio');
+        expect(savedProfiles.single.picture, isNull);
+        expect(savedProfiles.single.allowsVideoReuse, isFalse);
+      });
+
+      test('does not publish after close during the repository read', () async {
+        final event = Event(_pubkey, 0, const [], '{"display_name":"Creator"}');
+        final read = (events: [event], timedOut: false, noRelays: false);
+        final started = Completer<void>();
+        final finish = Completer<void>();
+        var reads = 0;
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer((_) async {
+          if (++reads == 3) {
+            started.complete();
+            await finish.future;
+          }
+          return read;
+        });
+        final cubit = buildPublishingCubit();
+        addTearDown(cubit.close);
+        await cubit.load();
+        final save = cubit.setAllowVideoReuse(false);
+        await started.future;
+        await cubit.close();
+        finish.complete();
+        await save;
+
+        verifyNever(
+          () => client.sendProfileAwaitOk(
+            profileContent: any(named: 'profileContent'),
+            tags: any(named: 'tags'),
+            requireDefaultRelay: any(named: 'requireDefaultRelay'),
+          ),
+        );
+      });
+
+      test('preserves fields and tags removed on the newer profile', () async {
+        final earlier = Event(
+          _pubkey,
+          0,
+          [
+            ['i', 'example:user'],
+          ],
+          '{"name":"creator","display_name":"Creator"}',
+          createdAt: 1790000000,
+        );
+        final later = Event(
+          _pubkey,
+          0,
+          const [],
+          '{"name":"creator"}',
+          createdAt: 1790000001,
+        );
+        var reads = 0;
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => (
+            events: [if (++reads <= 2) earlier else later],
+            timedOut: false,
+            noRelays: false,
+          ),
+        );
+        stubDefaultRelayPublish((event) => PublishSuccess(event: event));
+        final cubit = buildPublishingCubit();
+        addTearDown(cubit.close);
+        await cubit.load();
+
+        await cubit.setAllowVideoReuse(false);
+
+        expect(savedProfiles.single.rawData, {
+          'name': 'creator',
+          divineAllowVideoReuseKey: false,
+        });
+        expect(savedProfiles.single.rawTags, isEmpty);
+      });
+
+      test('keeps a profile first published after the setting loads', () async {
+        stubDefaultRelayPublish((event) => PublishSuccess(event: event));
+        final cubit = buildPublishingCubit();
+        addTearDown(cubit.close);
+        await cubit.load();
+
+        final firstProfile = Event(
+          _pubkey,
+          0,
+          const [],
+          '{"display_name":"Creator","about":"New bio"}',
+        );
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async =>
+              (events: [firstProfile], timedOut: false, noRelays: false),
+        );
+
+        await cubit.setAllowVideoReuse(false);
+
+        expect(savedProfiles.single.displayName, 'Creator');
+        expect(savedProfiles.single.about, 'New bio');
+        expect(savedProfiles.single.allowsVideoReuse, isFalse);
+      });
 
       test(
         'reverts the switch when only a relay other than the default one '

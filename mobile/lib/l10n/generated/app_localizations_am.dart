@@ -3987,6 +3987,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get remixStartFailed => 'ሪሚክሱን መጀመር አልተቻለም። እንደገና ይሞክሩ።';
 
   @override
+  String get remixSettingSaveFailed => 'የሪሚክስ ቅንብርዎን ማዘመን አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
   String get remixSettingAllowTitle => 'ሌሎች ቪዲዮዎቼን እንዲቀላቅሉ መፍቀድ';
 
   @override

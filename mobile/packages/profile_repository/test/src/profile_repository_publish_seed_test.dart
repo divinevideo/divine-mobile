@@ -90,6 +90,7 @@ void main() {
         () => client.sendProfileAwaitOk(
           profileContent: any(named: 'profileContent'),
           tags: any(named: 'tags'),
+          requireDefaultRelay: any(named: 'requireDefaultRelay'),
         ),
       ).thenAnswer(
         (invocation) async => PublishSuccess(
@@ -169,6 +170,46 @@ void main() {
       });
 
       test(
+        'a settings-only save uses the newer relay profile fields',
+        () async {
+          final older = UserProfile.fromNostrEvent(relayKind0());
+          final newer = Event(
+            pubkey,
+            0,
+            const [],
+            jsonEncode({
+              'display_name': 'New display name',
+              'about': 'New bio',
+              'website': 'https://example.com/new',
+              'picture': 'https://example.com/new.png',
+              'banner': 'https://example.com/new-banner.png',
+            }),
+            createdAt: 1790000001,
+          );
+          stubRelayRead(
+            () async => (events: [newer], timedOut: false, noRelays: false),
+          );
+
+          final saved = await repository.saveProfileEvent(
+            displayName: 'Old display name',
+            about: 'Old bio',
+            website: 'https://example.com/old',
+            picture: 'https://example.com/old.png',
+            banner: 'https://example.com/old-banner.png',
+            currentProfile: older,
+            allowVideoReuse: false,
+            useLatestProfileFields: true,
+          );
+
+          expect(saved.rawData, {
+            ...UserProfile.fromNostrEvent(newer).rawData,
+            divineAllowVideoReuseKey: false,
+          });
+          expect(saved.rawTags, isEmpty);
+        },
+      );
+
+      test(
         'defers instead of republishing when the relay read times out',
         () async {
           final cached = await cacheAndReadBack(relayKind0());
@@ -181,7 +222,13 @@ void main() {
               displayName: 'After',
               currentProfile: cached,
             ),
-            throwsA(isA<ProfilePublishFailedException>()),
+            throwsA(
+              isA<ProfilePublishSeedUnavailableException>().having(
+                (error) => error.toString(),
+                'diagnostic',
+                startsWith('ProfilePublishSeedUnavailableException:'),
+              ),
+            ),
           );
           expectNoPublish();
         },

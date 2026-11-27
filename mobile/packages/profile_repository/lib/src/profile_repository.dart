@@ -1058,6 +1058,7 @@ class ProfileRepository implements ProfileReader {
     required String pubkey,
     bool requireRawKind0 = false,
     List<Duration> rawKind0RetryDelays = const [],
+    bool recheckMissingRawProfile = false,
   }) {
     if (_vanished.contains(pubkey)) {
       revalidateVanishOnce(pubkey);
@@ -1068,6 +1069,7 @@ class ProfileRepository implements ProfileReader {
       pubkey: pubkey,
       requireRawKind0: requireRawKind0,
       rawKind0RetryDelays: rawKind0RetryDelays,
+      recheckMissingRawProfile: recheckMissingRawProfile,
     );
   }
 
@@ -1086,8 +1088,11 @@ class ProfileRepository implements ProfileReader {
     required String pubkey,
     bool requireRawKind0 = false,
     List<Duration> rawKind0RetryDelays = const [],
+    bool recheckMissingRawProfile = false,
   }) {
-    if (requireRawKind0 && _rawKind0ConfirmedMissing.contains(pubkey)) {
+    if (requireRawKind0 &&
+        !recheckMissingRawProfile &&
+        _rawKind0ConfirmedMissing.contains(pubkey)) {
       return Future.value((profile: null, conclusive: true));
     }
 
@@ -1562,14 +1567,19 @@ class ProfileRepository implements ProfileReader {
   /// default relay's `OK true`: remix consent readers settle on that relay's
   /// kind 0, so a save other relays accepted but it did not is a failure.
   ///
+  /// Set [useLatestProfileFields] for a settings-only save that should take
+  /// display name, bio, website, picture and banner from the resolved seed.
+  ///
+  /// Throws [ProfileSaveCancelledException] if [shouldPublish] returns false
+  /// after the preparatory reads, before sending the event.
   /// Throws [NoRelaysConnectedException] when no relays are connected.
   /// Throws [ProfilePublishFailedException] when relays were reached but none
   /// confirmed the event (rejection, timeout, or a send failure such as the
-  /// signer returning null), and — before publishing anything — when the
-  /// current Kind 0 could not be read from the connected relays. A Kind 0
-  /// replaces the previous one whole, so publishing from a local copy that
-  /// cannot carry its tags would erase them; the save is deferred for the
-  /// caller, or the durable pending-save retry, to try again.
+  /// signer returning null). Throws [ProfilePublishSeedUnavailableException]
+  /// before publishing when the current Kind 0 cannot safely seed the save.
+  /// A Kind 0 replaces the previous one whole, so publishing from a local
+  /// copy that cannot carry its tags would erase them. The save is deferred
+  /// for the caller or the durable pending-save retry to try again.
   Future<UserProfile> saveProfileEvent({
     required String displayName,
     String? about,
@@ -1582,6 +1592,8 @@ class ProfileRepository implements ProfileReader {
     Iterable<MonetizationLink>? monetizationLinks,
     bool? allowVideoReuse,
     UserProfile? currentProfile,
+    bool useLatestProfileFields = false,
+    bool Function()? shouldPublish,
   }) async {
     // External NIP-05 takes precedence when provided.
     final resolvedNip05 =
@@ -1597,31 +1609,52 @@ class ProfileRepository implements ProfileReader {
     // otherwise the cached profile for the signing key — competes with the
     // relay copy on recency. A relay read that fails or times out defers the
     // save instead (see [_resolvePublishSeed]).
-    final seed = await _resolvePublishSeed(currentProfile);
+    final seed = await _resolvePublishSeed(
+      currentProfile,
+      recheckMissingRawProfile: useLatestProfileFields,
+    );
 
     final newContent = Map<String, dynamic>.from(seed?.rawData ?? const {});
 
-    // Editable fields — caller's value is authoritative. Empty / null means
-    // "user cleared this field" → remove the key. The form pre-populates
-    // these fields so the user sees what they're editing; an empty submit
-    // is intentional.
-    newContent['display_name'] = displayName;
-    if (about != null && about.isNotEmpty) {
+    // A settings-only save applies the normalized fields from the resolved
+    // seed so it keeps changes made to the profile since the caller's read.
+    // For editor saves, the submitted form fields are authoritative.
+    final fields = useLatestProfileFields
+        ? (
+            displayName: seed?.displayName ?? '',
+            about: seed?.about,
+            website: seed?.website,
+            picture: seed?.picture,
+            banner: seed?.banner,
+          )
+        : (
+            displayName: displayName,
+            about: about,
+            website: website,
+            picture: picture,
+            banner: banner,
+          );
+    if (!useLatestProfileFields || newContent.containsKey('display_name')) {
+      newContent['display_name'] = fields.displayName;
+    }
+    if (fields.about case final about? when about.isNotEmpty) {
       newContent['about'] = about;
     } else {
       newContent.remove('about');
     }
-    if (website != null && website.isNotEmpty) {
-      newContent['website'] = website;
-    } else if (website != null) {
-      newContent.remove('website');
+    if (fields.website case final website?) {
+      if (website.isNotEmpty) {
+        newContent['website'] = website;
+      } else {
+        newContent.remove('website');
+      }
     }
-    if (picture != null && picture.isNotEmpty) {
+    if (fields.picture case final picture? when picture.isNotEmpty) {
       newContent['picture'] = picture;
     } else {
       newContent.remove('picture');
     }
-    if (banner != null && banner.isNotEmpty) {
+    if (fields.banner case final banner? when banner.isNotEmpty) {
       newContent['banner'] = banner;
     } else {
       newContent.remove('banner');
@@ -1658,12 +1691,16 @@ class ProfileRepository implements ProfileReader {
     // custom client fields, future NIPs — flows through from the seed
     // untouched. Adding new editable fields here MUST keep that invariant.
 
-    final rawTags = (seed?.rawTags.isNotEmpty ?? false)
-        ? seed!.rawTags
+    final seedTags = seed?.rawTags ?? const <List<String>>[];
+    final rawTags = useLatestProfileFields || seedTags.isNotEmpty
+        ? seedTags
         : currentProfile?.rawTags ?? const <List<String>>[];
     // Remix consent readers trust the default relay's kind 0 on its own, so
     // a save that sets the block only counts once the default relay has it.
     final requireDefaultRelay = allowVideoReuse != null;
+    if (shouldPublish?.call() == false) {
+      throw const ProfileSaveCancelledException();
+    }
     final result = rawTags.isEmpty
         ? await _nostrClient.sendProfileAwaitOk(
             profileContent: newContent,
@@ -1883,13 +1920,16 @@ class ProfileRepository implements ProfileReader {
   /// - the local seed is strictly newer and can carry the relay copy's tags,
   ///   or carries the same timestamp and strictly more meaningful keys.
   ///
-  /// Throws [ProfilePublishFailedException], before anything is published,
-  /// when the relay read is inconclusive — it timed out, was refused, reached
-  /// no relay, threw, or ran past [_publishSeedRelayTimeout] — or when the
-  /// local seed is newer but has no tags while the relay copy does, meaning
+  /// Throws [ProfilePublishSeedUnavailableException] before anything is
+  /// published when the relay read is inconclusive (timeout, refusal, no
+  /// relay, exception, or [_publishSeedRelayTimeout]). It also throws when
+  /// the local seed is newer but has no tags while the relay copy does, meaning
   /// the relays have not indexed the newer copy yet. The profile cache stores
   /// no tags, so publishing in either case could erase the tags on relays.
-  Future<UserProfile?> _resolvePublishSeed(UserProfile? currentProfile) async {
+  Future<UserProfile?> _resolvePublishSeed(
+    UserProfile? currentProfile, {
+    required bool recheckMissingRawProfile,
+  }) async {
     // `??` short-circuits, so the signer is consulted only when the caller gave
     // us no profile to take a pubkey from.
     final pubkey = currentProfile?.pubkey ?? _signerPubkeyOrNull();
@@ -1906,6 +1946,9 @@ class ProfileRepository implements ProfileReader {
         await _readFreshProfile(
           pubkey: pubkey,
           requireRawKind0: true,
+          // A remix setting load can cache a miss before the creator
+          // publishes their first Kind 0 on another device.
+          recheckMissingRawProfile: recheckMissingRawProfile,
         ).timeout(
           _publishSeedRelayTimeout,
           onTimeout: () => (profile: null, conclusive: false),
@@ -1964,14 +2007,17 @@ class ProfileRepository implements ProfileReader {
   ///
   /// [drivePendingSave] maps it to a retryable outcome, so an editor save
   /// stays queued and the durable retry tries again later.
-  ProfilePublishFailedException _deferSave(String pubkey, String reason) {
+  ProfilePublishSeedUnavailableException _deferSave(
+    String pubkey,
+    String reason,
+  ) {
     Log.warning(
       'Deferring profile save for ${pubkeyForLogs(pubkey)}: $reason. '
       'Publishing now could erase what only the relay copy holds.',
       name: 'ProfileRepository.saveProfileEvent',
       category: LogCategory.relay,
     );
-    return const ProfilePublishFailedException(
+    return const ProfilePublishSeedUnavailableException(
       'Failed to publish profile. Please try again.',
     );
   }

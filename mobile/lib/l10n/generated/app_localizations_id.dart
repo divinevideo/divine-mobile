@@ -4002,6 +4002,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get remixStartFailed => 'Tidak bisa memulai remix. Coba lagi.';
 
   @override
+  String get remixSettingSaveFailed =>
+      'Pengaturan remix kamu gagal diperbarui. Coba lagi.';
+
+  @override
   String get remixSettingAllowTitle => 'Izinkan orang lain me-remix videoku';
 
   @override

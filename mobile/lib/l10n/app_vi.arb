@@ -1965,6 +1965,7 @@
   "remixBlockedByCreator": "Nhà sáng tạo này không cho phép remix.",
   "remixConsentCheckFailed": "Không kiểm tra được video này có thể remix hay không. Hãy thử lại.",
   "remixStartFailed": "Không bắt đầu được bản remix. Hãy thử lại.",
+  "remixSettingSaveFailed": "Không thể cập nhật cài đặt remix của bạn. Hãy thử lại.",
   "remixSettingAllowTitle": "Cho phép người khác remix video của tôi",
   "remixSettingAllowSubtitle": "Người khác có thể dùng video của bạn làm clip trong bài đăng của họ.",
   "videoMetadataClipCreditRow": "Dùng clip của {name}",

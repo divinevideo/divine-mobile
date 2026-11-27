@@ -6869,6 +6869,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t start the remix. Try again.'**
   String get remixStartFailed;
 
+  /// Error when saving the account-wide remix setting fails, including a failed profile read before publishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update your remix setting. Try again.'**
+  String get remixSettingSaveFailed;
+
   /// Settings switch title: when off, nobody else can use the signed-in creator's videos as clips.
   ///
   /// In en, this message translates to:

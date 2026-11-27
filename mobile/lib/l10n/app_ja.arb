@@ -1454,6 +1454,7 @@
   "remixBlockedByCreator": "このクリエイターはリミックスを許可していません。",
   "remixConsentCheckFailed": "この動画をリミックスできるか確認できませんでした。もう一度お試しください。",
   "remixStartFailed": "リミックスを開始できませんでした。もう一度お試しください。",
+  "remixSettingSaveFailed": "リミックスの設定を更新できませんでした。もう一度お試しください。",
   "remixSettingAllowTitle": "自分の動画のリミックスを許可",
   "remixSettingAllowSubtitle": "他の人があなたの動画をクリップとして自分の投稿に使えます。",
   "videoMetadataClipCreditRow": "{name}さんのクリップを使用",

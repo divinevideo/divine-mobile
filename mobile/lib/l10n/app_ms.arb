@@ -1965,6 +1965,7 @@
   "remixBlockedByCreator": "Pencipta ini tidak membenarkan remix.",
   "remixConsentCheckFailed": "Tidak dapat menyemak sama ada video ini boleh di-remix. Cuba lagi.",
   "remixStartFailed": "Tidak dapat memulakan remix. Cuba lagi.",
+  "remixSettingSaveFailed": "Tetapan remix kamu tidak dapat dikemas kini. Cuba lagi.",
   "remixSettingAllowTitle": "Benarkan orang lain me-remix video saya",
   "remixSettingAllowSubtitle": "Orang lain boleh menggunakan video anda sebagai klip dalam siaran mereka sendiri.",
   "videoMetadataClipCreditRow": "Menggunakan klip daripada {name}",

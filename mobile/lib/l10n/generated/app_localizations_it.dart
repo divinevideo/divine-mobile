@@ -4134,6 +4134,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get remixStartFailed => 'Impossibile avviare il remix. Riprova.';
 
   @override
+  String get remixSettingSaveFailed =>
+      'Impossibile aggiornare la tua impostazione per i remix. Riprova.';
+
+  @override
   String get remixSettingAllowTitle =>
       'Permetti ad altri di remixare i miei video';
 

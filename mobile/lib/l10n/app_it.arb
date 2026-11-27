@@ -1464,6 +1464,7 @@
   "remixBlockedByCreator": "Questa persona non consente i remix.",
   "remixConsentCheckFailed": "Impossibile verificare se questo video si può remixare. Riprova.",
   "remixStartFailed": "Impossibile avviare il remix. Riprova.",
+  "remixSettingSaveFailed": "Impossibile aggiornare la tua impostazione per i remix. Riprova.",
   "remixSettingAllowTitle": "Permetti ad altri di remixare i miei video",
   "remixSettingAllowSubtitle": "Altri possono usare i tuoi video come clip nei propri post.",
   "videoMetadataClipCreditRow": "Usa una clip di {name}",

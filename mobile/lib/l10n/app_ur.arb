@@ -1965,6 +1965,7 @@
   "remixBlockedByCreator": "یہ کریئیٹر ری مکس کی اجازت نہیں دیتے۔",
   "remixConsentCheckFailed": "یہ معلوم نہیں ہو سکا کہ اس ویڈیو کو ری مکس کیا جا سکتا ہے یا نہیں۔ دوبارہ کوشش کریں۔",
   "remixStartFailed": "ری مکس شروع نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
+  "remixSettingSaveFailed": "آپ کی ری مکس سیٹنگ اپ ڈیٹ نہیں ہو سکی۔ دوبارہ کوشش کریں۔",
   "remixSettingAllowTitle": "دوسروں کو میری ویڈیوز ری مکس کرنے دیں",
   "remixSettingAllowSubtitle": "دوسرے لوگ آپ کی ویڈیوز کو اپنی پوسٹس میں کلپس کے طور پر استعمال کر سکتے ہیں۔",
   "videoMetadataClipCreditRow": "{name} کا کلپ استعمال کرتا ہے",

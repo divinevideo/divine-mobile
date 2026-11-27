@@ -4093,6 +4093,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'We konden de remix niet starten. Probeer het opnieuw.';
 
   @override
+  String get remixSettingSaveFailed =>
+      'Je remixinstelling kon niet worden bijgewerkt. Probeer het opnieuw.';
+
+  @override
   String get remixSettingAllowTitle => 'Laat anderen mijn video\'s remixen';
 
   @override

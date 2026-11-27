@@ -631,6 +631,46 @@ void main() {
         expect(read.conclusive, isFalse);
       });
 
+      for (final recovers in [true, false]) {
+        test(
+          recovers
+              ? 'retries an inconclusive raw read and returns the fresh profile'
+              : 'bounds retries and leaves an exhausted raw read inconclusive',
+          () async {
+            var attempts = 0;
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                useCache: false,
+                requireAllRelaysSettled: true,
+              ),
+            ).thenAnswer((_) async {
+              attempts++;
+              final found = recovers && attempts == 2;
+              return (
+                events: found ? [mockProfileEvent] : <Event>[],
+                timedOut: !found,
+                noRelays: false,
+              );
+            });
+
+            final read = await profileRepository.readFreshProfile(
+              pubkey: testPubkey,
+              requireRawKind0: true,
+              rawKind0RetryDelays: const [Duration.zero],
+            );
+
+            expect(attempts, 2);
+            expect(read.conclusive, recovers);
+            if (recovers) {
+              expect(read.profile?.displayName, 'Test User');
+            } else {
+              expect(read.profile, isNull);
+            }
+          },
+        );
+      }
+
       test('reports a miss with no relay connected as inconclusive', () async {
         stubRawRelayRead(noRelays: true);
 

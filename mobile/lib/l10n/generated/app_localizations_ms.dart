@@ -4067,6 +4067,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get remixStartFailed => 'Tidak dapat memulakan remix. Cuba lagi.';
 
   @override
+  String get remixSettingSaveFailed =>
+      'Tetapan remix kamu tidak dapat dikemas kini. Cuba lagi.';
+
+  @override
   String get remixSettingAllowTitle =>
       'Benarkan orang lain me-remix video saya';
 

@@ -4069,6 +4069,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get remixStartFailed => 'تعذّر بدء إعادة المزج. يُرجى إعادة المحاولة.';
 
   @override
+  String get remixSettingSaveFailed =>
+      'تعذّر تحديث إعداد إعادة المزج. يُرجى المحاولة مجددًا.';
+
+  @override
   String get remixSettingAllowTitle => 'السماح للآخرين بإعادة مزج فيديوهاتي';
 
   @override
