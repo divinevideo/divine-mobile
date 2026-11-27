@@ -105,6 +105,15 @@ class AudioPlaybackService {
   /// Used to reload the source when a "Loading interrupted" error occurs.
   ({_SourceType type, Object value})? _lastSource;
 
+  /// How long the loaded audio is, as its load reported it, or `null` while
+  /// that is unknown.
+  Duration? _loadedDuration;
+
+  /// Audio shorter than this can end inside Android's audio output buffer
+  /// before playback starts. media3 sizes that buffer to at most 750 ms of
+  /// PCM; the rest covers the decoder's own buffers.
+  static const _outputBufferBound = Duration(seconds: 1);
+
   /// Monotonic counter to discard stale `getDevices` results.
   /// Incremented before every device query; only the response whose
   /// captured epoch still equals [_deviceCheckEpoch] may update the subject.
@@ -246,6 +255,7 @@ class AudioPlaybackService {
     if (_isDisposed) return null;
     final generation = ++_loadGeneration;
     _streamedUrl = null;
+    _loadedDuration = null;
     final completer = _loadCompleter = Completer<void>();
     try {
       Duration? loadedDuration;
@@ -294,6 +304,7 @@ class AudioPlaybackService {
       }
 
       _lastSource = (type: _SourceType.url, value: url);
+      _loadedDuration = loadedDuration;
       return loadedDuration;
     } catch (e) {
       Log.warning(
@@ -314,6 +325,7 @@ class AudioPlaybackService {
     if (_isDisposed) return null;
     ++_loadGeneration;
     _streamedUrl = null;
+    _loadedDuration = null;
     final completer = _loadCompleter = Completer<void>();
     try {
       final loadedDuration = await _audioPlayer.setFilePath(filePath);
@@ -322,6 +334,7 @@ class AudioPlaybackService {
         name: 'AudioPlaybackService',
       );
       _lastSource = (type: _SourceType.file, value: filePath);
+      _loadedDuration = loadedDuration;
       return loadedDuration;
     } catch (e) {
       Log.warning(
@@ -348,6 +361,7 @@ class AudioPlaybackService {
     if (_isDisposed) return null;
     final generation = ++_loadGeneration;
     _streamedUrl = null;
+    _loadedDuration = null;
     final completer = _loadCompleter = Completer<void>();
     try {
       final UriAudioSource child;
@@ -375,6 +389,7 @@ class AudioPlaybackService {
         category: LogCategory.video,
       );
       _lastSource = (type: _SourceType.audioSource, value: config);
+      _loadedDuration = loadedDuration;
       return loadedDuration;
     } catch (e) {
       Log.warning(
@@ -483,7 +498,7 @@ class AudioPlaybackService {
     if (_isDisposed) return;
     final failure = _playFailure = Completer<void>();
     try {
-      await Future.any<void>([_audioPlayer.play(), failure.future]);
+      await Future.any<void>([_playLoaded(), failure.future]);
       Log.debug('Started audio playback', name: 'AudioPlaybackService');
     } catch (e) {
       if (_isLoadingInterrupted(e)) {
@@ -493,7 +508,7 @@ class AudioPlaybackService {
         );
         if (await _reloadLastSource()) {
           if (_isDisposed) return;
-          await _audioPlayer.play();
+          await _playLoaded();
           return;
         }
       }
@@ -506,6 +521,32 @@ class AudioPlaybackService {
     } finally {
       if (identical(_playFailure, failure)) _playFailure = null;
     }
+  }
+
+  /// Plays the loaded audio, and completes once it stops.
+  ///
+  /// On Android, audio short enough to end inside the output buffer is
+  /// played by a player released first: media3 decodes while paused, so such
+  /// a clip reaches its output with its end before playback starts, and media3
+  /// then counts the never-started output as playing it out, so the clip ends
+  /// in silence. A released player is prepared again with the play request
+  /// ahead of the audio, so its output starts before the end arrives. The
+  /// source and position stay.
+  Future<void> _playLoaded() async {
+    if (_holdsShortClipPaused) await _audioPlayer.stop();
+    await _audioPlayer.play();
+  }
+
+  /// Whether the player holds audio, prepared and not playing, that ends
+  /// inside Android's output buffer; see [_playLoaded].
+  bool get _holdsShortClipPaused {
+    final duration = _loadedDuration;
+    return !kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.android &&
+        duration != null &&
+        duration < _outputBufferBound &&
+        !_audioPlayer.playing &&
+        _audioPlayer.processingState != ProcessingState.idle;
   }
 
   /// Pauses audio playback.

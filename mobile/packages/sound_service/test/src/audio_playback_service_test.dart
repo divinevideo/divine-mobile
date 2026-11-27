@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_session/audio_session.dart' as audio_session;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:mocktail/mocktail.dart';
@@ -363,6 +364,109 @@ void main() {
       await service.play();
 
       verify(() => mockPlayer.play()).called(1);
+    });
+
+    // media3 decodes while paused, so a clip that fits whole into Android's
+    // output buffer reaches it with its end before playback starts, and then
+    // ends in silence.
+    group('a clip that ends inside the output buffer', () {
+      late ProcessingState state;
+
+      setUp(() {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        state = ProcessingState.ready;
+        when(() => mockPlayer.processingState).thenAnswer((_) => state);
+        when(
+          () => mockPlayer.stop(),
+        ).thenAnswer((_) async => state = ProcessingState.idle);
+        when(() => mockPlayer.play()).thenAnswer((_) async {});
+        when(() => mockPlayer.setFilePath(any())).thenAnswer((_) async {
+          state = ProcessingState.ready;
+          return const Duration(milliseconds: 173);
+        });
+        service = AudioPlaybackService(
+          audioPlayer: mockPlayer,
+          audioSessionWrapper: mockSessionWrapper,
+        );
+      });
+
+      test('is released from the player before it plays', () async {
+        await service.loadAudioFromFile('/sounds/snare.m4a');
+        verifyNever(() => mockPlayer.stop());
+
+        await service.play();
+
+        verifyInOrder([() => mockPlayer.stop(), () => mockPlayer.play()]);
+      });
+
+      test('plays from a released player without releasing it again', () async {
+        await service.loadAudioFromFile('/sounds/snare.m4a');
+        state = ProcessingState.idle;
+
+        await service.play();
+
+        verifyNever(() => mockPlayer.stop());
+        verify(() => mockPlayer.play()).called(1);
+      });
+
+      test('leaves a longer sound prepared', () async {
+        when(
+          () => mockPlayer.setFilePath(any()),
+        ).thenAnswer((_) async => const Duration(seconds: 1));
+
+        await service.loadAudioFromFile('/sounds/song.m4a');
+        await service.play();
+
+        verifyNever(() => mockPlayer.stop());
+        verify(() => mockPlayer.play()).called(1);
+      });
+
+      test('leaves audio of unknown length prepared', () async {
+        when(() => mockPlayer.setFilePath(any())).thenAnswer((_) async => null);
+
+        await service.loadAudioFromFile('/sounds/live.m4a');
+        await service.play();
+
+        verifyNever(() => mockPlayer.stop());
+        verify(() => mockPlayer.play()).called(1);
+      });
+
+      test('is forgotten once another load fails', () async {
+        await service.loadAudioFromFile('/sounds/snare.m4a');
+        clearInteractions(mockPlayer);
+        when(
+          () => mockPlayer.setFilePath(any()),
+        ).thenThrow(Exception('unreadable'));
+        await expectLater(
+          service.loadAudioFromFile('/sounds/broken.m4a'),
+          throwsException,
+        );
+        state = ProcessingState.ready;
+
+        await service.play();
+
+        verifyNever(() => mockPlayer.stop());
+      });
+
+      test('keeps playing when the player is playing it', () async {
+        when(() => mockPlayer.playing).thenReturn(true);
+
+        await service.loadAudioFromFile('/sounds/snare.m4a');
+        await service.play();
+
+        verifyNever(() => mockPlayer.stop());
+      });
+
+      test('stays prepared on iOS', () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+
+        await service.loadAudioFromFile('/sounds/snare.m4a');
+        await service.play();
+
+        verifyNever(() => mockPlayer.stop());
+        verify(() => mockPlayer.play()).called(1);
+      });
     });
 
     test('pause pauses playback', () async {
@@ -1095,9 +1199,7 @@ void main() {
       );
 
       final source =
-          verify(
-                () => mockPlayer.setAudioSource(captureAny()),
-              ).captured.single
+          verify(() => mockPlayer.setAudioSource(captureAny())).captured.single
               as UriAudioSource;
       expect(source.uri, Uri.parse(soundUrl));
       expect(cache.requested, isEmpty);
@@ -1224,9 +1326,7 @@ void main() {
       await service.loadAudio(soundUrl, streamUnlessCached: true);
 
       final source =
-          verify(
-                () => mockPlayer.setAudioSource(captureAny()),
-              ).captured.single
+          verify(() => mockPlayer.setAudioSource(captureAny())).captured.single
               as UriAudioSource;
       expect(source.uri, Uri.parse(soundUrl));
     });
