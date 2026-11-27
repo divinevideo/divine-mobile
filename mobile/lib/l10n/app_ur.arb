@@ -1733,6 +1733,7 @@
   },
   "authRecoveryDraftsOwner": "آپ کے مسودے اور کلپس اس اکاؤنٹ کے لیے محفوظ ہیں",
   "authRecoveryOtherAccountWarning": "یہاں سائن ان کرنے سے وہ مسودے اور کلپس چھپ جائیں گے",
+  "authWatchClassicsAsGuest": "بطور مہمان کلاسکس دیکھیں",
   "authTermsPrefix": "نیچے کوئی آپشن منتخب کر کے، آپ تصدیق کرتے ہیں کہ آپ کی عمر کم از کم 16 سال ہے (یا آپ نے ",
   "authTermsAgeAuthorizationCta": "Divine عمر کی اجازت",
   "@authTermsAgeAuthorizationCta": {

@@ -1289,6 +1289,7 @@
   "authContinueAs": "{displayName} olarak devam et",
   "authRecoveryDraftsOwner": "Taslakların ve kliplerin bu hesaba kaydedildi",
   "authRecoveryOtherAccountWarning": "Buradan giriş yaparsan o taslaklar ve klipler gizlenir",
+  "authWatchClassicsAsGuest": "Klasikleri misafir olarak izle",
   "authTermsPrefix": "Aşağıdaki seçeneklerden birini seçerek en az 16 yaşında olduğunu (ya da ",
   "authTermsAgeAuthorizationCta": "Divine yaş doğrulamasını",
   "@authTermsAgeAuthorizationCta": {

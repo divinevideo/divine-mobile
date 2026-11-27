@@ -2484,6 +2484,10 @@
   },
   "authRecoveryDraftsOwner": "Your drafts and clips are saved for this account",
   "authRecoveryOtherAccountWarning": "Signing in here will hide those drafts and clips",
+  "authWatchClassicsAsGuest": "Watch Classics as a guest",
+  "@authWatchClassicsAsGuest": {
+    "description": "Welcome-screen action that opens the curated Classics player without signing in."
+  },
   "authTermsPrefix": "By selecting an option below, you confirm you are at least 16 years old (or have completed ",
   "authTermsAgeAuthorizationCta": "Divine age authorization",
   "@authTermsAgeAuthorizationCta": {

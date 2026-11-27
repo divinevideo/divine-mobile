@@ -3461,6 +3461,9 @@ class AppLocalizationsSv extends AppLocalizations {
       'Loggar du in här döljs de utkasten och klippen';
 
   @override
+  String get authWatchClassicsAsGuest => 'Titta på klassiker som gäst';
+
+  @override
   String get authTermsPrefix =>
       'Genom att välja ett alternativ nedan bekräftar du att du är minst 16 år (eller har genomfört ';
 

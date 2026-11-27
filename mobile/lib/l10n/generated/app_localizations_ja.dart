@@ -3244,6 +3244,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get authRecoveryOtherAccountWarning => 'ここでサインインするとそれらが非表示になります';
 
   @override
+  String get authWatchClassicsAsGuest => 'ゲストとしてクラシックを観る';
+
+  @override
   String get authTermsPrefix => '下のオプションを選ぶことで、あなたは16歳以上である（または';
 
   @override

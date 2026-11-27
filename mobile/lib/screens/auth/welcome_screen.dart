@@ -281,6 +281,7 @@ class _WelcomeView extends ConsumerWidget {
             !cleanupRequired &&
             ModalRoute.isCurrentOf(context) == true) {
           return GuestClassicsEntry(
+            acceptTerms: () => ref.read(authServiceProvider).acceptTerms(),
             load: guestLoader,
             now: DateTime.now,
             onObservation: guestObserver,
@@ -339,8 +340,9 @@ class _NewUserLayout extends StatelessWidget {
           const SizedBox(height: 20),
           if (openClassics != null) ...[
             DivineButton(
-              label: context.l10n.exploreTabClassics,
+              label: context.l10n.authWatchClassicsAsGuest,
               expanded: true,
+              maxLines: 2,
               onPressed: openClassics,
             ),
             const SizedBox(height: 12),

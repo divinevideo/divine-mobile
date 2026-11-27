@@ -3466,6 +3466,9 @@ class AppLocalizationsAr extends AppLocalizations {
       'تسجيل الدخول هنا سيُخفي تلك المسودات والمقاطع';
 
   @override
+  String get authWatchClassicsAsGuest => 'شاهد الكلاسيكيات كضيف';
+
+  @override
   String get authTermsPrefix =>
       'باختيارك أحد الخيارات أدناه، فإنك تؤكد أن عمرك 16 عامًا على الأقل (أو أنك أكملت ';
 

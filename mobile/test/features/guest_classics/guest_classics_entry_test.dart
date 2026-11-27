@@ -93,10 +93,11 @@ class _NativePlayback {
   }
 }
 
-Future<void> openGuest(
+Future<void> mountGuest(
   WidgetTester tester,
   Future<GuestClassicsManifest?> Function(http.Client, {required bool muted})
   load, {
+  Future<void> Function()? acceptTerms,
   ValueChanged<GuestClassicsObservation>? observe,
 }) async {
   await tester.pumpWidget(
@@ -104,20 +105,27 @@ Future<void> openGuest(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: GuestClassicsEntry(
+        acceptTerms: acceptTerms ?? () async {},
         load: load,
         now: () => _now,
         onObservation: observe,
-        welcome: (open) =>
-            TextButton(onPressed: open, child: const Text('Welcome')),
+        welcome: (open) => Scaffold(
+          body: TextButton(onPressed: open, child: const Text('Welcome')),
+        ),
       ),
     ),
   );
   await tester.pump();
+}
+
+Future<void> openGuest(
+  WidgetTester tester,
+  Future<GuestClassicsManifest?> Function(http.Client, {required bool muted})
+  load, {
+  ValueChanged<GuestClassicsObservation>? observe,
+}) async {
+  await mountGuest(tester, load, observe: observe);
   expect(find.byType(DivineVideoPlayer), findsNothing);
-  expect(
-    tester.widget<TextButton>(find.byType(TextButton)).onPressed,
-    isNotNull,
-  );
   await tester.tap(find.text('Welcome'));
   await tester.pump();
   await tester.pump();
@@ -250,76 +258,83 @@ void main() {
     );
 
     testWidgets(
-      'loads the manifest on cold start when lifecycleState is null',
-      (
-        tester,
-      ) async {
+      'cold start waits for a tap even when lifecycle state is null',
+      (tester) async {
+        _NativePlayback(tester);
         tester.binding.resetInternalState();
         addTearDown(tester.binding.resetInternalState);
         var loads = 0;
-        await tester.pumpWidget(
-          MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: GuestClassicsEntry(
-              load: (_, {required muted}) async {
-                loads++;
-                return manifest([1]);
-              },
-              now: () => _now,
-              welcome: (open) =>
-                  TextButton(onPressed: open, child: const Text('Welcome')),
-            ),
-          ),
-        );
-        await tester.pump();
-        expect(loads, 1);
+        await mountGuest(tester, (_, {required muted}) async {
+          loads++;
+          return manifest([1]);
+        });
+        expect(loads, 0);
         expect(find.byType(DivineVideoPlayer), findsNothing);
-        expect(
-          tester.widget<TextButton>(find.byType(TextButton)).onPressed,
-          isNotNull,
-        );
+
+        await tester.tap(find.text('Welcome'));
+        await tester.pumpAndSettle();
+        expect(loads, 1);
+        expect(find.text('Creator 1'), findsOneWidget);
       },
     );
 
     testWidgets(
-      'skips initial manifest load when mounted outside foreground',
+      'resuming idle welcome leaves the catalog untouched',
       (tester) async {
         tester.binding.handleAppLifecycleStateChanged(
           AppLifecycleState.inactive,
         );
         addTearDown(tester.binding.resetInternalState);
         var loads = 0;
-        await tester.pumpWidget(
-          MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: GuestClassicsEntry(
-              load: (_, {required muted}) async {
-                loads++;
-                return manifest([1]);
-              },
-              now: () => _now,
-              welcome: (open) =>
-                  TextButton(onPressed: open, child: const Text('Welcome')),
-            ),
-          ),
-        );
-        await tester.pump();
+        await mountGuest(tester, (_, {required muted}) async {
+          loads++;
+          return manifest([1]);
+        });
         expect(loads, 0);
-        expect(
-          tester.widget<TextButton>(find.byType(TextButton)).onPressed,
-          isNull,
-        );
+
         tester.binding.handleAppLifecycleStateChanged(
           AppLifecycleState.resumed,
         );
         await tester.pump();
-        expect(loads, 1);
-        expect(
-          tester.widget<TextButton>(find.byType(TextButton)).onPressed,
-          isNotNull,
+        expect(loads, 0);
+        expect(find.byType(DivineVideoPlayer), findsNothing);
+        expect(find.text('Welcome'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'backgrounding invalidates an entry whose consent write is pending',
+      (tester) async {
+        _NativePlayback(tester);
+        addTearDown(tester.binding.resetInternalState);
+        final consent = Completer<void>();
+        var loads = 0;
+        await mountGuest(
+          tester,
+          (_, {required muted}) async {
+            loads++;
+            return manifest([1]);
+          },
+          acceptTerms: () => consent.future,
         );
+        await tester.tap(find.text('Welcome'));
+        await tester.pump();
+        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        await tester.pump();
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        consent.complete();
+        await tester.pumpAndSettle();
+        expect(loads, 0);
+        expect(find.text('Welcome'), findsOneWidget);
+
+        await tester.tap(find.text('Welcome'));
+        await tester.pumpAndSettle();
+        expect(loads, 1);
+        expect(find.text('Creator 1'), findsOneWidget);
       },
     );
 
@@ -349,13 +364,19 @@ void main() {
           AppLifecycleState.resumed,
         );
         await tester.pump();
-        expect(requestedMuted.last, isTrue);
+        expect(requestedMuted, [true, false]);
         expect(find.byType(DivineVideoPlayer), findsNothing);
         expect(find.text('Welcome'), findsOneWidget);
         expect(
           tester.widget<TextButton>(find.byType(TextButton)).onPressed,
           isNotNull,
         );
+
+        await tester.tap(find.text('Welcome'));
+        await tester.pumpAndSettle();
+        expect(requestedMuted, [true, false, true]);
+        expect(find.text('Creator 1'), findsOneWidget);
+        expect(native.volumes.last, 0);
       },
     );
 
@@ -512,7 +533,7 @@ void main() {
           AppLifecycleState.resumed,
         );
         await tester.pump();
-        expect(loads, 2);
+        expect(loads, 1);
         expect(find.text('Welcome'), findsOneWidget);
         expect(find.byType(DivineVideoPlayer), findsNothing);
       },

@@ -3430,6 +3430,9 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đăng nhập ở đây sẽ ẩn các bản nháp và clip đó';
 
   @override
+  String get authWatchClassicsAsGuest => 'Xem clip kinh điển với tư cách khách';
+
+  @override
   String get authTermsPrefix =>
       'Khi chọn một tùy chọn bên dưới, bạn xác nhận bạn đã đủ 16 tuổi (hoặc đã hoàn tất ';
 

@@ -3478,6 +3478,9 @@ class AppLocalizationsNl extends AppLocalizations {
       'Hier inloggen verbergt die concepten en clips';
 
   @override
+  String get authWatchClassicsAsGuest => 'Bekijk klassiekers als gast';
+
+  @override
   String get authTermsPrefix =>
       'Door hieronder een optie te kiezen bevestig je dat je minstens 16 jaar bent (of de ';
 

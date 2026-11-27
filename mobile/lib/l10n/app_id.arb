@@ -1289,6 +1289,7 @@
   "authContinueAs": "Lanjut sebagai {displayName}",
   "authRecoveryDraftsOwner": "Draf dan klip kamu tersimpan untuk akun ini",
   "authRecoveryOtherAccountWarning": "Masuk di sini akan menyembunyikan draf dan klip tersebut",
+  "authWatchClassicsAsGuest": "Tonton video klasik sebagai tamu",
   "authTermsPrefix": "Dengan memilih salah satu opsi di bawah, kamu mengonfirmasi bahwa usiamu minimal 16 tahun (atau sudah menyelesaikan ",
   "authTermsAgeAuthorizationCta": "otorisasi usia Divine",
   "@authTermsAgeAuthorizationCta": {

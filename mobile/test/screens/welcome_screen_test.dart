@@ -2,6 +2,8 @@
 // ABOUTME: Verifies default variant, returning-user variant, button interactions,
 // ABOUTME: terms notice, error display, and loading states
 
+import 'dart:async';
+
 import 'package:db_client/db_client.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/rendering.dart';
@@ -15,6 +17,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/constants/terms_acceptance_keys.dart';
 import 'package:openvine/features/guest_classics/guest_classics_entry.dart';
 import 'package:openvine/features/guest_classics/guest_classics_manifest.dart';
 import 'package:openvine/features/guest_classics/guest_classics_providers.dart';
@@ -27,6 +30,8 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
+import 'package:openvine/services/auth/account_session_store.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/auth/auth_hero_section.dart';
@@ -228,9 +233,84 @@ void main() {
       );
 
       testWidgets(
-        'guest entry shows Classics button on welcome and returns on close',
+        'guest catalog waits for the viewer to accept terms',
         (tester) async {
           await useTallSurface(tester);
+          final canWrite = Completer<void>();
+          var loads = 0;
+          when(() => mockAuthService.acceptTerms()).thenAnswer((_) async {
+            await canWrite.future;
+            await AccountSessionStore(sharedPreferences).acceptTerms();
+          });
+          await tester.pumpWidget(
+            createTestWidget(
+              guestEntry: true,
+              guestLoader: (_, {required muted}) async {
+                loads++;
+                return null;
+              },
+            ),
+          );
+          await tester.pump();
+          expect(loads, 0);
+          expect(
+            sharedPreferences.containsKey(TermsAcceptanceKeys.termsAcceptedAt),
+            isFalse,
+          );
+
+          await tester.tap(find.text('Watch Classics as a guest'));
+          await tester.pump();
+          expect(loads, 0);
+          expect(
+            sharedPreferences.containsKey(TermsAcceptanceKeys.termsAcceptedAt),
+            isFalse,
+          );
+
+          canWrite.complete();
+          await tester.pumpAndSettle();
+          expect(loads, 1);
+          expect(
+            sharedPreferences.getString(TermsAcceptanceKeys.termsAcceptedAt),
+            isNotEmpty,
+          );
+          expect(
+            sharedPreferences.getBool(TermsAcceptanceKeys.ageVerified16Plus),
+            isTrue,
+          );
+        },
+      );
+
+      testWidgets(
+        'a failed consent write leaves the guest catalog untouched',
+        (tester) async {
+          await useTallSurface(tester);
+          when(() => mockAuthService.acceptTerms()).thenAnswer((_) async {
+            throw const AccountStorageException('Preferences write failed');
+          });
+          var loads = 0;
+          await tester.pumpWidget(
+            createTestWidget(
+              guestEntry: true,
+              guestLoader: (_, {required muted}) async {
+                loads++;
+                return null;
+              },
+            ),
+          );
+          await tester.pump();
+          await tester.tap(find.text('Watch Classics as a guest'));
+          await tester.pumpAndSettle();
+          expect(loads, 0);
+          expect(find.text('Watch Classics as a guest'), findsOneWidget);
+          expect(find.text('Create a new Divine account'), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'a phone can open guest Classics and return without refetching',
+        (tester) async {
+          await tester.binding.setSurfaceSize(const Size(390, 844));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
           tester.binding.handleAppLifecycleStateChanged(
             AppLifecycleState.resumed,
           );
@@ -277,25 +357,31 @@ void main() {
             ],
           }, now: DateTime.now().toUtc())!;
 
+          var loads = 0;
           await tester.pumpWidget(
             createTestWidget(
               guestEntry: true,
-              guestLoader: (_, {required muted}) async => manifest,
+              guestLoader: (_, {required muted}) async {
+                loads++;
+                return manifest;
+              },
             ),
           );
           await tester.pump();
           await tester.pump();
-          expect(find.text('Classics'), findsOneWidget);
+          expect(find.text('Watch Classics as a guest'), findsOneWidget);
 
-          await tester.tap(find.text('Classics'));
+          await tester.tap(find.text('Watch Classics as a guest'));
           await tester.pump();
           await tester.pump();
           expect(find.text('Creator 1'), findsOneWidget);
+          expect(loads, 1);
 
           await tester.tap(find.bySemanticsLabel('Close'));
           await tester.pump();
           expect(find.text('Creator 1'), findsNothing);
-          expect(find.text('Classics'), findsOneWidget);
+          expect(find.text('Watch Classics as a guest'), findsOneWidget);
+          expect(loads, 1);
         },
       );
 

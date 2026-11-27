@@ -1292,6 +1292,7 @@
   "authContinueAs": "Continua come {displayName}",
   "authRecoveryDraftsOwner": "Le tue bozze e i tuoi clip sono salvati per questo account",
   "authRecoveryOtherAccountWarning": "Accedere qui nasconderà quelle bozze e quei clip",
+  "authWatchClassicsAsGuest": "Guarda i classici come ospite",
   "authTermsPrefix": "Scegliendo un'opzione qui sotto, confermi di avere almeno 16 anni (o di aver completato l'",
   "authTermsAgeAuthorizationCta": "autorizzazione all'età di Divine",
   "@authTermsAgeAuthorizationCta": {

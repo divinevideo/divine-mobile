@@ -3479,6 +3479,9 @@ class AppLocalizationsFil extends AppLocalizations {
       'Ang pag-sign in dito ay magtatago ng mga draft at clip na iyon';
 
   @override
+  String get authWatchClassicsAsGuest => 'Manood ng mga klasiko bilang bisita';
+
+  @override
   String get authTermsPrefix =>
       'Sa pagpili ng opsyon sa ibaba, kinukumpirma mong hindi ka bababa sa 16 taong gulang (o natapos mo na ang ';
 

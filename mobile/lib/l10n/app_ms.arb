@@ -1733,6 +1733,7 @@
   },
   "authRecoveryDraftsOwner": "Draf dan klip anda disimpan untuk akaun ini",
   "authRecoveryOtherAccountWarning": "Log masuk di sini akan menyembunyikan draf dan klip itu",
+  "authWatchClassicsAsGuest": "Tonton video klasik sebagai tetamu",
   "authTermsPrefix": "Dengan memilih pilihan di bawah, anda mengesahkan bahawa anda berumur sekurang-kurangnya 16 tahun (atau telah melengkapkan ",
   "authTermsAgeAuthorizationCta": "kebenaran umur Divine",
   "@authTermsAgeAuthorizationCta": {

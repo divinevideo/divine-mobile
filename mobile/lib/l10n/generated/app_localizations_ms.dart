@@ -3450,6 +3450,9 @@ class AppLocalizationsMs extends AppLocalizations {
       'Log masuk di sini akan menyembunyikan draf dan klip itu';
 
   @override
+  String get authWatchClassicsAsGuest => 'Tonton video klasik sebagai tetamu';
+
+  @override
   String get authTermsPrefix =>
       'Dengan memilih pilihan di bawah, anda mengesahkan bahawa anda berumur sekurang-kurangnya 16 tahun (atau telah melengkapkan ';
 

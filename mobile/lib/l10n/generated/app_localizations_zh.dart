@@ -3248,6 +3248,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authRecoveryOtherAccountWarning => '在这里登录会隐藏那些草稿和片段';
 
   @override
+  String get authWatchClassicsAsGuest => '以访客身份观看经典视频';
+
+  @override
   String get authTermsPrefix => '选择下方任一选项，即表示你确认自己已满 16 周岁（或已完成 ';
 
   @override

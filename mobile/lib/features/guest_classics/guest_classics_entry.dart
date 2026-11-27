@@ -12,15 +12,21 @@ import 'package:openvine/features/guest_classics/guest_classics_adaptation.dart'
 import 'package:openvine/features/guest_classics/guest_classics_manifest.dart';
 import 'package:openvine/features/guest_classics/guest_classics_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class GuestClassicsEntry extends StatefulWidget {
   const GuestClassicsEntry({
+    required this.acceptTerms,
     required this.load,
     required this.welcome,
     required this.now,
     this.onObservation,
     super.key,
   });
+
+  /// Persists the age and terms attestation from the Welcome notice.
+  final Future<void> Function() acceptTerms;
 
   final Future<GuestClassicsManifest?> Function(
     http.Client, {
@@ -40,7 +46,7 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
   GuestClassicsManifest? _manifest;
   http.Client? _loading;
   Timer? _expiry;
-  bool _viewing = false;
+  Object? _opening;
   bool _muted = true;
   bool _inactive = false;
   final _muteRequests = ValueNotifier<int>(0);
@@ -67,10 +73,7 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     final lifecycle = WidgetsBinding.instance.lifecycleState;
-    _inactive = lifecycle == AppLifecycleState.inactive;
-    if (lifecycle == null || lifecycle == AppLifecycleState.resumed) {
-      unawaited(_load(muted: _muted, retire: false));
-    }
+    _inactive = lifecycle != null && lifecycle != AppLifecycleState.resumed;
   }
 
   void _retire() {
@@ -84,19 +87,44 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
   }
 
   void _resetToWelcome() {
-    _viewing = false;
+    _opening = null;
     _muted = true;
     _retire();
   }
 
   void _close() {
     _muteRequests.value++;
-    _viewing = false;
-    _muted = true;
-    unawaited(_refresh());
+    setState(_resetToWelcome);
   }
 
-  Future<void> _refresh() => _load(muted: _muted, retire: true);
+  void _returnWithError(String message) {
+    setState(_resetToWelcome);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _open() async {
+    if (_inactive || _opening != null || _loading != null) return;
+    final opening = Object();
+    setState(() => _opening = opening);
+    try {
+      await widget.acceptTerms();
+    } catch (_) {
+      if (mounted && _opening == opening) {
+        _returnWithError(context.l10n.authUnexpectedError);
+      }
+      rethrow;
+    }
+    if (!mounted || _opening != opening) return;
+    if (_inactive) {
+      setState(_resetToWelcome);
+      return;
+    }
+
+    _opening = null;
+    await _load(muted: true, retire: true);
+  }
 
   Future<void> _load({
     required bool muted,
@@ -114,19 +142,19 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
     try {
       manifest = await widget.load(client, muted: muted);
     } on Exception {
-      // Preserve welcome on startup and the current authorized mode on a switch.
+      // Treat this like an unavailable manifest.
     } finally {
       client.close();
     }
     if (!mounted || _loading != client) return;
     _loading = null;
     if (manifest == null) {
-      if (retire) setState(_resetToWelcome);
+      if (retire) _returnWithError(context.l10n.classicsErrorTitle);
       return;
     }
     final remaining = manifest.expiresAt.difference(widget.now());
     if (remaining <= Duration.zero) {
-      if (retire) setState(_resetToWelcome);
+      if (retire) _returnWithError(context.l10n.classicsErrorTitle);
       return;
     }
     // A new manifest starts a new queue in the approved mode. On a sound change
@@ -143,7 +171,7 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
       ),
     ];
     if (clips.isEmpty) {
-      if (retire) setState(_resetToWelcome);
+      if (retire) _returnWithError(context.l10n.classicsErrorTitle);
       return;
     }
     _expiry?.cancel();
@@ -162,7 +190,7 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
       setState(_resetToWelcome);
       return;
     }
-    unawaited(_load(muted: _muted, retire: true, keepCurrent: _viewing));
+    unawaited(_load(muted: _muted, retire: true, keepCurrent: true));
   }
 
   void _toggleSound() {
@@ -180,18 +208,18 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.resumed:
-        final needsRefresh =
-            _manifest == null || !_manifest!.expiresAt.isAfter(widget.now());
         if (_inactive) setState(() => _inactive = false);
-        if (needsRefresh) unawaited(_refresh());
+        if (_loading == null &&
+            _manifest?.expiresAt.isAfter(widget.now()) == false) {
+          _onExpiry();
+        }
       case AppLifecycleState.inactive:
         if (!_inactive) setState(() => _inactive = true);
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
-        _inactive = false;
-        if (_viewing) _muteRequests.value++;
-        setState(_resetToWelcome);
+        _inactive = true;
+        _close();
     }
   }
 
@@ -207,7 +235,7 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
   Widget build(BuildContext context) {
     final manifest = _manifest;
     if (manifest == null || !manifest.expiresAt.isAfter(widget.now())) {
-      if (_viewing && _loading != null) {
+      if (_opening != null || _loading != null) {
         return PopScope(
           canPop: false,
           onPopInvokedWithResult: (didPop, _) {
@@ -236,10 +264,14 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
           ),
         );
       }
-      return widget.welcome(null);
-    }
-    if (!_viewing) {
-      return widget.welcome(() => setState(() => _viewing = true));
+      return widget.welcome(() {
+        runDetached(
+          _open(),
+          'open guest Classics',
+          logName: 'GuestClassicsEntry',
+          category: LogCategory.auth,
+        );
+      });
     }
     final clip = _clips[_page];
     final generation = _queueGeneration;
@@ -260,7 +292,6 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
               onPageChanged: (page) {
                 if (_manifest != manifest ||
                     _queueGeneration != generation ||
-                    !_viewing ||
                     page == _page ||
                     page >= _clips.length) {
                   return;
@@ -287,7 +318,6 @@ class _GuestClassicsEntryState extends State<GuestClassicsEntry>
                   muteRequests: _muteRequests,
                   allowed: () =>
                       mounted &&
-                      _viewing &&
                       _manifest == manifest &&
                       _queueGeneration == generation &&
                       _clips.isNotEmpty &&

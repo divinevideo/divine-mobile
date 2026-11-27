@@ -3507,6 +3507,9 @@ class AppLocalizationsEs extends AppLocalizations {
       'Iniciar sesión aquí ocultará esos borradores y clips';
 
   @override
+  String get authWatchClassicsAsGuest => 'Ver clásicos como invitado';
+
+  @override
   String get authTermsPrefix =>
       'Al elegir una opción abajo, confirmas que tienes al menos 16 años (o que completaste la ';
 

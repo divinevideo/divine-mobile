@@ -3516,6 +3516,9 @@ class AppLocalizationsBg extends AppLocalizations {
       'Влизането тук ще скрие тези чернови и клипове';
 
   @override
+  String get authWatchClassicsAsGuest => 'Гледай класики като гост';
+
+  @override
   String get authTermsPrefix =>
       'Като избереш опция по-долу, потвърждаваш, че си на поне 16 години (или си преминал(а) ';
 

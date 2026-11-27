@@ -1292,6 +1292,7 @@
   "authContinueAs": "Continuer en tant que {displayName}",
   "authRecoveryDraftsOwner": "Tes brouillons et clips sont enregistrés pour ce compte",
   "authRecoveryOtherAccountWarning": "Se connecter ici masquera ces brouillons et clips",
+  "authWatchClassicsAsGuest": "Regarder les classiques en tant qu’invité",
   "authTermsPrefix": "En choisissant une option ci-dessous, tu confirmes avoir au moins 16 ans (ou avoir effectué l'",
   "authTermsAgeAuthorizationCta": "autorisation d'âge Divine",
   "@authTermsAgeAuthorizationCta": {

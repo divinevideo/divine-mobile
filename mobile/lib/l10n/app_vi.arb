@@ -1733,6 +1733,7 @@
   },
   "authRecoveryDraftsOwner": "Các bản nháp và clip của bạn đang được lưu cho tài khoản này",
   "authRecoveryOtherAccountWarning": "Đăng nhập ở đây sẽ ẩn các bản nháp và clip đó",
+  "authWatchClassicsAsGuest": "Xem clip kinh điển với tư cách khách",
   "authTermsPrefix": "Khi chọn một tùy chọn bên dưới, bạn xác nhận bạn đã đủ 16 tuổi (hoặc đã hoàn tất ",
   "authTermsAgeAuthorizationCta": "xác minh độ tuổi Divine",
   "@authTermsAgeAuthorizationCta": {

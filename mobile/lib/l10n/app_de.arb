@@ -1292,6 +1292,7 @@
   "authContinueAs": "Weiter als {displayName}",
   "authRecoveryDraftsOwner": "Deine Entwürfe und Clips sind für dieses Konto gespeichert",
   "authRecoveryOtherAccountWarning": "Hier anmelden verbirgt diese Entwürfe und Clips",
+  "authWatchClassicsAsGuest": "Klassiker als Gast ansehen",
   "authTermsPrefix": "Mit einer Auswahl unten bestätigst du, dass du mindestens 16 Jahre alt bist (oder die ",
   "authTermsAgeAuthorizationCta": "Divine-Altersfreigabe",
   "@authTermsAgeAuthorizationCta": {

@@ -53,21 +53,23 @@ of that product effect.
 
 For an iOS or Android QA build, set `GUEST_CLASSICS_MANIFEST_BASE_URL` to the
 HTTPS directory containing the reviewed starter manifests. An empty value
-keeps the normal welcome screen. On a fresh ordinary launch, a usable
-manifest adds **Classics** below the existing age and terms notice. Selecting
-it plays the first eligible classic muted. Closing the player returns to
-the account and Greenlight choices. Deep links, account recovery, pending
-terms, account switching and returning accounts retain their existing entry.
+keeps the normal welcome screen. On a fresh ordinary launch, a configured
+build shows **Watch Classics as a guest** below the existing age and terms
+notice. Choosing it records the age and terms attestation on the device before
+requesting a catalog. The first eligible classic starts muted. Closing the
+player returns to the account and Greenlight choices. Deep links, account
+recovery, pending terms, account switching and returning accounts retain
+their existing entry.
 
 The client requests `v1/<language>/muted.json` in viewing preference order,
 then `v1/und/muted.json`. A valid empty list or HTTP 404 advances to the
 next language. The player checks a fresh `audible.json` before enabling
 sound. The first rendered frame triggers preparation of the next clip.
 Transport errors, expired manifests and withdrawals preserve the existing
-welcome flow. Backgrounding releases the player, and resuming requires a
-fresh manifest. The welcome screen keeps its recently seen set in memory
-only while it stays on top; opening another screen from it, such as age
-authorization, starts a fresh set on return.
+welcome flow. Closing or backgrounding releases the player. Watching again
+starts with another tap and a fresh manifest. The welcome screen keeps its
+recently seen set in memory only while it stays on top. Opening another
+screen from it, such as age authorization, starts a fresh set on return.
 
 When the approved manifest includes discovery tags, swipes update the unseen
 order from early skips, completions and time spent in a second loop. Two

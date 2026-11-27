@@ -1289,6 +1289,7 @@
   "authContinueAs": "{displayName} として続ける",
   "authRecoveryDraftsOwner": "下書きとクリップはこのアカウントに保存されています",
   "authRecoveryOtherAccountWarning": "ここでサインインするとそれらが非表示になります",
+  "authWatchClassicsAsGuest": "ゲストとしてクラシックを観る",
   "authTermsPrefix": "下のオプションを選ぶことで、あなたは16歳以上である（または",
   "authTermsAgeAuthorizationCta": "Divine の年齢認証",
   "@authTermsAgeAuthorizationCta": {

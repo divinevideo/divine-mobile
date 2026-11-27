@@ -5779,6 +5779,12 @@ abstract class AppLocalizations {
   /// **'Signing in here will hide those drafts and clips'**
   String get authRecoveryOtherAccountWarning;
 
+  /// Welcome-screen action that opens the curated Classics player without signing in.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch Classics as a guest'**
+  String get authWatchClassicsAsGuest;
+
   /// No description provided for @authTermsPrefix.
   ///
   /// In en, this message translates to:

@@ -3494,6 +3494,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Entrar aqui vai esconder esses rascunhos e clipes';
 
   @override
+  String get authWatchClassicsAsGuest =>
+      'Assistir aos clássicos como visitante';
+
+  @override
   String get authTermsPrefix =>
       'Ao escolher uma opção abaixo, você confirma que tem pelo menos 16 anos (ou concluiu a ';
 
