@@ -371,6 +371,7 @@ void main() {
       ({
         _Editor editor,
         _Main main,
+        StreamController<VideoEditorMainState> playerStates,
         ClipEditorBloc clipBloc,
         Completer<LoopRepairResult> gate,
         DivineVideoClip clip,
@@ -526,6 +527,7 @@ void main() {
       return (
         editor: editor,
         main: main,
+        playerStates: playerStates,
         clipBloc: clipBloc,
         gate: gate,
         clip: clip,
@@ -547,8 +549,17 @@ void main() {
     testWidgets(
       'uses DivineSnackbarContainer and auto-dismisses after its duration',
       (tester) async {
-        final (:editor, :main, :clipBloc, :gate, :clip, :messengerKey) =
-            await pumpEditor(tester);
+        final (
+          :editor,
+          :main,
+          :playerStates,
+          :clipBloc,
+          :gate,
+          :clip,
+          :messengerKey,
+        ) = await pumpEditor(
+          tester,
+        );
         await triggerSmooth(tester, gate, clip);
 
         expect(find.byType(DivineSnackbarContainer), findsOneWidget);
@@ -566,8 +577,17 @@ void main() {
     testWidgets('dismiss button clears the snackbar without undoing', (
       tester,
     ) async {
-      final (:editor, :main, :clipBloc, :gate, :clip, :messengerKey) =
-          await pumpEditor(tester);
+      final (
+        :editor,
+        :main,
+        :playerStates,
+        :clipBloc,
+        :gate,
+        :clip,
+        :messengerKey,
+      ) = await pumpEditor(
+        tester,
+      );
       await triggerSmooth(tester, gate, clip);
 
       final l10n = lookupAppLocalizations(const Locale('en'));
@@ -581,8 +601,17 @@ void main() {
     testWidgets('subsequent clip edits dismiss the Undo snackbar', (
       tester,
     ) async {
-      final (:editor, :main, :clipBloc, :gate, :clip, :messengerKey) =
-          await pumpEditor(tester);
+      final (
+        :editor,
+        :main,
+        :playerStates,
+        :clipBloc,
+        :gate,
+        :clip,
+        :messengerKey,
+      ) = await pumpEditor(
+        tester,
+      );
       await triggerSmooth(tester, gate, clip);
       expect(find.text('Loop smoothed'), findsOneWidget);
 
@@ -596,25 +625,139 @@ void main() {
       expect(find.text('Loop smoothed'), findsNothing);
     });
 
-    testWidgets('Undo button dismisses the snackbar and undoes once', (
-      tester,
-    ) async {
-      final (:editor, :main, :clipBloc, :gate, :clip, :messengerKey) =
-          await pumpEditor(tester);
-      await triggerSmooth(tester, gate, clip);
+    testWidgets(
+      'Undo ends the active seam preview, dismisses the snackbar, and undoes once',
+      (tester) async {
+        final (
+          :editor,
+          :main,
+          :playerStates,
+          :clipBloc,
+          :gate,
+          :clip,
+          :messengerKey,
+        ) = await pumpEditor(
+          tester,
+        );
+        await triggerSmooth(tester, gate, clip);
 
-      await tester.tap(find.text('Undo'));
-      await tester.pumpAndSettle();
+        playerStates.add(const VideoEditorMainState());
+        await tester.pump();
+        playerStates.add(const VideoEditorMainState(isPlayerReady: true));
+        await tester.pump();
+        final started =
+            verify(
+                  () => main.add(
+                    captureAny(that: isA<VideoEditorAuditionStarted>()),
+                  ),
+                ).captured.single
+                as VideoEditorAuditionStarted;
 
-      expect(find.text('Loop smoothed'), findsNothing);
-      verify(editor.undoAction).called(1);
-    });
+        await tester.tap(find.text('Undo'));
+        await tester.pump();
+        // A rapid second tap while exiting must be a no-op.
+        if (find.text('Undo').evaluate().isNotEmpty) {
+          await tester.tap(find.text('Undo'), warnIfMissed: false);
+          await tester.pump();
+        }
+        await tester.pumpAndSettle();
+
+        expect(find.text('Loop smoothed'), findsNothing);
+        verify(editor.undoAction).called(1);
+        verify(
+          () => main.add(VideoEditorAuditionEnded(owner: started.owner)),
+        ).called(1);
+      },
+    );
+
+    testWidgets(
+      'Undo tapped before entrance completes undoes once and closes immediately',
+      (tester) async {
+        final (
+          :editor,
+          :main,
+          :playerStates,
+          :clipBloc,
+          :gate,
+          :clip,
+          :messengerKey,
+        ) = await pumpEditor(
+          tester,
+          accessibleNavigation: true,
+        );
+
+        await tester.tap(find.text('Align loop'));
+        await tester.pump();
+        gate.complete(repairedLoopResult([clip]));
+        // Pump without settling so entrance (< 250ms) has not fired onVisible,
+        // while accessibleNavigation renders the banner immediately.
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Undo'), findsOneWidget);
+
+        await tester.tap(find.text('Undo'));
+        await tester.pump();
+
+        expect(find.text('Loop smoothed'), findsNothing);
+        verify(editor.undoAction).called(1);
+      },
+    );
+
+    testWidgets(
+      'Undo is ignored if a clip edit invalidates the snackbar before entrance completes',
+      (tester) async {
+        final (
+          :editor,
+          :main,
+          :playerStates,
+          :clipBloc,
+          :gate,
+          :clip,
+          :messengerKey,
+        ) = await pumpEditor(
+          tester,
+          accessibleNavigation: true,
+        );
+
+        await tester.tap(find.text('Align loop'));
+        await tester.pump();
+        gate.complete(repairedLoopResult([clip]));
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Undo'), findsOneWidget);
+
+        clipBloc.add(
+          ClipEditorInitialized([
+            clip.copyWith(trimEnd: const Duration(milliseconds: 500)),
+          ]),
+        );
+        await tester.pump();
+
+        if (find.text('Undo').evaluate().isNotEmpty) {
+          await tester.tap(find.text('Undo'));
+          await tester.pump();
+        }
+        await tester.pumpAndSettle();
+
+        expect(find.text('Loop smoothed'), findsNothing);
+        verifyNever(editor.undoAction);
+      },
+    );
 
     testWidgets('dismisses the snackbar when navigating to the next screen', (
       tester,
     ) async {
-      final (:editor, :main, :clipBloc, :gate, :clip, :messengerKey) =
-          await pumpEditor(tester);
+      final (
+        :editor,
+        :main,
+        :playerStates,
+        :clipBloc,
+        :gate,
+        :clip,
+        :messengerKey,
+      ) = await pumpEditor(
+        tester,
+      );
       await triggerSmooth(tester, gate, clip);
       expect(find.text('Loop smoothed'), findsOneWidget);
 
@@ -638,6 +781,7 @@ void main() {
         final (
           :editor,
           :main,
+          :playerStates,
           :clipBloc,
           :gate,
           :clip,
@@ -666,8 +810,17 @@ void main() {
     testWidgets(
       'leaves an unrelated front snackbar alone when queued behind it and does not linger after navigation',
       (tester) async {
-        final (:editor, :main, :clipBloc, :gate, :clip, :messengerKey) =
-            await pumpEditor(tester);
+        final (
+          :editor,
+          :main,
+          :playerStates,
+          :clipBloc,
+          :gate,
+          :clip,
+          :messengerKey,
+        ) = await pumpEditor(
+          tester,
+        );
 
         messengerKey.currentState!.showSnackBar(
           DivineSnackbarContainer.snackBar(

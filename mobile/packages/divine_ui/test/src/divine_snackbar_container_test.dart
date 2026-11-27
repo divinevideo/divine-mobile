@@ -345,18 +345,26 @@ void main() {
 
       testWidgets('passes the dismiss parameters through', (tester) async {
         void onDismiss() {}
-        void onVisible() {}
 
         final snackBar = DivineSnackbarContainer.snackBar(
           'Saved',
           onDismissPressed: onDismiss,
           dismissSemanticLabel: 'Close',
-          onVisible: onVisible,
         );
 
         final container = snackBar.content as DivineSnackbarContainer;
         expect(container.onDismissPressed, equals(onDismiss));
         expect(container.dismissSemanticLabel, 'Close');
+      });
+
+      testWidgets('passes onVisible through to the SnackBar', (tester) async {
+        void onVisible() {}
+
+        final snackBar = DivineSnackbarContainer.snackBar(
+          'Saved',
+          onVisible: onVisible,
+        );
+
         expect(snackBar.onVisible, equals(onVisible));
       });
     });

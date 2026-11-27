@@ -122,7 +122,6 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
   _snackBarController;
   VoidCallback? _closeActiveSnackBar;
   bool _snackBarVisible = false;
-  bool _snackBarDismissed = false;
 
   @override
   void didChangeDependencies() {
@@ -369,13 +368,21 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
                     !(ModalRoute.isCurrentOf(context) ?? true)) {
                   return;
                 }
+                // Only the front snackbar in ScaffoldMessenger is mounted and
+                // tappable, so we can close it immediately even before
+                // onVisible fires at entrance-animation completion.
+                _snackBarVisible = true;
                 _dismissSnackBar();
                 _endSeam();
-                VideoEditorScope.of(context).editor?.undoAction();
+                final editor = VideoEditorScope.of(context).editor;
+                if (editor != null && editor.mounted) {
+                  editor.undoAction();
+                }
               }
             : null,
         onDismissPressed: () {
           if (!identical(_snackBarController, controller)) return;
+          _snackBarVisible = true;
           _dismissSnackBar();
         },
         dismissSemanticLabel: context.l10n.commonClose,
@@ -385,9 +392,7 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
             return;
           }
           _snackBarVisible = true;
-          if (_snackBarDismissed ||
-              !mounted ||
-              !(ModalRoute.isCurrentOf(context) ?? true)) {
+          if (!mounted || !(ModalRoute.isCurrentOf(context) ?? true)) {
             _dismissSnackBar(deferred: true);
           }
         },
@@ -396,7 +401,6 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
     _snackBarController = controller;
     _closeActiveSnackBar = close;
     _snackBarVisible = false;
-    _snackBarDismissed = false;
     unawaited(
       controller.closed.then((_) {
         isClosed = true;
@@ -404,7 +408,6 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
           _snackBarController = null;
           _closeActiveSnackBar = null;
           _snackBarVisible = false;
-          _snackBarDismissed = false;
         }
       }),
     );
@@ -413,6 +416,11 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
   /// Dismisses this listener's active loop-repair snackbar without disturbing
   /// unrelated snackbars ahead of it in the app-level messenger queue.
   ///
+  /// Clears [_snackBarController] immediately even if [onVisible] has not
+  /// fired yet, so a tap on Undo during the entrance animation cannot fire
+  /// after dismissal, and [onVisible] closes the stale snackbar as soon as it
+  /// reaches the front.
+  ///
   /// Uses [deferred] from [didChangeDependencies] and [dispose] because under
   /// `accessibleNavigation` [ScaffoldMessengerState.hideCurrentSnackBar] skips
   /// the exit animation and rebuilds synchronously, which Flutter forbids
@@ -420,16 +428,12 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
   void _dismissSnackBar({bool deferred = false}) {
     final controller = _snackBarController;
     if (controller == null) return;
-    if (!_snackBarVisible) {
-      _snackBarDismissed = true;
-      return;
-    }
+    final wasVisible = _snackBarVisible;
     final close = _closeActiveSnackBar;
     _snackBarController = null;
     _closeActiveSnackBar = null;
     _snackBarVisible = false;
-    _snackBarDismissed = false;
-    if (close == null) return;
+    if (!wasVisible || close == null) return;
     if (!deferred) {
       close();
       return;
