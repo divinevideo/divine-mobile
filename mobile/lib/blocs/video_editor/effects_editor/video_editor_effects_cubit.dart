@@ -265,6 +265,17 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
       }
       committedId = entry.id;
       if (picked == null) continue;
+      final settings = state.settingsFor(picked.type);
+      if (entry.type == picked.type &&
+          entry.intensity == picked.intensity &&
+          entry.onBeat == picked.onBeat &&
+          mapEquals(
+            settings,
+            effectSettingValuesOf(entry.type, _paramsOf(entry)),
+          )) {
+        effects.add(entry);
+        continue;
+      }
       final keepsWindow = entry.type.placement == picked.type.placement;
       effects.add(
         EditorVideoEffect.of(
@@ -274,7 +285,7 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
           startTime: keepsWindow ? entry.startTime : picked.startTime,
           endTime: keepsWindow ? entry.endTime : picked.endTime,
           onBeat: picked.onBeat,
-          settings: state.settingsFor(picked.type),
+          settings: settings,
         ),
       );
     }
@@ -309,16 +320,16 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
   /// The settings [effect] stores, as its type reads them: a custom effect's
   /// in its params, a built-in one's in its [VideoEffect.params].
   static EffectSettingValues _storedSettingsOf(EditorVideoEffect effect) {
-    final params =
-        effect.custom?.params ??
-        effect.effect?.params ??
-        const <String, dynamic>{};
+    final params = _paramsOf(effect);
     return Map.unmodifiable({
       for (final setting in effectSettingsOf(effect.type))
         if (params.containsKey(setting.key))
           setting.key: setting.read(params[setting.key]),
     });
   }
+
+  static Map<String, Object?> _paramsOf(EditorVideoEffect effect) =>
+      effect.custom?.params ?? effect.effect!.params;
 
   /// The [values] the user set for [from] that [to] has the very same setting
   /// for: the same param, range and default.

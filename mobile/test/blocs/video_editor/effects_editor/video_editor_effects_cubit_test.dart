@@ -763,6 +763,22 @@ void main() {
     });
 
     group('settings', () {
+      test('confirming a legacy effect without changes keeps its history '
+          'entry intact', () async {
+        final committed = EditorVideoEffect.of(
+          id: 'fisheye',
+          type: EditorEffectType.fisheye,
+          intensity: 0.6,
+          startTime: const Duration(seconds: 1),
+        );
+        final cubit = buildCubit()
+          ..syncApplied([committed])
+          ..startEditing(effectId: committed.id);
+
+        expect(cubit.confirm().effects, [committed]);
+        await cubit.close();
+      });
+
       test('open only for an effect that has any, and close when the editor '
           'opens or closes', () async {
         final cubit = buildCubit()
