@@ -24,14 +24,17 @@ import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
 import 'package:openvine/widgets/list_author_byline.dart';
+import 'package:openvine/widgets/list_video_player_mode.dart';
 import 'package:openvine/widgets/share_list_button.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../helpers/finders.dart';
 import '../helpers/test_provider_overrides.dart';
+import '../test_data/video_test_data.dart';
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
@@ -632,6 +635,66 @@ void main() {
         expect(find.text(l10n.peopleListsFailedToLoadVideos), findsNothing);
       },
     );
+
+    testWidgets('opens the tapped video when a newer relay post arrives', (
+      tester,
+    ) async {
+      final list = _buildList(pubkeys: const [_ownerPubkey]);
+      final bloc = _MockPeopleListsBloc();
+      whenListen(
+        bloc,
+        const Stream<PeopleListsState>.empty(),
+        initialState: PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: _ownerPubkey,
+          lists: [list],
+        ),
+      );
+      final indexed = createTestVideoEvent(
+        id: 'a' * 64,
+        pubkey: _ownerPubkey,
+      );
+      final fromRelay = createTestVideoEvent(
+        id: 'b' * 64,
+        pubkey: _ownerPubkey,
+        createdAt: 1704067300,
+      );
+      final feed = StreamController<List<VideoEvent>>();
+      addTearDown(() => unawaited(feed.close()));
+      final videoEventService = createMockVideoEventService();
+      when(() => videoEventService.shouldHideVideo(indexed)).thenReturn(false);
+      when(() => videoEventService.shouldHideVideo(fromRelay))
+          .thenReturn(false);
+      await _pumpPeopleListScreen(
+        tester,
+        bloc: bloc,
+        list: list,
+        overrides: [
+          videoEventServiceProvider.overrideWithValue(videoEventService),
+          userListMemberVideosProvider(list.pubkeys).overrideWith(
+            (ref) => feed.stream,
+          ),
+        ],
+      );
+      feed.add([indexed]);
+      await tester.pump();
+      final grid = tester.widget<ComposableVideoGrid>(
+        find.byType(ComposableVideoGrid),
+      );
+
+      grid.onVideoTap(grid.videos, 0, () => null);
+      feed.add([fromRelay, indexed]);
+      await tester.pump();
+
+      final player = tester.widget<ListVideoPlayerMode>(
+        find.byType(ListVideoPlayerMode),
+      );
+      expect(player.videos.map((video) => video.id), [
+        fromRelay.id,
+        indexed.id,
+      ]);
+      expect(player.videos[player.activeIndex].id, indexed.id);
+    });
 
     group('Follow', () {
       const listOwner =
