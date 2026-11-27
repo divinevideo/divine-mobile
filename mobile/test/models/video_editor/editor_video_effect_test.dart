@@ -595,6 +595,22 @@ void main() {
       }
     });
 
+    test('keeps a slower strobe within the flash limit next to a negative '
+        'flash and keeps safe strobes on their own clock', () {
+      final strobe = VideoEffect.strobe(
+        endTime: ms(5000),
+        params: const {VideoEffectParams.tempo: 0.9},
+      );
+      final negative = VideoEffect.negativeFlash(startTime: ms(5000));
+
+      final alone = mapped([strobe], plain);
+      final adjacent = mapped([strobe, negative], plain);
+
+      expect(alone.single.triggers, isEmpty);
+      expect(adjacent, hasLength(2));
+      expect(mostFlashesPerSecond(adjacent, plain), lessThanOrEqualTo(3));
+    });
+
     test('starts a flashing effect on the next whole second', () {
       final onOutput = mapped([
         flashing(.strobe, 1, ms(1300), ms(4000)),

@@ -10,7 +10,7 @@ import 'package:openvine/models/video_editor/effect_settings_catalog.dart';
 import 'package:openvine/models/video_editor/hit_timing_settings.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show CustomVideoEffect, VideoEffect, VideoEffectType;
+    show CustomVideoEffect, VideoEffect, VideoEffectParams, VideoEffectType;
 
 /// The id Divine's echo trail is registered under with pro_video_editor, by
 /// the native `EchoVideoEffect` on Android, iOS and macOS (#9708).
@@ -1995,45 +1995,67 @@ List<Duration> _spacedForFlashing(List<Duration> beats) {
   return kept;
 }
 
-/// [effects] without the beats of flashing effects that would put more than
-/// three flashes within one second of the video as it loops at [loopPoint].
+/// [effects] with flashes removed where they would put more than three
+/// within one second of the video as it loops at [loopPoint].
 ///
 /// Each flashing effect keeps its own beats [minimumFlashGap] apart, but a
 /// neighbouring flashing effect, a flash transition at one of
 /// [transitionFlashes], or the start of the next pass, can still flash right
 /// next to them. This looks at the flashes the renderers will show, so it
 /// holds whatever the effects' own timing: in each second that has a fourth
-/// flash, the latest beat in it goes, until none has. Flash transitions stay:
-/// `clampTransitions` keeps them a second apart, which leaves room for the
-/// two flashes a second a flashing effect makes on its own clock.
+/// flash, the latest beat in it goes. A strobe with a custom tempo can drift
+/// off the shared grid. If a crowded second has no beat to drop, schedule its
+/// flashes individually, so a conflicting flash can be dropped. Transitions
+/// keep their timing.
 List<VideoEffect> _withinFlashLimit(
   List<VideoEffect> effects, {
   required Duration loopPoint,
   List<Duration> transitionFlashes = const [],
 }) {
   if (!effects.any(
-    (e) => isFlashingVideoEffect(e.type) && e.triggers.isNotEmpty,
+    (e) =>
+        isFlashingVideoEffect(e.type) &&
+        (e.triggers.isNotEmpty || _hasCustomStrobeTempo(e)),
   )) {
     return effects;
   }
   var current = effects;
   while (true) {
-    // The latest beat of a flashing effect within a crowded second.
-    ({int effect, Duration beat})? latest;
+    // The latest beat in a crowded second, or a strobe flash if there are no
+    // beats in it.
+    ({
+      int index,
+      List<Duration> triggers,
+      Duration onset,
+      Duration at,
+      bool automatic,
+    })?
+    latest;
     for (final crowded in _crowdedFlashSeconds(
       current,
       loopPoint,
       transitionFlashes,
     )) {
-      Duration? latestAt;
-      for (var i = 0; i < current.length; i++) {
-        final effect = current[i];
+      for (final (i, effect) in current.indexed) {
         if (!isFlashingVideoEffect(effect.type)) continue;
-        for (final beat in effect.triggers) {
-          final at = _lastOccurrenceIn(beat, crowded, loopPoint);
-          if (at != null && (latestAt == null || at > latestAt)) {
-            latestAt = at;
-            latest = (effect: i, beat: beat);
+        final automatic = effect.triggers.isEmpty;
+        final triggers = automatic && _hasCustomStrobeTempo(effect)
+            ? _flashOnsets([effect], loopPoint)
+            : effect.triggers;
+        for (final onset in triggers) {
+          final at = _lastOccurrenceIn(onset, crowded, loopPoint);
+          if (at == null) continue;
+          final previous = latest;
+          if (previous == null ||
+              (previous.automatic && !automatic) ||
+              (previous.automatic == automatic && at > previous.at)) {
+            latest = (
+              index: i,
+              triggers: triggers,
+              onset: onset,
+              at: at,
+              automatic: automatic,
+            );
           }
         }
       }
@@ -2042,18 +2064,22 @@ List<VideoEffect> _withinFlashLimit(
     final drop = latest;
     if (drop == null) return current;
     final thinned = [
-      for (final beat in current[drop.effect].triggers)
-        if (beat != drop.beat) beat,
+      for (final onset in drop.triggers)
+        if (onset != drop.onset) onset,
     ];
     current = [
       for (var i = 0; i < current.length; i++)
-        if (i != drop.effect)
+        if (i != drop.index)
           current[i]
         else if (thinned.isNotEmpty)
           current[i].copyWith(triggers: thinned),
     ];
   }
 }
+
+bool _hasCustomStrobeTempo(VideoEffect effect) =>
+    effect.type == VideoEffectType.strobe &&
+    effect.params.containsKey(VideoEffectParams.tempo);
 
 /// Where [time], repeating every [loopPoint] as the video loops, last occurs
 /// within the second from [from], or `null` when it does not occur in it.
