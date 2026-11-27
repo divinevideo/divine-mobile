@@ -280,11 +280,20 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     _classicSession = null;
     // Reset the adaptive cursor before disposing so any new pagination reads
     // start on the archive, including when the adaptive queue was exhausted.
+    var droppedRankedClips = false;
     if (state.source.type == VideoFeedSourceType.classic) {
       _paginationGeneration++;
       if (!_isClosing && !emit.isDone) {
+        // Clips the viewer has not reached were ranked for an account that is
+        // no longer eligible, so they go; the playing clip stays.
+        final videos = state.videos;
+        final reached = videos.isEmpty
+            ? 0
+            : state.currentIndex.clamp(0, videos.length - 1) + 1;
+        droppedRankedClips = reached < videos.length;
         emit(
           state.copyWith(
+            videos: droppedRankedClips ? videos.sublist(0, reached) : null,
             hasMore: true,
             isLoadingMore: false,
             clearPaginationCursor: true,
@@ -295,6 +304,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         );
       }
     }
+    // The playing clip is now the last one, so fetch what follows it from the
+    // archive instead of waiting for a swipe that has nowhere to go.
+    if (droppedRankedClips) addIfOpen(const VideoFeedLoadMoreRequested());
     await Future.wait(
       <Future<void>?>[subscription?.cancel(), session.dispose()].nonNulls,
     );

@@ -270,6 +270,51 @@ void main() {
     );
 
     test(
+      'drops unplayed ranked clips and continues on the archive when the gate '
+      'closes',
+      () async {
+        final bloc = VideoFeedBloc(
+          videosRepository: videosRepository,
+          followRepository: followRepository,
+          curatedListRepository: curatedListRepository,
+          classicSession: ClassicFeedSession(
+            loadPage: (_) async => HomeFeedResult(
+              videos: [_video(20), _video(21), _video(22)],
+              paginationCursor: 'recommendation-2',
+              hasMore: true,
+              recommendationPageCount: 1,
+            ),
+          ),
+          adaptiveClassicsEnabledStream: gate.stream,
+        );
+        addTearDown(bloc.close);
+        gate.add(true);
+        bloc.add(
+          const VideoFeedStarted(mode: FeedMode.classic, forceMode: true),
+        );
+        await pumpEventQueue();
+        bloc.add(const VideoFeedActiveIndexChanged(1));
+        await pumpEventQueue();
+        expect(bloc.state.currentIndex, 1);
+
+        completeFirstArchivePage();
+        gate.add(false);
+        await pumpEventQueue();
+
+        expect(archiveCursors, [null]);
+        expect(bloc.state.videos, [
+          _video(20),
+          _video(21),
+          _video(1),
+          _video(2),
+          _video(3),
+        ]);
+        expect(bloc.state.currentIndex, 1);
+        expect(bloc.state.paginationCursor, 'archive-2');
+      },
+    );
+
+    test(
       'starts archive pagination before the gate-close event is delivered',
       () async {
         var allowed = true;

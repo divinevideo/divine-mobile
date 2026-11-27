@@ -840,11 +840,14 @@ void main() {
           tester.element(find.byType(VideoFeedView)).read<VideoFeedBloc>(),
           same(home.originalFeed),
         );
+        // The ranked clips after the playing one are dropped and the feed
+        // continues from the archive.
+        expect(archiveCalls, 1);
 
         home.originalFeed.add(const VideoFeedRefreshRequested());
         await tester.runAsync(pumpEventQueue);
         expect(requests, isEmpty);
-        expect(archiveCalls, 1);
+        expect(archiveCalls, 2);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.runAsync(pumpEventQueue);
