@@ -5,10 +5,17 @@
 ///
 /// The [pending] factory returns the ordered list of actions that still
 /// need attention. An account restriction always appears first, followed by
-/// account recovery, profile completion, and the supporter invitation.
+/// email confirmation, a missing email, account recovery, profile completion,
+/// and the supporter invitation.
 enum ProfileActionType {
   /// Divine has confirmed that this account is restricted.
   accountRestricted,
+
+  /// The user signed in before confirming their email address.
+  confirmEmail,
+
+  /// The account has no email, so it cannot get back in by email.
+  addEmail,
 
   /// The user has no email/password and should register to secure their
   /// identity.
@@ -25,6 +32,8 @@ enum ProfileActionType {
   ///
   /// [isOwnProfile] — whether we are looking at the logged-in user's profile.
   /// [isAccountEnforced] — whether Divine has confirmed an account restriction.
+  /// [isEmailUnconfirmed] — the account's email still awaits confirmation.
+  /// [isEmailMissing] — the email/password account has no email.
   /// [isAnonymous] — the user signed in with an auto-generated key (no email).
   /// [hasAnyProfileInfo] — the user has set at least one profile field
   ///   (name, display name, picture, bio, or NIP-05).
@@ -36,11 +45,15 @@ enum ProfileActionType {
     required bool isAnonymous,
     required bool hasAnyProfileInfo,
     required bool canBecomeSupporter,
+    bool isEmailUnconfirmed = false,
+    bool isEmailMissing = false,
   }) {
     if (!isOwnProfile) return const [];
 
     return [
       if (isAccountEnforced) accountRestricted,
+      if (isEmailUnconfirmed) confirmEmail,
+      if (isEmailMissing) addEmail,
       if (isAnonymous) secureAccount,
       if (!hasAnyProfileInfo) completeProfile,
       if (canBecomeSupporter) becomeSupporter,

@@ -26,6 +26,7 @@ import 'package:openvine/screens/inbox/conversation/widgets/full_reaction_emoji_
 import 'package:openvine/screens/inbox/conversation/widgets/reaction_picker_overlay.dart'
     show kDefaultDmReactionEmojis;
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/email_confirmation/email_confirmation_gate.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Constants for the reel reply bar.
@@ -265,6 +266,7 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
   void _handleSubmit() {
     final text = _controller.text;
     if (text.trim().isEmpty) return;
+    if (!ensureEmailConfirmedToMessage(context)) return;
     final cubit = context.read<InlineReelReplyCubit>();
     if (cubit.state.status == InlineReelReplyStatus.sending) return;
     _pendingDraft = text;

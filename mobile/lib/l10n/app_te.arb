@@ -8667,7 +8667,7 @@
   "changePasswordCurrentLabel": "ప్రస్తుత పాస్‌వర్డ్",
   "changePasswordWrongCurrent": "అది మీ ప్రస్తుత పాస్‌వర్డ్ కాదు.",
   "changePasswordSuccess": "పాస్‌వర్డ్ మార్చబడింది.",
-  "changeEmailSubtitle": "మేము మీ కొత్త చిరునామాకు మరియు మీ ఖాతాలో ఉన్నదానికి నిర్ధారణ లింక్‌ను ఇమెయిల్ చేస్తాము. మీరు రెండింటి నుండి నిర్ధారించిన తర్వాత మీ ఇమెయిల్ మారుతుంది.",
+  "changeEmailSubtitle": "మీ కొత్త ఇమెయిల్ చిరునామాకు లింక్ పంపుతాం. మీ ఖాతాలో ఇప్పటికే ఇమెయిల్ చిరునామా ఉంటే, దానికీ లింక్ పంపుతాం.",
   "changeEmailCurrentAddress": "మీ ఖాతాలో: {email}",
   "@changeEmailCurrentAddress": {
     "description": "Shows the email address currently on the account.",
@@ -8681,9 +8681,9 @@
   "changeEmailPasswordLabel": "మీ పాస్‌వర్డ్",
   "changeEmailSameAsCurrent": "ఇది ఇప్పటికే మీ ఇమెయిల్ చిరునామా.",
   "changeEmailWrongPassword": "అది మీ పాస్‌వర్డ్ కాదు.",
-  "changeEmailSubmit": "నిర్ధారణ లింక్‌లను పంపండి",
-  "changeEmailSentTitle": "రెండు లింక్‌లు అందుబాటులో ఉన్నాయి",
-  "changeEmailSentMessage": "నుండి నిర్ధారించండి {email}మరియు మీ ఖాతాలోని చిరునామా నుండి. రెండూ పూర్తయిన తర్వాత మీ ఇమెయిల్ స్విచ్ అవుతుంది.",
+  "changeEmailSubmit": "నిర్ధారణ కోరండి",
+  "changeEmailSentTitle": "మీ ఇమెయిల్ చూడండి",
+  "changeEmailSentMessage": "{email}కు వచ్చిన లింక్ తెరవండి. మీ ఖాతాలో ఇప్పటికే ఇమెయిల్ చిరునామా ఉంటే, దానికి వచ్చిన లింక్ కూడా తెరవండి.",
   "@changeEmailSentMessage": {
     "description": "Confirmation copy after an email change was requested; {email} is the new address.",
     "placeholders": {
@@ -8692,7 +8692,7 @@
       }
     }
   },
-  "changeEmailSentExpiry": "లింక్‌లు 24 గంటల తర్వాత పని చేయడం ఆగిపోతాయి.",
+  "changeEmailSentExpiry": "ప్రతి లింక్ గడువు 24 గంటల తర్వాత ముగుస్తుంది.",
   "changeEmailSentDone": "అర్థమైంది",
   "searchUserVideoCount": "{count, plural, =1{{formattedCount}వీడియో} other{{formattedCount}వీడియోలు}}",
   "@searchUserVideoCount": {
@@ -9546,5 +9546,21 @@
   "menuBarMute": "మ్యూట్ చేయండి",
   "menuBarUnmute": "అన్‌మ్యూట్ చేయండి",
   "menuBarWindow": "విండో",
-  "menuBarHelp": "సహాయం"
+  "menuBarHelp": "సహాయం",
+  "emailConfirmationTitle": "మీ ఇమెయిల్‌ను నిర్ధారించండి",
+  "emailConfirmationProfileSubtitle": "మేము {email} కి ఒక లింక్ పంపాము. సందేశాలను అన్‌లాక్ చేయడానికి, మీ ఖాతాలోకి ఎప్పుడైనా తిరిగి రాగలిగేలా చూసుకోవడానికి దాన్ని నొక్కండి.",
+  "emailConfirmationResendButton": "ఇమెయిల్‌ను మళ్లీ పంపండి",
+  "emailConfirmationNotice": "మీరు లోపలికి వచ్చేశారు! మీ ఖాతాను నిర్ధారించడానికి {email} ని చూడండి.",
+  "emailConfirmationResendSent": "నిర్ధారణ అభ్యర్థన అందింది. మీ ఇన్‌బాక్స్ చూడండి.",
+  "emailConfirmationResendFailed": "దాన్ని పంపలేకపోయాము. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.",
+  "emailConfirmationMessagesTitle": "సందేశాలు పంపడం మొదలుపెట్టడానికి మీ ఇమెయిల్‌ను నిర్ధారించండి",
+  "emailConfirmationMessagesBody": "మేము {email} కి పంపిన లింక్‌ను నొక్కండి. ఆ తర్వాత సందేశాలు పూర్తిగా మీవే.",
+  "emailConfirmationCheckInbox": "నిర్ధారణ లింక్ కోసం మీ ఇన్‌బాక్స్‌ను చూడండి.",
+  "emailConfirmationDone": "ఇమెయిల్ నిర్ధారించబడింది. సందేశాలు అన్‌లాక్ అయ్యాయి.",
+  "emailConfirmationLinkConfirmed": "ఇమెయిల్ నిర్ధారించబడింది.",
+  "emailConfirmationAddEmailTitle": "ఇమెయిల్‌ను జోడించండి",
+  "emailConfirmationAddEmailSubtitle": "ప్రస్తుతం మీ ఖాతాకు ఇమెయిల్ లేదు. ఎప్పుడైనా తిరిగి లోపలికి రాగలిగేలా ఒక ఇమెయిల్‌ను జోడించండి.",
+  "emailConfirmationAddEmailButton": "ఇమెయిల్ జోడించండి",
+  "emailConfirmationSendBlocked": "సందేశాలు పంపడానికి మీ ఇమెయిల్‌ను నిర్ధారించండి.",
+  "emailConfirmationCapReached": "కొత్త ఖాతాలకు గంటకు ఉన్న పరిమితి ఇదే. దాన్ని తొలగించడానికి మీ ఇమెయిల్‌ను నిర్ధారించండి."
 }

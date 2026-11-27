@@ -2,22 +2,30 @@
 // ABOUTME: Verifies form state, validation, sign-in, sign-up, and error handling
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
+import 'package:openvine/repositories/email_confirmation_repository.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/pending_verification_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/validators.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class _MockKeycastOAuth extends Mock implements KeycastOAuth {}
 
 class _MockAuthService extends Mock implements AuthService {}
+
+class _MockEmailConfirmationRepository extends Mock
+    implements EmailConfirmationRepository {}
 
 class _MockPendingVerificationService extends Mock
     implements PendingVerificationService {}
@@ -40,6 +48,7 @@ class _RecordingBlocObserver extends BlocObserver {
 
 void main() {
   setUpAll(() {
+    registerFallbackValue(const EmailConfirmation.unknown());
     registerFallbackValue(_FakeKeycastSession());
     registerFallbackValue(
       const OAuthConfig(
@@ -75,11 +84,16 @@ void main() {
       );
     });
 
-    DivineAuthCubit buildCubit({String? appVersion}) {
+    DivineAuthCubit buildCubit({
+      String? appVersion,
+      KeycastOAuth? oauthClient,
+      EmailConfirmationRepository? emailConfirmationRepository,
+    }) {
       return DivineAuthCubit(
-        oauthClient: mockOAuth,
+        oauthClient: oauthClient ?? mockOAuth,
         authService: mockAuthService,
         pendingVerificationService: mockPendingVerification,
+        emailConfirmationRepository: emailConfirmationRepository,
         appVersion: appVersion,
         validationMessages: AuthValidationMessages.englishDefaults,
       );
@@ -304,6 +318,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -315,6 +330,7 @@ void main() {
               () => mockOAuth.exchangeCode(
                 code: any(named: 'code'),
                 verifier: any(named: 'verifier'),
+                persistSession: false,
               ),
             ).thenAnswer(
               (_) async => const TokenResponse(bunkerUrl: 'bunker://test'),
@@ -345,12 +361,14 @@ void main() {
                 email: testEmail,
                 password: testPassword,
                 scope: 'policy:full',
+                instantAccess: true,
               ),
             ).called(1);
             verify(
               () => mockOAuth.exchangeCode(
                 code: testCode,
                 verifier: testVerifier,
+                persistSession: false,
               ),
             ).called(1);
             verify(
@@ -367,6 +385,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -378,6 +397,7 @@ void main() {
               () => mockOAuth.exchangeCode(
                 code: any(named: 'code'),
                 verifier: any(named: 'verifier'),
+                persistSession: false,
               ),
             ).thenAnswer(
               (_) async => const TokenResponse(bunkerUrl: 'bunker://test'),
@@ -399,6 +419,7 @@ void main() {
                 email: testEmail,
                 password: testPassword,
                 scope: 'policy:full',
+                instantAccess: true,
               ),
             ).called(1);
           },
@@ -421,6 +442,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -432,6 +454,7 @@ void main() {
               () => mockOAuth.exchangeCode(
                 code: any(named: 'code'),
                 verifier: any(named: 'verifier'),
+                persistSession: false,
               ),
             ).thenAnswer(
               (_) async => const TokenResponse(bunkerUrl: 'bunker://test'),
@@ -468,6 +491,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -511,6 +535,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -555,6 +580,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -598,6 +624,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -653,6 +680,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (HeadlessLoginResult(success: true), testVerifier),
@@ -689,6 +717,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -700,6 +729,7 @@ void main() {
               () => mockOAuth.exchangeCode(
                 code: any(named: 'code'),
                 verifier: any(named: 'verifier'),
+                persistSession: false,
               ),
             ).thenAnswer(
               (_) async => const TokenResponse(bunkerUrl: 'bunker://test'),
@@ -740,6 +770,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -751,6 +782,7 @@ void main() {
               () => mockOAuth.exchangeCode(
                 code: any(named: 'code'),
                 verifier: any(named: 'verifier'),
+                persistSession: false,
               ),
             ).thenThrow(OAuthException('Token exchange failed'));
           },
@@ -786,6 +818,7 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -797,6 +830,7 @@ void main() {
               () => mockOAuth.exchangeCode(
                 code: any(named: 'code'),
                 verifier: any(named: 'verifier'),
+                persistSession: false,
               ),
             ).thenThrow(Exception('network timeout'));
           },
@@ -825,6 +859,371 @@ void main() {
         );
       });
 
+      group('confirmation status', () {
+        late _MockEmailConfirmationRepository confirmations;
+        const pubkey =
+            'a3c1e0b6f7d2948e5c1b0a9f8e7d6c5b4a3928170f6e5d4c3b2a19087f6e5d4c';
+
+        setUp(() {
+          confirmations = _MockEmailConfirmationRepository();
+          when(
+            () => confirmations.remember(any(), any()),
+          ).thenAnswer((_) async {});
+          when(
+            () => mockOAuth.exchangeCode(
+              code: any(named: 'code'),
+              verifier: any(named: 'verifier'),
+              persistSession: false,
+            ),
+          ).thenAnswer(
+            (_) async => const TokenResponse(bunkerUrl: 'bunker://test'),
+          );
+          when(
+            () => mockAuthService.signInWithDivineOAuth(any()),
+          ).thenAnswer((_) async {});
+        });
+
+        void stubSuccessfulUnconfirmedSignIn() {
+          when(
+            () => mockOAuth.headlessLogin(
+              email: any(named: 'email'),
+              password: any(named: 'password'),
+              scope: any(named: 'scope'),
+              instantAccess: any(named: 'instantAccess'),
+            ),
+          ).thenAnswer(
+            (_) async => (
+              HeadlessLoginResult(
+                success: true,
+                code: testCode,
+                pubkey: pubkey,
+                emailVerified: false,
+              ),
+              testVerifier,
+            ),
+          );
+        }
+
+        test(
+          'records an instant sign-up as unconfirmed before signing in',
+          () async {
+            when(
+              () => mockOAuth.headlessRegister(
+                email: any(named: 'email'),
+                password: any(named: 'password'),
+                scope: any(named: 'scope'),
+                marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
+              ),
+            ).thenAnswer(
+              (_) async => (
+                HeadlessRegisterResult(
+                  success: true,
+                  pubkey: pubkey,
+                  verificationRequired: false,
+                  code: testCode,
+                  email: testEmail,
+                ),
+                testVerifier,
+              ),
+            );
+            final cubit = buildCubit(emailConfirmationRepository: confirmations)
+              ..initialize()
+              ..updateEmail(testEmail)
+              ..updatePassword(testPassword);
+
+            await cubit.submit();
+
+            verifyInOrder([
+              () => confirmations.remember(
+                pubkey,
+                const EmailConfirmation.unconfirmed(testEmail),
+              ),
+              () => mockAuthService.signInWithDivineOAuth(any()),
+            ]);
+            await cubit.close();
+          },
+        );
+
+        test('records what sign-in reports about the email', () async {
+          stubSuccessfulUnconfirmedSignIn();
+          final cubit = buildCubit(emailConfirmationRepository: confirmations)
+            ..initialize(isSignIn: true)
+            ..updateEmail(testEmail)
+            ..updatePassword(testPassword);
+
+          await cubit.submit();
+
+          verify(
+            () => mockOAuth.headlessLogin(
+              email: testEmail,
+              password: testPassword,
+              scope: any(named: 'scope'),
+              instantAccess: true,
+            ),
+          ).called(1);
+          verifyInOrder([
+            () => confirmations.remember(
+              pubkey,
+              const EmailConfirmation.unconfirmed(testEmail),
+            ),
+            () => mockAuthService.signInWithDivineOAuth(any()),
+          ]);
+          await cubit.close();
+        });
+
+        for (final isSignIn in [true, false]) {
+          test(
+            'abandoned ${isSignIn ? 'sign-in' : 'sign-up'} leaves the cache clear',
+            () async {
+              final requested = Completer<void>();
+              final reply = Completer<void>();
+              if (isSignIn) {
+                when(
+                  () => mockOAuth.headlessLogin(
+                    email: any(named: 'email'),
+                    password: any(named: 'password'),
+                    scope: any(named: 'scope'),
+                    instantAccess: any(named: 'instantAccess'),
+                  ),
+                ).thenAnswer((_) async {
+                  requested.complete();
+                  await reply.future;
+                  return (
+                    HeadlessLoginResult(
+                      success: true,
+                      code: testCode,
+                      pubkey: pubkey,
+                      emailVerified: false,
+                    ),
+                    testVerifier,
+                  );
+                });
+              } else {
+                when(
+                  () => mockOAuth.headlessRegister(
+                    email: any(named: 'email'),
+                    password: any(named: 'password'),
+                    scope: any(named: 'scope'),
+                    marketingConsent: any(named: 'marketingConsent'),
+                    instantAccess: any(named: 'instantAccess'),
+                  ),
+                ).thenAnswer((_) async {
+                  requested.complete();
+                  await reply.future;
+                  return (
+                    HeadlessRegisterResult(
+                      success: true,
+                      pubkey: pubkey,
+                      verificationRequired: false,
+                      code: testCode,
+                      email: testEmail,
+                    ),
+                    testVerifier,
+                  );
+                });
+              }
+
+              SharedPreferences.setMockInitialValues({});
+              final preferences = await SharedPreferences.getInstance();
+              final repository = EmailConfirmationRepository(
+                oauthClient: mockOAuth,
+                readAccessToken: (_) async => null,
+                preferences: preferences,
+              );
+              await repository.remember(
+                pubkey,
+                const EmailConfirmation.unconfirmed(testEmail),
+              );
+              final cubit = buildCubit(emailConfirmationRepository: repository)
+                ..initialize(isSignIn: isSignIn)
+                ..updateEmail(testEmail)
+                ..updatePassword(testPassword);
+
+              final submission = cubit.submit();
+              await requested.future;
+              await cubit.close();
+              await UserDataCleanupService(preferences).clearUserSpecificData(
+                userPubkey: pubkey,
+                forgetAccount: true,
+              );
+              expect(
+                repository.remembered(pubkey),
+                const EmailConfirmation.unknown(),
+              );
+
+              reply.complete();
+              await submission;
+              await preferences.reload();
+
+              expect(
+                preferences.containsKey(
+                  EmailConfirmationRepository.storageKey(pubkey),
+                ),
+                isFalse,
+              );
+              verifyNever(
+                () => mockOAuth.exchangeCode(
+                  code: any(named: 'code'),
+                  verifier: any(named: 'verifier'),
+                  persistSession: any(named: 'persistSession'),
+                ),
+              );
+            },
+          );
+        }
+
+        test(
+          'failed token exchange preserves the existing confirmation',
+          () async {
+            stubSuccessfulUnconfirmedSignIn();
+            const original = EmailConfirmation.confirmed(
+              'previous@example.com',
+            );
+            SharedPreferences.setMockInitialValues({});
+            final preferences = await SharedPreferences.getInstance();
+            final repository = EmailConfirmationRepository(
+              oauthClient: mockOAuth,
+              readAccessToken: (_) async => null,
+              preferences: preferences,
+            );
+            await repository.remember(pubkey, original);
+            when(
+              () => mockOAuth.exchangeCode(
+                code: testCode,
+                verifier: testVerifier,
+                persistSession: false,
+              ),
+            ).thenThrow(OAuthException('Token exchange failed'));
+            final cubit = buildCubit(emailConfirmationRepository: repository)
+              ..initialize(isSignIn: true)
+              ..updateEmail(testEmail)
+              ..updatePassword(testPassword);
+            addTearDown(cubit.close);
+
+            await cubit.submit();
+
+            await preferences.reload();
+            expect(repository.remembered(pubkey), original);
+            verifyNever(() => mockAuthService.signInWithDivineOAuth(any()));
+          },
+        );
+
+        test(
+          'does not activate the account after closing during a cache write',
+          () async {
+            stubSuccessfulUnconfirmedSignIn();
+            final writing = Completer<void>();
+            final written = Completer<void>();
+            when(() => confirmations.remember(any(), any())).thenAnswer((_) {
+              writing.complete();
+              return written.future;
+            });
+            final cubit = buildCubit(emailConfirmationRepository: confirmations)
+              ..initialize(isSignIn: true)
+              ..updateEmail(testEmail)
+              ..updatePassword(testPassword);
+
+            final submission = cubit.submit();
+            await writing.future;
+            await cubit.close();
+            written.complete();
+            await submission;
+
+            verifyNever(() => mockAuthService.signInWithDivineOAuth(any()));
+          },
+        );
+
+        test(
+          'abandoned instant signup leaves credentials empty after exchange',
+          () async {
+            final exchanging = Completer<void>();
+            final exchanged = Completer<http.Response>();
+            final storage = MemoryKeycastStorage();
+            final oauth = KeycastOAuth(
+              config: mockOAuth.config,
+              storage: storage,
+              httpClient: MockClient((request) async {
+                if (request.url.path == '/api/headless/register') {
+                  return http.Response(
+                    jsonEncode({
+                      'success': true,
+                      'pubkey': pubkey,
+                      'verification_required': false,
+                      'code': testCode,
+                    }),
+                    201,
+                  );
+                }
+                expect(request.url.path, '/api/oauth/token');
+                exchanging.complete();
+                return exchanged.future;
+              }),
+            );
+            addTearDown(oauth.close);
+            final cubit =
+                buildCubit(
+                    oauthClient: oauth,
+                    emailConfirmationRepository: confirmations,
+                  )
+                  ..initialize()
+                  ..updateEmail(testEmail)
+                  ..updatePassword(testPassword);
+
+            final submission = cubit.submit();
+            await exchanging.future;
+            await cubit.close();
+            exchanged.complete(
+              http.Response(
+                jsonEncode({
+                  'bunker_url': 'bunker://test',
+                  'access_token': 'test-access-token',
+                  'refresh_token': 'test-refresh-token',
+                  'authorization_handle': 'test-handle',
+                }),
+                200,
+              ),
+            );
+            await submission;
+
+            verifyNever(() => mockAuthService.signInWithDivineOAuth(any()));
+            expect(await oauth.getSession(), isNull);
+            expect(await oauth.getAuthorizationHandle(), isNull);
+            expect(await storage.read('keycast_refresh_token'), isNull);
+            verifyNever(() => confirmations.remember(any(), any()));
+          },
+        );
+
+        test('records nothing when the server does not report it', () async {
+          when(
+            () => mockOAuth.headlessLogin(
+              email: any(named: 'email'),
+              password: any(named: 'password'),
+              scope: any(named: 'scope'),
+              instantAccess: any(named: 'instantAccess'),
+            ),
+          ).thenAnswer(
+            (_) async => (
+              HeadlessLoginResult(
+                success: true,
+                code: testCode,
+                pubkey: pubkey,
+              ),
+              testVerifier,
+            ),
+          );
+          final cubit = buildCubit(emailConfirmationRepository: confirmations)
+            ..initialize(isSignIn: true)
+            ..updateEmail(testEmail)
+            ..updatePassword(testPassword);
+
+          await cubit.submit();
+
+          verifyNever(() => confirmations.remember(any(), any()));
+          await cubit.close();
+        });
+      });
+
       group('sign up', () {
         // Duplicate registrations are not cosmetic: each one mints a separate
         // pending row with its own token, so the first email's link dies and
@@ -840,6 +1239,7 @@ void main() {
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
                 marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer((_) => registered.future);
             when(
@@ -877,6 +1277,7 @@ void main() {
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
                 marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).called(1);
 
@@ -894,6 +1295,7 @@ void main() {
                 scope: any(named: 'scope'),
                 marketingConsent: any(named: 'marketingConsent'),
                 appVersion: any(named: 'appVersion'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -930,10 +1332,88 @@ void main() {
                 scope: any(named: 'scope'),
                 marketingConsent: true,
                 appVersion: '1.2.3',
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).called(1);
 
             await cubit.close();
+          },
+        );
+
+        blocTest<DivineAuthCubit, DivineAuthState>(
+          'signs in straight away when Keycast grants instant access',
+          setUp: () {
+            when(
+              () => mockOAuth.headlessRegister(
+                email: any(named: 'email'),
+                password: any(named: 'password'),
+                scope: any(named: 'scope'),
+                marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
+              ),
+            ).thenAnswer(
+              (_) async => (
+                HeadlessRegisterResult(
+                  success: true,
+                  pubkey: 'test-pubkey',
+                  verificationRequired: false,
+                  code: testCode,
+                  email: testEmail,
+                ),
+                testVerifier,
+              ),
+            );
+            when(
+              () => mockOAuth.exchangeCode(
+                code: any(named: 'code'),
+                verifier: any(named: 'verifier'),
+                persistSession: false,
+              ),
+            ).thenAnswer(
+              (_) async => const TokenResponse(bunkerUrl: 'bunker://test'),
+            );
+            when(
+              () => mockAuthService.signInWithDivineOAuth(any()),
+            ).thenAnswer((_) async {});
+          },
+          build: buildCubit,
+          seed: () => const DivineAuthFormState(
+            email: testEmail,
+            password: testPassword,
+          ),
+          act: (cubit) => cubit.submit(),
+          expect: () => [
+            const DivineAuthFormState(
+              email: testEmail,
+              password: testPassword,
+              isSubmitting: true,
+            ),
+            isA<DivineAuthSuccess>(),
+          ],
+          verify: (_) {
+            verify(
+              () => mockOAuth.headlessRegister(
+                email: testEmail,
+                password: testPassword,
+                scope: any(named: 'scope'),
+                marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: true,
+              ),
+            ).called(1);
+            verify(
+              () => mockOAuth.exchangeCode(
+                code: testCode,
+                verifier: testVerifier,
+                persistSession: false,
+              ),
+            ).called(1);
+            verifyNever(
+              () => mockPendingVerification.save(
+                deviceCode: any(named: 'deviceCode'),
+                verifier: any(named: 'verifier'),
+                email: any(named: 'email'),
+              ),
+            );
           },
         );
 
@@ -946,6 +1426,7 @@ void main() {
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
                 marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -1005,6 +1486,7 @@ void main() {
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
                 marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -1039,6 +1521,7 @@ void main() {
                 password: testPassword,
                 scope: 'policy:full',
                 marketingConsent: false,
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).called(1);
             verify(
@@ -1061,6 +1544,7 @@ void main() {
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
                 marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer(
               (_) async => (
@@ -1103,6 +1587,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1146,6 +1631,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1192,6 +1678,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1232,6 +1719,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1272,6 +1760,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1312,6 +1801,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1352,6 +1842,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1392,6 +1883,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1436,6 +1928,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1477,6 +1970,7 @@ void main() {
                   password: any(named: 'password'),
                   scope: any(named: 'scope'),
                   marketingConsent: any(named: 'marketingConsent'),
+                  instantAccess: any(named: 'instantAccess'),
                 ),
               ).thenAnswer(
                 (_) async => (
@@ -1518,6 +2012,7 @@ void main() {
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
                 marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenThrow(Exception('network failure'));
           },
@@ -1556,6 +2051,7 @@ void main() {
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
                 marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
               ),
             ).thenAnswer((_) => registered.future);
             when(

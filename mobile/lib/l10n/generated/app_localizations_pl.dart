@@ -15651,7 +15651,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Wyślemy link potwierdzający na nowy adres i na ten z twojego konta. E-mail zmieni się, gdy potwierdzisz z obu.';
+      'Wyślemy link na twój nowy adres e-mail. Jeśli na twoim koncie jest już adres e-mail, tam też wyślemy link.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15671,19 +15671,18 @@ class AppLocalizationsPl extends AppLocalizations {
   String get changeEmailWrongPassword => 'To nie jest twoje hasło.';
 
   @override
-  String get changeEmailSubmit => 'Wyślij linki potwierdzające';
+  String get changeEmailSubmit => 'Poproś o potwierdzenie';
 
   @override
-  String get changeEmailSentTitle => 'Dwa linki są w drodze';
+  String get changeEmailSentTitle => 'Sprawdź pocztę';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Potwierdź z $email i z adresu na twoim koncie. E-mail zmieni się, gdy zrobisz oba.';
+    return 'Otwórz link wysłany na $email. Jeśli na twoim koncie jest już adres e-mail, otwórz też link wysłany na ten adres.';
   }
 
   @override
-  String get changeEmailSentExpiry =>
-      'Linki przestają działać po 24 godzinach.';
+  String get changeEmailSentExpiry => 'Każdy link wygasa po 24 godzinach.';
 
   @override
   String get changeEmailSentDone => 'Jasne';
@@ -17499,4 +17498,66 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Pomoc';
+
+  @override
+  String get emailConfirmationTitle => 'Potwierdź swój e-mail';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Wysłaliśmy link na adres $email. Dotknij go, żeby odblokować wiadomości i mieć pewność, że zawsze wrócisz na swoje konto.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Wyślij e-mail ponownie';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Jesteś w środku! Sprawdź skrzynkę $email, żeby potwierdzić konto.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Prośba o potwierdzenie przyjęta. Sprawdź skrzynkę odbiorczą.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Nie udało się wysłać. Spróbuj ponownie za chwilę.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Potwierdź e-mail, żeby zacząć pisać wiadomości';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Dotknij linku, który wysłaliśmy na adres $email. Potem możesz pisać do woli.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox =>
+      'Poszukaj linku potwierdzającego w skrzynce odbiorczej.';
+
+  @override
+  String get emailConfirmationDone =>
+      'E-mail potwierdzony. Wiadomości odblokowane.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'E-mail potwierdzony.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Dodaj e-mail';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Twoje konto nie ma teraz adresu e-mail. Dodaj go, żeby zawsze móc wrócić na swoje konto.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Dodaj e-mail';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Potwierdź e-mail, żeby wysyłać wiadomości.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'To limit godzinowy dla nowych kont. Potwierdź e-mail, żeby go znieść.';
 }

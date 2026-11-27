@@ -15489,7 +15489,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Ще изпратим линк за потвърждение на новия адрес и на този в акаунта ти. Имейлът се сменя, след като потвърдиш и от двата.';
+      'Ще изпратим връзка на новия ти имейл. Ако вече има имейл в профила ти, ще изпратим връзка и там.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15509,19 +15509,18 @@ class AppLocalizationsBg extends AppLocalizations {
   String get changeEmailWrongPassword => 'Това не е твоята парола.';
 
   @override
-  String get changeEmailSubmit => 'Изпрати линковете за потвърждение';
+  String get changeEmailSubmit => 'Поискай потвърждение';
 
   @override
-  String get changeEmailSentTitle => 'Два линка са на път';
+  String get changeEmailSentTitle => 'Провери имейла си';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Потвърди от $email и от адреса в акаунта ти. Имейлът се сменя, щом направиш и двете.';
+    return 'Отвори връзката в $email. Ако вече има имейл в профила ти, отвори и връзката там.';
   }
 
   @override
-  String get changeEmailSentExpiry =>
-      'Линковете спират да работят след 24 часа.';
+  String get changeEmailSentExpiry => 'Всяка връзка изтича след 24 часа.';
 
   @override
   String get changeEmailSentDone => 'Ясно';
@@ -17306,4 +17305,66 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Помощ';
+
+  @override
+  String get emailConfirmationTitle => 'Потвърди имейла си';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Изпратихме връзка до $email. Натисни я, за да отключиш съобщенията и винаги да можеш да влезеш обратно в акаунта си.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Изпрати имейла отново';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Вътре си! Провери $email, за да потвърдиш акаунта си.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Поискано е потвърждение. Провери входящата си поща.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Не успяхме да го изпратим. Опитай пак след малко.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Потвърди имейла си, за да пишеш съобщения';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Натисни връзката, която изпратихме до $email. После съобщенията са изцяло твои.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox =>
+      'Потърси връзката за потвърждение във входящата си поща.';
+
+  @override
+  String get emailConfirmationDone =>
+      'Имейлът е потвърден. Съобщенията са отключени.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'Имейлът е потвърден.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Добави имейл';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'В момента акаунтът ти няма имейл. Добави такъв, за да можеш винаги да влезеш обратно.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Добави имейл';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Потвърди имейла си, за да изпращаш съобщения.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Това е лимитът на час за нови акаунти. Потвърди имейла си, за да го махнеш.';
 }

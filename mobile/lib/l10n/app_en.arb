@@ -12512,7 +12512,7 @@
   "changePasswordCurrentLabel": "Current password",
   "changePasswordWrongCurrent": "That's not your current password.",
   "changePasswordSuccess": "Password changed.",
-  "changeEmailSubtitle": "We'll email a confirmation link to your new address and to the one on your account. Your email changes once you confirm from both.",
+  "changeEmailSubtitle": "We'll send a link to your new address. If there's already an email on your account, we'll send a link there too.",
   "changeEmailCurrentAddress": "On your account: {email}",
   "@changeEmailCurrentAddress": {
     "description": "Shows the email address currently on the account.",
@@ -12526,9 +12526,9 @@
   "changeEmailPasswordLabel": "Your password",
   "changeEmailSameAsCurrent": "That's already your email address.",
   "changeEmailWrongPassword": "That's not your password.",
-  "changeEmailSubmit": "Send confirmation links",
-  "changeEmailSentTitle": "Two links are on their way",
-  "changeEmailSentMessage": "Confirm from {email} and from the address on your account. Your email switches once both are done.",
+  "changeEmailSubmit": "Request confirmation",
+  "changeEmailSentTitle": "Check your email",
+  "changeEmailSentMessage": "Open the link at {email}. If there's already an email on your account, open the link there too.",
   "@changeEmailSentMessage": {
     "description": "Confirmation copy after an email change was requested; {email} is the new address.",
     "placeholders": {
@@ -12537,7 +12537,7 @@
       }
     }
   },
-  "changeEmailSentExpiry": "The links stop working after 24 hours.",
+  "changeEmailSentExpiry": "Each link expires after 24 hours.",
   "changeEmailSentDone": "Got it",
   "searchUserVideoCount": "{count, plural, =1{{formattedCount} video} other{{formattedCount} videos}}",
   "@searchUserVideoCount": {
@@ -14592,5 +14592,87 @@
   "menuBarHelp": "Help",
   "@menuBarHelp": {
     "description": "macOS menu bar: title of the Help menu, as in other Mac apps."
+  },
+  "emailConfirmationTitle": "Confirm your email",
+  "@emailConfirmationTitle": {
+    "description": "Label on the own-profile pill and title of the prompt asking an account that signed up without confirming its email to click the confirmation link."
+  },
+  "emailConfirmationProfileSubtitle": "We sent a link to {email}. Tap it to unlock DMs and make sure you can always get back into your account.",
+  "@emailConfirmationProfileSubtitle": {
+    "description": "Body of the own-profile prompt for an account whose email is not confirmed yet.",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "you@example.com"
+      }
+    }
+  },
+  "emailConfirmationResendButton": "Resend email",
+  "@emailConfirmationResendButton": {
+    "description": "Button that asks Divine to send the email confirmation link again."
+  },
+  "emailConfirmationNotice": "You're in! Check {email} to confirm your account.",
+  "@emailConfirmationNotice": {
+    "description": "Pop-up shown after signing up, and on later launches, while the account's email is not confirmed yet.",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "you@example.com"
+      }
+    }
+  },
+  "emailConfirmationResendSent": "Confirmation requested. Check your inbox.",
+  "@emailConfirmationResendSent": {
+    "description": "Pop-up after a new email confirmation link was requested."
+  },
+  "emailConfirmationResendFailed": "Couldn't send that one. Try again in a bit.",
+  "@emailConfirmationResendFailed": {
+    "description": "Pop-up when requesting a new email confirmation link failed."
+  },
+  "emailConfirmationMessagesTitle": "Confirm your email to start messaging",
+  "@emailConfirmationMessagesTitle": {
+    "description": "Title shown in place of direct messages while the account's email is not confirmed."
+  },
+  "emailConfirmationMessagesBody": "Tap the link we sent to {email}. Then DMs are all yours.",
+  "@emailConfirmationMessagesBody": {
+    "description": "Body shown in place of direct messages while the account's email is not confirmed.",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "you@example.com"
+      }
+    }
+  },
+  "emailConfirmationCheckInbox": "Check your inbox for the confirmation link.",
+  "@emailConfirmationCheckInbox": {
+    "description": "Instructions when an account must confirm its email but the app has not learned its address yet."
+  },
+  "emailConfirmationDone": "Email confirmed. DMs are unlocked.",
+  "@emailConfirmationDone": {
+    "description": "Pop-up when a signed-in account opens its email confirmation link in the app."
+  },
+  "emailConfirmationLinkConfirmed": "Email confirmed.",
+  "@emailConfirmationLinkConfirmed": {
+    "description": "Pop-up after a confirmation link opened in the app, when the signed-in account is not known to be the one it confirmed."
+  },
+  "emailConfirmationAddEmailTitle": "Add an email",
+  "@emailConfirmationAddEmailTitle": {
+    "description": "Own-profile pill and prompt title for an email/password account that no longer has an email (another person confirmed the address it had claimed)."
+  },
+  "emailConfirmationAddEmailSubtitle": "Your account has no email right now. Add one so you can always get back in.",
+  "@emailConfirmationAddEmailSubtitle": {
+    "description": "Body of the own-profile prompt for an email/password account with no email."
+  },
+  "emailConfirmationAddEmailButton": "Add email",
+  "@emailConfirmationAddEmailButton": {
+    "description": "Button opening the change-email screen from the add-an-email prompt."
+  },
+  "emailConfirmationSendBlocked": "Confirm your email to send messages.",
+  "@emailConfirmationSendBlocked": {
+    "description": "Pop-up when an account that has not confirmed its email tries to send a direct message, for example from the share sheet."
+  },
+  "emailConfirmationCapReached": "That's the hourly limit for new accounts. Confirm your email to lift it.",
+  "@emailConfirmationCapReached": {
+    "description": "Pop-up when an account that has not confirmed its email hits the hourly limit on posts, comments or reports."
   }
 }

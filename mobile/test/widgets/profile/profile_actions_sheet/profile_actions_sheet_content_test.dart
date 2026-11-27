@@ -3,15 +3,19 @@
 
 import 'dart:async';
 
+import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iap_repository/iap_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/email_confirmation/email_confirmation_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/supporter_providers.dart';
+import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/screens/auth/secure_account_screen.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
@@ -22,12 +26,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helpers/go_router.dart';
 
+class _MockEmailConfirmationCubit extends MockCubit<EmailConfirmationState>
+    implements EmailConfirmationCubit {}
+
 void main() {
   group(ProfileActionsSheetContent, () {
     Widget buildApp({
       required List<ProfileActionType> actions,
       void Function(ProfileActionType action)? onMaybeLater,
       MockGoRouter? goRouter,
+      EmailConfirmationCubit? emailConfirmationCubit,
     }) {
       // The button sits in a nested navigator, like a tab of the app shell,
       // so a sheet shown on the nearest navigator would stay inside it.
@@ -55,8 +63,14 @@ void main() {
           ),
         ),
       );
-      if (goRouter == null) return app;
-      return MockGoRouterProvider(goRouter: goRouter, child: app);
+      final scoped = emailConfirmationCubit == null
+          ? app
+          : BlocProvider<EmailConfirmationCubit>.value(
+              value: emailConfirmationCubit,
+              child: app,
+            );
+      if (goRouter == null) return scoped;
+      return MockGoRouterProvider(goRouter: goRouter, child: scoped);
     }
 
     group('presentation', () {
@@ -142,6 +156,12 @@ void main() {
           primaryLabel: l10n.profileCompletePrimaryButton,
           route: ProfileSetupScreen.setupPath,
         ),
+        (
+          action: ProfileActionType.addEmail,
+          title: l10n.emailConfirmationAddEmailTitle,
+          primaryLabel: l10n.emailConfirmationAddEmailButton,
+          route: const ChangeEmailRouteData().location,
+        ),
       ];
 
       for (final destination in destinations) {
@@ -200,6 +220,177 @@ void main() {
         // Sheet should be dismissed
         expect(find.text('Secure Your Account'), findsNothing);
         expect(dismissed, [ProfileActionType.secureAccount]);
+      });
+    });
+
+    group('confirmEmail', () {
+      late _MockEmailConfirmationCubit emailConfirmationCubit;
+      const account =
+          'a3c1e0b6f7d2948e5c1b0a9f8e7d6c5b4a3928170f6e5d4c3b2a19087f6e5d4c';
+      const email = 'you@example.com';
+
+      setUp(() {
+        emailConfirmationCubit = _MockEmailConfirmationCubit();
+        when(() => emailConfirmationCubit.state).thenReturn(
+          const EmailConfirmationState(
+            account: account,
+            status: EmailConfirmationStatus.unconfirmed,
+            email: email,
+          ),
+        );
+        when(
+          () => emailConfirmationCubit.resend(account: account),
+        ).thenAnswer((_) async {});
+      });
+
+      testWidgets('steps on to the next action once the email is confirmed', (
+        tester,
+      ) async {
+        final states = StreamController<EmailConfirmationState>();
+        addTearDown(states.close);
+        const unconfirmed = EmailConfirmationState(
+          account: account,
+          status: EmailConfirmationStatus.unconfirmed,
+          email: email,
+        );
+        whenListen(
+          emailConfirmationCubit,
+          states.stream,
+          initialState: unconfirmed,
+        );
+        await tester.pumpWidget(
+          buildApp(
+            actions: [
+              ProfileActionType.confirmEmail,
+              ProfileActionType.completeProfile,
+            ],
+            emailConfirmationCubit: emailConfirmationCubit,
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.emailConfirmationTitle), findsOneWidget);
+
+        states.add(
+          const EmailConfirmationState(
+            account: account,
+            status: EmailConfirmationStatus.confirmed,
+            email: email,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.emailConfirmationTitle), findsNothing);
+        expect(find.text(l10n.profileCompleteYourProfile), findsOneWidget);
+      });
+
+      testWidgets('names the address waiting for confirmation', (tester) async {
+        await tester.pumpWidget(
+          buildApp(
+            actions: [ProfileActionType.confirmEmail],
+            emailConfirmationCubit: emailConfirmationCubit,
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.emailConfirmationTitle), findsOneWidget);
+        expect(
+          find.text(l10n.emailConfirmationProfileSubtitle(email)),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('gives instructions when the address is unknown', (
+        tester,
+      ) async {
+        when(() => emailConfirmationCubit.state).thenReturn(
+          const EmailConfirmationState(
+            account: account,
+            status: EmailConfirmationStatus.unconfirmed,
+          ),
+        );
+
+        await tester.pumpWidget(
+          buildApp(
+            actions: [ProfileActionType.confirmEmail],
+            emailConfirmationCubit: emailConfirmationCubit,
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.emailConfirmationCheckInbox), findsOneWidget);
+        expect(
+          find.text(l10n.emailConfirmationProfileSubtitle('')),
+          findsNothing,
+        );
+        expect(find.text(l10n.emailConfirmationResendButton), findsOneWidget);
+      });
+
+      testWidgets('shows resend feedback inside the open sheet', (
+        tester,
+      ) async {
+        final states = StreamController<EmailConfirmationState>();
+        addTearDown(states.close);
+        final initial = emailConfirmationCubit.state;
+        whenListen(
+          emailConfirmationCubit,
+          states.stream,
+          initialState: initial,
+        );
+        await tester.pumpWidget(
+          buildApp(
+            actions: [ProfileActionType.confirmEmail],
+            emailConfirmationCubit: emailConfirmationCubit,
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.emailConfirmationResendButton));
+        states.add(
+          initial.copyWith(resendStatus: EmailConfirmationResendStatus.failed),
+        );
+        await tester.pumpAndSettle();
+
+        verify(() => emailConfirmationCubit.resend(account: account)).called(1);
+        expect(find.text(l10n.emailConfirmationTitle), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(ProfileActionsSheetContent),
+            matching: find.text(l10n.emailConfirmationResendFailed),
+          ),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text(l10n.emailConfirmationResendButton));
+        states.add(
+          initial.copyWith(resendStatus: EmailConfirmationResendStatus.sent),
+        );
+        await tester.pumpAndSettle();
+
+        verify(() => emailConfirmationCubit.resend(account: account)).called(1);
+        expect(find.text(l10n.emailConfirmationResendFailed), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(ProfileActionsSheetContent),
+            matching: find.text(l10n.emailConfirmationResendSent),
+          ),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('Maybe Later'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.emailConfirmationTitle), findsOneWidget);
+        expect(find.text(l10n.emailConfirmationResendSent), findsNothing);
       });
     });
 

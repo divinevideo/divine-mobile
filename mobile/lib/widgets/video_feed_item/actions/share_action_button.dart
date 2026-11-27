@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
+import 'package:openvine/blocs/email_confirmation/email_confirmation_cubit.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/blocs/share_delivery/share_delivery_cubit.dart';
 import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
@@ -38,6 +39,7 @@ import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/utils/watermark_text_resolver.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
+import 'package:openvine/widgets/email_confirmation/email_confirmation_share_prompt.dart';
 import 'package:openvine/widgets/find_people_sheet.dart';
 import 'package:openvine/widgets/save_original_progress_sheet.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -547,6 +549,10 @@ class _UnifiedShareSheetView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final emailConfirmationRequired = context
+        .select<EmailConfirmationCubit?, bool>(
+          (cubit) => cubit?.state.isUnconfirmed ?? false,
+        );
     final isDeletePending =
         isOwnContent &&
         context.select<OwnerVideoActionsCubit, bool>((cubit) {
@@ -597,7 +603,8 @@ class _UnifiedShareSheetView extends StatelessWidget {
                       disabledPubkeys: state.disabledPubkeys,
                       isSending: state.isSending,
                       onSend:
-                          state.attemptedRecipients.isEmpty &&
+                          !emailConfirmationRequired &&
+                              state.attemptedRecipients.isEmpty &&
                               messageController.text.isEmpty
                           ? (user) => bloc.add(
                               ShareSheetSendRequested(only: user),
@@ -671,7 +678,12 @@ class _UnifiedShareSheetView extends StatelessWidget {
                           ],
                         ),
                       ),
-                    if (state.attemptedRecipients.isNotEmpty)
+                    if (emailConfirmationRequired)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: EmailConfirmationSharePrompt(),
+                      )
+                    else if (state.attemptedRecipients.isNotEmpty)
                       _MessageInput(
                         controller: messageController,
                         isSending: state.isSending,

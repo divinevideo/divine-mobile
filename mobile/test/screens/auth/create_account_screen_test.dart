@@ -362,6 +362,7 @@ void main() {
               scope: any(named: 'scope'),
               marketingConsent: any(named: 'marketingConsent'),
               appVersion: any(named: 'appVersion'),
+              instantAccess: any(named: 'instantAccess'),
             ),
           ).thenAnswer(
             (_) async => (
@@ -476,6 +477,7 @@ void main() {
               scope: any(named: 'scope'),
               marketingConsent: any(named: 'marketingConsent'),
               appVersion: any(named: 'appVersion'),
+              instantAccess: any(named: 'instantAccess'),
             ),
           ).thenAnswer(
             (_) async => (
@@ -577,6 +579,7 @@ void main() {
             scope: any(named: 'scope'),
             marketingConsent: any(named: 'marketingConsent'),
             appVersion: any(named: 'appVersion'),
+            instantAccess: any(named: 'instantAccess'),
           ),
         ).thenAnswer(
           (_) async => (
@@ -629,6 +632,7 @@ void main() {
             scope: any(named: 'scope'),
             marketingConsent: any(named: 'marketingConsent'),
             appVersion: any(named: 'appVersion'),
+            instantAccess: any(named: 'instantAccess'),
           ),
         );
       });
@@ -673,6 +677,7 @@ void main() {
             scope: any(named: 'scope'),
             marketingConsent: any(named: 'marketingConsent'),
             appVersion: any(named: 'appVersion'),
+            instantAccess: any(named: 'instantAccess'),
           ),
         );
       });
@@ -686,6 +691,7 @@ void main() {
             scope: any(named: 'scope'),
             marketingConsent: any(named: 'marketingConsent'),
             appVersion: any(named: 'appVersion'),
+            instantAccess: any(named: 'instantAccess'),
           ),
         ).thenAnswer(
           (_) async => (
@@ -742,6 +748,7 @@ void main() {
             scope: 'policy:full',
             marketingConsent: false,
             appVersion: 'test',
+            instantAccess: true,
           ),
         ).called(1);
       });
@@ -760,6 +767,7 @@ void main() {
             scope: any(named: 'scope'),
             marketingConsent: any(named: 'marketingConsent'),
             appVersion: any(named: 'appVersion'),
+            instantAccess: any(named: 'instantAccess'),
           ),
         ).thenAnswer((_) => registered.future);
 
@@ -813,6 +821,7 @@ void main() {
             scope: 'policy:full',
             marketingConsent: false,
             appVersion: 'test',
+            instantAccess: true,
           ),
         ).called(1);
 

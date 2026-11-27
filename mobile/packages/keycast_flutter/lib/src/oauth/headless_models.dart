@@ -18,17 +18,23 @@ class HeadlessRegisterResult {
     required this.pubkey,
     required this.verificationRequired,
     this.deviceCode,
+    this.code,
     this.email,
     this.errorCode,
     this.errorDescription,
   });
 
   factory HeadlessRegisterResult.fromJson(Map<String, dynamic> json) {
+    final success = json['success'] as bool? ?? false;
+    final verificationRequired = json['verification_required'] as bool? ?? true;
     return HeadlessRegisterResult(
-      success: json['success'] as bool? ?? false,
+      success: success,
       pubkey: json['pubkey'] as String? ?? '',
-      verificationRequired: json['verification_required'] as bool? ?? true,
+      verificationRequired: verificationRequired,
       deviceCode: json['device_code'] as String?,
+      // Only an instant sign-up carries an authorization code; an error body
+      // can reuse `code` for its machine-readable failure.
+      code: success && !verificationRequired ? json['code'] as String? : null,
       email: json['email'] as String?,
       errorCode: json['error'] as String?,
       errorDescription:
@@ -49,7 +55,15 @@ class HeadlessRegisterResult {
   final String pubkey;
   final bool verificationRequired;
   final String? deviceCode;
+
+  /// Authorization code for an account Keycast created without waiting for
+  /// email confirmation. Exchange it with `exchangeCode` to sign in.
+  final String? code;
   final String? email;
+
+  /// Whether the account can be signed into now, before its email is
+  /// confirmed.
+  bool get isInstantAccess => success && !verificationRequired && code != null;
 
   /// Machine-readable server or client-generated failure code.
   final String? errorCode;
@@ -111,6 +125,7 @@ class HeadlessLoginResult {
     this.code,
     this.pubkey,
     this.state,
+    this.emailVerified,
     this.errorCode,
     this.errorDescription,
   });
@@ -125,6 +140,7 @@ class HeadlessLoginResult {
       code: success ? rawCode : null,
       pubkey: json['pubkey'] as String?,
       state: json['state'] as String?,
+      emailVerified: json['email_verified'] as bool?,
       errorCode: success ? null : rawCode,
       errorDescription:
           json['error'] as String? ?? json['error_description'] as String?,
@@ -144,6 +160,10 @@ class HeadlessLoginResult {
   final String? code;
   final String? pubkey;
   final String? state;
+
+  /// Whether the account's email is confirmed. `null` from servers that do
+  /// not report it.
+  final bool? emailVerified;
 
   /// Machine-readable failure code (e.g. `INVALID_CREDENTIALS`), failure only.
   ///

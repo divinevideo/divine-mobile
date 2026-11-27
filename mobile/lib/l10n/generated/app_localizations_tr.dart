@@ -15268,7 +15268,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Yeni adresine ve hesabındaki adrese birer onay bağlantısı yolluyoruz. E-postan ikisini de onaylayınca değişir.';
+      'Yeni e-posta adresine bir bağlantı göndereceğiz. Hesabında zaten bir e-posta adresi varsa oraya da bağlantı göndereceğiz.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15288,19 +15288,19 @@ class AppLocalizationsTr extends AppLocalizations {
   String get changeEmailWrongPassword => 'Bu senin şifren değil.';
 
   @override
-  String get changeEmailSubmit => 'Onay bağlantılarını gönder';
+  String get changeEmailSubmit => 'Onay iste';
 
   @override
-  String get changeEmailSentTitle => 'İki bağlantı yolda';
+  String get changeEmailSentTitle => 'E-postanı kontrol et';
 
   @override
   String changeEmailSentMessage(String email) {
-    return '$email adresinden ve hesabındaki adresten onayla. İkisi de bitince e-postan değişir.';
+    return '$email adresine gelen bağlantıyı aç. Hesabında zaten bir e-posta adresi varsa oraya gelen bağlantıyı da aç.';
   }
 
   @override
   String get changeEmailSentExpiry =>
-      'Bağlantılar 24 saat sonra geçersiz olur.';
+      'Her bağlantının süresi 24 saat sonra dolar.';
 
   @override
   String get changeEmailSentDone => 'Anladım';
@@ -17073,4 +17073,66 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Yardım';
+
+  @override
+  String get emailConfirmationTitle => 'E-postanı doğrula';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return '$email adresine bir bağlantı gönderdik. Mesajların kilidini açmak ve hesabına her zaman geri dönebilmek için bağlantıya dokun.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'E-postayı Tekrar Gönder';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'İçeridesin! Hesabını doğrulamak için $email adresini kontrol et.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Onay istendi. Gelen kutunu kontrol et.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Gönderemedik. Biraz sonra tekrar dene.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Mesajlaşmaya başlamak için e-postanı doğrula';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return '$email adresine gönderdiğimiz bağlantıya dokun. Sonra mesajlar tamamen senin.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox =>
+      'Onay bağlantısı için gelen kutuna bak.';
+
+  @override
+  String get emailConfirmationDone =>
+      'E-posta doğrulandı. Mesajların kilidi açıldı.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'E-posta doğrulandı.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'E-posta ekle';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Hesabında şu anda e-posta yok. Her zaman geri dönebilmek için bir tane ekle.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'E-posta ekle';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Mesaj göndermek için e-postanı doğrula.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Yeni hesaplar için saatlik sınır bu kadar. Sınırı kaldırmak için e-postanı doğrula.';
 }

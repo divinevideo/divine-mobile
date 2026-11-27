@@ -14621,7 +14621,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      '新しいアドレスと、アカウントに登録中のアドレスの両方に確認リンクを送ります。両方で確認するとメールアドレスが変わります。';
+      '新しいメールアドレスにリンクを送ります。アカウントにすでにメールアドレスが登録されている場合は、そのアドレスにもリンクを送ります。';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -14641,18 +14641,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String get changeEmailWrongPassword => 'パスワードが違います。';
 
   @override
-  String get changeEmailSubmit => '確認リンクを送る';
+  String get changeEmailSubmit => '確認をリクエスト';
 
   @override
-  String get changeEmailSentTitle => '確認リンクを2通送りました';
+  String get changeEmailSentTitle => 'メールをご確認ください';
 
   @override
   String changeEmailSentMessage(String email) {
-    return '$email と、アカウントに登録中のアドレスの両方で確認してください。両方が終わるとメールアドレスが切り替わります。';
+    return '$email に届いたリンクを開いてください。アカウントにすでにメールアドレスが登録されている場合は、そのアドレスに届いたリンクも開いてください。';
   }
 
   @override
-  String get changeEmailSentExpiry => 'リンクは24時間で使えなくなります。';
+  String get changeEmailSentExpiry => '各リンクは24時間で無効になります。';
 
   @override
   String get changeEmailSentDone => 'わかりました';
@@ -16362,4 +16362,60 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'ヘルプ';
+
+  @override
+  String get emailConfirmationTitle => 'メールアドレスの認証';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return '$email にリンクを送りました。タップするとメッセージが使えるようになり、いつでもアカウントに戻れるようになります。';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'メールを再送信';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return '登録できました！$email に届いたメールで、アカウントを認証してください。';
+  }
+
+  @override
+  String get emailConfirmationResendSent => '確認リクエストを受け付けました。受信トレイをご確認ください。';
+
+  @override
+  String get emailConfirmationResendFailed => '送信できませんでした。少し時間をおいてもう一度お試しください。';
+
+  @override
+  String get emailConfirmationMessagesTitle => 'メールアドレスを認証して、メッセージを始めましょう';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return '$email に送ったリンクをタップしてください。それでメッセージが使えるようになります。';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox => '受信トレイで確認リンクを探してください。';
+
+  @override
+  String get emailConfirmationDone => 'メールアドレスの認証が完了しました。メッセージが使えるようになりました。';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'メールアドレスの認証が完了しました。';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'メールアドレスを追加';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      '現在、アカウントにメールアドレスが登録されていません。いつでもアカウントに戻れるよう、メールアドレスを追加してください。';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'メールアドレスを追加';
+
+  @override
+  String get emailConfirmationSendBlocked => 'メッセージを送信するには、メールアドレスを認証してください。';
+
+  @override
+  String get emailConfirmationCapReached =>
+      '新しいアカウントの1時間あたりの上限に達しました。メールアドレスを認証すると、上限が解除されます。';
 }

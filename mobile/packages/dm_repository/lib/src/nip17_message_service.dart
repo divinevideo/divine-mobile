@@ -192,7 +192,7 @@ class NIP17MessageService {
       );
       if (policyDecision == DmSendPolicyDecision.temporarilyBlocked) {
         return const NIP17SendResult.failure(
-          'temporarily blocked: protected-minor status unresolved',
+          'temporarily blocked by send policy',
         );
       }
       return NIP17SendResult.blocked(

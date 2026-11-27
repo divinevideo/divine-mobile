@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/blocs/drafts_library/draft_dm_share_cubit.dart';
 import 'package:openvine/blocs/drafts_library/drafts_library_bloc.dart';
+import 'package:openvine/blocs/email_confirmation/email_confirmation_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/draft_transfer_provider.dart';
@@ -19,6 +20,8 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/screens/inbox/new_message_sheet.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
+import 'package:openvine/widgets/email_confirmation/email_confirmation_gate.dart';
+import 'package:openvine/widgets/email_confirmation/email_confirmation_share_prompt.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Selects one recipient, confirms what is shared, then opens the chat.
@@ -27,6 +30,8 @@ Future<void> showDraftDmShare(
   WidgetRef ref,
   String draftId,
 ) async {
+  if (!ensureEmailConfirmedToMessage(context)) return;
+
   final auth = ref.read(authServiceProvider);
   final owner = auth.currentPublicKeyHex;
   if (owner == null || ref.read(profileRepositoryProvider) == null) {
@@ -75,7 +80,7 @@ Future<void> showDraftDmShare(
       scrollable: false,
       enableDrag: false,
       title: Text(context.l10n.libraryDraftShareConfirm(name)),
-      body: _DraftDmShareConfirmation(draftId: draftId),
+      body: DraftDmShareConfirmation(draftId: draftId),
       contentWrapper: (sheetContext, child) {
         final route = ModalRoute.of(sheetContext);
         return BlocProvider(
@@ -116,14 +121,20 @@ Future<void> showDraftDmShare(
   }
 }
 
-class _DraftDmShareConfirmation extends StatelessWidget {
-  const _DraftDmShareConfirmation({required this.draftId});
+@visibleForTesting
+class DraftDmShareConfirmation extends StatelessWidget {
+  const DraftDmShareConfirmation({required this.draftId, super.key});
 
   final String draftId;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final emailConfirmationRequired = context
+        .select<EmailConfirmationCubit?, bool>(
+          (cubit) => cubit?.state.isUnconfirmed ?? false,
+        );
+
     return BlocConsumer<DraftDmShareCubit, DraftDmShareState>(
       listener: (context, state) {
         if (state == DraftDmShareState.queued ||
@@ -141,7 +152,8 @@ class _DraftDmShareConfirmation extends StatelessWidget {
         final error = switch (state) {
           DraftDmShareState.failed => l10n.libraryDraftShareFailed,
           DraftDmShareState.tooLarge => l10n.libraryDraftShareTooLarge,
-          DraftDmShareState.blocked => l10n.dmSendBlockedMessage,
+          DraftDmShareState.blocked when !emailConfirmationRequired =>
+            l10n.dmSendBlockedMessage,
           DraftDmShareState.recipientBlockedByUs => l10n.dmBlockedThreadTitle,
           DraftDmShareState.retiredRecipient =>
             l10n.dmSendBlockedRetiredMessage,
@@ -158,6 +170,10 @@ class _DraftDmShareConfirmation extends StatelessWidget {
                   color: context.vineColors.secondaryText,
                 ),
               ),
+              if (emailConfirmationRequired) ...[
+                const SizedBox(height: 12),
+                const EmailConfirmationSharePrompt(),
+              ],
               if (error != null) ...[
                 const SizedBox(height: 12),
                 Semantics(
@@ -182,7 +198,7 @@ class _DraftDmShareConfirmation extends StatelessWidget {
                     ? l10n.dmPendingVideoPreparing
                     : l10n.libraryDraftActionShare,
                 isLoading: preparing,
-                onPressed: preparing
+                onPressed: preparing || emailConfirmationRequired
                     ? null
                     : () => unawaited(
                         context.read<DraftDmShareCubit>().send(draftId),

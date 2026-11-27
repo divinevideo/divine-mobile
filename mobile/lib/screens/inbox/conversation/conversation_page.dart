@@ -22,6 +22,7 @@ import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_view.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/email_confirmation/email_confirmation_gate.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Conversation detail page (single DM thread).
@@ -110,10 +111,13 @@ class ConversationPage extends ConsumerWidget {
         );
         return cubit;
       },
-      child: _ConversationPageContent(
-        conversationId: conversationId,
-        subject: subject,
-        messageId: messageId,
+      child: EmailConfirmationGate(
+        standalone: true,
+        child: _ConversationPageContent(
+          conversationId: conversationId,
+          subject: subject,
+          messageId: messageId,
+        ),
       ),
     );
   }

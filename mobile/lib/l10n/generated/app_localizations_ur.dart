@@ -15339,7 +15339,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'ہم آپ کے نئے پتے اور اکاؤنٹ والے پتے، دونوں پر تصدیقی لنک بھیجیں گے۔ دونوں سے تصدیق کے بعد آپ کی ای میل بدل جائے گی۔';
+      'ہم آپ کے نئے ای میل پتے پر ایک لنک بھیجیں گے۔ اگر آپ کے اکاؤنٹ میں پہلے سے کوئی ای میل پتہ ہے تو ہم وہاں بھی ایک لنک بھیجیں گے۔';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15359,19 +15359,19 @@ class AppLocalizationsUr extends AppLocalizations {
   String get changeEmailWrongPassword => 'یہ آپ کا پاس ورڈ نہیں ہے۔';
 
   @override
-  String get changeEmailSubmit => 'تصدیقی لنک بھیجیں';
+  String get changeEmailSubmit => 'تصدیق کی درخواست کریں';
 
   @override
-  String get changeEmailSentTitle => 'دو لنک بھیج دیے گئے ہیں';
+  String get changeEmailSentTitle => 'اپنی ای میل دیکھیں';
 
   @override
   String changeEmailSentMessage(String email) {
-    return '$email سے اور اپنے اکاؤنٹ والے پتے سے تصدیق کریں۔ دونوں مکمل ہونے پر ای میل بدل جائے گی۔';
+    return '$email پر موصول ہونے والا لنک کھولیں۔ اگر آپ کے اکاؤنٹ میں پہلے سے کوئی ای میل پتہ ہے تو وہاں موصول ہونے والا لنک بھی کھولیں۔';
   }
 
   @override
   String get changeEmailSentExpiry =>
-      'لنک 24 گھنٹے بعد کام کرنا بند کر دیتے ہیں۔';
+      'ہر لنک کی میعاد 24 گھنٹے بعد ختم ہو جاتی ہے۔';
 
   @override
   String get changeEmailSentDone => 'سمجھ گیا';
@@ -17150,4 +17150,66 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'مدد';
+
+  @override
+  String get emailConfirmationTitle => 'اپنی ای میل کی تصدیق کریں';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'ہم نے $email پر ایک لنک بھیجا ہے۔ پیغامات کھولنے اور ہمیشہ اپنے اکاؤنٹ میں واپس آ سکنے کے لیے یہ لنک کھولیں۔';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'ای میل دوبارہ بھیجیں';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'خوش آمدید! اپنے اکاؤنٹ کی تصدیق کے لیے $email چیک کریں۔';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'تصدیق کی درخواست موصول ہوئی۔ اپنا ان باکس دیکھیں۔';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'یہ نہیں بھیجی جا سکی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'پیغامات شروع کرنے کے لیے اپنی ای میل کی تصدیق کریں';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'ہم نے $email پر جو لنک بھیجا ہے اسے کھولیں۔ پھر پیغامات پوری طرح آپ کے ہیں۔';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox =>
+      'تصدیقی لنک کے لیے اپنا ان باکس دیکھیں۔';
+
+  @override
+  String get emailConfirmationDone =>
+      'ای میل کی تصدیق ہو گئی۔ پیغامات کھل گئے ہیں۔';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'ای میل کی تصدیق ہو گئی۔';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'ای میل شامل کریں';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'آپ کے اکاؤنٹ میں ابھی کوئی ای میل نہیں ہے۔ ایک ای میل شامل کریں تاکہ آپ ہمیشہ واپس آ سکیں۔';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'ای میل شامل کریں';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'پیغامات بھیجنے کے لیے اپنی ای میل کی تصدیق کریں۔';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'نئے اکاؤنٹس کے لیے فی گھنٹہ کی حد یہی ہے۔ یہ حد ختم کرنے کے لیے اپنی ای میل کی تصدیق کریں۔';
 }

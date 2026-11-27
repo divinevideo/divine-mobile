@@ -15357,7 +15357,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Vi mejlar en bekräftelselänk till din nya adress och till den på kontot. E-postadressen byts när du bekräftat från båda.';
+      'Vi skickar en länk till din nya adress. Om du redan har en e-postadress på kontot skickar vi en länk dit också.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15377,19 +15377,19 @@ class AppLocalizationsSv extends AppLocalizations {
   String get changeEmailWrongPassword => 'Det är inte ditt lösenord.';
 
   @override
-  String get changeEmailSubmit => 'Skicka bekräftelselänkar';
+  String get changeEmailSubmit => 'Begär bekräftelse';
 
   @override
-  String get changeEmailSentTitle => 'Två länkar är på väg';
+  String get changeEmailSentTitle => 'Kolla din e-post';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Bekräfta från $email och från adressen på ditt konto. E-posten byts när båda är klara.';
+    return 'Öppna länken som kom till $email. Om du redan har en e-postadress på kontot, öppna länken där också.';
   }
 
   @override
   String get changeEmailSentExpiry =>
-      'Länkarna slutar fungera efter 24 timmar.';
+      'Varje länk upphör att gälla efter 24 timmar.';
 
   @override
   String get changeEmailSentDone => 'Okej';
@@ -17170,4 +17170,66 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Hjälp';
+
+  @override
+  String get emailConfirmationTitle => 'Bekräfta din e-post';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Vi har skickat en länk till $email. Tryck på den för att låsa upp meddelanden och se till att du alltid kan ta dig tillbaka in på ditt konto.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Skicka mejlet igen';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Du är inne! Kolla $email för att bekräfta ditt konto.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Bekräftelse begärd. Kolla din inkorg.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Det gick inte att skicka. Försök igen om en stund.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Bekräfta din e-post för att börja skicka meddelanden';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Tryck på länken vi skickade till $email. Sen är meddelandena dina.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox =>
+      'Leta efter bekräftelselänken i din inkorg.';
+
+  @override
+  String get emailConfirmationDone =>
+      'E-post bekräftad. Meddelanden är upplåsta.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'E-post bekräftad.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Lägg till e-post';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Ditt konto har ingen e-post just nu. Lägg till en e-postadress så att du alltid kan ta dig tillbaka in.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Lägg till e-post';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Bekräfta din e-post för att skicka meddelanden.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Det är timgränsen för nya konton. Bekräfta din e-post för att ta bort den.';
 }

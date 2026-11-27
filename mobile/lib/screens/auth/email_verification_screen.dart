@@ -15,6 +15,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/email_confirmation/email_confirmation_cubit.dart';
 import 'package:openvine/blocs/email_verification/email_verification_cubit.dart';
 import 'package:openvine/l10n/email_verification_error_l10n.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -436,11 +437,56 @@ class _EmailVerificationScreenState
     }
   }
 
+  /// Says what the link did once the signed-in account has been re-checked.
+  ///
+  /// The link names no account, and it may have confirmed someone else's
+  /// address, so announce an unlock only if the same account moves from
+  /// unconfirmed to confirmed.
+  static Future<void> _announceLinkConfirmation(
+    EmailConfirmationCubit? confirmation,
+    ScaffoldMessengerState messenger,
+    AppLocalizations l10n,
+  ) async {
+    final before = confirmation?.state;
+    await confirmation?.refresh();
+    if (!messenger.mounted) return;
+    final after = confirmation?.state;
+    final unlocked =
+        before?.isUnconfirmed == true &&
+        before?.account != null &&
+        before?.account == after?.account &&
+        after?.status == EmailConfirmationStatus.confirmed;
+    messenger.showSnackBar(
+      DivineSnackbarContainer.snackBar(
+        unlocked
+            ? l10n.emailConfirmationDone
+            : l10n.emailConfirmationLinkConfirmed,
+      ),
+    );
+  }
+
   Future<void> _handleTokenModeSuccess({bool clearPending = true}) async {
     if (!_claimLeavingVerification()) return;
     if (clearPending) {
       await _clearPendingVerification();
       if (!mounted) return;
+    }
+    // An account that signed in before confirming is already in: confirming
+    // only unlocks what was waiting on it, so stay signed in.
+    final authService = ref.read(authServiceProvider);
+    if (authService.authState == AuthState.authenticated &&
+        !authService.isAnonymous) {
+      final confirmation = context.read<EmailConfirmationCubit?>();
+      final messenger = ScaffoldMessenger.of(context);
+      final l10n = context.l10n;
+      context.go(ExploreScreen.pathForTab('popular'));
+      runDetached(
+        _announceLinkConfirmation(confirmation, messenger, l10n),
+        'announce email confirmation after link',
+        logName: 'EmailVerificationScreen',
+        category: LogCategory.auth,
+      );
+      return;
     }
     // Show feedback message before redirecting to login
     ScaffoldMessenger.of(context).showSnackBar(

@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:keycast_flutter/src/models/exceptions.dart';
 import 'package:keycast_flutter/src/models/keycast_session.dart';
 import 'package:keycast_flutter/src/oauth/oauth_config.dart';
+import 'package:keycast_flutter/src/rpc/policy_refusal.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -22,6 +23,7 @@ class KeycastRpc implements NostrSigner, GiftWrapBatchUnwrapper {
   KeycastRpc({
     required this.nostrApi,
     required String accessToken,
+    this.owner,
     http.Client? httpClient,
     http.Client Function()? httpClientFactory,
     TokenRefreshCallback? onTokenRefresh,
@@ -46,6 +48,7 @@ class KeycastRpc implements NostrSigner, GiftWrapBatchUnwrapper {
     return KeycastRpc(
       nostrApi: config.nostrApiUrl,
       accessToken: session.accessToken!,
+      owner: session.userPubkey,
       onTokenRefresh: onTokenRefresh,
       requestTimeout: requestTimeout,
       batchRequestTimeout: batchRequestTimeout,
@@ -110,6 +113,12 @@ class KeycastRpc implements NostrSigner, GiftWrapBatchUnwrapper {
   static const Duration defaultBatchRequestTimeout = Duration(seconds: 30);
 
   final String nostrApi;
+
+  /// Public key (hex) of the account this signer signs for, when known. It is
+  /// reported with each [KeycastPolicyRefusal] so the refusal reaches that
+  /// account, not whichever one is signed in by the time it arrives.
+  final String? owner;
+
   String _accessToken;
   final http.Client Function() _clientFactory;
   http.Client _client;
@@ -215,6 +224,13 @@ class KeycastRpc implements NostrSigner, GiftWrapBatchUnwrapper {
           category: LogCategory.auth,
         );
       }
+      final refusal = KeycastPolicyRefusals.classify(
+        body: response.body,
+        retryAfterHeader: response.headers['retry-after'],
+        method: method,
+        owner: owner,
+      );
+      if (refusal != null) throw refusal;
       final message = 'HTTP ${response.statusCode}: ${response.body}';
       // 504 is Keycast reporting *its own* timeout, so it classifies like one
       // rather than like a refusal. See [RpcTimeoutException].

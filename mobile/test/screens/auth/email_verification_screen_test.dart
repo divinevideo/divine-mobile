@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/email_confirmation/email_confirmation_cubit.dart';
 import 'package:openvine/blocs/email_verification/email_verification_cubit.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_scope.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -43,6 +44,14 @@ class _MockPendingVerificationService extends Mock
 
 Finder _divineIcon(DivineIconName name) =>
     find.byWidgetPredicate((w) => w is DivineIcon && w.icon == name);
+
+class _MockEmailConfirmationCubit extends MockCubit<EmailConfirmationState>
+    implements EmailConfirmationCubit {}
+
+Widget _withConfirmation(EmailConfirmationCubit? cubit, Widget app) =>
+    cubit == null
+    ? app
+    : BlocProvider<EmailConfirmationCubit>.value(value: cubit, child: app);
 
 void main() {
   late _MockEmailVerificationCubit mockCubit;
@@ -92,6 +101,7 @@ void main() {
     TargetPlatform? platform,
     EmailVerificationState initialState = const EmailVerificationState(),
     Stream<EmailVerificationState>? stateStream,
+    EmailConfirmationCubit? emailConfirmationCubit,
   }) {
     // Set up cubit state
     when(() => mockCubit.state).thenReturn(initialState);
@@ -109,50 +119,53 @@ void main() {
           mockPendingVerification,
         ),
       ],
-      child: MaterialApp.router(
-        localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        theme: VineTheme.theme.copyWith(platform: platform),
-        routerConfig: GoRouter(
-          initialLocation: '/verify-email',
-          routes: [
-            GoRoute(path: '/', builder: (_, _) => const Scaffold()),
-            GoRoute(
-              path: '/verify-email',
-              builder: (_, _) => BlocProvider<EmailVerificationCubit>.value(
-                value: mockCubit,
-                child: EmailVerificationScreen(
-                  deviceCode: deviceCode,
-                  verifier: verifier,
-                  email: email,
-                  token: token,
-                  restored: restored,
+      child: _withConfirmation(
+        emailConfirmationCubit,
+        MaterialApp.router(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: VineTheme.theme.copyWith(platform: platform),
+          routerConfig: GoRouter(
+            initialLocation: '/verify-email',
+            routes: [
+              GoRoute(path: '/', builder: (_, _) => const Scaffold()),
+              GoRoute(
+                path: '/verify-email',
+                builder: (_, _) => BlocProvider<EmailVerificationCubit>.value(
+                  value: mockCubit,
+                  child: EmailVerificationScreen(
+                    deviceCode: deviceCode,
+                    verifier: verifier,
+                    email: email,
+                    token: token,
+                    restored: restored,
+                  ),
                 ),
               ),
-            ),
-            GoRoute(
-              path: '/login-options',
-              builder: (_, _) => const Scaffold(body: Text('Login Options')),
-            ),
-            GoRoute(
-              path: '/welcome/login-options',
-              builder: (_, state) => Scaffold(
-                body: Text(
-                  'Login Options ${state.uri.queryParameters['email'] ?? ''}',
+              GoRoute(
+                path: '/login-options',
+                builder: (_, _) => const Scaffold(body: Text('Login Options')),
+              ),
+              GoRoute(
+                path: '/welcome/login-options',
+                builder: (_, state) => Scaffold(
+                  body: Text(
+                    'Login Options ${state.uri.queryParameters['email'] ?? ''}',
+                  ),
                 ),
               ),
-            ),
-            GoRoute(
-              path: '/explore',
-              builder: (_, _) => const Scaffold(body: Text('Explore')),
-            ),
-            GoRoute(
-              path: '/explore/tab/:tab',
-              builder: (_, state) => Scaffold(
-                body: Text('Explore ${state.pathParameters['tab']}'),
+              GoRoute(
+                path: '/explore',
+                builder: (_, _) => const Scaffold(body: Text('Explore')),
               ),
-            ),
-          ],
+              GoRoute(
+                path: '/explore/tab/:tab',
+                builder: (_, state) => Scaffold(
+                  body: Text('Explore ${state.pathParameters['tab']}'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -169,6 +182,7 @@ void main() {
     Size surfaceSize = const Size(800, 1200),
     EmailVerificationState initialState = const EmailVerificationState(),
     Stream<EmailVerificationState>? stateStream,
+    EmailConfirmationCubit? emailConfirmationCubit,
   }) async {
     await tester.binding.setSurfaceSize(surfaceSize);
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -182,6 +196,7 @@ void main() {
         platform: platform,
         initialState: initialState,
         stateStream: stateStream,
+        emailConfirmationCubit: emailConfirmationCubit,
       ),
     );
   }
@@ -1931,10 +1946,124 @@ void main() {
   });
 
   group('token mode', () {
-    testWidgets('signed-in accounts still verify an incoming token', (
+    testWidgets(
+      'signed-in accounts verify an incoming token and stay signed in',
+      (tester) async {
+        // An account that signed up without waiting for confirmation opens
+        // the link later: it is already in, so it lands back in the app
+        // rather than on a sign-in screen.
+        when(
+          () => mockAuthService.authState,
+        ).thenReturn(AuthState.authenticated);
+        await pumpVerificationScreen(tester, token: 'verification-token');
+        await tester.pumpAndSettle();
+
+        verify(
+          () => mockCubit.verifyEmailToken(token: 'verification-token'),
+        ).called(1);
+        expect(find.text('Explore popular'), findsOneWidget);
+        expect(find.textContaining('Login Options'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'announces unlocked DMs when the signed-in account becomes confirmed',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final confirmation = _MockEmailConfirmationCubit();
+        const account =
+            'a3c1e0b6f7d2948e5c1b0a9f8e7d6c5b4a3928170f6e5d4c3b2a19087f6e5d4c';
+        var status = EmailConfirmationStatus.unconfirmed;
+        when(() => confirmation.state).thenAnswer(
+          (_) => EmailConfirmationState(
+            account: account,
+            status: status,
+            email: 'you@example.com',
+          ),
+        );
+        when(confirmation.refresh).thenAnswer((_) async {
+          status = EmailConfirmationStatus.confirmed;
+        });
+        when(
+          () => mockAuthService.authState,
+        ).thenReturn(AuthState.authenticated);
+
+        await pumpVerificationScreen(
+          tester,
+          token: 'verification-token',
+          emailConfirmationCubit: confirmation,
+        );
+        await tester.pumpAndSettle();
+
+        verify(confirmation.refresh).called(1);
+        expect(find.text(l10n.emailConfirmationDone), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'uses neutral copy when the signed-in account was already confirmed',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final confirmation = _MockEmailConfirmationCubit();
+        when(confirmation.refresh).thenAnswer((_) async {});
+        when(() => confirmation.state).thenReturn(
+          const EmailConfirmationState(
+            account: 'a3c1e0b6f7d2948e5c1b0a9f8e7d6c5b4a3928170f6e5d4c3b2a19087f6e5d4c',
+            status: EmailConfirmationStatus.confirmed,
+            email: 'you@example.com',
+          ),
+        );
+        when(
+          () => mockAuthService.authState,
+        ).thenReturn(AuthState.authenticated);
+
+        await pumpVerificationScreen(
+          tester,
+          token: 'verification-token',
+          emailConfirmationCubit: confirmation,
+        );
+        await tester.pumpAndSettle();
+
+        verify(confirmation.refresh).called(1);
+        expect(find.text(l10n.emailConfirmationDone), findsNothing);
+        expect(find.text(l10n.emailConfirmationLinkConfirmed), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'uses neutral copy when the link confirmed some other address',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final confirmation = _MockEmailConfirmationCubit();
+        when(confirmation.refresh).thenAnswer((_) async {});
+        when(() => confirmation.state).thenReturn(
+          const EmailConfirmationState(
+            account: 'a3c1e0b6f7d2948e5c1b0a9f8e7d6c5b4a3928170f6e5d4c3b2a19087f6e5d4c',
+            status: EmailConfirmationStatus.unconfirmed,
+            email: 'you@example.com',
+          ),
+        );
+        when(
+          () => mockAuthService.authState,
+        ).thenReturn(AuthState.authenticated);
+
+        await pumpVerificationScreen(
+          tester,
+          token: 'verification-token',
+          emailConfirmationCubit: confirmation,
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.emailConfirmationDone), findsNothing);
+        expect(find.text(l10n.emailConfirmationLinkConfirmed), findsOneWidget);
+      },
+    );
+
+    testWidgets('anonymous accounts securing an email still go to sign-in', (
       tester,
     ) async {
       when(() => mockAuthService.authState).thenReturn(AuthState.authenticated);
+      when(() => mockAuthService.isAnonymous).thenReturn(true);
       await pumpVerificationScreen(tester, token: 'verification-token');
       await tester.pumpAndSettle();
 

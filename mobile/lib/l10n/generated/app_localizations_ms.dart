@@ -15333,7 +15333,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Kami hantar pautan pengesahan ke alamat baharu anda dan ke alamat dalam akaun anda. E-mel anda bertukar sebaik anda sahkan kedua-duanya.';
+      'Kami akan menghantar pautan ke alamat e-mel baharu anda. Jika akaun anda sudah mempunyai alamat e-mel, kami juga akan menghantar pautan ke alamat itu.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15353,18 +15353,19 @@ class AppLocalizationsMs extends AppLocalizations {
   String get changeEmailWrongPassword => 'Itu bukan kata laluan anda.';
 
   @override
-  String get changeEmailSubmit => 'Hantar pautan pengesahan';
+  String get changeEmailSubmit => 'Minta pengesahan';
 
   @override
-  String get changeEmailSentTitle => 'Dua pautan dalam perjalanan';
+  String get changeEmailSentTitle => 'Semak e-mel anda';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Sahkan dari $email dan dari alamat dalam akaun anda. E-mel anda bertukar sebaik kedua-duanya selesai.';
+    return 'Buka pautan di $email. Jika akaun anda sudah mempunyai alamat e-mel, buka juga pautan di alamat itu.';
   }
 
   @override
-  String get changeEmailSentExpiry => 'Pautan tamat selepas 24 jam.';
+  String get changeEmailSentExpiry =>
+      'Setiap pautan tamat tempoh selepas 24 jam.';
 
   @override
   String get changeEmailSentDone => 'Faham';
@@ -17149,4 +17150,65 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Bantuan';
+
+  @override
+  String get emailConfirmationTitle => 'Sahkan e-mel anda';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Kami telah menghantar pautan ke $email. Ketik pautan itu untuk membuka mesej dan pastikan anda sentiasa boleh kembali ke akaun anda.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Hantar semula e-mel';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Anda sudah masuk! Semak $email untuk mengesahkan akaun anda.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Pengesahan diminta. Semak peti masuk anda.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Tidak dapat dihantar. Cuba lagi sekejap lagi.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Sahkan e-mel anda untuk mula menghantar mesej';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Ketik pautan yang kami hantar ke $email. Selepas itu, mesej milik anda sepenuhnya.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox =>
+      'Cari pautan pengesahan dalam peti masuk anda.';
+
+  @override
+  String get emailConfirmationDone => 'E-mel disahkan. Mesej sudah dibuka.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'E-mel disahkan.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Tambah e-mel';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Akaun anda tiada e-mel buat masa ini. Tambah satu supaya anda sentiasa boleh kembali ke akaun anda.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Tambah e-mel';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Sahkan e-mel anda untuk menghantar mesej.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Anda telah mencapai had sejam untuk akaun baharu. Sahkan e-mel anda untuk menghapuskan had ini.';
 }

@@ -15651,7 +15651,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Trimitem un link de confirmare la noua adresă și la cea din contul tău. E-mailul se schimbă după ce confirmi din ambele.';
+      'Îți vom trimite un link la noua adresă. Dacă ai deja o adresă de e-mail în cont, îți vom trimite un link și acolo.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15671,18 +15671,18 @@ class AppLocalizationsRo extends AppLocalizations {
   String get changeEmailWrongPassword => 'Asta nu e parola ta.';
 
   @override
-  String get changeEmailSubmit => 'Trimite linkurile de confirmare';
+  String get changeEmailSubmit => 'Cere confirmarea';
 
   @override
-  String get changeEmailSentTitle => 'Două linkuri sunt pe drum';
+  String get changeEmailSentTitle => 'Verifică-ți e-mailul';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Confirmă din $email și din adresa contului tău. E-mailul se schimbă după ce le faci pe amândouă.';
+    return 'Deschide linkul primit la $email. Dacă ai deja o adresă de e-mail în cont, deschide și linkul primit acolo.';
   }
 
   @override
-  String get changeEmailSentExpiry => 'Linkurile expiră după 24 de ore.';
+  String get changeEmailSentExpiry => 'Fiecare link expiră după 24 de ore.';
 
   @override
   String get changeEmailSentDone => 'Am înțeles';
@@ -17482,4 +17482,66 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Ajutor';
+
+  @override
+  String get emailConfirmationTitle => 'Confirmă-ți emailul';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Ți-am trimis un link la $email. Apasă-l ca să deblochezi mesajele și să te poți întoarce mereu în cont.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Retrimite emailul';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Ai intrat! Verifică $email ca să-ți confirmi contul.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Confirmare solicitată. Verifică-ți căsuța de e-mail.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Nu l-am putut trimite. Încearcă din nou puțin mai târziu.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Confirmă-ți emailul ca să poți trimite mesaje';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Apasă linkul pe care ți l-am trimis la $email. Apoi mesajele sunt ale tale.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox =>
+      'Caută linkul de confirmare în căsuța ta de e-mail.';
+
+  @override
+  String get emailConfirmationDone =>
+      'Email confirmat. Mesajele sunt deblocate.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'Email confirmat.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Adaugă un email';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Contul tău nu are acum niciun email. Adaugă unul ca să te poți întoarce mereu în cont.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Adaugă email';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Confirmă-ți emailul ca să trimiți mesaje.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Asta e limita pe oră pentru conturile noi. Confirmă-ți emailul ca s-o ridici.';
 }

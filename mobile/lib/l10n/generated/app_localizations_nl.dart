@@ -15424,7 +15424,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'We sturen een bevestigingslink naar je nieuwe adres en naar dat van je account. Je e-mail verandert zodra je beide bevestigt.';
+      'We sturen een link naar je nieuwe e-mailadres. Als er al een e-mailadres aan je account is gekoppeld, sturen we daar ook een link naartoe.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15444,18 +15444,18 @@ class AppLocalizationsNl extends AppLocalizations {
   String get changeEmailWrongPassword => 'Dat is niet je wachtwoord.';
 
   @override
-  String get changeEmailSubmit => 'Bevestigingslinks sturen';
+  String get changeEmailSubmit => 'Bevestiging aanvragen';
 
   @override
-  String get changeEmailSentTitle => 'Er zijn twee links onderweg';
+  String get changeEmailSentTitle => 'Check je e-mail';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Bevestig vanaf $email en vanaf het adres op je account. Je e-mail wisselt zodra beide gedaan zijn.';
+    return 'Open de link die je op $email hebt ontvangen. Als er al een e-mailadres aan je account is gekoppeld, open dan ook de link die je daar hebt ontvangen.';
   }
 
   @override
-  String get changeEmailSentExpiry => 'De links werken 24 uur.';
+  String get changeEmailSentExpiry => 'Elke link verloopt na 24 uur.';
 
   @override
   String get changeEmailSentDone => 'Duidelijk';
@@ -17243,4 +17243,66 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Help';
+
+  @override
+  String get emailConfirmationTitle => 'Bevestig je e-mail';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'We hebben een link gestuurd naar $email. Tik erop om berichten te ontgrendelen en zorg dat je altijd weer in je account komt.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'E-mail opnieuw versturen';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Je bent binnen! Check $email om je account te bevestigen.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Bevestiging aangevraagd. Check je inbox.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Versturen lukte niet. Probeer het zo nog eens.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Bevestig je e-mail om berichten te sturen';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Tik op de link die we naar $email hebben gestuurd. Dan zijn berichten helemaal van jou.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox =>
+      'Kijk in je inbox voor de bevestigingslink.';
+
+  @override
+  String get emailConfirmationDone =>
+      'E-mail bevestigd. Berichten zijn ontgrendeld.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'E-mail bevestigd.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Voeg een e-mail toe';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Je account heeft nu geen e-mail. Voeg er een toe, zodat je altijd weer in je account komt.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'E-mail toevoegen';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Bevestig je e-mail om berichten te sturen.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Dat is de limiet per uur voor nieuwe accounts. Bevestig je e-mail om die op te heffen.';
 }

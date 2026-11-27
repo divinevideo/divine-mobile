@@ -25732,7 +25732,7 @@ abstract class AppLocalizations {
   /// No description provided for @changeEmailSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'We\'ll email a confirmation link to your new address and to the one on your account. Your email changes once you confirm from both.'**
+  /// **'We\'ll send a link to your new address. If there\'s already an email on your account, we\'ll send a link there too.'**
   String get changeEmailSubtitle;
 
   /// Shows the email address currently on the account.
@@ -25768,25 +25768,25 @@ abstract class AppLocalizations {
   /// No description provided for @changeEmailSubmit.
   ///
   /// In en, this message translates to:
-  /// **'Send confirmation links'**
+  /// **'Request confirmation'**
   String get changeEmailSubmit;
 
   /// No description provided for @changeEmailSentTitle.
   ///
   /// In en, this message translates to:
-  /// **'Two links are on their way'**
+  /// **'Check your email'**
   String get changeEmailSentTitle;
 
   /// Confirmation copy after an email change was requested; {email} is the new address.
   ///
   /// In en, this message translates to:
-  /// **'Confirm from {email} and from the address on your account. Your email switches once both are done.'**
+  /// **'Open the link at {email}. If there\'s already an email on your account, open the link there too.'**
   String changeEmailSentMessage(String email);
 
   /// No description provided for @changeEmailSentExpiry.
   ///
   /// In en, this message translates to:
-  /// **'The links stop working after 24 hours.'**
+  /// **'Each link expires after 24 hours.'**
   String get changeEmailSentExpiry;
 
   /// No description provided for @changeEmailSentDone.
@@ -28714,6 +28714,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Help'**
   String get menuBarHelp;
+
+  /// Label on the own-profile pill and title of the prompt asking an account that signed up without confirming its email to click the confirmation link.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your email'**
+  String get emailConfirmationTitle;
+
+  /// Body of the own-profile prompt for an account whose email is not confirmed yet.
+  ///
+  /// In en, this message translates to:
+  /// **'We sent a link to {email}. Tap it to unlock DMs and make sure you can always get back into your account.'**
+  String emailConfirmationProfileSubtitle(String email);
+
+  /// Button that asks Divine to send the email confirmation link again.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend email'**
+  String get emailConfirmationResendButton;
+
+  /// Pop-up shown after signing up, and on later launches, while the account's email is not confirmed yet.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re in! Check {email} to confirm your account.'**
+  String emailConfirmationNotice(String email);
+
+  /// Pop-up after a new email confirmation link was requested.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmation requested. Check your inbox.'**
+  String get emailConfirmationResendSent;
+
+  /// Pop-up when requesting a new email confirmation link failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send that one. Try again in a bit.'**
+  String get emailConfirmationResendFailed;
+
+  /// Title shown in place of direct messages while the account's email is not confirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your email to start messaging'**
+  String get emailConfirmationMessagesTitle;
+
+  /// Body shown in place of direct messages while the account's email is not confirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the link we sent to {email}. Then DMs are all yours.'**
+  String emailConfirmationMessagesBody(String email);
+
+  /// Instructions when an account must confirm its email but the app has not learned its address yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your inbox for the confirmation link.'**
+  String get emailConfirmationCheckInbox;
+
+  /// Pop-up when a signed-in account opens its email confirmation link in the app.
+  ///
+  /// In en, this message translates to:
+  /// **'Email confirmed. DMs are unlocked.'**
+  String get emailConfirmationDone;
+
+  /// Pop-up after a confirmation link opened in the app, when the signed-in account is not known to be the one it confirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Email confirmed.'**
+  String get emailConfirmationLinkConfirmed;
+
+  /// Own-profile pill and prompt title for an email/password account that no longer has an email (another person confirmed the address it had claimed).
+  ///
+  /// In en, this message translates to:
+  /// **'Add an email'**
+  String get emailConfirmationAddEmailTitle;
+
+  /// Body of the own-profile prompt for an email/password account with no email.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account has no email right now. Add one so you can always get back in.'**
+  String get emailConfirmationAddEmailSubtitle;
+
+  /// Button opening the change-email screen from the add-an-email prompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Add email'**
+  String get emailConfirmationAddEmailButton;
+
+  /// Pop-up when an account that has not confirmed its email tries to send a direct message, for example from the share sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your email to send messages.'**
+  String get emailConfirmationSendBlocked;
+
+  /// Pop-up when an account that has not confirmed its email hits the hourly limit on posts, comments or reports.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s the hourly limit for new accounts. Confirm your email to lift it.'**
+  String get emailConfirmationCapReached;
 }
 
 class _AppLocalizationsDelegate

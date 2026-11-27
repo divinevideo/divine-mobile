@@ -14972,7 +14972,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'ወደ አዲሱ አድራሻህ እና በመለያህ ላይ ወዳለው አድራሻ የማረጋገጫ ማገናኛ እንልካለን። ከሁለቱም ስታረጋግጥ ኢሜይልህ ይቀየራል።';
+      'ወደ አዲሱ ኢሜይል አድራሻዎ አገናኝ እንልካለን። በመለያዎ ላይ ኢሜይል ካለ፣ ወደዚያም እንልካለን።';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -14992,18 +14992,18 @@ class AppLocalizationsAm extends AppLocalizations {
   String get changeEmailWrongPassword => 'ይህ የይለፍ ቃልህ አይደለም።';
 
   @override
-  String get changeEmailSubmit => 'የማረጋገጫ ማገናኛዎችን ላክ';
+  String get changeEmailSubmit => 'ማረጋገጫ መጠየቅ';
 
   @override
-  String get changeEmailSentTitle => 'ሁለት ማገናኛዎች በመንገድ ላይ ናቸው';
+  String get changeEmailSentTitle => 'ኢሜይልዎን ይመልከቱ';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'ከ$email እና በመለያህ ላይ ካለው አድራሻ አረጋግጥ። ሁለቱም ሲጠናቀቁ ኢሜይልህ ይቀየራል።';
+    return 'በ$email የደረሰውን አገናኝ ይክፈቱ። በመለያዎ ላይ ኢሜይል ካለ፣ እዚያ የደረሰውንም አገናኝ ይክፈቱ።';
   }
 
   @override
-  String get changeEmailSentExpiry => 'ማገናኛዎቹ ከ24 ሰዓት በኋላ አይሠሩም።';
+  String get changeEmailSentExpiry => 'የእያንዳንዱ አገናኝ ጊዜ ከ24 ሰዓት በኋላ ያበቃል።';
 
   @override
   String get changeEmailSentDone => 'ገባኝ';
@@ -16737,4 +16737,62 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'እገዛ';
+
+  @override
+  String get emailConfirmationTitle => 'ኢሜይልዎን ያረጋግጡ';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'ወደ $email አገናኝ ልከናል። መልእክቶችን ለመክፈት እና ሁልጊዜ ወደ መለያዎ መመለስ እንዲችሉ አገናኙን ይንኩ።';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'ኢሜይሉን እንደገና ይላኩ';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'ገብተዋል! መለያዎን ለማረጋገጥ ወደ $email የተላከውን ኢሜይል ይመልከቱ።';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'የማረጋገጫ ጥያቄዎን ተቀብለናል። ኢሜይልዎን ይመልከቱ።';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'መላክ አልተቻለም። ትንሽ ቆይተው እንደገና ይሞክሩ።';
+
+  @override
+  String get emailConfirmationMessagesTitle => 'መልእክት መላክ ለመጀመር ኢሜይልዎን ያረጋግጡ';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'ወደ $email የላክነውን አገናኝ ይንኩ። ከዚያ መልእክቶች ሙሉ በሙሉ የእርስዎ ናቸው።';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox => 'የማረጋገጫ ሊንኩን በገቢ መልዕክቶችዎ ውስጥ ይፈልጉ።';
+
+  @override
+  String get emailConfirmationDone => 'ኢሜይሉ ተረጋግጧል። መልእክቶች ተከፍተዋል።';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'ኢሜይሉ ተረጋግጧል።';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'ኢሜይል ያክሉ';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'መለያዎ አሁን ኢሜይል የለውም። ሁልጊዜ ተመልሰው መግባት እንዲችሉ አንድ ያክሉ።';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'ኢሜይል ያክሉ';
+
+  @override
+  String get emailConfirmationSendBlocked => 'መልእክቶችን ለመላክ ኢሜይልዎን ያረጋግጡ።';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'ለአዲስ መለያዎች የሰዓት ገደቡ ይህ ነው። ገደቡን ለማንሳት ኢሜይልዎን ያረጋግጡ።';
 }

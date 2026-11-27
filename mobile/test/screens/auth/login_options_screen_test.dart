@@ -448,6 +448,7 @@ void main() {
             email: any(named: 'email'),
             password: any(named: 'password'),
             scope: any(named: 'scope'),
+            instantAccess: any(named: 'instantAccess'),
           ),
         ).thenAnswer(
           (_) async => (
@@ -489,6 +490,7 @@ void main() {
             email: 'test@example.com',
             password: 'SecurePass123!',
             scope: 'policy:full',
+            instantAccess: true,
           ),
         ).called(1);
       });
@@ -501,6 +503,7 @@ void main() {
               email: any(named: 'email'),
               password: any(named: 'password'),
               scope: any(named: 'scope'),
+              instantAccess: any(named: 'instantAccess'),
             ),
           ).thenAnswer(
             (_) async => (
@@ -561,6 +564,7 @@ void main() {
             email: any(named: 'email'),
             password: any(named: 'password'),
             scope: any(named: 'scope'),
+            instantAccess: any(named: 'instantAccess'),
           ),
         ).thenAnswer(
           (_) async => (
@@ -609,6 +613,7 @@ void main() {
               email: any(named: 'email'),
               password: any(named: 'password'),
               scope: any(named: 'scope'),
+              instantAccess: any(named: 'instantAccess'),
             ),
           ).thenAnswer(
             (_) async => (
@@ -670,6 +675,7 @@ void main() {
             email: any(named: 'email'),
             password: any(named: 'password'),
             scope: any(named: 'scope'),
+            instantAccess: any(named: 'instantAccess'),
           ),
         );
       });
@@ -756,6 +762,7 @@ void main() {
             email: any(named: 'email'),
             password: any(named: 'password'),
             scope: any(named: 'scope'),
+            instantAccess: any(named: 'instantAccess'),
           ),
         ).thenAnswer((_) => Completer<(HeadlessLoginResult, String)>().future);
 

@@ -14443,7 +14443,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get changePasswordSuccess => '密码已更改。';
 
   @override
-  String get changeEmailSubtitle => '我们会向新地址和账号上的地址各发一封确认邮件。两边都确认后邮箱才会更改。';
+  String get changeEmailSubtitle => '我们会向你的新邮箱发送链接。如果你的账号已绑定邮箱，我们也会向那个邮箱发送链接。';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -14463,18 +14463,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get changeEmailWrongPassword => '这不是你的密码。';
 
   @override
-  String get changeEmailSubmit => '发送确认链接';
+  String get changeEmailSubmit => '请求确认';
 
   @override
-  String get changeEmailSentTitle => '两封确认邮件已在路上';
+  String get changeEmailSentTitle => '查看你的邮箱';
 
   @override
   String changeEmailSentMessage(String email) {
-    return '请在 $email 和账号上的地址两边都确认。两边都完成后邮箱就会切换。';
+    return '打开 $email 收到的链接。如果你的账号已绑定邮箱，也请打开那个邮箱收到的链接。';
   }
 
   @override
-  String get changeEmailSentExpiry => '链接 24 小时后失效。';
+  String get changeEmailSentExpiry => '每条链接在 24 小时后失效。';
 
   @override
   String get changeEmailSentDone => '知道了';
@@ -16164,4 +16164,59 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get menuBarHelp => '帮助';
+
+  @override
+  String get emailConfirmationTitle => '确认你的邮箱';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return '我们已向 $email 发送了一个链接。点击它即可解锁私信，并确保你随时都能回到自己的账号。';
+  }
+
+  @override
+  String get emailConfirmationResendButton => '重新发送邮件';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return '你已加入！去 $email 查收邮件，确认你的账号。';
+  }
+
+  @override
+  String get emailConfirmationResendSent => '已请求确认。请查看你的收件箱。';
+
+  @override
+  String get emailConfirmationResendFailed => '这封没发出去，稍后再试试。';
+
+  @override
+  String get emailConfirmationMessagesTitle => '确认邮箱后即可开始发私信';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return '点击我们发送到 $email 的链接，私信就全归你啦。';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox => '请在收件箱中查找确认链接。';
+
+  @override
+  String get emailConfirmationDone => '邮箱已确认，私信已解锁。';
+
+  @override
+  String get emailConfirmationLinkConfirmed => '邮箱已确认。';
+
+  @override
+  String get emailConfirmationAddEmailTitle => '添加邮箱';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      '你的账号目前没有绑定邮箱。添加一个，确保你随时都能回到自己的账号。';
+
+  @override
+  String get emailConfirmationAddEmailButton => '添加邮箱';
+
+  @override
+  String get emailConfirmationSendBlocked => '确认邮箱后才能发私信。';
+
+  @override
+  String get emailConfirmationCapReached => '新账号每小时的上限就是这些。确认邮箱即可解除限制。';
 }

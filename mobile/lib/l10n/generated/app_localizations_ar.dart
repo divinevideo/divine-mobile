@@ -15352,7 +15352,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'سنرسل رابط تأكيد إلى عنوانك الجديد وإلى العنوان المسجّل في حسابك. يتغيّر بريدك بعد التأكيد من الاثنين.';
+      'سنرسل رابطًا إلى عنوان البريد الإلكتروني الجديد. إذا كان هناك عنوان بريد مرتبط بالحساب، فسنرسل رابطًا إليه أيضًا.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15372,18 +15372,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get changeEmailWrongPassword => 'هذه ليست كلمة السر.';
 
   @override
-  String get changeEmailSubmit => 'إرسال روابط التأكيد';
+  String get changeEmailSubmit => 'طلب التأكيد';
 
   @override
-  String get changeEmailSentTitle => 'رابطان في الطريق';
+  String get changeEmailSentTitle => 'التحقق من البريد الإلكتروني';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'أكّد من $email ومن العنوان المسجّل في حسابك. يتبدّل بريدك بعد إتمام الاثنين.';
+    return 'يُرجى فتح الرابط في $email. إذا كان هناك عنوان بريد مرتبط بالحساب، فيُرجى فتح الرابط فيه أيضًا.';
   }
 
   @override
-  String get changeEmailSentExpiry => 'تتوقف الروابط عن العمل بعد 24 ساعة.';
+  String get changeEmailSentExpiry => 'تنتهي صلاحية كل رابط بعد 24 ساعة.';
 
   @override
   String get changeEmailSentDone => 'فهمت';
@@ -17184,4 +17184,65 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'مساعدة';
+
+  @override
+  String get emailConfirmationTitle => 'تأكيد البريد الإلكتروني';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'أرسلنا رابطًا إلى $email. بالنقر عليه تُفتح الرسائل، وتبقى العودة إلى الحساب ممكنة دائمًا.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'إعادة إرسال البريد';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'تم التسجيل! الخطوة التالية: تأكيد الحساب عبر الرابط المرسل إلى $email.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'تم استلام طلب التأكيد. يُرجى التحقق من البريد الوارد.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'تعذّر الإرسال. يمكن المحاولة مجددًا بعد قليل.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'تأكيد البريد الإلكتروني لبدء المراسلة';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'بالنقر على الرابط المرسل إلى $email تصبح الرسائل متاحة بالكامل.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox => 'رابط التأكيد في صندوق الوارد.';
+
+  @override
+  String get emailConfirmationDone =>
+      'تم تأكيد البريد الإلكتروني. الرسائل مفتوحة الآن.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'تم تأكيد البريد الإلكتروني.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'إضافة بريد إلكتروني';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'لا يوجد بريد إلكتروني في هذا الحساب حاليًا. بإضافة بريد تبقى العودة إلى الحساب ممكنة دائمًا.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'إضافة بريد إلكتروني';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'تأكيد البريد الإلكتروني مطلوب لإرسال الرسائل.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'هذا هو الحد المسموح به في الساعة للحسابات الجديدة. تأكيد البريد الإلكتروني يرفع هذا الحد.';
 }

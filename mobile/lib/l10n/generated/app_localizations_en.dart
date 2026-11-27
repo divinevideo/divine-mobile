@@ -15431,7 +15431,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'We\'ll email a confirmation link to your new address and to the one on your account. Your email changes once you confirm from both.';
+      'We\'ll send a link to your new address. If there\'s already an email on your account, we\'ll send a link there too.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15451,18 +15451,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changeEmailWrongPassword => 'That\'s not your password.';
 
   @override
-  String get changeEmailSubmit => 'Send confirmation links';
+  String get changeEmailSubmit => 'Request confirmation';
 
   @override
-  String get changeEmailSentTitle => 'Two links are on their way';
+  String get changeEmailSentTitle => 'Check your email';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'Confirm from $email and from the address on your account. Your email switches once both are done.';
+    return 'Open the link at $email. If there\'s already an email on your account, open the link there too.';
   }
 
   @override
-  String get changeEmailSentExpiry => 'The links stop working after 24 hours.';
+  String get changeEmailSentExpiry => 'Each link expires after 24 hours.';
 
   @override
   String get changeEmailSentDone => 'Got it';
@@ -17270,4 +17270,65 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Help';
+
+  @override
+  String get emailConfirmationTitle => 'Confirm your email';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'We sent a link to $email. Tap it to unlock DMs and make sure you can always get back into your account.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Resend email';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'You\'re in! Check $email to confirm your account.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Confirmation requested. Check your inbox.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Couldn\'t send that one. Try again in a bit.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'Confirm your email to start messaging';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'Tap the link we sent to $email. Then DMs are all yours.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox =>
+      'Check your inbox for the confirmation link.';
+
+  @override
+  String get emailConfirmationDone => 'Email confirmed. DMs are unlocked.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'Email confirmed.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Add an email';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Your account has no email right now. Add one so you can always get back in.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Add email';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'Confirm your email to send messages.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'That\'s the hourly limit for new accounts. Confirm your email to lift it.';
 }

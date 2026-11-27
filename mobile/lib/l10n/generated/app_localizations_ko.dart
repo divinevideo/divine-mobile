@@ -14640,7 +14640,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      '새 주소와 계정에 등록된 주소로 확인 링크를 보냅니다. 둘 다 확인하면 이메일이 바뀌어요.';
+      '새 이메일 주소로 링크를 보내 드려요. 계정에 이미 이메일 주소가 등록되어 있으면 그 주소로도 링크를 보내 드려요.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -14660,18 +14660,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get changeEmailWrongPassword => '비밀번호가 아니에요.';
 
   @override
-  String get changeEmailSubmit => '확인 링크 보내기';
+  String get changeEmailSubmit => '확인 요청';
 
   @override
-  String get changeEmailSentTitle => '링크 두 통을 보냈어요';
+  String get changeEmailSentTitle => '이메일을 확인해 주세요';
 
   @override
   String changeEmailSentMessage(String email) {
-    return '$email과 계정에 등록된 주소에서 확인해 주세요. 둘 다 끝나면 이메일이 바뀝니다.';
+    return '$email에 도착한 링크를 열어 주세요. 계정에 이미 이메일 주소가 등록되어 있으면 그 주소에 도착한 링크도 열어 주세요.';
   }
 
   @override
-  String get changeEmailSentExpiry => '링크는 24시간 뒤에 만료돼요.';
+  String get changeEmailSentExpiry => '각 링크는 24시간 후에 만료돼요.';
 
   @override
   String get changeEmailSentDone => '알겠어요';
@@ -16381,4 +16381,60 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get menuBarHelp => '도움말';
+
+  @override
+  String get emailConfirmationTitle => '이메일 인증하기';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return '$email 주소로 링크를 보냈어요. 링크를 탭하면 메시지가 열리고, 언제든 계정에 다시 들어올 수 있어요.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => '이메일 다시 보내기';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return '가입 완료! $email 주소로 온 메일에서 계정을 인증해주세요.';
+  }
+
+  @override
+  String get emailConfirmationResendSent => '확인을 요청했어요. 받은편지함을 확인해 주세요.';
+
+  @override
+  String get emailConfirmationResendFailed => '보내지 못했어요. 잠시 후 다시 시도해주세요.';
+
+  @override
+  String get emailConfirmationMessagesTitle => '메시지를 보내려면 이메일을 인증해주세요';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return '$email 주소로 보낸 링크를 탭해주세요. 그러면 메시지를 마음껏 쓸 수 있어요.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox => '받은편지함에서 확인 링크를 찾아보세요.';
+
+  @override
+  String get emailConfirmationDone => '이메일 인증 완료. 이제 메시지를 쓸 수 있어요.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => '이메일 인증 완료.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => '이메일 추가하기';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      '지금은 계정에 이메일이 없어요. 언제든 계정에 다시 들어올 수 있도록 이메일을 추가해주세요.';
+
+  @override
+  String get emailConfirmationAddEmailButton => '이메일 추가';
+
+  @override
+  String get emailConfirmationSendBlocked => '메시지를 보내려면 이메일을 인증해주세요.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      '새 계정의 시간당 한도에 도달했어요. 이메일을 인증하면 한도가 풀려요.';
 }

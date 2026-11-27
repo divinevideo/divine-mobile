@@ -15480,7 +15480,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get changeEmailSubtitle =>
-      'Magpapadala kami ng confirmation link sa bago mong address at sa nasa account mo. Magbabago ang email mo kapag na-confirm mo pareho.';
+      'Magpapadala kami ng link sa bago mong email address. Kung may email address na sa account mo, magpapadala rin kami ng link doon.';
 
   @override
   String changeEmailCurrentAddress(String email) {
@@ -15500,19 +15500,19 @@ class AppLocalizationsFil extends AppLocalizations {
   String get changeEmailWrongPassword => 'Hindi \'yan ang password mo.';
 
   @override
-  String get changeEmailSubmit => 'Ipadala ang mga confirmation link';
+  String get changeEmailSubmit => 'I-request ang confirmation';
 
   @override
-  String get changeEmailSentTitle => 'Papunta na ang dalawang link';
+  String get changeEmailSentTitle => 'Tingnan ang email mo';
 
   @override
   String changeEmailSentMessage(String email) {
-    return 'I-confirm mula sa $email at mula sa address na nasa account mo. Magpapalit ang email mo kapag tapos na pareho.';
+    return 'Buksan ang link sa $email. Kung may email address na sa account mo, buksan din ang link doon.';
   }
 
   @override
   String get changeEmailSentExpiry =>
-      'Titigil gumana ang mga link pagkatapos ng 24 oras.';
+      'Mag-e-expire ang bawat link pagkalipas ng 24 na oras.';
 
   @override
   String get changeEmailSentDone => 'Sige';
@@ -17300,4 +17300,66 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get menuBarHelp => 'Tulong';
+
+  @override
+  String get emailConfirmationTitle => 'I-confirm ang email mo';
+
+  @override
+  String emailConfirmationProfileSubtitle(String email) {
+    return 'Nagpadala kami ng link sa $email. I-tap ito para ma-unlock ang mga mensahe at siguradong makakabalik ka lagi sa account mo.';
+  }
+
+  @override
+  String get emailConfirmationResendButton => 'Ipadala ulit ang email';
+
+  @override
+  String emailConfirmationNotice(String email) {
+    return 'Pasok ka na! Tingnan ang $email para i-confirm ang account mo.';
+  }
+
+  @override
+  String get emailConfirmationResendSent =>
+      'Na-request na ang confirmation. Tingnan ang inbox mo.';
+
+  @override
+  String get emailConfirmationResendFailed =>
+      'Hindi namin naipadala. Subukan ulit mamaya.';
+
+  @override
+  String get emailConfirmationMessagesTitle =>
+      'I-confirm ang email mo para makapagsimulang mag-message';
+
+  @override
+  String emailConfirmationMessagesBody(String email) {
+    return 'I-tap ang link na pinadala namin sa $email. Tapos, sa\'yo na ang mga mensahe.';
+  }
+
+  @override
+  String get emailConfirmationCheckInbox =>
+      'Hanapin ang confirmation link sa inbox mo.';
+
+  @override
+  String get emailConfirmationDone =>
+      'Na-confirm na ang email. Naka-unlock na ang mga mensahe.';
+
+  @override
+  String get emailConfirmationLinkConfirmed => 'Na-confirm na ang email.';
+
+  @override
+  String get emailConfirmationAddEmailTitle => 'Magdagdag ng email';
+
+  @override
+  String get emailConfirmationAddEmailSubtitle =>
+      'Walang email ang account mo ngayon. Magdagdag ka ng isa para lagi kang makakabalik.';
+
+  @override
+  String get emailConfirmationAddEmailButton => 'Magdagdag ng email';
+
+  @override
+  String get emailConfirmationSendBlocked =>
+      'I-confirm ang email mo para makapagpadala ng mga mensahe.';
+
+  @override
+  String get emailConfirmationCapReached =>
+      'Iyan na ang limit kada oras para sa mga bagong account. I-confirm ang email mo para matanggal ito.';
 }

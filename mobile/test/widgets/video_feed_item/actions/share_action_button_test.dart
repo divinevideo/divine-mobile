@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:analytics/analytics.dart';
+import 'package:bloc_test/bloc_test.dart';
 import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -19,6 +20,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/email_confirmation/email_confirmation_cubit.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
 import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.dart';
@@ -64,6 +66,9 @@ import '../../../helpers/test_provider_overrides.dart';
 import '../../../helpers/test_pubkeys.dart';
 
 class _MockDmRepository extends Mock implements DmRepository {}
+
+class _MockEmailConfirmationCubit extends MockCubit<EmailConfirmationState>
+    implements EmailConfirmationCubit {}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -1764,6 +1769,7 @@ void main() {
         Future<void> pumpOpenSheet(
           WidgetTester tester, {
           List<Override> extraOverrides = const [],
+          EmailConfirmationCubit? confirmation,
         }) async {
           final mockAuth = createMockAuthService(
             authState: AuthState.authenticated,
@@ -1786,33 +1792,98 @@ void main() {
               await stream.close();
             }
           });
-          await tester.pumpWidget(
-            testProviderScope(
-              additionalOverrides: [
-                dmRepositoryProvider.overrideWithValue(repository),
-                userRankingSignalsLoaderProvider.overrideWithValue(
-                  mockRankingSignalsLoader,
-                ),
-                videoSharingServiceProvider.overrideWith(
-                  (ref) => mockVideoSharingService,
-                ),
-                ...extraOverrides,
-              ],
-              mockAuthService: mockAuth,
-              mockProfileRepository: mockProfileRepository,
-              mockFollowRepository: mockFollowRepository,
-              child: MaterialApp(
-                localizationsDelegates: appLocalizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                builder: (_, child) => ShareDeliveryHost(child: child!),
-                home: Scaffold(body: ShareActionButton(video: testVideo)),
+          final app = testProviderScope(
+            additionalOverrides: [
+              dmRepositoryProvider.overrideWithValue(repository),
+              userRankingSignalsLoaderProvider.overrideWithValue(
+                mockRankingSignalsLoader,
               ),
+              videoSharingServiceProvider.overrideWith(
+                (ref) => mockVideoSharingService,
+              ),
+              ...extraOverrides,
+            ],
+            mockAuthService: mockAuth,
+            mockProfileRepository: mockProfileRepository,
+            mockFollowRepository: mockFollowRepository,
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              builder: (_, child) => ShareDeliveryHost(child: child!),
+              home: Scaffold(body: ShareActionButton(video: testVideo)),
             ),
+          );
+          await tester.pumpWidget(
+            confirmation == null
+                ? app
+                : BlocProvider.value(value: confirmation, child: app),
           );
 
           await tester.tap(find.byType(ShareActionButton));
           await tester.pumpAndSettle();
         }
+
+        testWidgets(
+          'offers a tappable resend in the share sheet when email is unconfirmed',
+          (tester) async {
+            final confirmation = _MockEmailConfirmationCubit();
+            final states = StreamController<EmailConfirmationState>();
+            addTearDown(states.close);
+            final unconfirmed = EmailConfirmationState(
+              account: ownPubkey,
+              status: EmailConfirmationStatus.unconfirmed,
+              email: 'you@example.com',
+              resendStatus: EmailConfirmationResendStatus.sent,
+            );
+            whenListen(
+              confirmation,
+              states.stream,
+              initialState: unconfirmed,
+            );
+            when(
+              () => confirmation.resend(account: ownPubkey),
+            ).thenAnswer((_) async {});
+
+            await pumpOpenSheet(tester, confirmation: confirmation);
+
+            expect(find.text(l10n.shareRecipientSend), findsNothing);
+            expect(
+              find.text(l10n.emailConfirmationSendBlocked),
+              findsOneWidget,
+            );
+            expect(find.text(l10n.emailConfirmationResendSent), findsNothing);
+
+            await tester.tap(find.text('Alice'));
+            await tester.pumpAndSettle();
+
+            expect(
+              find.text(l10n.emailConfirmationSendBlocked),
+              findsOneWidget,
+            );
+            final resend = find.text(l10n.emailConfirmationResendButton);
+            expect(resend.hitTestable(), findsOneWidget);
+            await tester.tap(resend);
+            states.add(
+              unconfirmed.copyWith(
+                resendStatus: EmailConfirmationResendStatus.failed,
+              ),
+            );
+            await tester.pumpAndSettle();
+
+            expect(
+              find.text(l10n.emailConfirmationResendFailed),
+              findsOneWidget,
+            );
+            verify(() => confirmation.resend(account: ownPubkey)).called(1);
+            verifyNever(
+              () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                video: any(named: 'video'),
+                recipientPubkeys: any(named: 'recipientPubkeys'),
+                personalMessage: any(named: 'personalMessage'),
+              ),
+            );
+          },
+        );
 
         testWidgets(
           'tapping a contact selects it and swaps more actions for the '

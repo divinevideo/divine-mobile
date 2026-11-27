@@ -5,6 +5,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/repositories/email_confirmation_repository.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/pending_verification_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
@@ -28,9 +29,11 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
     required AuthService authService,
     required PendingVerificationService pendingVerificationService,
     required AuthValidationMessages validationMessages,
+    EmailConfirmationRepository? emailConfirmationRepository,
     bool requirePasswordConfirmation = false,
     String? appVersion,
   }) : _oauthClient = oauthClient,
+       _emailConfirmationRepository = emailConfirmationRepository,
        _authService = authService,
        _pendingVerificationService = pendingVerificationService,
        _validationMessages = validationMessages,
@@ -42,6 +45,7 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
   final AuthService _authService;
   final PendingVerificationService _pendingVerificationService;
   final AuthValidationMessages _validationMessages;
+  final EmailConfirmationRepository? _emailConfirmationRepository;
   final bool _requirePasswordConfirmation;
   final String? _appVersion;
 
@@ -217,7 +221,11 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       email: email,
       password: password,
       scope: 'policy:full',
+      instantAccess: true,
     );
+    // The route can be dismissed while Keycast is answering. A closed form
+    // must not seed the account's email cache or start another auth step.
+    if (isClosed) return;
 
     if (!result.success || result.code == null) {
       final reason = _signInFailureReasonFrom(result.failure);
@@ -237,8 +245,21 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       return;
     }
 
-    // Exchange code for tokens
-    await _exchangeCodeAndLogin(result.code!, verifier);
+    final pubkey = result.pubkey;
+    final emailVerified = result.emailVerified;
+    await _exchangeCodeAndLogin(
+      result.code!,
+      verifier,
+      confirmation: pubkey != null && emailVerified != null
+          ? (
+              pubkey,
+              EmailConfirmation.fromSignIn(
+                email: email,
+                emailVerified: emailVerified,
+              ),
+            )
+          : null,
+    );
   }
 
   /// Translates the client-layer [KeycastLoginFailure] into the UI-facing
@@ -277,6 +298,7 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       scope: 'policy:full',
       marketingConsent: marketingConsent,
       appVersion: _appVersion,
+      instantAccess: true,
     );
 
     if (!result.success) {
@@ -302,6 +324,23 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
           ),
         );
       }
+      return;
+    }
+
+    // Keycast created the account without waiting for the email link: sign
+    // in now and let the app nudge for confirmation instead of blocking.
+    if (result.isInstantAccess) {
+      if (isClosed) return;
+      Log.info(
+        'Account created; signing in before email confirmation',
+        name: 'DivineAuthCubit',
+        category: LogCategory.auth,
+      );
+      await _exchangeCodeAndLogin(
+        result.code!,
+        verifier,
+        confirmation: (result.pubkey, EmailConfirmation.unconfirmed(email)),
+      );
       return;
     }
 
@@ -340,7 +379,11 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
     }
   }
 
-  Future<void> _exchangeCodeAndLogin(String code, String verifier) async {
+  Future<void> _exchangeCodeAndLogin(
+    String code,
+    String verifier, {
+    required (String, EmailConfirmation)? confirmation,
+  }) async {
     try {
       Log.info(
         'Exchanging code for tokens',
@@ -348,12 +391,23 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
         category: LogCategory.auth,
       );
 
+      // AuthService saves the bound credentials under the activation lease.
       final tokenResponse = await _oauthClient.exchangeCode(
         code: code,
         verifier: verifier,
+        persistSession: false,
       );
 
+      if (isClosed) return;
+
       final session = KeycastSession.fromTokenResponse(tokenResponse);
+
+      // A failed or abandoned exchange must leave the email cache alone.
+      // Seed it before activation so the first frame has the current status.
+      if (confirmation case (final pubkey, final status)) {
+        await _emailConfirmationRepository?.remember(pubkey, status);
+        if (isClosed) return;
+      }
 
       // Get the session and sign in
       await _authService.signInWithDivineOAuth(session);
