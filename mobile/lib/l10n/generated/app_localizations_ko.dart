@@ -3238,6 +3238,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get authSignInDifferentAccount => '다른 계정으로 로그인';
 
   @override
+  String get authRegisteredKeyRecoveryDescription =>
+      'This key is already linked to a Divine account. Sign in with your email to recover it.';
+
+  @override
   String get authUseAnotherAccount => '다른 계정 사용';
 
   @override

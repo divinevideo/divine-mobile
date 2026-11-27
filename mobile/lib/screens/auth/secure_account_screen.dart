@@ -128,6 +128,17 @@ class _SecureAccountScreenState extends ConsumerState<SecureAccountScreen> {
       // Use authService.exportNsec() which accesses keys from secure storage
       // This works for both auto-generated and imported keys
       final authService = ref.read(authServiceProvider);
+      final registeredKeyConflictStore = ref.read(
+        registeredKeyConflictStoreProvider,
+      );
+      void recordRegisteredKeyConflict({
+        required String expectedPubkeyHex,
+        required String email,
+      }) => registeredKeyConflictStore.record(
+        expectedPubkeyHex: expectedPubkeyHex,
+        email: email,
+      );
+      final ownerPublicKeyHex = authService.currentPublicKeyHex;
       final nsec = await authService.exportNsec();
 
       if (nsec == null) {
@@ -140,7 +151,8 @@ class _SecureAccountScreenState extends ConsumerState<SecureAccountScreen> {
         email: email,
         password: password,
         nsec: nsec,
-        ownerPublicKeyHex: authService.currentPublicKeyHex,
+        ownerPublicKeyHex: ownerPublicKeyHex,
+        recordRegisteredKeyConflict: recordRegisteredKeyConflict,
       );
     } catch (e) {
       Log.error(
@@ -162,6 +174,11 @@ class _SecureAccountScreenState extends ConsumerState<SecureAccountScreen> {
     required String password,
     required String nsec,
     required String? ownerPublicKeyHex,
+    required void Function({
+      required String expectedPubkeyHex,
+      required String email,
+    })
+    recordRegisteredKeyConflict,
   }) async {
     final (result, verifier) = await oauth.headlessRegister(
       email: email,
@@ -171,12 +188,17 @@ class _SecureAccountScreenState extends ConsumerState<SecureAccountScreen> {
     );
 
     if (!result.success) {
-      // A registration conflict means the key or entered email already has an
-      // account (commonly a registered key forgotten after anonymous fallback).
-      // Show recovery choices in place instead of dead-ending on raw server
-      // text: sign in for the recoverable case, or contact support for duplicate
-      // or credential-less accounts.
+      // Keycast distinguishes a BYOK key collision from an email collision.
+      // Only the former changes future Secure account entry points; an email
+      // collision can still be retried here with another address.
+      final isRegisteredKey = result.errorCode == 'CONFLICT';
       if (result.failure == KeycastRegisterFailure.emailAlreadyRegistered) {
+        if (isRegisteredKey && ownerPublicKeyHex != null) {
+          recordRegisteredKeyConflict(
+            expectedPubkeyHex: ownerPublicKeyHex,
+            email: email,
+          );
+        }
         if (!mounted) return;
         setState(() {
           _hasConflict = true;

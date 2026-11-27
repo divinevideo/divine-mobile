@@ -159,6 +159,7 @@ void main() {
     authServiceProvider.overrideWithValue(authService),
     hasExpiredOAuthSessionProvider.overrideWithValue(false),
     currentAuthStateProvider.overrideWithValue(AuthState.unauthenticated),
+    registeredKeyConflictProvider.overrideWithValue(null),
     audioSharingPreferenceServiceProvider.overrideWithValue(
       audioSharingService,
     ),

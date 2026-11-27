@@ -249,6 +249,7 @@ void main() {
         hasExpiredOAuthSessionProvider.overrideWithValue(false),
         deviceScopeProvider.overrideWithValue(deviceScope),
         currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+        registeredKeyConflictProvider.overrideWithValue(null),
         // Null repository keeps profile reads offline, so the account header
         // renders from fallbacks without any network.
         profileRepositoryProvider.overrideWithValue(null),

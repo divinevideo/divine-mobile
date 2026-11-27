@@ -305,6 +305,7 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
     // stays authenticated, is watched through its own provider (#9943).
     ref.watch(currentAuthStateProvider);
     final isAnonymous = authService.isAnonymous;
+    final registeredKeyConflict = ref.watch(registeredKeyConflictProvider);
     final isAccountEnforced =
         widget.isOwnProfile && ref.watch(isAccountEnforcedProvider);
     final hasExpiredSession =
@@ -433,6 +434,7 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
                       isOwnProfile: widget.isOwnProfile,
                       isAccountEnforced: isAccountEnforced,
                       isAnonymous: isAnonymous,
+                      hasRegisteredKeyConflict: registeredKeyConflict != null,
                       hasAnyProfileInfo: hasAnyProfileInfo,
                       secureAccountPromptDismissal:
                           secureAccountPromptDismissal,
@@ -442,6 +444,7 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
                         actions,
                         secureAccountPromptDismissal,
                         supporterPromptDismissal,
+                        registeredKeyConflict?.email,
                       ),
                     ),
                   ),
@@ -601,12 +604,14 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
     List<ProfileActionType> actions,
     SecureAccountPromptDismissalStore secureAccountPromptDismissal,
     SupporterPromptDismissalStore supporterPromptDismissal,
+    String? recoveryEmail,
   ) {
     _runProfileDetached(
       _awaitProfileResult(
         showProfileActionsSheet(
           context: context,
           actions: actions,
+          recoveryEmail: recoveryEmail,
           onMaybeLater: (action) {
             final dismissal = switch (action) {
               ProfileActionType.secureAccount =>
@@ -614,6 +619,7 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
               ProfileActionType.becomeSupporter =>
                 supporterPromptDismissal.dismiss(),
               ProfileActionType.accountRestricted ||
+              ProfileActionType.recoverAccount ||
               ProfileActionType.completeProfile => null,
             };
             if (dismissal == null) return;

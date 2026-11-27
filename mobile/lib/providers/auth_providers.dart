@@ -30,6 +30,7 @@ import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/following_prefetch_marker.dart';
+import 'package:openvine/services/auth/registered_key_conflict_store.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/c2pa_creator_binding_factory.dart';
 import 'package:openvine/services/cawg_verifier_client.dart';
@@ -277,6 +278,44 @@ class CurrentAccountActivationReceipt
     return authService.committedAccountActivationReceipt;
   }
 }
+
+/// Current active-key conflict and its sign-in recovery context.
+final registeredKeyConflictStoreProvider = Provider<RegisteredKeyConflictStore>(
+  (ref) {
+    final store = RegisteredKeyConflictStore(ref.watch(authServiceProvider));
+    ref.onDispose(store.dispose);
+    return store;
+  },
+);
+
+final _registeredKeyConflictStateProvider =
+    NotifierProvider<RegisteredKeyConflictNotifier, RegisteredKeyConflict?>(
+      RegisteredKeyConflictNotifier.new,
+    );
+
+class RegisteredKeyConflictNotifier extends Notifier<RegisteredKeyConflict?> {
+  @override
+  RegisteredKeyConflict? build() {
+    final authState = ref.watch(currentAuthStateProvider);
+    final authService = ref.watch(authServiceProvider);
+    final store = ref.watch(registeredKeyConflictStoreProvider);
+    store.syncAuthState(authState);
+    final storeSubscription = store.stream.listen((_) {
+      state = store.current;
+    });
+    final authSubscription = authService.authStateStream.listen(
+      store.syncAuthState,
+    );
+    ref.onDispose(storeSubscription.cancel);
+    ref.onDispose(authSubscription.cancel);
+    return store.current;
+  }
+}
+
+/// Read-only recovery context; callers can override this boundary in UI tests.
+final registeredKeyConflictProvider = Provider<RegisteredKeyConflict?>(
+  (ref) => ref.watch(_registeredKeyConflictStateProvider),
+);
 
 /// Boundary-safe auth helper for recorder exits.
 ///

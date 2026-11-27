@@ -435,6 +435,7 @@ class _ProfileAvatarWithPendingActions extends StatelessWidget {
     required this.isOwnProfile,
     required this.isAccountEnforced,
     required this.isAnonymous,
+    required this.hasRegisteredKeyConflict,
     required this.hasAnyProfileInfo,
     required this.secureAccountPromptDismissal,
     required this.supporterPromptDismissal,
@@ -448,6 +449,7 @@ class _ProfileAvatarWithPendingActions extends StatelessWidget {
   final bool isOwnProfile;
   final bool isAccountEnforced;
   final bool isAnonymous;
+  final bool hasRegisteredKeyConflict;
   final bool hasAnyProfileInfo;
   final SecureAccountPromptDismissalStore secureAccountPromptDismissal;
   final SupporterPromptDismissalStore supporterPromptDismissal;
@@ -469,6 +471,7 @@ class _ProfileAvatarWithPendingActions extends StatelessWidget {
           isOwnProfile: isOwnProfile,
           isAccountEnforced: isAccountEnforced,
           isAnonymous: isAnonymous,
+          hasRegisteredKeyConflict: hasRegisteredKeyConflict,
           hasAnyProfileInfo: hasAnyProfileInfo,
           canBecomeSupporter: isConfirmedNonSupporter,
         ).where((action) {
@@ -478,6 +481,7 @@ class _ProfileAvatarWithPendingActions extends StatelessWidget {
             ProfileActionType.becomeSupporter =>
               !supporterPromptDismissal.isDismissed(),
             ProfileActionType.accountRestricted ||
+            ProfileActionType.recoverAccount ||
             ProfileActionType.completeProfile => true,
           };
         }).toList();
@@ -698,6 +702,10 @@ class _ProfileActionLabel extends StatelessWidget {
         DivineIconName.lockSimple,
         context.l10n.profileSecureYourAccount,
       ),
+      ProfileActionType.recoverAccount => (
+        DivineIconName.signIn,
+        context.l10n.authSignInButton,
+      ),
       ProfileActionType.completeProfile => (
         DivineIconName.pencilSimple,
         context.l10n.profileCompleteYourProfile,
@@ -713,6 +721,7 @@ class _ProfileActionLabel extends StatelessWidget {
       ProfileActionType.accountRestricted =>
         context.vineColors.accentChipOrange,
       ProfileActionType.secureAccount ||
+      ProfileActionType.recoverAccount ||
       ProfileActionType.completeProfile => context.vineColors.accentChipYellow,
       // A brand fill, the same in both appearances, paired as on primary
       // buttons so the label stays legible.

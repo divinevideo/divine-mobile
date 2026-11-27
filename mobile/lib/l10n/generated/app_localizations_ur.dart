@@ -3443,6 +3443,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get authSignInDifferentAccount => 'موجودہ اکاؤنٹ سے سائن ان کریں';
 
   @override
+  String get authRegisteredKeyRecoveryDescription =>
+      'This key is already linked to a Divine account. Sign in with your email to recover it.';
+
+  @override
   String get authUseAnotherAccount => 'دوسرا اکاؤنٹ استعمال کریں';
 
   @override

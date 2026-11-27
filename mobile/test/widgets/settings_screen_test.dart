@@ -40,6 +40,7 @@ import 'package:openvine/screens/settings/monetization_links_settings_screen.dar
 import 'package:openvine/screens/settings/settings_categories_screen.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
+import 'package:openvine/services/auth/registered_key_conflict_store.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/environment_service.dart';
@@ -162,6 +163,7 @@ void main() {
       bool developerMode = false,
       AccountEnforcementKind? enforcement,
       Widget? child,
+      RegisteredKeyConflict? registeredKeyConflict,
     }) {
       stubReadOnlySupporterEntry();
       when(
@@ -193,6 +195,9 @@ void main() {
             mockDraftStorageService,
           ),
           currentAuthStateProvider.overrideWithValue(authState),
+          registeredKeyConflictProvider.overrideWithValue(
+            registeredKeyConflict,
+          ),
           knownAccountsProvider.overrideWith((ref) async => knownAccounts),
           isAccountEnforcedProvider.overrideWithValue(
             enforcement?.isEnforced ?? false,
@@ -831,6 +836,41 @@ void main() {
 
       await tester.pumpWidget(const SizedBox());
       await tester.pump();
+    });
+
+    testWidgets('replaces Secure account with registered-key recovery', (
+      tester,
+    ) async {
+      when(() => mockAuthService.isAnonymous).thenReturn(true);
+      final mockGoRouter = MockGoRouter();
+      when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
+
+      await tester.pumpWidget(
+        buildSubject(
+          goRouter: mockGoRouter,
+          registeredKeyConflict: const RegisteredKeyConflict(
+            pubkeyHex: currentPubkey,
+            email: 'existing@example.com',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.settingsSecureAccount), findsNothing);
+      expect(find.text(l10n.authSignInButton), findsOneWidget);
+      expect(
+        find.text(l10n.authRegisteredKeyRecoveryDescription),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text(l10n.authSignInButton));
+      await tester.pumpAndSettle();
+
+      verify(
+        () => mockGoRouter.push(
+          '/welcome/login-options?email=existing%40example.com',
+        ),
+      ).called(1);
     });
 
     testWidgets('renders Session Expired tile when session expired', (

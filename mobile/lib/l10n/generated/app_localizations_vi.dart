@@ -3407,6 +3407,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get authSignInDifferentAccount => 'Đăng nhập bằng tài khoản hiện có';
 
   @override
+  String get authRegisteredKeyRecoveryDescription =>
+      'This key is already linked to a Divine account. Sign in with your email to recover it.';
+
+  @override
   String get authUseAnotherAccount => 'Dùng tài khoản khác';
 
   @override

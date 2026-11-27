@@ -7,6 +7,37 @@ import 'package:openvine/widgets/profile/profile_actions_sheet/profile_action_ty
 void main() {
   group(ProfileActionType, () {
     group('pending', () {
+      test('replaces secureAccount after a registered-key conflict', () {
+        final actions = ProfileActionType.pending(
+          isOwnProfile: true,
+          isAccountEnforced: false,
+          isAnonymous: true,
+          hasAnyProfileInfo: true,
+          hasRegisteredKeyConflict: true,
+          canBecomeSupporter: false,
+        );
+
+        expect(actions, [ProfileActionType.recoverAccount]);
+      });
+
+      test('keeps restriction first and supporter last during recovery', () {
+        final actions = ProfileActionType.pending(
+          isOwnProfile: true,
+          isAccountEnforced: true,
+          isAnonymous: true,
+          hasAnyProfileInfo: false,
+          hasRegisteredKeyConflict: true,
+          canBecomeSupporter: true,
+        );
+
+        expect(actions, [
+          ProfileActionType.accountRestricted,
+          ProfileActionType.recoverAccount,
+          ProfileActionType.completeProfile,
+          ProfileActionType.becomeSupporter,
+        ]);
+      });
+
       test('returns both actions when anonymous without profile info', () {
         final actions = ProfileActionType.pending(
           isOwnProfile: true,

@@ -72,6 +72,7 @@ void main() {
           sharedPreferencesProvider.overrideWithValue(preferences),
           authServiceProvider.overrideWithValue(authService),
           currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+          registeredKeyConflictProvider.overrideWithValue(null),
         ],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
