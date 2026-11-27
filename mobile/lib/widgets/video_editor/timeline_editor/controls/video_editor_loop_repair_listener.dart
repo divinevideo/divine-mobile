@@ -1,6 +1,8 @@
 // ABOUTME: Applies a verified loop as one history edit, plays its seam after
 // ABOUTME: player readiness, and presents cancellable progress and Undo.
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/semantics.dart';
@@ -45,6 +47,7 @@ void alignEditorLoop(BuildContext context) {
     return;
   }
   listener?._endSeam();
+  listener?._dismissSnackBar();
   final overlays = context.read<TimelineOverlayBloc>().state;
   runDetached(
     context.read<LoopSuggestionCubit>().fix(
@@ -115,6 +118,25 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
   bool _sawNotReady = false;
   bool _ownsAudition = false;
   String? _auditionOwner;
+  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>?
+  _snackBarController;
+  VoidCallback? _closeActiveSnackBar;
+  bool _snackBarVisible = false;
+  bool _snackBarDismissed = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!(ModalRoute.isCurrentOf(context) ?? true)) {
+      _dismissSnackBar(deferred: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _dismissSnackBar(deferred: true);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) => MultiBlocListener(
@@ -217,6 +239,7 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
     }
     if (_playingClips != null && !listEquals(state.clips, _playingClips)) {
       _endSeam();
+      _dismissSnackBar();
     }
   }
 
@@ -279,6 +302,7 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
         !(ModalRoute.isCurrentOf(context) ?? true)) {
       context.read<LoopSuggestionCubit>().compositionChanged('editor-inactive');
       _endSeam();
+      _dismissSnackBar();
       return;
     }
     if (!state.isPlayerReady) _sawNotReady = true;
@@ -307,6 +331,7 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
   }
 
   void _report(String message, {bool undo = false}) {
+    if (!mounted || !(ModalRoute.isCurrentOf(context) ?? true)) return;
     runDetached(
       SemanticsService.sendAnnouncement(
         View.of(context),
@@ -317,19 +342,98 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
       logName: 'LoopRepair',
       category: LogCategory.ui,
     );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        action: undo
-            ? SnackBarAction(
-                label: context.l10n.videoEditorUndoSemanticLabel,
-                onPressed: () {
-                  _endSeam();
-                  VideoEditorScope.of(context).editor?.undoAction();
-                },
-              )
+    _dismissSnackBar();
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+    var isClosed = false;
+    var closing = false;
+    late final ScaffoldFeatureController<SnackBar, SnackBarClosedReason>
+    controller;
+    void close() {
+      if (closing || isClosed || !messenger.mounted) return;
+      closing = true;
+      controller.close();
+    }
+
+    // Use DivineSnackbarContainer rather than SnackBar.action so SnackBar
+    // persist stays false (auto-dismissing after its duration) while offering
+    // both Undo and an explicit dismiss button.
+    controller = messenger.showSnackBar(
+      DivineSnackbarContainer.snackBar(
+        message,
+        actionLabel: undo ? context.l10n.videoEditorUndoSemanticLabel : null,
+        onActionPressed: undo
+            ? () {
+                if (!mounted ||
+                    !identical(_snackBarController, controller) ||
+                    !(ModalRoute.isCurrentOf(context) ?? true)) {
+                  return;
+                }
+                _dismissSnackBar();
+                _endSeam();
+                VideoEditorScope.of(context).editor?.undoAction();
+              }
             : null,
+        onDismissPressed: () {
+          if (!identical(_snackBarController, controller)) return;
+          _dismissSnackBar();
+        },
+        dismissSemanticLabel: context.l10n.commonClose,
+        onVisible: () {
+          if (!identical(_snackBarController, controller)) {
+            scheduleMicrotask(close);
+            return;
+          }
+          _snackBarVisible = true;
+          if (_snackBarDismissed ||
+              !mounted ||
+              !(ModalRoute.isCurrentOf(context) ?? true)) {
+            _dismissSnackBar(deferred: true);
+          }
+        },
       ),
     );
+    _snackBarController = controller;
+    _closeActiveSnackBar = close;
+    _snackBarVisible = false;
+    _snackBarDismissed = false;
+    unawaited(
+      controller.closed.then((_) {
+        isClosed = true;
+        if (identical(_snackBarController, controller)) {
+          _snackBarController = null;
+          _closeActiveSnackBar = null;
+          _snackBarVisible = false;
+          _snackBarDismissed = false;
+        }
+      }),
+    );
+  }
+
+  /// Dismisses this listener's active loop-repair snackbar without disturbing
+  /// unrelated snackbars ahead of it in the app-level messenger queue.
+  ///
+  /// Uses [deferred] from [didChangeDependencies] and [dispose] because under
+  /// `accessibleNavigation` [ScaffoldMessengerState.hideCurrentSnackBar] skips
+  /// the exit animation and rebuilds synchronously, which Flutter forbids
+  /// while the framework holds the build/unmount lock.
+  void _dismissSnackBar({bool deferred = false}) {
+    final controller = _snackBarController;
+    if (controller == null) return;
+    if (!_snackBarVisible) {
+      _snackBarDismissed = true;
+      return;
+    }
+    final close = _closeActiveSnackBar;
+    _snackBarController = null;
+    _closeActiveSnackBar = null;
+    _snackBarVisible = false;
+    _snackBarDismissed = false;
+    if (close == null) return;
+    if (!deferred) {
+      close();
+      return;
+    }
+    scheduleMicrotask(close);
   }
 }
