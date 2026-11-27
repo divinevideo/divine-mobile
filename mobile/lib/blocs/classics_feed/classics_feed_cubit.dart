@@ -36,6 +36,10 @@ class ClassicsFeedCubit extends Cubit<ClassicFeedSessionState> {
   /// Asks the repository for another page.
   Future<void> loadMore() async => _session.loadMore();
 
+  /// Moves the rest of this queue to the archive once the account stops being
+  /// eligible; see [ClassicFeedSession.revokePersonalization].
+  void revokePersonalization() => _session.revokePersonalization();
+
   @override
   Future<void> close() async {
     // Stop feedback and close presentation immediately, then await all drains.

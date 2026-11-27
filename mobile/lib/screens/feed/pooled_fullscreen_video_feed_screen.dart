@@ -276,10 +276,8 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (ref.watch(adaptiveClassicsEnabledProvider)) {
-      if (source case ClassicVinesViewSource(anchor: final anchor?)) {
-        return ClassicsPlaybackPage(anchor: anchor, screen: this);
-      }
+    if (source case ClassicVinesViewSource(anchor: final anchor?)) {
+      return _SelectedClassicRoute(anchor: anchor, screen: this);
     }
     final mediaCache = kIsWeb ? null : ref.read(mediaCacheProvider);
     final blossomAuthService = ref.read(blossomAuthServiceProvider);
@@ -384,6 +382,62 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
     );
     // Not around the classics page above, whose own feed lands here.
     return ScreenFrameTraceScope(screen: .fullscreenFeed, child: feed);
+  }
+}
+
+/// Chooses a selected classic's playback mode once, when the route opens.
+///
+/// Watching the account gate instead rebuilt the route into the other mode
+/// whenever Keycast's answer changed, which restarted playback at the tapped
+/// classic. An adaptive route that loses eligibility moves its own queue to
+/// the archive ([ClassicsPlaybackPage]); an archive route stays on the archive
+/// until the viewer opens another classic.
+class _SelectedClassicRoute extends ConsumerStatefulWidget {
+  const _SelectedClassicRoute({required this.anchor, required this.screen});
+
+  final VideoEvent anchor;
+  final PooledFullscreenVideoFeedScreen screen;
+
+  @override
+  ConsumerState<_SelectedClassicRoute> createState() =>
+      _SelectedClassicRouteState();
+}
+
+class _SelectedClassicRouteState extends ConsumerState<_SelectedClassicRoute> {
+  late final bool _adaptive;
+
+  @override
+  void initState() {
+    super.initState();
+    _adaptive = ref.read(adaptiveClassicsEnabledProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screen = widget.screen;
+    if (_adaptive) {
+      return ClassicsPlaybackPage(anchor: widget.anchor, screen: screen);
+    }
+    // Without an anchor the source reads the same shared archive feed, and
+    // this route does not come back through the mode choice.
+    return PooledFullscreenVideoFeedScreen(
+      source: const ClassicVinesViewSource(),
+      feedRepository: screen.feedRepository,
+      initialIndex: screen.initialIndex,
+      initialVideoId: screen.initialVideoId,
+      initialStableId: screen.initialStableId,
+      contextTitle: screen.contextTitle,
+      sponsorName: screen.sponsorName,
+      trafficSource: screen.trafficSource,
+      sourceDetail: screen.sourceDetail,
+      autoOpenComments: screen.autoOpenComments,
+      focusCommentId: screen.focusCommentId,
+      onPageChanged: screen.onPageChanged,
+      onActiveVideoChanged: screen.onActiveVideoChanged,
+      dmReplyContext: screen.dmReplyContext,
+      onBack: screen.onBack,
+      isAddYoursSeries: screen.isAddYoursSeries,
+    );
   }
 }
 

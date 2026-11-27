@@ -33,10 +33,20 @@ class ClassicsPlaybackPage extends ConsumerWidget {
         ref.context.mounted && ref.read(adaptiveClassicsEnabledProvider);
     return BlocProvider(
       key: ValueKey((viewer, repository, analytics, anchor.id)),
-      create: (_) => ClassicsFeedCubit(
-        session: ClassicFeedSession(
+      create: (_) {
+        late final ClassicFeedSession session;
+        session = ClassicFeedSession(
           initialVideos: [anchor],
           loadPage: (request) {
+            // Once the account stops being eligible the queue continues on
+            // the archive, without a viewer or ranking context.
+            if (session.personalizationRevoked || !isAdaptiveAllowed()) {
+              return repository.getClassicVideos(
+                limit: request.limit,
+                cursor: request.cursor,
+                archiveOnly: true,
+              );
+            }
             final contextId = analytics.privacyGeneration;
             final allowed = analytics.initializedAnalyticsConsent;
             return repository.getClassicRecommendations(
@@ -54,22 +64,30 @@ class ClassicsPlaybackPage extends ConsumerWidget {
           privacyChanges: analytics.privacyChanges,
           removedVideoIds: repository.removedVideoIds,
           filter: repository.applyContentPreferences,
-        ),
-      ),
+        );
+        // A queue re-created after eligibility ended starts on the archive.
+        if (!isAdaptiveAllowed()) session.revokePersonalization();
+        return ClassicsFeedCubit(session: session);
+      },
       child: _ClassicsPlaybackView(anchor: anchor, screen: screen),
     );
   }
 }
 
-class _ClassicsPlaybackView extends StatelessWidget {
+class _ClassicsPlaybackView extends ConsumerWidget {
   const _ClassicsPlaybackView({required this.anchor, required this.screen});
 
   final VideoEvent anchor;
   final PooledFullscreenVideoFeedScreen screen;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cubit = context.read<ClassicsFeedCubit>();
+    // The route keeps playing through a change of eligibility; only the
+    // queue's remaining pages change source.
+    ref.listen<bool>(adaptiveClassicsEnabledProvider, (_, allowed) {
+      if (!allowed) cubit.revokePersonalization();
+    });
     return PooledFullscreenVideoFeedScreen(
       source: const ClassicVinesViewSource(),
       feedRepository: StreamFeedRepository(
