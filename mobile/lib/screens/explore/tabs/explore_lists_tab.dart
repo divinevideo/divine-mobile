@@ -2,11 +2,11 @@
 // ABOUTME: people lists side by side in independent columns. My Lists lives
 // ABOUTME: on the profile's Lists tab, not here.
 
+import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/lists_discovery/cubit/lists_discovery_cubit.dart';
@@ -78,7 +78,6 @@ class _ExploreListsTabState extends ConsumerState<ExploreListsTab>
       )),
       create: (_) {
         final cubit = ListsDiscoveryCubit(
-          curatedListService: service,
           curatedListRepository: curatedRepository,
           peopleListsRepository: peopleRepository,
           viewerPubkey: viewerPubkey,
@@ -88,7 +87,10 @@ class _ExploreListsTabState extends ConsumerState<ExploreListsTab>
               ? ListsDiscoveryState(
                   videoStatus: ListsDiscoveryColumnStatus.success,
                   peopleStatus: ListsDiscoveryColumnStatus.success,
-                  videoLists: screenshotDiscoverListsFixtures(),
+                  videoLists: [
+                    for (final list in screenshotDiscoverListsFixtures())
+                      CuratedListSearchResult(list),
+                  ],
                 )
               : null,
         );
@@ -290,7 +292,7 @@ class _VideoListsColumn extends StatelessWidget {
 
   final int columns;
   final ListsDiscoveryColumnStatus status;
-  final List<CuratedList> lists;
+  final List<CuratedListSearchResult> lists;
   final bool thumbnailsPending;
   final bool initializationFailed;
   final VoidCallback? onRetryInitialization;
@@ -306,17 +308,19 @@ class _VideoListsColumn extends StatelessWidget {
       placeholder: const DivineListThumbnailSkeleton.videos(),
       isColumnEmpty: lists.isEmpty,
       children: [
-        for (final (index, list) in lists.indexed)
+        for (final (index, result) in lists.indexed)
           Semantics(
-            // The stream re-sorts on every emit, so cards can change slots;
-            // the key keeps each card's image state with its list.
-            key: ValueKey(list.authorScopedId),
+            // A list can drop out as it completes, so cards can change
+            // slots; the key keeps each card's image state with its list.
+            key: ValueKey(result.list.authorScopedId),
             identifier: SemanticIds.listCard(index),
             container: true,
             child: DivineListThumbnail.videos(
-              curatedList: list,
+              curatedList: result.list,
+              videoCount: result.itemCount,
               thumbnailsPending: thumbnailsPending,
               onTap: () {
+                final list = result.list;
                 final author = list.pubkey;
                 if (author == null) return;
                 Log.info(
@@ -327,11 +331,13 @@ class _VideoListsColumn extends StatelessWidget {
                   CuratedListByAuthorRouteData(
                     pubkey: author,
                     listId: list.id,
+                    // An index summary holds no video references, so the
+                    // screen loads the list by its address instead.
                     $extra: CuratedListRouteExtra(
                       listName: list.name,
-                      videoIds: list.videoEventIds,
+                      videoIds: result.isComplete ? list.videoEventIds : null,
                       authorPubkey: list.pubkey,
-                      list: list,
+                      list: result.isComplete ? list : null,
                     ),
                   ).push<void>(context),
                   'open discovered list',
@@ -398,6 +404,7 @@ class _PeopleListsColumn extends StatelessWidget {
           DivineListThumbnail.people(
             key: ValueKey(result.addressableId),
             userList: result.list,
+            memberCount: result.memberCount,
             onTap: () {
               Log.info(
                 'Opening discovered people list: ${result.list.id}',

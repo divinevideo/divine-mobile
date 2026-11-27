@@ -5428,7 +5428,7 @@ void main() {
       );
 
       test(
-        'deduplicates repeated addressable refs with different event ids',
+        'deduplicates relay revisions in favor of the newer event',
         () async {
           final author = 'a' * 64;
           final firstCopy = _createVideoEventWithDTag(
@@ -5446,12 +5446,7 @@ void main() {
             createdAt: 1704067300,
           );
 
-          var callCount = 0;
-          when(() => mockNostrClient.queryEvents(any())).thenAnswer((_) async {
-            callCount++;
-            if (callCount == 1) return [firstCopy];
-            return [secondCopy];
-          });
+          _answerQueriesFrom(mockNostrClient, [firstCopy, secondCopy]);
 
           final result = await repository.getVideosForList([
             'first-event-id',
@@ -5459,7 +5454,7 @@ void main() {
           ]);
 
           expect(result, hasLength(1));
-          expect(result.single.id, equals('first-event-id'));
+          expect(result.single.id, equals('second-event-id'));
         },
       );
 
@@ -5554,6 +5549,428 @@ void main() {
 
         expect(result, hasLength(1));
         expect(result.first.id, equals('found-video'));
+      });
+
+      group('from Funnelcake', () {
+        String videoIdFor(int index) =>
+            (1000 + index).toRadixString(16).padLeft(64, '0');
+        String authorFor(int index) => index.toRadixString(16).padLeft(64, '0');
+
+        VideoStats statsFor(int index) => _createVideoStats(
+          id: videoIdFor(index),
+          pubkey: authorFor(index),
+          dTag: 'd-$index',
+          videoUrl: 'https://example.com/$index.mp4',
+        );
+
+        Event relayVideo(int index) => _createVideoEvent(
+          id: videoIdFor(index),
+          pubkey: authorFor(index),
+          videoUrl: 'https://example.com/relay-$index.mp4',
+          createdAt: 1704067200,
+        );
+
+        MockFunnelcakeApiClient availableApi() {
+          final api = MockFunnelcakeApiClient();
+          when(() => api.isAvailable).thenReturn(true);
+          return api;
+        }
+
+        void answerApi(
+          MockFunnelcakeApiClient api,
+          Future<List<VideoStats>> Function(List<String> ids) answer,
+        ) {
+          when(() => api.getVideosByIds(any())).thenAnswer(
+            (invocation) =>
+                answer(invocation.positionalArguments.first as List<String>),
+          );
+        }
+
+        VideosRepository repositoryWith(
+          MockFunnelcakeApiClient api, {
+          BlockedVideoFilter? blockFilter,
+          VideoContentFilter? feedShapeFilter,
+        }) => VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: api,
+          blockFilter: blockFilter,
+          feedShapeFilter: feedShapeFilter,
+        );
+
+        test('answers event ids in list order and skips the relays', () async {
+          final api = availableApi();
+          answerApi(api, (_) async => [statsFor(1), statsFor(2)]);
+
+          final result = await repositoryWith(api).getVideosForList([
+            videoIdFor(2),
+            videoIdFor(1),
+          ]);
+
+          expect(
+            result.map((video) => video.id),
+            equals([videoIdFor(2), videoIdFor(1)]),
+          );
+          verifyNever(() => mockNostrClient.queryEvents(any()));
+        });
+
+        test('keeps the engagement counts Funnelcake sends', () async {
+          final api = availableApi();
+          answerApi(
+            api,
+            (_) async => [
+              _createVideoStats(
+                id: videoIdFor(1),
+                pubkey: authorFor(1),
+                dTag: 'd-1',
+                videoUrl: 'https://example.com/1.mp4',
+                reactions: 6,
+                comments: 2,
+                reposts: 1,
+              ),
+            ],
+          );
+
+          final videos = await repositoryWith(
+            api,
+          ).getVideosForList([videoIdFor(1)]);
+
+          expect(videos.single.nostrLikeCount, 6);
+          expect(videos.single.nostrCommentCount, 2);
+          expect(videos.single.nostrRepostCount, 1);
+          verifyNever(() => api.getBulkVideoStats(any()));
+        });
+
+        test('asks for a hundred ids per request', () async {
+          final api = availableApi();
+          answerApi(api, (_) async => const []);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+
+          await repositoryWith(api).getVideosForList([
+            for (var i = 0; i < 150; i++) videoIdFor(i),
+          ]);
+
+          final requests = verify(
+            () => api.getVideosByIds(captureAny()),
+          ).captured.cast<List<String>>();
+          expect(
+            requests,
+            equals([
+              [for (var i = 0; i < 100; i++) videoIdFor(i)],
+              [for (var i = 100; i < 150; i++) videoIdFor(i)],
+            ]),
+          );
+        });
+
+        test(
+          'reads the relays only for ids Funnelcake did not return',
+          () async {
+            final api = availableApi();
+            answerApi(api, (_) async => [statsFor(1)]);
+            when(
+              () => mockNostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [relayVideo(2)]);
+
+            final result = await repositoryWith(api).getVideosForList([
+              videoIdFor(2),
+              videoIdFor(1),
+            ]);
+
+            expect(
+              result.map((video) => video.id),
+              equals([videoIdFor(2), videoIdFor(1)]),
+            );
+            final filters =
+                verify(
+                      () => mockNostrClient.queryEvents(captureAny()),
+                    ).captured.single
+                    as List<Filter>;
+            expect(filters.single.ids, equals([videoIdFor(2)]));
+          },
+        );
+
+        test('reads the relays for the ids of a request that failed', () async {
+          final api = availableApi();
+          answerApi(api, (ids) async {
+            if (ids.length == 100) return [statsFor(0)];
+            throw const FunnelcakeTimeoutException('bulk');
+          });
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => [relayVideo(100)]);
+
+          final result = await repositoryWith(api).getVideosForList([
+            for (var i = 0; i < 101; i++) videoIdFor(i),
+          ]);
+
+          expect(
+            result.map((video) => video.id),
+            equals([videoIdFor(0), videoIdFor(100)]),
+          );
+          final filters =
+              verify(
+                    () => mockNostrClient.queryEvents(captureAny()),
+                  ).captured.single
+                  as List<Filter>;
+          expect(filters.single.ids, contains(videoIdFor(100)));
+          expect(filters.single.ids, isNot(contains(videoIdFor(0))));
+        });
+
+        test(
+          'trusts an answer whose videos the viewer filters all out',
+          () async {
+            final api = availableApi();
+            answerApi(api, (_) async => [statsFor(1)]);
+
+            final result = await repositoryWith(
+              api,
+              blockFilter: (pubkey) => pubkey == authorFor(1),
+            ).getVideosForList([videoIdFor(1)]);
+
+            expect(result, isEmpty);
+            verifyNever(() => mockNostrClient.queryEvents(any()));
+          },
+        );
+
+        test('asks for event ids in lowercase, and nothing else', () async {
+          final api = availableApi();
+          answerApi(api, (_) async => [statsFor(1)]);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+
+          final result = await repositoryWith(api).getVideosForList([
+            'not-an-event-id',
+            videoIdFor(1).toUpperCase(),
+          ]);
+
+          expect(
+            result.map((video) => video.id),
+            equals([videoIdFor(1)]),
+          );
+          verify(() => api.getVideosByIds([videoIdFor(1)])).called(1);
+        });
+
+        test(
+          'resolves external video kinds by event id on the relays',
+          () async {
+            final api = availableApi();
+            answerApi(api, (_) async => const []);
+            final events = [
+              for (final (index, kind) in [
+                (1, NIP71VideoKinds.normalVideo),
+                (2, NIP71VideoKinds.shortVideo),
+                (3, NIP71VideoKinds.addressableNormalVideo),
+              ])
+                _createVideoEventWithDTag(
+                  id: videoIdFor(index),
+                  pubkey: authorFor(index),
+                  dTag: 'd-$index',
+                  videoUrl: 'https://example.com/$index.mp4',
+                  createdAt: 1704067200,
+                  kind: kind,
+                ),
+            ];
+            when(() => mockNostrClient.queryEvents(any())).thenAnswer((
+              invocation,
+            ) async {
+              final filters =
+                  invocation.positionalArguments.single as List<Filter>;
+              return events.where(filters.single.checkEvent).toList();
+            });
+
+            final result = await repositoryWith(api).watchVideosForList([
+              videoIdFor(1).toUpperCase(),
+              videoIdFor(2),
+              videoIdFor(3),
+            ], includeFeedShape: false).last;
+
+            expect(result.map((video) => video.id), [
+              videoIdFor(1),
+              videoIdFor(2),
+              videoIdFor(3),
+            ]);
+          },
+        );
+
+        test('reads coordinates from the relays', () async {
+          final api = availableApi();
+          answerApi(api, (_) async => [statsFor(1)]);
+          final author = authorFor(9);
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [
+              _createVideoEventWithDTag(
+                id: videoIdFor(9),
+                pubkey: author,
+                dTag: 'vine-9',
+                videoUrl: 'https://example.com/9.mp4',
+                createdAt: 1704067200,
+              ),
+            ],
+          );
+
+          final result = await repositoryWith(api).getVideosForList([
+            '34236:$author:vine-9',
+            videoIdFor(1),
+          ]);
+
+          expect(
+            result.map((video) => video.id),
+            equals([videoIdFor(9), videoIdFor(1)]),
+          );
+          verify(() => api.getVideosByIds([videoIdFor(1)])).called(1);
+        });
+
+        test('skips the feed-shape filter only when asked', () async {
+          final api = availableApi();
+          answerApi(api, (_) async => [statsFor(1)]);
+          final repo = repositoryWith(api, feedShapeFilter: (_) => true);
+
+          final filtered = await repo.getVideosForList([videoIdFor(1)]);
+          final kept = await repo.getVideosForList(
+            [videoIdFor(1)],
+            includeFeedShape: false,
+          );
+
+          expect(filtered, isEmpty);
+          expect(kept.map((video) => video.id), equals([videoIdFor(1)]));
+        });
+
+        group('watchVideosForList', () {
+          test(
+            'replaces an older event ID with the resolved revision',
+            () async {
+              final api = availableApi();
+              answerApi(api, (_) async => [statsFor(1), statsFor(2)]);
+              _answerQueriesFrom(mockNostrClient, [
+                _createVideoEventWithDTag(
+                  id: videoIdFor(3),
+                  pubkey: authorFor(1),
+                  dTag: 'd-1',
+                  videoUrl: 'https://example.com/edited.mp4',
+                  createdAt: 1704067201,
+                  publishedAt: 1704067200,
+                ),
+              ]);
+
+              final emissions = await repositoryWith(api).watchVideosForList([
+                videoIdFor(1),
+                videoIdFor(2),
+                '34236:${authorFor(1)}:d-1',
+              ]).toList();
+
+              expect(emissions.map((videos) => videos.map((v) => v.id)), [
+                [videoIdFor(1), videoIdFor(2)],
+                [videoIdFor(3), videoIdFor(2)],
+              ]);
+            },
+          );
+
+          test('emits Funnelcake videos before the relays answer', () async {
+            final api = availableApi();
+            answerApi(api, (_) async => [statsFor(1)]);
+            final relays = Completer<List<Event>>();
+            when(
+              () => mockNostrClient.queryEvents(any()),
+            ).thenAnswer((_) => relays.future);
+
+            final emissions = <List<String>>[];
+            final done = repositoryWith(api)
+                .watchVideosForList([videoIdFor(1), videoIdFor(2)])
+                .forEach(
+                  (videos) => emissions.add([
+                    for (final video in videos) video.id,
+                  ]),
+                );
+            await pumpEventQueue();
+
+            expect(
+              emissions,
+              equals([
+                [videoIdFor(1)],
+              ]),
+            );
+
+            relays.complete([relayVideo(2)]);
+            await done;
+
+            expect(
+              emissions,
+              equals([
+                [videoIdFor(1)],
+                [videoIdFor(1), videoIdFor(2)],
+              ]),
+            );
+          });
+
+          test('emits once when Funnelcake answers every ref', () async {
+            final api = availableApi();
+            answerApi(api, (_) async => [statsFor(1)]);
+
+            final emissions = await repositoryWith(
+              api,
+            ).watchVideosForList([videoIdFor(1)]).toList();
+
+            expect(emissions, hasLength(1));
+            expect(
+              emissions.single.map((video) => video.id),
+              equals([videoIdFor(1)]),
+            );
+          });
+
+          test('waits for the relays when Funnelcake returns none', () async {
+            final api = availableApi();
+            answerApi(api, (_) async => const []);
+            when(
+              () => mockNostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [relayVideo(1)]);
+
+            final emissions = await repositoryWith(
+              api,
+            ).watchVideosForList([videoIdFor(1)]).toList();
+
+            expect(emissions, hasLength(1));
+            expect(
+              emissions.single.map((video) => video.id),
+              equals([videoIdFor(1)]),
+            );
+          });
+
+          test('keeps a relay-only list away from Funnelcake', () async {
+            final api = availableApi();
+            final author = authorFor(9);
+            when(
+              () => mockNostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [relayVideo(1)]);
+            when(() => mockNostrClient.readEvents(any())).thenAnswer(
+              (_) async => QueryResult(
+                events: [
+                  _createVideoEventWithDTag(
+                    id: videoIdFor(9),
+                    pubkey: author,
+                    dTag: 'vine-9',
+                    videoUrl: 'https://example.com/9.mp4',
+                    createdAt: 1704067200,
+                  ),
+                ],
+                endedBy: QueryEnd.complete,
+              ),
+            );
+
+            final emissions = await repositoryWith(api).watchVideosForList(
+              ['34236:$author:vine-9', videoIdFor(1)],
+              relayOnly: true,
+            ).toList();
+
+            expect(emissions, hasLength(1));
+            expect(
+              emissions.single.map((video) => video.id),
+              equals([videoIdFor(9), videoIdFor(1)]),
+            );
+            verifyZeroInteractions(api);
+          });
+        });
       });
     });
     group('getProfileVideos', () {
@@ -12413,21 +12830,80 @@ void main() {
       String videoIdFor(int index) =>
           (1000 + index).toRadixString(16).padLeft(64, '0');
 
-      Future<VideosByAuthorResponse> pageFor(Invocation invocation) async {
-        final pubkey = invocation.namedArguments[#pubkey] as String;
-        final index = int.parse(pubkey, radix: 16);
-        return VideosByAuthorResponse(
-          videos: [
-            _createVideoStats(
-              id: videoIdFor(index),
-              pubkey: pubkey,
-              dTag: 'd-$index',
-              videoUrl: 'https://example.com/$index.mp4',
-              createdAt: 1704067200 + index,
-            ),
-          ],
+      VideoStats statsFor(int index) => _createVideoStats(
+        id: videoIdFor(index),
+        pubkey: memberKey(index),
+        dTag: 'd-$index',
+        videoUrl: 'https://example.com/$index.mp4',
+        createdAt: 1704067200 + index,
+      );
+
+      RecentVideosResponse pageOf(
+        List<VideoStats> videos, {
+        bool hasMore = false,
+      }) => RecentVideosResponse(
+        videos: videos,
+        serverItemCount: videos.length,
+        hasMore: hasMore,
+      );
+
+      MockFunnelcakeApiClient availableApi() {
+        final api = MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+        return api;
+      }
+
+      void answerApi(
+        MockFunnelcakeApiClient api,
+        Future<RecentVideosResponse> Function(Invocation) answer,
+      ) {
+        when(
+          () => api.getVideosByAuthors(
+            authors: any(named: 'authors'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            before: any(named: 'before'),
+            sort: any(named: 'sort'),
+          ),
+        ).thenAnswer(answer);
+      }
+
+      void answerRelays(List<Event> events) {
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
+          (_) async => (events: events, timedOut: false, noRelays: false),
         );
       }
+
+      void failRelays(Object error) {
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenThrow(error);
+      }
+
+      Event relayVideo(int index) => _createVideoEvent(
+        id: videoIdFor(index),
+        pubkey: memberKey(index),
+        videoUrl: 'https://example.com/relay-$index.mp4',
+        createdAt: 1704067200 + index,
+      );
+
+      // The relays' copy of the video [statsFor] describes.
+      Event indexedRelayVideo(int index, {String? id, int? createdAt}) =>
+          _createVideoEventWithDTag(
+            id: id ?? videoIdFor(index),
+            pubkey: memberKey(index),
+            dTag: 'd-$index',
+            videoUrl: 'https://example.com/$index.mp4',
+            createdAt: createdAt ?? 1704067200 + index,
+          );
 
       test('returns nothing for a list with no members', () async {
         final result = await repository.getVideosByAuthors(
@@ -12512,62 +12988,6 @@ void main() {
         expect(filters.single.limit, equals(10));
       });
 
-      test('hydrates member videos with live engagement counts', () async {
-        const author =
-            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-        const eventId =
-            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-        final api = MockFunnelcakeApiClient();
-        when(() => api.isAvailable).thenReturn(true);
-        when(
-          () => mockNostrClient.queryEventsDetailed(
-            any(),
-            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-          ),
-        ).thenAnswer(
-          (_) async => (
-            events: [
-              _createVideoEvent(
-                id: eventId,
-                pubkey: author,
-                videoUrl: 'https://example.com/member.mp4',
-                createdAt: 1704067200,
-              ),
-            ],
-            timedOut: false,
-            noRelays: false,
-          ),
-        );
-        when(() => api.getBulkVideoStats([eventId])).thenAnswer(
-          (_) async => const BulkVideoStatsResponse(
-            stats: {
-              eventId: BulkVideoStatsEntry(
-                eventId: eventId,
-                reactions: 6,
-                comments: 2,
-                reposts: 1,
-                views: 14,
-                loops: 7,
-              ),
-            },
-          ),
-        );
-        final repo = VideosRepository(
-          nostrClient: mockNostrClient,
-          funnelcakeApiClient: api,
-        );
-
-        final videos = await repo.getVideosByAuthors(
-          authorPubkeys: const [author],
-        );
-
-        expect(videos.single.nostrLikeCount, 6);
-        expect(videos.single.nostrCommentCount, 2);
-        expect(videos.single.nostrRepostCount, 1);
-        expect(videos.single.rawTags['views'], '14');
-        expect(videos.single.totalLoops, 14);
-      });
-
       test('bounds the relay filter by until when paging', () async {
         when(
           () => mockNostrClient.queryEventsDetailed(
@@ -12596,43 +13016,6 @@ void main() {
                 ).captured.single
                 as List<Filter>;
         expect(filters.single.until, equals(1704067200));
-      });
-
-      test('bounds the Funnelcake fallback by until as well', () async {
-        final mockFunnelcakeClient = MockFunnelcakeApiClient();
-        when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-        when(
-          () => mockNostrClient.queryEventsDetailed(
-            any(),
-            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-          ),
-        ).thenThrow(Exception('relay down'));
-        when(
-          () => mockFunnelcakeClient.getVideosByAuthor(
-            pubkey: any(named: 'pubkey'),
-            limit: any(named: 'limit'),
-            before: any(named: 'before'),
-          ),
-        ).thenAnswer(pageFor);
-        final repo = VideosRepository(
-          nostrClient: mockNostrClient,
-          funnelcakeApiClient: mockFunnelcakeClient,
-        );
-
-        await repo.getVideosByAuthors(
-          authorPubkeys: [
-            memberKey(1),
-          ],
-          until: 1704067200,
-        );
-
-        verify(
-          () => mockFunnelcakeClient.getVideosByAuthor(
-            pubkey: memberKey(1),
-            limit: any(named: 'limit'),
-            before: 1704067200,
-          ),
-        ).called(1);
       });
 
       test(
@@ -12730,272 +13113,6 @@ void main() {
         },
       );
 
-      test('pages Funnelcake per member when the relay read fails', () async {
-        final mockFunnelcakeClient = MockFunnelcakeApiClient();
-        when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-        when(
-          () => mockNostrClient.queryEventsDetailed(
-            any(),
-            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-          ),
-        ).thenThrow(Exception('relay down'));
-        when(
-          () => mockFunnelcakeClient.getVideosByAuthor(
-            pubkey: any(named: 'pubkey'),
-            limit: any(named: 'limit'),
-            before: any(named: 'before'),
-          ),
-        ).thenAnswer(pageFor);
-        final repo = VideosRepository(
-          nostrClient: mockNostrClient,
-          funnelcakeApiClient: mockFunnelcakeClient,
-        );
-        final members = [
-          for (var i = 0; i < 25; i++) memberKey(i),
-        ];
-
-        final result = await repo.getVideosByAuthors(
-          authorPubkeys: members,
-          limit: 40,
-        );
-
-        // Every member is paged, and the pages merge newest first across
-        // members.
-        expect(result, hasLength(25));
-        expect(
-          result.first.id,
-          equals(
-            videoIdFor(24),
-          ),
-        );
-        expect(
-          result.last.id,
-          equals(
-            videoIdFor(0),
-          ),
-        );
-        verify(
-          () => mockFunnelcakeClient.getVideosByAuthor(
-            pubkey: any(named: 'pubkey'),
-            limit: 40,
-            before: any(named: 'before'),
-          ),
-        ).called(25);
-      });
-
-      test('keeps twenty fallback calls in flight at once', () async {
-        final mockFunnelcakeClient = MockFunnelcakeApiClient();
-        when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-        when(
-          () => mockNostrClient.queryEventsDetailed(
-            any(),
-            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-          ),
-        ).thenThrow(Exception('relay down'));
-        final gates = <Completer<VideosByAuthorResponse>>[];
-        when(
-          () => mockFunnelcakeClient.getVideosByAuthor(
-            pubkey: any(named: 'pubkey'),
-            limit: any(named: 'limit'),
-            before: any(named: 'before'),
-          ),
-        ).thenAnswer((_) {
-          final gate = Completer<VideosByAuthorResponse>();
-          gates.add(gate);
-          return gate.future;
-        });
-        final repo = VideosRepository(
-          nostrClient: mockNostrClient,
-          funnelcakeApiClient: mockFunnelcakeClient,
-        );
-        final members = [
-          for (var i = 0; i < 45; i++) memberKey(i),
-        ];
-
-        final feed = repo.getVideosByAuthors(authorPubkeys: members);
-        await pumpEventQueue();
-        expect(gates, hasLength(20));
-
-        for (final gate in gates.toList()) {
-          gate.complete(const VideosByAuthorResponse(videos: []));
-        }
-        await pumpEventQueue();
-        expect(gates, hasLength(40));
-
-        for (final gate in gates.skip(20).toList()) {
-          gate.complete(const VideosByAuthorResponse(videos: []));
-        }
-        await pumpEventQueue();
-        expect(gates, hasLength(45));
-
-        for (final gate in gates.skip(40).toList()) {
-          gate.complete(const VideosByAuthorResponse(videos: []));
-        }
-        expect(await feed, isEmpty);
-      });
-
-      test(
-        'surfaces the relay failure for a list the fallback cannot cover',
-        () async {
-          final relayError = Exception('relay down');
-          final mockFunnelcakeClient = MockFunnelcakeApiClient();
-          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-          when(
-            () => mockNostrClient.queryEventsDetailed(
-              any(),
-              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-            ),
-          ).thenThrow(relayError);
-          final repo = VideosRepository(
-            nostrClient: mockNostrClient,
-            funnelcakeApiClient: mockFunnelcakeClient,
-          );
-          final members = [
-            for (var i = 0; i < 101; i++) memberKey(i),
-          ];
-
-          await expectLater(
-            repo.getVideosByAuthors(authorPubkeys: members),
-            throwsA(same(relayError)),
-          );
-          verifyNever(
-            () => mockFunnelcakeClient.getVideosByAuthor(
-              pubkey: any(named: 'pubkey'),
-              limit: any(named: 'limit'),
-              before: any(named: 'before'),
-            ),
-          );
-        },
-      );
-
-      test(
-        'keeps the pages that answered when Funnelcake does not know a member',
-        () async {
-          final mockFunnelcakeClient = MockFunnelcakeApiClient();
-          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-          when(
-            () => mockNostrClient.queryEventsDetailed(
-              any(),
-              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-            ),
-          ).thenThrow(Exception('relay down'));
-          when(
-            () => mockFunnelcakeClient.getVideosByAuthor(
-              pubkey: any(named: 'pubkey'),
-              limit: any(named: 'limit'),
-              before: any(named: 'before'),
-            ),
-          ).thenAnswer((invocation) {
-            if (invocation.namedArguments[#pubkey] == memberKey(1)) {
-              throw FunnelcakeNotFoundException(resource: 'Author');
-            }
-            return pageFor(invocation);
-          });
-          final repo = VideosRepository(
-            nostrClient: mockNostrClient,
-            funnelcakeApiClient: mockFunnelcakeClient,
-          );
-
-          final result = await repo.getVideosByAuthors(
-            authorPubkeys: [
-              memberKey(0),
-              memberKey(1),
-              memberKey(2),
-            ],
-          );
-
-          expect(
-            result.map((video) => video.id),
-            equals([
-              videoIdFor(2),
-              videoIdFor(0),
-            ]),
-          );
-        },
-      );
-
-      test(
-        'fails the feed when a member page fails for another reason',
-        () async {
-          final mockFunnelcakeClient = MockFunnelcakeApiClient();
-          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-          when(
-            () => mockNostrClient.queryEventsDetailed(
-              any(),
-              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-            ),
-          ).thenThrow(Exception('relay down'));
-          when(
-            () => mockFunnelcakeClient.getVideosByAuthor(
-              pubkey: any(named: 'pubkey'),
-              limit: any(named: 'limit'),
-              before: any(named: 'before'),
-            ),
-          ).thenAnswer((invocation) {
-            if (invocation.namedArguments[#pubkey] == memberKey(1)) {
-              throw const FunnelcakeApiException(
-                message: 'Server error',
-                statusCode: 500,
-              );
-            }
-            return pageFor(invocation);
-          });
-          final repo = VideosRepository(
-            nostrClient: mockNostrClient,
-            funnelcakeApiClient: mockFunnelcakeClient,
-          );
-
-          await expectLater(
-            repo.getVideosByAuthors(
-              authorPubkeys: [
-                memberKey(0),
-                memberKey(1),
-                memberKey(2),
-              ],
-            ),
-            throwsA(isA<FunnelcakeApiException>()),
-          );
-        },
-      );
-
-      test(
-        'propagates programming errors without falling back to the API',
-        () async {
-          final api = MockFunnelcakeApiClient();
-          when(() => api.isAvailable).thenReturn(true);
-          final error = StateError('relay query bug');
-          when(
-            () => mockNostrClient.queryEventsDetailed(
-              any(),
-              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-            ),
-          ).thenThrow(error);
-          when(
-            () => api.getVideosByAuthor(
-              pubkey: any(named: 'pubkey'),
-              limit: any(named: 'limit'),
-              before: any(named: 'before'),
-            ),
-          ).thenAnswer((_) async => const VideosByAuthorResponse(videos: []));
-          final repo = VideosRepository(
-            nostrClient: mockNostrClient,
-            funnelcakeApiClient: api,
-          );
-
-          await expectLater(
-            repo.getVideosByAuthors(authorPubkeys: [memberKey(200)]),
-            throwsA(same(error)),
-          );
-          verifyNever(
-            () => api.getVideosByAuthor(
-              pubkey: any(named: 'pubkey'),
-              limit: any(named: 'limit'),
-              before: any(named: 'before'),
-            ),
-          );
-        },
-      );
-
       test('rethrows the relay error without a Funnelcake client', () async {
         final relayError = Exception('relay down');
         when(
@@ -13012,38 +13129,6 @@ void main() {
             ],
           ),
           throwsA(same(relayError)),
-        );
-      });
-
-      test('rethrows the relay error when Funnelcake is unavailable', () async {
-        final relayError = Exception('relay down');
-        final mockFunnelcakeClient = MockFunnelcakeApiClient();
-        when(() => mockFunnelcakeClient.isAvailable).thenReturn(false);
-        when(
-          () => mockNostrClient.queryEventsDetailed(
-            any(),
-            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-          ),
-        ).thenThrow(relayError);
-        final repo = VideosRepository(
-          nostrClient: mockNostrClient,
-          funnelcakeApiClient: mockFunnelcakeClient,
-        );
-
-        await expectLater(
-          repo.getVideosByAuthors(
-            authorPubkeys: [
-              memberKey(200),
-            ],
-          ),
-          throwsA(same(relayError)),
-        );
-        verifyNever(
-          () => mockFunnelcakeClient.getVideosByAuthor(
-            pubkey: any(named: 'pubkey'),
-            limit: any(named: 'limit'),
-            before: any(named: 'before'),
-          ),
         );
       });
 
@@ -13064,80 +13149,6 @@ void main() {
         );
 
         expect(result, isEmpty);
-      });
-
-      test('pages Funnelcake when no relay took the read', () async {
-        final mockFunnelcakeClient = MockFunnelcakeApiClient();
-        when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-        when(
-          () => mockNostrClient.queryEventsDetailed(
-            any(),
-            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-          ),
-        ).thenAnswer(
-          (_) async => (events: <Event>[], timedOut: false, noRelays: true),
-        );
-        when(
-          () => mockFunnelcakeClient.getVideosByAuthor(
-            pubkey: any(named: 'pubkey'),
-            limit: any(named: 'limit'),
-            before: any(named: 'before'),
-          ),
-        ).thenAnswer(pageFor);
-        final repo = VideosRepository(
-          nostrClient: mockNostrClient,
-          funnelcakeApiClient: mockFunnelcakeClient,
-        );
-
-        final result = await repo.getVideosByAuthors(
-          authorPubkeys: [
-            memberKey(1),
-          ],
-        );
-
-        expect(
-          result.map((video) => video.id),
-          equals([
-            videoIdFor(1),
-          ]),
-        );
-      });
-
-      test('pages Funnelcake when the read timed out', () async {
-        final mockFunnelcakeClient = MockFunnelcakeApiClient();
-        when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-        when(
-          () => mockNostrClient.queryEventsDetailed(
-            any(),
-            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-          ),
-        ).thenAnswer(
-          (_) async => (events: <Event>[], timedOut: true, noRelays: false),
-        );
-        when(
-          () => mockFunnelcakeClient.getVideosByAuthor(
-            pubkey: any(named: 'pubkey'),
-            limit: any(named: 'limit'),
-            before: any(named: 'before'),
-          ),
-        ).thenAnswer(pageFor);
-        final repo = VideosRepository(
-          nostrClient: mockNostrClient,
-          funnelcakeApiClient: mockFunnelcakeClient,
-        );
-
-        final result = await repo.getVideosByAuthors(
-          authorPubkeys: [
-            memberKey(2),
-          ],
-        );
-
-        expect(
-          result.map((video) => video.id),
-          equals([
-            videoIdFor(2),
-          ]),
-        );
       });
 
       test('raises an unreachable read with no Funnelcake client', () async {
@@ -13192,6 +13203,646 @@ void main() {
           ).called(1);
         },
       );
+
+      group('from Funnelcake', () {
+        setUp(() => answerRelays(const []));
+
+        test('answers from Funnelcake, newest first', () async {
+          final api = availableApi();
+          answerApi(api, (_) async => pageOf([statsFor(1), statsFor(2)]));
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: api,
+          );
+
+          final result = await repo.getVideosByAuthors(
+            authorPubkeys: [memberKey(1), memberKey(2)],
+            limit: 10,
+          );
+
+          expect(
+            result.map((video) => video.id),
+            equals([videoIdFor(2), videoIdFor(1)]),
+          );
+          verify(
+            () => api.getVideosByAuthors(
+              authors: [memberKey(1), memberKey(2)],
+              limit: 10,
+              sort: 'published',
+            ),
+          ).called(1);
+        });
+
+        test('keeps the engagement counts Funnelcake sends', () async {
+          final api = availableApi();
+          answerApi(
+            api,
+            (_) async => pageOf([
+              _createVideoStats(
+                id: videoIdFor(1),
+                pubkey: memberKey(1),
+                dTag: 'd-1',
+                videoUrl: 'https://example.com/1.mp4',
+                reactions: 6,
+                comments: 2,
+                reposts: 1,
+              ),
+            ]),
+          );
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: api,
+          );
+
+          final videos = await repo.getVideosByAuthors(
+            authorPubkeys: [memberKey(1)],
+          );
+
+          expect(videos.single.nostrLikeCount, 6);
+          expect(videos.single.nostrCommentCount, 2);
+          expect(videos.single.nostrRepostCount, 1);
+          verifyNever(() => api.getBulkVideoStats(any()));
+        });
+
+        test(
+          'keeps edited posts in reach of a publication-time page',
+          () async {
+            const until = 1704067300;
+            final edited = _createVideoStats(
+              id: videoIdFor(1),
+              pubkey: memberKey(1),
+              dTag: 'edited',
+              videoUrl: 'https://example.com/edited.mp4',
+              eventCreatedAt: until + 100,
+              createdAt: until + 100,
+              publishedAt: until,
+            );
+            final api = availableApi();
+            answerApi(api, (invocation) async {
+              final before = invocation.namedArguments[#before]! as int;
+              final timestamp = invocation.namedArguments[#sort] == 'published'
+                  ? edited.publishedAt!
+                  : edited.eventCreatedAt!;
+              return pageOf([if (timestamp < before) edited, statsFor(2)]);
+            });
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: api,
+            );
+
+            final videos = await repo.getVideosByAuthors(
+              authorPubkeys: [memberKey(1), memberKey(2)],
+              until: until,
+            );
+
+            expect(videos.map((video) => video.id), [
+              videoIdFor(1),
+              videoIdFor(2),
+            ]);
+          },
+        );
+
+        test(
+          'reads two hundred members per request, one request at a time, '
+          'merged newest first',
+          () async {
+            final members = [for (var i = 0; i < 250; i++) memberKey(i)];
+            final api = availableApi();
+            final gates = <Completer<RecentVideosResponse>>[];
+            final requested = <List<String>>[];
+            answerApi(api, (invocation) {
+              requested.add(
+                invocation.namedArguments[#authors]! as List<String>,
+              );
+              final gate = Completer<RecentVideosResponse>();
+              gates.add(gate);
+              return gate.future;
+            });
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: api,
+            );
+
+            final feed = repo.getVideosByAuthors(authorPubkeys: members);
+            await pumpEventQueue();
+            // The second group waits for the first, bounding the server's
+            // concurrent scans.
+            expect(gates, hasLength(1));
+            gates.first.complete(pageOf([statsFor(0)]));
+            await pumpEventQueue();
+            expect(gates, hasLength(2));
+            // The later group's member posted later, so the merge has to order
+            // across groups, not just within one.
+            gates.last.complete(pageOf([statsFor(249)]));
+
+            expect(
+              (await feed).map((video) => video.id),
+              equals([videoIdFor(249), videoIdFor(0)]),
+            );
+            expect(requested.first, equals(members.sublist(0, 200)));
+            expect(requested.last, equals(members.sublist(200)));
+          },
+        );
+
+        test(
+          'pages a group until it has the limit, a hundred videos per read',
+          () async {
+            final api = availableApi();
+            answerApi(api, (invocation) async {
+              final offset = invocation.namedArguments[#offset]! as int;
+              final limit = invocation.namedArguments[#limit]! as int;
+              return pageOf(
+                [for (var i = offset; i < offset + limit; i++) statsFor(i)],
+                hasMore: true,
+              );
+            });
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: api,
+            );
+
+            final result = await repo.getVideosByAuthors(
+              authorPubkeys: [memberKey(1)],
+              limit: 130,
+            );
+
+            expect(result, hasLength(130));
+            verifyInOrder([
+              () => api.getVideosByAuthors(
+                authors: any(named: 'authors'),
+                limit: 100,
+                sort: 'published',
+              ),
+              () => api.getVideosByAuthors(
+                authors: any(named: 'authors'),
+                limit: 30,
+                offset: 100,
+                sort: 'published',
+              ),
+            ]);
+          },
+        );
+
+        test(
+          'leaves malformed members out of the request and lowercases the rest',
+          () async {
+            final api = availableApi();
+            answerApi(api, (_) async => pageOf([statsFor(1)]));
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: api,
+            );
+
+            const mixedCase =
+                'ABCDEF0123456789abcdef0123456789'
+                'ABCDEF0123456789abcdef0123456789';
+
+            await repo.getVideosByAuthors(
+              authorPubkeys: ['not-a-pubkey', mixedCase, memberKey(2)],
+            );
+
+            verify(
+              () => api.getVideosByAuthors(
+                authors: [mixedCase.toLowerCase(), memberKey(2)],
+                limit: any(named: 'limit'),
+                offset: any(named: 'offset'),
+                sort: 'published',
+              ),
+            ).called(1);
+          },
+        );
+
+        test(
+          'leaves out the videos the viewer filters, from either source',
+          () async {
+            final api = availableApi();
+            answerApi(api, (_) async => pageOf([statsFor(1)]));
+            answerRelays([indexedRelayVideo(1)]);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: api,
+              blockFilter: (pubkey) => pubkey == memberKey(1),
+            );
+
+            final result = await repo.getVideosByAuthors(
+              authorPubkeys: [memberKey(1)],
+            );
+
+            expect(result, isEmpty);
+          },
+        );
+      });
+
+      group('from the relays', () {
+        test('reads the relays when Funnelcake holds no video', () async {
+          // Members who post only to relays Funnelcake does not index.
+          final api = availableApi();
+          answerApi(api, (_) async => pageOf(const []));
+          when(() => api.getBulkVideoStats(any())).thenAnswer(
+            (_) async => const BulkVideoStatsResponse(stats: {}),
+          );
+          answerRelays([relayVideo(3)]);
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: api,
+          );
+
+          final result = await repo.getVideosByAuthors(
+            authorPubkeys: [memberKey(3)],
+          );
+
+          expect(result.map((video) => video.id), equals([videoIdFor(3)]));
+        });
+
+        test(
+          "keeps Funnelcake's empty answer when the relay read then fails",
+          () async {
+            final api = availableApi();
+            answerApi(api, (_) async => pageOf(const []));
+            failRelays(Exception('relay down'));
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: api,
+            );
+
+            final result = await repo.getVideosByAuthors(
+              authorPubkeys: [memberKey(3)],
+            );
+
+            expect(result, isEmpty);
+          },
+        );
+
+        test('reads the relays when a Funnelcake read fails', () async {
+          final api = availableApi();
+          answerApi(
+            api,
+            (_) async => throw const FunnelcakeApiException(
+              message: 'Server error',
+              statusCode: 500,
+            ),
+          );
+          when(() => api.getBulkVideoStats(any())).thenAnswer(
+            (_) async => const BulkVideoStatsResponse(stats: {}),
+          );
+          answerRelays([relayVideo(4)]);
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: api,
+          );
+
+          final result = await repo.getVideosByAuthors(
+            authorPubkeys: [memberKey(4)],
+          );
+
+          expect(result.map((video) => video.id), equals([videoIdFor(4)]));
+        });
+
+        test(
+          "reads the relays when a later group's read fails",
+          () async {
+            // A feed missing a group of members would pass for the complete
+            // one, so the answered group is not served on its own.
+            final members = [for (var i = 0; i < 250; i++) memberKey(i)];
+            final api = availableApi();
+            answerApi(api, (invocation) async {
+              final authors =
+                  invocation.namedArguments[#authors]! as List<String>;
+              if (authors.length == 200) return pageOf([statsFor(0)]);
+              throw const FunnelcakeTimeoutException('by-authors');
+            });
+            when(() => api.getBulkVideoStats(any())).thenAnswer(
+              (_) async => const BulkVideoStatsResponse(stats: {}),
+            );
+            answerRelays([relayVideo(5)]);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: api,
+            );
+
+            final result = await repo.getVideosByAuthors(
+              authorPubkeys: members,
+            );
+
+            expect(result.map((video) => video.id), equals([videoIdFor(5)]));
+          },
+        );
+
+        test(
+          'surfaces the relay error when Funnelcake failed as well',
+          () async {
+            final relayError = Exception('relay down');
+            final api = availableApi();
+            answerApi(
+              api,
+              (_) async => throw const FunnelcakeTimeoutException('by-authors'),
+            );
+            failRelays(relayError);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: api,
+            );
+
+            await expectLater(
+              repo.getVideosByAuthors(authorPubkeys: [memberKey(6)]),
+              throwsA(same(relayError)),
+            );
+          },
+        );
+
+        test(
+          'propagates programming errors from the Funnelcake read',
+          () async {
+            final error = StateError('by-authors bug');
+            final api = availableApi();
+            answerApi(api, (_) async => throw error);
+            answerRelays(const []);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: api,
+            );
+
+            await expectLater(
+              repo.getVideosByAuthors(authorPubkeys: [memberKey(7)]),
+              throwsA(same(error)),
+            );
+          },
+        );
+
+        test(
+          'hydrates relay videos with live engagement counts',
+          () async {
+            const author =
+                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+            const eventId =
+                'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+                'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+            final api = availableApi();
+            answerApi(api, (_) async => pageOf(const []));
+            answerRelays([
+              _createVideoEvent(
+                id: eventId,
+                pubkey: author,
+                videoUrl: 'https://example.com/member.mp4',
+                createdAt: 1704067200,
+              ),
+            ]);
+            when(() => api.getBulkVideoStats([eventId])).thenAnswer(
+              (_) async => const BulkVideoStatsResponse(
+                stats: {
+                  eventId: BulkVideoStatsEntry(
+                    eventId: eventId,
+                    reactions: 6,
+                    comments: 2,
+                    reposts: 1,
+                    views: 14,
+                    loops: 7,
+                  ),
+                },
+              ),
+            );
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: api,
+            );
+
+            final videos = await repo.getVideosByAuthors(
+              authorPubkeys: const [author],
+            );
+
+            expect(videos.single.nostrLikeCount, 6);
+            expect(videos.single.nostrCommentCount, 2);
+            expect(videos.single.nostrRepostCount, 1);
+            expect(videos.single.rawTags['views'], '14');
+            expect(videos.single.totalLoops, 14);
+          },
+        );
+
+        test(
+          'reads only the relays when Funnelcake is unavailable',
+          () async {
+            final relayError = Exception('relay down');
+            final api = MockFunnelcakeApiClient();
+            when(() => api.isAvailable).thenReturn(false);
+            failRelays(relayError);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: api,
+            );
+
+            await expectLater(
+              repo.getVideosByAuthors(authorPubkeys: [memberKey(200)]),
+              throwsA(same(relayError)),
+            );
+            verifyNever(
+              () => api.getVideosByAuthors(
+                authors: any(named: 'authors'),
+                limit: any(named: 'limit'),
+                offset: any(named: 'offset'),
+                before: any(named: 'before'),
+                sort: any(named: 'sort'),
+              ),
+            );
+          },
+        );
+      });
+
+      group('merging the two sources', () {
+        late MockFunnelcakeApiClient api;
+        late VideosRepository repo;
+
+        setUp(() {
+          api = availableApi();
+          when(() => api.getBulkVideoStats(any())).thenAnswer(
+            (_) async => const BulkVideoStatsResponse(stats: {}),
+          );
+          repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: api,
+          );
+        });
+
+        test(
+          'adds the videos of members only the relays hold',
+          () async {
+            // One member is indexed; the other posts only to relays
+            // Funnelcake does not index.
+            answerApi(api, (_) async => pageOf([statsFor(1)]));
+            answerRelays([indexedRelayVideo(1), relayVideo(3)]);
+
+            final result = await repo.getVideosByAuthors(
+              authorPubkeys: [memberKey(1), memberKey(3)],
+            );
+
+            expect(
+              result.map((video) => video.id),
+              equals([videoIdFor(3), videoIdFor(1)]),
+            );
+            // Only the video Funnelcake did not return needs its counts.
+            verify(
+              () => api.getBulkVideoStats([videoIdFor(3)]),
+            ).called(1);
+          },
+        );
+
+        test(
+          "emits Funnelcake's videos before the relays answer",
+          () async {
+            final relayAnswer =
+                Completer<
+                  ({List<Event> events, bool timedOut, bool noRelays})
+                >();
+            answerApi(api, (_) async => pageOf([statsFor(1)]));
+            when(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: any(
+                  named: 'requireAllRelaysSettled',
+                ),
+              ),
+            ).thenAnswer((_) => relayAnswer.future);
+            final emitted = <List<String>>[];
+
+            final done = repo
+                .watchVideosByAuthors(
+                  authorPubkeys: [memberKey(1), memberKey(3)],
+                )
+                .forEach(
+                  (videos) => emitted.add([
+                    for (final video in videos) video.id,
+                  ]),
+                );
+            await pumpEventQueue();
+            expect(
+              emitted,
+              equals([
+                [videoIdFor(1)],
+              ]),
+            );
+
+            relayAnswer.complete(
+              (events: [relayVideo(3)], timedOut: false, noRelays: false),
+            );
+            await done;
+            expect(
+              emitted,
+              equals([
+                [videoIdFor(1)],
+                [videoIdFor(3), videoIdFor(1)],
+              ]),
+            );
+          },
+        );
+
+        test(
+          'reads the relays while Funnelcake is still answering',
+          () async {
+            final apiAnswer = Completer<RecentVideosResponse>();
+            answerApi(api, (_) => apiAnswer.future);
+            answerRelays(const []);
+
+            final feed = repo.getVideosByAuthors(
+              authorPubkeys: [memberKey(1)],
+            );
+            await pumpEventQueue();
+            verify(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+              ),
+            ).called(1);
+
+            apiAnswer.complete(pageOf([statsFor(1)]));
+            expect(
+              (await feed).map((video) => video.id),
+              equals([videoIdFor(1)]),
+            );
+          },
+        );
+
+        test(
+          "emits once when the relays add nothing to Funnelcake's answer",
+          () async {
+            answerApi(api, (_) async => pageOf([statsFor(1)]));
+            answerRelays([indexedRelayVideo(1)]);
+
+            final emissions = await repo
+                .watchVideosByAuthors(authorPubkeys: [memberKey(1)])
+                .toList();
+
+            expect(emissions, hasLength(1));
+            expect(
+              emissions.single.map((video) => video.id),
+              equals([videoIdFor(1)]),
+            );
+            verifyNever(() => api.getBulkVideoStats(any()));
+          },
+        );
+
+        test(
+          "keeps Funnelcake's answer when the relay read then fails",
+          () async {
+            answerApi(api, (_) async => pageOf([statsFor(1)]));
+            failRelays(Exception('relay down'));
+
+            final result = await repo.getVideosByAuthors(
+              authorPubkeys: [memberKey(1)],
+            );
+
+            expect(result.map((video) => video.id), equals([videoIdFor(1)]));
+          },
+        );
+
+        test(
+          'takes a newer revision from the relays and keeps its counts',
+          () async {
+            // Funnelcake has not indexed the edit yet.
+            const editedId =
+                'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+                'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+            answerApi(
+              api,
+              (_) async => pageOf([
+                _createVideoStats(
+                  id: videoIdFor(1),
+                  pubkey: memberKey(1),
+                  dTag: 'd-1',
+                  videoUrl: 'https://example.com/1.mp4',
+                  eventCreatedAt: 1704067200,
+                  reactions: 6,
+                ),
+              ]),
+            );
+            answerRelays([
+              indexedRelayVideo(1, id: editedId, createdAt: 1704067300),
+            ]);
+
+            final result = await repo.getVideosByAuthors(
+              authorPubkeys: [memberKey(1)],
+            );
+
+            expect(result.single.id, editedId);
+            expect(result.single.nostrLikeCount, 6);
+            verifyNever(() => api.getBulkVideoStats(any()));
+          },
+        );
+
+        test('keeps the merge to the limit, newest first', () async {
+          answerApi(api, (_) async => pageOf([statsFor(1), statsFor(2)]));
+          answerRelays([relayVideo(3)]);
+
+          final result = await repo.getVideosByAuthors(
+            authorPubkeys: [memberKey(1), memberKey(2), memberKey(3)],
+            limit: 2,
+          );
+
+          expect(
+            result.map((video) => video.id),
+            equals([videoIdFor(3), videoIdFor(2)]),
+          );
+        });
+      });
     });
 
     group('getVideosByAuthor', () {
@@ -18342,6 +18993,7 @@ Event _createVideoEventWithDTag({
   required String dTag,
   required String? videoUrl,
   required int createdAt,
+  int? publishedAt,
   int? loops,
   List<String>? hashtags,
   bool hasContentWarning = false,
@@ -18351,6 +19003,7 @@ Event _createVideoEventWithDTag({
     if (videoUrl != null) ['url', videoUrl],
     if (loops != null) ['loops', loops.toString()],
     ['d', dTag], // Custom d-tag
+    if (publishedAt != null) ['published_at', publishedAt.toString()],
     if (hashtags != null)
       for (final tag in hashtags) ['t', tag],
     if (hasContentWarning) ['content-warning', 'adult content'],

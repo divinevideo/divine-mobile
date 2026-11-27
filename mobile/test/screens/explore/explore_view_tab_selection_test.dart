@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -55,6 +56,9 @@ class _FakeFunnelcakeAvailable extends FunnelcakeAvailable {
 
 class _MockCuratedListService extends Mock implements CuratedListService {}
 
+class _MockCuratedListRepository extends Mock
+    implements CuratedListRepository {}
+
 class _MockPeopleListsRepository extends Mock
     implements PeopleListsRepository {}
 
@@ -83,10 +87,18 @@ CuratedListService _stubbedListService() {
   when(() => service.subscribedListIds).thenReturn(const <String>{});
   when(() => service.lists).thenReturn(const []);
   when(() => service.myLists).thenReturn(const []);
-  when(
-    () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-  ).thenAnswer((_) => Stream.value(const <CuratedList>[]));
   return service;
+}
+
+CuratedListRepository _stubbedCuratedListRepository() {
+  final repository = _MockCuratedListRepository();
+  when(
+    () => repository.discoverLists(
+      limit: any(named: 'limit'),
+      excludeAuthor: any(named: 'excludeAuthor'),
+    ),
+  ).thenAnswer((_) => Stream.value(const []));
+  return repository;
 }
 
 PeopleListsRepository _stubbedPeopleRepository() {
@@ -248,6 +260,9 @@ void main() {
           forYouAvailableProvider.overrideWithValue(false),
           curatedListsStateProvider.overrideWith(
             () => _FakeCuratedListsState(_stubbedListService()),
+          ),
+          curatedListRepositoryProvider.overrideWith(
+            (ref) => _stubbedCuratedListRepository(),
           ),
           peopleListsRepositoryProvider.overrideWith(
             (ref) => _stubbedPeopleRepository(),

@@ -2983,12 +2983,59 @@ class FunnelcakeApiClient {
         if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
       },
     );
+    return _getListPage(uri, action: 'search lists');
+  }
 
+  /// Public NIP-51 lists of [kind], most recently updated first, from the
+  /// server's list index, for browsing without a search term.
+  ///
+  /// Leaves out what [searchLists] leaves out, plus empty lists and
+  /// direct-message bookkeeping sets; a people list appears only when its
+  /// owner has posted a video. The index refreshes every 30 minutes. [cursor]
+  /// is the [ListSearchResponse.nextCursor] of the page before.
+  ///
+  /// Throws:
+  /// - [ArgumentError] if [limit] is not between 1 and [maxListSearchLimit].
+  /// - [FunnelcakeNotConfiguredException] if the API is not configured.
+  /// - [FunnelcakeApiException] if the request fails.
+  /// - [FunnelcakeTimeoutException] if the request times out.
+  /// - [FunnelcakeException] for other errors, a malformed answer included.
+  Future<ListSearchResponse> discoverLists({
+    required PublicListKind kind,
+    int limit = 25,
+    String? cursor,
+  }) async {
+    if (limit < 1 || limit > maxListSearchLimit) {
+      throw ArgumentError.value(
+        limit,
+        'limit',
+        'Must be between 1 and $maxListSearchLimit',
+      );
+    }
+    if (!isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+
+    final uri = Uri.parse('$_baseUrl/api/v2/lists/discover').replace(
+      queryParameters: {
+        'kind': kind.value.toString(),
+        'limit': limit.toString(),
+        if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+      },
+    );
+    return _getListPage(uri, action: 'discover lists');
+  }
+
+  /// One page of list cards at [uri]; [action] names the call in errors.
+  Future<ListSearchResponse> _getListPage(
+    Uri uri, {
+    required String action,
+  }) async {
     try {
       final response = await _get(uri);
       if (response.statusCode != 200) {
         throw FunnelcakeApiException(
-          message: 'Failed to search lists',
+          message: 'Failed to $action',
           statusCode: response.statusCode,
           url: uri.toString(),
         );
@@ -2996,7 +3043,7 @@ class FunnelcakeApiClient {
 
       final data = jsonDecode(response.body);
       if (data is! Map<String, dynamic>) {
-        throw const FormatException('Malformed list search response');
+        throw FormatException('Malformed answer to $action');
       }
       return ListSearchResponse.fromJson(data);
     } on TimeoutException {
@@ -3004,7 +3051,7 @@ class FunnelcakeApiClient {
     } on FunnelcakeException {
       rethrow;
     } catch (e) {
-      throw FunnelcakeException('Failed to search lists: $e', cause: e);
+      throw FunnelcakeException('Failed to $action: $e', cause: e);
     }
   }
 

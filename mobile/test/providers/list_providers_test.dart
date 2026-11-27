@@ -7,7 +7,7 @@ import 'dart:io';
 import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/misc.dart' show Override, ProviderListenable;
+import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive_ce.dart';
 import 'package:mocktail/mocktail.dart';
@@ -20,7 +20,6 @@ import 'package:openvine/features/people_lists/bloc/people_list_info_cubit.dart'
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
-import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/video_event_service.dart';
@@ -93,38 +92,6 @@ VideoEvent _video({
     title: id,
     videoUrl: 'https://example.com/$id.mp4',
     rawTags: dTag == null ? const {} : {'d': dTag},
-  );
-}
-
-/// The overrides for a list whose first video only a relay holds and whose
-/// second the cache answers at once, so the cache's video is emitted first.
-///
-/// Returns them with the relay's event, whose video belongs first.
-(List<Override>, Event) _cacheAnswersBeforeRelay() {
-  registerFallbackValue(_video(id: 'fallback', pubkey: _ownerA));
-  final fromRelay = Event(_ownerA, 34236, [
-    ['d', 'part-1'],
-    ['url', 'https://example.com/part-1.mp4'],
-  ], '');
-  final cached = _video(id: _allowedVideoId, pubkey: _ownerA);
-  final videoEventService = _MockVideoEventService();
-  final nostrClient = _MockNostrClient();
-  when(() => videoEventService.discoveryVideos).thenReturn(const []);
-  when(() => videoEventService.homeFeedVideos).thenReturn(const []);
-  when(() => videoEventService.profileVideos).thenReturn(const []);
-  when(
-    () => videoEventService.getVideoById(_allowedVideoId),
-  ).thenReturn(cached);
-  when(() => videoEventService.shouldHideVideo(any())).thenReturn(false);
-  when(
-    () => nostrClient.subscribe(any(), closeOnEose: true),
-  ).thenAnswer((_) => Stream.value(fromRelay));
-  return (
-    [
-      videoEventServiceProvider.overrideWithValue(videoEventService),
-      nostrServiceProvider.overrideWithValue(nostrClient),
-    ],
-    fromRelay,
   );
 }
 
@@ -268,19 +235,19 @@ void main() {
         );
         final queries = <List<String>>[];
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenAnswer((i) async {
+        ).thenAnswer((i) {
           final authors = i.namedArguments[#authorPubkeys] as List<String>;
           queries.add(List.of(authors));
-          return [
+          return Stream.value([
             for (final author in authors)
               _video(
                 id: author == _ownerB ? fetchedId : strangerId,
                 pubkey: author,
               ),
-          ];
+          ]);
         });
         final container = buildContainer();
         await repository.syncOwner(ownerPubkey: _ownerA);
@@ -375,10 +342,10 @@ void main() {
       'reuses the feed after unchanged members are decoded from cache',
       () async {
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenAnswer((_) async => const []);
+        ).thenAnswer((_) => Stream.value(const []));
         final initial = UserList(
           id: 'crew',
           name: 'Old name',
@@ -396,7 +363,7 @@ void main() {
         await collect(container, renamed.pubkeys);
 
         verify(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
         ).called(1);
@@ -407,10 +374,10 @@ void main() {
       'reuses reordered members without changing the caller roster',
       () async {
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenAnswer((_) async => const []);
+        ).thenAnswer((_) => Stream.value(const []));
         final members = [_ownerB, _ownerA, _ownerB];
         final container = buildContainer();
 
@@ -419,7 +386,7 @@ void main() {
 
         expect(members, [_ownerB, _ownerA, _ownerB]);
         final queriedMembers = verify(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: captureAny(named: 'authorPubkeys'),
           ),
         ).captured;
@@ -431,17 +398,17 @@ void main() {
 
     test('fetches a different feed when membership changes', () async {
       when(
-        () => videosRepository.getVideosByAuthors(
+        () => videosRepository.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
-      ).thenAnswer((_) async => const []);
+      ).thenAnswer((_) => Stream.value(const []));
       final container = buildContainer();
 
       await collect(container, [_ownerA]);
       await collect(container, [_ownerA, _ownerB]);
 
       verify(
-        () => videosRepository.getVideosByAuthors(
+        () => videosRepository.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
       ).called(2);
@@ -449,17 +416,17 @@ void main() {
 
     test('keeps delimiter-containing malformed rosters separate', () async {
       when(
-        () => videosRepository.getVideosByAuthors(
+        () => videosRepository.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
-      ).thenAnswer((_) async => const []);
+      ).thenAnswer((_) => Stream.value(const []));
       final container = buildContainer();
 
       await collect(container, [_ownerA, _ownerB]);
       await collect(container, ['$_ownerA,$_ownerB']);
 
       verify(
-        () => videosRepository.getVideosByAuthors(
+        () => videosRepository.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
       ).called(2);
@@ -471,10 +438,10 @@ void main() {
         pubkey: _ownerA,
       );
       when(
-        () => videosRepository.getVideosByAuthors(
+        () => videosRepository.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
-      ).thenAnswer((_) async => [fetched]);
+      ).thenAnswer((_) => Stream.value([fetched]));
 
       final states = await collect(buildContainer(), [_ownerA, _ownerB]);
 
@@ -486,7 +453,7 @@ void main() {
       );
       final asked =
           verify(
-                () => videosRepository.getVideosByAuthors(
+                () => videosRepository.watchVideosByAuthors(
                   authorPubkeys: captureAny(named: 'authorPubkeys'),
                 ),
               ).captured.single
@@ -513,10 +480,10 @@ void main() {
           createdAt: 200,
         );
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenAnswer((_) async => [fetched]);
+        ).thenAnswer((_) => Stream.value([fetched]));
 
         final states = await collect(
           buildContainer(pooled: [pooledMember, stranger]),
@@ -544,10 +511,10 @@ void main() {
         final pooled = _video(id: id, pubkey: _ownerA, createdAt: 100);
         final fetched = _video(id: id, pubkey: _ownerA, createdAt: 200);
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenAnswer((_) async => [fetched]);
+        ).thenAnswer((_) => Stream.value([fetched]));
 
         final states = await collect(buildContainer(pooled: [pooled]), [
           _ownerA,
@@ -576,10 +543,10 @@ void main() {
           createdAt: 200,
         ).copyWith(addressableDTag: 'clip');
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenAnswer((_) async => [edited]);
+        ).thenAnswer((_) => Stream.value([edited]));
 
         final states = await collect(buildContainer(pooled: [previous]), [
           _ownerA,
@@ -618,10 +585,12 @@ void main() {
           createdAt: 200,
         );
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenAnswer((_) async => [fetchedMember].where(visible).toList());
+        ).thenAnswer(
+          (_) => Stream.value([fetchedMember].where(visible).toList()),
+        );
         final container = buildContainer(pooled: [pooledMember]);
         final states = await collect(container, [_ownerA, _ownerB]);
         expect(idsOf(states).last, equals([fetchedId, pooledId]));
@@ -644,15 +613,17 @@ void main() {
       when(() => rebuilt.applyContentPreferences(any()))
           .thenAnswer(passThrough);
       when(
-        () => videosRepository.getVideosByAuthors(
+        () => videosRepository.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
-      ).thenAnswer((_) async => [_video(id: beforeId, pubkey: _ownerA)]);
+      ).thenAnswer(
+        (_) => Stream.value([_video(id: beforeId, pubkey: _ownerA)]),
+      );
       when(
-        () => rebuilt.getVideosByAuthors(
+        () => rebuilt.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
-      ).thenAnswer((_) async => [_video(id: afterId, pubkey: _ownerA)]);
+      ).thenAnswer((_) => Stream.value([_video(id: afterId, pubkey: _ownerA)]));
       final active = NotifierProvider<_ActiveRepository, VideosRepository>(
         () => _ActiveRepository(videosRepository),
       );
@@ -673,6 +644,67 @@ void main() {
     });
 
     test(
+      "merges each set the repository emits, Funnelcake's then the relays'",
+      () async {
+        const relayOnlyId =
+            '0000000000000000000000000000000000000000000000000000000000000bbd';
+        final indexed = _video(id: fetchedId, pubkey: _ownerA, createdAt: 100);
+        final relayOnly = _video(
+          id: relayOnlyId,
+          pubkey: _ownerB,
+          createdAt: 200,
+        );
+        when(
+          () => videosRepository.watchVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenAnswer(
+          (_) => Stream.fromIterable([
+            [indexed],
+            [relayOnly, indexed],
+          ]),
+        );
+
+        final states = await collect(buildContainer(), [_ownerA, _ownerB]);
+
+        expect(
+          idsOf(states),
+          equals([
+            [fetchedId],
+            [relayOnlyId, fetchedId],
+          ]),
+        );
+      },
+    );
+
+    test(
+      'keeps the fetched videos when the read fails after they showed',
+      () async {
+        final indexed = _video(id: fetchedId, pubkey: _ownerA);
+        Stream<List<VideoEvent>> showsThenFails() async* {
+          yield [indexed];
+          throw Exception('relay down');
+        }
+
+        when(
+          () => videosRepository.watchVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenAnswer((_) => showsThenFails());
+
+        final states = await collect(buildContainer(), [_ownerA]);
+
+        expect(states.last.hasError, isFalse);
+        expect(
+          idsOf(states),
+          equals([
+            [fetchedId],
+          ]),
+        );
+      },
+    );
+
+    test(
       'keeps the pooled videos when the fetch fails after the first paint',
       () async {
         final pooledMember = _video(
@@ -680,10 +712,10 @@ void main() {
           pubkey: _ownerA,
         );
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenThrow(Exception('relay down'));
+        ).thenAnswer((_) => Stream.error(Exception('relay down')));
 
         final states = await collect(buildContainer(pooled: [pooledMember]), [
           _ownerA,
@@ -701,10 +733,10 @@ void main() {
 
     test('surfaces the failure when nothing is pooled', () async {
       when(
-        () => videosRepository.getVideosByAuthors(
+        () => videosRepository.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
-      ).thenThrow(Exception('relay down'));
+      ).thenAnswer((_) => Stream.error(Exception('relay down')));
 
       final states = await collect(buildContainer(), [_ownerA]);
 
@@ -714,7 +746,7 @@ void main() {
       expect(states.last, isA<AsyncError<List<VideoEvent>>>());
       expect(idsOf(states), isEmpty);
       verify(
-        () => videosRepository.getVideosByAuthors(
+        () => videosRepository.watchVideosByAuthors(
           authorPubkeys: any(named: 'authorPubkeys'),
         ),
       ).called(1);
@@ -728,10 +760,10 @@ void main() {
           pubkey: _ownerA,
         );
         when(
-          () => videosRepository.getVideosByAuthors(
+          () => videosRepository.watchVideosByAuthors(
             authorPubkeys: any(named: 'authorPubkeys'),
           ),
-        ).thenThrow(StateError('bug'));
+        ).thenAnswer((_) => Stream.error(StateError('bug')));
 
         final states = await collect(buildContainer(pooled: [pooledMember]), [
           _ownerA,
@@ -744,7 +776,107 @@ void main() {
   });
 
   group(videoEventsByIdsProvider, () {
-    test('keeps legacy cache hits in their requested order', () async {
+    const missingVideoId =
+        '0000000000000000000000000000000000000000000000000000000000000abc';
+
+    late _MockVideoEventService videoEventService;
+    late _MockVideosRepository videosRepository;
+
+    setUp(() {
+      registerFallbackValue(_video(id: 'fallback', pubkey: _ownerA));
+      videoEventService = _MockVideoEventService();
+      videosRepository = _MockVideosRepository();
+      when(() => videoEventService.discoveryVideos).thenReturn(const []);
+      when(() => videoEventService.homeFeedVideos).thenReturn(const []);
+      when(() => videoEventService.profileVideos).thenReturn(const []);
+      when(() => videoEventService.getVideoById(any())).thenReturn(null);
+      when(() => videoEventService.shouldHideVideo(any())).thenReturn(false);
+    });
+
+    void answerRepository(Stream<List<VideoEvent>> answer) {
+      when(
+        () => videosRepository.watchVideosForList(
+          any(),
+          includeFeedShape: any(named: 'includeFeedShape'),
+          relayOnly: any(named: 'relayOnly'),
+        ),
+      ).thenAnswer((_) => answer);
+    }
+
+    Future<List<AsyncValue<List<VideoEvent>>>> collect(
+      List<String> videoRefs,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [
+          videoEventServiceProvider.overrideWithValue(videoEventService),
+          videosRepositoryProvider.overrideWithValue(videosRepository),
+        ],
+      );
+      addTearDown(container.dispose);
+      final provider = videoEventsByIdsProvider(videoRefs);
+      final states = <AsyncValue<List<VideoEvent>>>[];
+      final subscription = container.listen(
+        provider,
+        (_, next) => states.add(next),
+      );
+      addTearDown(subscription.close);
+      await container.read(provider.future).then<void>((_) {}, onError: (_) {});
+      await pumpEventQueue();
+      return states;
+    }
+
+    List<List<String>> idsOf(List<AsyncValue<List<VideoEvent>>> states) => [
+      for (final state in states)
+        if (state.hasValue) [for (final video in state.value!) video.id],
+    ];
+
+    test(
+      'reads the videos the pool lacks, keeping those its author chose',
+      () async {
+        final pooled = _video(id: _allowedVideoId, pubkey: _ownerA);
+        when(
+          () => videoEventService.getVideoById(_allowedVideoId),
+        ).thenReturn(pooled);
+        answerRepository(Stream.value(const []));
+
+        await collect([_allowedVideoId, missingVideoId, '34236:$_ownerB:d']);
+
+        // A discovered list is public, so Funnelcake may answer first: the
+        // omitted relayOnly matches only its default, false.
+        verify(
+          () => videosRepository.watchVideosForList(
+            [missingVideoId, '34236:$_ownerB:d'],
+            includeFeedShape: false,
+          ),
+        ).called(1);
+      },
+    );
+
+    test(
+      'shows pooled videos first, then every video in the list order',
+      () async {
+        final pooled = _video(id: _allowedVideoId, pubkey: _ownerA);
+        final fetched = _video(id: missingVideoId, pubkey: _ownerB);
+        when(
+          () => videoEventService.getVideoById(_allowedVideoId),
+        ).thenReturn(pooled);
+        answerRepository(Stream.value([fetched]));
+
+        final states = await collect([missingVideoId, _allowedVideoId]);
+
+        expect(
+          idsOf(states),
+          equals([
+            [_allowedVideoId],
+            [missingVideoId, _allowedVideoId],
+            [missingVideoId, _allowedVideoId],
+          ]),
+        );
+        verify(() => videoEventService.addVideoEvent(fetched)).called(1);
+      },
+    );
+
+    test('keeps pooled legacy videos in their requested order', () async {
       final legacy = _video(
         id: 'legacy-video',
         pubkey: _ownerA,
@@ -755,33 +887,25 @@ void main() {
         pubkey: _ownerA,
         dTag: 'chapter-2',
       ).copyWith(eventKind: 34236);
-      final videoService = _MockVideoEventService();
-      final nostrClient = _MockNostrClient();
-      registerFallbackValue(legacy);
-      when(() => videoService.discoveryVideos).thenReturn([later, legacy]);
-      when(() => videoService.homeFeedVideos).thenReturn(const []);
-      when(() => videoService.profileVideos).thenReturn(const []);
-      when(() => videoService.shouldHideVideo(any())).thenReturn(false);
-      when(() => nostrClient.subscribe(any(), closeOnEose: true)).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      final container = ProviderContainer(
-        overrides: [
-          videoEventServiceProvider.overrideWithValue(videoService),
-          nostrServiceProvider.overrideWithValue(nostrClient),
-        ],
-      );
-      addTearDown(container.dispose);
-      final provider = videoEventsByIdsProvider([
+      when(() => videoEventService.discoveryVideos).thenReturn([later, legacy]);
+      answerRepository(Stream.value(const []));
+
+      final states = await collect([
         '34236:$_ownerA:chapter-1',
         '34236:$_ownerA:chapter-2',
       ]);
-      final emitted = await _emittedIds(container, provider, provider.future);
 
-      expect(emitted.last, [legacy.id, later.id]);
+      expect(idsOf(states).last, [legacy.id, later.id]);
+      // The legacy video only stands in: the exact address is still read.
+      verify(
+        () => videosRepository.watchVideosForList(
+          ['34236:$_ownerA:chapter-1'],
+          includeFeedShape: false,
+        ),
+      ).called(1);
     });
 
-    test('matches cached addresses by kind and the entire d-tag', () async {
+    test('matches pooled addresses by kind and the entire d-tag', () async {
       final wrong = _video(
         id: 'wrong-video',
         pubkey: _ownerA,
@@ -792,61 +916,54 @@ void main() {
         pubkey: _ownerA,
         dTag: 'chapter:one',
       ).copyWith(eventKind: 34236);
-      final videoService = _MockVideoEventService();
-      when(() => videoService.discoveryVideos).thenReturn([wrong, expected]);
-      when(() => videoService.homeFeedVideos).thenReturn(const []);
-      when(() => videoService.profileVideos).thenReturn(const []);
-      when(() => videoService.shouldHideVideo(wrong)).thenReturn(false);
-      when(() => videoService.shouldHideVideo(expected)).thenReturn(false);
-      when(() => videoService.getVideoById(_allowedVideoId))
-          .thenReturn(expected);
-      final container = ProviderContainer(
-        overrides: [videoEventServiceProvider.overrideWithValue(videoService)],
-      );
-      addTearDown(container.dispose);
-      final provider = videoEventsByIdsProvider([
+      when(() => videoEventService.discoveryVideos)
+          .thenReturn([wrong, expected]);
+      when(
+        () => videoEventService.getVideoById(_allowedVideoId),
+      ).thenReturn(expected);
+
+      final states = await collect([
         _allowedVideoId,
         '34236:$_ownerA:chapter:one',
       ]);
-      final subscription = container.listen(provider, (_, _) {});
-      addTearDown(subscription.close);
 
-      expect(await container.read(provider.future), [expected]);
+      expect(idsOf(states).last, [_allowedVideoId]);
     });
 
     for (final (exactAddressExists, description) in [
-      (true, 'prefers the exact relay address over a legacy cache hit'),
-      (false, 'keeps a legacy cache hit when the exact address is unavailable'),
+      (true, 'prefers the exact address over a pooled legacy video'),
+      (
+        false,
+        'keeps a pooled legacy video when the exact address has no media',
+      ),
     ]) {
       test(description, () async {
-        final relay = StreamController<Event>();
-        addTearDown(relay.close);
+        final read = StreamController<List<VideoEvent>>();
+        addTearDown(read.close);
         final legacy = _video(
           id: 'legacy-video',
           pubkey: _ownerA,
           dTag: 'chapter',
         ).copyWith(eventKind: 34235);
-        final exact = Event(_ownerA, 34236, [
-          ['d', 'chapter'],
-          ['url', 'https://example.com/chapter.mp4'],
-        ], '');
-        final withoutMedia = Event(_ownerA, 34236, [
-          ['d', 'chapter'],
-        ], '');
-        final videoService = _MockVideoEventService();
-        final nostrClient = _MockNostrClient();
-        registerFallbackValue(legacy);
-        when(() => videoService.discoveryVideos).thenReturn([legacy]);
-        when(() => videoService.homeFeedVideos).thenReturn(const []);
-        when(() => videoService.profileVideos).thenReturn(const []);
-        when(() => videoService.shouldHideVideo(any())).thenReturn(false);
-        when(
-          () => nostrClient.subscribe(any(), closeOnEose: true),
-        ).thenAnswer((_) => relay.stream);
+        final exact = VideoEvent.fromNostrEvent(
+          Event(_ownerA, 34236, [
+            ['d', 'chapter'],
+            ['url', 'https://example.com/chapter.mp4'],
+          ], ''),
+          permissive: true,
+        );
+        final withoutMedia = VideoEvent.fromNostrEvent(
+          Event(_ownerA, 34236, [
+            ['d', 'chapter'],
+          ], ''),
+          permissive: true,
+        );
+        when(() => videoEventService.discoveryVideos).thenReturn([legacy]);
+        answerRepository(read.stream);
         final container = ProviderContainer(
           overrides: [
-            videoEventServiceProvider.overrideWithValue(videoService),
-            nostrServiceProvider.overrideWithValue(nostrClient),
+            videoEventServiceProvider.overrideWithValue(videoEventService),
+            videosRepositoryProvider.overrideWithValue(videosRepository),
           ],
         );
         addTearDown(container.dispose);
@@ -863,191 +980,117 @@ void main() {
         expect(emitted, [
           [legacy.id],
         ]);
-        relay.add(exactAddressExists ? exact : withoutMedia);
-        await relay.close();
+        read.add([if (exactAddressExists) exact else withoutMedia]);
+        await read.close();
         await pumpEventQueue();
         final expectedId = exactAddressExists ? exact.id : legacy.id;
         expect(emitted.last, [expectedId]);
       });
     }
 
-    test('emits the videos in the list order as relays answer', () async {
-      final (overrides, fromRelay) = _cacheAnswersBeforeRelay();
-      final container = ProviderContainer(overrides: overrides);
-      addTearDown(container.dispose);
+    test(
+      'ignores an older revision that arrives later',
+      () async {
+        const dTag = 'clip';
+        final first = _video(
+          id: _allowedVideoId,
+          pubkey: _ownerA,
+          createdAt: 200,
+        ).copyWith(addressableDTag: dTag);
+        final second = _video(
+          id: missingVideoId,
+          pubkey: _ownerA,
+          createdAt: 100,
+        ).copyWith(addressableDTag: dTag);
+        answerRepository(
+          Stream.fromIterable([
+            [first],
+            [second],
+          ]),
+        );
 
-      final provider = videoEventsByIdsProvider([
-        '34236:$_ownerA:part-1',
-        _allowedVideoId,
+        final states = await collect(['34236:$_ownerA:$dTag', _allowedVideoId]);
+
+        expect(idsOf(states).last, [_allowedVideoId]);
+        verifyNever(() => videoEventService.addVideoEvent(second));
+      },
+    );
+
+    test('uses the signed revision time without moving the tile', () async {
+      const dTag = 'clip';
+      const otherId =
+          '0000000000000000000000000000000000000000000000000000000000000abd';
+      final older = _video(
+        id: missingVideoId,
+        pubkey: _ownerA,
+        createdAt: 100,
+      ).copyWith(addressableDTag: dTag, eventCreatedAt: 150);
+      final other = _video(id: otherId, pubkey: _ownerB);
+      final newer = _video(
+        id: _allowedVideoId,
+        pubkey: _ownerA,
+        createdAt: 100,
+      ).copyWith(addressableDTag: dTag, eventCreatedAt: 200);
+      answerRepository(
+        Stream.fromIterable([
+          [older, other],
+          [newer],
+        ]),
+      );
+
+      final states = await collect([
+        missingVideoId,
+        otherId,
+        '34236:$_ownerA:$dTag',
       ]);
-      final emitted = await _emittedIds(container, provider, provider.future);
 
-      expect(emitted.first, equals([_allowedVideoId]));
-      expect(emitted.last, equals([fromRelay.id, _allowedVideoId]));
+      expect(idsOf(states).last, [_allowedVideoId, otherId]);
+      verify(() => videoEventService.addVideoEvent(newer)).called(1);
     });
 
-    test('uses an EOSE-bounded relay read for missing videos', () async {
-      final videoEventService = _MockVideoEventService();
-      final nostrClient = _MockNostrClient();
-      when(() => videoEventService.discoveryVideos).thenReturn(const []);
-      when(() => videoEventService.homeFeedVideos).thenReturn(const []);
-      when(() => videoEventService.profileVideos).thenReturn(const []);
+    test('leaves out a video the read finds that the viewer hides', () async {
+      final fetched = _video(id: missingVideoId, pubkey: _blockedAuthor);
+      when(() => videoEventService.shouldHideVideo(fetched)).thenReturn(true);
+      answerRepository(Stream.value([fetched]));
+
+      final states = await collect([missingVideoId]);
+
+      expect(states.last.value, isEmpty);
+      verifyNever(() => videoEventService.addVideoEvent(any()));
+    });
+
+    test('keeps pooled videos when the read fails', () async {
+      final pooled = _video(id: _allowedVideoId, pubkey: _ownerA);
       when(
         () => videoEventService.getVideoById(_allowedVideoId),
-      ).thenReturn(null);
-      when(
-        () => nostrClient.subscribe(any(), closeOnEose: true),
-      ).thenAnswer((_) => const Stream.empty());
+      ).thenReturn(pooled);
+      answerRepository(Stream.error(Exception('relays down')));
 
-      final container = ProviderContainer(
-        overrides: [
-          videoEventServiceProvider.overrideWithValue(videoEventService),
-          nostrServiceProvider.overrideWithValue(nostrClient),
-        ],
-      );
-      addTearDown(container.dispose);
-      final provider = videoEventsByIdsProvider([_allowedVideoId]);
-      final subscription = container.listen(provider, (_, _) {});
-      addTearDown(subscription.close);
+      final states = await collect([_allowedVideoId, missingVideoId]);
 
-      await expectLater(container.read(provider.future), completion(isEmpty));
-      verify(
-        () => nostrClient.subscribe(any(), closeOnEose: true),
-      ).called(1);
+      expect(states.where((state) => state.hasError), isEmpty);
+      expect(idsOf(states).last, equals([_allowedVideoId]));
     });
 
-    // relay.divine.video closes a REQ carrying more than ten filters, and
-    // lists name videos by coordinate since #7135.
-    test('asks for eleven addresses in a request the relay accepts', () async {
-      registerFallbackValue(<Filter>[]);
-      final videoEventService = _MockVideoEventService();
-      final nostrClient = _MockNostrClient();
-      when(() => videoEventService.discoveryVideos).thenReturn(const []);
-      when(() => videoEventService.homeFeedVideos).thenReturn(const []);
-      when(() => videoEventService.profileVideos).thenReturn(const []);
-      when(
-        () => nostrClient.subscribe(any(), closeOnEose: true),
-      ).thenAnswer((_) => const Stream.empty());
+    test('surfaces a failed read when nothing is pooled', () async {
+      answerRepository(Stream.error(Exception('relays down')));
 
-      final container = ProviderContainer(
-        overrides: [
-          videoEventServiceProvider.overrideWithValue(videoEventService),
-          nostrServiceProvider.overrideWithValue(nostrClient),
-        ],
-      );
-      addTearDown(container.dispose);
-      final provider = videoEventsByIdsProvider([
-        for (var i = 0; i < 11; i++) '34236:$_ownerA:clip-$i',
-      ]);
-      final subscription = container.listen(provider, (_, _) {});
-      addTearDown(subscription.close);
+      final states = await collect([missingVideoId]);
 
-      await container.read(provider.future);
-
-      final filters =
-          verify(
-                () => nostrClient.subscribe(captureAny(), closeOnEose: true),
-              ).captured.single
-              as List<Filter>;
-      expect(filters, hasLength(lessThanOrEqualTo(10)));
-      expect(filters.expand((filter) => filter.d!), hasLength(11));
+      expect(states.last, isA<AsyncError<List<VideoEvent>>>());
     });
 
-    test('keeps only the videos it asked for from a shared filter', () async {
-      registerFallbackValue(_video(id: 'fallback', pubkey: _ownerA));
-      Event videoAt(String author, String dTag) => Event(author, 34236, [
-        ['d', dTag],
-        ['url', 'https://example.com/$dTag.mp4'],
-      ], '');
-      final asked = videoAt(_ownerA, 'clip-1');
-      // The shared filter lists both authors and both d-tags, so a relay
-      // also answers with the first author's video at the other d-tag.
-      final notAsked = videoAt(_ownerA, 'clip-2');
-      final videoEventService = _MockVideoEventService();
-      final nostrClient = _MockNostrClient();
-      when(() => videoEventService.discoveryVideos).thenReturn(const []);
-      when(() => videoEventService.homeFeedVideos).thenReturn(const []);
-      when(() => videoEventService.profileVideos).thenReturn(const []);
-      when(() => videoEventService.shouldHideVideo(any())).thenReturn(false);
-      when(
-        () => nostrClient.subscribe(any(), closeOnEose: true),
-      ).thenAnswer((_) => Stream.fromIterable([asked, notAsked]));
+    test('skips references that are neither ids nor coordinates', () async {
+      final states = await collect(['not-an-event-id', '34236:$_ownerA']);
 
-      final container = ProviderContainer(
-        overrides: [
-          videoEventServiceProvider.overrideWithValue(videoEventService),
-          nostrServiceProvider.overrideWithValue(nostrClient),
-        ],
-      );
-      addTearDown(container.dispose);
-      final provider = videoEventsByIdsProvider([
-        '34236:$_ownerA:clip-1',
-        '34236:$_ownerB:clip-2',
-      ]);
-      final states = <AsyncValue<List<VideoEvent>>>[];
-      final subscription = container.listen(
-        provider,
-        (_, next) => states.add(next),
-      );
-      addTearDown(subscription.close);
-
-      await container.read(provider.future);
-      await pumpEventQueue();
-
-      expect(states.last.value?.map((video) => video.id), [asked.id]);
-    });
-
-    test('keeps cached videos when every relay refuses the read', () async {
-      final cachedVideo = _video(id: _allowedVideoId, pubkey: _ownerA);
-      final videoEventService = _MockVideoEventService();
-      final nostrClient = _MockNostrClient();
-      when(() => videoEventService.discoveryVideos).thenReturn(const []);
-      when(() => videoEventService.homeFeedVideos).thenReturn(const []);
-      when(() => videoEventService.profileVideos).thenReturn(const []);
-      when(
-        () => videoEventService.getVideoById(_allowedVideoId),
-      ).thenReturn(cachedVideo);
-      when(
-        () => videoEventService.getVideoById(_blockedVideoId),
-      ).thenReturn(null);
-      when(
-        () => videoEventService.shouldHideVideo(cachedVideo),
-      ).thenReturn(false);
-      when(() => nostrClient.subscribe(any(), closeOnEose: true)).thenAnswer(
-        (_) => Stream<Event>.error(
-          const RelaySubscriptionRefusedException(
-            'error: too many subscriptions',
-          ),
+      expect(states.last.value, isEmpty);
+      verifyNever(
+        () => videosRepository.watchVideosForList(
+          any(),
+          includeFeedShape: any(named: 'includeFeedShape'),
+          relayOnly: any(named: 'relayOnly'),
         ),
       );
-
-      final container = ProviderContainer(
-        overrides: [
-          videoEventServiceProvider.overrideWithValue(videoEventService),
-          nostrServiceProvider.overrideWithValue(nostrClient),
-        ],
-      );
-      addTearDown(container.dispose);
-      final provider = videoEventsByIdsProvider([
-        _allowedVideoId,
-        _blockedVideoId,
-      ]);
-      final states = <AsyncValue<List<VideoEvent>>>[];
-      final subscription = container.listen(
-        provider,
-        (_, next) => states.add(next),
-      );
-      addTearDown(subscription.close);
-
-      await container.read(provider.future);
-      await pumpEventQueue();
-
-      expect(
-        states.where((state) => state.hasError),
-        isEmpty,
-        reason: 'a refused relay read must not fail the provider',
-      );
-      expect(states.last.value?.map((v) => v.id), [_allowedVideoId]);
     });
 
     test(
@@ -1167,12 +1210,35 @@ void main() {
   });
 
   group(curatedListVideoEventsProvider, () {
-    test('emits the videos in the list order as relays answer', () async {
+    test('emits the videos in the list order as the read answers', () async {
       const listId = 'series-list';
-      final (overrides, fromRelay) = _cacheAnswersBeforeRelay();
+      registerFallbackValue(_video(id: 'fallback', pubkey: _ownerA));
+      final fromRead = _video(
+        id: 'part-1-video',
+        pubkey: _ownerA,
+        dTag: 'part-1',
+      ).copyWith(eventKind: 34236);
+      final pooled = _video(id: _allowedVideoId, pubkey: _ownerA);
+      final videoEventService = _MockVideoEventService();
+      final videosRepository = _MockVideosRepository();
+      when(() => videoEventService.discoveryVideos).thenReturn(const []);
+      when(() => videoEventService.homeFeedVideos).thenReturn(const []);
+      when(() => videoEventService.profileVideos).thenReturn(const []);
+      when(
+        () => videoEventService.getVideoById(_allowedVideoId),
+      ).thenReturn(pooled);
+      when(() => videoEventService.shouldHideVideo(any())).thenReturn(false);
+      when(
+        () => videosRepository.watchVideosForList(
+          ['34236:$_ownerA:part-1'],
+          includeFeedShape: false,
+          relayOnly: true,
+        ),
+      ).thenAnswer((_) => Stream.value([fromRead]));
       final container = ProviderContainer(
         overrides: [
-          ...overrides,
+          videoEventServiceProvider.overrideWithValue(videoEventService),
+          videosRepositoryProvider.overrideWithValue(videosRepository),
           curatedListVideosProvider(
             listId,
           ).overrideWith((ref) => ['34236:$_ownerA:part-1', _allowedVideoId]),
@@ -1184,27 +1250,34 @@ void main() {
       final emitted = await _emittedIds(container, provider, provider.future);
 
       expect(emitted.first, equals([_allowedVideoId]));
-      expect(emitted.last, equals([fromRelay.id, _allowedVideoId]));
+      expect(emitted.last, equals([fromRead.id, _allowedVideoId]));
     });
 
-    test('uses an EOSE-bounded relay read for missing videos', () async {
-      const listId = 'relay-list';
+    test('reads the videos the pool lacks from the relays alone', () async {
+      const listId = 'repository-list';
+      final fetched = _video(id: _allowedVideoId, pubkey: _ownerA);
       final videoEventService = _MockVideoEventService();
-      final nostrClient = _MockNostrClient();
+      final videosRepository = _MockVideosRepository();
       when(() => videoEventService.discoveryVideos).thenReturn(const []);
       when(() => videoEventService.homeFeedVideos).thenReturn(const []);
       when(() => videoEventService.profileVideos).thenReturn(const []);
       when(
         () => videoEventService.getVideoById(_allowedVideoId),
       ).thenReturn(null);
+      when(() => videoEventService.shouldHideVideo(fetched)).thenReturn(false);
       when(
-        () => nostrClient.subscribe(any(), closeOnEose: true),
-      ).thenAnswer((_) => const Stream.empty());
+        () => videosRepository.watchVideosForList(
+          [_allowedVideoId],
+          includeFeedShape: false,
+          // A stored list can be the viewer's private one.
+          relayOnly: true,
+        ),
+      ).thenAnswer((_) => Stream.value([fetched]));
 
       final container = ProviderContainer(
         overrides: [
           videoEventServiceProvider.overrideWithValue(videoEventService),
-          nostrServiceProvider.overrideWithValue(nostrClient),
+          videosRepositoryProvider.overrideWithValue(videosRepository),
           curatedListVideosProvider(
             listId,
           ).overrideWith((ref) => [_allowedVideoId]),
@@ -1215,10 +1288,9 @@ void main() {
       final subscription = container.listen(provider, (_, _) {});
       addTearDown(subscription.close);
 
-      await expectLater(container.read(provider.future), completion(isEmpty));
-      verify(
-        () => nostrClient.subscribe(any(), closeOnEose: true),
-      ).called(1);
+      final result = await container.read(provider.future);
+
+      expect(result.map((video) => video.id), [_allowedVideoId]);
     });
 
     test(

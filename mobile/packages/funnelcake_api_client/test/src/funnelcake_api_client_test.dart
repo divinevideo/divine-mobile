@@ -5508,6 +5508,107 @@ void main() {
       });
     });
 
+    group('discoverLists', () {
+      Uri requestedUri() =>
+          verify(
+                () => mockHttpClient.get(
+                  captureAny(),
+                  headers: any(named: 'headers'),
+                ),
+              ).captured.single
+              as Uri;
+
+      void answer(String body, [int status = 200]) {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response(body, status));
+      }
+
+      test('asks the discover index for one kind, in its order', () async {
+        answer(
+          '{"data": [ '
+          '{"kind": 30000, "pubkey": "$testPubkey", "d_tag": "crew", '
+          '"title": "Crew", "member_count": 7, "members": ["$testPubkey"], '
+          '"updated_at": 1779334404}, '
+          '{"kind": 30000, "pubkey": "$testPubkey", "d_tag": "pals", '
+          '"title": "Pals", "member_count": 2, "updated_at": 1764330677} '
+          '], "pagination": {"next_cursor": "o:2", "has_more": true}}',
+        );
+
+        final page = await client.discoverLists(
+          kind: PublicListKind.people,
+          limit: 2,
+        );
+
+        expect(page.cards.map((card) => card.dTag), ['crew', 'pals']);
+        expect(page.cards.first.memberCount, 7);
+        expect(page.cards.first.members, [testPubkey]);
+        expect(page.nextCursor, 'o:2');
+        final uri = requestedUri();
+        expect(uri.path, '/api/v2/lists/discover');
+        expect(uri.queryParameters, {'kind': '30000', 'limit': '2'});
+      });
+
+      test('continues from the cursor of the page before', () async {
+        answer('{"data": [], "pagination": {"has_more": false}}');
+
+        await client.discoverLists(
+          kind: PublicListKind.videos,
+          cursor: 'o:25',
+        );
+
+        expect(requestedUri().queryParameters, {
+          'kind': '30005',
+          'limit': '25',
+          'cursor': 'o:25',
+        });
+      });
+
+      test('refuses a page size the server does not take', () {
+        for (final limit in [0, FunnelcakeApiClient.maxListSearchLimit + 1]) {
+          expect(
+            () => client.discoverLists(
+              kind: PublicListKind.videos,
+              limit: limit,
+            ),
+            throwsArgumentError,
+            reason: '$limit',
+          );
+        }
+      });
+
+      test('throws FunnelcakeNotConfiguredException when not available', () {
+        final emptyClient = FunnelcakeApiClient(
+          baseUrl: '',
+          httpClient: mockHttpClient,
+        );
+
+        expect(
+          () => emptyClient.discoverLists(kind: PublicListKind.videos),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+
+        emptyClient.dispose();
+      });
+
+      test('throws FunnelcakeApiException for a rejected request', () {
+        answer('{"error": "kind must be 30000 or 30005"}', 400);
+
+        expect(
+          () => client.discoverLists(kind: PublicListKind.videos),
+          throwsA(
+            isA<FunnelcakeApiException>()
+                .having((e) => e.statusCode, 'statusCode', 400)
+                .having(
+                  (e) => e.message,
+                  'message',
+                  'Failed to discover lists',
+                ),
+          ),
+        );
+      });
+    });
+
     group('listSounds', () {
       Uri requestedUri() =>
           verify(

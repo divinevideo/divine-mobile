@@ -182,5 +182,27 @@ void main() {
         });
       }
     });
+
+    group('positionOfReference', () {
+      test('finds an event id and a coordinate the list names', () {
+        final order = ListVideoOrder([
+          _eventId,
+          '34236:$_author:part-1',
+        ]);
+
+        expect(order.positionOfReference(_eventId.toUpperCase()), equals(0));
+        expect(
+          order.positionOfReference('34236:${_author.toUpperCase()}:part-1'),
+          equals(1),
+        );
+      });
+
+      test('names no position for a reference the list lacks', () {
+        final order = ListVideoOrder(['34236:$_author:part-1']);
+
+        expect(order.positionOfReference('34236:$_other:part-1'), isNull);
+        expect(order.positionOfReference('invalid:$_author:part-1'), isNull);
+      });
+    });
   });
 }

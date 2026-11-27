@@ -29,6 +29,13 @@ class ListVideoOrder {
     _positions[addressOf(video)?.toAString()],
   );
 
+  /// The position of [reference] in the list, or null when the list does
+  /// not name it.
+  int? positionOfReference(String reference) {
+    final key = _referenceKey(reference);
+    return key == null ? null : _positions[key];
+  }
+
   /// The index in [videos] of the video named by [reference], even if the
   /// list also names the video earlier by its other identifier.
   /// [isEligible] can narrow the match to a playable revision.
