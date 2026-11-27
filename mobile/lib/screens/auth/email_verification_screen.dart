@@ -178,7 +178,6 @@ class _EmailVerificationScreenState
     final pending = enrolled && !widget.isPollingMode
         ? await pendingService.load()
         : null;
-    await pendingService.clear();
     if (!mounted) return;
     final newRegistration =
         widget.isPollingMode ||
@@ -188,6 +187,7 @@ class _EmailVerificationScreenState
           ? RoutePaths.videoFeedForIndex(0)
           : ExploreScreen.pathForTab('popular'),
     );
+    await pendingService.clear();
   }
 
   void _initializeVerification() {
@@ -303,6 +303,8 @@ class _EmailVerificationScreenState
         return;
       }
 
+      // This route now completes via the auth listener, like restored polling.
+      _isTokenMode = false;
       _cubit.startPolling(
         deviceCode: pending.deviceCode,
         verifier: pending.verifier,
@@ -437,22 +439,17 @@ class _EmailVerificationScreenState
       await _handleAuthenticated();
       return;
     }
-    // Clear persisted verification data on successful login
-    await _clearPendingVerification();
-    if (!mounted) return;
-
-    if (!_isTokenMode) {
-      // Email verification can finish before sign-in. The listener handles
-      // the remaining transition once authentication completes.
-      Log.info(
-        'Email verification succeeded, waiting for sign-in',
-        name: 'EmailVerificationScreen',
-        category: LogCategory.auth,
-      );
-    } else {
-      // Token mode: redirect to login screen
-      await _handleTokenModeSuccess(clearPending: false);
+    if (_isTokenMode) {
+      await _handleTokenModeSuccess();
+      return;
     }
+    // Keep the signup or upgrade record until the auth listener handles
+    // sign-in. Polling can report verification success before activating it.
+    Log.info(
+      'Email verification succeeded, waiting for sign-in',
+      name: 'EmailVerificationScreen',
+      category: LogCategory.auth,
+    );
   }
 
   /// Says what the link did once the signed-in account has been re-checked.
@@ -483,12 +480,10 @@ class _EmailVerificationScreenState
     );
   }
 
-  Future<void> _handleTokenModeSuccess({bool clearPending = true}) async {
+  Future<void> _handleTokenModeSuccess() async {
     if (!_claimLeavingVerification()) return;
-    if (clearPending) {
-      await _clearPendingVerification();
-      if (!mounted) return;
-    }
+    await _clearPendingVerification();
+    if (!mounted) return;
     // An account that signed in before confirming is already in: confirming
     // only unlocks what was waiting on it, so stay signed in.
     final authService = ref.read(authServiceProvider);

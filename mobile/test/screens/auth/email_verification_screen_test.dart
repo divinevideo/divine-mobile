@@ -456,6 +456,69 @@ void main() {
         expect(find.text('Home feed'), findsOneWidget);
       });
 
+      for (final useLink in [false, true]) {
+        final entry = useLink ? 'linked' : 'restored';
+        testWidgets('$entry new signup lands on Home after sign-in', (
+          tester,
+        ) async {
+          final viewer = 'a' * 64;
+          final prefs = createMockSharedPreferences();
+          when(() => prefs.containsKey(ClassicsWarmup.storageKey(viewer)))
+              .thenReturn(true);
+          PendingVerification? pending = PendingVerification(
+            deviceCode: 'signup-device-code',
+            verifier: 'signup-verifier',
+            email: 'user@example.com',
+            createdAt: DateTime.now(),
+          );
+          when(() => mockPendingVerification.load()).thenAnswer(
+            (_) async => pending,
+          );
+          when(() => mockPendingVerification.clear()).thenAnswer((_) async {
+            pending = null;
+          });
+          final states = StreamController<EmailVerificationState>.broadcast();
+          addTearDown(states.close);
+          await tester.pumpWidget(
+            createTestWidget(
+              restored: !useLink,
+              token: useLink ? 'verification-token' : null,
+              prefs: prefs,
+              initialState: const EmailVerificationState(
+                status: EmailVerificationStatus.polling,
+              ),
+              stateStream: states.stream,
+            ),
+          );
+          await tester.pump();
+          verify(
+            () => mockCubit.startPolling(
+              deviceCode: 'signup-device-code',
+              verifier: 'signup-verifier',
+              email: 'user@example.com',
+            ),
+          ).called(1);
+
+          states.add(
+            const EmailVerificationState(
+              status: EmailVerificationStatus.success,
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(find.byType(EmailVerificationScreen), findsOneWidget);
+
+          when(() => mockAuthService.currentPublicKeyHex).thenReturn(viewer);
+          when(() => mockAuthService.authState)
+              .thenReturn(AuthState.authenticated);
+          authStateController.add(AuthState.authenticated);
+          await tester.pumpAndSettle();
+
+          expect(find.text('Home feed'), findsOneWidget);
+          expect(pending, isNull);
+        });
+      }
+
       testWidgets('owner-bound verification keeps the Explore destination', (
         tester,
       ) async {
