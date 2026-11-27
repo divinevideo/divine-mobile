@@ -12,18 +12,22 @@ import pro_video_editor
 /// hits on the beat, is left as it is.
 ///
 /// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
-/// long the streaks are) and, for an effect on the beat, `beatsUs`: the beats,
-/// in microseconds after the effect's start. On the beat the streaks only show
-/// on each hit and fade out over half a second; see ``BlurHits``.
+/// long the streaks are), `centerX` and `centerY` (0–1: where its centre sits,
+/// as shares of the width from the left and of the height from the top; the
+/// middle by default) and, for an effect on the beat, `beatsUs`: the beats, in
+/// microseconds after the effect's start. On the beat the streaks only show on
+/// each hit and fade out over half a second; see ``BlurHits``.
 final class ZoomBlurVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.zoomBlur"
 
   private let intensity: Double
   private let beatsUs: [Int64]?
+  private let center: [Double]
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
+    center = Self.readCenter(params)
     beatsUs = BlurHits.beats(params)
     super.init(function: Self.function, source: Self.source)
   }
@@ -39,7 +43,7 @@ final class ZoomBlurVideoEffect: ShaderVideoEffect {
   override func values(effectTimeUs: Int64) -> [Double]? {
     let strength = BlurHits.strength(
       intensity: intensity, beatsUs: beatsUs, effectTimeUs: effectTimeUs)
-    return strength > 0 ? [strength] : nil
+    return strength > 0 ? [strength] + center : nil
   }
 
   static let function = "divineZoomBlur"
@@ -53,18 +57,20 @@ final class ZoomBlurVideoEffect: ShaderVideoEffect {
     ) {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
-      float strength = u[3].x;
+      float2 uSize = f.size;
+      float uStrength = u[3].x;
+      float2 uCenter = u[3].yz;
       float2 p = pixelOf(u, gid, target.get_height());
-      if (strength <= 0.0) {
+      if (uStrength <= 0.0) {
         target.write(float4(tap(frame, f, p), 1.0), gid);
         return;
       }
-      float2 c = f.size * 0.5;
+      float2 c = float2(uCenter.x, 1.0 - uCenter.y) * uSize;
       float jitter = fract(52.9829189 * fract(dot(p, float2(0.06711056, 0.00583715))));
       float3 color = float3(0.0);
       for (int i = 0; i < 32; i++) {
         float share = (float(i) + jitter) / 32.0;
-        color += tap(frame, f, c + (p - c) * (1.0 - 0.22 * strength * share));
+        color += tap(frame, f, c + (p - c) * (1.0 - 0.22 * uStrength * share));
       }
       target.write(float4(color / 32.0, 1.0), gid);
     }

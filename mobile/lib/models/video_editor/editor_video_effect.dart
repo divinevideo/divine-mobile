@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:openvine/models/content_label.dart';
+import 'package:openvine/models/video_editor/effect_settings_catalog.dart';
 import 'package:openvine/models/video_editor/hit_timing_settings.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
@@ -972,18 +973,6 @@ class EditorEffectType {
     _ => null,
   };
 
-  /// The colour of a blast's glow, liquid or smoke, as an ARGB integer, when
-  /// the user has not picked another one (see `HitLookSettings.color`):
-  /// electric blue for the plasma, red for the energy wave and light grey for
-  /// the smoke burst. `null` for any other type. The native `BlastVideoEffect`
-  /// falls back to the same.
-  int? get hitColor => switch (customId) {
-    plasmaVideoEffectId => 0xFF4CBFFF,
-    energyWaveVideoEffectId => 0xFFFF290F,
-    smokeBurstVideoEffectId => 0xFFD1CFC9,
-    _ => null,
-  };
-
   /// The look of this intro or outro, or `null` for any other type.
   IntroOutroLook? get introOutroLook => switch (customId) {
     introFadeVideoEffectId || outroFadeVideoEffectId => IntroOutroLook.fade,
@@ -1036,8 +1025,9 @@ class EditorVideoEffect extends Equatable {
 
   /// A new effect of [type] at [intensity], placed from [startTime] until
   /// [endTime]. [onBeat] only applies to a type that
-  /// [EditorEffectType.supportsOnBeat], and [settings] only to a custom one,
-  /// which stores them next to its intensity.
+  /// [EditorEffectType.supportsOnBeat]. A custom effect stores [settings] next
+  /// to its intensity, and a built-in one those that differ from their
+  /// defaults in its `VideoEffect.params` (see [effectSettingsOf]).
   factory EditorVideoEffect.of({
     required String id,
     required EditorEffectType type,
@@ -1056,6 +1046,14 @@ class EditorVideoEffect extends Equatable {
           intensity: intensity,
           startTime: startTime,
           endTime: endTime,
+          // Only what the user changed, so an untouched effect stays the
+          // plain one it always was.
+          params: {
+            for (final MapEntry(:key, :value) in settings.entries)
+              if (value is num &&
+                  value != effectSettingOf(type, key)?.defaultParam)
+                key: value.toDouble(),
+          },
         ),
         onBeat: onBeat,
       );
@@ -1689,13 +1687,13 @@ List<double> lightningBolt(int index) {
 
 /// How long one step of a tunnel takes at [intensity] when nothing else
 /// decides it: as long as the picture takes to grow from one copy to the size
-/// of the one around it, at a zoom that doubles it every 1.2 seconds. A
-/// smaller copy takes longer, so the zoom looks equally fast at every
-/// intensity. The native `TunnelSteps` use the same.
-Duration tunnelStepDuration(double intensity) {
+/// of the one around it, at a zoom that doubles it every 1.2 seconds, or
+/// [speed] times as fast. A smaller copy takes longer, so the zoom looks
+/// equally fast at every intensity. The native `TunnelSteps` use the same.
+Duration tunnelStepDuration(double intensity, {double speed = 1}) {
   final copyScale = 0.15 + 0.4 * intensity.clamp(0.0, 1.0);
   return Duration(
-    microseconds: (-math.log(copyScale) / math.ln2 * 1200000).round(),
+    microseconds: (-math.log(copyScale) / math.ln2 * 1200000 / speed).round(),
   );
 }
 
@@ -1718,7 +1716,12 @@ int tunnelPeriodUs(
   final intensity =
       (effect.params[EditorVideoEffect.intensityParam] as num?)?.toDouble() ??
       1;
-  final step = tunnelStepDuration(intensity);
+  // Both tunnels share the one speed setting.
+  final speed = effectSettingValuesOf(
+    EditorEffectType.tunnel,
+    effect.params,
+  )[EffectSettingKeys.speed]!;
+  final step = tunnelStepDuration(intensity, speed: speed as double);
   final (:output, :rendered) = _renderedWindow(
     effect,
     timelineMap,
@@ -1902,6 +1905,7 @@ List<VideoEffect> videoEffectsOnOutput(
           startTime: start,
           endTime: end,
           triggers: triggers,
+          params: effect.params,
         ),
       );
       continue;
@@ -1916,6 +1920,7 @@ List<VideoEffect> videoEffectsOnOutput(
         intensity: effect.intensity,
         startTime: start,
         endTime: end,
+        params: effect.params,
       ),
     );
   }
@@ -1963,6 +1968,7 @@ List<VideoEffect> _endFlashingBeforeLoopPoint(
           endTime: effect.endTime == null || effect.endTime! > lastStep
               ? lastStep
               : effect.endTime,
+          params: effect.params,
         ),
   ];
 }

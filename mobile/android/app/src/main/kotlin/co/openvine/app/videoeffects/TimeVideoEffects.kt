@@ -128,13 +128,14 @@ abstract class EarlierFramesShaderEffect(
 
 /**
  * Time split: red shows the current frame, green the frame 100 ms earlier
- * and blue the one 200 ms earlier, so still parts keep their colours and
- * moving parts get rainbow ghosts.
+ * and blue the one 200 ms earlier, or as many times that as the delay set, so
+ * still parts keep their colours and moving parts get rainbow ghosts.
  *
  * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
- * far the colours split, from the plain picture to the full split) and, for
- * an effect on the beat, `beatsUs`: the beats, in microseconds after the
- * effect's start. On the beat the colours only split on each hit and come
+ * far the colours split, from the plain picture to the full split), `delay`
+ * (0.34–3: how far back green and blue lag, as a share of the default; see
+ * [framesOf]) and, for an effect on the beat, `beatsUs`: the beats, in
+ * microseconds after the effect's start. On the beat the colours only split on each hit and come
  * back together over half a second, as the zoom blur's streaks fade; see
  * [BlurHits].
  *
@@ -144,7 +145,9 @@ abstract class EarlierFramesShaderEffect(
 class TimeSplitVideoEffect(params: Map<String, Any?>) :
     EarlierFramesShaderEffect(
         FRAGMENT_SHADER,
-        longArrayOf(TimeVideoEffects.frameOffsetUs(3), TimeVideoEffects.frameOffsetUs(6)),
+        framesOf(params).let { (green, blue) ->
+            longArrayOf(TimeVideoEffects.frameOffsetUs(green), TimeVideoEffects.frameOffsetUs(blue))
+        },
         historyScale = 1f,
     ) {
 
@@ -159,6 +162,17 @@ class TimeSplitVideoEffect(params: Map<String, Any?>) :
     companion object {
         /** The id the Dart `CustomVideoEffect` names. */
         const val ID = "divine.timeSplit"
+
+        /**
+         * How many frames back green and blue lag: three and six times the
+         * `delay` in [params], at least one and one more. Mirrors the Swift
+         * `TimeSplitVideoEffect.frames`.
+         */
+        fun framesOf(params: Map<String, Any?>): Pair<Int, Int> {
+            val delay = ShaderVideoEffect.numberOf(params, "delay", 1f, 0.34f, 3f)
+            val green = maxOf(1, (3 * delay).roundToInt())
+            return green to maxOf(green + 1, (6 * delay).roundToInt())
+        }
 
         private val FRAGMENT_SHADER = EarlierFramesShaderEffect.prelude(2) + """
 uniform float uStrength;
@@ -182,20 +196,30 @@ void main() {
  * further back it lies. A still part looks the same in every frame and stays
  * as it is.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1):
- * longer trails, fading slower, and of less bright parts. The trails are
- * soft anyway, so the earlier frames are kept at half size.
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1:
+ * longer trails, fading slower, and of less bright parts), `length` (0.5–3:
+ * how far apart the earlier frames lie, as a share of the default two frames,
+ * so how far back the trails reach) and `sensitivity` (0–1: how bright a part
+ * must be to leave a trail; 0.5 by default, higher leaves trails sooner). The
+ * trails are soft anyway, so the earlier frames are kept at half size.
  */
-class LongExposureVideoEffect private constructor(private val intensity: Float, copies: Int) :
+class LongExposureVideoEffect private constructor(
+    private val intensity: Float,
+    copies: Int,
+    length: Float,
+    private val sensitivity: Float,
+) :
     EarlierFramesShaderEffect(
         fragmentShader(copies),
-        LongArray(copies) { TimeVideoEffects.frameOffsetUs(2 * (it + 1)) },
+        LongArray(copies) { TimeVideoEffects.frameOffsetUs(framesBack(it, length)) },
         historyScale = 0.5f,
     ) {
 
     constructor(params: Map<String, Any?>) : this(
         ShaderVideoEffect.intensityOf(params),
         copiesOf(ShaderVideoEffect.intensityOf(params)),
+        ShaderVideoEffect.numberOf(params, "length", 1f, 0.5f, 3f),
+        ShaderVideoEffect.numberOf(params, "sensitivity", 0.5f, 0f, 1f),
     )
 
     /** How much of each earlier frame counts, newest first. */
@@ -203,7 +227,7 @@ class LongExposureVideoEffect private constructor(private val intensity: Float, 
 
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         // A part starts to count from this brightness, fully 0.25 above it.
-        shader.setFloat("uThreshold", 0.7f - 0.25f * intensity)
+        shader.setFloat("uThreshold", 0.7f - 0.25f * intensity - 0.4f * (sensitivity - 0.5f))
         weights.forEachIndexed { k, weight -> shader.setFloat("uWeight$k", weight) }
     }
 
@@ -213,6 +237,14 @@ class LongExposureVideoEffect private constructor(private val intensity: Float, 
 
         /** How many earlier frames an effect at [intensity] reads: 2 to 6. */
         fun copiesOf(intensity: Float): Int = (2 + 4 * intensity).roundToInt().coerceIn(2, 6)
+
+        /**
+         * How many frames back earlier frame [k] lies, newest first: two
+         * frames apart, times [length], and at least one further back than
+         * the one before.
+         */
+        fun framesBack(k: Int, length: Float): Int =
+            maxOf(k + 1, (2 * (k + 1) * length).roundToInt())
 
         private fun fragmentShader(copies: Int): String = buildString {
             append(EarlierFramesShaderEffect.prelude(copies))
@@ -240,10 +272,11 @@ class LongExposureVideoEffect private constructor(private val intensity: Float, 
  * difference to the frame before. Where a part moves, its edges differ the
  * most, so they light up as outlines.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1):
- * how dark the still parts go, down to black, and how much the moving parts
- * glow. The frame before is kept whole, so fine still detail does not count
- * as movement.
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
+ * dark the still parts go, down to black, and how much the moving parts glow)
+ * and `sensitivity` (0–1: how small a change counts as movement; 0.5 by
+ * default, higher counts smaller ones). The frame before is kept whole, so
+ * fine still detail does not count as movement.
  */
 class MotionOnlyVideoEffect(params: Map<String, Any?>) :
     EarlierFramesShaderEffect(
@@ -254,22 +287,32 @@ class MotionOnlyVideoEffect(params: Map<String, Any?>) :
 
     private val intensity = ShaderVideoEffect.intensityOf(params)
 
+    private val spread = spreadOf(ShaderVideoEffect.numberOf(params, "sensitivity", 0.5f, 0f, 1f))
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uIntensity", intensity)
+        shader.setFloat("uSpread", spread)
     }
 
     companion object {
         /** The id the Dart `CustomVideoEffect` names. */
         const val ID = "divine.motionOnly"
 
+        /**
+         * How far the change that counts as movement is scaled at
+         * [sensitivity]: 1 at the default 0.5, smaller as it rises.
+         */
+        fun spreadOf(sensitivity: Float): Float = maxOf(0.2f, 2f - 2f * sensitivity)
+
         // A difference below 0.05 is the sensor's noise, not movement.
         private val FRAGMENT_SHADER = EarlierFramesShaderEffect.prelude(1) + """
 uniform float uIntensity;
+uniform float uSpread;
 
 void main() {
   vec3 now = tap(vTexCoord * uSize);
   vec3 before = texture2D(uEarlier0, vTexCoord).rgb;
-  float moved = smoothstep(0.05, 0.15, length(now - before));
+  float moved = smoothstep(0.05 * uSpread, 0.15 * uSpread, length(now - before));
   vec3 glow = min(now * (1.0 + 0.5 * uIntensity) + 0.1 * uIntensity, vec3(1.0));
   gl_FragColor = vec4(mix(now * (1.0 - uIntensity), glow, moved), 1.0);
 }
@@ -386,21 +429,27 @@ object StutterHolds {
 
 /**
  * Time warp: each band of the picture comes from a different moment, the
- * top from now and each band below it from two frames further back, so
- * moving people bend and stretch, as in a slit-scan photograph.
+ * top from now and each band below it from two frames further back, or the
+ * same from whichever edge the user picks, so moving people bend and
+ * stretch, as in a slit-scan photograph.
  *
  * Neighbouring bands blend over the middle 30% of the way from one band's
  * middle to the next, so a moving edge steps rather than tears. Up to seven
  * earlier frames are read, as many as the intensity reaches down to; with the
  * current frame they take the eight texture units OpenGL ES 2.0 guarantees.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1):
- * how far back the bottom of the picture reaches, up to 7 bands of two frames
- * each, 467 ms. The earlier frames are kept at half size, which keeps seven
- * of them, and the frames between them the preview keeps, to a quarter of the
- * memory.
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+ * back the far edge of the picture reaches, up to 7 bands of two frames each,
+ * 467 ms) and `direction` (which way across the picture leads further back: 0
+ * down, 1 up, 2 right, 3 left; see [axisOf]). The earlier frames are kept at
+ * half size, which keeps seven of them, and the frames between them the preview
+ * keeps, to a quarter of the memory.
  */
-class TimeWarpVideoEffect private constructor(private val depth: Float, copies: Int) :
+class TimeWarpVideoEffect private constructor(
+    private val depth: Float,
+    copies: Int,
+    private val axis: FloatArray,
+) :
     EarlierFramesShaderEffect(
         fragmentShader(copies),
         LongArray(copies) { TimeVideoEffects.frameOffsetUs(2 * (it + 1)) },
@@ -410,10 +459,12 @@ class TimeWarpVideoEffect private constructor(private val depth: Float, copies: 
     constructor(params: Map<String, Any?>) : this(
         depthOf(ShaderVideoEffect.intensityOf(params)),
         copiesOf(ShaderVideoEffect.intensityOf(params)),
+        axisOf((params["direction"] as? Number)?.toInt() ?: 0),
     )
 
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uDepth", depth)
+        shader.setFloats("uAxis", axis)
     }
 
     companion object {
@@ -428,9 +479,24 @@ class TimeWarpVideoEffect private constructor(private val depth: Float, copies: 
         /** How many earlier frames an effect at [intensity] reads: 1 to 7. */
         fun copiesOf(intensity: Float): Int = ceil(depthOf(intensity)).toInt().coerceIn(1, MAX_BANDS_BACK)
 
+        /**
+         * How far a point lies towards the past edge, from 0 at the present
+         * edge to 1, as `dot(uv, axis.xy) + axis.z` for a point uv in shares
+         * of the frame with y up: for [direction] 0 the top is now and the
+         * bottom furthest back, 1 the other way round, 2 the left now and the
+         * right furthest back, 3 the other way round.
+         */
+        fun axisOf(direction: Int): FloatArray = when (direction) {
+            1 -> floatArrayOf(0f, 1f, 0f)
+            2 -> floatArrayOf(1f, 0f, 0f)
+            3 -> floatArrayOf(-1f, 0f, 1f)
+            else -> floatArrayOf(0f, -1f, 1f)
+        }
+
         private fun fragmentShader(copies: Int): String = buildString {
             append(EarlierFramesShaderEffect.prelude(copies))
             append("uniform float uDepth;\n")
+            append("uniform vec3 uAxis;\n")
             append("\n")
             append("// How much of band k a pixel t bands down shows: all of it near the band's\n")
             append("// middle, none from a whole band away, and in between the weights of two\n")
@@ -440,7 +506,7 @@ class TimeWarpVideoEffect private constructor(private val depth: Float, copies: 
             append("}\n")
             append("\n")
             append("void main() {\n")
-            append("  float t = (1.0 - vTexCoord.y) * uDepth;\n")
+            append("  float t = (dot(vTexCoord, uAxis.xy) + uAxis.z) * uDepth;\n")
             append("  vec3 color = tap(vTexCoord * uSize) * band(t, 0.0);\n")
             for (k in 0 until copies) {
                 append("  color += texture2D(uEarlier$k, vTexCoord).rgb * band(t, ${k + 1}.0);\n")

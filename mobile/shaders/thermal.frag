@@ -24,6 +24,9 @@ uniform vec2 uSize;
 // How far the picture turns into the thermal view, 0 to 1.
 uniform float uIntensity;
 
+// How warm a spot must be to glow: 0.5 is the default, higher glows sooner.
+uniform float uSensitivity;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -54,6 +57,7 @@ void main() {
   float heat = (2.0 * warmth(color) + warmth(tap(p + vec2(e, 0.0))) +
     warmth(tap(p - vec2(e, 0.0))) + warmth(tap(p + vec2(0.0, e))) +
     warmth(tap(p - vec2(0.0, e)))) / 6.0;
-  vec3 thermal = ironbow(smoothstep(0.1, 0.75, heat));
+  float shift = 0.6 * (uSensitivity - 0.5);
+  vec3 thermal = ironbow(smoothstep(0.1 - shift, 0.75 - shift, heat));
   fragColor = vec4(mix(color, thermal, uIntensity), 1.0);
 }

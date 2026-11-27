@@ -13,16 +13,19 @@ import pro_video_editor
 /// little of the light is added rather than multiplied, so black bricks show
 /// their studs too.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
-/// far the picture turns into bricks).
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+/// the picture turns into bricks), `size` (0.5–3: how large the bricks are, as
+/// a share of the default).
 final class BricksVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.bricks"
 
   private let intensity: Double
+  private let brick: Double
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
+    brick = Self.readNumber(params, "size", fallback: 1, in: 0.5...3)
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -35,7 +38,7 @@ final class BricksVideoEffect: ShaderVideoEffect {
   }
 
   override func values(effectTimeUs: Int64) -> [Double]? {
-    intensity > 0 ? [intensity] : nil
+    intensity > 0 ? [intensity] + [brick] : nil
   }
 
   static let function = "divineBricks"
@@ -56,10 +59,12 @@ final class BricksVideoEffect: ShaderVideoEffect {
     ) {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
-      float intensity = u[3].x;
+      float2 uSize = f.size;
+      float uIntensity = u[3].x;
+      float uBrick = u[3].y;
       float2 p = pixelOf(u, gid, target.get_height());
-      float s = min(f.size.x, f.size.y);
-      float c = max(6.0, s / 28.0);
+      float s = min(uSize.x, uSize.y);
+      float c = max(6.0, s / 28.0 * uBrick);
       float2 cell = floor(p / c);
       float2 middle = (cell + 0.5) * c;
       float3 ink = 0.25 * (tap(frame, f, middle + float2(-0.25, -0.25) * c) + tap(frame, f, middle + float2(0.25, -0.25) * c) +
@@ -79,7 +84,7 @@ final class BricksVideoEffect: ShaderVideoEffect {
       float rim = 1.08 + 0.35 * smoothstep(0.22, 0.3, r) * dot(normal, toLight);
       float shade = mix(bevel * (1.0 - 0.25 * shadow), rim, stud);
       float3 bricks = clamp((brick * shade + 0.12 * max(shade - 1.0, 0.0)) * (0.35 + 0.65 * seam), 0.0, 1.0);
-      target.write(float4(mix(tap(frame, f, p), bricks, intensity), 1.0), gid);
+      target.write(float4(mix(tap(frame, f, p), bricks, uIntensity), 1.0), gid);
     }
     """
 }

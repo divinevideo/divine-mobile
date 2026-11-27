@@ -237,7 +237,7 @@ void main() {
       final settingsLabel = l10n.videoEditorEffectSettingsOpen;
 
       testWidgets('shows only for an effect with settings', (tester) async {
-        cubit.selectType(EditorEffectType.tiltShift);
+        cubit.selectType(EditorEffectType.tealOrange);
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
         expect(find.bySemanticsLabel(settingsLabel), findsNothing);

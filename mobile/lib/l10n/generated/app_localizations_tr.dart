@@ -9727,9 +9727,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Tonlar';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'Damlaları ayarla';
-
-  @override
   String get videoEditorDropsCountLabel => 'Sayı';
 
   @override
@@ -9785,12 +9782,8 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String videoEditorEffectSeconds(double seconds) {
-    final intl.NumberFormat secondsNumberFormat =
-        intl.NumberFormat.decimalPattern(localeName);
-    final String secondsString = secondsNumberFormat.format(seconds);
-
-    return '$secondsString sn';
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds sn';
   }
 
   @override
@@ -9826,6 +9819,156 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorEffectLookReset => 'Görünümü sıfırla';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'Zamanlama';
+
+  @override
+  String get videoEditorEffectTimingReset => 'Zamanlamayı sıfırla';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'Hareket';
+
+  @override
+  String get videoEditorEffectMotionReset => 'Hareketi sıfırla';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'Odak';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'Genişlik';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'Yön';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'Yatay';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'Dikey';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'Saat yönünde';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'Saat yönünün tersine';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'Yakınlaştır';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'Uzaklaştır';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'Aralık';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'Açı';
+
+  @override
+  String get videoEditorEffectSettingHue => 'Ton';
+
+  @override
+  String get videoEditorEffectSettingLength => 'Uzunluk';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'Hassasiyet';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'Konum';
+
+  @override
+  String get videoEditorEffectSettingWind => 'Rüzgâr';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'Nokta boyutu';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'Kontur';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'Seviyeler';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'Piksel boyutu';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'Kayma';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'Fırça boyutu';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'Yoğunluk';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'Gren';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'Izgara';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'Katmanlar';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'Gölge';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'Birinci mürekkep';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'İkinci mürekkep';
+
+  @override
+  String get videoEditorEffectSettingColors => 'Renkler';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'Orijinal';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'Tek renk';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'Gecikme';
+
+  @override
+  String get videoEditorEffectSettingDown => 'Aşağı';
+
+  @override
+  String get videoEditorEffectSettingUp => 'Yukarı';
+
+  @override
+  String get videoEditorEffectSettingRight => 'Sağa';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'Sola';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'Sıklık';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'Mesafe';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'Tarama çizgileri';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'Gren boyutu';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'Sepya';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'Titreme';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'Vinyet';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'Tempo';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'Dalga boyu';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

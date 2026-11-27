@@ -21,6 +21,16 @@ uniform float uIntensity;
 // Seconds since the effect started.
 uniform float uTime;
 
+// Where the rainbow's middle lies along the diagonal from the bottom left,
+// 0 to 1, before it drifts.
+uniform float uPosition;
+
+// How wide the rainbow is, as a share of the default.
+uniform float uWidth;
+
+// How fast it drifts, as a share of the default; 0 holds it still.
+uniform float uSpeed;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -36,8 +46,8 @@ void main() {
   float l = max(uSize.x, uSize.y);
   vec2 uv = p / uSize;
   float across = 0.45 * uv.x + 0.55 * uv.y;
-  float centre = 0.72 + 0.06 * sin(0.31 * uTime + 1.3);
-  float width = 0.14 + 0.02 * sin(0.23 * uTime + 0.4);
+  float centre = uPosition + 0.06 * sin(0.31 * uTime * uSpeed + 1.3);
+  float width = (0.14 + 0.02 * sin(0.23 * uTime * uSpeed + 0.4)) * uWidth;
   float b = (across - centre) / width;
   float band = 1.0 - smoothstep(0.55, 1.0, abs(b));
   float hue = 0.375 * (b + 1.0);

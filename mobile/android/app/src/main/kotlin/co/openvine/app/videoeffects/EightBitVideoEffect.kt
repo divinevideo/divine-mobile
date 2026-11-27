@@ -3,6 +3,7 @@ package co.openvine.app.videoeffects
 import ch.waio.pro_video_editor.effects.CustomVideoEffectShader
 import ch.waio.pro_video_editor.effects.CustomVideoEffects
 import com.divinevideo.divine_video_player.VideoFrameEffects
+import kotlin.math.roundToInt
 
 /**
  * 8-bit: the picture as early console pixel art, in chunky pixels and 8-bit
@@ -16,15 +17,23 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * common video size, no pixel centre lands right on a cell's edge, so no
  * cell depends on how the GPU rounds there.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
- * far the picture turns into pixel art).
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+ * the picture turns into pixel art), `size` (0.5–4: how large the pixels are,
+ * as a share of the default) and `levels` (2–15: how many shades red and green
+ * each take; blue takes three sevenths as many).
  */
 class EightBitVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
     private val intensity = intensityOf(params)
 
+    private val pixel = numberOf(params, "size", 1f, 0.5f, 4f)
+
+    private val levels = numberOf(params, "levels", 7f, 2f, 15f).roundToInt().toFloat()
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uIntensity", intensity)
+        shader.setFloat("uPixel", pixel)
+        shader.setFloat("uLevels", levels)
     }
 
     companion object {
@@ -43,6 +52,8 @@ class EightBitVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMEN
         // make the 4 × 4 threshold.
         private const val FRAGMENT_SHADER = ShaderVideoEffect.PRELUDE + """
 uniform float uIntensity;
+uniform float uPixel;
+uniform float uLevels;
 
 float bayer(vec2 a) {
   a = floor(a);
@@ -52,7 +63,7 @@ float bayer(vec2 a) {
 void main() {
   vec2 p = vTexCoord * uSize;
   float s = min(uSize.x, uSize.y);
-  float cell = max(1.0, s / 100.0);
+  float cell = max(1.0, s / 100.0 * uPixel);
   vec2 index = floor(p / cell);
   vec2 centre = (index + 0.5) * cell;
   float q = 0.25 * cell;
@@ -60,7 +71,7 @@ void main() {
   vec3 block = 0.25 * (tap(centre + vec2(-q, -q)) + tap(centre + vec2(q, -q)) +
     tap(centre + vec2(-q, q)) + tap(centre + vec2(q, q)));
   float threshold = 0.25 * bayer(0.5 * index) + bayer(index);
-  vec3 levels = vec3(7.0, 7.0, 3.0);
+  vec3 levels = vec3(uLevels, uLevels, max(1.0, floor(uLevels * 3.0 / 7.0 + 0.5)));
   vec3 shade = clamp(floor(block * levels + threshold), vec3(0.0), levels) / levels;
   gl_FragColor = vec4(mix(color, shade, uIntensity), 1.0);
 }

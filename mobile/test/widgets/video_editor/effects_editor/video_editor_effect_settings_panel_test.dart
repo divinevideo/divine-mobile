@@ -6,7 +6,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/drops_effect_settings.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
-import 'package:openvine/models/video_editor/hit_look_settings.dart';
+import 'package:openvine/models/video_editor/effect_settings_catalog.dart';
 import 'package:openvine/models/video_editor/hit_timing_settings.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effect_settings_panel.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_row.dart';
@@ -119,6 +119,7 @@ void main() {
         cubit.selectType(EditorEffectType.plasma);
         await tester.pumpAndSettle();
 
+        expect(find.text(l10n.videoEditorEffectTimingTitle), findsOneWidget);
         expect(
           tester.getSemantics(
             find.bySemanticsLabel(l10n.videoEditorEffectHitDuration),
@@ -126,14 +127,15 @@ void main() {
           isSemantics(
             label: l10n.videoEditorEffectHitDuration,
             isSlider: true,
-            value: l10n.videoEditorEffectSeconds(0.8),
+            value: l10n.videoEditorEffectSeconds('0.8'),
           ),
         );
         expect(find.text(l10n.videoEditorEffectHitRepeat), findsOneWidget);
         expect(find.text(l10n.videoEditorEffectHitInterval), findsOneWidget);
       });
 
-      testWidgets('a longer duration slows the hit down', (tester) async {
+      testWidgets('a longer duration slows the hit down, and resetting the '
+          'timing puts it back', (tester) async {
         await pumpPanel(tester, EditorEffectType.shockwave);
 
         await tester.drag(
@@ -143,12 +145,18 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          cubit.state.selectedHitTiming?.duration,
-          HitTimingSettings.maxDuration,
-        );
-        expect(
           cubit.state.selection?.custom?.params[HitTimingSettings.hitParam],
           HitTimingSettings.maxDuration.inMicroseconds,
+        );
+
+        final reset = find.text(l10n.videoEditorEffectTimingReset);
+        await scrollUntilTappable(tester, reset, 50);
+        await tester.tap(reset);
+        await tester.pump();
+
+        expect(
+          cubit.state.selectedSettings[HitTimingSettings.hitParam],
+          EditorEffectType.shockwave.hitTiming!.duration.inMicroseconds,
         );
       });
 
@@ -160,7 +168,10 @@ void main() {
         await tester.tap(find.text(l10n.videoEditorEffectHitRepeat));
         await tester.pumpAndSettle();
 
-        expect(cubit.state.selectedHitTiming?.repeats, isFalse);
+        expect(
+          cubit.state.selectedSettings[HitTimingSettings.repeatParam],
+          isFalse,
+        );
         expect(find.text(l10n.videoEditorEffectHitOnce), findsOneWidget);
         expect(find.text(l10n.videoEditorEffectHitInterval), findsNothing);
       });
@@ -169,6 +180,16 @@ void main() {
         tester,
       ) async {
         cubit.setOnBeat(onBeat: true);
+        await pumpPanel(tester, EditorEffectType.shockwave);
+
+        expect(find.text(l10n.videoEditorEffectHitDuration), findsOneWidget);
+        expect(find.text(l10n.videoEditorEffectHitRepeat), findsNothing);
+        expect(find.text(l10n.videoEditorEffectHitInterval), findsNothing);
+      });
+    });
+
+    group('hit look', () {
+      testWidgets("picks a blast's colour and where it hits", (tester) async {
         await pumpPanel(tester, EditorEffectType.energyWave);
         // The panel scrolls, and so does the colour row in it.
         final panel = find.byType(Scrollable).first;
@@ -186,11 +207,10 @@ void main() {
         await tester.drag(horizontal, const Offset(800, 0));
         await tester.pumpAndSettle();
 
-        final look = cubit.state.selectedHitLook!;
-        expect(look.centerX, 1);
-        expect(look.color, VideoEditorConstants.colors.first.toARGB32());
+        final params = cubit.state.selection!.custom!.params;
+        expect(params[EffectSettingKeys.centerX], 1);
         expect(
-          cubit.state.selection?.custom?.params[HitLookSettings.colorParam],
+          params[EffectSettingKeys.color],
           VideoEditorConstants.colors.first.toARGB32(),
         );
       });
@@ -209,7 +229,10 @@ void main() {
       testWidgets('offers the shockwave its fringes, and puts the look back', (
         tester,
       ) async {
-        cubit.setHitLook(const HitLookSettings(shake: 2, fringe: 0));
+        cubit
+          ..selectType(EditorEffectType.shockwave)
+          ..setSetting(EffectSettingKeys.shake, 2)
+          ..setSetting(EffectSettingKeys.fringe, 0);
         await pumpPanel(tester, EditorEffectType.shockwave);
         final reset = find.text(l10n.videoEditorEffectLookReset);
 
@@ -218,7 +241,72 @@ void main() {
         await tester.tap(reset);
         await tester.pump();
 
-        expect(cubit.state.selectedHitLook, const HitLookSettings());
+        expect(cubit.state.settingValues, isEmpty);
+      });
+    });
+
+    group('choices', () {
+      testWidgets('turn the swirl the other way', (tester) async {
+        await pumpPanel(tester, EditorEffectType.swirl);
+        final anticlockwise = find.text(
+          l10n.videoEditorEffectSettingAnticlockwise,
+        );
+
+        await scrollUntilTappable(tester, anticlockwise, 50);
+        await tester.tap(anticlockwise);
+        await tester.pump();
+
+        expect(
+          cubit.state.selection?.custom?.params[EffectSettingKeys.direction],
+          -1,
+        );
+        expect(
+          tester.getSemantics(
+            find.bySemanticsLabel(
+              '${l10n.videoEditorEffectSettingDirection}: '
+              '${l10n.videoEditorEffectSettingAnticlockwise}',
+            ),
+          ),
+          isSemantics(isSelected: true, isButton: true),
+        );
+      });
+    });
+
+    group('movement', () {
+      testWidgets('offers a tunnel its speed, except on the beat, and which '
+          'way it zooms', (tester) async {
+        await pumpPanel(tester, EditorEffectType.tunnel);
+        expect(find.text(l10n.videoEditorEffectMotionTitle), findsOneWidget);
+        expect(find.text(l10n.videoEditorDropsSpeedLabel), findsOneWidget);
+
+        cubit.setOnBeat(onBeat: true);
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.videoEditorDropsSpeedLabel), findsNothing);
+        expect(find.text(l10n.videoEditorEffectSettingZoomOut), findsOneWidget);
+      });
+    });
+
+    group('angles', () {
+      testWidgets('read out in degrees', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await pumpPanel(tester, EditorEffectType.flutedGlass);
+        final angle = find.bySemanticsLabel(l10n.videoEditorEffectSettingAngle);
+
+        await scrollUntilTappable(tester, angle, 50);
+        await tester.drag(angle, const Offset(800, 0));
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.getSemantics(angle),
+          isSemantics(
+            label: l10n.videoEditorEffectSettingAngle,
+            isSlider: true,
+            value: '180°',
+          ),
+        );
+        expect(cubit.state.selectedSettings[EffectSettingKeys.angle], 180.0);
+        semantics.dispose();
       });
     });
 
@@ -245,7 +333,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          cubit.state.dropsSettings,
+          DropsEffectSettings.fromParams(cubit.state.selectedSettings),
           const DropsEffectSettings(count: DropsEffectSettings.maxCount),
         );
         semantics.dispose();
@@ -259,7 +347,10 @@ void main() {
         await tester.tap(shuffle);
         await tester.pump();
 
-        expect(cubit.state.dropsSettings.seed, 42);
+        expect(
+          cubit.state.selectedSettings[DropsEffectSettings.seedParam],
+          42,
+        );
       });
 
       testWidgets('keeps its labels whole at a large text size', (

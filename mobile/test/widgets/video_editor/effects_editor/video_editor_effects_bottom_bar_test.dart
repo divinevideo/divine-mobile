@@ -495,7 +495,7 @@ void main() {
           expect(tile?.values, isNotEmpty, reason: type.name);
         }
       }
-      // One shader draws every particle style, told apart by its last value.
+      // One shader draws every particle style, told apart by its third value.
       expect(
         [
           EditorEffectType.snow,
@@ -513,10 +513,10 @@ void main() {
           EditorEffectType.embers,
           EditorEffectType.money,
           EditorEffectType.balloons,
-        ].map((type) => shaderTileOf(type)!.values.last),
+        ].map((type) => shaderTileOf(type)!.values[2]),
         [for (var style = 0; style < 15; style++) style],
       );
-      // One shader paints watercolour and oil, told apart by its last value.
+      // One shader paints watercolour and oil, told apart by its second value.
       expect(
         [
           EditorEffectType.watercolor,
@@ -530,8 +530,8 @@ void main() {
           ),
         ),
       );
-      expect(shaderTileOf(EditorEffectType.watercolor)!.values.last, 0);
-      expect(shaderTileOf(EditorEffectType.oilPaint)!.values.last, 1);
+      expect(shaderTileOf(EditorEffectType.watercolor)!.values[1], 0);
+      expect(shaderTileOf(EditorEffectType.oilPaint)!.values[1], 1);
       // One shader draws every look, from the look's own table.
       for (final type in EditorEffectCategory.looks.types) {
         expect(
@@ -636,10 +636,19 @@ void main() {
         [0.8, IntroOutroLook.curtain.startingIntensity, 3.0, 0.3],
       );
       // The lightning tile fills the shader's four vec4 uniforms: how bright
-      // the flash and the bolt are, then the shape of the first bolt.
+      // the flash and the bolt are, then the shape of the first bolt; then
+      // the flash's colour and the glow's.
       final lightning = shaderTileOf(EditorEffectType.lightning)!;
-      expect(lightning.values, hasLength(2 + lightningBoltValueCount));
-      expect(lightning.values.skip(2), lightningBolt(0));
+      expect(lightning.values, hasLength(2 + lightningBoltValueCount + 6));
+      expect(
+        lightning.values.skip(2).take(lightningBoltValueCount),
+        lightningBolt(0),
+      );
+      expect(lightning.values.skip(2 + lightningBoltValueCount + 3), [
+        0.55,
+        0.65,
+        1.0,
+      ]);
     });
 
     test('holds a tile where its effect starts, plays it, and holds it '

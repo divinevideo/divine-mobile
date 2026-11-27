@@ -15,16 +15,27 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * a different point from pixel to pixel, by interleaved gradient noise, as
  * the zoom blur's do. The streak is tinted blue and added with a screen blend.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
- * long and bright the streaks are, and how bright a highlight must be to
- * streak). The streaks follow the picture, so they need no time.
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how long
+ * and bright the streaks are), `color` (the streaks' colour, as an ARGB
+ * integer), `length` (0.3–2: how long they are, as a share of the default) and
+ * `sensitivity` (0–1: how dim a light may be and still streak; 0.5 by default).
+ * The streaks follow the picture, so they need no time.
  */
 class AnamorphicVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
     private val intensity = intensityOf(params)
 
+    private val color = colorOf(params, "color", 0xFF4D9EFF)
+
+    private val length = numberOf(params, "length", 1f, 0.3f, 2f)
+
+    private val sensitivity = numberOf(params, "sensitivity", 0.5f, 0f, 1f)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uIntensity", intensity)
+        shader.setFloats("uColor", color)
+        shader.setFloat("uLength", length)
+        shader.setFloat("uSensitivity", sensitivity)
     }
 
     companion object {
@@ -39,6 +50,9 @@ class AnamorphicVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGM
 
         private const val FRAGMENT_SHADER = ShaderVideoEffect.PRELUDE + """
 uniform float uIntensity;
+uniform vec3 uColor;
+uniform float uLength;
+uniform float uSensitivity;
 
 float luma(vec3 c) {
   return dot(c, vec3(0.299, 0.587, 0.114));
@@ -46,8 +60,8 @@ float luma(vec3 c) {
 
 void main() {
   vec2 p = vTexCoord * uSize;
-  float reach = (0.08 + 0.17 * uIntensity) * uSize.x;
-  float threshold = 0.85 - 0.1 * uIntensity;
+  float reach = (0.08 + 0.17 * uIntensity) * uSize.x * uLength;
+  float threshold = min(0.85 - 0.1 * uIntensity - 0.3 * (uSensitivity - 0.5), 0.95);
   float jitter = fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
   float streak = 0.0;
   for (int i = 0; i < 48; i++) {
@@ -57,7 +71,7 @@ void main() {
     streak += h * h * w * w;
   }
   streak *= 3.0 / 48.0;
-  vec3 lit = clamp(vec3(0.3, 0.62, 1.0) * (5.0 * streak * uIntensity), 0.0, 1.0);
+  vec3 lit = clamp(uColor * (5.0 * streak * uIntensity), 0.0, 1.0);
   vec3 base = tap(p);
   gl_FragColor = vec4(1.0 - (1.0 - base) * (1.0 - lit), 1.0);
 }

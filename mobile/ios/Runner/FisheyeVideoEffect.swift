@@ -6,19 +6,23 @@ import pro_video_editor
 /// The fisheye: the middle of the picture bulges out, as through a wide-angle
 /// lens, while the corners stay where they are.
 ///
-/// Drawn with Core Image's `CIBumpDistortion` around the centre, with the
-/// radius at half the frame's diagonal, so the whole picture bulges and the
-/// corners stay put. Runtime Metal kernels need an A13 or later, so a stock
-/// filter is the only bulge every supported device can draw. Its mapping,
-/// measured to within 0.002 px,
+/// Drawn with Core Image's `CIBumpDistortion` around the centre, the middle
+/// unless the user moves it, with the radius at half the frame's diagonal at
+/// the default size, so the whole picture bulges and the corners stay put.
+/// Runtime Metal kernels need an A13 or later, so a stock filter is the only
+/// bulge every supported device can draw. Its mapping, measured to within
+/// 0.002 px,
 ///
 ///     source = centre + offset * (1 - scale * (1 - smoothstep(0, 1, t)))
 ///
 /// with t the distance from the centre over the radius, is what the Android
 /// `FisheyeVideoEffect` draws in its shader.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1):
-/// how far the middle bulges out.
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+/// the middle bulges out), `centerX` and `centerY` (0–1: where the bulge sits,
+/// as shares of the width from the left and of the height from the top; the
+/// middle by default) and `size` (0.3–1.5: the radius, as a share of half the
+/// diagonal).
 final class FisheyeVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.fisheye"
@@ -31,11 +35,15 @@ final class FisheyeVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
   let historyScale = 1.0
 
   private let scale: Double
+  private let center: [Double]
+  private let radius: Double
 
   init(params: [String: Any]) {
     let intensity = min(
       1, max(0, (params["intensity"] as? NSNumber)?.doubleValue ?? Self.defaultIntensity))
     scale = Self.maxScale * intensity
+    center = ShaderVideoEffect.readCenter(params)
+    radius = ShaderVideoEffect.readNumber(params, "size", fallback: 1, in: 0.3...1.5)
   }
 
   /// Registers the effect for exports and for the editor preview.
@@ -62,8 +70,11 @@ final class FisheyeVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
     return image.clampedToExtent().applyingFilter(
       "CIBumpDistortion",
       parameters: [
-        kCIInputCenterKey: CIVector(x: extent.midX, y: extent.midY),
-        kCIInputRadiusKey: hypot(extent.width, extent.height) / 2,
+        // Core Image counts y up from the bottom, the param down from the top.
+        kCIInputCenterKey: CIVector(
+          x: extent.minX + center[0] * extent.width,
+          y: extent.minY + (1 - center[1]) * extent.height),
+        kCIInputRadiusKey: radius * hypot(extent.width, extent.height) / 2,
         kCIInputScaleKey: scale,
       ]
     ).cropped(to: extent)

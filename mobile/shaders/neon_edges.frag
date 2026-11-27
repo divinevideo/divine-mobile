@@ -24,6 +24,13 @@ uniform vec2 uSize;
 // How far the picture turns into neon, 0 to 1.
 uniform float uIntensity;
 
+// How wide the glow reaches, as a share of the default.
+uniform float uWidth;
+
+// 1 to glow in uColor, 0 in the picture's own colours.
+uniform float uSingle;
+uniform vec3 uColor;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -48,7 +55,7 @@ void main() {
   vec2 fragCoord = FlutterFragCoord().xy;
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
   float s = min(uSize.x, uSize.y);
-  float e = max(1.0, s / 540.0);
+  float e = max(1.0, s / 540.0) * uWidth;
   vec3 color = tap(p);
   vec2 near = slope(p, e);
   vec2 mid = slope(p, 3.0 * e);
@@ -64,7 +71,7 @@ void main() {
   float lo = min(min(color.r, color.g), color.b);
   float hi = max(max(color.r, color.g), color.b);
   vec3 own = (color - lo) / max(hi - lo, 0.001);
-  vec3 tint = mix(turning, own, smoothstep(0.08, 0.25, hi - lo));
+  vec3 tint = uSingle > 0.5 ? uColor : mix(turning, own, smoothstep(0.08, 0.25, hi - lo));
   vec3 neon = clamp(tint * glow + 0.6 * core * core, 0.0, 1.0);
   fragColor = vec4(mix(color, neon, uIntensity), 1.0);
 }

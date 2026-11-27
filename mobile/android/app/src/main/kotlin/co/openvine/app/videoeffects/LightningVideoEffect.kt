@@ -15,12 +15,12 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * slowly; see [LightningStrikes]. Each strike flashes once.
  *
  * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
- * bright the flash is), `strikesUs`, when it strikes, in microseconds after
- * the effect's start, and `bolts`, the shape of each strike's bolt (14 values
- * each, as the Dart `lightningBolt` describes). The Dart side times the
- * strikes, on the beat or at irregular intervals, within three flashes a
- * second together with the video's other flashes, so this draws them as they
- * come.
+ * bright the flash is), `color` (the colour of the flash and the glow, as an
+ * ARGB integer), `strikesUs`, when it strikes, in microseconds after the
+ * effect's start, and `bolts`, the shape of each strike's bolt (14 values each,
+ * as the Dart `lightningBolt` describes). The Dart side times the strikes, on
+ * the beat or at irregular intervals, within three flashes a second together
+ * with the video's other flashes, so this draws them as they come.
  */
 class LightningVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
@@ -29,6 +29,16 @@ class LightningVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGME
     private val strikesUs = LightningStrikes.strikesOf(params)
 
     private val bolts = LightningStrikes.boltsOf(params)
+
+    private val tint = colorOf(params, "color", DEFAULT_COLOR)
+
+    /**
+     * The glow around the bolt: bluer than the flash at the default colour,
+     * and that much off any other colour, so it stays the same light.
+     */
+    private val glow = FloatArray(3) {
+        (DEFAULT_GLOW[it] * tint[it] / DEFAULT_TINT[it]).coerceAtMost(1f)
+    }
 
     private val strike = FloatArray(4)
     private val pathA = FloatArray(4)
@@ -61,11 +71,20 @@ class LightningVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGME
         shader.setFloats("uPathA", pathA)
         shader.setFloats("uPathB", pathB)
         shader.setFloats("uBranch", branch)
+        shader.setFloats("uTint", tint)
+        shader.setFloats("uGlow", glow)
     }
 
     companion object {
         /** The id the Dart `CustomVideoEffect` names. */
         const val ID = "divine.lightning"
+
+        /** The flash's colour unless the user picks another, as an ARGB integer. */
+        private const val DEFAULT_COLOR = 0xFFC7DBFF
+
+        private val DEFAULT_TINT = ShaderVideoEffect.colorOf(emptyMap(), "color", DEFAULT_COLOR)
+
+        private val DEFAULT_GLOW = floatArrayOf(0.55f, 0.65f, 1f)
 
         /** Registers the effect for exports and for the editor preview. */
         fun register() {
@@ -81,6 +100,8 @@ uniform vec4 uStrike;
 uniform vec4 uPathA;
 uniform vec4 uPathB;
 uniform vec4 uBranch;
+uniform vec3 uTint;
+uniform vec3 uGlow;
 
 float segment(vec2 p, vec2 a, vec2 b) {
   vec2 pa = p - a;
@@ -122,9 +143,9 @@ void main() {
   float sideEnd = clamp((p.y - b3.y) / (2.0 * rise), 0.0, 1.0);
   float core = (0.3 + 0.7 * trunkEnd) * exp(-trunk * trunk / (w * w)) + 0.7 * uBranch.w * sideEnd * exp(-side * side / (0.36 * w * w));
   float glow = (0.3 + 0.7 * trunkEnd) * exp(-trunk / (0.035 * l)) + 0.5 * uBranch.w * sideEnd * exp(-side / (0.025 * l));
-  vec3 tint = vec3(0.78, 0.86, 1.0);
+  vec3 tint = uTint;
   vec3 lit = base * (1.0 + 0.9 * flash * tint) + 0.22 * flash * tint;
-  lit += bolt * (min(core, 1.0) * vec3(0.95, 0.97, 1.0) + 0.6 * glow * vec3(0.55, 0.65, 1.0));
+  lit += bolt * (min(core, 1.0) * vec3(0.95, 0.97, 1.0) + 0.6 * glow * uGlow);
   gl_FragColor = vec4(clamp(lit, 0.0, 1.0), 1.0);
 }
 """

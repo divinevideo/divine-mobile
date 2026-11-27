@@ -14,10 +14,12 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * grain rather than rings. A frame without streaks, such as one between two
  * hits on the beat, reads each pixel once.
  *
- * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
- * long the streaks are) and, for an effect on the beat, `beatsUs`: the beats,
- * in microseconds after the effect's start. On the beat the streaks only show
- * on each hit and fade out over half a second; see [BlurHits].
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how long
+ * the streaks are), `centerX` and `centerY` (0–1: where its centre sits, as
+ * shares of the width from the left and of the height from the top; the middle
+ * by default) and, for an effect on the beat, `beatsUs`: the beats, in
+ * microseconds after the effect's start. On the beat the streaks only show on
+ * each hit and fade out over half a second; see [BlurHits].
  */
 class ZoomBlurVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
@@ -25,8 +27,11 @@ class ZoomBlurVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMEN
 
     private val beatsUs = BlurHits.beatsOf(params)
 
+    private val center = centerOf(params)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uStrength", BlurHits.strength(intensity, beatsUs, effectTimeUs))
+        shader.setFloats("uCenter", center)
     }
 
     companion object {
@@ -41,6 +46,7 @@ class ZoomBlurVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMEN
 
         private const val FRAGMENT_SHADER = ShaderVideoEffect.PRELUDE + """
 uniform float uStrength;
+uniform vec2 uCenter;
 
 void main() {
   vec2 p = vTexCoord * uSize;
@@ -48,7 +54,7 @@ void main() {
     gl_FragColor = vec4(tap(p), 1.0);
     return;
   }
-  vec2 c = uSize * 0.5;
+  vec2 c = vec2(uCenter.x, 1.0 - uCenter.y) * uSize;
   float jitter = fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
   vec3 color = vec3(0.0);
   for (int i = 0; i < 32; i++) {

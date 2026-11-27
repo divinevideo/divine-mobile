@@ -16,15 +16,19 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * little of the light is added rather than multiplied, so black bricks show
  * their studs too.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
- * far the picture turns into bricks).
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+ * the picture turns into bricks), `size` (0.5–3: how large the bricks are, as a
+ * share of the default).
  */
 class BricksVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
     private val intensity = intensityOf(params)
 
+    private val brick = numberOf(params, "size", 1f, 0.5f, 3f)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uIntensity", intensity)
+        shader.setFloat("uBrick", brick)
     }
 
     companion object {
@@ -42,6 +46,7 @@ class BricksVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_
         // pixel in bricks, which softens every edge.
         private const val FRAGMENT_SHADER = ShaderVideoEffect.PRELUDE + """
 uniform float uIntensity;
+uniform float uBrick;
 
 float luma(vec3 c) {
   return dot(c, vec3(0.299, 0.587, 0.114));
@@ -50,7 +55,7 @@ float luma(vec3 c) {
 void main() {
   vec2 p = vTexCoord * uSize;
   float s = min(uSize.x, uSize.y);
-  float c = max(6.0, s / 28.0);
+  float c = max(6.0, s / 28.0 * uBrick);
   vec2 cell = floor(p / c);
   vec2 middle = (cell + 0.5) * c;
   vec3 ink = 0.25 * (tap(middle + vec2(-0.25, -0.25) * c) + tap(middle + vec2(0.25, -0.25) * c) +

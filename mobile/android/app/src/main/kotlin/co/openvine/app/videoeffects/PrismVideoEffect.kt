@@ -16,18 +16,30 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * same strength all the time, so the picture never pulses brighter and
  * darker.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
- * strong the rainbow and the split are). The band moves with the time since
- * the effect started, so it follows the same path in the preview and in the
- * export.
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
+ * strong the rainbow is), `position` (0–1: where its middle lies along the
+ * diagonal from the bottom left before it drifts; 0.72 by default), `width`
+ * (0.5–2: how wide it is, as a share of the default) and `speed` (0–3: how fast
+ * it drifts, as a share of the default; 0 holds it still). The band moves with
+ * the time since the effect started, so it follows the same path in the preview
+ * and in the export.
  */
 class PrismVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
     private val intensity = intensityOf(params)
 
+    private val position = numberOf(params, "position", 0.72f, 0f, 1f)
+
+    private val width = numberOf(params, "width", 1f, 0.5f, 2f)
+
+    private val speed = numberOf(params, "speed", 1f, 0f, 3f)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uIntensity", intensity)
         shader.setFloat("uTime", (effectTimeUs / 1_000_000.0).toFloat())
+        shader.setFloat("uPosition", position)
+        shader.setFloat("uWidth", width)
+        shader.setFloat("uSpeed", speed)
     }
 
     companion object {
@@ -46,14 +58,17 @@ class PrismVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_S
         private const val FRAGMENT_SHADER = ShaderVideoEffect.PRELUDE + """
 uniform float uIntensity;
 uniform float uTime;
+uniform float uPosition;
+uniform float uWidth;
+uniform float uSpeed;
 
 void main() {
   vec2 p = vTexCoord * uSize;
   float l = max(uSize.x, uSize.y);
   vec2 uv = p / uSize;
   float across = 0.45 * uv.x + 0.55 * uv.y;
-  float centre = 0.72 + 0.06 * sin(0.31 * uTime + 1.3);
-  float width = 0.14 + 0.02 * sin(0.23 * uTime + 0.4);
+  float centre = uPosition + 0.06 * sin(0.31 * uTime * uSpeed + 1.3);
+  float width = (0.14 + 0.02 * sin(0.23 * uTime * uSpeed + 0.4)) * uWidth;
   float b = (across - centre) / width;
   float band = 1.0 - smoothstep(0.55, 1.0, abs(b));
   float hue = 0.375 * (b + 1.0);

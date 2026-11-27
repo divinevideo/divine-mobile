@@ -22,8 +22,11 @@ import pro_video_editor
 /// glyph is drawn in the cell's colour brightened to full strength, so the
 /// glyphs carry the brightness and the colour stays clear.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
-/// far the picture turns into characters).
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+/// the picture turns into characters), `size` (0.5–3: how large the characters
+/// are, as a share of the default), `single` (1 to draw them in one colour
+/// rather than the picture's own) and `color` (that colour, as an ARGB integer:
+/// terminal green by default).
 final class AsciiVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.ascii"
@@ -32,9 +35,15 @@ final class AsciiVideoEffect: ShaderVideoEffect {
   static let asset = "assets/effects/ascii_glyphs.png"
 
   private let intensity: Double
+  private let char: Double
+  private let single: Double
+  private let color: [Double]
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
+    char = Self.readNumber(params, "size", fallback: 1, in: 0.5...3)
+    single = (params["single"] as? NSNumber)?.intValue == 1 ? 1 : 0
+    color = Self.readColor(params, "color", fallback: 0xFF33_FF66)
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -48,7 +57,7 @@ final class AsciiVideoEffect: ShaderVideoEffect {
 
   /// Leaves the frame as it is when the app does not carry the atlas.
   override func values(effectTimeUs: Int64) -> [Double]? {
-    intensity > 0 && Self.glyphs() != nil ? [intensity] : nil
+    intensity > 0 && Self.glyphs() != nil ? [intensity, char, single] + color : nil
   }
 
   override func textures() -> [CIImage] {
@@ -124,9 +133,12 @@ final class AsciiVideoEffect: ShaderVideoEffect {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
       float intensity = u[3].x;
+      float uChar = u[3].y;
+      float uSingle = u[3].z;
+      float3 uColor = float3(u[3].w, u[4].x, u[4].y);
       float2 p = pixelOf(u, gid, target.get_height());
       float s = min(f.size.x, f.size.y);
-      float c = max(8.0, s / 60.0);
+      float c = max(8.0, s / 60.0 * uChar);
       float2 cell = floor(p / c);
       float2 middle = (cell + 0.5) * c;
       float3 ink = 0.25 * (tap(frame, f, middle + float2(-0.25, -0.25) * c) + tap(frame, f, middle + float2(0.25, -0.25) * c) +
@@ -137,7 +149,7 @@ final class AsciiVideoEffect: ShaderVideoEffect {
       float2 atlas = float2(kGlyphs * kGlyphSize, kGlyphSize);
       float glyph = glyphs.sample(linearClamp, float2(level * kGlyphSize + texel.x, texel.y) / atlas).r;
       float hi = max(max(ink.r, ink.g), ink.b);
-      float3 ascii = clamp(ink / max(hi, 0.25), 0.0, 1.0) * glyph;
+      float3 ascii = (uSingle > 0.5 ? uColor : clamp(ink / max(hi, 0.25), 0.0, 1.0)) * glyph;
       target.write(float4(mix(tap(frame, f, p), ascii, intensity), 1.0), gid);
     }
     """

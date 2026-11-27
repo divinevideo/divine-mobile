@@ -16545,12 +16545,6 @@ abstract class AppLocalizations {
   /// **'Tints'**
   String get videoEditorFilterCategoryTints;
 
-  /// Header of the expandable card in the video effects editor that holds the settings of the Drops effect.
-  ///
-  /// In en, this message translates to:
-  /// **'Adjust drops'**
-  String get videoEditorDropsSettingsTitle;
-
   /// Slider label in the Drops effect settings: how many glass drops float over the video (1 to 5).
   ///
   /// In en, this message translates to:
@@ -16647,11 +16641,11 @@ abstract class AppLocalizations {
   /// **'{effect} settings'**
   String videoEditorEffectSettingsTitle(String effect);
 
-  /// A length of time in seconds next to a slider in a video effect's settings, for example 0.8 s.
+  /// A length of time in seconds next to a slider in a video effect's settings, for example 0.8 s. {seconds} is already formatted for the locale.
   ///
   /// In en, this message translates to:
   /// **'{seconds} s'**
-  String videoEditorEffectSeconds(double seconds);
+  String videoEditorEffectSeconds(String seconds);
 
   /// Label of the slider that sets how long one hit of a video effect such as the shockwave lasts.
   ///
@@ -16677,7 +16671,7 @@ abstract class AppLocalizations {
   /// **'Interval'**
   String get videoEditorEffectHitInterval;
 
-  /// Title over the settings that change how a video effect such as the shockwave looks: where it hits, how far it spreads, how hard it shakes the picture and its colour.
+  /// Title over the settings that change how a video effect looks, such as where a shockwave hits and how far it spreads, or how many drops there are and how large.
   ///
   /// In en, this message translates to:
   /// **'Look'**
@@ -16718,6 +16712,306 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reset look'**
   String get videoEditorEffectLookReset;
+
+  /// Title over the settings that change when and how often a video effect such as the shockwave hits: how long a hit lasts, whether it repeats and how often.
+  ///
+  /// In en, this message translates to:
+  /// **'Timing'**
+  String get videoEditorEffectTimingTitle;
+
+  /// Button under the timing settings of a video effect that puts them all back to their defaults.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset timing'**
+  String get videoEditorEffectTimingReset;
+
+  /// Title over the settings that change how a video effect moves, such as how fast a tunnel zooms and whether it zooms in or out.
+  ///
+  /// In en, this message translates to:
+  /// **'Movement'**
+  String get videoEditorEffectMotionTitle;
+
+  /// Button under the movement settings of a video effect that puts them all back to their defaults.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset movement'**
+  String get videoEditorEffectMotionReset;
+
+  /// Slider label in a video effect's settings: where the sharp band of the tilt-shift effect lies on the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus'**
+  String get videoEditorEffectSettingFocus;
+
+  /// Slider label in a video effect's settings: how wide something in the effect is, such as the sharp band of tilt-shift or the ribs of fluted glass.
+  ///
+  /// In en, this message translates to:
+  /// **'Width'**
+  String get videoEditorEffectSettingWidth;
+
+  /// Label over a row of options in a video effect's settings: which way the effect runs, turns or zooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Direction'**
+  String get videoEditorEffectSettingDirection;
+
+  /// Option in a video effect's settings: the effect's band runs from side to side.
+  ///
+  /// In en, this message translates to:
+  /// **'Horizontal'**
+  String get videoEditorEffectSettingHorizontal;
+
+  /// Option in a video effect's settings: the effect's band runs from top to bottom.
+  ///
+  /// In en, this message translates to:
+  /// **'Vertical'**
+  String get videoEditorEffectSettingVertical;
+
+  /// Option in a video effect's settings: the swirl turns the picture clockwise.
+  ///
+  /// In en, this message translates to:
+  /// **'Clockwise'**
+  String get videoEditorEffectSettingClockwise;
+
+  /// Option in a video effect's settings: the swirl turns the picture counterclockwise.
+  ///
+  /// In en, this message translates to:
+  /// **'Counterclockwise'**
+  String get videoEditorEffectSettingAnticlockwise;
+
+  /// Option in a video effect's settings: the tunnel zooms into its copies of the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom in'**
+  String get videoEditorEffectSettingZoomIn;
+
+  /// Option in a video effect's settings: the tunnel zooms out of its copies of the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom out'**
+  String get videoEditorEffectSettingZoomOut;
+
+  /// Slider label in a video effect's settings: how far apart the ripple's rings are.
+  ///
+  /// In en, this message translates to:
+  /// **'Spacing'**
+  String get videoEditorEffectSettingSpacing;
+
+  /// Slider label in a video effect's settings: how far the fluted glass's ribs turn from upright, in degrees.
+  ///
+  /// In en, this message translates to:
+  /// **'Angle'**
+  String get videoEditorEffectSettingAngle;
+
+  /// Slider label in a video effect's settings: turns the colours of the effect's light around the colour wheel.
+  ///
+  /// In en, this message translates to:
+  /// **'Hue'**
+  String get videoEditorEffectSettingHue;
+
+  /// Slider label in a video effect's settings: how long the effect's rays or streaks of light are.
+  ///
+  /// In en, this message translates to:
+  /// **'Length'**
+  String get videoEditorEffectSettingLength;
+
+  /// Slider label in a video effect's settings: how easily the effect reacts, for example how bright a light must be before it streaks.
+  ///
+  /// In en, this message translates to:
+  /// **'Sensitivity'**
+  String get videoEditorEffectSettingSensitivity;
+
+  /// Slider label in a video effect's settings: where on the picture the effect lies, such as the prism's rainbow.
+  ///
+  /// In en, this message translates to:
+  /// **'Position'**
+  String get videoEditorEffectSettingPosition;
+
+  /// Slider label in a video effect's settings: how strongly the wind blows the falling particles sideways, left or right.
+  ///
+  /// In en, this message translates to:
+  /// **'Wind'**
+  String get videoEditorEffectSettingWind;
+
+  /// Slider label in a video effect's settings: how large the comic effect's printed dots are.
+  ///
+  /// In en, this message translates to:
+  /// **'Dot size'**
+  String get videoEditorEffectSettingDotSize;
+
+  /// Slider label in a video effect's settings: how strong or wide the drawn outlines are, such as the comic effect's ink or the lead between stained glass panes.
+  ///
+  /// In en, this message translates to:
+  /// **'Outline'**
+  String get videoEditorEffectSettingOutline;
+
+  /// Slider label in a video effect's settings: how many shades or colour steps the effect uses.
+  ///
+  /// In en, this message translates to:
+  /// **'Levels'**
+  String get videoEditorEffectSettingLevels;
+
+  /// Slider label in a video effect's settings: how large the 8-bit effect's pixels are.
+  ///
+  /// In en, this message translates to:
+  /// **'Pixel size'**
+  String get videoEditorEffectSettingPixelSize;
+
+  /// Slider label in a video effect's settings: how far the effect's colour layers are shifted apart, as in 3D glasses or a misprinted riso print.
+  ///
+  /// In en, this message translates to:
+  /// **'Offset'**
+  String get videoEditorEffectSettingOffset;
+
+  /// Slider label in a video effect's settings: how large the painting effects' brush strokes are.
+  ///
+  /// In en, this message translates to:
+  /// **'Brush size'**
+  String get videoEditorEffectSettingBrushSize;
+
+  /// Slider label in a video effect's settings: how close together the effect's lines are, such as the pencil sketch's hatching.
+  ///
+  /// In en, this message translates to:
+  /// **'Density'**
+  String get videoEditorEffectSettingDensity;
+
+  /// Slider label in a video effect's settings: how much grainy noise the effect adds, such as night vision's.
+  ///
+  /// In en, this message translates to:
+  /// **'Grain'**
+  String get videoEditorEffectSettingGrain;
+
+  /// Slider label in a video effect's settings: how many copies of the picture the pop art effect lines up along each side.
+  ///
+  /// In en, this message translates to:
+  /// **'Grid'**
+  String get videoEditorEffectSettingGrid;
+
+  /// Slider label in a video effect's settings: how many layers of paper the paper cut effect stacks.
+  ///
+  /// In en, this message translates to:
+  /// **'Layers'**
+  String get videoEditorEffectSettingLayers;
+
+  /// Slider label in a video effect's settings: how deep the shadows between the paper cut effect's layers are.
+  ///
+  /// In en, this message translates to:
+  /// **'Shadow'**
+  String get videoEditorEffectSettingShadow;
+
+  /// Label of a colour picker in the riso print effect's settings: the colour of the first of its two inks.
+  ///
+  /// In en, this message translates to:
+  /// **'First ink'**
+  String get videoEditorEffectSettingFirstInk;
+
+  /// Label of a colour picker in the riso print effect's settings: the colour of the second of its two inks.
+  ///
+  /// In en, this message translates to:
+  /// **'Second ink'**
+  String get videoEditorEffectSettingSecondInk;
+
+  /// Label over a row of options in a video effect's settings: whether the effect keeps the picture's own colours or draws in one colour.
+  ///
+  /// In en, this message translates to:
+  /// **'Colors'**
+  String get videoEditorEffectSettingColors;
+
+  /// Option in a video effect's settings: the effect keeps the picture's own colours.
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get videoEditorEffectSettingOriginalColors;
+
+  /// Option in a video effect's settings: the effect draws in one colour the user picks.
+  ///
+  /// In en, this message translates to:
+  /// **'Single color'**
+  String get videoEditorEffectSettingSingleColor;
+
+  /// Slider label in a video effect's settings: how far behind the present the earlier frames the effect shows lie, such as the time split's colour layers.
+  ///
+  /// In en, this message translates to:
+  /// **'Delay'**
+  String get videoEditorEffectSettingDelay;
+
+  /// Option in a video effect's settings: going down the picture leads further back in time.
+  ///
+  /// In en, this message translates to:
+  /// **'Down'**
+  String get videoEditorEffectSettingDown;
+
+  /// Option in a video effect's settings: going up the picture leads further back in time.
+  ///
+  /// In en, this message translates to:
+  /// **'Up'**
+  String get videoEditorEffectSettingUp;
+
+  /// Option in a video effect's settings: going right across the picture leads further back in time.
+  ///
+  /// In en, this message translates to:
+  /// **'Right'**
+  String get videoEditorEffectSettingRight;
+
+  /// Option in a video effect's settings: going left across the picture leads further back in time.
+  ///
+  /// In en, this message translates to:
+  /// **'Left'**
+  String get videoEditorEffectSettingLeft;
+
+  /// Slider label in a video effect's settings: how often the effect's bursts, such as a glitch's, come.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequency'**
+  String get videoEditorEffectSettingFrequency;
+
+  /// Slider label in a video effect's settings: how far the picture or its colours jump, as in a glitch or a shake.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance'**
+  String get videoEditorEffectSettingDistance;
+
+  /// Slider label in a video effect's settings: how strong the thin horizontal lines of an old screen or tape are.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanlines'**
+  String get videoEditorEffectSettingScanlines;
+
+  /// Slider label in a video effect's settings: how coarse the effect's grain is.
+  ///
+  /// In en, this message translates to:
+  /// **'Grain size'**
+  String get videoEditorEffectSettingGrainSize;
+
+  /// Slider label in a video effect's settings: how brown and old the old film effect makes the picture look.
+  ///
+  /// In en, this message translates to:
+  /// **'Sepia'**
+  String get videoEditorEffectSettingSepia;
+
+  /// Slider label in a video effect's settings: how much the old film effect's brightness flickers.
+  ///
+  /// In en, this message translates to:
+  /// **'Flicker'**
+  String get videoEditorEffectSettingFlicker;
+
+  /// Slider label in a video effect's settings: how dark the corners of the picture get.
+  ///
+  /// In en, this message translates to:
+  /// **'Vignette'**
+  String get videoEditorEffectSettingVignette;
+
+  /// Slider label in a video effect's settings: how often the effect's pulse or flash repeats.
+  ///
+  /// In en, this message translates to:
+  /// **'Tempo'**
+  String get videoEditorEffectSettingTempo;
+
+  /// Slider label in a video effect's settings: how tall the wave effect's waves are.
+  ///
+  /// In en, this message translates to:
+  /// **'Wavelength'**
+  String get videoEditorEffectSettingWavelength;
 
   /// Name of a video effect on the timeline, and what screen readers announce for it, when the effect fires on the beat of the music. {effect} is the effect's name, for example 'Zoom Pulse on the beat'. Keep it short.
   ///

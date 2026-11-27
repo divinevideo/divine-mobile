@@ -18,6 +18,9 @@ uniform vec2 uSize;
 // 0 to 1.
 uniform float uIntensity;
 
+// How far the two eyes' copies part, as a share of the default.
+uniform float uOffset;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -35,7 +38,7 @@ void main() {
   vec2 fragCoord = FlutterFragCoord().xy;
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
   float s = min(uSize.x, uSize.y);
-  vec2 shift = vec2(0.014 * s * uIntensity, 0.0);
+  vec2 shift = vec2(0.014 * s * uIntensity * uOffset, 0.0);
   vec3 color = tap(p);
   vec3 left = tap(p - shift);
   vec3 right = tap(p + shift);

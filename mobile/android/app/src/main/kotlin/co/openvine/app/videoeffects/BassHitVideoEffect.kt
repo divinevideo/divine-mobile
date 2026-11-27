@@ -158,7 +158,7 @@ object BassHits {
 
 /**
  * How a bass hit or a blast looks beyond its intensity, from its params, as
- * the Dart `HitLookSettings` stores them. Mirrors the Swift `HitLook`.
+ * the Dart effect settings catalog stores them. Mirrors the Swift `HitLook`.
  *
  * [center] is where it hits, in shares of the frame from its top left;
  * [reach] how far it spreads, 0.2 to 1; [shake], [punch] and [fringe] scale

@@ -11,16 +11,19 @@ import pro_video_editor
 /// seem to stand in front of the screen through the glasses; without them,
 /// each shape gets a red fringe on one side and a cyan one on the other.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
-/// far apart the copies are and how far the colours turn red and cyan).
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+/// apart the copies are and how far the colours turn red and cyan), `offset`
+/// (0–3: how far the two eyes' copies part, as a share of the default).
 final class AnaglyphVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.anaglyph"
 
   private let intensity: Double
+  private let offset: Double
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
+    offset = Self.readNumber(params, "offset", fallback: 1, in: 0...3)
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -33,7 +36,7 @@ final class AnaglyphVideoEffect: ShaderVideoEffect {
   }
 
   override func values(effectTimeUs: Int64) -> [Double]? {
-    intensity > 0 ? [intensity] : nil
+    intensity > 0 ? [intensity] + [offset] : nil
   }
 
   static let function = "divineAnaglyph"
@@ -52,15 +55,17 @@ final class AnaglyphVideoEffect: ShaderVideoEffect {
     ) {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
-      float intensity = u[3].x;
+      float2 uSize = f.size;
+      float uIntensity = u[3].x;
+      float uOffset = u[3].y;
       float2 p = pixelOf(u, gid, target.get_height());
-      float s = min(f.size.x, f.size.y);
-      float2 shift = float2(0.014 * s * intensity, 0.0);
+      float s = min(uSize.x, uSize.y);
+      float2 shift = float2(0.014 * s * uIntensity * uOffset, 0.0);
       float3 color = tap(frame, f, p);
       float3 left = tap(frame, f, p - shift);
       float3 right = tap(frame, f, p + shift);
       float3 stereo = float3(mix(luma(left), left.r, 0.3), mix(float2(luma(right)), right.gb, 0.3));
-      target.write(float4(mix(color, stereo, intensity), 1.0), gid);
+      target.write(float4(mix(color, stereo, uIntensity), 1.0), gid);
     }
     """
 }

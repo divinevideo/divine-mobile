@@ -4,7 +4,8 @@ import divine_video_player
 import pro_video_editor
 
 /// The echo trail (#9708): moving subjects leave fading copies of where they
-/// were 100 ms, 200 ms, ... ago, as many as the intensity asks for.
+/// were 100 ms, 200 ms, ... ago, or that times the spacing set, as many as the
+/// intensity asks for.
 ///
 /// Every copy is an earlier source frame of the same clip, which
 /// pro_video_editor hands over, so the export looks the same however the clip
@@ -13,9 +14,10 @@ import pro_video_editor
 /// The editor preview draws the same blend through divine_video_player,
 /// whose earlier frames come from what the player showed while playing.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1):
-/// more and stronger copies. Each copy lightens the frame, so the subject
-/// stays solid where the copies overlap it.
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: more
+/// and stronger copies) and `spacing` (0.4–3: how far apart in time the copies
+/// lie, as a share of the default tenth of a second). Each copy lightens the
+/// frame, so the subject stays solid where the copies overlap it.
 final class EchoVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.echo"
@@ -37,7 +39,10 @@ final class EchoVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
     let intensity = min(
       1, max(0, (params["intensity"] as? NSNumber)?.doubleValue ?? Self.defaultIntensity))
     let copies = min(Self.maxCopies, max(1, Int((1 + 6 * intensity).rounded())))
-    historyOffsetsUs = (1...copies).map { Int64($0) * Self.spacingUs }
+    let spacing = ShaderVideoEffect.readNumber(params, "spacing", fallback: 1, in: 0.4...3)
+    historyOffsetsUs = (1...copies).map { k in
+      Int64((Double(Int64(k) * Self.spacingUs) * spacing).rounded())
+    }
     weights = (0..<copies).map { k in
       CGFloat((0.25 + 0.55 * intensity) * pow(0.55 + 0.25 * intensity, Double(k)))
     }

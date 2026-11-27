@@ -20,6 +20,10 @@ uniform float uIntensity;
 // How far the picture moves each frame, as a share of its width.
 uniform float uShift;
 
+// How far the change that counts as movement is scaled: 1 at the default
+// sensitivity, smaller as it rises.
+uniform float uSpread;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -34,7 +38,7 @@ void main() {
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
   vec3 now = tap(p);
   vec3 before = tap(p + vec2(uShift * uSize.x, 0.0));
-  float moved = smoothstep(0.05, 0.15, length(now - before));
+  float moved = smoothstep(0.05 * uSpread, 0.15 * uSpread, length(now - before));
   vec3 glow = min(now * (1.0 + 0.5 * uIntensity) + 0.1 * uIntensity, vec3(1.0));
   fragColor = vec4(mix(now * (1.0 - uIntensity), glow, moved), 1.0);
 }

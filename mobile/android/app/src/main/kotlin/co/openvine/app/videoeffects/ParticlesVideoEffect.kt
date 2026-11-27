@@ -17,10 +17,13 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * inside its cell however it sways or spins, so each pixel only looks at the
  * cell it lies in, in each layer.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
- * many of the cells hold a particle). The particles move with the time since
- * the effect started, so they follow the same path in the preview and in the
- * export.
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how many
+ * of the cells hold a particle), `size` (0.5–2.5: how large the particles are,
+ * as a share of the default), `speed` (0.1–3: how fast they fall or rise, as a
+ * share of the default) and `wind` (-1–1: how hard the wind blows them
+ * sideways, to the left below 0 and to the right above it). The particles move
+ * with the time since the effect started, so they follow the same path in the
+ * preview and in the export.
  */
 class ParticlesVideoEffect(private val style: Style, params: Map<String, Any?>) :
     ShaderVideoEffect(FRAGMENT_SHADER) {
@@ -46,10 +49,19 @@ class ParticlesVideoEffect(private val style: Style, params: Map<String, Any?>) 
 
     private val intensity = intensityOf(params)
 
+    private val scale = numberOf(params, "size", 1f, 0.5f, 2.5f)
+
+    private val speed = numberOf(params, "speed", 1f, 0.1f, 3f)
+
+    private val wind = numberOf(params, "wind", 0f, -1f, 1f)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uIntensity", intensity)
         shader.setFloat("uTime", (effectTimeUs / 1_000_000.0).toFloat())
         shader.setFloat("uStyle", style.shaderValue)
+        shader.setFloat("uScale", scale)
+        shader.setFloat("uSpeed", speed)
+        shader.setFloat("uWind", wind)
     }
 
     companion object {
@@ -70,6 +82,9 @@ class ParticlesVideoEffect(private val style: Style, params: Map<String, Any?>) 
 uniform float uIntensity;
 uniform float uTime;
 uniform float uStyle;
+uniform float uScale;
+uniform float uSpeed;
+uniform float uWind;
 
 vec3 hash3(vec2 p) {
   vec3 q = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
@@ -355,12 +370,14 @@ void main() {
   int style = int(uStyle + 0.5);
   vec3 color = tap(p);
   vec4 look = lookOf(style);
-  // How fast the cells move sideways, for the rain and petals the wind slants.
-  float drift = style == 4 ? 0.22 : (style == 6 ? 0.08 : 0.0);
-  vec2 fall = normalize(vec2(drift, look.y));
+  // How fast the cells move sideways: the wind, and the slant of the rain and
+  // the petals.
+  float drift = (style == 4 ? 0.22 : (style == 6 ? 0.08 : 0.0)) * uSpeed + 0.3 * uWind;
+  float rise = look.y * uSpeed;
+  vec2 fall = normalize(vec2(drift, rise));
   for (int k = 0; k < 3; k++) {
     float depth = 0.55 + 0.225 * float(k);
-    vec2 q = (p - vec2(drift * depth * t * s, look.y * depth * t * s)) / (s * look.x * depth) + vec2(0.37 * float(k), 0.0);
+    vec2 q = (p - vec2(drift * depth * t * s, rise * depth * t * s)) / (s * look.x * uScale * depth) + vec2(0.37 * float(k), 0.0);
     vec2 id = floor(q) + vec2(131.0, 71.0) * float(k);
     vec3 h = hash3(id);
     if (h.z >= look.w * uIntensity) continue;
@@ -402,7 +419,6 @@ void main() {
   }
   gl_FragColor = vec4(color, 1.0);
 }
-
 """
     }
 }

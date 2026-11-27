@@ -14,22 +14,28 @@ import pro_video_editor
 /// of three colours that change together, blended over a moment; see
 /// ``PartyLights``.
 ///
-/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
-/// dim the picture gets and how bright the spots are) and, for an effect on
-/// the beat, `beatsUs`: the beats, in microseconds after the effect's start.
-/// On the beat the colours change and the ball turns the other way on each
-/// beat; otherwise the colours change every one and a half seconds and it
-/// keeps turning one way.
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how dim
+/// the picture gets and how bright the spots are), `size` (0.5–2: how large the
+/// spots are, as a share of the default), `speed` (0–3: how fast the ball
+/// turns, as a share of the default; 0 holds it still) and, for an effect on
+/// the beat, `beatsUs`: the beats, in microseconds after the effect's start. On
+/// the beat the colours change and the ball turns the other way on each beat;
+/// otherwise the colours change every one and a half seconds and it keeps
+/// turning one way.
 final class DiscoVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.disco"
 
   private let intensity: Double
   private let beatsUs: [Int64]?
+  private let spotSize: Double
+  private let speed: Double
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
     beatsUs = BlurHits.beats(params)
+    spotSize = Self.readNumber(params, "size", fallback: 1, in: 0.5...2)
+    speed = Self.readNumber(params, "speed", fallback: 1, in: 0...3)
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -44,7 +50,7 @@ final class DiscoVideoEffect: ShaderVideoEffect {
   override func values(effectTimeUs: Int64) -> [Double]? {
     guard intensity > 0 else { return nil }
     let lights = PartyLights.at(beatsUs: beatsUs, effectTimeUs: effectTimeUs)
-    return [intensity, lights.phase, lights.step, lights.mix]
+    return [intensity, lights.phase * speed, lights.step, lights.mix, spotSize]
   }
 
   static let function = "divineDisco"
@@ -61,31 +67,33 @@ final class DiscoVideoEffect: ShaderVideoEffect {
     ) {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
-      float intensity = u[3].x;
-      float phase = u[3].y;
-      float stage = u[3].z;
-      float blend = u[3].w;
+      float2 uSize = f.size;
+      float uIntensity = u[3].x;
+      float uPhase = u[3].y;
+      float uStep = u[3].z;
+      float uMix = u[3].w;
+      float uSpotSize = u[4].x;
       float2 p = pixelOf(u, gid, target.get_height());
-      float l = max(f.size.x, f.size.y);
-      float2 ball = float2(0.5 * f.size.x, f.size.y + 0.35 * l);
+      float l = max(uSize.x, uSize.y);
+      float2 ball = float2(0.5 * uSize.x, uSize.y + 0.35 * l);
       float2 d = p - ball;
       float spacing = 0.085 * l;
       float ring = floor(length(d) / spacing);
       float odd = ring - 2.0 * floor(ring / 2.0);
       float cell = 1.1 / (ring + 0.5);
-      float spin = 0.25 * phase;
+      float spin = 0.25 * uPhase;
       float turn = atan2(d.x, -d.y) + spin;
       float index = floor(turn / cell + 0.5 * odd);
       float centreTurn = (index + 0.5 - 0.5 * odd) * cell - spin;
       float2 centre = ball + (ring + 0.5) * spacing * float2(sin(centreTurn), -cos(centreTurn));
-      float size = 0.018 * l * (0.75 + 0.5 * fract(index * 0.618034 + ring * 0.371));
+      float size = 0.018 * l * uSpotSize * (0.75 + 0.5 * fract(index * 0.618034 + ring * 0.371));
       float2 q = (p - centre) / size;
       float r2 = dot(q, q);
       float spot = exp(-r2 * r2 * r2);
       float group = index + ring - 3.0 * floor((index + ring) / 3.0);
-      float3 color = mix(partyColor(stage - 1.0, group), partyColor(stage, group), blend);
+      float3 color = mix(partyColor(uStep - 1.0, group), partyColor(uStep, group), uMix);
       float3 base = tap(frame, f, p);
-      float3 lit = base * (1.0 - 0.4 * intensity) + intensity * spot * color * (0.25 + 0.75 * base);
+      float3 lit = base * (1.0 - 0.4 * uIntensity) + uIntensity * spot * color * (0.25 + 0.75 * base);
       target.write(float4(clamp(lit, 0.0, 1.0), 1.0), gid);
     }
     """

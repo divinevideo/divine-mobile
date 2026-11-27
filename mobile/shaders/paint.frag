@@ -28,6 +28,9 @@ uniform float uIntensity;
 // 0 for watercolour, 1 for oil paint.
 uniform float uStyle;
 
+// How large the brush strokes are, as a share of the default.
+uniform float uBrush;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -61,7 +64,7 @@ void main() {
   vec2 fragCoord = FlutterFragCoord().xy;
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
   float s = min(uSize.x, uSize.y);
-  float e = max(1.0, s / 360.0);
+  float e = max(1.0, s / 360.0 * uBrush);
   vec3 m0 = vec3(0.0);
   vec3 m1 = vec3(0.0);
   vec3 m2 = vec3(0.0);

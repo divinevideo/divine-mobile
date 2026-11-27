@@ -12,11 +12,13 @@ import pro_video_editor
 /// middle leads one copy deeper.
 ///
 /// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
-/// large the copy is), `periodUs` (how long a step takes; the Dart side fits a
-/// whole number of steps into the effect's window, so a video that loops
-/// zooms on seamlessly) and, for an effect on the beat, `beatsUs`: the beats,
-/// in microseconds after the effect's start, each taking one step; see
-/// ``TunnelSteps``.
+/// large the copy is), `speed` (0.25–3: how fast it zooms, as a share of the
+/// natural pace, when nothing else times it), `direction` (-1 to zoom out of
+/// the copies instead of into them), `periodUs` (how long a step takes; the
+/// Dart side fits a whole number of steps into the effect's window, so a video
+/// that loops zooms on seamlessly) and, for an effect on the beat, `beatsUs`:
+/// the beats, in microseconds after the effect's start, each taking one step;
+/// see ``TunnelSteps``.
 final class TunnelVideoEffect: ShaderVideoEffect {
   /// The ids the Dart `CustomVideoEffect` names.
   static let id = "divine.tunnel"
@@ -26,13 +28,19 @@ final class TunnelVideoEffect: ShaderVideoEffect {
   private let intensity: Double
   private let periodUs: Int64
   private let beatsUs: [Int64]?
+  private let direction: Double
 
   init(spiral: Bool, params: [String: Any]) {
     self.spiral = spiral
     intensity = Self.readIntensity(params)
     let period = (params["periodUs"] as? NSNumber)?.int64Value ?? 0
-    periodUs = period > 0 ? period : TunnelSteps.naturalPeriodUs(intensity: intensity)
+    let speed = Self.readNumber(params, "speed", fallback: 1, in: 0.25...3)
+    periodUs =
+      period > 0
+      ? period
+      : Int64((Double(TunnelSteps.naturalPeriodUs(intensity: intensity)) / speed).rounded())
     beatsUs = BlurHits.beats(params)
+    direction = Self.readDirection(params)
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -53,7 +61,8 @@ final class TunnelVideoEffect: ShaderVideoEffect {
   override func values(effectTimeUs: Int64) -> [Double]? {
     guard intensity > 0 else { return nil }
     let phase = TunnelSteps.phase(periodUs: periodUs, beatsUs: beatsUs, effectTimeUs: effectTimeUs)
-    return [intensity, phase, spiral ? 1 : 0]
+    // Zooming out runs the phase backwards; the kernel wraps it into a turn.
+    return [intensity, direction * phase, spiral ? 1 : 0]
   }
 
   static let function = "divineTunnel"

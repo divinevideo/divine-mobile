@@ -15,21 +15,44 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * picture keeps its brightness. It moves with the time since the effect
  * started, so it is the same in the preview and in the export.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
- * far the picture turns into night vision).
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+ * the picture turns into night vision), `grain` (0–3: how much grain the tube
+ * adds, as a share of the default) and `color` (the phosphor's colour, as an
+ * ARGB integer: green by default).
  */
 class NightVisionVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
     private val intensity = intensityOf(params)
 
+    private val grain = numberOf(params, "grain", 1f, 0f, 3f)
+
+    private val base = colorOf(params, "color", DEFAULT_COLOR)
+
+    /**
+     * How far the phosphor lifts towards white as it glows, kept off the
+     * default's lift as far as the colour is off the default.
+     */
+    private val lift = FloatArray(3) { DEFAULT_LIFT[it] + 0.5f * (DEFAULT_BASE[it] - base[it]) }
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uIntensity", intensity)
         shader.setFloat("uNoiseFrame", noiseFrameOf(effectTimeUs))
+        shader.setFloat("uGrain", grain)
+        shader.setFloats("uBase", base)
+        shader.setFloats("uLift", lift)
     }
 
     companion object {
         /** The id the Dart `CustomVideoEffect` names. */
         const val ID = "divine.nightVision"
+
+        /** The phosphor's colour unless the user picks another, as an ARGB integer. */
+        private const val DEFAULT_COLOR = 0xFF1AFF26
+
+        private val DEFAULT_BASE = ShaderVideoEffect.colorOf(emptyMap(), "color", DEFAULT_COLOR)
+
+        /** How far the default phosphor lifts towards white as it glows. */
+        private val DEFAULT_LIFT = floatArrayOf(0.5f, 0f, 0.4f)
 
         /** Registers the effect for exports and for the editor preview. */
         fun register() {
@@ -52,6 +75,9 @@ class NightVisionVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAG
         private const val FRAGMENT_SHADER = ShaderVideoEffect.PRELUDE + """
 uniform float uIntensity;
 uniform float uNoiseFrame;
+uniform float uGrain;
+uniform vec3 uBase;
+uniform vec3 uLift;
 
 float luma(vec3 c) {
   return dot(c, vec3(0.299, 0.587, 0.114));
@@ -71,8 +97,8 @@ void main() {
   float scan = 0.94 + 0.06 * step(0.5, fract(p.y / (2.0 * e)));
   float corner = length(p / uSize - 0.5);
   float tube = 1.0 - 0.65 * smoothstep(0.35, 0.75, corner);
-  float glow = clamp((level + 0.12 * noise) * scan * tube, 0.0, 1.0);
-  vec3 phosphor = vec3(0.1 + 0.5 * glow, 1.0, 0.15 + 0.4 * glow) * glow + vec3(0.0, 0.03, 0.01);
+  float glow = clamp((level + 0.12 * uGrain * noise) * scan * tube, 0.0, 1.0);
+  vec3 phosphor = (uBase + uLift * glow) * glow + vec3(0.0, 0.03, 0.01);
   gl_FragColor = vec4(mix(color, clamp(phosphor, 0.0, 1.0), uIntensity), 1.0);
 }
 """

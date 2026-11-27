@@ -9366,9 +9366,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorFilterCategoryTints => '틴트';
 
   @override
-  String get videoEditorDropsSettingsTitle => '물방울 조정';
-
-  @override
   String get videoEditorDropsCountLabel => '개수';
 
   @override
@@ -9423,12 +9420,8 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String videoEditorEffectSeconds(double seconds) {
-    final intl.NumberFormat secondsNumberFormat =
-        intl.NumberFormat.decimalPattern(localeName);
-    final String secondsString = secondsNumberFormat.format(seconds);
-
-    return '$secondsString초';
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds초';
   }
 
   @override
@@ -9463,6 +9456,156 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorEffectLookReset => '모양 초기화';
+
+  @override
+  String get videoEditorEffectTimingTitle => '타이밍';
+
+  @override
+  String get videoEditorEffectTimingReset => '타이밍 초기화';
+
+  @override
+  String get videoEditorEffectMotionTitle => '움직임';
+
+  @override
+  String get videoEditorEffectMotionReset => '움직임 초기화';
+
+  @override
+  String get videoEditorEffectSettingFocus => '초점';
+
+  @override
+  String get videoEditorEffectSettingWidth => '너비';
+
+  @override
+  String get videoEditorEffectSettingDirection => '방향';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => '가로';
+
+  @override
+  String get videoEditorEffectSettingVertical => '세로';
+
+  @override
+  String get videoEditorEffectSettingClockwise => '시계 방향';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => '반시계 방향';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => '확대';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => '축소';
+
+  @override
+  String get videoEditorEffectSettingSpacing => '간격';
+
+  @override
+  String get videoEditorEffectSettingAngle => '각도';
+
+  @override
+  String get videoEditorEffectSettingHue => '색조';
+
+  @override
+  String get videoEditorEffectSettingLength => '길이';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => '감도';
+
+  @override
+  String get videoEditorEffectSettingPosition => '위치';
+
+  @override
+  String get videoEditorEffectSettingWind => '바람';
+
+  @override
+  String get videoEditorEffectSettingDotSize => '점 크기';
+
+  @override
+  String get videoEditorEffectSettingOutline => '윤곽선';
+
+  @override
+  String get videoEditorEffectSettingLevels => '단계';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => '픽셀 크기';
+
+  @override
+  String get videoEditorEffectSettingOffset => '어긋남';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => '붓 크기';
+
+  @override
+  String get videoEditorEffectSettingDensity => '밀도';
+
+  @override
+  String get videoEditorEffectSettingGrain => '입자';
+
+  @override
+  String get videoEditorEffectSettingGrid => '격자';
+
+  @override
+  String get videoEditorEffectSettingLayers => '층';
+
+  @override
+  String get videoEditorEffectSettingShadow => '그림자';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => '첫 번째 잉크';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => '두 번째 잉크';
+
+  @override
+  String get videoEditorEffectSettingColors => '색상';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => '원본';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => '단색';
+
+  @override
+  String get videoEditorEffectSettingDelay => '지연';
+
+  @override
+  String get videoEditorEffectSettingDown => '아래로';
+
+  @override
+  String get videoEditorEffectSettingUp => '위로';
+
+  @override
+  String get videoEditorEffectSettingRight => '오른쪽으로';
+
+  @override
+  String get videoEditorEffectSettingLeft => '왼쪽으로';
+
+  @override
+  String get videoEditorEffectSettingFrequency => '빈도';
+
+  @override
+  String get videoEditorEffectSettingDistance => '거리';
+
+  @override
+  String get videoEditorEffectSettingScanlines => '주사선';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => '입자 크기';
+
+  @override
+  String get videoEditorEffectSettingSepia => '세피아';
+
+  @override
+  String get videoEditorEffectSettingFlicker => '깜빡임';
+
+  @override
+  String get videoEditorEffectSettingVignette => '비네트';
+
+  @override
+  String get videoEditorEffectSettingTempo => '템포';
+
+  @override
+  String get videoEditorEffectSettingWavelength => '파장';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {
