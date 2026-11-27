@@ -3,24 +3,31 @@
 
 import 'dart:async';
 
+import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/fullscreen_feed/fullscreen_feed_bloc.dart';
+import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
+import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/services/broken_video_tracker.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
 import 'package:openvine/widgets/list_action_buttons.dart';
 import 'package:openvine/widgets/list_author_byline.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
+import 'package:openvine/widgets/list_video_player_mode.dart';
 import 'package:openvine/widgets/share_list_button.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:videos_repository/videos_repository.dart';
@@ -28,8 +35,14 @@ import 'package:videos_repository/videos_repository.dart';
 import '../helpers/finders.dart';
 import '../helpers/go_router.dart';
 import '../helpers/test_provider_overrides.dart';
+import '../helpers/test_pubkeys.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
+
+class _MockBrokenVideoTracker extends Mock implements BrokenVideoTracker {}
+
+class _MockVideoVolumeCubit extends MockCubit<VideoVolumeState>
+    implements VideoVolumeCubit {}
 
 class _MockCuratedListService extends Mock implements CuratedListService {
   @override
@@ -108,6 +121,7 @@ void main() {
       List<VideoEvent> videoEvents = const [],
       CuratedList? discoveredList,
       CuratedListsState Function()? curatedListsState,
+      int? initialListIndex,
     }) {
       final list = CuratedList(
         id: listId,
@@ -125,6 +139,7 @@ void main() {
         videoIds: videoIds,
         authorPubkey: authorPubkey,
         discoveredList: discoveredList,
+        initialListIndex: initialListIndex,
       );
 
       final app = ProviderScope(
@@ -1320,6 +1335,424 @@ void main() {
           expect(confirm, returnsNormally);
         },
       );
+    });
+
+    group('playback from a list position', () {
+      final author = testPubkeyFromSeed(3);
+      final references = [
+        for (var part = 1; part <= 3; part++) '34236:$author:part-$part',
+      ];
+
+      VideoEvent part(int number) => VideoEvent(
+        id: 'part-$number-event',
+        pubkey: author,
+        content: '',
+        title: 'Part $number',
+        videoUrl: 'https://example.com/part-$number.mp4',
+        thumbnailUrl: 'https://example.com/part-$number.jpg',
+        duration: 5,
+        createdAt: DateTime(2026).millisecondsSinceEpoch ~/ 1000,
+        timestamp: DateTime(2026),
+        rawTags: {'d': 'part-$number'},
+      );
+
+      Finder player() => find.byType(ListVideoPlayerMode);
+
+      String playing(WidgetTester tester) {
+        final mode = tester.widget<ListVideoPlayerMode>(player());
+        return mode.videos[mode.activeIndex].id;
+      }
+
+      testWidgets('plays the video at the requested list position', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            // Emitted out of list order, as a cache hit before a relay answer.
+            videoEvents: [part(2), part(1), part(3)],
+            initialListIndex: 0,
+          ),
+        );
+        await tester.pump();
+
+        expect(playing(tester), equals(part(1).id));
+      });
+
+      testWidgets('opens the grid without a requested position', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            videoEvents: [part(1), part(2), part(3)],
+          ),
+        );
+        await tester.pump();
+
+        expect(player(), findsNothing);
+        expect(find.byType(ComposableVideoGrid), findsOneWidget);
+      });
+
+      testWidgets('opens a video also listed earlier by event id', (
+        tester,
+      ) async {
+        final video = part(1).copyWith(id: 'a' * 64);
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: [video.id, references.first],
+            videoEvents: [video],
+            initialListIndex: 1,
+          ),
+        );
+        await tester.pump();
+
+        expect(playing(tester), video.id);
+      });
+
+      for (final position in [-1, 3]) {
+        testWidgets('stays on the grid for the position $position', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildSubject(
+              videoIds: references,
+              videoEvents: [part(1), part(2), part(3)],
+              initialListIndex: position,
+            ),
+          );
+          await tester.pump();
+
+          expect(player(), findsNothing);
+          expect(find.byType(ComposableVideoGrid), findsOneWidget);
+        });
+      }
+
+      testWidgets('stays on the grid instead of playing a later part', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            videoEvents: [part(2), part(3)],
+            initialListIndex: 0,
+          ),
+        );
+        await tester.pump();
+
+        expect(player(), findsNothing);
+        expect(find.byType(ComposableVideoGrid), findsOneWidget);
+      });
+
+      testWidgets('stays on the grid when the requested video has no media', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            videoEvents: [
+              part(1).copyWith(videoUrl: ''),
+              part(2),
+            ],
+            initialListIndex: 0,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(player(), findsNothing);
+        expect(find.byType(DiVineAppBar), findsOneWidget);
+      });
+
+      testWidgets('opens a playable revision after one without media', (
+        tester,
+      ) async {
+        final playable = part(1).copyWith(id: 'part-1-revision');
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            videoEvents: [
+              part(1).copyWith(videoUrl: ''),
+              playable,
+              part(2),
+            ],
+            initialListIndex: 0,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(playing(tester), playable.id);
+      });
+
+      testWidgets(
+        'stays on the grid when the requested video is known broken',
+        (
+          tester,
+        ) async {
+          final tracker = _MockBrokenVideoTracker();
+          when(() => tracker.isVideoBroken(part(1).id)).thenReturn(true);
+          when(() => tracker.isVideoBroken(part(2).id)).thenReturn(false);
+          when(() => tracker.brokenVideoIds).thenReturn([part(1).id]);
+          when(() => tracker.markedVideoIds)
+              .thenAnswer((_) => const Stream.empty());
+          await tester.pumpWidget(
+            buildSubject(
+              videoIds: references,
+              videoEvents: [part(1), part(2)],
+              initialListIndex: 0,
+              extraOverrides: [
+                brokenVideoTrackerProvider.overrideWith((_) async => tracker),
+              ],
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          expect(player(), findsNothing);
+          expect(find.byType(DiVineAppBar), findsOneWidget);
+        },
+      );
+
+      testWidgets('plays the selected tile after the grid filters a video', (
+        tester,
+      ) async {
+        final tracker = _MockBrokenVideoTracker();
+        when(() => tracker.isVideoBroken(part(1).id)).thenReturn(true);
+        when(() => tracker.isVideoBroken(part(2).id)).thenReturn(false);
+        when(() => tracker.isVideoBroken(part(3).id)).thenReturn(false);
+        when(() => tracker.brokenVideoIds).thenReturn([part(1).id]);
+        when(() => tracker.markedVideoIds)
+            .thenAnswer((_) => const Stream.empty());
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            videoEvents: [part(1), part(2), part(3)],
+            extraOverrides: [
+              brokenVideoTrackerProvider.overrideWith((_) async => tracker),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        final grid = tester.widget<ComposableVideoGrid>(
+          find.byType(ComposableVideoGrid),
+        );
+        grid.onVideoTap([part(2), part(3)], 1, () => null);
+        await tester.pump();
+
+        expect(playing(tester), part(3).id);
+      });
+
+      testWidgets('opens the tapped video even if an earlier part arrives', (
+        tester,
+      ) async {
+        final videos = StreamController<List<VideoEvent>>();
+        addTearDown(videos.close);
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            overrideVideoEvents: false,
+            extraOverrides: [
+              videoEventsByIdsProvider(
+                references,
+              ).overrideWith((ref) => videos.stream),
+            ],
+          ),
+        );
+        videos.add([part(2)]);
+        await tester.pump();
+
+        final grid = tester.widget<ComposableVideoGrid>(
+          find.byType(ComposableVideoGrid),
+        );
+        grid.onVideoTap([part(2)], 0, () => null);
+        videos.add([part(1), part(2)]);
+        await tester.pump();
+
+        expect(playing(tester), part(2).id);
+      });
+
+      testWidgets('can return to the grid if the tapped video disappears', (
+        tester,
+      ) async {
+        final videos = StreamController<List<VideoEvent>>();
+        addTearDown(videos.close);
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            overrideVideoEvents: false,
+            extraOverrides: [
+              videoEventsByIdsProvider(
+                references,
+              ).overrideWith((ref) => videos.stream),
+            ],
+          ),
+        );
+        videos.add([part(2)]);
+        await tester.pump();
+
+        tester
+            .widget<ComposableVideoGrid>(find.byType(ComposableVideoGrid))
+            .onVideoTap([part(2)], 0, () => null);
+        videos.add([part(1)]);
+        await tester.pump();
+
+        expect(find.text(l10n.curatedListVideoNotAvailable), findsOneWidget);
+        await tester.binding.handlePopRoute();
+        await tester.pump();
+
+        expect(find.byType(ComposableVideoGrid), findsOneWidget);
+      });
+
+      testWidgets('keeps the back button until the requested video arrives', (
+        tester,
+      ) async {
+        final videos = StreamController<List<VideoEvent>>();
+        addTearDown(videos.close);
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            initialListIndex: 1,
+            overrideVideoEvents: false,
+            extraOverrides: [
+              videoEventsByIdsProvider(
+                references,
+              ).overrideWith((ref) => videos.stream),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        expect(player(), findsNothing);
+        expect(find.byType(DiVineAppBar), findsOneWidget);
+
+        videos.add([part(1)]);
+        await tester.pump();
+        expect(player(), findsNothing);
+
+        videos.add([part(1), part(2)]);
+        await tester.pump();
+        expect(playing(tester), equals(part(2).id));
+      });
+
+      testWidgets('keeps playing when the list changes after it opened', (
+        tester,
+      ) async {
+        final videos = StreamController<List<VideoEvent>>();
+        addTearDown(videos.close);
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            initialListIndex: 0,
+            overrideVideoEvents: false,
+            extraOverrides: [
+              videoEventsByIdsProvider(
+                references,
+              ).overrideWith((ref) => videos.stream),
+            ],
+          ),
+        );
+        videos.add([part(1), part(2), part(3)]);
+        await tester.pump();
+        await tester.pump();
+
+        // A reload after blocking the first part's author drops it.
+        videos.add([part(2), part(3)]);
+        await tester.pump();
+
+        expect(player(), findsOneWidget);
+      });
+
+      testWidgets('adds late parts without changing the playing video', (
+        tester,
+      ) async {
+        final earlier = part(1).copyWith(
+          eventKind: 34235,
+          addressableDTag: 'chapter',
+          vineId: 'chapter',
+        );
+        final selected = part(2).copyWith(
+          eventKind: 34236,
+          addressableDTag: 'chapter',
+          vineId: 'chapter',
+        );
+        final list = [
+          '34235:$author:chapter',
+          '34236:$author:chapter',
+          references.last,
+        ];
+        final videos = StreamController<List<VideoEvent>>();
+        addTearDown(videos.close);
+        registerFallbackValue(earlier);
+        final videoService = createMockVideoEventService();
+        when(() => videoService.shouldHideVideo(any())).thenReturn(false);
+        final volume = _MockVideoVolumeCubit();
+        when(() => volume.state).thenReturn(const VideoVolumeState());
+        await tester.pumpWidget(
+          BlocProvider<VideoVolumeCubit>.value(
+            value: volume,
+            child: buildSubject(
+              videoIds: list,
+              initialListIndex: 1,
+              overrideVideoEvents: false,
+              extraOverrides: [
+                videoEventServiceProvider.overrideWithValue(videoService),
+                videoEventsByIdsProvider(
+                  list,
+                ).overrideWith((ref) => videos.stream),
+              ],
+            ),
+          ),
+        );
+        videos.add([selected]);
+        await tester.pump();
+        await tester.pump();
+
+        FullscreenFeedBloc playback() => tester
+            .element(find.byType(FullscreenFeedContent))
+            .read<FullscreenFeedBloc>();
+        expect(playback().state.currentVideo?.id, selected.id);
+
+        videos.add([earlier, selected, part(3)]);
+        await tester.pump();
+        await tester.pump();
+
+        expect(playback().state.videos.map((video) => video.id), [
+          earlier.id,
+          selected.id,
+          part(3).id,
+        ]);
+        expect(playback().state.currentVideo?.id, selected.id);
+
+        final revised = selected.copyWith(id: 'part-2-revision');
+        videos.add([earlier, revised, part(3)]);
+        await tester.pump();
+        await tester.pump();
+
+        expect(playback().state.currentVideo?.id, revised.id);
+      });
+
+      testWidgets('backing out of the requested video lands on the grid', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            videoEvents: [part(1), part(2), part(3)],
+            initialListIndex: 0,
+          ),
+        );
+        await tester.pump();
+        expect(player(), findsOneWidget);
+
+        tester.widget<ListVideoPlayerMode>(player()).onExit();
+        await tester.pump();
+        await tester.pump();
+
+        expect(player(), findsNothing);
+        expect(find.byType(ComposableVideoGrid), findsOneWidget);
+      });
     });
 
     group('grid viewport', () {

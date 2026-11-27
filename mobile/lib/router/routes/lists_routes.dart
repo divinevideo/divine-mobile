@@ -87,6 +87,7 @@ class CuratedListByAuthorRouteData extends GoRouteData
   const CuratedListByAuthorRouteData({
     required this.pubkey,
     required this.listId,
+    @TypedQueryParameter(name: 'play') this.play,
     this.$extra,
   });
 
@@ -94,6 +95,10 @@ class CuratedListByAuthorRouteData extends GoRouteData
   final String pubkey;
 
   final String listId;
+
+  /// The list position to open playing, such as `0` for a series' first
+  /// part. Anything that is not a position in the list opens the grid.
+  final String? play;
 
   /// A [CuratedListRouteExtra] hint whose discovered list warms the screen,
   /// read through [extraAs]; absent after a deep link.
@@ -111,6 +116,7 @@ class CuratedListByAuthorRouteData extends GoRouteData
       authorPubkey: author,
       listId: listId,
       discoveredList: extraAs<CuratedListRouteExtra>($extra)?.list,
+      initialListIndex: int.tryParse(play ?? ''),
     );
   }
 }

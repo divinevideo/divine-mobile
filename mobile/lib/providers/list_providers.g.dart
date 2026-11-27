@@ -674,7 +674,7 @@ final class VideoEventsByIdsProvider
   }
 }
 
-String _$videoEventsByIdsHash() => r'71472b817b86016d74247fcb6288e252abf97cbf';
+String _$videoEventsByIdsHash() => r'9720f5d144dd7bb0e3af9f05ab191710525a433c';
 
 /// Provider that fetches VideoEvent objects directly from a list of video IDs
 /// Use this for discovered lists that aren't in local storage

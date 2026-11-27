@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -11,10 +12,12 @@ import 'package:models/models.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/widgets/list_video_player_mode.dart';
 
 import '../helpers/finders.dart';
 import '../helpers/go_router.dart';
@@ -48,11 +51,17 @@ void main() {
       when(() => mockService.isSubscribedToList(any())).thenReturn(false);
     });
 
-    Widget buildSubject({MockGoRouter? goRouter, CuratedList? discoveredList}) {
+    Widget buildSubject({
+      MockGoRouter? goRouter,
+      CuratedList? discoveredList,
+      int? initialListIndex,
+      List<Override> extraOverrides = const [],
+    }) {
       final screen = CuratedListByAuthorScreen(
         authorPubkey: _authorPubkey,
         listId: 'my-vines',
         discoveredList: discoveredList,
+        initialListIndex: initialListIndex,
       );
       return ProviderScope(
         overrides: [
@@ -60,6 +69,7 @@ void main() {
           curatedListsStateProvider.overrideWith(
             () => _TestCuratedListsState(mockService),
           ),
+          ...extraOverrides,
         ],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
@@ -130,6 +140,80 @@ void main() {
         },
       );
     }
+
+    group('requested position', () {
+      final list = CuratedList(
+        id: 'my-vines',
+        name: 'My Vines',
+        videoEventIds: const [],
+        pubkey: _authorPubkey,
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      );
+
+      int? requestedPosition(WidgetTester tester) => tester
+          .widget<CuratedListFeedScreen>(find.byType(CuratedListFeedScreen))
+          .initialListIndex;
+
+      testWidgets('reaches the list warmed from discovery', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(discoveredList: list, initialListIndex: 2),
+        );
+        await tester.pumpAndSettle();
+
+        expect(requestedPosition(tester), equals(2));
+      });
+
+      testWidgets('opens playback when navigation changes the play position', (
+        tester,
+      ) async {
+        final video = VideoEvent(
+          id: 'c' * 64,
+          pubkey: _authorPubkey,
+          createdAt: 1767225600,
+          timestamp: DateTime.utc(2026),
+          content: '',
+          videoUrl: 'https://example.com/clip.mp4',
+        );
+        final warmed = list.copyWith(videoEventIds: [video.id]);
+        final overrides = [
+          videoEventsByIdsProvider(
+            warmed.videoEventIds,
+          ).overrideWith((_) => Stream.value([video])),
+        ];
+        await tester.pumpWidget(
+          buildSubject(discoveredList: warmed, extraOverrides: overrides),
+        );
+        await tester.pump();
+        expect(find.byType(ListVideoPlayerMode), findsNothing);
+
+        await tester.pumpWidget(
+          buildSubject(
+            discoveredList: warmed,
+            initialListIndex: 0,
+            extraOverrides: overrides,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byType(ListVideoPlayerMode), findsOneWidget);
+      });
+
+      testWidgets('reaches the list read from relays', (tester) async {
+        when(
+          () => mockService.fetchPublicList(
+            authorPubkey: _authorPubkey,
+            listId: 'my-vines',
+          ),
+        ).thenAnswer((_) async => list);
+
+        await tester.pumpWidget(buildSubject(initialListIndex: 2));
+        await tester.pumpAndSettle();
+
+        expect(requestedPosition(tester), equals(2));
+      });
+    });
 
     testWidgets('renders $CuratedListFeedScreen when the list resolves', (
       tester,
