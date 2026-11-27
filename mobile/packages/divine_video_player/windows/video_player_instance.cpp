@@ -668,6 +668,7 @@ void VideoPlayerInstance::SetClips(const EncodableMap& args, Result result) {
   // first frame of this one; OnSourcesReady re-arms the check.
   frames_->first_frame = true;
   frames_->generation = generation_;
+  source_write_fence_ = ++*position_writes_;
   loading_ = true;
   opened_ = false;
   completed_ = false;
@@ -909,9 +910,13 @@ void VideoPlayerInstance::OnItemOpened(uint64_t generation, int64_t index,
 
 void VideoPlayerInstance::OnSeekCompleted(uint64_t write) {
   if (disposed_) return;
-  // Raised for an earlier position write, or before the latest seek has
-  // written its position because it still waits for its clip.
-  if (write != position_writes_->load() || pending_seek_) return;
+  // Raised for an earlier position write, for a source SetClips or Stop has
+  // replaced, or before the latest seek has written its position because it
+  // still waits for its clip.
+  if (write != position_writes_->load() || write == source_write_fence_ ||
+      pending_seek_) {
+    return;
+  }
   target_global_ms_.reset();
   ResolveSeek();
   SyncOverlays();
@@ -1003,6 +1008,7 @@ void VideoPlayerInstance::Stop() {
   want_play_ = false;
   ++generation_;
   frames_->generation = generation_;
+  source_write_fence_ = ++*position_writes_;
   ResolveSetClips();
   ResolveSeek();
   overlays_.RemoveAll();

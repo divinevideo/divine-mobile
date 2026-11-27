@@ -226,6 +226,10 @@ class VideoPlayerInstance
   // Media Foundation thread, so it is shared rather than a plain member.
   std::shared_ptr<std::atomic<uint64_t>> position_writes_ =
       std::make_shared<std::atomic<uint64_t>>(0);
+  // The count SetClips or Stop advanced it to. A completion read at this
+  // count was raised after the source changed and before any seek of the
+  // new one, so it belongs to the old source.
+  uint64_t source_write_fence_ = 0;
   uint32_t tick_timer_ = 0;
   uint32_t tick_count_ = 0;
   std::vector<uint32_t> one_shot_timers_;
