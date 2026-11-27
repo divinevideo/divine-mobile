@@ -379,6 +379,8 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
         limit: _pageSize,
         cursor: requestCursor,
         skipCache: true,
+        // The archive window keeps its source through eligibility changes.
+        archiveOnly: !currentState.containsRecommendations,
       );
       if (!ref.mounted || generation != _feedGeneration) {
         return;

@@ -8,8 +8,10 @@ import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/classic_vines_provider.dart';
@@ -22,6 +24,22 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
+
+class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
+
+class _MockNostrClient extends Mock implements NostrClient {}
+
+String _testId(int number) => number.toRadixString(16).padLeft(64, '0');
+
+VideoStats _archiveStats(int number) => VideoStats.fromJson({
+  'id': _testId(number),
+  'pubkey': _testId(number + 1000),
+  'created_at': 1400000000,
+  'video_url': 'https://example.com/$number.mp4',
+  'platform': 'vine',
+  'verified_archive': true,
+  'archive_provenance_available': true,
+});
 
 class _MockAnalyticsService extends Mock implements AnalyticsService {}
 
@@ -159,6 +177,7 @@ void main() {
             limit: any(named: 'limit'),
             cursor: any(named: 'cursor'),
             skipCache: any(named: 'skipCache'),
+            archiveOnly: any(named: 'archiveOnly'),
           ),
         ).thenAnswer((invocation) async {
           if (invocation.namedArguments[#cursor] != null) {
@@ -216,6 +235,7 @@ void main() {
             limit: any(named: 'limit'),
             cursor: any(named: 'cursor'),
             skipCache: any(named: 'skipCache'),
+            archiveOnly: any(named: 'archiveOnly'),
           ),
         ).thenAnswer((invocation) async {
           if (invocation.namedArguments[#cursor] != null) {
@@ -263,6 +283,7 @@ void main() {
             limit: any(named: 'limit'),
             cursor: any(named: 'cursor'),
             skipCache: any(named: 'skipCache'),
+            archiveOnly: any(named: 'archiveOnly'),
           ),
         ).thenAnswer((invocation) async {
           if (invocation.namedArguments[#cursor] != null) {
@@ -312,10 +333,140 @@ void main() {
               limit: any(named: 'limit'),
               cursor: 'classic-offset:50',
               skipCache: any(named: 'skipCache'),
+              archiveOnly: true,
             ),
           ).called(1);
         },
       );
+
+      test(
+        'archive pagination survives an eligibility and context rollover',
+        () async {
+          final api = _MockFunnelcakeApiClient();
+          final nostr = _MockNostrClient();
+          when(() => nostr.publicKey).thenReturn('');
+          when(() => api.isAvailable).thenReturn(true);
+          when(() => api.isDisposed).thenReturn(false);
+          when(
+            () => api.getBulkVideoStats(any()),
+          ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
+          registerFallbackValue(
+            const ClassicRecommendationsRequest(seed: 'test-session'),
+          );
+          var context = 0;
+          var recommendationRequests = 0;
+          when(
+            () => api.getClassicRecommendations(request: any(named: 'request')),
+          ).thenAnswer((_) async {
+            recommendationRequests++;
+            if (context == 0) {
+              throw const FunnelcakeException('Ranking unavailable');
+            }
+            return RecommendationsResponse(
+              videos: [_archiveStats(99)],
+              source: 'mixed',
+            );
+          });
+          final archiveOffsets = <int>[];
+          when(
+            () => api.getClassicVines(
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+            ),
+          ).thenAnswer((invocation) async {
+            archiveOffsets.add(invocation.namedArguments[#offset] as int);
+            final start = archiveOffsets.length == 1 ? 1 : 26;
+            return List.generate(25, (index) => _archiveStats(start + index));
+          });
+
+          late final ProviderContainer container;
+          final repository = VideosRepository(
+            nostrClient: nostr,
+            funnelcakeApiClient: api,
+            classicRecommendationsEnabled: true,
+            classicRecommendationsAllowed: () => container.read(
+              _eligibilityProvider,
+            ),
+            classicContextKey: () => context,
+          );
+          container = createContainer(
+            eligible: true,
+            repository: () => repository,
+          );
+          addTearDown(container.dispose);
+          await container.read(funnelcakeAvailableProvider.future);
+          final original = await gridIds(container);
+          expect(
+            original,
+            unorderedEquals(List.generate(25, (i) => _testId(i + 1))),
+          );
+
+          container.read(_eligibilityProvider.notifier).setEligible(false);
+          await container.pump();
+          context++;
+          container.read(_eligibilityProvider.notifier).setEligible(true);
+          await container.pump();
+          expect(await gridIds(container), original);
+
+          final feed = container.read(classicVinesFeedProvider.notifier);
+          await feed.loadMore();
+          expect(recommendationRequests, 1);
+          expect(
+            await gridIds(container),
+            unorderedEquals(List.generate(50, (i) => _testId(i + 1))),
+          );
+          expect(archiveOffsets, [
+            archiveOffsets.first,
+            archiveOffsets.first + 50,
+          ]);
+
+          await feed.refresh();
+          expect(await gridIds(container), [_testId(99)]);
+          expect(recommendationRequests, 2);
+        },
+      );
+
+      test('a deduped ranked page keeps its ranked continuation', () async {
+        final selected = _videoEvent('ranked');
+        when(
+          () => mockVideosRepository.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer(
+          (invocation) async => switch (invocation.namedArguments[#cursor]) {
+            null => HomeFeedResult(
+              videos: [selected],
+              recommendationPageCount: 1,
+              paginationCursor: 'ranked-page-2',
+              hasMore: true,
+            ),
+            'ranked-page-2' => HomeFeedResult(
+              videos: [selected],
+              recommendationPageCount: 1,
+              paginationCursor: 'ranked-page-3',
+              hasMore: true,
+            ),
+            'ranked-page-3' => HomeFeedResult(
+              videos: [_videoEvent('next-ranked')],
+              recommendationPageCount: 1,
+            ),
+            _ => throw StateError('Unexpected cursor'),
+          },
+        );
+        final container = createContainer(eligible: true);
+        addTearDown(container.dispose);
+        await container.read(funnelcakeAvailableProvider.future);
+        expect(await gridIds(container), ['ranked']);
+
+        final feed = container.read(classicVinesFeedProvider.notifier);
+        await feed.loadMore();
+        expect(await gridIds(container), ['ranked']);
+
+        await feed.loadMore();
+        expect(await gridIds(container), ['ranked', 'next-ranked']);
+      });
 
       test(
         'replaces a personalized grid with the archive when eligibility ends',
@@ -785,6 +936,7 @@ void main() {
           limit: any(named: 'limit'),
           cursor: any(named: 'cursor'),
           skipCache: any(named: 'skipCache'),
+          archiveOnly: any(named: 'archiveOnly'),
         ),
       ).thenAnswer((invocation) async {
         final cursor = invocation.namedArguments[#cursor] as String?;
@@ -824,6 +976,7 @@ void main() {
           limit: 50,
           cursor: 'classic-offset:50',
           skipCache: true,
+          archiveOnly: true,
         ),
       ).called(1);
     });
@@ -836,6 +989,7 @@ void main() {
             limit: any(named: 'limit'),
             cursor: any(named: 'cursor'),
             skipCache: any(named: 'skipCache'),
+            archiveOnly: any(named: 'archiveOnly'),
           ),
         ).thenAnswer((invocation) async {
           final cursor = invocation.namedArguments[#cursor] as String?;
@@ -874,6 +1028,7 @@ void main() {
             limit: any(named: 'limit'),
             cursor: any(named: 'cursor'),
             skipCache: any(named: 'skipCache'),
+            archiveOnly: any(named: 'archiveOnly'),
           ),
         ).thenAnswer((invocation) async {
           reads++;
