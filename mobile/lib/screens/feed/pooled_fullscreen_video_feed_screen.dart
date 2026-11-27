@@ -413,32 +413,11 @@ class _SelectedClassicRouteState extends ConsumerState<_SelectedClassicRoute> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final screen = widget.screen;
-    if (_adaptive) {
-      return ClassicsPlaybackPage(anchor: widget.anchor, screen: screen);
-    }
-    // Without an anchor the source reads the same shared archive feed, and
-    // this route does not come back through the mode choice.
-    return PooledFullscreenVideoFeedScreen(
-      source: const ClassicVinesViewSource(),
-      feedRepository: screen.feedRepository,
-      initialIndex: screen.initialIndex,
-      initialVideoId: screen.initialVideoId,
-      initialStableId: screen.initialStableId,
-      contextTitle: screen.contextTitle,
-      sponsorName: screen.sponsorName,
-      trafficSource: screen.trafficSource,
-      sourceDetail: screen.sourceDetail,
-      autoOpenComments: screen.autoOpenComments,
-      focusCommentId: screen.focusCommentId,
-      onPageChanged: screen.onPageChanged,
-      onActiveVideoChanged: screen.onActiveVideoChanged,
-      dmReplyContext: screen.dmReplyContext,
-      onBack: screen.onBack,
-      isAddYoursSeries: screen.isAddYoursSeries,
-    );
-  }
+  Widget build(BuildContext context) => ClassicsPlaybackPage(
+    anchor: widget.anchor,
+    screen: widget.screen,
+    adaptive: _adaptive,
+  );
 }
 
 /// Content widget for the fullscreen video feed.

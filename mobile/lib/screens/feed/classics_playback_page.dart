@@ -1,4 +1,4 @@
-// ABOUTME: Wires a selected classic to its own adaptive fullscreen session.
+// ABOUTME: Wires a selected classic to its own fullscreen queue.
 // ABOUTME: Leaves the launching grid and Home Classics session independent.
 
 import 'package:feed_repository/feed_repository.dart';
@@ -18,11 +18,15 @@ class ClassicsPlaybackPage extends ConsumerWidget {
   const ClassicsPlaybackPage({
     required this.anchor,
     required this.screen,
+    required this.adaptive,
     super.key,
   });
 
   final VideoEvent anchor;
   final PooledFullscreenVideoFeedScreen screen;
+
+  /// Whether the route was eligible for adaptation when the clip opened.
+  final bool adaptive;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,7 +34,9 @@ class ClassicsPlaybackPage extends ConsumerWidget {
     final analytics = ref.watch(analyticsServiceProvider);
     final viewer = ref.watch(nostrSessionProvider.select((s) => s.pubkey));
     bool isAdaptiveAllowed() =>
-        ref.context.mounted && ref.read(adaptiveClassicsEnabledProvider);
+        adaptive &&
+        ref.context.mounted &&
+        ref.read(adaptiveClassicsEnabledProvider);
     return BlocProvider(
       key: ValueKey((viewer, repository, analytics, anchor.id)),
       create: (_) {
@@ -69,25 +75,36 @@ class ClassicsPlaybackPage extends ConsumerWidget {
         if (!isAdaptiveAllowed()) session.revokePersonalization();
         return ClassicsFeedCubit(session: session);
       },
-      child: _ClassicsPlaybackView(anchor: anchor, screen: screen),
+      child: _ClassicsPlaybackView(
+        anchor: anchor,
+        screen: screen,
+        adaptive: adaptive,
+      ),
     );
   }
 }
 
 class _ClassicsPlaybackView extends ConsumerWidget {
-  const _ClassicsPlaybackView({required this.anchor, required this.screen});
+  const _ClassicsPlaybackView({
+    required this.anchor,
+    required this.screen,
+    required this.adaptive,
+  });
 
   final VideoEvent anchor;
   final PooledFullscreenVideoFeedScreen screen;
+  final bool adaptive;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cubit = context.read<ClassicsFeedCubit>();
     // The route keeps playing through a change of eligibility; only the
     // queue's remaining pages change source.
-    ref.listen<bool>(adaptiveClassicsEnabledProvider, (_, allowed) {
-      if (!allowed) cubit.revokePersonalization();
-    });
+    if (adaptive) {
+      ref.listen<bool>(adaptiveClassicsEnabledProvider, (_, allowed) {
+        if (!allowed) cubit.revokePersonalization();
+      });
+    }
     return PooledFullscreenVideoFeedScreen(
       source: const ClassicVinesViewSource(),
       feedRepository: StreamFeedRepository(
@@ -106,8 +123,12 @@ class _ClassicsPlaybackView extends ConsumerWidget {
       focusCommentId: screen.focusCommentId,
       dmReplyContext: screen.dmReplyContext,
       onBack: screen.onBack,
-      onActiveVideoChanged: cubit.activateVideo,
+      onActiveVideoChanged: (video) {
+        cubit.activateVideo(video);
+        screen.onActiveVideoChanged?.call(video);
+      },
       onPageChanged: screen.onPageChanged,
+      isAddYoursSeries: screen.isAddYoursSeries,
     );
   }
 }

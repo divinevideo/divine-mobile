@@ -962,6 +962,23 @@ void main() {
         addTearDown(nativePlayer.dispose);
         final videos = createTestVideos(count: 2);
         final repository = classicsRepository();
+        final archive = videos[1];
+        final ranked = createTestVideoEvent(
+          id: 'a' * 64,
+          pubkey: testPubkey,
+          videoUrl: 'https://example.com/ranked.mp4',
+        );
+        final gridWindow = StreamController<List<VideoEvent>>.broadcast();
+        addTearDown(gridWindow.close);
+        when(
+          () => repository.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            archiveOnly: true,
+          ),
+        ).thenAnswer(
+          (_) async => HomeFeedResult(videos: [archive], hasMore: false),
+        );
         await tester.pumpWidget(
           BlocProvider<VideoVolumeCubit>.value(
             value: videoVolumeCubit,
@@ -975,7 +992,7 @@ void main() {
               home: PooledFullscreenVideoFeedScreen(
                 source: ClassicVinesViewSource(anchor: videos.first),
                 feedRepository: StreamFeedRepository(
-                  videos: Stream.value(videos),
+                  videos: gridWindow.stream,
                   hasMore: Stream.value(false),
                   onLoadMore: () async {},
                 ),
@@ -985,7 +1002,11 @@ void main() {
             ),
           ),
         );
+        gridWindow.add(videos);
         await tester.pump();
+        await tester.pump();
+        expect(nativeFeed(tester).videos, videos);
+        nativeFeed(tester).onActiveVideoChanged?.call(archive, 1);
         await tester.pump();
         final bloc = tester
             .element(find.byType(FullscreenFeedContent))
@@ -994,6 +1015,7 @@ void main() {
         ProviderScope.containerOf(
           tester.element(find.byType(FullscreenFeedContent)),
         ).read(_eligibilityProvider.notifier).eligible = true;
+        gridWindow.add([ranked]);
         await tester.pump();
         await tester.pump();
 
@@ -1003,6 +1025,15 @@ void main() {
               .read<FullscreenFeedBloc>(),
           same(bloc),
         );
+        expect(nativeFeed(tester).videos, [videos.first, archive]);
+        expect(bloc.state.currentVideo, archive);
+        verify(
+          () => repository.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            archiveOnly: true,
+          ),
+        ).called(1);
         verifyNever(
           () => repository.getClassicRecommendations(
             request: any(named: 'request'),
