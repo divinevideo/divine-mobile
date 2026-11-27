@@ -236,7 +236,7 @@ std::optional<TrackEnds> ReadRemote(
   const winrt::Windows::Foundation::Uri target(winrt::to_hstring(uri));
   // The first request takes enough to hold ftyp and a faststart moov.
   constexpr uint32_t kFirstRead = 256 * 1024;
-  std::vector<uint8_t> head;
+  std::optional<std::vector<uint8_t>> head;
   const auto fetch = [&](uint64_t offset, uint32_t size) {
     HttpRequestMessage request(HttpMethod::Get(), target);
     request.Headers().TryAppendWithoutValidation(
@@ -287,11 +287,14 @@ std::optional<TrackEnds> ReadRemote(
     return bytes;
   };
   return FindMoov([&](uint64_t offset, uint32_t size) {
-    if (head.empty()) head = fetch(0, kFirstRead);
+    if (!head) head = fetch(0, kFirstRead);
+    // An empty head answered for the whole file, and so would every later
+    // request.
+    if (head->empty()) return std::vector<uint8_t>();
     // Compared without adding, so a huge offset cannot wrap past the check.
-    if (offset <= head.size() && size <= head.size() - offset) {
-      return std::vector<uint8_t>(head.begin() + offset,
-                                  head.begin() + offset + size);
+    if (offset <= head->size() && size <= head->size() - offset) {
+      return std::vector<uint8_t>(head->begin() + offset,
+                                  head->begin() + offset + size);
     }
     return fetch(offset, size);
   });
