@@ -83,6 +83,10 @@ uniform float uPunch;
 uniform float uFringe;
 
 void main() {
+  if (uIntensity <= 0.0) {
+    gl_FragColor = vec4(texture2D(uFrame, vTexCoord).rgb, 1.0);
+    return;
+  }
   vec2 p = vTexCoord * uSize;
   vec2 c = vec2(uCenter.x, 1.0 - uCenter.y) * uSize;
   vec2 m = uSize * 0.5;

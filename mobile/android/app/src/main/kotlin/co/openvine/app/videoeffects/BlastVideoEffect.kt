@@ -120,6 +120,10 @@ float liquid(vec2 a, float lobe, float ring, float wide, vec2 warp, float age, f
 }
 
 void main() {
+  if (uIntensity <= 0.0) {
+    gl_FragColor = vec4(texture2D(uFrame, vTexCoord).rgb, 1.0);
+    return;
+  }
   vec2 p = vTexCoord * uSize;
   vec2 c = vec2(uCenter.x, 1.0 - uCenter.y) * uSize;
   vec2 m = uSize * 0.5;
