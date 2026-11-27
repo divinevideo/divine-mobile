@@ -2248,8 +2248,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// Hands the effects Divine renders itself to the native player, which
   /// draws them on the preview (#9708), with their windows, and the beats of
   /// an effect on the beat, moved onto the player's timeline. Lightning
-  /// strikes clear of the flashes of the built-in effects the preview shows,
-  /// as in the export (see `lightningStrikesOnOutput`).
+  /// and the blasts strike clear of the flashes of the built-in effects the
+  /// preview shows, as in the export (see `flashStrikesOnOutput`).
   ///
   /// The effects that read earlier frames come first, the looks after the
   /// other effects, and the Adjust sets' highlights, shadows, vibrance and
@@ -2279,7 +2279,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             : null,
       ),
     ];
-    final strikes = lightningStrikesOnOutput(
+    final strikes = flashStrikesOnOutput(
       effects,
       timelineMap,
       beats: state.beats,
@@ -3274,7 +3274,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                 current.previewCustomEffects,
               ) ||
               !listEquals(previous.beats, current.beats) ||
-              // Lightning strikes clear of the built-in effects' flashes.
+              // Lightning and the blasts strike clear of the built-in
+              // effects' flashes.
               (current.previewCustomEffects.any(
                     (effect) => isFlashingCustomVideoEffect(effect.id),
                   ) &&

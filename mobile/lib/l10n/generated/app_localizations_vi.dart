@@ -9530,6 +9530,21 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Mờ xoay';
 
   @override
+  String get videoEditorEffectShockwave => 'Sóng xung kích';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Loa siêu trầm';
+
+  @override
+  String get videoEditorEffectPlasma => 'Plasma';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Sóng năng lượng';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Vụ nổ khói';
+
+  @override
   String get videoEditorEffectComic => 'Truyện tranh';
 
   @override
@@ -9773,6 +9788,57 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Thêm nhạc hoặc bật âm thanh của một clip';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Cài đặt hiệu ứng';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Cài đặt: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(double seconds) {
+    final intl.NumberFormat secondsNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String secondsString = secondsNumberFormat.format(seconds);
+
+    return '$secondsString giây';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Thời lượng';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Lặp lại';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'Một lần, tại điểm hiệu ứng bắt đầu trên dòng thời gian';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Khoảng cách';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Giao diện';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Vị trí ngang';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Vị trí dọc';
+
+  @override
+  String get videoEditorEffectHitReach => 'Phạm vi';
+
+  @override
+  String get videoEditorEffectHitShake => 'Rung';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Cú thu phóng';
+
+  @override
+  String get videoEditorEffectLookReset => 'Đặt lại giao diện';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

@@ -9358,6 +9358,21 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'የማሽከርከር ብዥታ';
 
   @override
+  String get videoEditorEffectShockwave => 'የግፊት ሞገድ';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'ሰብዉፈር';
+
+  @override
+  String get videoEditorEffectPlasma => 'ፕላዝማ';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'የኃይል ሞገድ';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'የጭስ ፍንዳታ';
+
+  @override
   String get videoEditorEffectComic => 'ኮሚክ';
 
   @override
@@ -9600,6 +9615,56 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorEffectsOnBeatNoSound => 'ሙዚቃ ያክሉ ወይም የአንድ ክሊፕ ድምፅ ያብሩ';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'የኢፌክት ቅንብሮች';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'ቅንብሮች፦ $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(double seconds) {
+    final intl.NumberFormat secondsNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String secondsString = secondsNumberFormat.format(seconds);
+
+    return '$secondsString ሰ';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'ቆይታ';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'ድገም';
+
+  @override
+  String get videoEditorEffectHitOnce => 'አንድ ጊዜ፣ ኢፌክቱ በጊዜ መስመሩ ላይ በሚጀምርበት';
+
+  @override
+  String get videoEditorEffectHitInterval => 'ክፍተት';
+
+  @override
+  String get videoEditorEffectLookTitle => 'መልክ';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'አግድም ቦታ';
+
+  @override
+  String get videoEditorEffectHitVertical => 'ቁም ቦታ';
+
+  @override
+  String get videoEditorEffectHitReach => 'ስፋት';
+
+  @override
+  String get videoEditorEffectHitShake => 'መንቀጥቀጥ';
+
+  @override
+  String get videoEditorEffectHitPunch => 'የማጉላት ምት';
+
+  @override
+  String get videoEditorEffectLookReset => 'መልክን ዳግም አስጀምር';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

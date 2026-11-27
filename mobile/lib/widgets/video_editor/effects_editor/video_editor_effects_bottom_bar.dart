@@ -11,11 +11,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
+import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/drops_effect_settings.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/hit_look_settings.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effect_settings_panel.dart';
 import 'package:openvine/widgets/video_editor/video_editor_category_picker.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show VideoEffect, VideoEffectPreview, VideoEffectType;
@@ -23,7 +26,9 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// Bottom bar of the effects editor: a [VideoEditorCategoryPicker] of the
 /// effects, one section per [EditorEffectCategory]. Opened on an effect of
-/// the timeline, the grid starts at that effect's section.
+/// the timeline, the grid starts at that effect's section. While the picked
+/// effect's settings are open (see [VideoEditorEffectsState.showsSettings]),
+/// the [VideoEditorEffectSettingsPanel] takes the picker's place.
 ///
 /// Each tile shows its effect on the first clip's thumbnail, at full strength
 /// and at the start of the effect, where the glitch always bursts. An intro or
@@ -46,16 +51,24 @@ class VideoEditorEffectsBottomBar extends ConsumerWidget {
     final selectedType = context.select(
       (VideoEditorEffectsCubit c) => c.state.selectedType,
     );
-    return VideoEditorCategoryPicker<EditorEffectCategory, EditorEffectType>(
-      sections: _sections,
-      categoryLabel: _categoryLabel,
-      initialCategory: selectedType?.category,
-      isSelected: (type) => type == selectedType,
-      tileBuilder: (context, type, isSelected) => _EffectItem(
-        type: type,
-        isSelected: isSelected,
-        thumbnailPath: thumbnailPath,
-      ),
+    final showsSettings = context.select(
+      (VideoEditorEffectsCubit c) => c.state.showsSettings,
+    );
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200).autoReduceMotion(context),
+      child: showsSettings
+          ? const VideoEditorEffectSettingsPanel()
+          : VideoEditorCategoryPicker<EditorEffectCategory, EditorEffectType>(
+              sections: _sections,
+              categoryLabel: _categoryLabel,
+              initialCategory: selectedType?.category,
+              isSelected: (type) => type == selectedType,
+              tileBuilder: (context, type, isSelected) => _EffectItem(
+                type: type,
+                isSelected: isSelected,
+                thumbnailPath: thumbnailPath,
+              ),
+            ),
     );
   }
 }
@@ -252,6 +265,54 @@ const _particlesTileSeconds = 3.0;
 /// well inside the corner.
 const _prismTileSeconds = 6.0;
 
+/// The shader the shockwave and subwoofer tiles draw with, the one the native
+/// `BassHitVideoEffect` runs; its last value is the style.
+const _bassHitShader = 'shaders/bass_hit.frag';
+
+/// The uniforms of the tile of the effect that hits, [type], [seconds] into
+/// its animation: full strength, the [style] its shader branches on, its
+/// default look (see `HitLookSettings`), and for a blast its own colour, red,
+/// green and blue from 0 to 1, last (see [EditorEffectType.hitColor]).
+@visibleForTesting
+List<double> hitTileValues(
+  EditorEffectType type, {
+  required double seconds,
+  required double style,
+}) {
+  const look = HitLookSettings();
+  final color = type.hitColor;
+  return [
+    1,
+    seconds,
+    style,
+    look.reach,
+    look.centerX,
+    look.centerY,
+    look.shake,
+    look.punch,
+    if (color == null)
+      look.fringe
+    else
+      for (final shift in const [16, 8, 0]) ((color >> shift) & 0xFF) / 255,
+  ];
+}
+
+/// Seconds after the hit at which the shockwave tile shows it, when the ring
+/// is halfway out.
+const _shockwaveTileSeconds = 0.12;
+
+/// The shader the plasma, energy wave and smoke burst tiles draw with, the
+/// one the native `BlastVideoEffect` runs; its last value is the style.
+const _blastShader = 'shaders/blast.frag';
+
+/// Seconds after the blast at which the plasma and energy wave tiles show it,
+/// when the hot core has opened into a ring.
+const _blastTileSeconds = 0.17;
+
+/// Seconds after the blast at which the smoke burst tile shows it, when the
+/// smoke has spread about halfway out.
+const _smokeBurstTileSeconds = 0.3;
+
 /// The lightning tile: its first bolt at full brightness, with the picture
 /// half lit by the flash, as just after a strike.
 final List<double> _lightningTileValues = [0.45, 1.0, ...lightningBolt(0)];
@@ -267,12 +328,17 @@ final List<double> _lightningTileValues = [0.45, 1.0, ...lightningBolt(0)];
 /// first colours with the ball or the fan where it starts; the Time effects
 /// stand the thumbnail in for their earlier frames, shifted as if the picture
 /// moved to the right by their last value, a share of its width each frame;
-/// lightning shows its
-/// first bolt (see [lightningBolt]) just after it strikes; the particles' last
-/// value is the style the native `ParticlesVideoEffect` draws; watercolour and oil
-/// paint share one shader, told apart by their last value. The looks share one
-/// shader, which reads the look's table from [lookTableAssets]; the ASCII
-/// shader reads its glyphs from [asciiGlyphsAsset] (see [shaderTileTextureOf]).
+/// lightning shows its first bolt (see [lightningBolt]) just after it strikes;
+/// the shockwave shows its ring halfway out and the subwoofer its cone bulged
+/// out, right as they hit, the plasma and energy wave their core opened into
+/// a ring and the smoke burst its smoke halfway out; the particles' last value
+/// is the style the native
+/// `ParticlesVideoEffect` draws; watercolour and oil paint share one shader,
+/// told apart by their last value; the bass hits share one and the blasts
+/// another, told apart by their third (see [hitTileValues]). The looks share
+/// one shader, which reads the look's table from
+/// [lookTableAssets]; the ASCII shader reads its glyphs from [asciiGlyphsAsset]
+/// (see [shaderTileTextureOf]).
 @visibleForTesting
 ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
   timeSplitVideoEffectId => (
@@ -417,6 +483,26 @@ ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
   spinBlurVideoEffectId => (
     asset: 'shaders/spin_blur.frag',
     values: const [1.0],
+  ),
+  shockwaveVideoEffectId => (
+    asset: _bassHitShader,
+    values: hitTileValues(type, seconds: _shockwaveTileSeconds, style: 0),
+  ),
+  subwooferVideoEffectId => (
+    asset: _bassHitShader,
+    values: hitTileValues(type, seconds: 0, style: 1),
+  ),
+  plasmaVideoEffectId => (
+    asset: _blastShader,
+    values: hitTileValues(type, seconds: _blastTileSeconds, style: 0),
+  ),
+  energyWaveVideoEffectId => (
+    asset: _blastShader,
+    values: hitTileValues(type, seconds: _blastTileSeconds, style: 1),
+  ),
+  smokeBurstVideoEffectId => (
+    asset: _blastShader,
+    values: hitTileValues(type, seconds: _smokeBurstTileSeconds, style: 2),
   ),
   comicVideoEffectId => (asset: 'shaders/comic.frag', values: const [1.0]),
   eightBitVideoEffectId => (
@@ -782,6 +868,11 @@ String videoEffectLabel(BuildContext context, EditorEffectType? type) {
     spiralTunnelVideoEffectId => context.l10n.videoEditorEffectSpiralTunnel,
     zoomBlurVideoEffectId => context.l10n.videoEditorEffectZoomBlur,
     spinBlurVideoEffectId => context.l10n.videoEditorEffectSpinBlur,
+    shockwaveVideoEffectId => context.l10n.videoEditorEffectShockwave,
+    subwooferVideoEffectId => context.l10n.videoEditorEffectSubwoofer,
+    plasmaVideoEffectId => context.l10n.videoEditorEffectPlasma,
+    energyWaveVideoEffectId => context.l10n.videoEditorEffectEnergyWave,
+    smokeBurstVideoEffectId => context.l10n.videoEditorEffectSmokeBurst,
     comicVideoEffectId => context.l10n.videoEditorEffectComic,
     eightBitVideoEffectId => context.l10n.videoEditorEffectEightBit,
     anaglyphVideoEffectId => context.l10n.videoEditorEffectAnaglyph,

@@ -9482,6 +9482,21 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Blur Putar';
 
   @override
+  String get videoEditorEffectShockwave => 'Gelombang Kejut';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Subwoofer';
+
+  @override
+  String get videoEditorEffectPlasma => 'Plasma';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Gelombang Energi';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Ledakan Asap';
+
+  @override
   String get videoEditorEffectComic => 'Komik';
 
   @override
@@ -9726,6 +9741,56 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Tambahkan musik atau nyalakan suara klip';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Pengaturan efek';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Pengaturan: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(double seconds) {
+    final intl.NumberFormat secondsNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String secondsString = secondsNumberFormat.format(seconds);
+
+    return '$secondsString dtk';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Durasi';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Ulangi';
+
+  @override
+  String get videoEditorEffectHitOnce => 'Sekali, di awal efek pada linimasa';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Jeda';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Tampilan';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Posisi horizontal';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Posisi vertikal';
+
+  @override
+  String get videoEditorEffectHitReach => 'Jangkauan';
+
+  @override
+  String get videoEditorEffectHitShake => 'Guncangan';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Hentakan zoom';
+
+  @override
+  String get videoEditorEffectLookReset => 'Atur ulang tampilan';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

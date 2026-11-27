@@ -9,6 +9,8 @@ import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/drops_effect_settings.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/hit_look_settings.dart';
+import 'package:openvine/models/video_editor/hit_timing_settings.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show CustomVideoEffect;
@@ -112,7 +114,20 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
         dropsSettings: current?.type == EditorEffectType.drops
             ? DropsEffectSettings.fromParams(current!.custom!.params)
             : const DropsEffectSettings(),
+        hitTiming: switch (current?.type.hitTiming) {
+          final defaults? => HitTimingSettings.fromParams(
+            current!.custom!.params,
+            defaults: defaults,
+          ),
+          null => null,
+        },
+        clearHitTiming: current?.type.hitTiming == null,
+        hitLook: current?.type.hitTiming == null
+            ? null
+            : HitLookSettings.fromParams(current!.custom!.params),
+        clearHitLook: current?.type.hitTiming == null,
         onBeat: current?.onBeat ?? false,
+        isSettingsOpen: false,
         startedPlayback: startedPlayback,
       ),
     );
@@ -128,11 +143,15 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
   /// kind was left at earlier in this editor (see
   /// [VideoEditorEffectsState.leftIntensities]), or, as for the first pick,
   /// starts at [startingIntensityOf] it.
+  ///
+  /// The hit timing the user set is kept for a type that starts from the same
+  /// timing, and dropped for one that starts from another.
   void selectType(EditorEffectType type) {
     final previous = state.selectedType;
     final look = type.introOutroLook;
+    final dropsTiming = previous?.hitTiming != type.hitTiming;
     if (previous != null && previous.introOutroLook == look) {
-      emit(state.copyWith(selectedType: type));
+      emit(state.copyWith(selectedType: type, clearHitTiming: dropsTiming));
     } else {
       final left = {
         ...state.leftIntensities,
@@ -143,6 +162,7 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
           selectedType: type,
           intensity: left[look] ?? startingIntensityOf(type),
           leftIntensities: Map.unmodifiable(left),
+          clearHitTiming: dropsTiming,
         ),
       );
     }
@@ -168,6 +188,28 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
     emit(state.copyWith(dropsSettings: settings));
   }
 
+  /// Sets how the picked effect hits; see [EditorEffectType.hitTiming].
+  void setHitTiming(HitTimingSettings timing) {
+    emit(state.copyWith(hitTiming: timing));
+  }
+
+  /// Sets how the picked effect looks; kept for the next effect that hits,
+  /// whose colour is its own until the user picks one.
+  void setHitLook(HitLookSettings look) {
+    emit(state.copyWith(hitLook: look));
+  }
+
+  /// Puts the look of the picked effect back to its defaults.
+  void resetHitLook() {
+    emit(state.copyWith(clearHitLook: true));
+  }
+
+  /// Shows the settings of the picked effect in place of the effects picker,
+  /// or the picker again.
+  void setSettingsOpen({required bool open}) {
+    emit(state.copyWith(isSettingsOpen: open));
+  }
+
   /// Gives the drops another arrangement and other paths.
   void shuffleDrops() {
     final current = state.dropsSettings.seed;
@@ -181,7 +223,13 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
   }
 
   /// Closes the editor without changing the committed effects.
-  void cancel() => emit(state.copyWith(isEditing: false, clearEditingId: true));
+  void cancel() => emit(
+    state.copyWith(
+      isEditing: false,
+      clearEditingId: true,
+      isSettingsOpen: false,
+    ),
+  );
 
   /// Closes the editor and returns the effects to commit to the history.
   ///
@@ -244,6 +292,7 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
       state.copyWith(
         isEditing: false,
         clearEditingId: true,
+        isSettingsOpen: false,
         applied: List.unmodifiable(effects),
       ),
     );

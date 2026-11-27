@@ -9,6 +9,8 @@ import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/drops_effect_settings.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/hit_look_settings.dart';
+import 'package:openvine/models/video_editor/hit_timing_settings.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -613,6 +615,134 @@ void main() {
         );
         await silent.close();
         await unreadable.close();
+      });
+    });
+
+    group('hit timing', () {
+      const slow = HitTimingSettings(
+        duration: Duration(seconds: 2),
+        interval: Duration(seconds: 3),
+        repeats: false,
+      );
+
+      test('a new shockwave stores its timing next to its intensity', () async {
+        final cubit = buildCubit()
+          ..startEditing()
+          ..selectType(EditorEffectType.shockwave)
+          ..setHitTiming(slow);
+
+        final result = cubit.confirm();
+
+        expect(result.effects.single.custom!.params, {
+          ...slow.toParams(),
+          ...const HitLookSettings().toParams(),
+          EditorVideoEffect.intensityParam:
+              VideoEditorEffectsCubit.defaultIntensity,
+        });
+        await cubit.close();
+      });
+
+      test('editing a committed effect starts from its timing', () async {
+        final committed = EditorVideoEffect.of(
+          id: 'plasma',
+          type: EditorEffectType.plasma,
+          intensity: 0.5,
+          settings: slow.toParams(),
+        );
+        final cubit = buildCubit()
+          ..syncApplied([committed])
+          ..startEditing(effectId: 'plasma');
+
+        expect(cubit.state.selectedHitTiming, slow);
+        await cubit.close();
+      });
+
+      test('keeps the timing for an effect that starts from the same one, '
+          'and drops it for one that starts from another', () async {
+        final cubit = buildCubit()
+          ..startEditing()
+          ..selectType(EditorEffectType.shockwave)
+          ..setHitTiming(slow)
+          ..selectType(EditorEffectType.subwoofer);
+        expect(cubit.state.selectedHitTiming, slow);
+
+        cubit.selectType(EditorEffectType.plasma);
+
+        expect(
+          cubit.state.selectedHitTiming,
+          EditorEffectType.plasma.hitTiming,
+        );
+        await cubit.close();
+      });
+    });
+
+    group('hit look', () {
+      const moved = HitLookSettings(
+        centerX: 0.2,
+        centerY: 0.8,
+        reach: 0.5,
+        color: 0xFF00FF00,
+      );
+
+      test('a new blast stores its look next to its timing', () async {
+        final cubit = buildCubit()
+          ..startEditing()
+          ..selectType(EditorEffectType.plasma)
+          ..setHitLook(moved);
+
+        final params = cubit.confirm().effects.single.custom!.params;
+
+        expect(params, containsPair(HitLookSettings.colorParam, 0xFF00FF00));
+        expect(params, containsPair(HitLookSettings.centerXParam, 0.2));
+        expect(
+          params,
+          containsPair(HitTimingSettings.hitParam, 800000),
+        );
+        await cubit.close();
+      });
+
+      test('editing a committed effect starts from its look, and resetting '
+          'puts the defaults back', () async {
+        final committed = EditorVideoEffect.of(
+          id: 'smoke',
+          type: EditorEffectType.smokeBurst,
+          intensity: 0.5,
+          settings: moved.toParams(),
+        );
+        final cubit = buildCubit()
+          ..syncApplied([committed])
+          ..startEditing(effectId: 'smoke');
+        expect(cubit.state.selectedHitLook, moved);
+
+        cubit.resetHitLook();
+
+        expect(cubit.state.selectedHitLook, const HitLookSettings());
+        await cubit.close();
+      });
+    });
+
+    group('settings', () {
+      test('open only for an effect that has any, and close when the editor '
+          'opens or closes', () async {
+        final cubit = buildCubit()
+          ..startEditing()
+          ..selectType(EditorEffectType.tiltShift)
+          ..setSettingsOpen(open: true);
+        expect(cubit.state.showsSettings, isFalse);
+
+        cubit.selectType(EditorEffectType.shockwave);
+        expect(cubit.state.showsSettings, isTrue);
+
+        cubit.cancel();
+        expect(cubit.state.isSettingsOpen, isFalse);
+
+        cubit
+          ..startEditing()
+          ..selectType(EditorEffectType.drops)
+          ..setSettingsOpen(open: true)
+          ..confirm();
+        expect(cubit.state.isSettingsOpen, isFalse);
+        await cubit.close();
       });
     });
 

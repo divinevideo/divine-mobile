@@ -579,6 +579,8 @@ flutter:
     - shaders/anaglyph.frag
     - shaders/anamorphic.frag
     - shaders/ascii.frag
+    - shaders/bass_hit.frag
+    - shaders/blast.frag
     - shaders/bricks.frag
     - shaders/chroma_key.frag
     - shaders/comic.frag

@@ -9576,6 +9576,21 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Rotationsoskärpa';
 
   @override
+  String get videoEditorEffectShockwave => 'Tryckvåg';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Subwoofer';
+
+  @override
+  String get videoEditorEffectPlasma => 'Plasma';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Energivåg';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Rökexplosion';
+
+  @override
   String get videoEditorEffectComic => 'Serie';
 
   @override
@@ -9820,6 +9835,57 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Lägg till musik eller slå på ljudet i ett klipp';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Effektinställningar';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Inställningar: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(double seconds) {
+    final intl.NumberFormat secondsNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String secondsString = secondsNumberFormat.format(seconds);
+
+    return '$secondsString s';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Längd';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Upprepa';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'En gång, där effekten börjar på tidslinjen';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Intervall';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Utseende';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Horisontell position';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Vertikal position';
+
+  @override
+  String get videoEditorEffectHitReach => 'Räckvidd';
+
+  @override
+  String get videoEditorEffectHitShake => 'Skakning';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Zoomstöt';
+
+  @override
+  String get videoEditorEffectLookReset => 'Återställ utseende';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

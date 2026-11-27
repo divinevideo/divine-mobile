@@ -9576,6 +9576,21 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'اسپن بلر';
 
   @override
+  String get videoEditorEffectShockwave => 'جھٹکے کی لہر';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'سب ووفر';
+
+  @override
+  String get videoEditorEffectPlasma => 'پلازما';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'توانائی کی لہر';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'دھوئیں کا دھماکا';
+
+  @override
   String get videoEditorEffectComic => 'کامک';
 
   @override
@@ -9821,6 +9836,57 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'موسیقی شامل کریں یا کسی کلپ کی آواز آن کریں';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'ایفیکٹ کی ترتیبات';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'ترتیبات: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(double seconds) {
+    final intl.NumberFormat secondsNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String secondsString = secondsNumberFormat.format(seconds);
+
+    return '$secondsString سیکنڈ';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'دورانیہ';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'دہرائیں';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'ایک بار، جہاں ٹائم لائن پر ایفیکٹ شروع ہوتا ہے';
+
+  @override
+  String get videoEditorEffectHitInterval => 'وقفہ';
+
+  @override
+  String get videoEditorEffectLookTitle => 'ظاہری شکل';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'افقی جگہ';
+
+  @override
+  String get videoEditorEffectHitVertical => 'عمودی جگہ';
+
+  @override
+  String get videoEditorEffectHitReach => 'پہنچ';
+
+  @override
+  String get videoEditorEffectHitShake => 'جھٹکا';
+
+  @override
+  String get videoEditorEffectHitPunch => 'زوم کا دھکا';
+
+  @override
+  String get videoEditorEffectLookReset => 'ظاہری شکل ری سیٹ کریں';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

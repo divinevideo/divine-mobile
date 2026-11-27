@@ -9587,6 +9587,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'تمويه الدوران';
 
   @override
+  String get videoEditorEffectShockwave => 'موجة صدمية';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'مضخم الجهير';
+
+  @override
+  String get videoEditorEffectPlasma => 'بلازما';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'موجة طاقة';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'انفجار دخان';
+
+  @override
   String get videoEditorEffectComic => 'رسوم مصوّرة';
 
   @override
@@ -9832,6 +9847,57 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'إضافة موسيقى أو تشغيل صوت أحد المقاطع';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'إعدادات التأثير';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'الإعدادات: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(double seconds) {
+    final intl.NumberFormat secondsNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String secondsString = secondsNumberFormat.format(seconds);
+
+    return '$secondsString ث';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'المدة';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'تكرار';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'مرة واحدة، حيث يبدأ التأثير على الخط الزمني';
+
+  @override
+  String get videoEditorEffectHitInterval => 'الفاصل';
+
+  @override
+  String get videoEditorEffectLookTitle => 'المظهر';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'الموضع الأفقي';
+
+  @override
+  String get videoEditorEffectHitVertical => 'الموضع العمودي';
+
+  @override
+  String get videoEditorEffectHitReach => 'المدى';
+
+  @override
+  String get videoEditorEffectHitShake => 'الاهتزاز';
+
+  @override
+  String get videoEditorEffectHitPunch => 'دفعة التكبير';
+
+  @override
+  String get videoEditorEffectLookReset => 'إعادة ضبط المظهر';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

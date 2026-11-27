@@ -16091,6 +16091,36 @@ abstract class AppLocalizations {
   /// **'Spin Blur'**
   String get videoEditorEffectSpinBlur;
 
+  /// Name of a video effect for heavy music: on each hit a ring of pressure races from the centre to the edges, bending the picture like a lens, while the picture punches in and rattles.
+  ///
+  /// In en, this message translates to:
+  /// **'Shockwave'**
+  String get videoEditorEffectShockwave;
+
+  /// Name of a video effect for heavy music, named after a bass loudspeaker: on each hit the middle of the picture bulges out like a speaker cone and springs back.
+  ///
+  /// In en, this message translates to:
+  /// **'Subwoofer'**
+  String get videoEditorEffectSubwoofer;
+
+  /// Name of a video effect for heavy music: on each hit a white-hot blast bursts in the middle and spreads as a glowing ring of liquid that bends the picture like water. It flashes.
+  ///
+  /// In en, this message translates to:
+  /// **'Plasma'**
+  String get videoEditorEffectPlasma;
+
+  /// Name of a video effect for heavy music: on each hit a red-hot blast bursts in the middle and spreads as a red ring crackling with arcs of energy. It flashes.
+  ///
+  /// In en, this message translates to:
+  /// **'Energy Wave'**
+  String get videoEditorEffectEnergyWave;
+
+  /// Name of a video effect for heavy music: on each hit a billow of grey smoke bursts from the middle and is pushed out past the edges of the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Smoke Burst'**
+  String get videoEditorEffectSmokeBurst;
+
   /// Name of a video effect: the picture looks like a printed comic book, with flat colours, halftone dots and ink outlines.
   ///
   /// In en, this message translates to:
@@ -16570,6 +16600,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add music or turn a clip\'s sound on'**
   String get videoEditorEffectsOnBeatNoSound;
+
+  /// Label and tooltip of the button under the intensity slider of the video effects editor that shows the picked effect's settings in place of the effects picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Effect settings'**
+  String get videoEditorEffectSettingsOpen;
+
+  /// Title over the settings of the picked video effect, which replace the effects picker; effect is the effect's name, for example Shockwave.
+  ///
+  /// In en, this message translates to:
+  /// **'{effect} settings'**
+  String videoEditorEffectSettingsTitle(String effect);
+
+  /// A length of time in seconds next to a slider in a video effect's settings, for example 0.8 s.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds} s'**
+  String videoEditorEffectSeconds(double seconds);
+
+  /// Label of the slider that sets how long one hit of a video effect such as the shockwave lasts.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get videoEditorEffectHitDuration;
+
+  /// Label of the switch that makes a video effect such as the shockwave hit again and again, rather than once.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat'**
+  String get videoEditorEffectHitRepeat;
+
+  /// Line under the repeat switch while it is off: the effect hits once, at the start of its bar on the editor timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Once, where the effect starts on the timeline'**
+  String get videoEditorEffectHitOnce;
+
+  /// Label of the slider that sets how long it takes until a repeating video effect such as the shockwave hits again.
+  ///
+  /// In en, this message translates to:
+  /// **'Interval'**
+  String get videoEditorEffectHitInterval;
+
+  /// Title over the settings that change how a video effect such as the shockwave looks: where it hits, how far it spreads, how hard it shakes the picture and its colour.
+  ///
+  /// In en, this message translates to:
+  /// **'Look'**
+  String get videoEditorEffectLookTitle;
+
+  /// Label of the slider that moves where a video effect such as the shockwave hits from left to right.
+  ///
+  /// In en, this message translates to:
+  /// **'Horizontal position'**
+  String get videoEditorEffectHitHorizontal;
+
+  /// Label of the slider that moves where a video effect such as the shockwave hits from top to bottom.
+  ///
+  /// In en, this message translates to:
+  /// **'Vertical position'**
+  String get videoEditorEffectHitVertical;
+
+  /// Label of the slider that sets how far a video effect such as the shockwave spreads across the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach'**
+  String get videoEditorEffectHitReach;
+
+  /// Label of the slider that sets how hard the picture rattles when a video effect such as the shockwave hits.
+  ///
+  /// In en, this message translates to:
+  /// **'Shake'**
+  String get videoEditorEffectHitShake;
+
+  /// Label of the slider that sets how far the picture zooms in for a moment when a video effect such as the shockwave hits.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom punch'**
+  String get videoEditorEffectHitPunch;
+
+  /// Button that puts the look settings of a video effect such as the shockwave back to their defaults.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset look'**
+  String get videoEditorEffectLookReset;
 
   /// Name of a video effect on the timeline, and what screen readers announce for it, when the effect fires on the beat of the music. {effect} is the effect's name, for example 'Zoom Pulse on the beat'. Keep it short.
   ///

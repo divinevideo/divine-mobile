@@ -2472,6 +2472,123 @@ final class ShaderVideoEffectTests: XCTestCase {
     }
   }
 
+  func testBassHitsDrawWhatTheAndroidShaderDraws() {
+    let moved: [String: Any] = [
+      "centerX": 0.3, "centerY": 0.7, "reach": 0.6, "shake": 2.0, "punch": 0.0, "fringe": 2.0,
+    ]
+    let cases: [(BassHitVideoEffect.Style, Double, Double, [String: Any])] = [
+      (.shockwave, 1.0, 0.0, [:]), (.shockwave, 1.0, 0.12, [:]), (.shockwave, 0.6, 0.31, [:]),
+      (.shockwave, 1.0, 0.15, moved), (.subwoofer, 1.0, 0.0, [:]), (.subwoofer, 1.0, 0.1, [:]),
+      (.subwoofer, 0.6, 0.27, [:]), (.subwoofer, 1.0, 0.05, moved),
+    ]
+    for (style, intensity, seconds, look) in cases {
+      var params: [String: Any] = ["intensity": intensity, "strikesUs": [0]]
+      params.merge(look) { _, new in new }
+      let effect = BassHitVideoEffect(style: style, params: params)
+      let settings = HitLook(params, defaultColor: 0)
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.bassHit(
+          px, py, intensity: intensity, age: seconds, style: style.rawValue, look: settings)
+      }
+      let difference = compare(effect, seconds: seconds, expected)
+      // The ring magnifies the picture up to tenfold, which scales the GPU's
+      // filtering and half-float rounding with it; a change to the ring, the
+      // cone, the rattle or the fringes moves far more.
+      XCTAssertLessThan(
+        difference.share, 0.003, "\(style) at \(intensity), \(seconds) s, \(look)")
+    }
+  }
+
+  func testHitsPlayOutOverTheirLengthAndThenLeaveThePictureAlone() {
+    let hits: [Int64] = [200_000, 400_000, 1_500_000]
+    let cases: [(Int64, Double?)] = [
+      (0, nil), (199_999, nil), (200_000, 0), (300_000, 0.1), (400_000, 0),
+      (799_999, 0.399999), (800_000, nil), (1_620_000, 0.12),
+    ]
+    for (time, expected) in cases {
+      // Hits of 400 ms play a 500 ms animation, a quarter faster.
+      let age = BassHits.age(
+        hitsUs: hits, hitUs: 400_000, animationUs: 500_000, effectTimeUs: time)
+      if let expected {
+        XCTAssertEqual(age ?? -1, expected * 1.25, accuracy: 1e-6, "\(time) us")
+      } else {
+        XCTAssertNil(age, "\(time) us")
+      }
+    }
+    XCTAssertEqual(BassHits.hit(["hitUs": 1_200_000], fallbackUs: 500_000), 1_200_000)
+    XCTAssertEqual(BassHits.hit([:], fallbackUs: 500_000), 500_000)
+    let effect = BassHitVideoEffect(
+      style: .shockwave, params: ["intensity": 0.8, "strikesUs": [200_000]])
+    let before = effect.render(frame, history: [], timeUs: 0, effectTimeUs: 100_000)
+    XCTAssertTrue(before === frame)
+    let after = effect.render(frame, history: [], timeUs: 0, effectTimeUs: 750_000)
+    XCTAssertTrue(after === frame)
+    let longer = BassHitVideoEffect(
+      style: .shockwave, params: ["intensity": 0.8, "strikesUs": [200_000], "hitUs": 1_000_000])
+    let still = longer.render(frame, history: [], timeUs: 0, effectTimeUs: 750_000)
+    XCTAssertFalse(still === frame)
+  }
+
+  func testBlastsDrawWhatTheAndroidShaderDraws() {
+    let moved: [String: Any] = [
+      "centerX": 0.65, "centerY": 0.3, "reach": 0.5, "shake": 0.5, "punch": 2.0,
+      "color": 0xFF33_CC66,
+    ]
+    let cases: [(BlastVideoEffect.Style, Double, Double, [String: Any])] = [
+      (.plasma, 1.0, 0.05, [:]), (.plasma, 0.8, 0.3, [:]), (.plasma, 1.0, 0.25, moved),
+      (.energy, 1.0, 0.17, [:]), (.energy, 0.6, 0.5, [:]), (.energy, 1.0, 0.2, moved),
+      (.smoke, 1.0, 0.3, [:]), (.smoke, 0.7, 0.6, [:]), (.smoke, 1.0, 0.35, moved),
+    ]
+    for (style, intensity, seconds, look) in cases {
+      var params: [String: Any] = ["intensity": intensity, "strikesUs": [0]]
+      params.merge(look) { _, new in new }
+      let effect = BlastVideoEffect(style: style, params: params)
+      let settings = HitLook(params, defaultColor: style.defaultColor)
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.blast(
+          px, py, intensity: intensity, age: seconds, style: style.rawValue, look: settings)
+      }
+      let difference = compare(effect, seconds: seconds, expected)
+      // The liquid bends the picture by its slope, which the GPU's filtering
+      // and float rounding shift a little, most where the picture has sharp
+      // edges; a change to the ring, the liquid, the arcs, the smoke or the
+      // glow moves far more.
+      XCTAssertLessThan(
+        difference.share, 0.005, "\(style) at \(intensity), \(seconds) s, \(look)")
+    }
+  }
+
+  func testReadsTheLookWithinRangeAndEachStyleItsOwnColour() {
+    let look = HitLook(
+      ["centerX": 1.4, "centerY": -1, "reach": 0.05, "shake": 3, "color": 0xFF00_80FF],
+      defaultColor: 0)
+    XCTAssertEqual(look.centerX, 1)
+    XCTAssertEqual(look.centerY, 0)
+    XCTAssertEqual(look.reach, 0.2)
+    XCTAssertEqual(look.shake, 2)
+    XCTAssertEqual(look.punch, 1)
+    XCTAssertEqual(look.color, [0, 128.0 / 255, 1])
+    let plasma = HitLook([:], defaultColor: BlastVideoEffect.Style.plasma.defaultColor)
+    XCTAssertEqual(plasma.color, [76.0 / 255, 191.0 / 255, 1])
+  }
+
+  func testBlastsPlayOutOverTheirLengthAfterEachStrike() {
+    let blast = BlastVideoEffect(
+      style: .plasma, params: ["intensity": 0.8, "strikesUs": [100_000]])
+    XCTAssertFalse(blast.render(frame, history: [], timeUs: 0, effectTimeUs: 899_999) === frame)
+    XCTAssertTrue(blast.render(frame, history: [], timeUs: 0, effectTimeUs: 900_000) === frame)
+    let short = BlastVideoEffect(
+      style: .plasma, params: ["intensity": 0.8, "strikesUs": [100_000], "hitUs": 300_000])
+    XCTAssertTrue(short.render(frame, history: [], timeUs: 0, effectTimeUs: 400_000) === frame)
+    let effect = BlastVideoEffect(
+      style: .energy, params: ["intensity": 0.8, "strikesUs": [100_000]])
+    let before = effect.render(frame, history: [], timeUs: 0, effectTimeUs: 50_000)
+    XCTAssertTrue(before === frame)
+    let without = BlastVideoEffect(style: .smoke, params: ["intensity": 0.8])
+    let never = without.render(frame, history: [], timeUs: 0, effectTimeUs: 50_000)
+    XCTAssertTrue(never === frame)
+  }
+
   func testComicDrawsWhatTheAndroidShaderDraws() {
     for intensity in [1.0, 0.45] {
       let effect = ComicVideoEffect(params: ["intensity": intensity])
@@ -2795,6 +2912,11 @@ final class ShaderVideoEffectTests: XCTestCase {
       TunnelVideoEffect(spiral: true, params: ["intensity": 0]),
       ZoomBlurVideoEffect(params: ["intensity": 0]),
       SpinBlurVideoEffect(params: ["intensity": 0]),
+      BassHitVideoEffect(style: .shockwave, params: ["intensity": 0]),
+      BassHitVideoEffect(style: .subwoofer, params: ["intensity": 0]),
+      BlastVideoEffect(style: .plasma, params: ["intensity": 0, "strikesUs": [1_000_000]]),
+      BlastVideoEffect(style: .energy, params: ["intensity": 0, "strikesUs": [1_000_000]]),
+      BlastVideoEffect(style: .smoke, params: ["intensity": 0, "strikesUs": [1_000_000]]),
       ComicVideoEffect(params: ["intensity": 0]),
       EightBitVideoEffect(params: ["intensity": 0]),
       AnaglyphVideoEffect(params: ["intensity": 0]),
@@ -3970,6 +4092,194 @@ final class ShaderVideoEffectTests: XCTestCase {
     }
     for k in 0..<3 { color[k] /= 32 }
     return color
+  }
+
+  private func bassHit(
+    _ px: Double, _ py: Double, intensity: Double, age: Double, style: Double, look: HitLook
+  ) -> [Double] {
+    let w = Double(width)
+    let hgt = Double(height)
+    let cx: Double = look.centerX * w
+    let cy: Double = (1 - look.centerY) * hgt
+    let mx: Double = w / 2
+    let my: Double = hgt / 2
+    let s = Double(min(width, height))
+    let dx: Double = px - cx
+    let dy: Double = py - cy
+    let r: Double = hypot(dx, dy)
+    let ux: Double = dx / max(r, 0.001)
+    let uy: Double = dy / max(r, 0.001)
+    let wave: Double = style < 0.5 ? 1 : 0
+    let edge: Double = min(min(px, w - px), min(py, hgt - py))
+    let keep: Double = smoothstep(0, 0.08 * s, edge)
+
+    let t: Double = min(age / 0.5, 1)
+    let spread: Double = 1 - (1 - t) * (1 - t)
+    let ringWidth: Double = s * (0.07 + 0.1 * spread)
+    let farthest: Double = hypot(max(cx, w - cx), max(cy, hgt - cy))
+    let x: Double = (r - 1.6 * look.reach * farthest * spread) / ringWidth
+    var band: Double = max(1 - x * x, 0)
+    band *= band
+    let ring: Double = intensity * (1 - t) * wave * keep
+    let push: Double = 0.9 * ringWidth * ring * x * band
+    var qx: Double = px - ux * push
+    var qy: Double = py - uy * push
+
+    let v: Double = min(age / 0.4, 1)
+    let spring: Double = (1 - v) * (1 - v) * cos(12.566 * v)
+    let nr: Double = r / (0.5 * s * look.reach)
+    let cone: Double = max(1 - nr * nr, 0)
+    let bulge: Double = 1 - 0.45 * intensity * (1 - wave) * spring * cone * cone * keep
+    qx = cx + (qx - cx) * bulge
+    qy = cy + (qy - cy) * bulge
+
+    var rattle: Double = max(1 - age / 0.4, 0)
+    rattle = rattle * rattle * rattle
+    var punch: Double = max(1 - age / 0.3, 0)
+    punch *= punch
+    let jolt: Double = (0.007 + (0.015 - 0.007) * wave) * intensity * look.shake * rattle
+    let zoom: Double = 1 + 2.2 * jolt + 0.08 * intensity * look.punch * wave * punch
+    qx = mx + (qx - mx) / zoom + jolt * s * sin(81.681 * age + 0.6)
+    qy = my + (qy - my) / zoom + jolt * s * sin(106.814 * age + 2.1)
+    let fringe: Double = 0.02 * s * look.fringe * ring * band / zoom
+
+    let red: Double = tap(qx + ux * fringe, qy + uy * fringe)[0]
+    let green: Double = tap(qx, qy)[1]
+    let blue: Double = tap(qx - ux * fringe, qy - uy * fringe)[2]
+    let light: Double = 1 + 0.06 * ring * band
+    return [clamp(red * light), clamp(green * light), clamp(blue * light)]
+  }
+
+
+  /// The blasts' three-octave value noise.
+  private func blastFbm(_ x: Double, _ y: Double) -> Double {
+    let first: Double = 0.5 * valueNoise(x, y)
+    let second: Double = 0.25 * valueNoise(x * 2.03 + 17.1, y * 2.03 + 17.1)
+    let third: Double = 0.125 * valueNoise(x * 4.01 + 41.7, y * 4.01 + 41.7)
+    return (first + second + third) / 0.875
+  }
+
+  /// The height of the blasts' liquid at (ax, ay), in shorter sides from the
+  /// centre.
+  private func blastLiquid(
+    _ ax: Double, _ ay: Double, lobe: Double, ring: Double, wide: Double, warp: (Double, Double),
+    age: Double, calm: Double, grain: Double
+  ) -> Double {
+    let length: Double = hypot(ax, ay)
+    let x: Double = (length + lobe - ring) / wide
+    let behind: Double = ring - length - lobe
+    let wake: Double = smoothstep(-0.03, 0.06, behind) * (1 - smoothstep(0.08, 0.45, behind))
+    let ripples: Double = blastFbm(
+      ax * grain + 2.2 * warp.0 + 0.7 * age, ay * grain + 2.2 * warp.1 - 0.9 * age)
+    return exp(-x * x) * (0.6 + 0.8 * ripples) + calm * wake * ripples
+  }
+
+  /// `style` is 0 for the plasma, 1 for the energy wave, 2 for the smoke burst.
+  private func blast(
+    _ px: Double, _ py: Double, intensity: Double, age: Double, style: Double, look: HitLook
+  ) -> [Double] {
+    let w = Double(width)
+    let hgt = Double(height)
+    let cx: Double = look.centerX * w
+    let cy: Double = (1 - look.centerY) * hgt
+    let mx: Double = w / 2
+    let my: Double = hgt / 2
+    let s: Double = min(w, hgt)
+    let dx: Double = px - cx
+    let dy: Double = py - cy
+    let r: Double = hypot(dx, dy)
+    let dirx: Double = dx / max(r, 0.001)
+    let diry: Double = dy / max(r, 0.001)
+    let ax: Double = dx / s
+    let ay: Double = dy / s
+    let edge: Double = min(min(px, w - px), min(py, hgt - py))
+    let keep: Double = smoothstep(0, 0.16 * s, edge)
+    let smoke: Double = style >= 1.5 ? 1 : 0
+    let energy: Double = (style >= 0.5 ? 1 : 0) - smoke
+    let plasma: Double = 1 - energy - smoke
+
+    let t: Double = min(age / 0.8, 1)
+    var pop: Double = min(age / 0.06, 1)
+    pop = 1 - (1 - pop) * (1 - pop)
+    let far: Double = 1.6 * look.reach * hypot(max(cx, w - cx), max(cy, hgt - cy)) / s
+    let ring: Double = 0.28 * pop + max(far - 0.28, 0) * pow(t, 1.1)
+    let wide: Double = 0.07 + 0.08 * t
+    let calm: Double = 1 - t * t
+    let lobes: Double = blastFbm(dirx * 2.5 + 3 * age, diry * 2.5 - 2 * age)
+    let lobe: Double = 0.07 * (lobes - 0.5) * (0.3 + ring) * smoothstep(0, 0.08, r / s)
+    let warp: (Double, Double) = (
+      valueNoise(ax * 2.5, ay * 2.5 + age), valueNoise(ax * 2.5 + 5.2, ay * 2.5 + 1.3 - age)
+    )
+    let grain: Double = 4 + 5 * energy
+    func liquid(_ x: Double, _ y: Double) -> Double {
+      blastLiquid(
+        x, y, lobe: lobe, ring: ring, wide: wide, warp: warp, age: age, calm: calm, grain: grain)
+    }
+    let h: Double = liquid(ax, ay)
+    let sx: Double = (liquid(ax + 0.004, ay) - h) / 0.004
+    let sy: Double = (liquid(ax, ay + 0.004) - h) / 0.004
+    let amount: Double = intensity * calm
+    let bend: Double = 0.012 * plasma + 0.006 * energy + 0.004 * smoke
+    var qx: Double = px - s * bend * amount * keep * sx
+    var qy: Double = py - s * bend * amount * keep * sy
+
+    var rattle: Double = max(1 - age / 0.4, 0)
+    rattle = rattle * rattle * rattle
+    var punch: Double = max(1 - age / 0.3, 0)
+    punch *= punch
+    let jolt: Double = 0.012 * intensity * look.shake * rattle
+    let zoom: Double = 1 + 2.2 * jolt + 0.06 * intensity * look.punch * punch
+    qx = mx + (qx - mx) / zoom + jolt * s * sin(81.681 * age + 0.6)
+    qy = my + (qy - my) / zoom + jolt * s * sin(106.814 * age + 2.1)
+
+    var color: [Double] = tap(qx, qy)
+    let depth: Double = clamp(h * 1.2) * amount
+    let hue: [Double] = look.color
+    let tinted: Double = (0.9 * plasma + 0.6 * energy) * depth
+    for k in 0..<3 { color[k] *= 1 + (hue[k] * hue[k] - 1) * tinted }
+    let nx: Double = -0.08 * sx
+    let ny: Double = -0.08 * sy
+    let norm: Double = sqrt(nx * nx + ny * ny + 1)
+    let facing: Double = max((nx * -0.2159 + ny * 0.3022 + 0.9282) / norm, 0)
+    let shine: Double = (1.3 * pow(facing, 48) + 0.3 * pow(facing, 8)) * clamp(h * 3)
+    let gloss: [Double] = mix(hue, [1, 1, 1], 0.5)
+    for k in 0..<3 { color[k] += plasma * amount * shine * gloss[k] }
+
+    let rr: Double = r / s + lobe
+    let x: Double = (rr - ring) / wide
+    let crackle: Double = valueNoise(
+      ax * 9 + 3 * warp.0 + 4 * age, ay * 9 + 3 * warp.1 - 5 * age)
+    var arc: Double = 1 - abs(2 * crackle - 1)
+    arc = pow(arc, 14) * exp(-x * x) * (1 + 2 * clamp(h - 0.5))
+    let spark: [Double] = mix(hue, [1, 1, 1], 0.35)
+    for k in 0..<3 { color[k] += energy * amount * arc * spark[k] }
+
+    let bx: Double = ax * 2.5 / (0.5 + ring) + 1.5 * warp.0 + 0.4 * age
+    let by: Double = ay * 2.5 / (0.5 + ring) + 1.5 * warp.1 + 0.3 * age
+    let radial: Double = blastFbm(dirx * 7 + 1.3 * rr - 2 * age, diry * 7)
+    let streaks: Double = 0.5 + (radial - 0.5) * smoothstep(0.05, 0.25, r / s)
+    let puffs: Double = 0.7 * blastFbm(bx, by) + 0.3 * streaks
+    let lit: Double = 0.7 * blastFbm(bx - 0.25, by + 0.35) + 0.3 * streaks
+    let ahead: Double = rr - ring + 0.06
+    let front: Double = exp(-ahead * ahead / 0.02)
+    let thick: Double = (1 - smoothstep(ring - 0.04, ring + 0.08, rr)) * (0.35 + 0.65 * front)
+    let cloud: Double = smoothstep(0.2, 0.6, puffs * (0.7 + 0.6 * thick)) * thick
+    let shade: Double = min(max(0.7 + 3 * (lit - puffs), 0.35), 1.1)
+    let puff: [Double] = hue.map { $0 * shade }
+    color = mix(color, puff, smoke * intensity * 0.9 * cloud * (1 - t * t * t))
+
+    let hair: Double = blastFbm(dirx * 24 - 9 * age, diry * 24 + 7 * age)
+    let inside: Double = 1 - smoothstep(ring - 0.03, ring + 0.005, rr)
+    let hollow: Double = ring * smoothstep(0.08, 0.35, t)
+    let core: Double =
+      inside * smoothstep(hollow - 0.12, hollow, rr) * (1 - smoothstep(0, 0.4, t))
+    let halo: Double = exp(-max(rr - ring, 0) / (0.012 + 0.05 * hair * hair)) * (1 - inside)
+    let rim: Double = exp(-(rr - ring) * (rr - ring) / 0.0004)
+    let glow: Double = (1 - smoke) * intensity * min(1.4 * core + (0.7 * rim + 0.6 * halo) * calm, 1)
+    let hot: [Double] = mix(hue, [1, 1, 1], 0.8)
+    let light: [Double] = mix(hue, hot, clamp(1.6 * core))
+    let out: [Double] = mix(color, light, glow)
+    return out.map { clamp($0) }
   }
 
   private func spinBlur(_ px: Double, _ py: Double, strength: Double) -> [Double] {
