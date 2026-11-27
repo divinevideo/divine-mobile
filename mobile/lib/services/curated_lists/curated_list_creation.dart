@@ -30,41 +30,65 @@ final class SeriesCreationRejected extends SeriesCreationResult {
 }
 
 /// This device could not finish creating the series: its lists were not ready
-/// for changes, or could not be saved. A series it had already saved stays,
-/// waiting to be published like any other list.
+/// for changes or could not be saved, the account changed, or a relay accepted
+/// the series but this device could not record that. A series it had already
+/// saved stays, and is published again like any other list.
 final class SeriesCreationFailed extends SeriesCreationResult {
   const SeriesCreationFailed();
 }
 
 extension _CuratedListCreation on CuratedListService {
   /// A series is an empty, public, manually ordered list carrying the series
-  /// marker. It is published here, not by [_createList], so a relay rejection
-  /// can remove it again.
+  /// marker. It is created and published in one operation on its own
+  /// coordinate: no relay can hold that coordinate yet, so nothing is read
+  /// first, and the background backfill cannot publish the series before
+  /// this does.
   Future<SeriesCreationResult> _createSeries(String name) async {
+    final owner = _relayGateway.currentAuthenticatedPubkey();
+    if (owner == null) return const SeriesCreationFailed();
+    final listId = _cacheIndex.nextLocalId(clock.now());
+    return _serializeListOperation(
+      // The new series' authorScopedId, which its later operations queue on.
+      '$owner:$listId',
+      () => _createAndPublishSeries(name, owner: owner, listId: listId),
+      cancelled: const SeriesCreationFailed(),
+    );
+  }
+
+  Future<SeriesCreationResult> _createAndPublishSeries(
+    String name, {
+    required String owner,
+    required String listId,
+  }) async {
     final created = await _createList(
+      id: listId,
       name: name,
       playOrder: PlayOrder.manual,
       preservedTags: const [_seriesMarker],
       publish: false,
     );
     if (created == null) return const SeriesCreationFailed();
-    return _serializeListOperation(
-      created.id,
-      () => _publishSeries(created.id),
-      cancelled: const SeriesCreationFailed(),
-    );
-  }
-
-  Future<SeriesCreationResult> _publishSeries(String listId) async {
-    final provisional = getListById(listId);
-    if (provisional == null) return const SeriesCreationFailed();
-    if (await _publishListToNostr(provisional, confirmed: true)) {
-      return SeriesCreated(getListById(listId) ?? provisional);
+    var relayAccepted = false;
+    if (await _publishListToNostr(
+      created,
+      confirmed: true,
+      onRelayAccepted: () => relayAccepted = true,
+    )) {
+      return SeriesCreated(getListById(created.authorScopedId) ?? created);
     }
-    final current = getListById(listId) ?? provisional;
+    // A relay holds an accepted series, so it stays for the backfill to
+    // record. After an account change its row is no longer this session's.
+    if (relayAccepted || !_isCurrent(owner)) {
+      return const SeriesCreationFailed();
+    }
+    final current = getListById(created.authorScopedId) ?? created;
     _lists.removeWhere((list) => list.authorScopedId == current.authorScopedId);
     if (await _saveLists()) return const SeriesCreationRejected();
-    _restoreList(current);
+    if (_isCurrent(owner) &&
+        _prefs.getString(CuratedListService.listsStorageKey) != null &&
+        getListById(current.authorScopedId) == null) {
+      _restoreList(current);
+    }
     return const SeriesCreationFailed();
   }
 

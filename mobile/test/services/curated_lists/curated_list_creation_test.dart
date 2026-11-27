@@ -14,14 +14,42 @@ import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 import '../../helpers/committed_list_account.dart';
+import '../../helpers/completed_owned_list_snapshot.dart';
 import '../../helpers/curated_list_publish_stubs.dart';
 import '../../helpers/test_pubkeys.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockAuthService extends Mock implements AuthService {}
+
+/// Can fail or hold the next write of the list cache.
+class _Storage extends InMemorySharedPreferencesStore {
+  _Storage() : super.empty();
+
+  bool rejectNextListWrite = false;
+  Completer<void>? holdNextListWrite;
+  final listWriteHeld = Completer<void>();
+
+  @override
+  Future<bool> setValue(String type, String key, Object value) async {
+    if (key == 'flutter.${CuratedListService.listsStorageKey}') {
+      if (rejectNextListWrite) {
+        rejectNextListWrite = false;
+        return false;
+      }
+      final hold = holdNextListWrite;
+      if (hold != null) {
+        holdNextListWrite = null;
+        listWriteHeld.complete();
+        await hold.future;
+      }
+    }
+    return super.setValue(type, key, value);
+  }
+}
 
 final String _owner = testPubkeyFromSeed(1);
 final String _otherOwner = testPubkeyFromSeed(2);
@@ -31,6 +59,8 @@ void main() {
     TestWidgetsFlutterBinding.ensureInitialized();
 
     late SharedPreferences prefs;
+    late SharedPreferencesStorePlatform previousStorage;
+    late _Storage storage;
     late _MockNostrClient client;
     late _MockAuthService auth;
     late List<Event> sent;
@@ -60,8 +90,22 @@ void main() {
             .map((row) => CuratedList.fromJson(row as Map<String, dynamic>))
             .toList();
 
+    void failCurrentVersionReads() {
+      when(
+        () => client.readCurrentVersion(
+          kind: any(named: 'kind'),
+          pubkey: any(named: 'pubkey'),
+          dTag: any(named: 'dTag'),
+          timeout: any(named: 'timeout'),
+        ),
+      ).thenAnswer((_) async => const CurrentVersionFailed(noRelay: true));
+    }
+
     setUp(() async {
-      SharedPreferences.setMockInitialValues({});
+      previousStorage = SharedPreferencesStorePlatform.instance;
+      storage = _Storage();
+      SharedPreferencesStorePlatform.instance = storage;
+      SharedPreferences.resetStatic();
       prefs = await SharedPreferences.getInstance();
       client = _MockNostrClient();
       auth = _MockAuthService();
@@ -69,6 +113,11 @@ void main() {
       when(() => auth.isAuthenticated).thenReturn(true);
       when(() => auth.currentPublicKeyHex).thenReturn(_owner);
       stubListPublishing(client: client, auth: auth, pubkey: _owner);
+    });
+
+    tearDown(() {
+      SharedPreferences.resetStatic();
+      SharedPreferencesStorePlatform.instance = previousStorage;
     });
 
     group('createSeries', () {
@@ -141,6 +190,78 @@ void main() {
         expect(savedLists().where((list) => list.isSeries), isEmpty);
       });
 
+      test('publishes without reading relays first, so an unreachable '
+          'relay does not stop it', () async {
+        answerPublishes(acceptedOutcome);
+        final service = await buildService();
+        failCurrentVersionReads();
+
+        final result = await service.createSeries('Road trip');
+
+        expect(result, isA<SeriesCreated>());
+        expect(sent, hasLength(1));
+      });
+
+      test('removes a series created while no relay can be reached', () async {
+        answerPublishes(
+          (event) => PublishOutcome(
+            eventId: event.id,
+            acceptedBy: const [],
+            rejectedBy: const {},
+            noResponseFrom: const ['wss://relay.test'],
+          ),
+        );
+        final service = await buildService();
+        failCurrentVersionReads();
+
+        final result = await service.createSeries('Road trip');
+
+        expect(result, isA<SeriesCreationRejected>());
+        expect(sent, hasLength(1));
+        expect(service.lists.where((list) => list.isSeries), isEmpty);
+        expect(savedLists().where((list) => list.isSeries), isEmpty);
+      });
+
+      test('keeps a series a relay accepted when this device cannot record '
+          'it', () async {
+        answerPublishes((event) {
+          storage.rejectNextListWrite = true;
+          return acceptedOutcome(event);
+        });
+        final service = await buildService();
+
+        final result = await service.createSeries('Road trip');
+
+        expect(result, isA<SeriesCreationFailed>());
+        final kept = service.lists.where((list) => list.isSeries).single;
+        expect(kept.pendingRepublish, isTrue);
+      });
+
+      test('publishes the series once when a relay sync runs while it is '
+          'being saved', () async {
+        answerPublishes(acceptedOutcome);
+        when(
+          () => client.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((i) => completedOwnedListSnapshot(i, const []));
+        final service = await buildService();
+        final release = Completer<void>();
+        storage.holdNextListWrite = release;
+
+        final creating = service.createSeries('Road trip');
+        await storage.listWriteHeld.future;
+        final syncing = service.fetchUserListsFromRelays(force: true);
+        await pumpEventQueue(times: 200);
+        release.complete();
+
+        expect(await creating, isA<SeriesCreated>());
+        await syncing;
+        expect(sent, hasLength(1));
+      });
+
       test('creates nothing when no account is signed in', () async {
         answerPublishes(acceptedOutcome);
         final service = await buildService();
@@ -178,9 +299,12 @@ void main() {
           final creating = service.createSeries('Road trip');
           final event = await dispatched.future;
           when(() => auth.currentPublicKeyHex).thenReturn(_otherOwner);
+          var notified = 0;
+          service.addListener(() => notified++);
           answer.complete(acceptedOutcome(event));
 
           expect(await creating, isA<SeriesCreationFailed>());
+          expect(notified, isZero);
           final kept = savedLists().where((list) => list.isSeries).single;
           expect(kept.pubkey, equals(_owner));
           expect(kept.pendingRepublish, isTrue);
