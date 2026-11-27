@@ -62,7 +62,7 @@ jobs:
           flutter-version: "3.47.9"
           channel: stable
           cache: true
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         if: matrix.platform == 'linux'
         with:
           python-version: "3.12"
