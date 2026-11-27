@@ -1289,6 +1289,7 @@ void main() {
       // Watch time over clip length would be 5 s / 67 ms = 74.6 loops.
       expect(end.loopCount, closeTo(5, 0.001));
       expect(seenVideosService.records.single.loopCount, 5);
+      expect(analyticsService.playbackSessions.single.loopCount, 5);
 
       await controller.close();
     });

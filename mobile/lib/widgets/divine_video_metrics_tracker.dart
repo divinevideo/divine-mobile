@@ -15,16 +15,9 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
+import 'package:openvine/utils/playback_loops.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:uuid/uuid.dart';
-
-/// Shortest playback counted as one loop.
-///
-/// A clip shorter than this wraps several times a second, so its loops are
-/// counted at most once per this much playback, both on screen and in what
-/// is reported. A single-frame clip would otherwise add about 15 loops for
-/// every second it is watched.
-const _minimumLoopDuration = Duration(seconds: 1);
 
 class DivineVideoMetricsTracker extends ConsumerStatefulWidget {
   const DivineVideoMetricsTracker({
@@ -313,11 +306,11 @@ class _DivineVideoMetricsTrackerState
   }
 
   /// Whether a wrap of a clip [duration] long counts as a loop. Every wrap of
-  /// a clip at least [_minimumLoopDuration] long does; a shorter clip's wraps
+  /// a clip at least [minimumLoopDuration] long does; a shorter clip's wraps
   /// count only once that much playback has passed since the last one.
   bool _isCountableWrap(DateTime now, Duration duration) {
-    if (duration >= _minimumLoopDuration) return true;
-    return _playedTime(now) - _playedAtLastWrap >= _minimumLoopDuration;
+    if (duration >= minimumLoopDuration) return true;
+    return _playedTime(now) - _playedAtLastWrap >= minimumLoopDuration;
   }
 
   /// Playback time of the session so far, including the open play interval.
@@ -545,14 +538,14 @@ class _DivineVideoMetricsTrackerState
   /// Loops for the whole session so far: counted wrap-arounds, or the
   /// watch-time ratio when that is larger, so a wrap missed across a flush
   /// seam does not lose the pass. The ratio divides by at least
-  /// [_minimumLoopDuration], so a sub-second clip adds one loop per second.
+  /// [minimumLoopDuration], so a sub-second clip adds one loop per second.
   double _cumulativeLoops(Duration? totalDuration) {
     var loops = _wrapsTotal;
     if (totalDuration != null && totalDuration > Duration.zero) {
-      final loopLength = totalDuration < _minimumLoopDuration
-          ? _minimumLoopDuration
-          : totalDuration;
-      final ratio = _watchTotal.inMilliseconds / loopLength.inMilliseconds;
+      final ratio = loopsInPlayback(
+        watched: _watchTotal,
+        clipLength: totalDuration,
+      );
       if (ratio > loops) loops = ratio;
     }
     return loops;
