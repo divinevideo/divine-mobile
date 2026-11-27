@@ -105,6 +105,24 @@ void main() {
 
         expect(find.text(l10n.videoEditorEffectsOnBeatNoSound), findsOneWidget);
       });
+
+      for (final type in [
+        VideoEffectType.glitch,
+        VideoEffectType.blockGlitch,
+      ]) {
+        testWidgets('hides $type frequency when the beat sets it', (
+          tester,
+        ) async {
+          await pumpPanel(tester, EditorEffectType.builtIn(type));
+          final frequency = find.text(l10n.videoEditorEffectSettingFrequency);
+          expect(frequency, findsOneWidget);
+
+          await tester.tap(find.text(l10n.videoEditorEffectsOnBeat));
+          await tester.pumpAndSettle();
+
+          expect(frequency, findsNothing);
+        });
+      }
     });
 
     group('hit timing', () {
@@ -185,6 +203,27 @@ void main() {
         expect(find.text(l10n.videoEditorEffectHitDuration), findsOneWidget);
         expect(find.text(l10n.videoEditorEffectHitRepeat), findsNothing);
         expect(find.text(l10n.videoEditorEffectHitInterval), findsNothing);
+      });
+
+      testWidgets('resets repeat timing while it is hidden on the beat', (
+        tester,
+      ) async {
+        await pumpPanel(tester, EditorEffectType.shockwave);
+        await tester.tap(find.text(l10n.videoEditorEffectHitRepeat));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.videoEditorEffectsOnBeat));
+        await tester.pumpAndSettle();
+
+        final reset = find.text(l10n.videoEditorEffectTimingReset);
+        await scrollUntilTappable(tester, reset, 50);
+        await tester.tap(reset);
+        await tester.pumpAndSettle();
+
+        expect(cubit.state.selectionOnBeat, isTrue);
+        expect(
+          cubit.state.selectedSettings[HitTimingSettings.repeatParam],
+          isTrue,
+        );
       });
     });
 
