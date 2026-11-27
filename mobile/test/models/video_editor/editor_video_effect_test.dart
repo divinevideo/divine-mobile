@@ -7,6 +7,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/hit_timing_settings.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -363,6 +364,22 @@ void main() {
             EditorVideoEffect.of(
               id: 'lightning',
               type: EditorEffectType.lightning,
+              intensity: 0.5,
+            ).custom!,
+          ],
+        ),
+        {ContentLabel.flashingLights},
+      );
+    });
+
+    test('requires the flashing lights warning for a blast', () {
+      expect(
+        requiredContentLabelsForEffects(
+          const [],
+          customEffects: [
+            EditorVideoEffect.of(
+              id: 'smoke',
+              type: EditorEffectType.smokeBurst,
               intensity: 0.5,
             ).custom!,
           ],
@@ -1133,7 +1150,7 @@ void main() {
         });
 
         test('keeps the beats of disco and laser a third of a second apart, '
-            'and every beat of the zoom blur', () {
+            'and hits every beat with the zoom blur and the bass hits', () {
           final beats = [ms(1150), ms(1000), ms(1300), ms(1450), ms(1650)];
           CustomVideoEffect onBeat(EditorEffectType type) =>
               EditorVideoEffect.of(
@@ -1162,11 +1179,25 @@ void main() {
             )?[EditorVideoEffect.beatsParam],
             [1000000, 1150000, 1300000, 1450000, 1650000],
           );
+          for (final type in [
+            EditorEffectType.shockwave,
+            EditorEffectType.subwoofer,
+          ]) {
+            expect(
+              customVideoEffectRenderParams(
+                onBeat(type),
+                plain,
+                beats,
+              )?[EditorVideoEffect.strikesParam],
+              [1000000, 1150000, 1300000, 1450000, 1650000],
+              reason: type.name,
+            );
+          }
         });
       });
     });
 
-    group('lightningStrikesOnOutput', () {
+    group('flashStrikesOnOutput', () {
       CustomVideoEffect lightning({
         Duration? start,
         Duration? end,
@@ -1220,7 +1251,7 @@ void main() {
       test('strikes at irregular intervals all through its window', () {
         final effect = lightning();
 
-        expect(lightningStrikesOnOutput([effect], plain)[effect], [
+        expect(flashStrikesOnOutput([effect], plain)[effect], [
           ms(300),
           ms(1700),
           ms(2500),
@@ -1236,7 +1267,7 @@ void main() {
           end: const Duration(seconds: 4),
         );
 
-        expect(lightningStrikesOnOutput([effect], compressed)[effect], [
+        expect(flashStrikesOnOutput([effect], compressed)[effect], [
           ms(1300),
           ms(2700),
           ms(3500),
@@ -1248,7 +1279,7 @@ void main() {
         final effect = lightning(onBeat: true);
 
         expect(
-          lightningStrikesOnOutput(
+          flashStrikesOnOutput(
             [effect],
             plain,
             beats: [ms(1000), ms(1200), ms(1500), ms(2000), ms(6500)],
@@ -1273,12 +1304,12 @@ void main() {
         final beats = [ms(2400), ms(2750), ms(3100), ms(3450)];
         final effect = lightning(onBeat: true);
 
-        final alone = lightningStrikesOnOutput(
+        final alone = flashStrikesOnOutput(
           [effect],
           plain,
           beats: beats,
         )[effect]!;
-        final beside = lightningStrikesOnOutput(
+        final beside = flashStrikesOnOutput(
           [effect],
           map,
           beats: beats,
@@ -1300,7 +1331,7 @@ void main() {
         final beats = [ms(2300), ms(2640), ms(2980), ms(3320)];
         final effect = lightning(start: ms(2300), onBeat: true);
 
-        final strikes = lightningStrikesOnOutput(
+        final strikes = flashStrikesOnOutput(
           [effect],
           plain,
           beats: beats,
@@ -1320,7 +1351,7 @@ void main() {
         // 170 beats a minute: one every 353 ms.
         final beats = [for (var t = 0; t < 6000; t += 353) ms(t)];
 
-        final strikes = lightningStrikesOnOutput(
+        final strikes = flashStrikesOnOutput(
           [first, second],
           plain,
           beats: beats,
@@ -1371,6 +1402,123 @@ void main() {
           (params?[EditorVideoEffect.strikesParam] as List?)?.first,
           600000,
         );
+      });
+
+      test('strikes a blast at the start of its window and then every '
+          '0.8 s, or on the beats a third of a second apart', () {
+        final plasma = EditorVideoEffect.of(
+          id: 'plasma',
+          type: EditorEffectType.plasma,
+          intensity: 0.7,
+          startTime: ms(1000),
+          endTime: ms(4000),
+        ).custom!;
+        final onBeat = EditorVideoEffect.of(
+          id: 'smoke',
+          type: EditorEffectType.smokeBurst,
+          intensity: 0.7,
+          onBeat: true,
+        ).custom!;
+
+        final strikes = flashStrikesOnOutput(
+          [plasma, onBeat],
+          plain,
+          beats: [ms(4500), ms(4700), ms(4900), ms(5300)],
+        );
+
+        expect(strikes[plasma], [ms(1000), ms(1800), ms(2600), ms(3400)]);
+        expect(strikes[onBeat], [ms(4500), ms(4900), ms(5300)]);
+      });
+
+      test('hands the renderer the strikes of a blast, without bolts', () {
+        final effect = EditorVideoEffect.of(
+          id: 'energy',
+          type: EditorEffectType.energyWave,
+          intensity: 0.7,
+          startTime: ms(1000),
+          endTime: ms(2000),
+        ).custom!;
+
+        final params = customVideoEffectRenderParams(effect, plain, const []);
+
+        expect(params?[EditorVideoEffect.strikesParam], [0, 800000]);
+        expect(params, isNot(contains(EditorVideoEffect.boltsParam)));
+      });
+
+      test('hits a bass hit at the start of its window and then every '
+          'interval, or once, with its length for the renderer', () {
+        CustomVideoEffect shockwave(Map<String, Object> settings) =>
+            EditorVideoEffect.of(
+              id: 'shockwave',
+              type: EditorEffectType.shockwave,
+              intensity: 0.7,
+              startTime: ms(1000),
+              endTime: ms(3000),
+              settings: settings,
+            ).custom!;
+
+        final repeating = customVideoEffectRenderParams(
+          shockwave(
+            const HitTimingSettings(
+              duration: Duration(milliseconds: 1200),
+              interval: Duration(milliseconds: 700),
+            ).toParams(),
+          ),
+          plain,
+          const [],
+        );
+        final once = customVideoEffectRenderParams(
+          shockwave(
+            const HitTimingSettings(
+              duration: Duration(milliseconds: 500),
+              interval: Duration(milliseconds: 500),
+              repeats: false,
+            ).toParams(),
+          ),
+          plain,
+          const [],
+        );
+        final defaults = customVideoEffectRenderParams(
+          shockwave(const {}),
+          plain,
+          const [],
+        );
+
+        expect(repeating?[EditorVideoEffect.strikesParam], [
+          0,
+          700000,
+          1400000,
+        ]);
+        expect(repeating?[HitTimingSettings.hitParam], 1200000);
+        expect(once?[EditorVideoEffect.strikesParam], [0]);
+        expect(defaults?[EditorVideoEffect.strikesParam], [
+          0,
+          500000,
+          1000000,
+          1500000,
+        ]);
+        expect(defaults?[HitTimingSettings.hitParam], 500000);
+      });
+
+      test('strikes a blast that does not repeat once, at the start of its '
+          'window, with its length for the renderer', () {
+        final effect = EditorVideoEffect.of(
+          id: 'plasma',
+          type: EditorEffectType.plasma,
+          intensity: 0.7,
+          startTime: ms(2000),
+          endTime: ms(5000),
+          settings: const HitTimingSettings(
+            duration: Duration(seconds: 2),
+            interval: Duration(milliseconds: 800),
+            repeats: false,
+          ).toParams(),
+        ).custom!;
+
+        final params = customVideoEffectRenderParams(effect, plain, const []);
+
+        expect(params?[EditorVideoEffect.strikesParam], [0]);
+        expect(params?[HitTimingSettings.hitParam], 2000000);
       });
 
       test('is left out without a strike in its window', () {
@@ -1831,7 +1979,7 @@ void main() {
         for (final type in EditorEffectType.values)
           if (type.customId != null) type,
       ];
-      expect(custom, hasLength(77));
+      expect(custom, hasLength(82));
       for (final type in custom) {
         final effect = EditorVideoEffect.of(
           id: 'x',
@@ -1845,11 +1993,16 @@ void main() {
       }
     });
 
-    test('only the zoom blur, the spin blur, the time split, the stutter, the '
-        'tunnels, disco, laser and lightning of the custom effects fire on '
-        'the beat', () {
+    test('only the zoom blur, the spin blur, the shockwave, the subwoofer, the '
+        'blasts, the time split, the stutter, the tunnels, disco, laser and '
+        'lightning of the custom effects fire on the beat', () {
       for (final type in [
         EditorEffectType.zoomBlur,
+        EditorEffectType.shockwave,
+        EditorEffectType.subwoofer,
+        EditorEffectType.plasma,
+        EditorEffectType.energyWave,
+        EditorEffectType.smokeBurst,
         EditorEffectType.timeSplit,
         EditorEffectType.stutter,
         EditorEffectType.tunnel,
@@ -1929,6 +2082,24 @@ void main() {
       expect(EditorEffectType.laser.isFlashing, isFalse);
     });
 
+    test('counts the blasts as flashing, but not the shockwave or the '
+        'subwoofer', () {
+      for (final type in [
+        EditorEffectType.plasma,
+        EditorEffectType.energyWave,
+        EditorEffectType.smokeBurst,
+      ]) {
+        expect(type.isFlashing, isTrue, reason: type.name);
+        expect(
+          type.exclusiveGroup,
+          EditorEffectExclusiveGroup.flashing,
+          reason: type.name,
+        );
+      }
+      expect(EditorEffectType.shockwave.isFlashing, isFalse);
+      expect(EditorEffectType.subwoofer.isFlashing, isFalse);
+    });
+
     test('never counts as flashing', () {
       expect(EditorEffectType.echo.isFlashing, isFalse);
       expect(
@@ -1975,6 +2146,21 @@ void main() {
         EditorEffectCategory.values.indexOf(EditorEffectCategory.time),
         EditorEffectCategory.values.indexOf(EditorEffectCategory.motion) + 1,
       );
+    });
+
+    test('lists the zoom blur, the spin blur, the bass hits and the blasts '
+        'under motion, after the shake and the zoom pulse', () {
+      expect(EditorEffectCategory.motion.types, [
+        const EditorEffectType.builtIn(VideoEffectType.shake),
+        const EditorEffectType.builtIn(VideoEffectType.zoomPulse),
+        EditorEffectType.zoomBlur,
+        EditorEffectType.spinBlur,
+        EditorEffectType.shockwave,
+        EditorEffectType.subwoofer,
+        EditorEffectType.plasma,
+        EditorEffectType.energyWave,
+        EditorEffectType.smokeBurst,
+      ]);
     });
 
     test('lists the swirl, ripple, fluted glass and the tunnels under '

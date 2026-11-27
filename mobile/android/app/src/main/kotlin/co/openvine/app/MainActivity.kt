@@ -20,6 +20,8 @@ import co.openvine.app.videoeffects.AdjustVideoEffect
 import co.openvine.app.videoeffects.AnaglyphVideoEffect
 import co.openvine.app.videoeffects.AnamorphicVideoEffect
 import co.openvine.app.videoeffects.AsciiVideoEffect
+import co.openvine.app.videoeffects.BassHitVideoEffect
+import co.openvine.app.videoeffects.BlastVideoEffect
 import co.openvine.app.videoeffects.BricksVideoEffect
 import co.openvine.app.videoeffects.ComicVideoEffect
 import co.openvine.app.videoeffects.CrossStitchVideoEffect
@@ -202,6 +204,8 @@ class MainActivity : FlutterFragmentActivity() {
         TunnelVideoEffect.register()
         ZoomBlurVideoEffect.register()
         SpinBlurVideoEffect.register()
+        BassHitVideoEffect.register()
+        BlastVideoEffect.register()
         ComicVideoEffect.register()
         EightBitVideoEffect.register()
         AnaglyphVideoEffect.register()

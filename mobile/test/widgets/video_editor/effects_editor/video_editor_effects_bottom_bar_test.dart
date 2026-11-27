@@ -460,6 +460,11 @@ void main() {
           l10n.videoEditorEffectDisco,
           l10n.videoEditorEffectLaser,
           l10n.videoEditorEffectLightning,
+          l10n.videoEditorEffectShockwave,
+          l10n.videoEditorEffectSubwoofer,
+          l10n.videoEditorEffectPlasma,
+          l10n.videoEditorEffectEnergyWave,
+          l10n.videoEditorEffectSmokeBurst,
           l10n.videoEditorEffectTealOrange,
           l10n.videoEditorEffectBleachBypass,
           l10n.videoEditorEffectSilver,
@@ -560,6 +565,53 @@ void main() {
       expect(tunnels.map((type) => shaderTileOf(type)!.values.last), [
         0.0,
         1.0,
+      ]);
+      // One shader draws both bass hits, the subwoofer told apart by its third
+      // value: the shockwave with its ring on the way out, the subwoofer
+      // bulged out right as it hits.
+      final bassHits = [EditorEffectType.shockwave, EditorEffectType.subwoofer];
+      expect(bassHits.map((type) => shaderTileOf(type)!.asset), [
+        'shaders/bass_hit.frag',
+        'shaders/bass_hit.frag',
+      ]);
+      // Full strength, the moment, the style, then the default look:
+      // reach, where it hits, shake, punch and the shockwave's fringes.
+      expect(shaderTileOf(EditorEffectType.shockwave)!.values, [
+        1.0,
+        0.12,
+        0.0,
+        1.0,
+        0.5,
+        0.5,
+        1.0,
+        1.0,
+        1.0,
+      ]);
+      expect(shaderTileOf(EditorEffectType.subwoofer)!.values.take(3), [
+        1.0,
+        0.0,
+        1.0,
+      ]);
+      // One shader draws every blast, told apart by its third value.
+      final blasts = [
+        EditorEffectType.plasma,
+        EditorEffectType.energyWave,
+        EditorEffectType.smokeBurst,
+      ];
+      expect(
+        blasts.map((type) => shaderTileOf(type)!.asset),
+        everyElement('shaders/blast.frag'),
+      );
+      // The style third, and each blast's own colour last.
+      expect(blasts.map((type) => shaderTileOf(type)!.values[2]), [
+        0.0,
+        1.0,
+        2.0,
+      ]);
+      expect(shaderTileOf(EditorEffectType.energyWave)!.values.skip(8), [
+        1.0,
+        41 / 255,
+        15 / 255,
       ]);
       // One shader draws every intro and outro: halfway covered, at its
       // look's starting structure, the look told apart by its third value,

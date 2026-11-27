@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:openvine/models/content_label.dart';
+import 'package:openvine/models/video_editor/hit_timing_settings.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show CustomVideoEffect, VideoEffect, VideoEffectType;
@@ -117,6 +118,32 @@ const zoomBlurVideoEffectId = 'divine.zoomBlur';
 /// The id Divine's spin blur is registered under with pro_video_editor, by
 /// the native `SpinBlurVideoEffect` on Android, iOS and macOS.
 const spinBlurVideoEffectId = 'divine.spinBlur';
+
+/// The ids Divine's bass hits are registered under with pro_video_editor, the
+/// shockwave and the subwoofer, both drawn by the native `BassHitVideoEffect`
+/// on Android, iOS and macOS.
+const shockwaveVideoEffectId = 'divine.shockwave';
+const subwooferVideoEffectId = 'divine.subwoofer';
+
+/// The ids of the bass hits.
+const Set<String> bassHitVideoEffectIds = {
+  shockwaveVideoEffectId,
+  subwooferVideoEffectId,
+};
+
+/// The ids Divine's blasts are registered under with pro_video_editor, one
+/// per style, all drawn by the native `BlastVideoEffect` on Android, iOS and
+/// macOS. Each flashes; see [isFlashingCustomVideoEffect].
+const plasmaVideoEffectId = 'divine.plasma';
+const energyWaveVideoEffectId = 'divine.energyWave';
+const smokeBurstVideoEffectId = 'divine.smokeBurst';
+
+/// The ids of the blasts.
+const Set<String> blastVideoEffectIds = {
+  plasmaVideoEffectId,
+  energyWaveVideoEffectId,
+  smokeBurstVideoEffectId,
+};
 
 /// The id Divine's comic look is registered under with pro_video_editor, by
 /// the native `ComicVideoEffect` on Android, iOS and macOS.
@@ -454,7 +481,7 @@ class EditorEffectType {
 
   /// Lightning: the picture flashes blue-white with a short bolt, then fades
   /// back, at irregular intervals or on the beat; see
-  /// [lightningStrikesOnOutput]. It flashes.
+  /// [flashStrikesOnOutput]. It flashes.
   static const lightning = EditorEffectType.custom(lightningVideoEffectId);
 
   /// Snow: soft flakes fall over the picture.
@@ -535,6 +562,28 @@ class EditorEffectType {
   /// Spin blur: the picture streaks around its centre, all the time or on
   /// the beat.
   static const spinBlur = EditorEffectType.custom(spinBlurVideoEffectId);
+
+  /// Shockwave: a ring of pressure races from the centre past the corners,
+  /// bending the picture like a lens and splitting its colours, while the
+  /// picture punches in and rattles, all the time or on the beat.
+  static const shockwave = EditorEffectType.custom(shockwaveVideoEffectId);
+
+  /// Subwoofer: the middle of the picture bulges out like a speaker cone and
+  /// springs back while the picture rattles, all the time or on the beat.
+  static const subwoofer = EditorEffectType.custom(subwooferVideoEffectId);
+
+  /// Plasma: a white-hot blast bursts in the middle of the picture and
+  /// spreads as a glowing ring of liquid that bends the picture like water,
+  /// on the beat or at a steady pace; see [flashStrikesOnOutput]. It flashes.
+  static const plasma = EditorEffectType.custom(plasmaVideoEffectId);
+
+  /// Energy wave: a red-hot blast bursts in the middle and spreads as a red
+  /// ring crackling with arcs, on the beat or at a steady pace. It flashes.
+  static const energyWave = EditorEffectType.custom(energyWaveVideoEffectId);
+
+  /// Smoke burst: a billow of grey smoke bursts from the middle and is
+  /// pushed out past the edges, on the beat or at a steady pace. It flashes.
+  static const smokeBurst = EditorEffectType.custom(smokeBurstVideoEffectId);
 
   /// Comic: flat poster colours, halftone dots and ink outlines.
   static const comic = EditorEffectType.custom(comicVideoEffectId);
@@ -712,6 +761,11 @@ class EditorEffectType {
     spiralTunnel,
     zoomBlur,
     spinBlur,
+    shockwave,
+    subwoofer,
+    plasma,
+    energyWave,
+    smokeBurst,
     eightBit,
     anaglyph,
     watercolor,
@@ -768,15 +822,18 @@ class EditorEffectType {
   };
 
   /// Whether this type can fire on the beat; see [canFireOnBeat]. Of the
-  /// custom effects the zoom blur, the spin blur, the time split and lightning
-  /// have a hit, the stutter holds frames for a moment after each beat, the
-  /// tunnels take one step deeper on each beat, and disco and laser change
-  /// colour and direction on each beat; the others play all through their
-  /// window.
+  /// custom effects the zoom blur, the spin blur, the shockwave, the
+  /// subwoofer, the blasts, the time split and lightning have a hit, the stutter holds
+  /// frames for a moment after each beat, the tunnels take one step deeper on
+  /// each beat, and disco and laser change colour and direction on each beat;
+  /// the others play all through their window.
   bool get supportsOnBeat => builtIn != null
       ? canFireOnBeat(builtIn!)
       : customId == zoomBlurVideoEffectId ||
             customId == spinBlurVideoEffectId ||
+            customId == shockwaveVideoEffectId ||
+            customId == subwooferVideoEffectId ||
+            blastVideoEffectIds.contains(customId) ||
             customId == timeSplitVideoEffectId ||
             customId == stutterVideoEffectId ||
             customId == tunnelVideoEffectId ||
@@ -841,7 +898,12 @@ class EditorEffectType {
       laserVideoEffectId ||
       lightningVideoEffectId => EditorEffectCategory.light,
       zoomBlurVideoEffectId ||
-      spinBlurVideoEffectId => EditorEffectCategory.motion,
+      spinBlurVideoEffectId ||
+      shockwaveVideoEffectId ||
+      subwooferVideoEffectId ||
+      plasmaVideoEffectId ||
+      energyWaveVideoEffectId ||
+      smokeBurstVideoEffectId => EditorEffectCategory.motion,
       echoVideoEffectId ||
       timeSplitVideoEffectId ||
       longExposureVideoEffectId ||
@@ -892,6 +954,35 @@ class EditorEffectType {
   /// Whether this type is an intro or an outro: it plays once over its
   /// window, revealing or covering the picture, rather than all through it.
   bool get isIntroOutro => placement != EditorEffectPlacement.wholeVideo;
+
+  /// How a new effect of this type hits, for the effects whose hits can be
+  /// timed: the bass hits last half a second and hit every half second, at
+  /// 120 beats a minute, as the built-in zoom pulse punches; the blasts take
+  /// 0.8 s to play out and hit again as one ends. `null` for any other type.
+  HitTimingSettings? get hitTiming => switch (customId) {
+    final id? when bassHitVideoEffectIds.contains(id) =>
+      const HitTimingSettings(
+        duration: Duration(milliseconds: 500),
+        interval: Duration(milliseconds: 500),
+      ),
+    final id? when blastVideoEffectIds.contains(id) => const HitTimingSettings(
+      duration: Duration(milliseconds: 800),
+      interval: Duration(milliseconds: 800),
+    ),
+    _ => null,
+  };
+
+  /// The colour of a blast's glow, liquid or smoke, as an ARGB integer, when
+  /// the user has not picked another one (see `HitLookSettings.color`):
+  /// electric blue for the plasma, red for the energy wave and light grey for
+  /// the smoke burst. `null` for any other type. The native `BlastVideoEffect`
+  /// falls back to the same.
+  int? get hitColor => switch (customId) {
+    plasmaVideoEffectId => 0xFF4CBFFF,
+    energyWaveVideoEffectId => 0xFFFF290F,
+    smokeBurstVideoEffectId => 0xFFD1CFC9,
+    _ => null,
+  };
 
   /// The look of this intro or outro, or `null` for any other type.
   IntroOutroLook? get introOutroLook => switch (customId) {
@@ -1045,9 +1136,10 @@ class EditorVideoEffect extends Equatable {
   /// right where the window ends. See [customVideoEffectRenderParams].
   static const durationParam = 'durationUs';
 
-  /// The param lightning reads when it strikes from, when it is rendered:
-  /// microseconds after the start of its window, in order. See
-  /// [lightningStrikesOnOutput] and [customVideoEffectRenderParams].
+  /// The param a flashing custom effect, lightning or a blast, reads when it
+  /// strikes from, when it is rendered: microseconds after the start of
+  /// its window, in order. See [flashStrikesOnOutput] and
+  /// [customVideoEffectRenderParams].
   static const strikesParam = 'strikesUs';
 
   /// The param lightning reads the shape of each bolt from, when it is
@@ -1227,8 +1319,8 @@ List<CustomVideoEffect> customVideoEffectsInRenderOrder(
 ///
 /// An effect on the beat fires on the [beats], on the exported video, that
 /// fall in its window, and is left out when none does; see
-/// [customVideoEffectRenderParams]. Lightning strikes where
-/// [lightningStrikesOnOutput] says, keeping clear of the flashes of the
+/// [customVideoEffectRenderParams]. Lightning and the blasts strike where
+/// [flashStrikesOnOutput] says, keeping clear of the flashes of the
 /// built-in [flashingEffects], on the exported video as
 /// [videoEffectsOnOutput] times them.
 List<CustomVideoEffect> customVideoEffectsOnOutput(
@@ -1237,7 +1329,7 @@ List<CustomVideoEffect> customVideoEffectsOnOutput(
   List<Duration> beats = const [],
   List<VideoEffect> flashingEffects = const [],
 }) {
-  final strikes = lightningStrikesOnOutput(
+  final strikes = flashStrikesOnOutput(
     effects,
     timelineMap,
     beats: beats,
@@ -1277,14 +1369,18 @@ List<CustomVideoEffect> customVideoEffectsOnOutput(
 /// timeline is not the exported video's, [toPlayer] maps a time on the editor
 /// timeline onto the player's, and the beats are counted on it.
 ///
-/// Lightning, on the beat or not, gets the times it strikes at instead, under
-/// [EditorVideoEffect.strikesParam], counted the same way, and the shape of
-/// each bolt, under [EditorVideoEffect.boltsParam]. They are [strikes], on the
-/// exported video, which [lightningStrikesOnOutput] times against the other
-/// flashes of the video; without them it is timed as if it were the only one.
+/// A flashing one, lightning or a blast, on the beat or not, gets the times
+/// it strikes at instead, under [EditorVideoEffect.strikesParam], counted the
+/// same way, and lightning the shape of each bolt, under
+/// [EditorVideoEffect.boltsParam]. They are [strikes], on the exported video,
+/// which [flashStrikesOnOutput] times against the other flashes of the video;
+/// without them it is timed as if it were the only one. A bass hit gets the
+/// times it hits at under [EditorVideoEffect.strikesParam] too (see
+/// [_hitCandidates]), and it and a blast how long one hit lasts, under
+/// [HitTimingSettings.hitParam].
 ///
 /// Returns `null` for an effect on the beat without a beat in its window, or
-/// lightning without a strike, which is left out, as a built-in one is.
+/// a flashing one without a strike, which is left out, as a built-in one is.
 Map<String, Object?>? customVideoEffectRenderParams(
   CustomVideoEffect effect,
   TransitionTimelineMap timelineMap,
@@ -1292,10 +1388,9 @@ Map<String, Object?>? customVideoEffectRenderParams(
   Duration Function(Duration editorTime)? toPlayer,
   List<Duration>? strikes,
 }) {
-  if (effect.id == lightningVideoEffectId) {
-    final times =
-        strikes ??
-        lightningStrikesOnOutput([effect], timelineMap, beats: beats)[effect]!;
+  final timing = _hitTimingOf(effect);
+  if (bassHitVideoEffectIds.contains(effect.id) && timing != null) {
+    final times = _hitCandidates(effect, timelineMap, beats, timing);
     if (times.isEmpty) return null;
     return {
       ...effect.params,
@@ -1305,10 +1400,29 @@ Map<String, Object?>? customVideoEffectRenderParams(
         times,
         toPlayer: toPlayer,
       ),
-      EditorVideoEffect.boltsParam: [
-        for (var index = 0; index < times.length; index++)
-          ...lightningBolt(index),
-      ],
+      HitTimingSettings.hitParam: timing.duration.inMicroseconds,
+    };
+  }
+  if (isFlashingCustomVideoEffect(effect.id)) {
+    final times =
+        strikes ??
+        flashStrikesOnOutput([effect], timelineMap, beats: beats)[effect]!;
+    if (times.isEmpty) return null;
+    return {
+      ...effect.params,
+      if (timing != null)
+        HitTimingSettings.hitParam: timing.duration.inMicroseconds,
+      EditorVideoEffect.strikesParam: _offsetsInWindow(
+        effect,
+        timelineMap,
+        times,
+        toPlayer: toPlayer,
+      ),
+      if (effect.id == lightningVideoEffectId)
+        EditorVideoEffect.boltsParam: [
+          for (var index = 0; index < times.length; index++)
+            ...lightningBolt(index),
+        ],
     };
   }
   if (effect.params[EditorVideoEffect.onBeatParam] != true) {
@@ -1401,32 +1515,35 @@ const lightningStrikeGaps = [
   Duration(milliseconds: 1700),
 ];
 
-/// Where each lightning effect of [effects] strikes on the exported video, by
-/// effect (compared by identity); other effects are left out.
+/// Where each flashing custom effect of [effects], lightning or a blast,
+/// strikes on the exported video, by effect (compared by identity); other
+/// effects are left out.
 ///
 /// On the beat it strikes on the [beats], on the exported video, in its
 /// window, skipping those closer than [minimumFlashGap] to the one before, as
-/// a built-in flashing effect does. Otherwise it first strikes
+/// a built-in flashing effect does. Otherwise lightning first strikes
 /// [lightningFirstStrike] after its start and then after each of
-/// [lightningStrikeGaps] in turn. Its window ends where the video loops at the
-/// latest.
+/// [lightningStrikeGaps] in turn, and a blast where its
+/// [HitTimingSettings] say (see [_hitCandidates]). Its window ends where the
+/// video loops at the latest.
 ///
 /// A strike that would put more than three flashes into one second of the
 /// looping video, across its loop point too, is dropped. The flash
 /// transitions on [timelineMap], the flashes of the built-in
 /// [flashingEffects], on the exported video as [videoEffectsOnOutput] times
-/// them, and the strikes of the lightning before it in [effects] all count
-/// toward those three, and stay: in each second with a fourth flash, the
-/// latest strike of the effect in it goes, until none has. They already keep
-/// to three a second among themselves, so dropping strikes always gets there.
-Map<CustomVideoEffect, List<Duration>> lightningStrikesOnOutput(
+/// them, and the strikes of the flashing effects before it in [effects] all
+/// count toward those three, and stay: in each second with a fourth flash,
+/// the latest strike of the effect in it goes, until none has. They already
+/// keep to three a second among themselves, so dropping strikes always gets
+/// there.
+Map<CustomVideoEffect, List<Duration>> flashStrikesOnOutput(
   List<CustomVideoEffect> effects,
   TransitionTimelineMap timelineMap, {
   List<Duration> beats = const [],
   List<VideoEffect> flashingEffects = const [],
 }) {
   final result = Map<CustomVideoEffect, List<Duration>>.identity();
-  if (!effects.any((effect) => effect.id == lightningVideoEffectId)) {
+  if (!effects.any((effect) => isFlashingCustomVideoEffect(effect.id))) {
     return result;
   }
   final loopPoint = timelineMap.loopPoint;
@@ -1435,8 +1552,8 @@ Map<CustomVideoEffect, List<Duration>> lightningStrikesOnOutput(
     ..._flashOnsets(flashingEffects, loopPoint),
   ];
   for (final effect in effects) {
-    if (effect.id != lightningVideoEffectId) continue;
-    var strikes = _lightningCandidates(effect, timelineMap, beats);
+    if (!isFlashingCustomVideoEffect(effect.id)) continue;
+    var strikes = _strikeCandidates(effect, timelineMap, beats);
     while (true) {
       Duration? drop;
       for (final crowded in _crowdedSeconds([
@@ -1465,9 +1582,9 @@ Map<CustomVideoEffect, List<Duration>> lightningStrikesOnOutput(
   return result;
 }
 
-/// Where the lightning [effect] would strike on the exported video on its own,
-/// before [lightningStrikesOnOutput] thins the strikes out.
-List<Duration> _lightningCandidates(
+/// Where the flashing [effect] would strike on the exported video on its own,
+/// before [flashStrikesOnOutput] thins the strikes out.
+List<Duration> _strikeCandidates(
   CustomVideoEffect effect,
   TransitionTimelineMap timelineMap,
   List<Duration> beats,
@@ -1479,6 +1596,9 @@ List<Duration> _lightningCandidates(
         if (beat >= start && beat < end) beat,
     ]);
   }
+  if (_hitTimingOf(effect) case final timing?) {
+    return _hitCandidates(effect, timelineMap, beats, timing);
+  }
   final strikes = <Duration>[];
   var at = start + lightningFirstStrike;
   for (var gap = 0; at < end; gap++) {
@@ -1486,6 +1606,36 @@ List<Duration> _lightningCandidates(
     at += lightningStrikeGaps[gap % lightningStrikeGaps.length];
   }
   return strikes;
+}
+
+/// The [HitTimingSettings] of [effect], or `null` for an effect whose hits
+/// cannot be timed.
+HitTimingSettings? _hitTimingOf(CustomVideoEffect effect) {
+  final defaults = EditorEffectType.custom(effect.id).hitTiming;
+  return defaults == null
+      ? null
+      : HitTimingSettings.fromParams(effect.params, defaults: defaults);
+}
+
+/// Where the [effect] that hits, with [timing], hits on the exported video:
+/// on the [beats] in its window when it follows the beat, otherwise at the
+/// start of its window and, while it repeats, every [HitTimingSettings.interval]
+/// after. Its window ends where the video loops at the latest.
+List<Duration> _hitCandidates(
+  CustomVideoEffect effect,
+  TransitionTimelineMap timelineMap,
+  List<Duration> beats,
+  HitTimingSettings timing,
+) {
+  final (:start, :end) = _outputWindow(effect, timelineMap);
+  if (effect.params[EditorVideoEffect.onBeatParam] == true) {
+    return [
+      for (final beat in [...beats]..sort())
+        if (beat >= start && beat < end) beat,
+    ];
+  }
+  if (!timing.repeats) return [if (start < end) start];
+  return [for (var at = start; at < end; at += timing.interval) at];
 }
 
 /// How many values describe one bolt of lightning; see [lightningBolt].
@@ -2011,13 +2161,16 @@ Duration _roundDown(Duration value, Duration step) {
 bool isFlashingVideoEffect(VideoEffectType type) =>
     type == VideoEffectType.strobe || type == VideoEffectType.negativeFlash;
 
-/// Whether the effect Divine registered under [id] flashes: lightning.
+/// Whether the effect Divine registered under [id] flashes: lightning, and
+/// the blasts, whose white-hot or red-hot core or burst of smoke changes much
+/// of the picture at once.
 ///
 /// Like a built-in flashing effect (see [isFlashingVideoEffect]), only one
-/// flashing effect may run at a time, and [lightningStrikesOnOutput] keeps its
+/// flashing effect may run at a time, and [flashStrikesOnOutput] keeps its
 /// strikes within three flashes a second together with the video's other
 /// flashes.
-bool isFlashingCustomVideoEffect(String id) => id == lightningVideoEffectId;
+bool isFlashingCustomVideoEffect(String id) =>
+    id == lightningVideoEffectId || blastVideoEffectIds.contains(id);
 
 /// How strong the custom [effect] is, from 0 to 1: its intensity param, or 1
 /// without one.

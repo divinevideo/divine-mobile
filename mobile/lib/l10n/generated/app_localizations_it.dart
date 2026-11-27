@@ -9718,6 +9718,21 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Sfocatura rotatoria';
 
   @override
+  String get videoEditorEffectShockwave => 'Onda d\'urto';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Subwoofer';
+
+  @override
+  String get videoEditorEffectPlasma => 'Plasma';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Onda di energia';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Esplosione di fumo';
+
+  @override
   String get videoEditorEffectComic => 'Fumetto';
 
   @override
@@ -9963,6 +9978,57 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Aggiungi musica o attiva l\'audio di una clip';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Impostazioni effetto';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Impostazioni: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(double seconds) {
+    final intl.NumberFormat secondsNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String secondsString = secondsNumberFormat.format(seconds);
+
+    return '$secondsString s';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Durata';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Ripeti';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'Una volta, dove l\'effetto inizia sulla timeline';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Intervallo';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Aspetto';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Posizione orizzontale';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Posizione verticale';
+
+  @override
+  String get videoEditorEffectHitReach => 'Portata';
+
+  @override
+  String get videoEditorEffectHitShake => 'Scossa';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Colpo di zoom';
+
+  @override
+  String get videoEditorEffectLookReset => 'Ripristina aspetto';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

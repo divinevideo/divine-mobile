@@ -9645,6 +9645,21 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Draaivervaging';
 
   @override
+  String get videoEditorEffectShockwave => 'Schokgolf';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Subwoofer';
+
+  @override
+  String get videoEditorEffectPlasma => 'Plasma';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Energiegolf';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Rookexplosie';
+
+  @override
   String get videoEditorEffectComic => 'Strip';
 
   @override
@@ -9888,6 +9903,57 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Voeg muziek toe of zet het geluid van een clip aan';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Effectinstellingen';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Instellingen: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(double seconds) {
+    final intl.NumberFormat secondsNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String secondsString = secondsNumberFormat.format(seconds);
+
+    return '$secondsString s';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Duur';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Herhalen';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'Eén keer, waar het effect op de tijdlijn begint';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Interval';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Uiterlijk';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Horizontale positie';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Verticale positie';
+
+  @override
+  String get videoEditorEffectHitReach => 'Bereik';
+
+  @override
+  String get videoEditorEffectHitShake => 'Schudden';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Zoomstoot';
+
+  @override
+  String get videoEditorEffectLookReset => 'Uiterlijk herstellen';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

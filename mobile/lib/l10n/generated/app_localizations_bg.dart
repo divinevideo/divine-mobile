@@ -9689,6 +9689,21 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Ротационно размазване';
 
   @override
+  String get videoEditorEffectShockwave => 'Ударна вълна';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Субуфер';
+
+  @override
+  String get videoEditorEffectPlasma => 'Плазма';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Енергийна вълна';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Димен взрив';
+
+  @override
   String get videoEditorEffectComic => 'Комикс';
 
   @override
@@ -9934,6 +9949,57 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Добави музика или включи звука на клип';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Настройки на ефекта';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Настройки: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(double seconds) {
+    final intl.NumberFormat secondsNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String secondsString = secondsNumberFormat.format(seconds);
+
+    return '$secondsString с';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Продължителност';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Повтаряй';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'Веднъж, където ефектът започва на времевата линия';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Интервал';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Външен вид';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Хоризонтална позиция';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Вертикална позиция';
+
+  @override
+  String get videoEditorEffectHitReach => 'Обхват';
+
+  @override
+  String get videoEditorEffectHitShake => 'Тръскане';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Удар с мащабиране';
+
+  @override
+  String get videoEditorEffectLookReset => 'Нулирай външния вид';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

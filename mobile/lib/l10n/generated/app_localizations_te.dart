@@ -9860,6 +9860,21 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'స్పిన్ బ్లర్';
 
   @override
+  String get videoEditorEffectShockwave => 'షాక్‌వేవ్';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'సబ్‌వూఫర్';
+
+  @override
+  String get videoEditorEffectPlasma => 'ప్లాస్మా';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'శక్తి తరంగం';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'పొగ పేలుడు';
+
+  @override
   String get videoEditorEffectComic => 'కామిక్';
 
   @override
@@ -10103,6 +10118,57 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'సంగీతాన్ని జోడించండి లేదా ఒక క్లిప్ ధ్వనిని ఆన్ చేయండి';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'ఎఫెక్ట్ సెట్టింగ్‌లు';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'సెట్టింగ్‌లు: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(double seconds) {
+    final intl.NumberFormat secondsNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String secondsString = secondsNumberFormat.format(seconds);
+
+    return '$secondsString సె';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'వ్యవధి';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'పునరావృతం';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'ఒకసారి, టైమ్‌లైన్‌లో ఎఫెక్ట్ మొదలయ్యే చోట';
+
+  @override
+  String get videoEditorEffectHitInterval => 'విరామం';
+
+  @override
+  String get videoEditorEffectLookTitle => 'రూపం';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'అడ్డ స్థానం';
+
+  @override
+  String get videoEditorEffectHitVertical => 'నిలువు స్థానం';
+
+  @override
+  String get videoEditorEffectHitReach => 'పరిధి';
+
+  @override
+  String get videoEditorEffectHitShake => 'కుదుపు';
+
+  @override
+  String get videoEditorEffectHitPunch => 'జూమ్ పంచ్';
+
+  @override
+  String get videoEditorEffectLookReset => 'రూపాన్ని రీసెట్ చేయి';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

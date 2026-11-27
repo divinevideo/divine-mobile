@@ -9517,6 +9517,21 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Dönme Bulanıklığı';
 
   @override
+  String get videoEditorEffectShockwave => 'Şok Dalgası';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Subwoofer';
+
+  @override
+  String get videoEditorEffectPlasma => 'Plazma';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Enerji Dalgası';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Duman Patlaması';
+
+  @override
   String get videoEditorEffectComic => 'Çizgi Roman';
 
   @override
@@ -9760,6 +9775,57 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Müzik ekle ya da bir klibin sesini aç';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Efekt ayarları';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Ayarlar: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(double seconds) {
+    final intl.NumberFormat secondsNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String secondsString = secondsNumberFormat.format(seconds);
+
+    return '$secondsString sn';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Süre';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Tekrarla';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'Bir kez, efektin zaman çizelgesinde başladığı yerde';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Aralık';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Görünüm';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Yatay konum';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Dikey konum';
+
+  @override
+  String get videoEditorEffectHitReach => 'Menzil';
+
+  @override
+  String get videoEditorEffectHitShake => 'Sarsıntı';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Zoom darbesi';
+
+  @override
+  String get videoEditorEffectLookReset => 'Görünümü sıfırla';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

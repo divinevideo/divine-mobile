@@ -9052,6 +9052,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectSpinBlur => '旋转模糊';
 
   @override
+  String get videoEditorEffectShockwave => '冲击波';
+
+  @override
+  String get videoEditorEffectSubwoofer => '低音炮';
+
+  @override
+  String get videoEditorEffectPlasma => '等离子';
+
+  @override
+  String get videoEditorEffectEnergyWave => '能量波';
+
+  @override
+  String get videoEditorEffectSmokeBurst => '烟雾爆发';
+
+  @override
   String get videoEditorEffectComic => '漫画';
 
   @override
@@ -9294,6 +9309,56 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorEffectsOnBeatNoSound => '添加音乐或打开某个片段的声音';
+
+  @override
+  String get videoEditorEffectSettingsOpen => '效果设置';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return '设置：$effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(double seconds) {
+    final intl.NumberFormat secondsNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String secondsString = secondsNumberFormat.format(seconds);
+
+    return '$secondsString 秒';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => '时长';
+
+  @override
+  String get videoEditorEffectHitRepeat => '重复';
+
+  @override
+  String get videoEditorEffectHitOnce => '仅一次，在时间轴上效果开始处';
+
+  @override
+  String get videoEditorEffectHitInterval => '间隔';
+
+  @override
+  String get videoEditorEffectLookTitle => '外观';
+
+  @override
+  String get videoEditorEffectHitHorizontal => '水平位置';
+
+  @override
+  String get videoEditorEffectHitVertical => '垂直位置';
+
+  @override
+  String get videoEditorEffectHitReach => '范围';
+
+  @override
+  String get videoEditorEffectHitShake => '震动';
+
+  @override
+  String get videoEditorEffectHitPunch => '缩放冲击';
+
+  @override
+  String get videoEditorEffectLookReset => '重置外观';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

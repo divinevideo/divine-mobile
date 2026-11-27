@@ -9137,6 +9137,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'スピンブラー';
 
   @override
+  String get videoEditorEffectShockwave => '衝撃波';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'サブウーファー';
+
+  @override
+  String get videoEditorEffectPlasma => 'プラズマ';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'エネルギー波';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'スモークバースト';
+
+  @override
   String get videoEditorEffectComic => 'コミック';
 
   @override
@@ -9379,6 +9394,56 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorEffectsOnBeatNoSound => '音楽を追加するか、クリップの音をオンにしてください';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'エフェクト設定';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return '設定：$effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(double seconds) {
+    final intl.NumberFormat secondsNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String secondsString = secondsNumberFormat.format(seconds);
+
+    return '$secondsString秒';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => '長さ';
+
+  @override
+  String get videoEditorEffectHitRepeat => '繰り返し';
+
+  @override
+  String get videoEditorEffectHitOnce => '1回だけ（タイムライン上でエフェクトが始まる位置）';
+
+  @override
+  String get videoEditorEffectHitInterval => '間隔';
+
+  @override
+  String get videoEditorEffectLookTitle => '見た目';
+
+  @override
+  String get videoEditorEffectHitHorizontal => '横の位置';
+
+  @override
+  String get videoEditorEffectHitVertical => '縦の位置';
+
+  @override
+  String get videoEditorEffectHitReach => '範囲';
+
+  @override
+  String get videoEditorEffectHitShake => '揺れ';
+
+  @override
+  String get videoEditorEffectHitPunch => 'ズームの衝撃';
+
+  @override
+  String get videoEditorEffectLookReset => '見た目をリセット';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

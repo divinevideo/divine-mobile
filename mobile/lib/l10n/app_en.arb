@@ -7180,6 +7180,26 @@
   "@videoEditorEffectSpinBlur": {
     "description": "Name of a video effect: the picture streaks around its centre, as if the camera turned during the shot."
   },
+  "videoEditorEffectShockwave": "Shockwave",
+  "@videoEditorEffectShockwave": {
+    "description": "Name of a video effect for heavy music: on each hit a ring of pressure races from the centre to the edges, bending the picture like a lens, while the picture punches in and rattles."
+  },
+  "videoEditorEffectSubwoofer": "Subwoofer",
+  "@videoEditorEffectSubwoofer": {
+    "description": "Name of a video effect for heavy music, named after a bass loudspeaker: on each hit the middle of the picture bulges out like a speaker cone and springs back."
+  },
+  "videoEditorEffectPlasma": "Plasma",
+  "@videoEditorEffectPlasma": {
+    "description": "Name of a video effect for heavy music: on each hit a white-hot blast bursts in the middle and spreads as a glowing ring of liquid that bends the picture like water. It flashes."
+  },
+  "videoEditorEffectEnergyWave": "Energy Wave",
+  "@videoEditorEffectEnergyWave": {
+    "description": "Name of a video effect for heavy music: on each hit a red-hot blast bursts in the middle and spreads as a red ring crackling with arcs of energy. It flashes."
+  },
+  "videoEditorEffectSmokeBurst": "Smoke Burst",
+  "@videoEditorEffectSmokeBurst": {
+    "description": "Name of a video effect for heavy music: on each hit a billow of grey smoke bursts from the middle and is pushed out past the edges of the picture."
+  },
   "videoEditorEffectComic": "Comic",
   "@videoEditorEffectComic": {
     "description": "Name of a video effect: the picture looks like a printed comic book, with flat colours, halftone dots and ink outlines."
@@ -7499,6 +7519,75 @@
   "videoEditorEffectsOnBeatNoSound": "Add music or turn a clip's sound on",
   "@videoEditorEffectsOnBeatNoSound": {
     "description": "Shown under the 'On the beat' switch when nothing in the video makes a sound: no music was added and every clip is muted."
+  },
+  "videoEditorEffectSettingsOpen": "Effect settings",
+  "@videoEditorEffectSettingsOpen": {
+    "description": "Label and tooltip of the button under the intensity slider of the video effects editor that shows the picked effect's settings in place of the effects picker."
+  },
+  "videoEditorEffectSettingsTitle": "{effect} settings",
+  "@videoEditorEffectSettingsTitle": {
+    "description": "Title over the settings of the picked video effect, which replace the effects picker; effect is the effect's name, for example Shockwave.",
+    "placeholders": {
+      "effect": {
+        "type": "String",
+        "example": "Shockwave"
+      }
+    }
+  },
+  "videoEditorEffectSeconds": "{seconds} s",
+  "@videoEditorEffectSeconds": {
+    "description": "A length of time in seconds next to a slider in a video effect's settings, for example 0.8 s.",
+    "placeholders": {
+      "seconds": {
+        "type": "double",
+        "format": "decimalPattern",
+        "example": "0.8"
+      }
+    }
+  },
+  "videoEditorEffectHitDuration": "Duration",
+  "@videoEditorEffectHitDuration": {
+    "description": "Label of the slider that sets how long one hit of a video effect such as the shockwave lasts."
+  },
+  "videoEditorEffectHitRepeat": "Repeat",
+  "@videoEditorEffectHitRepeat": {
+    "description": "Label of the switch that makes a video effect such as the shockwave hit again and again, rather than once."
+  },
+  "videoEditorEffectHitOnce": "Once, where the effect starts on the timeline",
+  "@videoEditorEffectHitOnce": {
+    "description": "Line under the repeat switch while it is off: the effect hits once, at the start of its bar on the editor timeline."
+  },
+  "videoEditorEffectHitInterval": "Interval",
+  "@videoEditorEffectHitInterval": {
+    "description": "Label of the slider that sets how long it takes until a repeating video effect such as the shockwave hits again."
+  },
+  "videoEditorEffectLookTitle": "Look",
+  "@videoEditorEffectLookTitle": {
+    "description": "Title over the settings that change how a video effect such as the shockwave looks: where it hits, how far it spreads, how hard it shakes the picture and its colour."
+  },
+  "videoEditorEffectHitHorizontal": "Horizontal position",
+  "@videoEditorEffectHitHorizontal": {
+    "description": "Label of the slider that moves where a video effect such as the shockwave hits from left to right."
+  },
+  "videoEditorEffectHitVertical": "Vertical position",
+  "@videoEditorEffectHitVertical": {
+    "description": "Label of the slider that moves where a video effect such as the shockwave hits from top to bottom."
+  },
+  "videoEditorEffectHitReach": "Reach",
+  "@videoEditorEffectHitReach": {
+    "description": "Label of the slider that sets how far a video effect such as the shockwave spreads across the picture."
+  },
+  "videoEditorEffectHitShake": "Shake",
+  "@videoEditorEffectHitShake": {
+    "description": "Label of the slider that sets how hard the picture rattles when a video effect such as the shockwave hits."
+  },
+  "videoEditorEffectHitPunch": "Zoom punch",
+  "@videoEditorEffectHitPunch": {
+    "description": "Label of the slider that sets how far the picture zooms in for a moment when a video effect such as the shockwave hits."
+  },
+  "videoEditorEffectLookReset": "Reset look",
+  "@videoEditorEffectLookReset": {
+    "description": "Button that puts the look settings of a video effect such as the shockwave back to their defaults."
   },
   "videoEditorEffectOnBeatLabel": "{effect} on the beat",
   "@videoEditorEffectOnBeatLabel": {

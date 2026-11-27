@@ -9156,6 +9156,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectSpinBlur => '스핀 블러';
 
   @override
+  String get videoEditorEffectShockwave => '충격파';
+
+  @override
+  String get videoEditorEffectSubwoofer => '서브우퍼';
+
+  @override
+  String get videoEditorEffectPlasma => '플라즈마';
+
+  @override
+  String get videoEditorEffectEnergyWave => '에너지 파동';
+
+  @override
+  String get videoEditorEffectSmokeBurst => '연기 폭발';
+
+  @override
   String get videoEditorEffectComic => '만화';
 
   @override
@@ -9398,6 +9413,56 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorEffectsOnBeatNoSound => '음악을 추가하거나 클립 소리를 켜 주세요';
+
+  @override
+  String get videoEditorEffectSettingsOpen => '효과 설정';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return '설정: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(double seconds) {
+    final intl.NumberFormat secondsNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String secondsString = secondsNumberFormat.format(seconds);
+
+    return '$secondsString초';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => '길이';
+
+  @override
+  String get videoEditorEffectHitRepeat => '반복';
+
+  @override
+  String get videoEditorEffectHitOnce => '한 번, 타임라인에서 효과가 시작되는 지점';
+
+  @override
+  String get videoEditorEffectHitInterval => '간격';
+
+  @override
+  String get videoEditorEffectLookTitle => '모양';
+
+  @override
+  String get videoEditorEffectHitHorizontal => '가로 위치';
+
+  @override
+  String get videoEditorEffectHitVertical => '세로 위치';
+
+  @override
+  String get videoEditorEffectHitReach => '범위';
+
+  @override
+  String get videoEditorEffectHitShake => '흔들림';
+
+  @override
+  String get videoEditorEffectHitPunch => '줌 펀치';
+
+  @override
+  String get videoEditorEffectLookReset => '모양 초기화';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

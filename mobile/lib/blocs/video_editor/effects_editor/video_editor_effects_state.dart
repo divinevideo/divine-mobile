@@ -47,7 +47,10 @@ class VideoEditorEffectsState extends Equatable {
     this.intensity = VideoEditorEffectsCubit.defaultIntensity,
     this.leftIntensities = const {},
     this.dropsSettings = const DropsEffectSettings(),
+    this.hitTiming,
+    this.hitLook,
     this.onBeat = false,
+    this.isSettingsOpen = false,
     this.startedPlayback = false,
     this.beatInput,
     this.beats = const [],
@@ -81,9 +84,21 @@ class VideoEditorEffectsState extends Equatable {
   /// How the drops look when [selectedType] is [EditorEffectType.drops].
   final DropsEffectSettings dropsSettings;
 
+  /// How the picked effect hits, when the user changed it from the defaults
+  /// of [selectedType]; see [selectedHitTiming].
+  final HitTimingSettings? hitTiming;
+
+  /// How the picked effect looks, when the user changed it from the
+  /// defaults; see [selectedHitLook].
+  final HitLookSettings? hitLook;
+
   /// Whether the picked effect fires on the beat; only applies when
   /// [selectedType] [EditorEffectType.supportsOnBeat].
   final bool onBeat;
+
+  /// Whether the settings of the picked effect show in place of the effects
+  /// picker.
+  final bool isSettingsOpen;
 
   /// Whether opening the editor started the video, which closing it should
   /// then pause again.
@@ -105,6 +120,33 @@ class VideoEditorEffectsState extends Equatable {
   /// Whether the picked effect fires on the beat.
   bool get selectionOnBeat =>
       onBeat && selectedType != null && selectedType!.supportsOnBeat;
+
+  /// How the picked effect hits, or `null` for one whose hits cannot be
+  /// timed (see [EditorEffectType.hitTiming]).
+  HitTimingSettings? get selectedHitTiming {
+    final defaults = selectedType?.hitTiming;
+    return defaults == null ? null : hitTiming ?? defaults;
+  }
+
+  /// How the picked effect looks, or `null` for one whose look cannot be
+  /// set: the effects whose hits can be timed (see
+  /// [EditorEffectType.hitTiming]).
+  HitLookSettings? get selectedHitLook => selectedType?.hitTiming == null
+      ? null
+      : hitLook ?? const HitLookSettings();
+
+  /// Whether the picked effect has settings beyond its intensity: it can fire
+  /// on the beat, its hits can be timed, or it is the drops.
+  bool get hasSettings {
+    final type = selectedType;
+    return type != null &&
+        (type.supportsOnBeat ||
+            type.hitTiming != null ||
+            type == EditorEffectType.drops);
+  }
+
+  /// Whether the settings of the picked effect show; see [isSettingsOpen].
+  bool get showsSettings => isSettingsOpen && hasSettings;
 
   /// The effect the open editor would commit, or `null` for none.
   ///
@@ -158,8 +200,16 @@ class VideoEditorEffectsState extends Equatable {
   }
 
   /// The settings a picked effect of [type] stores next to its intensity.
-  Map<String, Object> settingsFor(EditorEffectType type) =>
-      type == EditorEffectType.drops ? dropsSettings.toParams() : const {};
+  Map<String, Object> settingsFor(EditorEffectType type) {
+    if (type == EditorEffectType.drops) return dropsSettings.toParams();
+    final defaults = type.hitTiming;
+    if (defaults == null) return const {};
+    final picked = type == selectedType;
+    return {
+      ...(picked ? hitTiming ?? defaults : defaults).toParams(),
+      ...((picked ? hitLook : null) ?? const HitLookSettings()).toParams(),
+    };
+  }
 
   /// Whether any effect, committed or picked, fires on the beat, so the beats
   /// are needed.
@@ -234,7 +284,12 @@ class VideoEditorEffectsState extends Equatable {
     double? intensity,
     Map<IntroOutroLook?, double>? leftIntensities,
     DropsEffectSettings? dropsSettings,
+    HitTimingSettings? hitTiming,
+    bool clearHitTiming = false,
+    HitLookSettings? hitLook,
+    bool clearHitLook = false,
     bool? onBeat,
+    bool? isSettingsOpen,
     bool? startedPlayback,
     VideoEditorBeatInput? beatInput,
     List<Duration>? beats,
@@ -251,7 +306,10 @@ class VideoEditorEffectsState extends Equatable {
       intensity: intensity ?? this.intensity,
       leftIntensities: leftIntensities ?? this.leftIntensities,
       dropsSettings: dropsSettings ?? this.dropsSettings,
+      hitTiming: clearHitTiming ? null : (hitTiming ?? this.hitTiming),
+      hitLook: clearHitLook ? null : (hitLook ?? this.hitLook),
       onBeat: onBeat ?? this.onBeat,
+      isSettingsOpen: isSettingsOpen ?? this.isSettingsOpen,
       startedPlayback: startedPlayback ?? this.startedPlayback,
       beatInput: beatInput ?? this.beatInput,
       beats: beats ?? this.beats,
@@ -269,7 +327,10 @@ class VideoEditorEffectsState extends Equatable {
     intensity,
     leftIntensities,
     dropsSettings,
+    hitTiming,
+    hitLook,
     onBeat,
+    isSettingsOpen,
     startedPlayback,
     beatInput,
     beats,
