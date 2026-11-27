@@ -71,6 +71,7 @@ void main() {
         () => repository.readFreshProfile(
           pubkey: _pubkey,
           requireRawKind0: true,
+          rawKind0RetryDelays: any(named: 'rawKind0RetryDelays'),
         ),
       ).thenAnswer((_) => answer());
     }
@@ -134,6 +135,7 @@ void main() {
           () => repository.readFreshProfile(
             pubkey: _pubkey,
             requireRawKind0: true,
+            rawKind0RetryDelays: any(named: 'rawKind0RetryDelays'),
           ),
         ).called(1),
       );
@@ -391,12 +393,15 @@ void main() {
           await cubit.setAllowVideoReuse(false);
         },
         skip: 3,
-        errors: () => [isA<ProfilePublishFailedException>()],
-        expect: () => const [
-          RemixSettingsState(
-            loadStatus: RemixSettingsLoadStatus.ready,
-            saveStatus: RemixSettingsSaveStatus.failedPublish,
-          ),
+        errors: () => [isA<Exception>()],
+        expect: () => [
+          isA<RemixSettingsState>()
+              .having((s) => s.allowVideoReuse, 'rollback', isTrue)
+              .having(
+                (s) => s.saveStatus,
+                'failure phase',
+                RemixSettingsSaveStatus.failedRead,
+              ),
         ],
         verify: (_) {
           verifyNever(
@@ -413,6 +418,103 @@ void main() {
           expect(savedProfiles, isEmpty);
         },
       );
+
+      blocTest<RemixSettingsCubit, RemixSettingsState>(
+        'can save after an inconclusive read without reloading the screen',
+        setUp: () {
+          stubReads([
+            (profile: _profile(), conclusive: true),
+            (profile: null, conclusive: false),
+            (profile: _profile(about: 'new bio'), conclusive: true),
+          ]);
+          stubSave((allow) async => _profile(allowVideoReuse: allow));
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.setAllowVideoReuse(false);
+          expect(cubit.state.saveStatus, RemixSettingsSaveStatus.failedRead);
+          await cubit.setAllowVideoReuse(false);
+        },
+        errors: () => [isA<Exception>()],
+        verify: (cubit) {
+          expect(cubit.state.allowVideoReuse, isFalse);
+          expect(cubit.state.saveStatus, RemixSettingsSaveStatus.idle);
+          verify(
+            () => repository.readFreshProfile(
+              pubkey: _pubkey,
+              requireRawKind0: true,
+              rawKind0RetryDelays: const [Duration(milliseconds: 250)],
+            ),
+          ).called(2);
+          verify(
+            () => repository.saveProfileEvent(
+              displayName: 'Creator',
+              about: 'new bio',
+              website: 'https://creator.example',
+              picture: 'https://cdn.example/p.png',
+              banner: '#112233',
+              allowVideoReuse: false,
+              currentProfile: _profile(about: 'new bio'),
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<RemixSettingsCubit, RemixSettingsState>(
+        'refuses to publish when the save read belongs to another account',
+        setUp: () => stubReads([
+          (profile: _profile(), conclusive: true),
+          (profile: _profile(pubkey: 'd' * 64), conclusive: true),
+        ]),
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.setAllowVideoReuse(false);
+        },
+        skip: 3,
+        errors: () => [isA<Exception>()],
+        expect: () => const [
+          RemixSettingsState(
+            loadStatus: RemixSettingsLoadStatus.ready,
+            saveStatus: RemixSettingsSaveStatus.failedRead,
+          ),
+        ],
+        verify: (_) => verifyNever(
+          () => repository.saveProfileEvent(
+            displayName: any(named: 'displayName'),
+            about: any(named: 'about'),
+            website: any(named: 'website'),
+            picture: any(named: 'picture'),
+            banner: any(named: 'banner'),
+            allowVideoReuse: any(named: 'allowVideoReuse'),
+            currentProfile: any(named: 'currentProfile'),
+          ),
+        ),
+      );
+
+      test('does not publish if closed during the save read', () async {
+        final read = Completer<FreshProfileRead>();
+        final cubit = buildCubit();
+        await cubit.load();
+        stubReadResult(() => read.future);
+        final save = cubit.setAllowVideoReuse(false);
+        await cubit.close();
+        read.complete((profile: _profile(), conclusive: true));
+        await save;
+
+        verifyNever(
+          () => repository.saveProfileEvent(
+            displayName: any(named: 'displayName'),
+            about: any(named: 'about'),
+            website: any(named: 'website'),
+            picture: any(named: 'picture'),
+            banner: any(named: 'banner'),
+            allowVideoReuse: any(named: 'allowVideoReuse'),
+            currentProfile: any(named: 'currentProfile'),
+          ),
+        );
+      });
 
       blocTest<RemixSettingsCubit, RemixSettingsState>(
         'reverts the switch when the publish is rejected',

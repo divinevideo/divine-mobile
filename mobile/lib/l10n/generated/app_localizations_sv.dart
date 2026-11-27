@@ -4060,6 +4060,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get remixStartFailed => 'Kunde inte starta remixen. Försök igen.';
 
   @override
+  String get remixSettingSaveFailed =>
+      'Det gick inte att uppdatera din remixinställning. Försök igen.';
+
+  @override
   String get remixSettingAllowTitle => 'Låt andra remixa mina videor';
 
   @override

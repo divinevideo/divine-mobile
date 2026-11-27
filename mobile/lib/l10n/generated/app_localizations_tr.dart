@@ -4004,6 +4004,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get remixStartFailed => 'Remiks başlatılamadı. Tekrar dene.';
 
   @override
+  String get remixSettingSaveFailed =>
+      'Remiks ayarın güncellenemedi. Tekrar dene.';
+
+  @override
   String get remixSettingAllowTitle =>
       'Başkalarının videolarımı remikslemesine izin ver';
 

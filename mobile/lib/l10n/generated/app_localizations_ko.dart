@@ -3827,6 +3827,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get remixStartFailed => '리믹스를 시작하지 못했어요. 다시 시도해 주세요.';
 
   @override
+  String get remixSettingSaveFailed => '리믹스 설정을 업데이트하지 못했어요. 다시 시도해 주세요.';
+
+  @override
   String get remixSettingAllowTitle => '다른 사람이 내 영상을 리믹스하도록 허용';
 
   @override

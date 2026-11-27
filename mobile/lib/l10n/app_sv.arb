@@ -1462,6 +1462,7 @@
   "remixBlockedByCreator": "Den här kreatören tillåter inte remixer.",
   "remixConsentCheckFailed": "Kunde inte kontrollera om videon får remixas. Försök igen.",
   "remixStartFailed": "Kunde inte starta remixen. Försök igen.",
+  "remixSettingSaveFailed": "Det gick inte att uppdatera din remixinställning. Försök igen.",
   "remixSettingAllowTitle": "Låt andra remixa mina videor",
   "remixSettingAllowSubtitle": "Andra kan använda dina videor som klipp i sina egna inlägg.",
   "videoMetadataClipCreditRow": "Använder ett klipp från {name}",

@@ -1462,6 +1462,7 @@
   "remixBlockedByCreator": "Ta osoba nie pozwala na remiksy.",
   "remixConsentCheckFailed": "Nie udało się sprawdzić, czy ten film można remiksować. Spróbuj ponownie.",
   "remixStartFailed": "Nie udało się rozpocząć remiksu. Spróbuj ponownie.",
+  "remixSettingSaveFailed": "Nie udało się zaktualizować ustawienia remiksów. Spróbuj ponownie.",
   "remixSettingAllowTitle": "Pozwól innym remiksować moje filmy",
   "remixSettingAllowSubtitle": "Inni mogą używać twoich filmów jako klipów we własnych postach.",
   "videoMetadataClipCreditRow": "Używa klipu od {name}",

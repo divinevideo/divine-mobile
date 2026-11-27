@@ -4118,6 +4118,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Не успяхме да започнем ремикса. Опитай отново.';
 
   @override
+  String get remixSettingSaveFailed =>
+      'Настройката ти за ремикси не можа да се обнови. Опитай пак.';
+
+  @override
   String get remixSettingAllowTitle =>
       'Позволи на другите да ремиксират моите видеа';
 

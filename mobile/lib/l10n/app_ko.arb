@@ -1019,6 +1019,7 @@
   "remixBlockedByCreator": "이 크리에이터는 리믹스를 허용하지 않아요.",
   "remixConsentCheckFailed": "이 영상을 리믹스할 수 있는지 확인하지 못했어요. 다시 시도해 주세요.",
   "remixStartFailed": "리믹스를 시작하지 못했어요. 다시 시도해 주세요.",
+  "remixSettingSaveFailed": "리믹스 설정을 업데이트하지 못했어요. 다시 시도해 주세요.",
   "remixSettingAllowTitle": "다른 사람이 내 영상을 리믹스하도록 허용",
   "remixSettingAllowSubtitle": "다른 사람들이 내 영상을 자기 게시물의 클립으로 쓸 수 있어요.",
   "videoMetadataClipCreditRow": "{name}님의 클립 사용",

@@ -1452,6 +1452,7 @@
   "remixBlockedByCreator": "لا يسمح صانع المحتوى هذا بإعادة المزج.",
   "remixConsentCheckFailed": "تعذّر التحقق مما إذا كان يمكن إعادة مزج هذا الفيديو. يُرجى إعادة المحاولة.",
   "remixStartFailed": "تعذّر بدء إعادة المزج. يُرجى إعادة المحاولة.",
+  "remixSettingSaveFailed": "تعذّر تحديث إعداد إعادة المزج. يُرجى المحاولة مجددًا.",
   "remixSettingAllowTitle": "السماح للآخرين بإعادة مزج فيديوهاتي",
   "remixSettingAllowSubtitle": "يمكن للآخرين استخدام فيديوهاتك كمقاطع في منشوراتهم.",
   "videoMetadataClipCreditRow": "يستخدم مقطعًا من {name}",
