@@ -872,10 +872,8 @@ class CuratedListRepository {
 
   /// Resolves up to [maxThumbnails] thumbnail URLs for each of [lists].
   ///
-  /// The same funnelcake-first, batched-relay-fallback pipeline the search
-  /// stream uses to enrich its results, exposed for discovery surfaces that
-  /// fetch their lists elsewhere (the relay discovery stream) and render
-  /// thumbnail collages.
+  /// Reuses the search and discovery thumbnail pipeline for callers that
+  /// already hold their lists, such as the profile's My Lists gallery.
   Future<List<CuratedList>> resolveListThumbnails(
     List<CuratedList> lists, {
     int maxThumbnails = 5,
