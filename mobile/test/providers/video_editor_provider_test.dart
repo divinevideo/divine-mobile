@@ -2767,6 +2767,34 @@ void main() {
       expect(container.read(videoEditorProvider).tags, equals({'funny'}));
     });
 
+    test(
+      'keeps all legacy tags through metadata edits and explicit removals',
+      () {
+        final tags = {for (var i = 0; i < 15; i++) 'tag$i'};
+        final notifier = container.read(videoEditorProvider.notifier)
+          ..initFromPublishedVideo(buildVideo(hashtags: tags.toList()));
+        expect(container.read(videoEditorProvider).tags, tags);
+
+        notifier.updateMetadata(title: 'Retitled', description: 'New caption');
+        expect(container.read(videoEditorProvider).tags, tags);
+
+        final remaining = tags.difference({'tag0'});
+        notifier.updateMetadata(tags: remaining);
+        expect(container.read(videoEditorProvider).tags, remaining);
+
+        notifier.updateMetadata(description: 'New caption #newtag');
+        expect(container.read(videoEditorProvider).tags, remaining);
+
+        final roomForOne = tags.skip(6).toSet();
+        notifier.updateMetadata(tags: roomForOne);
+        notifier.updateMetadata(tags: {...roomForOne, 'replacement'});
+        expect(container.read(videoEditorProvider).tags, {
+          ...roomForOne,
+          'replacement',
+        });
+      },
+    );
+
     test('drops a mixed-case tag once the caption loses its hashtag', () {
       final notifier = container.read(videoEditorProvider.notifier)
         ..initFromPublishedVideo(

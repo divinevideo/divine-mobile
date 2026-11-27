@@ -35,17 +35,16 @@ class HashtagExtractor {
     return isWithinLengthLimit(tag) ? tag : null;
   }
 
-  /// Normalizes every tag with [normalizeVideoHashtag], drops invalid ones
-  /// and duplicates, and keeps at most [maxHashtagsPerVideo], in order.
-  static List<String> normalizeVideoHashtags(Iterable<String> rawTags) {
-    final result = <String>{};
-    for (final raw in rawTags) {
-      if (result.length >= maxHashtagsPerVideo) break;
-      final tag = normalizeVideoHashtag(raw);
-      if (tag != null) result.add(tag);
-    }
-    return result.toList();
-  }
+  /// Normalizes and deduplicates tags in order without applying a count limit.
+  ///
+  /// Existing videos can exceed the current publish limit. Editing must expose
+  /// every valid tag so creators choose which ones to remove.
+  static List<String> normalizeHashtags(Iterable<String> rawTags) =>
+      rawTags.map(normalizeVideoHashtag).whereType<String>().toSet().toList();
+
+  /// Normalizes tags and keeps at most [maxHashtagsPerVideo] for a new publish.
+  static List<String> normalizeVideoHashtags(Iterable<String> rawTags) =>
+      normalizeHashtags(rawTags).take(maxHashtagsPerVideo).toList();
 
   /// Common hashtags for Divine content, used as a fallback when the
   /// Funnelcake API is unavailable.

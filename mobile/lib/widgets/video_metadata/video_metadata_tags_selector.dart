@@ -64,10 +64,13 @@ class VideoMetadataTagsSelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // The tags the post will carry: the stickers' first, at most ten.
+    // Show every existing tag, including legacy tags above the publish limit.
     final tags = ref.watch(
       videoEditorProvider.select(
-        (s) => s.stickerCredits.hashtagsWith(s.tags).join(', '),
+        (s) => HashtagExtractor.normalizeHashtags([
+          ...s.stickerCredits.hashtags,
+          ...s.tags,
+        ]).join(', '),
       ),
     );
 

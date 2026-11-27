@@ -495,10 +495,10 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         .toString();
 
     // Only extract hashtags when text changes, not when tags are manually edited
-    final Set<String> allTags;
+    final Set<String> requestedTags;
     if (tags != null) {
       // User manually edited tags - use only what they provided
-      allTags = HashtagExtractor.normalizeVideoHashtags(tags).toSet();
+      requestedTags = HashtagExtractor.normalizeHashtags(tags).toSet();
     } else {
       // Text changed - compare old and new hashtags to only update changed ones
       final hashtagPattern = RegExp('#([a-zA-Z0-9]+)(?![a-zA-Z0-9])');
@@ -518,9 +518,22 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       final addedHashtags = newHashtags.difference(oldHashtags);
 
       // Update tags: remove old ones, add new ones, keep manually added tags
-      allTags = HashtagExtractor.normalizeVideoHashtags(
+      requestedTags = HashtagExtractor.normalizeHashtags(
         state.tags.difference(removedHashtags).union(addedHashtags),
       ).toSet();
+    }
+
+    // Keep every existing tag the creator retained, even on legacy videos
+    // above the limit. Only new additions need room; never make room for them
+    // by silently dropping another tag.
+    final existingTags = HashtagExtractor.normalizeHashtags(state.tags).toSet();
+    final allTags = requestedTags.intersection(existingTags);
+    final stickerTags = state.stickerCredits.hashtags;
+    for (final tag in requestedTags.difference(existingTags)) {
+      if ({...stickerTags, ...allTags}.length <
+          HashtagExtractor.maxHashtagsPerVideo) {
+        allTags.add(tag);
+      }
     }
 
     // Calculate total size in bytes (UTF-8 encoded)
