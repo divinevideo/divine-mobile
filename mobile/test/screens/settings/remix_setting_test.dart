@@ -56,6 +56,7 @@ void main() {
       when(
         () => repository.saveProfileEvent(
           useLatestProfileFields: true,
+          shouldPublish: any(named: 'shouldPublish'),
           displayName: any(named: 'displayName'),
           about: any(named: 'about'),
           website: any(named: 'website'),
@@ -249,6 +250,7 @@ void main() {
         verify(
           () => repository.saveProfileEvent(
             useLatestProfileFields: true,
+            shouldPublish: any(named: 'shouldPublish'),
             displayName: 'Creator',
             about: any(named: 'about'),
             website: any(named: 'website'),
@@ -291,6 +293,7 @@ void main() {
         verifyNever(
           () => repository.saveProfileEvent(
             useLatestProfileFields: true,
+            shouldPublish: any(named: 'shouldPublish'),
             displayName: any(named: 'displayName'),
             about: any(named: 'about'),
             website: any(named: 'website'),

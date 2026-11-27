@@ -149,6 +149,7 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
         allowVideoReuse: allow,
         currentProfile: seed,
         useLatestProfileFields: true,
+        shouldPublish: () => !isClosed,
       );
       if (isClosed) return;
       await _onProfileSaved(saved);

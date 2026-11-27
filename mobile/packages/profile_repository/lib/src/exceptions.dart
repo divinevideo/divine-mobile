@@ -32,6 +32,12 @@ class ProfilePublishSeedUnavailableException
   String toString() => 'ProfilePublishSeedUnavailableException: $message';
 }
 
+/// Thrown when a caller cancels a save before publication starts.
+class ProfileSaveCancelledException extends ProfileRepositoryException {
+  /// Creates a profile save cancellation exception.
+  const ProfileSaveCancelledException();
+}
+
 /// Thrown when profile publish fails because no relays are connected.
 ///
 /// A sibling of [ProfilePublishFailedException] — both extend

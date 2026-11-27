@@ -1565,6 +1565,8 @@ class ProfileRepository implements ProfileReader {
   /// Set [useLatestProfileFields] for a settings-only save that should take
   /// display name, bio, website, picture and banner from the resolved seed.
   ///
+  /// Throws [ProfileSaveCancelledException] if [shouldPublish] returns false
+  /// after the preparatory reads, before sending the event.
   /// Throws [NoRelaysConnectedException] when no relays are connected.
   /// Throws [ProfilePublishFailedException] when relays were reached but none
   /// confirmed the event (rejection, timeout, or a send failure such as the
@@ -1586,6 +1588,7 @@ class ProfileRepository implements ProfileReader {
     bool? allowVideoReuse,
     UserProfile? currentProfile,
     bool useLatestProfileFields = false,
+    bool Function()? shouldPublish,
   }) async {
     // External NIP-05 takes precedence when provided.
     final resolvedNip05 =
@@ -1684,6 +1687,9 @@ class ProfileRepository implements ProfileReader {
     // Remix consent readers trust the default relay's kind 0 on its own, so
     // a save that sets the block only counts once the default relay has it.
     final requireDefaultRelay = allowVideoReuse != null;
+    if (shouldPublish?.call() == false) {
+      throw const ProfileSaveCancelledException();
+    }
     final result = rawTags.isEmpty
         ? await _nostrClient.sendProfileAwaitOk(
             profileContent: newContent,

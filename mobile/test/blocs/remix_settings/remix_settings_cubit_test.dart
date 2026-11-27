@@ -96,6 +96,7 @@ void main() {
       when(
         () => repository.saveProfileEvent(
           useLatestProfileFields: true,
+          shouldPublish: any(named: 'shouldPublish'),
           displayName: any(named: 'displayName'),
           about: any(named: 'about'),
           website: any(named: 'website'),
@@ -277,6 +278,7 @@ void main() {
           verify(
             () => repository.saveProfileEvent(
               useLatestProfileFields: true,
+              shouldPublish: any(named: 'shouldPublish'),
               displayName: 'Creator',
               about: 'bio',
               website: 'https://creator.example',
@@ -313,6 +315,7 @@ void main() {
         verify: (_) => verify(
           () => repository.saveProfileEvent(
             useLatestProfileFields: true,
+            shouldPublish: any(named: 'shouldPublish'),
             displayName: 'Renamed',
             about: 'new bio',
             website: 'https://creator.example',
@@ -351,6 +354,7 @@ void main() {
         verify: (_) => verify(
           () => repository.saveProfileEvent(
             useLatestProfileFields: true,
+            shouldPublish: any(named: 'shouldPublish'),
             displayName: '',
             allowVideoReuse: false,
           ),
@@ -372,6 +376,7 @@ void main() {
         verify: (_) => verify(
           () => repository.saveProfileEvent(
             useLatestProfileFields: true,
+            shouldPublish: any(named: 'shouldPublish'),
             displayName: 'Creator',
             about: 'bio',
             website: 'https://creator.example',
@@ -412,6 +417,7 @@ void main() {
           verifyNever(
             () => repository.saveProfileEvent(
               useLatestProfileFields: true,
+              shouldPublish: any(named: 'shouldPublish'),
               displayName: any(named: 'displayName'),
               about: any(named: 'about'),
               website: any(named: 'website'),
@@ -456,6 +462,7 @@ void main() {
           verify(
             () => repository.saveProfileEvent(
               useLatestProfileFields: true,
+              shouldPublish: any(named: 'shouldPublish'),
               displayName: 'Creator',
               about: 'new bio',
               website: 'https://creator.example',
@@ -490,6 +497,7 @@ void main() {
         verify: (_) => verifyNever(
           () => repository.saveProfileEvent(
             useLatestProfileFields: true,
+            shouldPublish: any(named: 'shouldPublish'),
             displayName: any(named: 'displayName'),
             about: any(named: 'about'),
             website: any(named: 'website'),
@@ -514,6 +522,7 @@ void main() {
         verifyNever(
           () => repository.saveProfileEvent(
             useLatestProfileFields: true,
+            shouldPublish: any(named: 'shouldPublish'),
             displayName: any(named: 'displayName'),
             about: any(named: 'about'),
             website: any(named: 'website'),
@@ -574,6 +583,7 @@ void main() {
         verify: (_) => verifyNever(
           () => repository.saveProfileEvent(
             useLatestProfileFields: true,
+            shouldPublish: any(named: 'shouldPublish'),
             displayName: any(named: 'displayName'),
             allowVideoReuse: any(named: 'allowVideoReuse'),
             currentProfile: any(named: 'currentProfile'),
@@ -757,6 +767,43 @@ void main() {
         expect(savedProfiles.single.about, 'New bio');
         expect(savedProfiles.single.picture, isNull);
         expect(savedProfiles.single.allowsVideoReuse, isFalse);
+      });
+
+      test('does not publish after close during the repository read', () async {
+        final event = Event(_pubkey, 0, const [], '{"display_name":"Creator"}');
+        final read = (events: [event], timedOut: false, noRelays: false);
+        final started = Completer<void>();
+        final finish = Completer<void>();
+        var reads = 0;
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer((_) async {
+          if (++reads == 3) {
+            started.complete();
+            await finish.future;
+          }
+          return read;
+        });
+        final cubit = buildPublishingCubit();
+        addTearDown(cubit.close);
+        await cubit.load();
+        final save = cubit.setAllowVideoReuse(false);
+        await started.future;
+        await cubit.close();
+        finish.complete();
+        await save;
+
+        verifyNever(
+          () => client.sendProfileAwaitOk(
+            profileContent: any(named: 'profileContent'),
+            tags: any(named: 'tags'),
+            requireDefaultRelay: any(named: 'requireDefaultRelay'),
+          ),
+        );
       });
 
       test(
