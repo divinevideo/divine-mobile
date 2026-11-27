@@ -34,6 +34,17 @@ void main() {
         );
       });
 
+      test('falls back to defaults for unreadable draft values', () {
+        expect(
+          HitTimingSettings.fromParams(const {
+            HitTimingSettings.hitParam: '800000',
+            HitTimingSettings.intervalParam: {'milliseconds': 400},
+            HitTimingSettings.repeatParam: 0,
+          }, defaults: defaults),
+          defaults,
+        );
+      });
+
       test('clamps lengths out of range', () {
         final read = HitTimingSettings.fromParams(const {
           HitTimingSettings.hitParam: 10,
