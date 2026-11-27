@@ -1098,7 +1098,7 @@ void main() {
 
     testWidgets(
       'closing the Classics gate during in-flight pagination clears '
-      'isLoadingMore on Classics and does not disrupt For You pagination',
+      'the adaptive cursor and does not disrupt For You pagination',
       (tester) async {
         var pendingStatus = Completer<ProtectedMinorStatus>()
           ..complete(ProtectedMinorStatus.notProtected());
@@ -1188,20 +1188,19 @@ void main() {
         await tester.runAsync(pumpEventQueue);
 
         expect(home.originalFeed.state.isLoadingMore, isFalse);
-        expect(home.originalFeed.state.paginationCursor, isNull);
+        expect(home.originalFeed.state.paginationCursor, 'archive-offset-2');
+        expect(home.originalFeed.state.videos, [
+          _removalVideo('1'),
+          _removalVideo('2'),
+        ]);
 
-        // Once the superseded in-flight request settles, droppable pagination
-        // is free again and subsequent pagination uses the archive cleanly.
+        // The superseded request must leave the archive page intact.
         pageTwoReply.completeError(
           const FunnelcakeException('Classics request superseded'),
         );
         await tester.runAsync(pumpEventQueue);
         expect(home.originalFeed.state.isLoadingMore, isFalse);
-        expect(home.originalFeed.state.paginationCursor, isNull);
-
-        home.originalFeed.add(const VideoFeedLoadMoreRequested());
-        await tester.runAsync(pumpEventQueue);
-        expect(home.originalFeed.state.isLoadingMore, isFalse);
+        expect(home.originalFeed.state.paginationCursor, 'archive-offset-2');
         expect(home.originalFeed.state.videos, [
           _removalVideo('1'),
           _removalVideo('2'),

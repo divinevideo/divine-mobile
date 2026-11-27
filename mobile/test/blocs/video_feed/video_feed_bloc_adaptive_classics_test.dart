@@ -256,8 +256,6 @@ void main() {
         completeFirstArchivePage();
         gate.add(false);
         await pumpEventQueue();
-        bloc.add(const VideoFeedLoadMoreRequested());
-        await pumpEventQueue();
 
         expect(archiveCursors, [null]);
         expect(bloc.state.videos, [
@@ -311,6 +309,72 @@ void main() {
         ]);
         expect(bloc.state.currentIndex, 1);
         expect(bloc.state.paginationCursor, 'archive-2');
+      },
+    );
+
+    test(
+      'continues on the archive without waiting for stale adaptive pagination',
+      () async {
+        final stalePage = Completer<HomeFeedResult>();
+        final recommendationCursors = <String?>[];
+        final bloc = VideoFeedBloc(
+          videosRepository: videosRepository,
+          followRepository: followRepository,
+          curatedListRepository: curatedListRepository,
+          classicSession: ClassicFeedSession(
+            loadPage: (request) async {
+              recommendationCursors.add(request.cursor);
+              if (request.cursor != null) return stalePage.future;
+              return HomeFeedResult(
+                videos: [_video(20), _video(21)],
+                paginationCursor: 'recommendation-2',
+                hasMore: true,
+                recommendationPageCount: 1,
+              );
+            },
+          ),
+          adaptiveClassicsEnabledStream: gate.stream,
+        );
+        addTearDown(() async {
+          if (!stalePage.isCompleted) {
+            stalePage.complete(const HomeFeedResult(videos: []));
+          }
+          await bloc.close();
+        });
+        gate.add(true);
+        bloc.add(
+          const VideoFeedStarted(mode: FeedMode.classic, forceMode: true),
+        );
+        await pumpEventQueue();
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+        expect(recommendationCursors, [null, 'recommendation-2']);
+        expect(bloc.state.isLoadingMore, isTrue);
+
+        completeFirstArchivePage();
+        gate.add(false);
+        await pumpEventQueue();
+
+        expect(archiveCursors, [null]);
+        expect(bloc.state.videos, [
+          _video(20),
+          _video(1),
+          _video(2),
+          _video(3),
+        ]);
+        expect(bloc.state.currentIndex, 0);
+
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+        expect(archiveCursors, [null, 'archive-2']);
+        expect(bloc.state.videos.last, _video(4));
+
+        final archiveState = bloc.state;
+        stalePage.complete(
+          HomeFeedResult(videos: [_video(22)], recommendationPageCount: 1),
+        );
+        await pumpEventQueue();
+        expect(bloc.state, archiveState);
       },
     );
 

@@ -148,7 +148,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     on<VideoFeedSourceChanged>(_onSourceChanged);
     on<VideoFeedLoadMoreRequested>(
       _onLoadMoreRequested,
-      transformer: droppable(),
+      transformer: concurrent(),
     );
     on<VideoFeedRefreshRequested>(_onRefreshRequested);
     on<VideoFeedAutoRefreshRequested>(_onAutoRefreshRequested);
@@ -240,6 +240,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   StreamSubscription<bool>? _adaptiveClassicsSubscription;
   bool _adaptiveClassicsEnabled;
   bool _isVisible = true;
+  int? _activePaginationGeneration;
 
   bool get _isAdaptiveClassicsAllowed =>
       _isAdaptiveClassicsAllowedCallback?.call() ?? _adaptiveClassicsEnabled;
@@ -272,7 +273,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     );
   }
 
-  Future<void> _detachClassicSession(Emitter<VideoFeedBlocState> emit) async {
+  Future<void> _detachClassicSession(
+    Emitter<VideoFeedBlocState> emit, {
+    bool refillArchive = false,
+  }) async {
     final subscription = _classicSessionSubscription;
     final session = _classicSession;
     if (session == null) return;
@@ -280,9 +284,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     _classicSession = null;
     // Reset the adaptive cursor before disposing so any new pagination reads
     // start on the archive, including when the adaptive queue was exhausted.
-    var droppedRankedClips = false;
     if (state.source.type == VideoFeedSourceType.classic) {
       _paginationGeneration++;
+      // An obsolete adaptive request can still be awaiting its response.
+      // Release its slot so the archive can start paging immediately.
+      _activePaginationGeneration = null;
       if (!_isClosing && !emit.isDone) {
         // Clips the viewer has not reached were ranked for an account that is
         // no longer eligible, so they go; the playing clip stays.
@@ -290,10 +296,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         final reached = videos.isEmpty
             ? 0
             : state.currentIndex.clamp(0, videos.length - 1) + 1;
-        droppedRankedClips = reached < videos.length;
         emit(
           state.copyWith(
-            videos: droppedRankedClips ? videos.sublist(0, reached) : null,
+            videos: reached < videos.length ? videos.sublist(0, reached) : null,
             hasMore: true,
             isLoadingMore: false,
             clearPaginationCursor: true,
@@ -302,11 +307,15 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
             ),
           ),
         );
+        // The current video is the last one, even if there was no ranked tail
+        // to remove. Start the archive without requiring another swipe.
+        if (refillArchive &&
+            reached > 0 &&
+            state.status == VideoFeedStatus.success) {
+          addIfOpen(const VideoFeedLoadMoreRequested());
+        }
       }
     }
-    // The playing clip is now the last one, so fetch what follows it from the
-    // archive instead of waiting for a swipe that has nowhere to go.
-    if (droppedRankedClips) addIfOpen(const VideoFeedLoadMoreRequested());
     await Future.wait(
       <Future<void>?>[subscription?.cancel(), session.dispose()].nonNulls,
     );
@@ -329,7 +338,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     if (event.enabled == _adaptiveClassicsEnabled) return;
     _adaptiveClassicsEnabled = event.enabled;
     if (!event.enabled) {
-      await _detachClassicSession(emit);
+      await _detachClassicSession(emit, refillArchive: true);
       return;
     }
     // If Home is already loading or showing an archive Classics slice, keep it
@@ -1243,7 +1252,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         source.type == VideoFeedSourceType.forYou &&
         state.paginationCursor != null;
     // Skip if not in success state, already loading more, or no more content
-    if (state.status != VideoFeedStatus.success ||
+    if (_activePaginationGeneration != null ||
+        state.status != VideoFeedStatus.success ||
         state.isLoadingMore ||
         !state.hasMore ||
         (state.videos.isEmpty && !canContinueEmptyForYou)) {
@@ -1251,6 +1261,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     }
 
     final paginationGeneration = _paginationGeneration;
+    _activePaginationGeneration = paginationGeneration;
     final feedLoad = _feedTracker?.startFeedLoad(
       source.mode.name,
       reason: FeedLoadReason.pagination,
@@ -1480,6 +1491,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       );
       emit(state.copyWith(isLoadingMore: false));
     } finally {
+      if (_activePaginationGeneration == paginationGeneration) {
+        _activePaginationGeneration = null;
+      }
       if (feedLoad != null) _feedTracker?.abandonFeedLoad(feedLoad);
     }
   }
