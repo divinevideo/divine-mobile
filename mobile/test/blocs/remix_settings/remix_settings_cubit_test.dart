@@ -624,6 +624,7 @@ void main() {
         when(
           () => client.sendProfileAwaitOk(
             profileContent: any(named: 'profileContent'),
+            tags: any(named: 'tags'),
             requireDefaultRelay: true,
           ),
         ).thenAnswer(
@@ -631,7 +632,7 @@ void main() {
             Event(
               _pubkey,
               0,
-              const [],
+              invocation.namedArguments[#tags] as List<List<String>>,
               jsonEncode(invocation.namedArguments[#profileContent]),
             ),
           ),
@@ -804,6 +805,51 @@ void main() {
             requireDefaultRelay: any(named: 'requireDefaultRelay'),
           ),
         );
+      });
+
+      test('preserves fields and tags removed on the newer profile', () async {
+        final earlier = Event(
+          _pubkey,
+          0,
+          [
+            ['i', 'example:user'],
+          ],
+          '{"name":"creator","display_name":"Creator"}',
+          createdAt: 1790000000,
+        );
+        final later = Event(
+          _pubkey,
+          0,
+          const [],
+          '{"name":"creator"}',
+          createdAt: 1790000001,
+        );
+        var reads = 0;
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => (
+            events: [if (++reads <= 2) earlier else later],
+            timedOut: false,
+            noRelays: false,
+          ),
+        );
+        stubDefaultRelayPublish((event) => PublishSuccess(event: event));
+        final cubit = buildPublishingCubit();
+        addTearDown(cubit.close);
+        await cubit.load();
+
+        await cubit.setAllowVideoReuse(false);
+
+        expect(savedProfiles.single.rawData, {
+          'name': 'creator',
+          divineAllowVideoReuseKey: false,
+        });
+        expect(savedProfiles.single.rawTags, isEmpty);
       });
 
       test(

@@ -1613,7 +1613,7 @@ class ProfileRepository implements ProfileReader {
     // For editor saves, the submitted form fields are authoritative.
     final fields = useLatestProfileFields
         ? (
-            displayName: seed?.displayName ?? seed?.name ?? '',
+            displayName: seed?.displayName ?? '',
             about: seed?.about,
             website: seed?.website,
             picture: seed?.picture,
@@ -1626,7 +1626,9 @@ class ProfileRepository implements ProfileReader {
             picture: picture,
             banner: banner,
           );
-    newContent['display_name'] = fields.displayName;
+    if (!useLatestProfileFields || newContent.containsKey('display_name')) {
+      newContent['display_name'] = fields.displayName;
+    }
     if (fields.about case final about? when about.isNotEmpty) {
       newContent['about'] = about;
     } else {
@@ -1681,8 +1683,9 @@ class ProfileRepository implements ProfileReader {
     // custom client fields, future NIPs — flows through from the seed
     // untouched. Adding new editable fields here MUST keep that invariant.
 
-    final rawTags = (seed?.rawTags.isNotEmpty ?? false)
-        ? seed!.rawTags
+    final seedTags = seed?.rawTags ?? const <List<String>>[];
+    final rawTags = useLatestProfileFields || seedTags.isNotEmpty
+        ? seedTags
         : currentProfile?.rawTags ?? const <List<String>>[];
     // Remix consent readers trust the default relay's kind 0 on its own, so
     // a save that sets the block only counts once the default relay has it.
