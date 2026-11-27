@@ -668,6 +668,9 @@ void VideoPlayerInstance::SetClips(const EncodableMap& args, Result result) {
   // first frame of this one; OnSourcesReady re-arms the check.
   frames_->first_frame = true;
   frames_->generation = generation_;
+  // The new source's first frame must not be drawn at the old size.
+  frames_->width = 0;
+  frames_->height = 0;
   source_write_fence_ = ++*position_writes_;
   loading_ = true;
   opened_ = false;
@@ -932,11 +935,12 @@ void VideoPlayerInstance::OnFirstFrame(uint64_t generation) {
 
 void VideoPlayerInstance::OnVideoSizeChanged(uint32_t width, uint32_t height) {
   if (width == 0 || height == 0) return;
+  // Written even when unchanged: SetClips and Stop clear the frame size.
+  frames_->width = width;
+  frames_->height = height;
   if (width == video_width_ && height == video_height_) return;
   video_width_ = width;
   video_height_ = height;
-  frames_->width = width;
-  frames_->height = height;
   SendState();
 }
 
@@ -1008,6 +1012,8 @@ void VideoPlayerInstance::Stop() {
   want_play_ = false;
   ++generation_;
   frames_->generation = generation_;
+  frames_->width = 0;
+  frames_->height = 0;
   source_write_fence_ = ++*position_writes_;
   ResolveSetClips();
   ResolveSeek();
