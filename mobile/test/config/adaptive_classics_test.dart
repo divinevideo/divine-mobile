@@ -164,6 +164,37 @@ void main() {
     );
 
     test(
+      'a minor-review recheck closes the gate until Keycast answers again',
+      () async {
+        var nextStatus = Completer<ProtectedMinorStatus>()
+          ..complete(ProtectedMinorStatus.notProtected());
+        final container = _container(
+          authState: AuthState.authenticated,
+          status: () => nextStatus.future,
+        );
+        expect(
+          await _settledGate(container, confirmedNotProtectedMinorProvider),
+          isTrue,
+        );
+
+        nextStatus = Completer<ProtectedMinorStatus>();
+        container
+            .read(protectedMinorRecheckProvider.notifier)
+            .requireFreshAnswer();
+        expect(container.read(confirmedNotProtectedMinorProvider), isFalse);
+
+        nextStatus.complete(ProtectedMinorStatus.notProtected());
+        await container.read(protectedMinorStatusProvider.future);
+        expect(container.read(confirmedNotProtectedMinorProvider), isTrue);
+
+        // An ordinary resume refresh after the recheck keeps it open again.
+        nextStatus = Completer<ProtectedMinorStatus>();
+        container.invalidate(protectedMinorStatusProvider);
+        expect(container.read(confirmedNotProtectedMinorProvider), isTrue);
+      },
+    );
+
+    test(
       'preserves confirmation during a same-account refresh and closes if the '
       'refresh turns protected or fails',
       () async {

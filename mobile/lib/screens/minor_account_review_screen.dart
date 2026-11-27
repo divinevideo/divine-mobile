@@ -34,10 +34,11 @@ enum MinorAccountReviewEntryPoint { welcome, moderation }
 /// state must be invalidated in lockstep. Otherwise `isProtectedMinorProvider`
 /// keeps its stale value and the DM/content restrictions wouldn't apply until
 /// the next relaunch or auth transition. Invalidating is strictly fail-closed:
-/// the sticky store never lets a refetch weaken protection.
+/// the sticky store never lets a refetch weaken protection, and the recheck
+/// withholds the personalization gate until the new answer arrives.
 void refreshMinorAccountState(WidgetRef ref) {
   ref.invalidate(currentMinorAccountReviewStatusProvider);
-  ref.invalidate(protectedMinorStatusProvider);
+  ref.read(protectedMinorRecheckProvider.notifier).requireFreshAnswer();
 }
 
 class MinorAccountReviewScreen extends ConsumerWidget {
