@@ -54,7 +54,7 @@ final class ClassicVinesFeedProvider
   ClassicVinesFeed create() => ClassicVinesFeed();
 }
 
-String _$classicVinesFeedHash() => r'b6f70ce9b610c92dae2d4b99a41d649695e9e9af';
+String _$classicVinesFeedHash() => r'8b8dc880a986e9fe12cfc1edb8584413aee573c0';
 
 /// ClassicVines grid provider, ranked by the repository's recommendation path.
 ///

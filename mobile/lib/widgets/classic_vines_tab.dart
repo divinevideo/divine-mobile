@@ -63,7 +63,7 @@ class _ClassicVinesTabState extends ConsumerState<ClassicVinesTab> {
   Widget build(BuildContext context) {
     final classicVinesAsync = ref.watch(classicVinesFeedProvider);
     final isAvailableAsync = ref.watch(classicVinesAvailableProvider);
-    final isAvailable = isAvailableAsync.asData?.value;
+    final isAvailable = isAvailableAsync.value;
 
     Log.debug(
       '🎬 ClassicVinesTab: AsyncValue state - isLoading: ${classicVinesAsync.isLoading}, '
@@ -72,7 +72,7 @@ class _ClassicVinesTabState extends ConsumerState<ClassicVinesTab> {
       category: LogCategory.video,
     );
 
-    if (isAvailableAsync.isLoading) {
+    if (isAvailableAsync.isLoading && isAvailable == null) {
       return const _ClassicVinesLoadingState();
     }
 
@@ -151,20 +151,17 @@ class _ClassicVinesTabState extends ConsumerState<ClassicVinesTab> {
       videos: videos,
       isLoadingMore: feedState.isLoadingMore,
       hasMoreContent: feedState.hasMoreContent,
+      onRefresh: _refreshClassics,
     );
   }
 
   Future<void> _refreshClassics() async {
-    ref.read(funnelcakeAvailableProvider.notifier).refresh();
-    await ref.read(funnelcakeAvailableProvider.future);
-    // The widget can be disposed during any of these awaits (e.g. the Explore
-    // TabController settling on another tab, or navigating away) while a
-    // throttled-network refresh is still in flight. Using `ref` after that
-    // throws a StateError, so bail out once unmounted. See issue #6157.
-    if (!mounted) return;
-    ref.invalidate(classicVinesAvailableProvider);
-    await ref.read(classicVinesAvailableProvider.future);
-    if (!mounted) return;
+    if (ref.read(classicVinesAvailableProvider).value != true) {
+      ref.read(funnelcakeAvailableProvider.notifier).refresh();
+      await ref.read(classicVinesAvailableProvider.future);
+      // The user can leave the tab while the availability check is in flight.
+      if (!mounted) return;
+    }
     await ref.read(classicVinesFeedProvider.notifier).refresh();
   }
 
@@ -184,11 +181,13 @@ class _ClassicVinesTabState extends ConsumerState<ClassicVinesTab> {
 class _ClassicVinesContent extends ConsumerStatefulWidget {
   const _ClassicVinesContent({
     required this.videos,
+    required this.onRefresh,
     this.isLoadingMore = false,
     this.hasMoreContent = false,
   });
 
   final List<VideoEvent> videos;
+  final RefreshCallback onRefresh;
   final bool isLoadingMore;
   final bool hasMoreContent;
 
@@ -232,22 +231,9 @@ class _ClassicVinesContentState extends ConsumerState<_ClassicVinesContent>
 
   @override
   Widget build(BuildContext context) {
-    final classicVinesFeedNotifier = ref.read(
-      classicVinesFeedProvider.notifier,
-    );
-
     return FeedRefreshControl(
       scrollController: _scrollController,
-      onRefresh: () async {
-        Log.info(
-          '🔄 ClassicVinesTab: Spinning to next batch of classics',
-          name: 'ClassicVinesTab',
-          category: LogCategory.video,
-        );
-        ref.read(funnelcakeAvailableProvider.notifier).refresh();
-        await ref.read(funnelcakeAvailableProvider.future);
-        await classicVinesFeedNotifier.refresh();
-      },
+      onRefresh: widget.onRefresh,
       child: CustomScrollView(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),

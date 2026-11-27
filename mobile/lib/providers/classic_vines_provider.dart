@@ -3,6 +3,8 @@
 
 import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart'
+    show ProviderListenableSelect;
 import 'package:models/models.dart';
 import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
@@ -85,8 +87,11 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
 
     // A personalized grid must not carry another account's cursor forward.
     ref.watch(currentAuthStateProvider);
-    final funnelcakeAvailable =
-        ref.watch(funnelcakeAvailableProvider).asData?.value ?? false;
+    final funnelcakeAvailable = ref.watch(
+      funnelcakeAvailableProvider.select(
+        (availability) => availability.value ?? false,
+      ),
+    );
 
     _paginationCursor = null;
 
@@ -277,7 +282,7 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
   Future<void> refresh() async {
     final generation = ++_feedGeneration;
     final funnelcakeAvailable =
-        ref.read(funnelcakeAvailableProvider).asData?.value ?? false;
+        ref.read(funnelcakeAvailableProvider).value ?? false;
 
     _paginationCursor = null;
 
@@ -321,7 +326,7 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
     final repository = ref.read(videosRepositoryProvider);
     final videoEventService = ref.read(videoEventServiceProvider);
     final funnelcakeAvailable =
-        ref.read(funnelcakeAvailableProvider).asData?.value ?? false;
+        ref.read(funnelcakeAvailableProvider).value ?? false;
 
     if (!funnelcakeAvailable || !currentState.hasMoreContent) {
       return;

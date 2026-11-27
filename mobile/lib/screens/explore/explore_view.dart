@@ -289,9 +289,9 @@ class _ExploreViewState extends ConsumerState<ExploreView>
   Widget build(BuildContext context) {
     ref.watch(exploreTabVideoUpdateListenerProvider);
 
-    // Watch tab availability and rebuild the controller when it changes.
+    // Keep Classics in the tab list while its last availability is rechecked.
     final classicsAvailable =
-        ref.watch(classicVinesAvailableProvider).asData?.value ?? false;
+        ref.watch(classicVinesAvailableProvider).value ?? false;
     final forYouAvailable = ref.watch(forYouAvailableProvider);
     final appsAvailable =
         nostrAppsSandboxSupported &&
