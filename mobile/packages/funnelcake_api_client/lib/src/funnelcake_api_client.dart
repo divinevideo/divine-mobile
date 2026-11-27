@@ -2779,7 +2779,9 @@ class FunnelcakeApiClient {
   /// [kind] narrows the search to music or to effects as the server's audio
   /// analysis classified them; `null` searches every sound. [authors] narrows
   /// it to sounds by those creators, given as hex pubkeys; empty searches
-  /// every creator's. [limit] is the
+  /// every creator's. [sort] orders equally good matches newest or most
+  /// trending first; the best matches still lead, and `null` keeps the
+  /// server's blended rank. [limit] is the
   /// most sounds a page holds; the server takes 1 to 100. [cursor] is the
   /// [SoundSearchResponse.nextCursor] of the page before. A page can hold
   /// fewer sounds than [limit], none even, and still not be the last; follow
@@ -2798,6 +2800,7 @@ class FunnelcakeApiClient {
     required String query,
     SoundKind? kind,
     List<String> authors = const [],
+    SoundListSort? sort,
     int limit = 50,
     String? cursor,
   }) async {
@@ -2822,6 +2825,7 @@ class FunnelcakeApiClient {
         'q': trimmed,
         if (kind != null) 'kind': _soundKindParameter(kind),
         if (authors.isNotEmpty) 'authors': authors.join(','),
+        if (sort != null) 'sort': sort.name,
         'limit': limit.toString(),
         if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
       },

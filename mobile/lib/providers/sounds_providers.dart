@@ -3,6 +3,8 @@
 
 import 'dart:async';
 
+import 'package:funnelcake_api_client/funnelcake_api_client.dart'
+    show SoundListSort;
 import 'package:meta/meta.dart';
 import 'package:models/models.dart'
     show AudioEvent, SoundKind, VideoEvent, searchTermsOf;
@@ -117,8 +119,8 @@ class TrendingSounds extends _$TrendingSounds with _LoadsMoreSounds {
 }
 
 /// The first page of the community sounds matching a free-text [query], of
-/// [kind] when one is given and by the accounts the viewer follows when
-/// [followed], who answered it and how the relays answered it.
+/// [kind] when one is given, equally good matches ordered by [sort] when one
+/// is given, who answered it and how the relays answered it.
 ///
 /// [SoundsRepository.searchSounds] owns the composition: Funnelcake's
 /// typo-tolerant search, ranked best match first, and when that cannot
@@ -141,7 +143,7 @@ Future<SoundSearchResults> soundSearchResults(
   Ref ref,
   String query, {
   SoundKind? kind,
-  bool followed = false,
+  SoundListSort? sort,
 }) async {
   // Answered before the repository is read, so a search field that is merely
   // open does not construct one — and with it a Nostr client — for a query
@@ -156,20 +158,14 @@ Future<SoundSearchResults> soundSearchResults(
     );
   }
 
-  final repository = ref.watch(soundsRepositoryProvider);
-  return repository.searchSounds(
-    query,
-    kind: kind,
-    followedBy: followed
-        ? ref.watch(followRepositoryProvider).followingPubkeys
-        : null,
-  );
+  return ref
+      .watch(soundsRepositoryProvider)
+      .searchSounds(query, kind: kind, sort: sort);
 }
 
-/// Every page a search for [query], of [kind] when one is given and by the
-/// accounts the viewer follows when [followed], has loaded, starting with
-/// [soundSearchResults]'s, and loading the next as the list is scrolled to
-/// its end ([SoundSearchPages.loadMore]).
+/// Every page a search for [query], of [kind] and in [sort] when given, has
+/// loaded, starting with [soundSearchResults]'s, and loading the next as the
+/// list is scrolled to its end ([SoundSearchPages.loadMore]).
 ///
 /// Only Funnelcake's answers have more than one page. Its pages can hold
 /// fewer sounds than asked for, none even, and still not be the last, so the
@@ -188,10 +184,10 @@ class SoundSearchPages extends _$SoundSearchPages with _LoadsMoreSounds {
   Future<PagedSounds> build(
     String query, {
     SoundKind? kind,
-    bool followed = false,
+    SoundListSort? sort,
   }) async {
     final first = await ref.watch(
-      soundSearchResultsProvider(query, kind: kind, followed: followed).future,
+      soundSearchResultsProvider(query, kind: kind, sort: sort).future,
     );
     // Made anew with each build, so a page still loading for the list this
     // build replaced cannot move the new one's cursor. The repository is
@@ -199,14 +195,7 @@ class SoundSearchPages extends _$SoundSearchPages with _LoadsMoreSounds {
     _pager = _CursorPager((cursor) async {
       final page = await ref
           .read(soundsRepositoryProvider)
-          .searchSounds(
-            query,
-            kind: kind,
-            followedBy: followed
-                ? ref.read(followRepositoryProvider).followingPubkeys
-                : null,
-            cursor: cursor,
-          );
+          .searchSounds(query, kind: kind, sort: sort, cursor: cursor);
       return _indexPageOf(page);
     });
     return PagedSounds.first(_pager.take(_indexPageOf(first)));
@@ -638,13 +627,13 @@ Future<Map<String, SoundCover?>> soundSearchCovers(
   Ref ref,
   String query, {
   SoundKind? kind,
-  bool followed = false,
+  SoundListSort? sort,
 }) async {
   final pages = await ref.watch(
     soundSearchPagesProvider(
       query,
       kind: kind,
-      followed: followed,
+      sort: sort,
     ).selectAsync((list) => list.pages),
   );
   return _coversFor(ref, pages);

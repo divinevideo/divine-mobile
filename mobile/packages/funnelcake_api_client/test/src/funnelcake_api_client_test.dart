@@ -5253,6 +5253,20 @@ void main() {
         },
       );
 
+      test('orders equally good matches as asked', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response('{"data": []}', 200));
+
+        await client.searchSounds(query: 'rain', sort: SoundListSort.recent);
+        final recent = requestedUri().queryParameters;
+        await client.searchSounds(query: 'rain', sort: SoundListSort.trending);
+        final trending = requestedUri().queryParameters;
+
+        expect(recent['sort'], 'recent');
+        expect(trending['sort'], 'trending');
+      });
+
       test('narrows the search to creators', () async {
         when(
           () => mockHttpClient.get(any(), headers: any(named: 'headers')),
