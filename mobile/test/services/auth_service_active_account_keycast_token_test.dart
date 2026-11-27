@@ -33,12 +33,13 @@ void main() {
 
     late _MockUserDataCleanupService cleanupService;
     late _MockKeycastOAuth oauthClient;
+    late AuthServiceChannelMocks channelMocks;
 
     setUp(() {
       cleanupService = _MockUserDataCleanupService();
       oauthClient = _MockKeycastOAuth();
       stubUserDataCleanupSuccess(cleanupService);
-      AuthServiceChannelMocks.install();
+      channelMocks = AuthServiceChannelMocks.install();
       SharedPreferences.setMockInitialValues({kKnownAccountsKey: '[]'});
     });
 
@@ -134,6 +135,70 @@ void main() {
         expect(await tokenFuture, isNull);
       },
     );
+
+    group('refresh of an expired session', () {
+      void storeExpiredSessionFor(String owner) {
+        channelMocks.secureStorage['keycast_session'] = jsonEncode(
+          KeycastSession(
+            bunkerUrl: 'https://bunker.example.com',
+            accessToken: 'expired-access-token',
+            expiresAt: DateTime.now().subtract(const Duration(hours: 1)),
+            userPubkey: owner,
+          ).toJson(),
+        );
+      }
+
+      void stubRefreshMintingFor(String owner) {
+        when(() => oauthClient.getSession()).thenAnswer((_) async => null);
+        when(
+          () => oauthClient.refreshSession(
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).thenAnswer(
+          (_) async => KeycastSession(
+            bunkerUrl: 'https://bunker.example.com',
+            accessToken: accessToken,
+            expiresAt: DateTime.now().add(const Duration(hours: 1)),
+            userPubkey: owner,
+          ),
+        );
+      }
+
+      test('refreshes a session stored for the signed-in account', () async {
+        final (authService, pubkeyHex) = await signedInAuthService();
+        storeExpiredSessionFor(pubkeyHex);
+        stubRefreshMintingFor(pubkeyHex);
+
+        expect(
+          await authService.activeAccountKeycastToken(forAccount: pubkeyHex),
+          accessToken,
+        );
+        verify(
+          () => oauthClient.refreshSession(userPubkey: pubkeyHex),
+        ).called(1);
+      });
+
+      // A refresh stamps the expected owner onto the session it mints, so
+      // the owner check after it cannot catch another account's token.
+      test(
+        'does not refresh a session another account left in storage',
+        () async {
+          final (authService, pubkeyHex) = await signedInAuthService();
+          storeExpiredSessionFor(otherAccountPubkey);
+          stubRefreshMintingFor(pubkeyHex);
+
+          expect(
+            await authService.activeAccountKeycastToken(forAccount: pubkeyHex),
+            isNull,
+          );
+          verifyNever(
+            () => oauthClient.refreshSession(
+              userPubkey: any(named: 'userPubkey'),
+            ),
+          );
+        },
+      );
+    });
 
     test(
       'binds the live signer to the verified account on unbound OAuth sign-in',

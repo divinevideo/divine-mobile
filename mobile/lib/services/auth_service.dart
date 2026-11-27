@@ -3280,8 +3280,13 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     // exactly the same condition getSessionOrRefresh() would.
     var session = await client.getSession();
     if (session == null && currentPublicKeyHex == ownerPubkey) {
+      // The refresh token lives in the same global slot, and a refresh
+      // stamps the expected owner onto whatever it mints, so the stored
+      // session's owner has to be checked before the refresh, not after.
       session = await _oauthCoordinator.refreshSession(
         expectedOwnerPubkey: ownerPubkey,
+        storedSessionReader: () => KeycastSession.load(_flutterSecureStorage),
+        caller: 'activeAccountKeycastToken',
       );
     }
     if (session == null || currentPublicKeyHex != ownerPubkey) return null;
