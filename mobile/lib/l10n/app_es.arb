@@ -54,6 +54,8 @@
   "videoStickerAddYoursButton": "Sumá el tuyo",
   "videoStickerAddYoursWatchSeries": "Mirá la serie",
   "videoStickerAddYoursWatchSeriesSemanticLabel": "Mirá la serie: {prompt}",
+  "videoSeriesChipEpisode": "Ep. {episode} de {total}",
+  "videoSeriesChipSemanticLabel": "Serie {seriesName}, episodio {episode} de {total}",
   "videoStickerAddYoursJoined": "{count, plural, =0{Empezá vos} =1{{count} se sumó} many{{count} se sumaron} other{{count} se sumaron}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} se sumaron",
   "videoStickerAddYoursOpenSemanticLabel": "Ver quiénes se sumaron",

@@ -3619,6 +3619,22 @@ abstract class AppLocalizations {
   /// **'Watch the series: {prompt}'**
   String videoStickerAddYoursWatchSeriesSemanticLabel(String prompt);
 
+  /// On the chip shown on a video that is an episode of a series, after the series name: which episode this is and how many the series has, such as 'Ep 4 of 12'; episode and total are already formatted numbers. Kept short: Ep abbreviates Episode.
+  ///
+  /// In en, this message translates to:
+  /// **'Ep {episode} of {total}'**
+  String videoSeriesChipEpisode(String episode, String total);
+
+  /// Screen reader label of the series chip on a video that is an episode of a series; a tap opens the series at this episode. {seriesName} is the series' title; episode and total are already formatted numbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Series {seriesName}, episode {episode} of {total}'**
+  String videoSeriesChipSemanticLabel(
+    String seriesName,
+    String episode,
+    String total,
+  );
+
   /// On an Add yours sticker in the player: how many people answered its prompt with a video.
   ///
   /// In en, this message translates to:

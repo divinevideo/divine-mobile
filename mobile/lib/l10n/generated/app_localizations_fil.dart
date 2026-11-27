@@ -2130,6 +2130,20 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String videoSeriesChipEpisode(String episode, String total) {
+    return 'Ep $episode ng $total';
+  }
+
+  @override
+  String videoSeriesChipSemanticLabel(
+    String seriesName,
+    String episode,
+    String total,
+  ) {
+    return 'Series $seriesName, episode $episode ng $total';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

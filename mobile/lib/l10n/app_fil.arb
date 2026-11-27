@@ -54,6 +54,8 @@
   "videoStickerAddYoursButton": "Ikaw naman",
   "videoStickerAddYoursWatchSeries": "Panoorin ang series",
   "videoStickerAddYoursWatchSeriesSemanticLabel": "Panoorin ang series: {prompt}",
+  "videoSeriesChipEpisode": "Ep {episode} ng {total}",
+  "videoSeriesChipSemanticLabel": "Series {seriesName}, episode {episode} ng {total}",
   "videoStickerAddYoursJoined": "{count, plural, =0{Mauna ka na} =1{{count} ang sumali} other{{count} ang sumali}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} ang sumali",
   "videoStickerAddYoursOpenSemanticLabel": "Tingnan kung sino ang sumali",

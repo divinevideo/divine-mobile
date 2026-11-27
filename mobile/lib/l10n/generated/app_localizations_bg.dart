@@ -2163,6 +2163,20 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String videoSeriesChipEpisode(String episode, String total) {
+    return 'Еп. $episode от $total';
+  }
+
+  @override
+  String videoSeriesChipSemanticLabel(
+    String seriesName,
+    String episode,
+    String total,
+  ) {
+    return 'Поредица $seriesName, епизод $episode от $total';
+  }
+
+  @override
   String videoStickerAddYoursJoined(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

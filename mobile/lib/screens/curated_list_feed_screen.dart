@@ -35,6 +35,7 @@ import 'package:openvine/widgets/list_video_player_mode.dart';
 import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
 import 'package:openvine/widgets/share_list_button.dart';
+import 'package:openvine/widgets/video_feed_item/series_chip.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Owner actions offered by the `...` bottom sheet.
@@ -252,35 +253,40 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       // screen background.
       backgroundColor: context.vineColors.nav,
       appBar: appBar,
-      body: _ListBody(
-        videosAsync: videosAsync,
-        activeVideoIndex: activeVideoIndex,
-        manageCubit: _manageCubit,
-        listName: widget.listName,
-        header: _ListHeroHeader(
-          name: list?.name ?? widget.listName,
-          videoCount:
-              list?.videoEventIds.length ?? widget.videoIds?.length ?? 0,
-          description: list?.description,
-          authorPubkey: isOwned ? null : widget.authorPubkey ?? list?.pubkey,
-          isPublic: list?.isPublic,
-          onAuthorTap: _openAuthorProfile,
-          actions: headerButtons,
+      // A series' own episodes play here without a chip opening it again.
+      body: PlayingListScope(
+        authorPubkey: list?.pubkey ?? widget.authorPubkey,
+        listId: widget.listId,
+        child: _ListBody(
+          videosAsync: videosAsync,
+          activeVideoIndex: activeVideoIndex,
+          manageCubit: _manageCubit,
+          listName: widget.listName,
+          header: _ListHeroHeader(
+            name: list?.name ?? widget.listName,
+            videoCount:
+                list?.videoEventIds.length ?? widget.videoIds?.length ?? 0,
+            description: list?.description,
+            authorPubkey: isOwned ? null : widget.authorPubkey ?? list?.pubkey,
+            isPublic: list?.isPublic,
+            onAuthorTap: _openAuthorProfile,
+            actions: headerButtons,
+          ),
+          onExitVideoMode: _exitVideoMode,
+          onVideoTap: (videoList, index) {
+            final selected = videoList[index];
+            Log.info(
+              'Tapped video in curated list: ${selected.id}',
+              category: LogCategory.ui,
+            );
+            setState(() {
+              // A relay can insert a video before the next frame opens playback.
+              _activeVideoId = selected.id;
+              _pendingListIndex = null;
+            });
+          },
+          onRefresh: _refreshListVideos,
         ),
-        onExitVideoMode: _exitVideoMode,
-        onVideoTap: (videoList, index) {
-          final selected = videoList[index];
-          Log.info(
-            'Tapped video in curated list: ${selected.id}',
-            category: LogCategory.ui,
-          );
-          setState(() {
-            // A relay can insert a video before the next frame opens playback.
-            _activeVideoId = selected.id;
-            _pendingListIndex = null;
-          });
-        },
-        onRefresh: _refreshListVideos,
       ),
       bottomNavigationBar: _manageCubit == null
           ? null

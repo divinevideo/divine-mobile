@@ -29,6 +29,7 @@ import 'package:openvine/widgets/list_author_byline.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:openvine/widgets/list_video_player_mode.dart';
 import 'package:openvine/widgets/share_list_button.dart';
+import 'package:openvine/widgets/video_feed_item/series_chip.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:videos_repository/videos_repository.dart';
 
@@ -1377,6 +1378,33 @@ void main() {
         await tester.pump();
 
         expect(playing(tester), equals(part(1).id));
+      });
+
+      testWidgets('marks the list it plays, so its series chip hides', (
+        tester,
+      ) async {
+        when(
+          () => mockService.isOwnedList('$author:road-trip'),
+        ).thenReturn(false);
+        when(
+          () => mockService.isSubscribedToList('$author:road-trip'),
+        ).thenReturn(false);
+        await tester.pumpWidget(
+          buildSubject(
+            listId: 'road-trip',
+            authorPubkey: author,
+            videoIds: references,
+            videoEvents: [part(1), part(2), part(3)],
+            initialListIndex: 0,
+          ),
+        );
+        await tester.pump();
+
+        final scope = tester.widget<PlayingListScope>(
+          find.ancestor(of: player(), matching: find.byType(PlayingListScope)),
+        );
+        expect(scope.plays('30005:$author:road-trip'), isTrue);
+        expect(scope.plays('30005:$author:other-series'), isFalse);
       });
 
       testWidgets('opens the grid without a requested position', (
