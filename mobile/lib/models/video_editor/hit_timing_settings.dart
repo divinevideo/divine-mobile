@@ -24,13 +24,14 @@ class HitTimingSettings extends Equatable {
     required HitTimingSettings defaults,
   }) {
     Duration read(String key, Duration fallback, Duration min, Duration max) {
-      final us = (params[key] as num?)?.round();
-      if (us == null) return fallback;
+      final us = params[key];
+      if (us is! num || !us.isFinite) return fallback;
       return Duration(
-        microseconds: us.clamp(min.inMicroseconds, max.inMicroseconds),
+        microseconds: us.round().clamp(min.inMicroseconds, max.inMicroseconds),
       );
     }
 
+    final repeats = params[repeatParam];
     return HitTimingSettings(
       duration: read(hitParam, defaults.duration, minDuration, maxDuration),
       interval: read(
@@ -39,7 +40,7 @@ class HitTimingSettings extends Equatable {
         minInterval,
         maxInterval,
       ),
-      repeats: params[repeatParam] as bool? ?? defaults.repeats,
+      repeats: repeats is bool ? repeats : defaults.repeats,
     );
   }
 
