@@ -205,6 +205,48 @@ void main() {
       expect(requests, isEmpty);
     });
 
+    test('uses an index answer slowed by a cold connection', () {
+      fakeAsync((clock) {
+        events = [definition(key2)];
+        final pending = Completer<List<IndexedBadgeCard>>();
+        when(api.getBadgeDiscovery).thenAnswer((_) => pending.future);
+        List<IndexedBadgeDiscovery>? cards;
+        unawaited(
+          repository.loadIndexedDiscovery().then((value) => cards = value),
+        );
+        // The first index read after app start took 1.3–2.1 s on device.
+        clock.elapse(const Duration(seconds: 2));
+        pending.complete([
+          (
+            definition: definition(key1),
+            holderCount: 0,
+            followerCount: 0,
+            videos: <BadgeVideoPreview>[],
+          ),
+        ]);
+        clock.flushMicrotasks();
+
+        expect(cards?.map((card) => card.definition.event.pubkey), [issuer1]);
+        expect(requests, isEmpty);
+      });
+    });
+
+    test('falls back to relays only once a hung index used its budget', () {
+      fakeAsync((clock) {
+        events = [definition(key2)];
+        when(
+          api.getBadgeDiscovery,
+        ).thenAnswer((_) => Completer<List<IndexedBadgeCard>>().future);
+        unawaited(repository.loadIndexedDiscovery());
+
+        clock.elapse(const Duration(milliseconds: 4900));
+        expect(requests, isEmpty);
+
+        clock.elapse(const Duration(milliseconds: 200));
+        expect(requests, isNotEmpty);
+      });
+    });
+
     test('an empty raw page falls back to primary relay definitions', () async {
       final badge = definition(key1);
       events = [badge];
