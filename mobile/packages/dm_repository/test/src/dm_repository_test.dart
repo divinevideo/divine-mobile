@@ -1202,6 +1202,24 @@ void main() {
       });
     }
 
+    /// The sender's own copy of a group send lands. A group publishes one copy
+    /// for every member after their sends (#10016).
+    void stubOwnCopyPublishes() =>
+        when(
+          () => mockMessageService.publishSelfWrap(
+            rumorEvent: any(named: 'rumorEvent'),
+            targetRelays: any(named: 'targetRelays'),
+            prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+          ),
+        ).thenAnswer((inv) async {
+          final rumor = inv.namedArguments[#rumorEvent] as Event;
+          return NIP17SendResult.success(
+            rumorEventId: rumor.id,
+            messageEventId: rumor.id,
+            recipientPubkey: _validPubkeyA,
+          );
+        });
+
     // -----------------------------------------------------------------
     // Static helpers
     // -----------------------------------------------------------------
@@ -5033,21 +5051,22 @@ void main() {
             'sig': '',
           });
           final mockOutgoingDmsDao = _MockOutgoingDmsDao();
-          when(() => mockOutgoingDmsDao.getById(any())).thenAnswer(
-            (_) async => OutgoingDm(
-              id: _rumorEventId,
-              conversationId: groupConversationId,
-              recipientPubkey: _validPubkeyB,
-              content: 'Hello from B!',
-              createdAt: 1700000000,
-              rumorEventJson: bRumorJson,
-              recipientWrapStatus: OutgoingWrapStatus.failed,
-              selfWrapStatus: OutgoingWrapStatus.failed,
-              queuedAt: DateTime.fromMillisecondsSinceEpoch(0),
-              ownerPubkey: _validPubkeyA,
-              sendBatchId: batchId,
-            ),
+          final groupRow = OutgoingDm(
+            id: '$_rumorEventId:$_validPubkeyB',
+            conversationId: groupConversationId,
+            recipientPubkey: _validPubkeyB,
+            content: 'Hello from B!',
+            createdAt: 1700000000,
+            rumorEventJson: bRumorJson,
+            recipientWrapStatus: OutgoingWrapStatus.failed,
+            selfWrapStatus: OutgoingWrapStatus.failed,
+            queuedAt: DateTime.fromMillisecondsSinceEpoch(0),
+            ownerPubkey: _validPubkeyA,
+            sendBatchId: batchId,
           );
+          when(
+            () => mockOutgoingDmsDao.getById(any()),
+          ).thenAnswer((_) async => groupRow);
           when(
             () => mockOutgoingDmsDao.deleteById(any()),
           ).thenAnswer((_) async => 1);
@@ -5067,6 +5086,27 @@ void main() {
               lastError: any(named: 'lastError'),
             ),
           ).thenAnswer((_) async => true);
+          // The recovered member's copy is its batch's (#10016): no other
+          // member's row records it yet, so this recovery publishes it.
+          when(
+            () => mockOutgoingDmsDao.getForConversation(
+              conversationId: any(named: 'conversationId'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => [groupRow]);
+          when(
+            () => mockMessageService.publishSelfWrap(
+              rumorEvent: any(named: 'rumorEvent'),
+              targetRelays: any(named: 'targetRelays'),
+              prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+            ),
+          ).thenAnswer(
+            (_) async => NIP17SendResult.success(
+              rumorEventId: _rumorEventId,
+              messageEventId: _rumorEventId,
+              recipientPubkey: _validPubkeyA,
+            ),
+          );
 
           final controller = StreamController<Event>();
           when(
@@ -5101,7 +5141,7 @@ void main() {
             ),
           );
           final recovered = await repository.recoverFullSend(
-            rumorId: _rumorEventId,
+            rumorId: groupRow.id,
           );
 
           expect(recovered.success, isTrue);
@@ -27241,6 +27281,7 @@ void main() {
 
     group('sendGroupMessage - success', () {
       setUp(stubSendPolicyPermitsEveryone);
+      setUp(stubOwnCopyPublishes);
 
       void stubDaoInserts() {
         when(
@@ -27577,6 +27618,7 @@ void main() {
 
     group('sendSharedVideoGroup', () {
       setUp(stubSendPolicyPermitsEveryone);
+      setUp(stubOwnCopyPublishes);
 
       void stubDaoInserts() {
         when(
@@ -29750,6 +29792,7 @@ void main() {
 
     group('sendGroupMessage with outgoing_dms queue wired in', () {
       setUp(stubSendPolicyPermitsEveryone);
+      setUp(stubOwnCopyPublishes);
 
       setUp(stubNoMessageForSendBatch);
 
@@ -30167,21 +30210,103 @@ void main() {
         },
       );
 
+      /// Answers every member's send as delivered, the way the real service
+      /// answers a send handed the copy callback: it hands its copy over and
+      /// publishes none (#10016). The batch's one copy then [ownCopyLands] or
+      /// not. Returns, per recipient, whether its send was handed the callback.
+      Map<String, bool> stubDeliveredMembers({required bool ownCopyLands}) {
+        final handedOver = <String, bool>{};
+        when(
+          () => mockMessageService.sendRumor(
+            rumorEvent: any(named: 'rumorEvent'),
+            recipientPubkey: any(named: 'recipientPubkey'),
+            targetRelays: any(named: 'targetRelays'),
+            selfWrapTargetRelays: any(named: 'selfWrapTargetRelays'),
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
+            recipientWrap: any(named: 'recipientWrap'),
+            publishRefusal: any(named: 'publishRefusal'),
+          ),
+        ).thenAnswer((inv) async {
+          final recipient = inv.namedArguments[#recipientPubkey] as String;
+          final callback =
+              inv.namedArguments[#onSelfWrapDue] as void Function(Event?)?;
+          handedOver[recipient] = callback != null;
+          callback?.call(null);
+          return NIP17SendResult.success(
+            rumorEventId: 'rumor-$recipient',
+            messageEventId: 'wrap-$recipient',
+            recipientPubkey: recipient,
+            selfWrapPublished: callback == null,
+          );
+        });
+        when(
+          () => mockMessageService.publishSelfWrap(
+            rumorEvent: any(named: 'rumorEvent'),
+            targetRelays: any(named: 'targetRelays'),
+            prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+          ),
+        ).thenAnswer(
+          (_) async => ownCopyLands
+              ? NIP17SendResult.success(
+                  rumorEventId: 'rumor',
+                  messageEventId: 'rumor',
+                  recipientPubkey: _validPubkeyA,
+                )
+              : const NIP17SendResult.failure('own copy not published'),
+        );
+        return handedOver;
+      }
+
+      int ownCopyPublishes() => verify(
+        () => mockMessageService.publishSelfWrap(
+          rumorEvent: any(named: 'rumorEvent'),
+          targetRelays: any(named: 'targetRelays'),
+          prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+        ),
+      ).callCount;
+
       test(
-        'marks recipient sent + self failed only for the recipients '
-        'whose self-wrap failed, deletes rows for fully-delivered ones',
+        "deletes every delivered member's row when the batch's one own copy "
+        'lands after their sends (#10016)',
         () async {
-          stubSendRumor((_, recipient) async {
-            return NIP17SendResult.success(
-              rumorEventId: 'rumor-$recipient',
-              messageEventId: 'wrap-$recipient',
-              recipientPubkey: recipient,
-              // First recipient (B) is fully delivered, second (C) is
-              // partial. The asymmetry pins "scope recovery to only the
-              // affected successful recipient sends" from #4102.
-              selfWrapPublished: recipient == _validPubkeyB,
-            );
-          });
+          final handedOver = stubDeliveredMembers(ownCopyLands: true);
+
+          final repository = createRepository(
+            outgoingDmsDao: mockOutgoingDmsDao,
+          );
+
+          final results = await repository.sendGroupMessage(
+            recipientPubkeys: [_validPubkeyB, _validPubkeyC],
+            content: 'group delivery',
+          );
+
+          expect(handedOver, {_validPubkeyB: true, _validPubkeyC: true});
+          expect(ownCopyPublishes(), 1);
+          expect(results.every((r) => r.success), isTrue);
+          expect(results.every((r) => r.selfWrapPublished ?? false), isTrue);
+          final captured = verify(
+            () => mockOutgoingDmsDao.enqueue(captureAny()),
+          ).captured;
+          for (final row in captured.cast<OutgoingDm>()) {
+            verify(() => mockOutgoingDmsDao.deleteById(row.id)).called(1);
+          }
+          verifyNever(
+            () => mockOutgoingDmsDao.markSelfWrapStatus(
+              id: any(named: 'id'),
+              status: OutgoingWrapStatus.failed,
+              lastError: any(named: 'lastError'),
+            ),
+          );
+        },
+      );
+
+      test(
+        'keeps every delivered member as recipient sent + self failed when '
+        "the batch's one own copy fails, so recovery publishes only that copy",
+        () async {
+          stubDeliveredMembers(ownCopyLands: false);
 
           final repository = createRepository(
             outgoingDmsDao: mockOutgoingDmsDao,
@@ -30192,36 +30317,37 @@ void main() {
             content: 'group partial delivery',
           );
 
-          expect(results, hasLength(2));
+          expect(
+            ownCopyPublishes(),
+            1,
+            reason: 'one failed copy is not tried again for each member',
+          );
           expect(results.every((r) => r.success), isTrue);
-
+          expect(results.every((r) => r.selfWrapPublished == false), isTrue);
           final captured = verify(
             () => mockOutgoingDmsDao.enqueue(captureAny()),
           ).captured;
-          final enqueuedB = captured.first as OutgoingDm;
-          final enqueuedC = captured.last as OutgoingDm;
-
-          // Recipient B: full delivery → row deleted.
-          expect(results.first.queuedRumorId, isNull);
-          verify(() => mockOutgoingDmsDao.deleteById(enqueuedB.id)).called(1);
-          // Recipient C: partial → recipient sent + self failed, row
-          // preserved for recovery.
-          expect(results.last.queuedRumorId, equals(enqueuedC.id));
-          verify(
-            () => mockOutgoingDmsDao.markRecipientWrapStatus(
-              id: enqueuedC.id,
-              status: OutgoingWrapStatus.sent,
-              eventId: 'wrap-$_validPubkeyC',
-            ),
-          ).called(1);
-          verify(
-            () => mockOutgoingDmsDao.markSelfWrapStatus(
-              id: enqueuedC.id,
-              status: OutgoingWrapStatus.failed,
-              lastError: 'Recipient delivered, but self-wrap publish failed',
-            ),
-          ).called(1);
-          verifyNever(() => mockOutgoingDmsDao.deleteById(enqueuedC.id));
+          for (final row in captured.cast<OutgoingDm>()) {
+            verify(
+              () => mockOutgoingDmsDao.markRecipientWrapStatus(
+                id: row.id,
+                status: OutgoingWrapStatus.sent,
+                eventId: 'wrap-${row.recipientPubkey}',
+              ),
+            ).called(1);
+            verify(
+              () => mockOutgoingDmsDao.markSelfWrapStatus(
+                id: row.id,
+                status: OutgoingWrapStatus.failed,
+                lastError: 'Recipient delivered, but self-wrap publish failed',
+              ),
+            ).called(1);
+            verifyNever(() => mockOutgoingDmsDao.deleteById(row.id));
+          }
+          expect(
+            results.map((r) => r.queuedRumorId),
+            captured.cast<OutgoingDm>().map((row) => row.id),
+          );
         },
       );
 
@@ -31060,6 +31186,17 @@ void main() {
               recipientPubkey: recipient,
               selfWrapPublished: false,
             ),
+          );
+          // The batch's one own copy does not land either (#10016).
+          when(
+            () => mockMessageService.publishSelfWrap(
+              rumorEvent: any(named: 'rumorEvent'),
+              targetRelays: any(named: 'targetRelays'),
+              prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                const NIP17SendResult.failure('own copy not published'),
           );
 
           final repository = createRepository(
@@ -33052,9 +33189,12 @@ void main() {
         'group-row recovery skips the direct_messages insert when a batch '
         'sibling already persisted the message (no duplicate group bubble)',
         () async {
+          final groupRow = queuedRow(
+            sendBatchId: 'batch-recover',
+          ).copyWith(id: '$_rumorEventId:$_validPubkeyB');
           when(
-            () => mockOutgoingDmsDao.getById(_rumorEventId),
-          ).thenAnswer((_) async => queuedRow(sendBatchId: 'batch-recover'));
+            () => mockOutgoingDmsDao.getById(groupRow.id),
+          ).thenAnswer((_) async => groupRow);
           // queuedRow's conversationId ('conv') differs from the computed
           // 1:1 pair id, so the row classifies as a group sibling. The
           // recovered row carries a durable batch id, so the dedup probes
@@ -33073,15 +33213,44 @@ void main() {
             ),
           );
 
+          // The recovered member's copy is its batch's (#10016): no other
+          // member's row records it yet, so this recovery publishes it.
+          when(
+            () => mockOutgoingDmsDao.getForConversation(
+              conversationId: any(named: 'conversationId'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => [groupRow]);
+          when(
+            () => mockMessageService.publishSelfWrap(
+              rumorEvent: any(named: 'rumorEvent'),
+              targetRelays: any(named: 'targetRelays'),
+              prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+            ),
+          ).thenAnswer(
+            (_) async => NIP17SendResult.success(
+              rumorEventId: _rumorEventId,
+              messageEventId: _rumorEventId,
+              recipientPubkey: _validPubkeyA,
+            ),
+          );
+
           final repository = createRepository(
             outgoingDmsDao: mockOutgoingDmsDao,
           );
 
           final result = await repository.recoverFullSend(
-            rumorId: _rumorEventId,
+            rumorId: groupRow.id,
           );
 
           expect(result.success, isTrue);
+          verify(
+            () => mockMessageService.publishSelfWrap(
+              rumorEvent: any(named: 'rumorEvent'),
+              targetRelays: any(named: 'targetRelays'),
+              prebuiltSelfWrap: any(named: 'prebuiltSelfWrap'),
+            ),
+          ).called(1);
           verify(
             () => mockDirectMessagesDao.hasMessageWithSendBatchId(
               batchId: 'batch-recover',
@@ -33116,7 +33285,7 @@ void main() {
           );
           // The queue row still finalizes — full delivery deletes it.
           verify(
-            () => mockOutgoingDmsDao.deleteById(_rumorEventId),
+            () => mockOutgoingDmsDao.deleteById(groupRow.id),
           ).called(1);
         },
       );
