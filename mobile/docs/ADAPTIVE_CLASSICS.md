@@ -40,15 +40,35 @@ reading recommendations keeps its queue and retries its cursor until the viewer
 refreshes.
 
 Adaptive Classics activates per account only when an authenticated Keycast check
-confirms the account is not a protected minor
-(`confirmedNotProtectedMinorProvider`). Protected accounts, logged-out sessions,
+explicitly confirms the account is not a protected minor
+(`confirmedNotProtectedMinorProvider`). A Keycast reply without a boolean
+`verified_minor` is not a confirmation. Protected accounts, logged-out sessions,
 non-Keycast signer sessions, and accounts whose first status check is pending or
-unavailable stay on the archive path. A re-check later in the same session keeps
-an earlier confirmation until it resolves; a protected, unknown or failed result
-returns the account to the archive. When that happens, Home keeps the videos it
-is showing but no longer saves them as its archive resume window. Usage-data
-consent separately gates the viewer identity and recent feedback each request
-carries.
+unavailable stay on the archive path. A resume re-check later in the same
+session keeps an earlier confirmation until it resolves; a protected, unknown or
+failed result returns the account to the archive. A re-check from the
+minor-account review flow or the developer override
+(`ProtectedMinorRecheck.requireFreshAnswer`) closes the gate until it answers.
+Usage-data consent separately gates the viewer identity and recent feedback each
+request carries.
+
+When the account stops being eligible mid-session, nothing restarts:
+
+- An open fullscreen classic keeps playing. The route picks its mode once, when
+  it opens, so it is never rebuilt at the tapped clip. Its queue keeps the
+  clips already reached (the playing one only if it still passes the content
+  filters), drops the ranked clips not yet reached, stops sending feedback and
+  recommendation requests, and loads the rest from the archive.
+- Home does the same with its Classics slice, and no longer saves the kept
+  clips as its archive resume window.
+- The Explore grid reloads from the archive if it was showing ranked videos.
+
+When eligibility arrives mid-session, an archive route, Home's loaded archive
+slice and the Explore grid stay on the archive until the next refresh.
+
+Whether ranked clips the viewer has not reached may be kept after a protected
+result is a Trust & Safety decision; until they decide otherwise they are
+dropped.
 
 Old clients keep their existing endpoints. This work leaves archive inference
 and production item-to-item indexing disabled.
