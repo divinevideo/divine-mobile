@@ -16751,6 +16751,9 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox => 'የማረጋገጫ ሊንኩን በገቢ መልዕክቶችዎ ውስጥ ይፈልጉ።';
+
+  @override
   String get emailConfirmationDone => 'ኢሜይሉ ተረጋግጧል። መልእክቶች ተከፍተዋል።';
 
   @override

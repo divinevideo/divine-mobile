@@ -16393,6 +16393,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox => '받은편지함에서 확인 링크를 찾아보세요.';
+
+  @override
   String get emailConfirmationDone => '이메일 인증 완료. 이제 메시지를 쓸 수 있어요.';
 
   @override

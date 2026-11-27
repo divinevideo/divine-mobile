@@ -226,7 +226,9 @@ class _ConfirmEmailPromptState extends State<_ConfirmEmailPrompt> {
       child: _ActionPrompt(
         sticker: DivineStickerName.email,
         title: l10n.emailConfirmationTitle,
-        subtitle: l10n.emailConfirmationProfileSubtitle(email ?? ''),
+        subtitle: email == null
+            ? l10n.emailConfirmationCheckInbox
+            : l10n.emailConfirmationProfileSubtitle(email),
         statusMessage: switch (outcome) {
           EmailConfirmationResendStatus.sent =>
             l10n.emailConfirmationResendSent,

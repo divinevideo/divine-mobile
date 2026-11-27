@@ -6635,6 +6635,7 @@
   "emailConfirmationResendFailed": "Das hat nicht geklappt. Versuch es gleich noch mal.",
   "emailConfirmationMessagesTitle": "Bestätige deine E-Mail, um Nachrichten zu schreiben",
   "emailConfirmationMessagesBody": "Tippe auf den Link, den wir an {email} geschickt haben. Dann kann's mit Nachrichten losgehen.",
+  "emailConfirmationCheckInbox": "Schau in deinem Posteingang nach dem Bestätigungslink.",
   "emailConfirmationDone": "E-Mail bestätigt. Nachrichten sind freigeschaltet.",
   "emailConfirmationLinkConfirmed": "E-Mail bestätigt.",
   "emailConfirmationAddEmailTitle": "E-Mail hinzufügen",

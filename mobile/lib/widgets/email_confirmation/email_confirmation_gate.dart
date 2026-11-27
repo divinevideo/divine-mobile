@@ -59,8 +59,8 @@ class ConfirmEmailToMessageView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final email = context.select<EmailConfirmationCubit, String>(
-      (cubit) => cubit.state.email ?? '',
+    final email = context.select<EmailConfirmationCubit, String?>(
+      (cubit) => cubit.state.email,
     );
     final isSending = context.select<EmailConfirmationCubit, bool>(
       (cubit) =>
@@ -85,7 +85,9 @@ class ConfirmEmailToMessageView extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                l10n.emailConfirmationMessagesBody(email),
+                email == null
+                    ? l10n.emailConfirmationCheckInbox
+                    : l10n.emailConfirmationMessagesBody(email),
                 style: VineTheme.bodyLargeFont(
                   color: context.vineColors.onSurfaceVariant,
                 ),

@@ -6635,6 +6635,7 @@
   "emailConfirmationResendFailed": "Det gick inte att skicka. Försök igen om en stund.",
   "emailConfirmationMessagesTitle": "Bekräfta din e-post för att börja skicka meddelanden",
   "emailConfirmationMessagesBody": "Tryck på länken vi skickade till {email}. Sen är meddelandena dina.",
+  "emailConfirmationCheckInbox": "Leta efter bekräftelselänken i din inkorg.",
   "emailConfirmationDone": "E-post bekräftad. Meddelanden är upplåsta.",
   "emailConfirmationLinkConfirmed": "E-post bekräftad.",
   "emailConfirmationAddEmailTitle": "Lägg till e-post",

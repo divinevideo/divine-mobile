@@ -14608,6 +14608,10 @@
       }
     }
   },
+  "emailConfirmationCheckInbox": "Check your inbox for the confirmation link.",
+  "@emailConfirmationCheckInbox": {
+    "description": "Instructions when an account must confirm its email but the app has not learned its address yet."
+  },
   "emailConfirmationDone": "Email confirmed. DMs are unlocked.",
   "@emailConfirmationDone": {
     "description": "Pop-up when a signed-in account opens its email confirmation link in the app."

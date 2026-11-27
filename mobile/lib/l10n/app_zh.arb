@@ -7928,6 +7928,7 @@
   "emailConfirmationResendFailed": "这封没发出去，稍后再试试。",
   "emailConfirmationMessagesTitle": "确认邮箱后即可开始发私信",
   "emailConfirmationMessagesBody": "点击我们发送到 {email} 的链接，私信就全归你啦。",
+  "emailConfirmationCheckInbox": "请在收件箱中查找确认链接。",
   "emailConfirmationDone": "邮箱已确认，私信已解锁。",
   "emailConfirmationLinkConfirmed": "邮箱已确认。",
   "emailConfirmationAddEmailTitle": "添加邮箱",

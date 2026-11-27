@@ -6635,6 +6635,7 @@
   "emailConfirmationResendFailed": "送信できませんでした。少し時間をおいてもう一度お試しください。",
   "emailConfirmationMessagesTitle": "メールアドレスを認証して、メッセージを始めましょう",
   "emailConfirmationMessagesBody": "{email} に送ったリンクをタップしてください。それでメッセージが使えるようになります。",
+  "emailConfirmationCheckInbox": "受信トレイで確認リンクを探してください。",
   "emailConfirmationDone": "メールアドレスの認証が完了しました。メッセージが使えるようになりました。",
   "emailConfirmationLinkConfirmed": "メールアドレスの認証が完了しました。",
   "emailConfirmationAddEmailTitle": "メールアドレスを追加",

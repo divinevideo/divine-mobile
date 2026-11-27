@@ -6188,6 +6188,7 @@
   "emailConfirmationResendFailed": "보내지 못했어요. 잠시 후 다시 시도해주세요.",
   "emailConfirmationMessagesTitle": "메시지를 보내려면 이메일을 인증해주세요",
   "emailConfirmationMessagesBody": "{email} 주소로 보낸 링크를 탭해주세요. 그러면 메시지를 마음껏 쓸 수 있어요.",
+  "emailConfirmationCheckInbox": "받은편지함에서 확인 링크를 찾아보세요.",
   "emailConfirmationDone": "이메일 인증 완료. 이제 메시지를 쓸 수 있어요.",
   "emailConfirmationLinkConfirmed": "이메일 인증 완료.",
   "emailConfirmationAddEmailTitle": "이메일 추가하기",

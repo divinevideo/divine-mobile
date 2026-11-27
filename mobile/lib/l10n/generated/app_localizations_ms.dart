@@ -17164,6 +17164,10 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox =>
+      'Cari pautan pengesahan dalam peti masuk anda.';
+
+  @override
   String get emailConfirmationDone => 'E-mel disahkan. Mesej sudah dibuka.';
 
   @override

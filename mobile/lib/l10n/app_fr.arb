@@ -6635,6 +6635,7 @@
   "emailConfirmationResendFailed": "L'envoi n'a pas marché. Réessaie dans un instant.",
   "emailConfirmationMessagesTitle": "Confirme ton e-mail pour envoyer des messages",
   "emailConfirmationMessagesBody": "Appuie sur le lien envoyé à {email}. Ensuite, les messages sont à toi.",
+  "emailConfirmationCheckInbox": "Cherche le lien de confirmation dans ta boîte de réception.",
   "emailConfirmationDone": "E-mail confirmé. Les messages sont débloqués.",
   "emailConfirmationLinkConfirmed": "E-mail confirmé.",
   "emailConfirmationAddEmailTitle": "Ajoute un e-mail",

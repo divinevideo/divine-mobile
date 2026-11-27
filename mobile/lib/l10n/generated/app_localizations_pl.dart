@@ -17512,6 +17512,10 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox =>
+      'Poszukaj linku potwierdzającego w skrzynce odbiorczej.';
+
+  @override
   String get emailConfirmationDone =>
       'E-mail potwierdzony. Wiadomości odblokowane.';
 

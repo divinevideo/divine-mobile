@@ -17546,6 +17546,10 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox =>
+      'నిర్ధారణ లింక్ కోసం మీ ఇన్‌బాక్స్‌ను చూడండి.';
+
+  @override
   String get emailConfirmationDone =>
       'ఇమెయిల్ నిర్ధారించబడింది. సందేశాలు అన్‌లాక్ అయ్యాయి.';
 

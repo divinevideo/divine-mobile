@@ -17369,6 +17369,10 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox =>
+      'Schau in deinem Posteingang nach dem Bestätigungslink.';
+
+  @override
   String get emailConfirmationDone =>
       'E-Mail bestätigt. Nachrichten sind freigeschaltet.';
 

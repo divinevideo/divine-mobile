@@ -85,6 +85,24 @@ void main() {
         expect(find.text(l10n.emailConfirmationMessagesTitle), findsNothing);
       });
 
+      testWidgets('gives instructions when the address is unknown', (
+        tester,
+      ) async {
+        when(() => cubit.state).thenReturn(
+          const EmailConfirmationState(
+            account: _account,
+            status: EmailConfirmationStatus.unconfirmed,
+          ),
+        );
+
+        await tester.pumpWidget(buildSubject());
+
+        expect(find.text('conversations'), findsNothing);
+        expect(find.text(l10n.emailConfirmationCheckInbox), findsOneWidget);
+        expect(find.text(l10n.emailConfirmationMessagesBody('')), findsNothing);
+        expect(find.text(l10n.emailConfirmationResendButton), findsOneWidget);
+      });
+
       testWidgets('the conversations while the status is unknown', (
         tester,
       ) async {

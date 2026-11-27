@@ -28735,6 +28735,12 @@ abstract class AppLocalizations {
   /// **'Tap the link we sent to {email}. Then DMs are all yours.'**
   String emailConfirmationMessagesBody(String email);
 
+  /// Instructions when an account must confirm its email but the app has not learned its address yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your inbox for the confirmation link.'**
+  String get emailConfirmationCheckInbox;
+
   /// Pop-up when a signed-in account opens its email confirmation link in the app.
   ///
   /// In en, this message translates to:

@@ -17435,6 +17435,10 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox =>
+      'Cherche le lien de confirmation dans ta boîte de réception.';
+
+  @override
   String get emailConfirmationDone =>
       'E-mail confirmé. Les messages sont débloqués.';
 

@@ -6635,6 +6635,7 @@
   "emailConfirmationResendFailed": "Gönderemedik. Biraz sonra tekrar dene.",
   "emailConfirmationMessagesTitle": "Mesajlaşmaya başlamak için e-postanı doğrula",
   "emailConfirmationMessagesBody": "{email} adresine gönderdiğimiz bağlantıya dokun. Sonra mesajlar tamamen senin.",
+  "emailConfirmationCheckInbox": "Onay bağlantısı için gelen kutuna bak.",
   "emailConfirmationDone": "E-posta doğrulandı. Mesajların kilidi açıldı.",
   "emailConfirmationLinkConfirmed": "E-posta doğrulandı.",
   "emailConfirmationAddEmailTitle": "E-posta ekle",

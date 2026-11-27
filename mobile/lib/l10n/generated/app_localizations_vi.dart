@@ -17106,6 +17106,10 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox =>
+      'Tìm liên kết xác nhận trong hộp thư đến của bạn.';
+
+  @override
   String get emailConfirmationDone =>
       'Đã xác nhận email. Tin nhắn đã được mở khóa.';
 

@@ -6635,6 +6635,7 @@
   "emailConfirmationResendFailed": "Gagal mengirim. Coba lagi sebentar lagi.",
   "emailConfirmationMessagesTitle": "Konfirmasi emailmu untuk mulai kirim pesan",
   "emailConfirmationMessagesBody": "Ketuk tautan yang kami kirim ke {email}. Setelah itu, kamu bebas kirim pesan.",
+  "emailConfirmationCheckInbox": "Cari tautan konfirmasi di kotak masukmu.",
   "emailConfirmationDone": "Email dikonfirmasi. Pesan sudah terbuka.",
   "emailConfirmationLinkConfirmed": "Email dikonfirmasi.",
   "emailConfirmationAddEmailTitle": "Tambahkan email",

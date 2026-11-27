@@ -6752,6 +6752,7 @@
   "emailConfirmationResendFailed": "Не успяхме да го изпратим. Опитай пак след малко.",
   "emailConfirmationMessagesTitle": "Потвърди имейла си, за да пишеш съобщения",
   "emailConfirmationMessagesBody": "Натисни връзката, която изпратихме до {email}. После съобщенията са изцяло твои.",
+  "emailConfirmationCheckInbox": "Потърси връзката за потвърждение във входящата си поща.",
   "emailConfirmationDone": "Имейлът е потвърден. Съобщенията са отключени.",
   "emailConfirmationLinkConfirmed": "Имейлът е потвърден.",
   "emailConfirmationAddEmailTitle": "Добави имейл",

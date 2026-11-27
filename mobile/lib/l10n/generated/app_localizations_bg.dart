@@ -17319,6 +17319,10 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox =>
+      'Потърси връзката за потвърждение във входящата си поща.';
+
+  @override
   String get emailConfirmationDone =>
       'Имейлът е потвърден. Съобщенията са отключени.';
 

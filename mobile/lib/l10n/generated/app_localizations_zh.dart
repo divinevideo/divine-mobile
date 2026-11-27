@@ -16176,6 +16176,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox => '请在收件箱中查找确认链接。';
+
+  @override
   String get emailConfirmationDone => '邮箱已确认，私信已解锁。';
 
   @override

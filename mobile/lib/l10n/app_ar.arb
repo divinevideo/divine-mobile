@@ -6635,6 +6635,7 @@
   "emailConfirmationResendFailed": "تعذّر الإرسال. يمكن المحاولة مجددًا بعد قليل.",
   "emailConfirmationMessagesTitle": "تأكيد البريد الإلكتروني لبدء المراسلة",
   "emailConfirmationMessagesBody": "بالنقر على الرابط المرسل إلى {email} تصبح الرسائل متاحة بالكامل.",
+  "emailConfirmationCheckInbox": "رابط التأكيد في صندوق الوارد.",
   "emailConfirmationDone": "تم تأكيد البريد الإلكتروني. الرسائل مفتوحة الآن.",
   "emailConfirmationLinkConfirmed": "تم تأكيد البريد الإلكتروني.",
   "emailConfirmationAddEmailTitle": "إضافة بريد إلكتروني",

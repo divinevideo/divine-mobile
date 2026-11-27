@@ -5672,6 +5672,7 @@
   "emailConfirmationResendFailed": "Hindi namin naipadala. Subukan ulit mamaya.",
   "emailConfirmationMessagesTitle": "I-confirm ang email mo para makapagsimulang mag-message",
   "emailConfirmationMessagesBody": "I-tap ang link na pinadala namin sa {email}. Tapos, sa'yo na ang mga mensahe.",
+  "emailConfirmationCheckInbox": "Hanapin ang confirmation link sa inbox mo.",
   "emailConfirmationDone": "Na-confirm na ang email. Naka-unlock na ang mga mensahe.",
   "emailConfirmationLinkConfirmed": "Na-confirm na ang email.",
   "emailConfirmationAddEmailTitle": "Magdagdag ng email",

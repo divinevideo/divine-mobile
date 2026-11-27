@@ -17087,6 +17087,10 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox =>
+      'Onay bağlantısı için gelen kutuna bak.';
+
+  @override
   String get emailConfirmationDone =>
       'E-posta doğrulandı. Mesajların kilidi açıldı.';
 

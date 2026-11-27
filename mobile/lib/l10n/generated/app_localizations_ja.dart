@@ -16374,6 +16374,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox => '受信トレイで確認リンクを探してください。';
+
+  @override
   String get emailConfirmationDone => 'メールアドレスの認証が完了しました。メッセージが使えるようになりました。';
 
   @override

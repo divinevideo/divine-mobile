@@ -303,6 +303,34 @@ void main() {
         );
       });
 
+      testWidgets('gives instructions when the address is unknown', (
+        tester,
+      ) async {
+        when(() => emailConfirmationCubit.state).thenReturn(
+          const EmailConfirmationState(
+            account: account,
+            status: EmailConfirmationStatus.unconfirmed,
+          ),
+        );
+
+        await tester.pumpWidget(
+          buildApp(
+            actions: [ProfileActionType.confirmEmail],
+            emailConfirmationCubit: emailConfirmationCubit,
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.emailConfirmationCheckInbox), findsOneWidget);
+        expect(
+          find.text(l10n.emailConfirmationProfileSubtitle('')),
+          findsNothing,
+        );
+        expect(find.text(l10n.emailConfirmationResendButton), findsOneWidget);
+      });
+
       testWidgets('shows resend feedback inside the open sheet', (
         tester,
       ) async {

@@ -17368,6 +17368,10 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox =>
+      'Buscá el enlace de confirmación en tu bandeja de entrada.';
+
+  @override
   String get emailConfirmationDone =>
       'Email confirmado. Ya tenés los mensajes desbloqueados.';
 

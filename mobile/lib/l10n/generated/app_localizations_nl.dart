@@ -17257,6 +17257,10 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox =>
+      'Kijk in je inbox voor de bevestigingslink.';
+
+  @override
   String get emailConfirmationDone =>
       'E-mail bevestigd. Berichten zijn ontgrendeld.';
 

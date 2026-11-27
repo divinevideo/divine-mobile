@@ -17388,6 +17388,10 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox =>
+      'Cerca il link di conferma nella tua posta in arrivo.';
+
+  @override
   String get emailConfirmationDone => 'Email confermata. Messaggi sbloccati.';
 
   @override

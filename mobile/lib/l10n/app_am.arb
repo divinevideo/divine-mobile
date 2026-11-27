@@ -6688,6 +6688,7 @@
   "emailConfirmationResendFailed": "መላክ አልተቻለም። ትንሽ ቆይተው እንደገና ይሞክሩ።",
   "emailConfirmationMessagesTitle": "መልእክት መላክ ለመጀመር ኢሜይልዎን ያረጋግጡ",
   "emailConfirmationMessagesBody": "ወደ {email} የላክነውን አገናኝ ይንኩ። ከዚያ መልእክቶች ሙሉ በሙሉ የእርስዎ ናቸው።",
+  "emailConfirmationCheckInbox": "የማረጋገጫ ሊንኩን በገቢ መልዕክቶችዎ ውስጥ ይፈልጉ።",
   "emailConfirmationDone": "ኢሜይሉ ተረጋግጧል። መልእክቶች ተከፍተዋል።",
   "emailConfirmationLinkConfirmed": "ኢሜይሉ ተረጋግጧል።",
   "emailConfirmationAddEmailTitle": "ኢሜይል ያክሉ",

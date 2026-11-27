@@ -17314,6 +17314,10 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox =>
+      'Hanapin ang confirmation link sa inbox mo.';
+
+  @override
   String get emailConfirmationDone =>
       'Na-confirm na ang email. Naka-unlock na ang mga mensahe.';
 

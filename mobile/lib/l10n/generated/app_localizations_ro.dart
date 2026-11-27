@@ -17496,6 +17496,10 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox =>
+      'Caută linkul de confirmare în căsuța ta de e-mail.';
+
+  @override
   String get emailConfirmationDone =>
       'Email confirmat. Mesajele sunt deblocate.';
 

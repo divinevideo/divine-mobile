@@ -7928,6 +7928,7 @@
   "emailConfirmationResendFailed": "Tidak dapat dihantar. Cuba lagi sekejap lagi.",
   "emailConfirmationMessagesTitle": "Sahkan e-mel anda untuk mula menghantar mesej",
   "emailConfirmationMessagesBody": "Ketik pautan yang kami hantar ke {email}. Selepas itu, mesej milik anda sepenuhnya.",
+  "emailConfirmationCheckInbox": "Cari pautan pengesahan dalam peti masuk anda.",
   "emailConfirmationDone": "E-mel disahkan. Mesej sudah dibuka.",
   "emailConfirmationLinkConfirmed": "E-mel disahkan.",
   "emailConfirmationAddEmailTitle": "Tambah e-mel",

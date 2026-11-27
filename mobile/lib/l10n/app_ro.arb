@@ -6635,6 +6635,7 @@
   "emailConfirmationResendFailed": "Nu l-am putut trimite. Încearcă din nou puțin mai târziu.",
   "emailConfirmationMessagesTitle": "Confirmă-ți emailul ca să poți trimite mesaje",
   "emailConfirmationMessagesBody": "Apasă linkul pe care ți l-am trimis la {email}. Apoi mesajele sunt ale tale.",
+  "emailConfirmationCheckInbox": "Caută linkul de confirmare în căsuța ta de e-mail.",
   "emailConfirmationDone": "Email confirmat. Mesajele sunt deblocate.",
   "emailConfirmationLinkConfirmed": "Email confirmat.",
   "emailConfirmationAddEmailTitle": "Adaugă un email",

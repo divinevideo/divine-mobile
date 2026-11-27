@@ -17284,6 +17284,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox =>
+      'Check your inbox for the confirmation link.';
+
+  @override
   String get emailConfirmationDone => 'Email confirmed. DMs are unlocked.';
 
   @override

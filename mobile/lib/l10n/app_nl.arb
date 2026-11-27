@@ -6635,6 +6635,7 @@
   "emailConfirmationResendFailed": "Versturen lukte niet. Probeer het zo nog eens.",
   "emailConfirmationMessagesTitle": "Bevestig je e-mail om berichten te sturen",
   "emailConfirmationMessagesBody": "Tik op de link die we naar {email} hebben gestuurd. Dan zijn berichten helemaal van jou.",
+  "emailConfirmationCheckInbox": "Kijk in je inbox voor de bevestigingslink.",
   "emailConfirmationDone": "E-mail bevestigd. Berichten zijn ontgrendeld.",
   "emailConfirmationLinkConfirmed": "E-mail bevestigd.",
   "emailConfirmationAddEmailTitle": "Voeg een e-mail toe",

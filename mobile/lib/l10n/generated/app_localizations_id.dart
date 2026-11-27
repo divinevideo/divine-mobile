@@ -17054,6 +17054,10 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox =>
+      'Cari tautan konfirmasi di kotak masukmu.';
+
+  @override
   String get emailConfirmationDone =>
       'Email dikonfirmasi. Pesan sudah terbuka.';
 

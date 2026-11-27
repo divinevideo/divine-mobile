@@ -17164,6 +17164,10 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox =>
+      'تصدیقی لنک کے لیے اپنا ان باکس دیکھیں۔';
+
+  @override
   String get emailConfirmationDone =>
       'ای میل کی تصدیق ہو گئی۔ پیغامات کھل گئے ہیں۔';
 

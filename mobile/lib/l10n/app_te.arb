@@ -9551,6 +9551,7 @@
   "emailConfirmationResendFailed": "దాన్ని పంపలేకపోయాము. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.",
   "emailConfirmationMessagesTitle": "సందేశాలు పంపడం మొదలుపెట్టడానికి మీ ఇమెయిల్‌ను నిర్ధారించండి",
   "emailConfirmationMessagesBody": "మేము {email} కి పంపిన లింక్‌ను నొక్కండి. ఆ తర్వాత సందేశాలు పూర్తిగా మీవే.",
+  "emailConfirmationCheckInbox": "నిర్ధారణ లింక్ కోసం మీ ఇన్‌బాక్స్‌ను చూడండి.",
   "emailConfirmationDone": "ఇమెయిల్ నిర్ధారించబడింది. సందేశాలు అన్‌లాక్ అయ్యాయి.",
   "emailConfirmationLinkConfirmed": "ఇమెయిల్ నిర్ధారించబడింది.",
   "emailConfirmationAddEmailTitle": "ఇమెయిల్‌ను జోడించండి",

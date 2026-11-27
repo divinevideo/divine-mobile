@@ -7928,6 +7928,7 @@
   "emailConfirmationResendFailed": "یہ نہیں بھیجی جا سکی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔",
   "emailConfirmationMessagesTitle": "پیغامات شروع کرنے کے لیے اپنی ای میل کی تصدیق کریں",
   "emailConfirmationMessagesBody": "ہم نے {email} پر جو لنک بھیجا ہے اسے کھولیں۔ پھر پیغامات پوری طرح آپ کے ہیں۔",
+  "emailConfirmationCheckInbox": "تصدیقی لنک کے لیے اپنا ان باکس دیکھیں۔",
   "emailConfirmationDone": "ای میل کی تصدیق ہو گئی۔ پیغامات کھل گئے ہیں۔",
   "emailConfirmationLinkConfirmed": "ای میل کی تصدیق ہو گئی۔",
   "emailConfirmationAddEmailTitle": "ای میل شامل کریں",

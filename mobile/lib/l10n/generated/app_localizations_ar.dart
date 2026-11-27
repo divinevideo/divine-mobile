@@ -17198,6 +17198,9 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox => 'رابط التأكيد في صندوق الوارد.';
+
+  @override
   String get emailConfirmationDone =>
       'تم تأكيد البريد الإلكتروني. الرسائل مفتوحة الآن.';
 

@@ -17184,6 +17184,10 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String get emailConfirmationCheckInbox =>
+      'Leta efter bekräftelselänken i din inkorg.';
+
+  @override
   String get emailConfirmationDone =>
       'E-post bekräftad. Meddelanden är upplåsta.';
 
