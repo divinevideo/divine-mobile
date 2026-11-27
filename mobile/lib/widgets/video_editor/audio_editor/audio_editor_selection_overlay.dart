@@ -25,6 +25,7 @@ class AudioEditorSelectionOverlay extends StatelessWidget {
     required this.onTapDone,
     this.onShowDetails,
     this.cover,
+    this.kind,
     this.isLoading = false,
     super.key,
   });
@@ -40,6 +41,10 @@ class AudioEditorSelectionOverlay extends StatelessWidget {
 
   /// The cover the sound's row shows, or `null` for its colour tile.
   final SoundCover? cover;
+
+  /// Whether the sound is music or an effect, which picks the colour tile's
+  /// icon as in its row; `null` when unknown.
+  final SoundKind? kind;
 
   /// Whether the sound is still loading, or its reuse is still being checked.
   final bool isLoading;
@@ -130,6 +135,7 @@ class AudioEditorSelectionOverlay extends StatelessWidget {
                               size: _coverSize,
                               borderRadius: 12,
                               colorSeed: audio.id,
+                              kind: kind,
                             ),
                             Expanded(
                               child: _Details(

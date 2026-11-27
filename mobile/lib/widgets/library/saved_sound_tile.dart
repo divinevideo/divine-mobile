@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart' show SoundKind;
 import 'package:openvine/extensions/divine_sound_extensions.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -29,6 +30,7 @@ class SavedSoundTile extends StatelessWidget {
     required this.onPreview,
     required this.onOpenMore,
     this.cover,
+    this.kind,
     this.isMissingFile = false,
     this.cannotBeReused = false,
     this.isPreviewing = false,
@@ -48,6 +50,9 @@ class SavedSoundTile extends StatelessWidget {
 
   /// Artwork leading the row, or `null` for the colour tile.
   final SoundCover? cover;
+
+  /// See [SoundListTile.kind].
+  final SoundKind? kind;
 
   /// Whether the device-local audio file behind this entry is gone.
   ///
@@ -101,6 +106,7 @@ class SavedSoundTile extends StatelessWidget {
             sound: sound,
             title: title,
             cover: cover,
+            kind: kind,
             isActive: isPreviewing,
             isPlaying: isPlaying,
             unavailableReason: unavailableReason,
@@ -143,6 +149,7 @@ class SavedSoundMenuHeader extends StatelessWidget {
   const SavedSoundMenuHeader({
     required this.sound,
     this.cover,
+    this.kind,
     this.isMissingFile = false,
     this.cannotBeReused = false,
     super.key,
@@ -150,6 +157,9 @@ class SavedSoundMenuHeader extends StatelessWidget {
 
   final SavedSound sound;
   final SoundCover? cover;
+
+  /// See [SoundListTile.kind].
+  final SoundKind? kind;
 
   /// See [SavedSoundTile.isMissingFile].
   final bool isMissingFile;
@@ -181,6 +191,7 @@ class SavedSoundMenuHeader extends StatelessWidget {
             sound: sound,
             title: title,
             cover: cover,
+            kind: kind,
             unavailableReason: savedSoundUnavailableReason(
               context,
               isMissingFile: isMissingFile,
@@ -246,6 +257,7 @@ class _SavedSoundListTile extends StatelessWidget {
     required this.sound,
     required this.title,
     required this.cover,
+    required this.kind,
     required this.unavailableReason,
     this.isActive = false,
     this.isPlaying = false,
@@ -257,6 +269,7 @@ class _SavedSoundListTile extends StatelessWidget {
   final SavedSound sound;
   final String title;
   final SoundCover? cover;
+  final SoundKind? kind;
   final String? unavailableReason;
   final bool isActive;
   final bool isPlaying;
@@ -276,6 +289,7 @@ class _SavedSoundListTile extends StatelessWidget {
           ? null
           : _Hashtags(hashtags: sound.personalHashtags),
       cover: cover,
+      kind: kind,
       colorSeed: sound.id,
       isCommunitySound: audio.isCommunitySound,
       isActive: isActive,

@@ -514,6 +514,25 @@ void main() {
       expect(find.text('Piano Loop'), findsNothing);
     });
 
+    testWidgets('lists every saved sound again once the search is cleared', (
+      tester,
+    ) async {
+      final service = SavedSoundsService(sharedPreferences);
+      await service.saveSound(_sound(id: 'sound1', title: 'Drum Loop'));
+      await service.saveSound(_sound(id: 'sound2', title: 'Piano Loop'));
+
+      await pumpSoundsTab(tester);
+      await tester.enterText(find.byType(TextField), 'drum');
+      await tester.pumpAndSettle();
+      expect(find.text('Piano Loop'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('search_clear_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Drum Loop'), findsOneWidget);
+      expect(find.text('Piano Loop'), findsOneWidget);
+    });
+
     testWidgets('scrolls the search field away with the list', (tester) async {
       final service = SavedSoundsService(sharedPreferences);
       for (var i = 0; i < 15; i++) {

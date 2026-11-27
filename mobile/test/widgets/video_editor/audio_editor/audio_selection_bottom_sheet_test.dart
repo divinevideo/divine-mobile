@@ -538,6 +538,30 @@ void main() {
         expect(find.byKey(const Key('audio_search_import')), findsOneWidget);
       });
 
+      testWidgets('drops the search once it is cleared', (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.pumpWidget(
+          buildWidget(trendingSoundsAsync: AsyncValue.data(testSounds)),
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).first, 'nothing like it');
+        await tester.pumpAndSettle();
+        final tryAnotherTerm = find.text(l10n.soundsNoSoundsFoundDescription);
+        expect(tryAnotherTerm, findsWidgets);
+
+        await tester.tap(find.byKey(const Key('search_clear_button')));
+        await tester.pumpAndSettle();
+
+        expect(
+          tester
+              .widget<TextField>(find.byType(TextField).first)
+              .controller!
+              .text,
+          isEmpty,
+        );
+        expect(tryAnotherTerm, findsNothing);
+      });
+
       testWidgets('places the search above the list tabs', (tester) async {
         await tester.pumpWidget(
           buildWidget(trendingSoundsAsync: const AsyncValue.data([])),

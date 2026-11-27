@@ -8,16 +8,18 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' show AudioEvent, NostrHexUtils;
+import 'package:models/models.dart' show AudioEvent, NostrHexUtils, SoundKind;
 import 'package:openvine/blocs/creator_sync/sound_sync_cubit.dart';
 import 'package:openvine/blocs/creator_sync/sound_sync_state.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
+import 'package:openvine/extensions/divine_sound_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
+import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/router/routes/library_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
@@ -27,6 +29,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/audio/sound_list_tile.dart';
 import 'package:openvine/widgets/library/saved_sound_details_editor.dart';
 import 'package:openvine/widgets/library/saved_sound_tile.dart';
+import 'package:openvine/widgets/search_clear_button.dart';
 import 'package:sound_service/sound_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -420,6 +423,7 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
       title: SavedSoundMenuHeader(
         sound: sound,
         cover: view.cover,
+        kind: view.kind,
         isMissingFile: view.isMissingFile,
         cannotBeReused: view.cannotBeReused,
       ),
@@ -757,6 +761,14 @@ class _SearchInput extends StatelessWidget {
               color: context.vineColors.onSurfaceMuted,
             ),
           ),
+          suffixIconConstraints: const BoxConstraints(),
+          suffixIcon: Padding(
+            padding: const EdgeInsetsDirectional.only(end: 4),
+            child: SearchClearButton(
+              controller: controller,
+              onCleared: () => onChanged(''),
+            ),
+          ),
           filled: true,
           fillColor: context.vineColors.surfaceContainer,
           border: OutlineInputBorder(
@@ -776,6 +788,7 @@ class _SearchInput extends StatelessWidget {
 /// How a saved sound's row shows it, which its actions menu repeats.
 typedef _SavedSoundView = ({
   SoundCover? cover,
+  SoundKind? kind,
   bool isMissingFile,
   bool cannotBeReused,
 });
@@ -825,6 +838,7 @@ class _SavedSoundsSection extends ConsumerWidget {
     final sourceCovers = sourcesLookup.hasError ? null : sourcesLookup.value;
     // Whose own sounds stay usable follows account changes, as in the picker.
     final viewer = ref.watch(currentAccountIdProvider);
+    final library = ref.watch(soundLibraryServiceProvider).value;
     return SliverMainAxisGroup(
       slivers: [
         if (hashtags.isNotEmpty)
@@ -845,6 +859,7 @@ class _SavedSoundsSection extends ConsumerWidget {
             );
             final view = (
               cover: cover,
+              kind: sound.audio.kindIn(library),
               isMissingFile: state.isMissingFile(sound),
               cannotBeReused: SoundCover.cannotBeReused(
                 sound.audio,
@@ -855,6 +870,7 @@ class _SavedSoundsSection extends ConsumerWidget {
             return SavedSoundTile(
               sound: sound,
               cover: cover,
+              kind: view.kind,
               isMissingFile: view.isMissingFile,
               cannotBeReused: view.cannotBeReused,
               isPreviewing: isPreviewing,

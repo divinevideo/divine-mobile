@@ -43,6 +43,7 @@ import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/audio/sound_list_tile.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/private_key_search_warning.dart';
+import 'package:openvine/widgets/search_clear_button.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_category_bar.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_editor_selection_overlay.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_kind_filter_pill.dart';
@@ -1670,6 +1671,7 @@ class _AudioSelectionBottomSheetState
               child: _selectedItem != null
                   ? AudioEditorSelectionOverlay(
                       audio: _selectedItem!,
+                      kind: _selectedItem!.kindIn(bundledSoundsAsync.value),
                       cover: _selectedCover(
                         savedSounds: savedSoundsState.sounds,
                         savedSourceCovers: savedSourceCovers,
@@ -1957,7 +1959,8 @@ class _PickerSearchInput extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
 
-  /// Sits at the field's end, inside it.
+  /// Sits at the field's end, inside it, after the button that clears the
+  /// search.
   final Widget suffix;
 
   @override
@@ -1985,7 +1988,16 @@ class _PickerSearchInput extends StatelessWidget {
                 ),
                 prefixIconConstraints: const BoxConstraints(),
                 suffixIconConstraints: const BoxConstraints(),
-                suffixIcon: suffix,
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SearchClearButton(
+                      controller: controller,
+                      onCleared: () => onChanged(''),
+                    ),
+                    suffix,
+                  ],
+                ),
                 prefixIcon: Padding(
                   padding: const EdgeInsetsDirectional.only(
                     start: 12,
@@ -2113,6 +2125,7 @@ class _SoundsContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isBlocked = ref.watch(soundAuthorFilterProvider);
+    final library = ref.watch(soundLibraryServiceProvider).value;
     final sounds = this.sounds
         .where((sound) => !isBlocked(sound.pubkey))
         .toList(growable: false);
@@ -2163,6 +2176,7 @@ class _SoundsContent extends ConsumerWidget {
                             audio: displayAudio,
                             displayTitle: displayTitles[displayAudio.id],
                             cover: _coverFor(displayAudio),
+                            kind: displayAudio.kindIn(library),
                             isSelected: true,
                             isPlaying: snapshot.data ?? false,
                             videoCount: _videoCountFor(displayAudio),
@@ -2180,6 +2194,7 @@ class _SoundsContent extends ConsumerWidget {
                         audio: audio,
                         displayTitle: displayTitles[audio.id],
                         cover: _coverFor(audio),
+                        kind: audio.kindIn(library),
                         isSelected: false,
                         isUnavailable: isUnavailable,
                         videoCount: _videoCountFor(audio),

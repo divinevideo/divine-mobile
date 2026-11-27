@@ -1,8 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' show AudioEvent;
+import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show AudioEvent, SoundKind, VineSound;
 import 'package:nostr_sdk/nostr_sdk.dart' show pubkeyIsOnCurve;
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/extensions/divine_sound_extensions.dart';
+import 'package:openvine/services/sound_library_service.dart';
+
+class _MockSoundLibraryService extends Mock implements SoundLibraryService {}
 
 void main() {
   group('DivineSound', () {
@@ -44,6 +48,60 @@ void main() {
 
         expect(sound.isLibrary, isFalse);
         expect(sound.isCommunitySound, isTrue);
+      });
+    });
+
+    group('kindIn', () {
+      late SoundLibraryService library;
+
+      setUp(() {
+        library = _MockSoundLibraryService();
+      });
+
+      VineSound shipped({List<String> tags = const []}) => VineSound(
+        id: 'boom',
+        title: 'Boom',
+        assetPath: 'assets/sounds/boom.mp3',
+        duration: const Duration(seconds: 1),
+        tags: tags,
+      );
+
+      test('is the kind the tags of a published sound name', () {
+        final sound = AudioEvent(
+          id: soundId,
+          pubkey: otherPubkey,
+          createdAt: 1,
+          publicTags: const ['sfx'],
+        );
+
+        expect(sound.kindIn(null), SoundKind.effect);
+      });
+
+      test("is the kind of a shipped sound's manifest entry", () {
+        final music = shipped(tags: ['music']);
+        when(() => library.getSoundById('boom')).thenReturn(music);
+
+        expect(
+          AudioEvent.fromBundledSound(music).kindIn(library),
+          SoundKind.music,
+        );
+      });
+
+      test('is an effect for a shipped sound its manifest tags no kind', () {
+        final effect = shipped(tags: ['meme']);
+        when(() => library.getSoundById('boom')).thenReturn(effect);
+
+        expect(
+          AudioEvent.fromBundledSound(effect).kindIn(library),
+          SoundKind.effect,
+        );
+      });
+
+      test('is unknown for a shipped sound while the library loads', () {
+        expect(
+          AudioEvent.fromBundledSound(shipped(tags: ['music'])).kindIn(null),
+          isNull,
+        );
       });
     });
 
