@@ -1,7 +1,7 @@
-// ABOUTME: E2E regression for #8619 — a group DM sibling that JOINS a
-// ABOUTME: recovery the retry sweep already owns must be charged for that one
-// ABOUTME: attempt once, not twice. Drives a real DmRepository + NostrClient
-// ABOUTME: over real sockets, and the real OutgoingDmRetryService in ARM B.
+// ABOUTME: E2E regression for #8619 and #8627 — a retry that overlaps a group
+// ABOUTME: DM send joins it, so each sibling is attempted and charged once.
+// ABOUTME: Drives a real DmRepository + NostrClient over real sockets, and the
+// ABOUTME: real OutgoingDmRetryService in ARM B.
 // ABOUTME: Requires: NO Docker stack — every dependency here is local.
 
 @Tags(['service'])
@@ -230,11 +230,11 @@ void main() {
 
   group('#8619 group DM send overlapping the retry sweep', () {
     testWidgets(
-      'ARM A: a sibling that joins a recovery the sweep already owns is '
-      'charged for that one attempt once, and still hands back its handle',
+      'ARM A: a retry of a sibling the group send has not reached joins the '
+      'send, which attempts and charges that sibling once',
       (tester) async {
         // The deliverable sibling's OK is delayed so the group loop is parked
-        // on it while the sweep registers the unreadable sibling's recovery.
+        // on it while the retry joins the unreadable sibling's attempt.
         // The unreadable sibling's REQ is swallowed, so every attempt for it
         // ends soft-unconfirmed with its row kept — the outcome #8619 is
         // about.
@@ -260,7 +260,8 @@ void main() {
         );
 
         // The sweep reaches the unreadable sibling's row while the group is
-        // still on the first publish: its recovery owns `full:<queueId>`.
+        // still on the first publish. The group send holds that row's key
+        // from the start (#8627), so the retry joins it.
         final rows = await rowsQueued;
         final queued = rows.firstWhere(
           (row) => row.recipientPubkey == unreadablePubkey,
@@ -274,10 +275,10 @@ void main() {
 
         expect(
           inboxLookupsFor(relay, unreadablePubkey) - lookupsBeforeSend,
-          equals(2 * perResolution),
+          equals(perResolution),
           reason:
-              'precondition: the recovery RAN its own attempt (it re-resolved '
-              'the inbox), so the group JOINED it rather than the reverse',
+              'the retry ran no attempt of its own (it never re-resolved the '
+              'inbox): it joined the group send',
         );
         expect(
           wrapsAddressedTo(relay, unreadablePubkey),
@@ -294,16 +295,14 @@ void main() {
         expect(
           held!.retryCount,
           equals(1),
-          reason:
-              'one underlying attempt charges the budget once; before #8619 '
-              'the owner charged it and the joining group send charged it '
-              'again',
+          reason: 'one underlying attempt charges the budget once (#8619)',
         );
         expect(
           results[1].queuedRumorId,
           equals(held.id),
-          reason: 'a joined sibling still hands the caller its durable handle',
+          reason: 'the group send hands the caller its durable handle',
         );
+        expect(recovered.queuedRumorId, equals(held.id));
 
         // The deliverable sibling is untouched by the fix.
         expect(results[0].success, isTrue);
@@ -312,8 +311,8 @@ void main() {
     );
 
     testWidgets(
-      'ARM B: the real retry sweep that overlaps a group send joins the '
-      'sibling in flight, then wins the next sibling, which is charged once',
+      'ARM B: the real retry sweep that overlaps a group send joins it, and '
+      'the unreadable sibling is attempted and charged once',
       (tester) async {
         // Same relay shape as ARM A, but the sweep is the production
         // OutgoingDmRetryService, driven exactly as a foreground flip would
@@ -345,6 +344,13 @@ void main() {
             OutgoingDmRetryService.interruptedMinAge +
                 const Duration(seconds: 10),
           ),
+          // The skewed clock also makes a row attempted a moment ago look
+          // minutes old. A backoff longer than the skew keeps that row
+          // recent, as it is without a skew.
+          retryConfig: const OutgoingDmRetryConfig(
+            initialDelay: Duration(minutes: 10),
+            maxDelay: Duration(minutes: 10),
+          ),
         );
         addTearDown(service.dispose);
 
@@ -361,18 +367,16 @@ void main() {
         final results = await sendFuture;
         await sweepFuture;
 
-        // The sweep processes rows in queue order. It joins the deliverable
-        // sibling the group is parked on, and when both resume from that one
-        // future it registers the unreadable sibling's recovery before the
-        // group loop can — the group still has to re-read the row first. So
-        // the sweep OWNS the second attempt, which is what its own inbox
-        // re-resolution proves here.
+        // The sweep processes rows in queue order and joins the deliverable
+        // sibling the group is parked on. The group send holds every
+        // sibling's key until it has finalized the batch (#8627), so the
+        // group, not the sweep, attempts the unreadable sibling. The sweep
+        // then reads that row again, sees it was just attempted, and waits out
+        // its backoff instead of retrying it at once.
         expect(
           inboxLookupsFor(relay, unreadablePubkey) - lookupsBeforeSend,
-          equals(2 * perResolution),
-          reason:
-              'the sweep ran the unreadable sibling attempt itself; the '
-              'group send joined it',
+          equals(perResolution),
+          reason: 'only the group send resolved the unreadable inbox',
         );
         expect(wrapsAddressedTo(relay, deliverablePubkey), equals(1));
         expect(wrapsAddressedTo(relay, unreadablePubkey), equals(1));
@@ -380,9 +384,14 @@ void main() {
         final held = await queueRowFor(stack.db, unreadablePubkey);
         expect(held, isNotNull);
         expect(
-          held!.retryCount,
+          held!.recipientWrapEventId,
+          isNotNull,
+          reason: "the group's attempt recorded the held member's pool wrap",
+        );
+        expect(
+          held.retryCount,
           equals(1),
-          reason: 'one attempt, one charge, whichever side ran it (#8619)',
+          reason: 'one attempt, one charge (#8619)',
         );
         expect(results, hasLength(2));
         expect(results[1].retryablePending, isTrue);

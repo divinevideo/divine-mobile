@@ -19,7 +19,7 @@ import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
-/// Holds the first real SQLite conversation read across an account switch.
+/// Holds the first real SQLite conversation read until the test resumes it.
 class _HeldConversationDao extends ConversationsDao {
   _HeldConversationDao(super.attachedDatabase);
 
@@ -39,7 +39,51 @@ class _HeldConversationDao extends ConversationsDao {
   }
 }
 
+/// A conversation store whose transactions fail, so a group send throws while
+/// it persists the batch.
+class _FailingTransactionConversationsDao extends ConversationsDao {
+  _FailingTransactionConversationsDao(super.attachedDatabase);
+
+  @override
+  Future<T> runInTransaction<T>(Future<T> Function() action) =>
+      Future.error(StateError('database is locked'));
+}
+
+class _HeldFailureOutgoingDmsDao extends OutgoingDmsDao {
+  _HeldFailureOutgoingDmsDao(super.attachedDatabase);
+
+  final started = Completer<void>();
+  final resume = Completer<void>();
+
+  @override
+  Future<bool> markRecipientWrapStatus({
+    required String id,
+    required OutgoingWrapStatus status,
+    String? eventId,
+    String? lastError,
+  }) async {
+    if (status == OutgoingWrapStatus.failed && !started.isCompleted) {
+      started.complete();
+      await resume.future;
+    }
+    return super.markRecipientWrapStatus(
+      id: id,
+      status: status,
+      eventId: eventId,
+      lastError: lastError,
+    );
+  }
+}
+
 class _FakeEvent extends Fake implements Event {}
+
+/// The pubkey a gift wrap is addressed to: its `p` tag.
+String? _recipientOf(Event wrap) {
+  for (final tag in wrap.tags) {
+    if (tag.length >= 2 && tag[0] == 'p') return tag[1];
+  }
+  return null;
+}
 
 // Real curve keys: the real message service encrypts every wrap, so each
 // pubkey has to be a point the NIP-44 key agreement accepts.
@@ -49,6 +93,8 @@ const _peerBKey =
     '6a1f2e3d4c5b6a7980f1e2d3c4b5a69788f9e0d1c2b3a4958677f8e9d0c1b2a3';
 const _peerCKey =
     '7b2e3f4a5b6c7d8e9f0a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6';
+const _peerDKey =
+    '8c3f4a5b6c7d8e9fa0b1c2d3e4f5061728394a5b6c7d8e9fa0b1c2d3e4f5a6b7';
 
 const _poolRelay = 'wss://relay.divine.video';
 const _advertisedInbox = 'wss://inbox.example.com';
@@ -76,6 +122,7 @@ void main() {
     final owner = getPublicKey(_ownerKey);
     final peerB = getPublicKey(_peerBKey);
     final peerC = getPublicKey(_peerCKey);
+    final peerD = getPublicKey(_peerDKey);
 
     late AppDatabase db;
     late OutgoingDmsDao outgoingDao;
@@ -87,6 +134,13 @@ void main() {
     late List<String> lookups;
     late bool failPublishes;
     String? acceptingRelayOverride;
+    // Holds one recipient's inbox read, after `discovery`, so a send to that
+    // recipient can sit at the head of the background queue while others
+    // resolve at once.
+    late Map<String, Completer<void>> lookupHolds;
+    // Fails the sender's own copy (the wrap addressed to [owner]) at the
+    // socket, the way a dropped connection does.
+    late bool failSelfWraps;
 
     ({List<Event> events, bool timedOut, bool noRelays}) answerLookup(
       List<nostr_filter.Filter> filters,
@@ -155,6 +209,8 @@ void main() {
       lookups = [];
       failPublishes = false;
       acceptingRelayOverride = null;
+      lookupHolds = {};
+      failSelfWraps = false;
 
       when(() => nostrClient.connectedRelayCount).thenReturn(1);
       when(() => nostrClient.configuredRelayCount).thenReturn(1);
@@ -180,8 +236,12 @@ void main() {
         (invocation) async {
           final filters = (invocation.positionalArguments.first as List)
               .cast<nostr_filter.Filter>();
-          lookups.addAll(filters.expand((f) => f.authors ?? <String>[]));
+          final authors = filters.expand((f) => f.authors ?? <String>[]);
+          lookups.addAll(authors);
           await discovery.future;
+          for (final author in authors) {
+            await lookupHolds[author]?.future;
+          }
           return answerLookup(
             (invocation.positionalArguments.first as List)
                 .cast<nostr_filter.Filter>(),
@@ -200,9 +260,10 @@ void main() {
       ).thenAnswer((invocation) async {
         final event = invocation.positionalArguments.first as Event;
         published.add(event);
+        final selfCopyFails = failSelfWraps && _recipientOf(event) == owner;
         return PublishOutcome(
           eventId: event.id,
-          acceptedBy: failPublishes
+          acceptedBy: failPublishes || selfCopyFails
               ? const []
               : acceptingRelayOverride != null
               ? [acceptingRelayOverride!]
@@ -222,6 +283,9 @@ void main() {
       ).thenAnswer((invocation) async {
         final event = invocation.positionalArguments.first as Event;
         published.add(event);
+        if (failSelfWraps && _recipientOf(event) == owner) {
+          return const PublishFailed();
+        }
         return PublishSuccess(event: event);
       });
 
@@ -622,5 +686,207 @@ void main() {
         },
       );
     }
+
+    /// Distinct gift wraps addressed to [pubkey].
+    Set<String> wrapsTo(String pubkey) => {
+      for (final event in published)
+        if (_recipientOf(event) == pubkey) event.id,
+    };
+
+    /// Lets queued work run until [done] holds, for at most [turns] passes of
+    /// the event queue: far more than a retry that is free to run needs.
+    Future<void> pumpUntil(bool Function() done, {int turns = 200}) async {
+      for (var i = 0; i < turns && !done(); i++) {
+        await pumpEventQueue();
+      }
+    }
+
+    /// Puts a send to [peerD] at the head of the background queue, held in
+    /// its inbox read until the returned completer completes.
+    Future<Completer<void>> queueBehindASlowSend() async {
+      discovery.complete();
+      final ahead = Completer<void>();
+      lookupHolds[peerD] = ahead;
+      final first = await repository.sendMessage(
+        recipientPubkey: peerD,
+        content: 'sent first',
+        backgroundDelivery: true,
+      );
+      expect(first.retryablePending, isTrue);
+      await pumpUntil(() => lookups.contains(peerD));
+      expect(lookups, contains(peerD));
+      return ahead;
+    }
+
+    int readsOf(String pubkey) => lookups.where((p) => p == pubkey).length;
+
+    /// How many relay reads one inbox resolution of [pubkey] makes, measured
+    /// rather than restated.
+    Future<int> readsPerResolution(String pubkey) async {
+      final before = readsOf(pubkey);
+      await repository.resolveDmInboxRelaysDetailed(pubkey);
+      final reads = readsOf(pubkey) - before;
+      expect(reads, greaterThan(0));
+      return reads;
+    }
+
+    test(
+      'a retry of a group member while the group waits behind earlier sends '
+      'joins the group send instead of sending it itself (#8627)',
+      () async {
+        final ahead = await queueBehindASlowSend();
+        final perResolution = await readsPerResolution(peerB);
+        final readsBefore = readsOf(peerB);
+        final results = await repository.sendGroupMessage(
+          recipientPubkeys: [peerB, peerC],
+          content: 'group note',
+          backgroundDelivery: true,
+        );
+
+        // The retry sweep's interrupted-send arm makes this call once the
+        // waiting rows look older than its min-age.
+        var retryDone = false;
+        final retry = repository
+            .recoverFullSend(rumorId: results.first.queuedRumorId!)
+            .whenComplete(() => retryDone = true);
+        await pumpUntil(() => retryDone || wrapsTo(peerB).isNotEmpty);
+
+        expect(wrapsTo(peerB), isEmpty);
+        expect(retryDone, isFalse);
+
+        ahead.complete();
+        expect((await retry).success, isTrue);
+        expect(wrapsTo(peerB), hasLength(1));
+        // Only the group send read the member's inbox: a retry that ran its
+        // own attempt would have read it again.
+        expect(readsOf(peerB) - readsBefore, perResolution);
+      },
+    );
+
+    test(
+      'a retry that joined a group send which then fails is released with a '
+      'failure instead of waiting forever (#8627)',
+      () async {
+        repository = buildRepository(
+          queue: outgoingDao,
+          conversationStore: _FailingTransactionConversationsDao(db),
+        );
+        final send = repository.sendGroupMessage(
+          recipientPubkeys: [peerB, peerC],
+          content: 'group note',
+        );
+        await pumpUntil(() => lookups.contains(peerB));
+        final rows = await outgoingDao.getAllForOwner(owner);
+        expect(rows, hasLength(2));
+        final retry = repository.recoverFullSend(rumorId: rows.first.id);
+
+        discovery.complete();
+        await expectLater(send, throwsA(isA<StateError>()));
+        final released = await retry;
+        expect(released.success, isFalse);
+        expect(released.error, contains('group send failed'));
+      },
+    );
+
+    test(
+      'a group member is sent the message once when its sender copy fails '
+      'to publish (#8627)',
+      () async {
+        final ahead = await queueBehindASlowSend();
+        final results = await repository.sendGroupMessage(
+          recipientPubkeys: [peerB, peerC],
+          content: 'group note',
+          backgroundDelivery: true,
+        );
+        failSelfWraps = true;
+
+        final retry = repository.recoverFullSend(
+          rumorId: results.first.queuedRumorId!,
+        );
+        await pumpUntil(() => wrapsTo(peerB).isNotEmpty);
+        ahead.complete();
+        await retry;
+        await pumpUntil(() => wrapsTo(peerC).isNotEmpty);
+        expect(wrapsTo(peerC), hasLength(1));
+
+        final row = await outgoingDao.getById(results.first.queuedRumorId!);
+        expect(row?.recipientWrapStatus, OutgoingWrapStatus.sent);
+        expect(row?.selfWrapStatus, OutgoingWrapStatus.failed);
+        expect(wrapsTo(peerB), hasLength(1));
+      },
+    );
+
+    test(
+      'a retry before the group send returns joins the queued batch',
+      () async {
+        final conversations = _HeldConversationDao(db);
+        repository = buildRepository(
+          queue: outgoingDao,
+          conversationStore: conversations,
+        );
+        failSelfWraps = true;
+        final send = repository.sendGroupMessage(
+          recipientPubkeys: [peerB, peerC],
+          content: 'group note',
+          backgroundDelivery: true,
+        );
+        await conversations.started.future;
+        final rows = await outgoingDao.getAllForOwner(owner);
+        final row = rows.singleWhere((row) => row.recipientPubkey == peerB);
+
+        discovery.complete();
+        final retry = repository.recoverFullSend(rumorId: row.id);
+        await pumpUntil(() => wrapsTo(peerB).isNotEmpty);
+        final wrapsBeforeSendContinued = wrapsTo(peerB);
+        conversations.resume.complete();
+
+        final queued = await send;
+        final result = await retry;
+        expect(wrapsBeforeSendContinued, isEmpty);
+        expect(queued.first.queuedRumorId, row.id);
+        expect(result.success, isTrue);
+        expect(result.selfWrapPublished, isFalse);
+        expect(wrapsTo(peerB), hasLength(1));
+      },
+    );
+
+    test(
+      'joined background retry waits for failed rows to be finalized',
+      () async {
+        final queue = _HeldFailureOutgoingDmsDao(db);
+        repository = buildRepository(
+          queue: queue,
+          conversationStore: _FailingTransactionConversationsDao(db),
+        );
+        final queued = await repository.sendGroupMessage(
+          recipientPubkeys: [peerB, peerC],
+          content: 'group note',
+          backgroundDelivery: true,
+        );
+        final id = queued.first.queuedRumorId!;
+        final retry = repository.recoverFullSend(rumorId: id).then((
+          result,
+        ) async {
+          final row = await queue.getById(id);
+          return (result, row);
+        });
+
+        discovery.complete();
+        await queue.started.future;
+        try {
+          expect(
+            (await queue.getById(id))?.recipientWrapStatus,
+            OutgoingWrapStatus.pending,
+          );
+          await pumpEventQueue();
+        } finally {
+          queue.resume.complete();
+        }
+        final (result, row) = await retry;
+        expect(result.success, isFalse);
+        expect(row?.recipientWrapStatus, OutgoingWrapStatus.failed);
+        expect(row?.selfWrapStatus, OutgoingWrapStatus.failed);
+      },
+    );
   });
 }

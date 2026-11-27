@@ -42,6 +42,7 @@ OutgoingDm _row({
   DateTime? queuedAt,
   String? recipientWrapEventId,
   String? conversationId,
+  String? sendBatchId,
   String? unconfirmedRecipientWrapJson,
 }) {
   return OutgoingDm(
@@ -59,6 +60,7 @@ OutgoingDm _row({
     unconfirmedRecipientWrapJson: unconfirmedRecipientWrapJson,
     lastAttemptAt: lastAttemptAt,
     recipientWrapEventId: recipientWrapEventId,
+    sendBatchId: sendBatchId,
   );
 }
 
@@ -1039,6 +1041,49 @@ void main() {
     });
 
     group('per-row backoff', () {
+      test(
+        'backs off a failed sibling that was attempted while recovery '
+        'joined the group send',
+        () async {
+          final now = DateTime.utc(2026, 5, 10, 12);
+          final beforeReconnect = now.subtract(const Duration(minutes: 5));
+          final failedSiblings = [
+            for (final id in ['sibling-1', 'sibling-2'])
+              _row(
+                id: id,
+                recipient: OutgoingWrapStatus.failed,
+                self: OutgoingWrapStatus.failed,
+                lastAttemptAt: beforeReconnect,
+                sendBatchId: 'group-batch',
+              ),
+          ];
+          when(
+            () => dao.getRetryableForOwner(
+              ownerPubkey: _ownerPubkey,
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          ).thenAnswer((_) async => failedSiblings);
+          when(() => dao.getById('sibling-2')).thenAnswer(
+            (_) async => failedSiblings.last.copyWith(
+              retryCount: 1,
+              lastAttemptAt: now,
+            ),
+          );
+          when(
+            () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
+          ).thenAnswer((_) async => _successResult('sibling-1'));
+
+          await buildService(now: () => now).sweep();
+
+          verify(
+            () => dmRepository.recoverFullSend(rumorId: 'sibling-1'),
+          ).called(1);
+          verifyNever(
+            () => dmRepository.recoverFullSend(rumorId: 'sibling-2'),
+          );
+        },
+      );
+
       test(
         'skips a row whose lastAttemptAt + backoff is still in the future',
         () async {
@@ -2356,6 +2401,67 @@ void main() {
           verifyNever(
             () => dmRepository.recoverSelfWrap(rumorId: any(named: 'rumorId')),
           );
+        },
+      );
+
+      test(
+        'judges each later row by its state after the previous dispatch, so '
+        'a row attempted meanwhile waits out its backoff (#8627)',
+        () async {
+          final now = DateTime.utc(2026, 5, 10, 12);
+          final queuedAt = now.subtract(const Duration(minutes: 5));
+          final first = _row(
+            id: 'sibling-1',
+            recipient: OutgoingWrapStatus.pending,
+            self: OutgoingWrapStatus.pending,
+            queuedAt: queuedAt,
+          );
+          final second = _row(
+            id: 'sibling-2',
+            recipient: OutgoingWrapStatus.pending,
+            self: OutgoingWrapStatus.pending,
+            queuedAt: queuedAt,
+          );
+          // What a group send the first dispatch joined has done to the
+          // second row by the time that dispatch returns: attempted, charged.
+          final secondAfterGroupSend = _row(
+            id: 'sibling-2',
+            recipient: OutgoingWrapStatus.pending,
+            self: OutgoingWrapStatus.pending,
+            queuedAt: queuedAt,
+            retryCount: 1,
+            lastAttemptAt: now,
+          );
+          final unrelated = _row(
+            id: 'unrelated',
+            recipient: OutgoingWrapStatus.pending,
+            self: OutgoingWrapStatus.pending,
+            queuedAt: queuedAt,
+          );
+          when(
+            () => dao.getStillPendingForOwner(any()),
+          ).thenAnswer((_) async => [first, second, unrelated]);
+          when(() => dao.getById(second.id)).thenAnswer(
+            (_) async => secondAfterGroupSend,
+          );
+          when(() => dao.getById(unrelated.id))
+              .thenAnswer((_) async => unrelated);
+          when(
+            () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
+          ).thenAnswer((_) async => _successResult('sibling-1'));
+
+          await buildService(now: () => now).sweep();
+
+          verify(
+            () => dmRepository.recoverFullSend(rumorId: 'sibling-1'),
+          ).called(1);
+          verifyNever(
+            () => dmRepository.recoverFullSend(rumorId: 'sibling-2'),
+          );
+          verify(
+            () => dmRepository.recoverFullSend(rumorId: 'unrelated'),
+          ).called(1);
+          verify(() => dao.getStillPendingForOwner(any())).called(1);
         },
       );
 

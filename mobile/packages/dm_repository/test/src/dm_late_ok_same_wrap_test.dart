@@ -22,35 +22,6 @@ class _MockNostrClient extends Mock implements NostrClient {}
 
 class _FakeEvent extends Fake implements Event {}
 
-/// A queue that holds one read of a row: it reads the row, then hands that
-/// copy back only once the test releases it.
-class _HeldReadOutgoingDmsDao extends OutgoingDmsDao {
-  _HeldReadOutgoingDmsDao(super.attachedDatabase);
-
-  String? _heldId;
-  final _taken = Completer<void>();
-  final _released = Completer<void>();
-
-  /// Holds the next [getById] of [id]; completes once that read has the row.
-  Future<void> holdNextRead(String id) {
-    _heldId = id;
-    return _taken.future;
-  }
-
-  void release() => _released.complete();
-
-  @override
-  Future<OutgoingDm?> getById(String id) async {
-    final row = await super.getById(id);
-    if (id == _heldId) {
-      _heldId = null;
-      _taken.complete();
-      await _released.future;
-    }
-    return row;
-  }
-}
-
 /// A queue whose write of an unconfirmed attempt's wrap fails.
 class _UnkeepableOutgoingDmsDao extends OutgoingDmsDao {
   _UnkeepableOutgoingDmsDao(super.attachedDatabase);
@@ -62,6 +33,7 @@ class _UnkeepableOutgoingDmsDao extends OutgoingDmsDao {
   }) => Future.error(StateError('database is locked'));
 }
 
+/// A queue whose clear of a refused wrap fails.
 class _UnclearableOutgoingDmsDao extends OutgoingDmsDao {
   _UnclearableOutgoingDmsDao(super.attachedDatabase);
 
@@ -294,111 +266,8 @@ void main() {
     });
 
     group('sendGroupMessage', () {
-      test(
-        'reports a failed clear without aborting the remaining siblings',
-        () async {
-          final reported = <String>[];
-          outgoingDao = _UnclearableOutgoingDmsDao(db);
-          repository = buildRepository(
-            errorReporter: (error, stackTrace, {required site}) =>
-                reported.add(site),
-          );
-          relay = _Relay.refuses;
-
-          final results = await repository.sendGroupMessage(
-            recipientPubkeys: [peer, getPublicKey(_secondPeerKey)],
-            content: 'refused wrap cleanup can fail',
-          );
-
-          expect(results, hasLength(2));
-          expect(
-            results.map((result) => result.recipientWrapRefused),
-            everyElement(isTrue),
-          );
-          expect(reported, [
-            DmRepositoryReportableSites.clearUnconfirmedRecipientWrap,
-            DmRepositoryReportableSites.clearUnconfirmedRecipientWrap,
-          ]);
-        },
-      );
-
-      test('does not clear a newer recovery wrap when the earlier group '
-          'attempt was refused', () async {
-        final secondPeer = getPublicKey(_secondPeerKey);
-        final secondStarted = Completer<void>();
-        final releaseSecond = Completer<void>();
-        relay = _Relay.refuses;
-        when(
-          () => nostrClient.publishEventAwaitOk(
-            any(),
-            targetRelays: any(named: 'targetRelays'),
-            timeout: any(named: 'timeout'),
-            diagnosticTag: any(named: 'diagnosticTag'),
-          ),
-        ).thenAnswer((invocation) async {
-          final event = invocation.positionalArguments.first as Event;
-          published.add(event);
-          final toSecond = event.tags.any(
-            (tag) => tag.length >= 2 && tag[0] == 'p' && tag[1] == secondPeer,
-          );
-          if (toSecond && !secondStarted.isCompleted) {
-            secondStarted.complete();
-            await releaseSecond.future;
-            return PublishOutcome(
-              eventId: event.id,
-              acceptedBy: const [],
-              rejectedBy: const {},
-              noResponseFrom: const [_poolRelay],
-            );
-          }
-          return PublishOutcome(
-            eventId: event.id,
-            acceptedBy: relay == _Relay.accepts ? const [_poolRelay] : const [],
-            rejectedBy: relay == _Relay.refuses
-                ? const {_poolRelay: 'invalid: created_at too old'}
-                : const {},
-            noResponseFrom: relay == _Relay.staysSilent
-                ? const [_poolRelay]
-                : const [],
-          );
-        });
-
-        final batch = repository.sendGroupMessage(
-          recipientPubkeys: [peer, secondPeer],
-          content: 'a recovery kept a newer wrap',
-        );
-        await secondStarted.future;
-        final firstRow = (await outgoingDao.getAllForOwner(
-          owner,
-        )).singleWhere((row) => row.recipientPubkey == peer);
-        relay = _Relay.staysSilent;
-        try {
-          final recovered = await repository.recoverFullSend(
-            rumorId: firstRow.id,
-          );
-          expect(recovered.retryablePending, isTrue);
-          expect(
-            (await outgoingDao.getById(
-              firstRow.id,
-            ))!.unconfirmedRecipientWrapJson,
-            isNotNull,
-          );
-        } finally {
-          releaseSecond.complete();
-          await batch;
-        }
-
-        final recoveryWrap = wrapsTo(peer).last;
-        relay = _Relay.accepts;
-        final retried = await repository.recoverFullSend(rumorId: firstRow.id);
-
-        expect(retried.success, isTrue);
-        expect(wrapsTo(peer), hasLength(3));
-        expect(wrapsTo(peer).last.id, recoveryWrap.id);
-      });
-
-      test('reuses the wrap a recovery sent before the group loop reaches '
-          'that sibling', () async {
+      test('a retry of a sibling the group loop has not reached joins the '
+          'send, so that member gets one wrap (#8627)', () async {
         final secondPeer = getPublicKey(_secondPeerKey);
         final firstStarted = Completer<void>();
         final releaseFirst = Completer<void>();
@@ -435,24 +304,18 @@ void main() {
         final secondRow = (await outgoingDao.getAllForOwner(
           owner,
         )).singleWhere((row) => row.recipientPubkey == secondPeer);
-        try {
-          final recovered = await repository.recoverFullSend(
-            rumorId: secondRow.id,
-          );
-          expect(recovered.retryablePending, isTrue);
-          expect(wrapsTo(secondPeer), hasLength(1));
-        } finally {
-          releaseFirst.complete();
-          await batch;
-        }
+        final retry = repository.recoverFullSend(rumorId: secondRow.id);
+        await pumpEventQueue();
+        expect(wrapsTo(secondPeer), isEmpty);
+        releaseFirst.complete();
+        await batch;
 
-        final wraps = wrapsTo(secondPeer);
-        expect(wraps, hasLength(2));
-        expect(wraps.last.id, wraps.first.id);
+        expect((await retry).retryablePending, isTrue);
+        expect(wrapsTo(secondPeer), hasLength(1));
       });
 
-      test('keeps a sibling wrap before the next sibling publishes, so a '
-          'retry in between sends that same wrap again', () async {
+      test('keeps a sibling wrap on its row before the next sibling '
+          'publishes, for a recovery after an app kill to resend', () async {
         final secondPeer = getPublicKey(_secondPeerKey);
         final secondStarted = Completer<void>();
         final releaseSecond = Completer<void>();
@@ -500,26 +363,22 @@ void main() {
           owner,
         )).singleWhere((row) => row.recipientPubkey == peer);
 
-        relay = _Relay.accepts;
-        final retried = await repository.recoverFullSend(rumorId: firstRow.id);
+        final kept = firstRow.unconfirmedRecipientWrapJson;
         releaseSecond.complete();
         await batch;
 
-        expect(retried.success, isTrue);
+        expect(kept, isNotNull);
         expect(
-          wrapsTo(peer).map((wrap) => wrap.id).toSet(),
-          equals({firstWrap.id}),
+          (jsonDecode(kept!) as Map<String, dynamic>)['id'],
+          firstWrap.id,
         );
       });
 
-      test('reuses the wrap a recovery kept while the group loop was reading '
-          'that sibling', () async {
+      test('a retry of a sibling the group already attempted, while a later '
+          'sibling still publishes, joins the send (#8619, #8627)', () async {
         final secondPeer = getPublicKey(_secondPeerKey);
-        final heldReads = _HeldReadOutgoingDmsDao(db);
-        outgoingDao = heldReads;
-        repository = buildRepository();
-        final firstStarted = Completer<void>();
-        final releaseFirst = Completer<void>();
+        final secondStarted = Completer<void>();
+        final releaseSecond = Completer<void>();
         when(
           () => nostrClient.publishEventAwaitOk(
             any(),
@@ -530,12 +389,12 @@ void main() {
         ).thenAnswer((invocation) async {
           final event = invocation.positionalArguments.first as Event;
           published.add(event);
-          final toFirst = event.tags.any(
-            (tag) => tag.length >= 2 && tag[0] == 'p' && tag[1] == peer,
+          final toSecond = event.tags.any(
+            (tag) => tag.length >= 2 && tag[0] == 'p' && tag[1] == secondPeer,
           );
-          if (toFirst && !firstStarted.isCompleted) {
-            firstStarted.complete();
-            await releaseFirst.future;
+          if (toSecond && !secondStarted.isCompleted) {
+            secondStarted.complete();
+            await releaseSecond.future;
           }
           return PublishOutcome(
             eventId: event.id,
@@ -547,29 +406,21 @@ void main() {
 
         final batch = repository.sendGroupMessage(
           recipientPubkeys: [peer, secondPeer],
-          content: 'recovery finished while the loop read the row',
+          content: 'first member already tried',
         );
-        await firstStarted.future;
-        final secondRow = (await heldReads.getAllForOwner(
+        await secondStarted.future;
+        final firstRow = (await outgoingDao.getAllForOwner(
           owner,
-        )).singleWhere((row) => row.recipientPubkey == secondPeer);
-        final loopRead = heldReads.holdNextRead(secondRow.id);
-        releaseFirst.complete();
-        try {
-          await loopRead;
-          final recovered = await repository.recoverFullSend(
-            rumorId: secondRow.id,
-          );
-          expect(recovered.retryablePending, isTrue);
-          expect(wrapsTo(secondPeer), hasLength(1));
-        } finally {
-          heldReads.release();
-          await batch;
-        }
+        )).singleWhere((row) => row.recipientPubkey == peer);
+        final retry = repository.recoverFullSend(rumorId: firstRow.id);
+        await pumpEventQueue();
+        expect(wrapsTo(peer), hasLength(1));
+        releaseSecond.complete();
+        await batch;
 
-        final wraps = wrapsTo(secondPeer);
-        expect(wraps, hasLength(2));
-        expect(wraps.last.id, wraps.first.id);
+        expect((await retry).retryablePending, isTrue);
+        expect(wrapsTo(peer), hasLength(1));
+        expect((await outgoingDao.getById(firstRow.id))!.retryCount, 1);
       });
 
       test(
@@ -650,6 +501,27 @@ void main() {
           equals({wrap.id}),
         );
       });
+
+      test(
+        'reports a failed clear of a refused wrap without throwing',
+        () async {
+          final reported = <String>[];
+          outgoingDao = _UnclearableOutgoingDmsDao(db);
+          repository = buildRepository(
+            errorReporter: (error, stackTrace, {required site}) =>
+                reported.add(site),
+          );
+          final (:rowId, wrap: _) = await unconfirmedSend();
+          relay = _Relay.refuses;
+
+          final refused = await repository.recoverFullSend(rumorId: rowId);
+
+          expect(refused.success, isFalse);
+          expect(reported, [
+            DmRepositoryReportableSites.clearUnconfirmedRecipientWrap,
+          ]);
+        },
+      );
 
       test('builds a new wrap once a relay has refused the kept one', () async {
         final (:rowId, :wrap) = await unconfirmedSend();
