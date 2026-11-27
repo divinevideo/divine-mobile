@@ -182,11 +182,10 @@ class _AudioSelectionBottomSheetState
   ProviderSubscription<AsyncValue<PagedSounds>>? _tabLoadListener;
   StreamSubscription<SavedSoundsState>? _savedSoundsListener;
 
-  /// The search being timed: the query the open tab sends, the kind it is
-  /// narrowed to, and whether it is For you's, within the followed accounts.
+  /// The search being timed: the query the open tab sends and the kind it is
+  /// narrowed to.
   String _timedSearchQuery = '';
   SoundKind? _timedSearchKind;
-  bool _timedSearchFollowed = false;
   ProviderSubscription<AsyncValue<SoundSearchResults>>? _searchListener;
 
   /// The lists shown, in tab order: Songs only while the song catalog is
@@ -347,13 +346,10 @@ class _AudioSelectionBottomSheetState
     AudioCategory.songs || AudioCategory.mySounds => '',
   };
 
-  /// The search the open tab sends out: For you's within the accounts the
-  /// viewer follows, Popular's and New's among every sound.
-  _SoundSearch get _sentSearch => (
-    query: _sentSearchQuery,
-    kind: _kind,
-    followed: _category == AudioCategory.forYou,
-  );
+  /// The search the open tab sends out, among every sound. For you sends the
+  /// same as Popular: the accounts the viewer follows have too few sounds to
+  /// search on their own.
+  _SoundSearch get _sentSearch => (query: _sentSearchQuery, kind: _kind);
 
   /// Follows the search the open tab sends: times it, and shows its answer
   /// once it lands.
@@ -399,15 +395,9 @@ class _AudioSelectionBottomSheetState
   /// reported abandoned: the picker stops listening to it.
   void _syncSearchTiming() {
     final query = _sentSearchQuery;
-    final followed = _category == AudioCategory.forYou;
-    if (query == _timedSearchQuery &&
-        _kind == _timedSearchKind &&
-        followed == _timedSearchFollowed) {
-      return;
-    }
+    if (query == _timedSearchQuery && _kind == _timedSearchKind) return;
     _timedSearchQuery = query;
     _timedSearchKind = _kind;
-    _timedSearchFollowed = followed;
     _searchListener?.close();
     _searchListener = null;
     _telemetry.abandonSearch();
@@ -415,7 +405,7 @@ class _AudioSelectionBottomSheetState
 
     _telemetry.startSearch();
     _searchListener = _listenUntilSettled(
-      soundSearchResultsProvider(query, kind: _kind, followed: followed),
+      soundSearchResultsProvider(query, kind: _kind),
       (results, {required wasSettled}) {
         final answer = results.value;
         if (answer == null) {
@@ -527,25 +517,13 @@ class _AudioSelectionBottomSheetState
   }
 
   static SoundSearchResultsProvider _searchResultsOf(_SoundSearch search) =>
-      soundSearchResultsProvider(
-        search.query,
-        kind: search.kind,
-        followed: search.followed,
-      );
+      soundSearchResultsProvider(search.query, kind: search.kind);
 
   static SoundSearchPagesProvider _searchPagesOf(_SoundSearch search) =>
-      soundSearchPagesProvider(
-        search.query,
-        kind: search.kind,
-        followed: search.followed,
-      );
+      soundSearchPagesProvider(search.query, kind: search.kind);
 
   static SoundSearchCoversProvider _searchCoversOf(_SoundSearch search) =>
-      soundSearchCoversProvider(
-        search.query,
-        kind: search.kind,
-        followed: search.followed,
-      );
+      soundSearchCoversProvider(search.query, kind: search.kind);
 
   /// [matches] by how well their title fits [query], the search typed when
   /// none is given, Divine's first among equals; as given while nothing is
@@ -1194,10 +1172,9 @@ class _AudioSelectionBottomSheetState
       titleOf: (sound) => sound.personalLabel ?? sound.audio.title,
       audioOf: (sound) => sound.audio,
     );
-    // The open tab sends the search out: For you within the accounts the
-    // viewer follows, Popular and New among every sound. My sounds keeps its
-    // query local, as there it is often a private label, which must not go
-    // out as a search.
+    // The open tab sends the search out, among every sound: For you, Popular
+    // and New. My sounds keeps its query local, as there it is often a
+    // private label, which must not go out as a search.
     final sent = _sentSearch;
     final searchResults = ref.watch(_searchResultsOf(sent));
     // Watched while the answer before stays on screen, so what this one
@@ -1245,18 +1222,14 @@ class _AudioSelectionBottomSheetState
         (shownWasAnswered
             ? foundAnswer == null
             : _lastSearchSource == SoundSearchSource.relays);
-    _SearchView searchViewIn(AudioCategory tab) {
-      if (_searchQuery.isEmpty) return _SearchView.none;
-      if (searchesAsTyped) return _SearchView.typed;
-      // An answer within the followed accounts is no answer for the tabs that
-      // search every sound, nor the other way round.
-      return foundAnswer?.search.followed == (tab == AudioCategory.forYou)
-          ? _SearchView.found
-          : _SearchView.pending;
-    }
+    final searchView = _searchQuery.isEmpty
+        ? _SearchView.none
+        : searchesAsTyped
+        ? _SearchView.typed
+        : foundAnswer != null
+        ? _SearchView.found
+        : _SearchView.pending;
 
-    _FoundSounds? foundIn(AudioCategory tab) =>
-        searchViewIn(tab) == _SearchView.found ? foundAnswer : null;
     // The answer shown is to a search typed earlier; the next one's is on
     // its way.
     final foundIsStale =
@@ -1268,7 +1241,7 @@ class _AudioSelectionBottomSheetState
         : ref.read(_searchPagesOf(shown).notifier).loadMore;
     // The search whose answer the open tab shows, which a screen reader
     // hears how many sounds it found as it lands.
-    final answeredSearch = switch (searchViewIn(_category)) {
+    final answeredSearch = switch (searchView) {
       _SearchView.found when !foundIsStale => (_category, foundAnswer?.search),
       _SearchView.typed
           when _debouncedQuery == _searchQuery &&
@@ -1349,11 +1322,10 @@ class _AudioSelectionBottomSheetState
     // Ranked search has its own data and covers, so browse readiness only
     // controls the unsearched and as-typed views.
     Widget searchOrBrowse({
-      required AudioCategory tab,
       required AsyncValue<PagedSounds> browse,
       required Widget Function(PagedSounds?, _FoundSounds?) content,
       required VoidCallback retryBrowse,
-    }) => switch (searchViewIn(tab)) {
+    }) => switch (searchView) {
       _SearchView.pending => searchLoadingState,
       _SearchView.found => content(browse.value, foundAnswer),
       _SearchView.none || _SearchView.typed => browse.when(
@@ -1372,143 +1344,104 @@ class _AudioSelectionBottomSheetState
     final loadsMoreOnScroll = _searchQuery.isEmpty;
     final followedPages = [
       for (final page in forYouAsync.value?.pages ?? const <List<AudioEvent>>[])
-        _filterAudioEvents(
-          page,
-        ).where((sound) => !_cannotBeReused(sound, forYouLookup)).toList(),
+        page.where((sound) => !_cannotBeReused(sound, forYouLookup)).toList(),
     ];
-    final forYouFound = foundIn(AudioCategory.forYou);
+    // Popular, as it shows in [tab]: For you shows it too while a query is
+    // typed, as the accounts the viewer follows have too few sounds to search
+    // on their own.
+    Widget popularListIn(AudioCategory tab) => searchOrBrowse(
+      browse: popularAsync,
+      retryBrowse: () => ref.invalidate(popularList),
+      content: (popular, found) {
+        final popularSounds = popular?.sounds ?? const <AudioEvent>[];
+        final listed = {for (final sound in popularSounds) sound.id};
+        // A search result's video is looked up with the search.
+        bool canBeReused(AudioEvent sound) => !_cannotBeReused(
+          sound,
+          listed.contains(sound.id) ? popularLookup : shownLookup,
+        );
+        return _PendingAnswerBar(
+          isPending: found != null && foundIsStale,
+          child: _SoundsContent(
+            scrollController: listScrollController,
+            selectionCardHeight: _selectionCardHeight,
+            sounds: found != null
+                ? found.pages.sounds.where(canBeReused).toList()
+                : _soundsBySearchFit(
+                    _filterAudioEvents(popularSounds)
+                        .where(canBeReused)
+                        .toList(),
+                  ),
+            selectedSound: _selectedItem,
+            audioService: _audioService,
+            onSelect: _selectSound,
+            onShowDetails: _showDetails,
+            usageCounts: {
+              ...?popular?.usageCounts,
+              ...?found?.pages.usageCounts,
+            },
+            coversBySourceVideo: found == null
+                ? popularCovers
+                : {...?popularCovers, ...?shownCovers},
+            paging: found?.pages ?? (loadsMoreOnScroll ? popular : null),
+            onLoadMore: found != null
+                ? loadMoreFound
+                : kind == null
+                ? ref.read(popularSoundsProvider.notifier).loadMore
+                : ref
+                      .read(
+                        soundsOfKindProvider(
+                          kind,
+                          SoundListOfKind.popular,
+                        ).notifier,
+                      )
+                      .loadMore,
+            emptyState: emptyState,
+            answeredSearch: answeredIn(tab),
+          ),
+        );
+      },
+    );
+
     // Its own Material, so the rows' ink shows over the sheet's background.
     final lists = Material(
       type: MaterialType.transparency,
       child: TabBarView(
         controller: tabController,
         children: [
-          // Sounds from people the viewer follows, ranked in among Divine's own
-          // by how new they are. Divine's are always there, so a failed or empty
-          // lookup still leaves a list rather than an error.
-          if (searchViewIn(AudioCategory.forYou) == _SearchView.pending)
-            searchLoadingState
-          else if (forYouFound == null &&
-              !forYouAsync.hasValue &&
-              !forYouAsync.hasError)
+          if (_searchQuery.isNotEmpty)
+            popularListIn(AudioCategory.forYou)
+          // Sounds from people the viewer follows, ranked in among Divine's
+          // own by how new they are. Divine's are always there, so a failed or
+          // empty lookup still leaves a list rather than an error.
+          else if (!forYouAsync.hasValue && !forYouAsync.hasError)
             loadingState
           else
-            _PendingAnswerBar(
-              isPending: forYouFound != null && foundIsStale,
-              child: _SoundsContent(
-                scrollController: listScrollController,
-                selectionCardHeight: _selectionCardHeight,
-                // A search orders by fit instead, with no daily mix; once
-                // Funnelcake has answered it, Divine's matches lead and the
-                // followed accounts' follow in its order. Divine's are
-                // matched against the search it answered rather than the
-                // words typed since, so the whole list changes at once, as
-                // the next answer lands.
-                sounds: forYouFound != null
-                    ? [
-                        ..._soundsBySearchFit(
-                          divineSoundsMatching(
-                            forYouFound.search.query,
-                            forYouFound.search.kind,
-                          ),
-                          query: forYouFound.search.query,
-                        ),
-                        ...forYouFound.pages.sounds.where(
-                          (sound) => !_cannotBeReused(sound, shownLookup),
-                        ),
-                      ]
-                    : _searchQuery.isEmpty
-                    ? _rankedForYou(followedPages, divineSounds)
-                    : _soundsBySearchFit([
-                        for (final page in followedPages) ...page,
-                        ...divineSounds,
-                      ]),
-                selectedSound: _selectedItem,
-                audioService: _audioService,
-                onSelect: _selectSound,
-                onShowDetails: _showDetails,
-                usageCounts: {
-                  ...?forYouAsync.value?.usageCounts,
-                  ...?forYouFound?.pages.usageCounts,
-                },
-                coversBySourceVideo: forYouFound == null
-                    ? forYouCovers
-                    : {...?forYouCovers, ...?shownCovers},
-                paging:
-                    forYouFound?.pages ??
-                    (loadsMoreOnScroll ? forYouAsync.value : null),
-                onLoadMore: forYouFound != null
-                    ? loadMoreFound
-                    : kind == null
-                    ? ref.read(forYouSoundsProvider.notifier).loadMore
-                    : ref
-                          .read(
-                            soundsOfKindProvider(
-                              kind,
-                              SoundListOfKind.followed,
-                            ).notifier,
-                          )
-                          .loadMore,
-                emptyState: emptyState,
-                answeredSearch: answeredIn(AudioCategory.forYou),
-              ),
+            _SoundsContent(
+              scrollController: listScrollController,
+              selectionCardHeight: _selectionCardHeight,
+              sounds: _rankedForYou(followedPages, divineSounds),
+              selectedSound: _selectedItem,
+              audioService: _audioService,
+              onSelect: _selectSound,
+              onShowDetails: _showDetails,
+              usageCounts: {...?forYouAsync.value?.usageCounts},
+              coversBySourceVideo: forYouCovers,
+              paging: forYouAsync.value,
+              onLoadMore: kind == null
+                  ? ref.read(forYouSoundsProvider.notifier).loadMore
+                  : ref
+                        .read(
+                          soundsOfKindProvider(
+                            kind,
+                            SoundListOfKind.followed,
+                          ).notifier,
+                        )
+                        .loadMore,
+              emptyState: emptyState,
             ),
+          popularListIn(AudioCategory.popular),
           searchOrBrowse(
-            tab: AudioCategory.popular,
-            browse: popularAsync,
-            retryBrowse: () => ref.invalidate(popularList),
-            content: (popular, found) {
-              final popularSounds = popular?.sounds ?? const <AudioEvent>[];
-              final listed = {for (final sound in popularSounds) sound.id};
-              // A search result's video is looked up with the search.
-              bool canBeReused(AudioEvent sound) => !_cannotBeReused(
-                sound,
-                listed.contains(sound.id) ? popularLookup : shownLookup,
-              );
-              return _PendingAnswerBar(
-                isPending: found != null && foundIsStale,
-                child: _SoundsContent(
-                  scrollController: listScrollController,
-                  selectionCardHeight: _selectionCardHeight,
-                  sounds: found != null
-                      ? found.pages.sounds.where(canBeReused).toList()
-                      : _soundsBySearchFit(
-                          _filterAudioEvents(popularSounds)
-                              .where(canBeReused)
-                              .toList(),
-                        ),
-                  selectedSound: _selectedItem,
-                  audioService: _audioService,
-                  onSelect: _selectSound,
-                  onShowDetails: _showDetails,
-                  usageCounts: {
-                    ...?popular?.usageCounts,
-                    ...?found?.pages.usageCounts,
-                  },
-                  coversBySourceVideo: found == null
-                      ? popularCovers
-                      : {...?popularCovers, ...?shownCovers},
-                  paging: found?.pages ?? (loadsMoreOnScroll ? popular : null),
-                  onLoadMore: found != null
-                      ? loadMoreFound
-                      : kind == null
-                      ? ref.read(popularSoundsProvider.notifier).loadMore
-                      : ref
-                            .read(
-                              soundsOfKindProvider(
-                                kind,
-                                SoundListOfKind.popular,
-                              ).notifier,
-                            )
-                            .loadMore,
-                  emptyState: emptyState,
-                  answeredSearch: answeredIn(AudioCategory.popular),
-                ),
-              );
-            },
-          ),
-          searchOrBrowse(
-            tab: AudioCategory.newest,
             browse: nostrSoundsAsync,
             retryBrowse: () => ref.invalidate(newestList),
             content: (newestList, found) {
@@ -1832,10 +1765,8 @@ class _SongsTabState extends State<_SongsTab> {
   }
 }
 
-/// A search a community tab sends: the words, the kind it is narrowed to,
-/// and whether it searches only the accounts the viewer follows, as For you
-/// does.
-typedef _SoundSearch = ({String query, SoundKind? kind, bool followed});
+/// A search a community tab sends: the words and the kind it is narrowed to.
+typedef _SoundSearch = ({String query, SoundKind? kind});
 
 /// What Funnelcake found for [search].
 typedef _FoundSounds = ({_SoundSearch search, PagedSounds pages});

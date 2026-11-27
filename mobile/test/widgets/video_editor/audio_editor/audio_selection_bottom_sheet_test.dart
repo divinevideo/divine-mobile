@@ -206,7 +206,6 @@ void main() {
             usageCounts: const <String, int>{},
           ),
       Map<String, List<AudioEvent>> searchResults = const {},
-      Map<String, List<AudioEvent>> followedSearchResults = const {},
       Map<(SoundKind, SoundListOfKind), List<AudioEvent>> kindLists = const {},
       SoundSearchSource searchSource = SoundSearchSource.relays,
       SoundSearchRelays searchRelays = SoundSearchRelays.answered,
@@ -356,9 +355,9 @@ void main() {
             // Always overridden: without it a keystroke would build the real
             // repository, and with it a Nostr client, inside a widget test.
             soundSearchResultsProvider.overrideWith((ref, search) async {
-              final (query, :kind, :followed) = search;
+              final (query, :kind) = search;
               if (query.isNotEmpty) {
-                relaySearches?.add(followed ? 'followed:$query' : query);
+                relaySearches?.add(query);
                 searchedKinds?.add(kind);
               }
               final pending = query.isEmpty
@@ -366,8 +365,7 @@ void main() {
                   : pendingSearches[query] ?? pendingSearch;
               final sounds = pending != null
                   ? await pending.future
-                  : (followed ? followedSearchResults : searchResults)[query] ??
-                        const <AudioEvent>[];
+                  : searchResults[query] ?? const <AudioEvent>[];
               return (
                 sounds: sounds,
                 source: searchSource,
@@ -1937,16 +1935,22 @@ void main() {
         handle.dispose();
       });
 
-      testWidgets('filters followed and Divine sounds on For you', (
+      testWidgets("filters Popular's sounds on For you, not its own", (
         tester,
       ) async {
         await tester.pumpWidget(
           buildWidget(
             trendingSoundsAsync: AsyncValue.data(testSounds),
             forYouSounds: [
-              _createTestAudioEvent(id: 'followed-1', title: 'Wednesday beat'),
-              _createTestAudioEvent(id: 'followed-2', title: 'Monday blues'),
+              _createTestAudioEvent(id: 'followed-1', title: 'Wednesday clip'),
             ],
+            popularSounds: (
+              sounds: [
+                _createTestAudioEvent(id: 'popular-1', title: 'Wednesday beat'),
+                _createTestAudioEvent(id: 'popular-2', title: 'Monday blues'),
+              ],
+              usageCounts: const <String, int>{},
+            ),
             bundledSounds: [
               VineSound(
                 id: 'wednesday',
@@ -1959,12 +1963,16 @@ void main() {
         );
         await tester.pumpAndSettle();
 
+        expect(find.text('Wednesday clip'), findsOneWidget);
+        expect(find.text('Wednesday My Dudes'), findsOneWidget);
+
         await tester.enterText(find.byType(TextField).first, 'wednes');
         await tester.pumpAndSettle();
 
         expect(find.text('Wednesday beat'), findsOneWidget);
-        expect(find.text('Wednesday My Dudes'), findsOneWidget);
         expect(find.text('Monday blues'), findsNothing);
+        expect(find.text('Wednesday clip'), findsNothing);
+        expect(find.text('Wednesday My Dudes'), findsNothing);
       });
 
       testWidgets('filters community sounds on community tab', (tester) async {
@@ -2003,45 +2011,6 @@ void main() {
 
         expect(find.text('Uh Oh'), findsOneWidget);
         expect(find.text('Victory Lap'), findsNothing);
-      });
-
-      testWidgets('orders For you by fit, a Divine sound first among equals', (
-        tester,
-      ) async {
-        await tester.pumpWidget(
-          buildWidget(
-            trendingSoundsAsync: AsyncValue.data(testSounds),
-            forYouSounds: [
-              _createTestAudioEvent(
-                id: 'followed-contains',
-                title: 'Kaboom',
-                createdAt: _publishedAgo(const Duration(hours: 1)),
-              ),
-              _createTestAudioEvent(
-                id: 'followed-prefix',
-                title: 'Boom box',
-                createdAt: _publishedAgo(const Duration(hours: 1)),
-              ),
-            ],
-            bundledSounds: [
-              VineSound(
-                id: 'boom-divine',
-                title: 'Boom bap',
-                assetPath: 'assets/sounds/boom.mp3',
-                duration: const Duration(seconds: 3),
-              ),
-            ],
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        await tester.enterText(find.byType(TextField).first, 'boom');
-        await tester.pumpAndSettle();
-
-        double top(String title) => tester.getTopLeft(find.text(title)).dy;
-        // Without the search, today's followed sounds would lead.
-        expect(top('Boom bap'), lessThan(top('Boom box')));
-        expect(top('Boom box'), lessThan(top('Kaboom')));
       });
 
       testWidgets('orders My Sounds by the label the owner gave', (
@@ -2221,7 +2190,6 @@ void main() {
                 trendingSoundsAsync: AsyncValue.data(testSounds),
                 searchSource: SoundSearchSource.funnelcake,
                 searchResults: ranked,
-                followedSearchResults: ranked,
                 pendingSearches: searches,
                 pendingKindLists: {list: browse},
               ),
@@ -2353,65 +2321,6 @@ void main() {
           expect(find.byType(DivineLinearProgressIndicator), findsNothing);
         });
 
-        testWidgets("keeps Divine's own matches with the answer they were "
-            'listed with on For you', (tester) async {
-          final next = Completer<List<AudioEvent>>();
-          await tester.pumpWidget(
-            buildWidget(
-              trendingSoundsAsync: AsyncValue.data(testSounds),
-              searchSource: SoundSearchSource.funnelcake,
-              followedSearchResults: {
-                'boom': [
-                  _createTestAudioEvent(id: 'followed', title: 'Followed bomm'),
-                ],
-              },
-              pendingSearches: {'boomx': next},
-              bundledSounds: [
-                VineSound(
-                  id: 'vine-boom',
-                  title: 'Vine Boom',
-                  assetPath: 'assets/sounds/vine_boom.mp3',
-                  duration: const Duration(seconds: 1),
-                ),
-              ],
-            ),
-          );
-          await tester.pumpAndSettle();
-
-          await tester.enterText(find.byType(TextField).first, 'boom');
-          await tester.pump();
-
-          expect(
-            find.text('Vine Boom'),
-            findsNothing,
-            reason: 'it shows with the answer, rather than alone before it',
-          );
-
-          await tester.pump(const Duration(milliseconds: 400));
-          await tester.pumpAndSettle();
-
-          expect(
-            tester.getTopLeft(find.text('Vine Boom')).dy,
-            lessThan(tester.getTopLeft(find.text('Followed bomm')).dy),
-          );
-
-          await tester.enterText(find.byType(TextField).first, 'boomx');
-          await tester.pump(const Duration(milliseconds: 400));
-
-          expect(
-            find.text('Vine Boom'),
-            findsOneWidget,
-            reason: 'matched against the search answered, not the words typed',
-          );
-          expect(find.text('Followed bomm'), findsOneWidget);
-
-          next.complete(const []);
-          await tester.pumpAndSettle();
-
-          expect(find.text('Vine Boom'), findsNothing);
-          expect(find.text('Followed bomm'), findsNothing);
-        });
-
         testWidgets('tells a screen reader how many sounds it found', (
           tester,
         ) async {
@@ -2533,8 +2442,8 @@ void main() {
           expect(find.text('Coolness lol'), findsOneWidget);
         });
 
-        testWidgets('searches only the followed accounts on For you, after '
-            "Divine's own matches", (tester) async {
+        testWidgets('lists on For you what it found among every sound, as on '
+            'Popular', (tester) async {
           final searches = <String>[];
           await tester.pumpWidget(
             buildWidget(
@@ -2542,21 +2451,11 @@ void main() {
               searchSource: SoundSearchSource.funnelcake,
               searchResults: {
                 'boom': [
-                  _createTestAudioEvent(id: 'stranger', title: 'Stranger boom'),
+                  _createTestAudioEvent(id: 'stranger', title: 'Stranger bomm'),
                 ],
               },
-              followedSearchResults: {
-                'boom': [
-                  _createTestAudioEvent(id: 'followed', title: 'Followed bomm'),
-                ],
-              },
-              bundledSounds: [
-                VineSound(
-                  id: 'vine-boom',
-                  title: 'Vine Boom',
-                  assetPath: 'assets/sounds/vine_boom.mp3',
-                  duration: const Duration(seconds: 1),
-                ),
+              forYouSounds: [
+                _createTestAudioEvent(id: 'followed', title: 'Followed boom'),
               ],
               relaySearches: searches,
             ),
@@ -2567,13 +2466,16 @@ void main() {
           await tester.pump(const Duration(milliseconds: 400));
           await tester.pumpAndSettle();
 
-          expect(searches, contains('followed:boom'));
-          expect(find.text('Followed bomm'), findsOneWidget);
-          expect(find.text('Stranger boom'), findsNothing);
-          expect(
-            tester.getTopLeft(find.text('Vine Boom')).dy,
-            lessThan(tester.getTopLeft(find.text('Followed bomm')).dy),
-          );
+          expect(searches, ['boom']);
+          expect(find.text('Stranger bomm'), findsOneWidget);
+          expect(find.text('Followed boom'), findsNothing);
+
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.text(l10n.exploreTabPopular));
+          await tester.pumpAndSettle();
+
+          expect(searches, ['boom'], reason: 'Popular shows the same answer');
+          expect(find.text('Stranger bomm'), findsOneWidget);
         });
 
         testWidgets('loads the next page of what it found', (tester) async {
