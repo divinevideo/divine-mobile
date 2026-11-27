@@ -86,6 +86,10 @@ class AudioPlaybackService {
   /// load started gives way instead of replacing the later one's audio.
   int _loadGeneration = 0;
 
+  /// Counts play, pause and stop requests and playback failures, so a play
+  /// still releasing the player gives way to whatever came after it.
+  int _playEpoch = 0;
+
   /// The URL of the audio loaded as a stream, or `null` when the player
   /// holds anything else.
   String? _streamedUrl;
@@ -435,6 +439,7 @@ class AudioPlaybackService {
   /// player then goes idle and never answers the [play] call waiting for the
   /// audio, so that call is ended here, with the error.
   void _onPlaybackError(PlayerException error) {
+    ++_playEpoch;
     final url = _streamedUrl;
     if (url != null) _unstreamable.add(url);
     Log.warning(
@@ -496,6 +501,7 @@ class AudioPlaybackService {
     if (_isDisposed) return;
     await _loadCompleter?.future;
     if (_isDisposed) return;
+    ++_playEpoch;
     final failure = _playFailure = Completer<void>();
     try {
       await Future.any<void>([_playLoaded(), failure.future]);
@@ -532,8 +538,18 @@ class AudioPlaybackService {
   /// in silence. A released player is prepared again with the play request
   /// ahead of the audio, so its output starts before the end arrives. The
   /// source and position stay.
+  ///
+  /// The player counts as not playing while it is released, so a pause, a
+  /// stop or a load meanwhile has nothing to stop; the play then gives way.
   Future<void> _playLoaded() async {
-    if (_holdsShortClipPaused) await _audioPlayer.stop();
+    if (_holdsShortClipPaused) {
+      final load = _loadGeneration;
+      final epoch = _playEpoch;
+      await _audioPlayer.stop();
+      if (_isDisposed || load != _loadGeneration || epoch != _playEpoch) {
+        return;
+      }
+    }
     await _audioPlayer.play();
   }
 
@@ -552,6 +568,7 @@ class AudioPlaybackService {
   /// Pauses audio playback.
   Future<void> pause() async {
     if (_isDisposed) return;
+    ++_playEpoch;
     try {
       await _audioPlayer.pause();
       Log.debug('Paused audio playback', name: 'AudioPlaybackService');
@@ -568,6 +585,7 @@ class AudioPlaybackService {
   /// Stops audio playback and resets position to the beginning.
   Future<void> stop() async {
     if (_isDisposed) return;
+    ++_playEpoch;
     try {
       await _audioPlayer.stop();
       Log.debug('Stopped audio playback', name: 'AudioPlaybackService');

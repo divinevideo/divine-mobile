@@ -400,6 +400,89 @@ void main() {
         verifyInOrder([() => mockPlayer.stop(), () => mockPlayer.play()]);
       });
 
+      // The player counts as not playing while it is released, so a pause,
+      // stop or load in that window has nothing to stop.
+      test('does not play once paused while the player is released', () async {
+        final releasing = Completer<void>();
+        when(() => mockPlayer.stop()).thenAnswer((_) => releasing.future);
+        when(() => mockPlayer.pause()).thenAnswer((_) async {});
+        await service.loadAudioFromFile('/sounds/snare.m4a');
+
+        final playing = service.play();
+        await pumpEventQueue();
+        verify(() => mockPlayer.stop()).called(1);
+        await service.pause();
+        releasing.complete();
+        await playing;
+
+        verifyNever(() => mockPlayer.play());
+      });
+
+      test('does not play once stopped while the player is released', () async {
+        final releasing = Completer<void>();
+        when(() => mockPlayer.stop()).thenAnswer((_) => releasing.future);
+        await service.loadAudioFromFile('/sounds/snare.m4a');
+
+        final playing = service.play();
+        await pumpEventQueue();
+        final stopping = service.stop();
+        releasing.complete();
+        await stopping;
+        await playing;
+
+        verifyNever(() => mockPlayer.play());
+      });
+
+      test(
+        'does not play once disposed while the player is released',
+        () async {
+          final releasing = Completer<void>();
+          when(() => mockPlayer.stop()).thenAnswer((_) => releasing.future);
+          await service.loadAudioFromFile('/sounds/snare.m4a');
+
+          final playing = service.play();
+          await pumpEventQueue();
+          await service.dispose();
+          releasing.complete();
+          await playing;
+
+          verifyNever(() => mockPlayer.play());
+        },
+      );
+
+      test('does not play once another sound loads while the player is '
+          'released', () async {
+        final releasing = Completer<void>();
+        when(() => mockPlayer.stop()).thenAnswer((_) => releasing.future);
+        await service.loadAudioFromFile('/sounds/snare.m4a');
+
+        final playing = service.play();
+        await pumpEventQueue();
+        await service.loadAudioFromFile('/sounds/kick.m4a');
+        releasing.complete();
+        await playing;
+
+        verifyNever(() => mockPlayer.play());
+      });
+
+      test(
+        'plays once when played again while the player is released',
+        () async {
+          final releasing = Completer<void>();
+          when(() => mockPlayer.stop()).thenAnswer((_) => releasing.future);
+          await service.loadAudioFromFile('/sounds/snare.m4a');
+
+          final first = service.play();
+          await pumpEventQueue();
+          final second = service.play();
+          await pumpEventQueue();
+          releasing.complete();
+          await Future.wait([first, second]);
+
+          verify(() => mockPlayer.play()).called(1);
+        },
+      );
+
       test('plays from a released player without releasing it again', () async {
         await service.loadAudioFromFile('/sounds/snare.m4a');
         state = ProcessingState.idle;
