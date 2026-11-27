@@ -8,16 +8,18 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' show AudioEvent, NostrHexUtils;
+import 'package:models/models.dart' show AudioEvent, NostrHexUtils, SoundKind;
 import 'package:openvine/blocs/creator_sync/sound_sync_cubit.dart';
 import 'package:openvine/blocs/creator_sync/sound_sync_state.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
+import 'package:openvine/extensions/divine_sound_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
+import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/router/routes/library_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
@@ -421,6 +423,7 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
         sound: sound,
         cover: view.cover,
         isMissingFile: view.isMissingFile,
+        kind: view.kind,
         cannotBeReused: view.cannotBeReused,
       ),
       options: [
@@ -785,6 +788,7 @@ typedef _OpenMore = Future<void> Function(
   _SavedSoundView view,
 );
 
+  SoundKind? kind,
 /// Saved-sound list as a [SliverMainAxisGroup] so its filters and rows
 /// scroll as one with the search field above them.
 ///
@@ -834,6 +838,7 @@ class _SavedSoundsSection extends ConsumerWidget {
               selectedHashtag: state.selectedHashtag,
             ),
           ),
+    final library = ref.watch(soundLibraryServiceProvider).value;
         SliverList.builder(
           itemCount: sounds.length,
           itemBuilder: (context, index) {
@@ -854,6 +859,7 @@ class _SavedSoundsSection extends ConsumerWidget {
             );
             return SavedSoundTile(
               sound: sound,
+              kind: sound.audio.kindIn(library),
               cover: cover,
               isMissingFile: view.isMissingFile,
               cannotBeReused: view.cannotBeReused,
@@ -864,6 +870,7 @@ class _SavedSoundsSection extends ConsumerWidget {
               onPreview: () => onPreview(sound),
               onOpenMore: () => onOpenMore(sound, view),
             );
+              kind: view.kind,
           },
         ),
       ],

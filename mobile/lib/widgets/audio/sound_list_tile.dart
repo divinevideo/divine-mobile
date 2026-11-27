@@ -7,6 +7,7 @@ import 'dart:math';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart' show SoundKind;
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/utils/video_editor_utils.dart';
@@ -28,6 +29,7 @@ class SoundListTile extends StatelessWidget {
     this.details = const [],
     this.caption,
     this.cover,
+    this.kind,
     this.isCommunitySound = false,
     this.isActive = false,
     this.isPlaying = false,
@@ -57,6 +59,10 @@ class SoundListTile extends StatelessWidget {
 
   /// Artwork leading the row, or `null` for the colour tile.
   final SoundCover? cover;
+
+  /// Whether the sound is music or an effect, which picks the colour tile's
+  /// icon; `null` when unknown.
+  final SoundKind? kind;
 
   /// Whether someone on Divine published the sound, which a people mark on
   /// the cover says.
@@ -120,6 +126,7 @@ class SoundListTile extends StatelessWidget {
         isThreeLine: caption != null,
         leading: _Cover(
           cover: cover,
+          kind: kind,
           colorSeed: colorSeed,
           isCommunitySound: isCommunitySound,
         ),
@@ -270,11 +277,13 @@ class _Details extends StatelessWidget {
 class _Cover extends StatelessWidget {
   const _Cover({
     required this.cover,
+    required this.kind,
     required this.isCommunitySound,
     required this.colorSeed,
   });
 
   final SoundCover? cover;
+  final SoundKind? kind;
   final bool isCommunitySound;
   final String colorSeed;
 
@@ -284,6 +293,7 @@ class _Cover extends StatelessWidget {
       cover: cover,
       size: _coverSize,
       colorSeed: colorSeed,
+      kind: kind,
     );
     if (!isCommunitySound) return image;
     return Stack(

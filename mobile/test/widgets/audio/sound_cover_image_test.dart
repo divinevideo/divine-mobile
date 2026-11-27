@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:media_cache/media_cache.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show SoundKind;
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/widgets/audio/sound_cover_image.dart';
@@ -16,13 +17,22 @@ const _blurhash = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
 
 class _MockMediaCacheManager extends Mock implements MediaCacheManager {}
 
-Widget _app(SoundCover? cover, {String colorSeed = ''}) => MaterialApp(
+Widget _app(
+  SoundCover? cover, {
+  String colorSeed = '',
+  SoundKind? kind,
+}) => MaterialApp(
   localizationsDelegates: appLocalizationsDelegates,
   supportedLocales: AppLocalizations.supportedLocales,
   theme: VineTheme.theme,
   home: Scaffold(
     body: Center(
-      child: SoundCoverImage(cover: cover, size: 48, colorSeed: colorSeed),
+      child: SoundCoverImage(
+        cover: cover,
+        size: 48,
+        colorSeed: colorSeed,
+        kind: kind,
+      ),
     ),
   ),
 );
@@ -30,6 +40,15 @@ Widget _app(SoundCover? cover, {String colorSeed = ''}) => MaterialApp(
 Color _tileColor(WidgetTester tester) => tester
     .widget<ColoredBox>(find.byKey(const Key('sound_cover_fallback')))
     .color;
+
+DivineIconName _tileIcon(WidgetTester tester) => tester
+    .widget<DivineIcon>(
+      find.descendant(
+        of: find.byKey(const Key('sound_cover_fallback')),
+        matching: find.byType(DivineIcon),
+      ),
+    )
+    .icon;
 
 void main() {
   group(SoundCoverImage, () {
@@ -39,6 +58,26 @@ void main() {
 
         expect(find.byKey(const Key('sound_cover_fallback')), findsOneWidget);
         expect(find.byType(VineCachedImage), findsNothing);
+      });
+
+      testWidgets('notes on the colour tile of music', (tester) async {
+        await tester.pumpWidget(_app(null, kind: SoundKind.music));
+
+        expect(_tileIcon(tester), DivineIconName.musicNotes);
+      });
+
+      testWidgets('a flash on the colour tile of an effect', (tester) async {
+        await tester.pumpWidget(_app(null, kind: SoundKind.effect));
+
+        expect(_tileIcon(tester), DivineIconName.lightning);
+      });
+
+      testWidgets('a waveform on the colour tile of a sound of unknown kind', (
+        tester,
+      ) async {
+        await tester.pumpWidget(_app(null));
+
+        expect(_tileIcon(tester), DivineIconName.waveform);
       });
 
       testWidgets('the same colour for the same sound, and not one for all', (

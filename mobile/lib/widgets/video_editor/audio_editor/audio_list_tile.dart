@@ -1,5 +1,5 @@
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' show AudioEvent;
+import 'package:models/models.dart' show AudioEvent, SoundKind;
 import 'package:openvine/extensions/divine_sound_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/sound_cover.dart';
@@ -14,6 +14,7 @@ class AudioListTile extends StatelessWidget {
     this.onShowDetails,
     this.displayTitle,
     this.cover,
+    this.kind,
     this.isPlaying = false,
     this.isUnavailable = false,
     this.videoCount,
@@ -41,6 +42,9 @@ class AudioListTile extends StatelessWidget {
 
   /// See [SoundListTile.cover].
   final SoundCover? cover;
+
+  /// See [SoundListTile.kind].
+  final SoundKind? kind;
 
   /// Whether this sound cannot be attached because its device-local audio
   /// file is gone.
@@ -80,6 +84,7 @@ class AudioListTile extends StatelessWidget {
           ?audio.sourceForDisplay,
         ],
         cover: cover,
+        kind: kind,
         colorSeed: audio.id,
         isCommunitySound: audio.isCommunitySound,
         isActive: isSelected,

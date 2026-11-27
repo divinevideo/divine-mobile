@@ -1671,6 +1671,7 @@ class _AudioSelectionBottomSheetState
                   ? AudioEditorSelectionOverlay(
                       audio: _selectedItem!,
                       cover: _selectedCover(
+                      kind: _selectedItem!.kindIn(bundledSoundsAsync.value),
                         savedSounds: savedSoundsState.sounds,
                         savedSourceCovers: savedSourceCovers,
                         coversBySourceVideo: [
@@ -2124,6 +2125,7 @@ class _SoundsContent extends ConsumerWidget {
     // fits, so a list with more to load goes on loading.
     final Widget content;
     if (sounds.isEmpty && !loadsMore) {
+    final library = ref.watch(soundLibraryServiceProvider).value;
       content = _LeadingAbove(leading: leading, child: emptyState);
     } else {
       content = CustomScrollView(
@@ -2174,6 +2176,7 @@ class _SoundsContent extends ConsumerWidget {
                                 ? () => onShowDetails(displayAudio)
                                 : null,
                           );
+                            kind: displayAudio.kindIn(library),
                         },
                       )
                     : AudioListTile(
@@ -2191,6 +2194,7 @@ class _SoundsContent extends ConsumerWidget {
                       ),
               );
             },
+                        kind: audio.kindIn(library),
           ),
           SliverToBoxAdapter(
             child: _ListEndSpace(selectionCardHeight: selectionCardHeight),

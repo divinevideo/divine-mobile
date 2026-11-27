@@ -1,15 +1,44 @@
-// ABOUTME: Widget tests for the sound list's rows, starting with the action
-// ABOUTME: row that heads a list, at the text sizes of a small phone.
+// ABOUTME: Widget tests for the sound list's rows: the action row that heads
+// ABOUTME: a list at a small phone's text sizes, and a sound row's cover.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart' show SoundKind;
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/widgets/audio/sound_cover_image.dart';
 import 'package:openvine/widgets/audio/sound_list_tile.dart';
 
 import '../../helpers/text_lines.dart';
 
 void main() {
+  group(SoundListTile, () {
+    group('renders', () {
+      testWidgets("its sound's kind on the cover", (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: VineTheme.theme,
+            home: const Scaffold(
+              body: SoundListTile(
+                title: 'Boom',
+                colorSeed: 'boom',
+                kind: SoundKind.effect,
+                onTap: null,
+              ),
+            ),
+          ),
+        );
+
+        expect(
+          tester.widget<SoundCoverImage>(find.byType(SoundCoverImage)).kind,
+          SoundKind.effect,
+        );
+      });
+    });
+  });
+
   group(SoundListActionTile, () {
     group('at the largest text size on a small phone', () {
       testWidgets('keeps every word of its title whole', (tester) async {
