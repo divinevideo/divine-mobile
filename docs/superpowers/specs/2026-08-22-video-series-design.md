@@ -2,6 +2,9 @@
 
 Date: 2026-08-22
 Status: Revised design, pending review
+Revised 2026-11-27: the series chip opens the series at the part it is on,
+and reads `Series name · Ep 3 of 10`, since the app calls each part an
+episode.
 
 ## Problem
 
@@ -10,8 +13,7 @@ part 1, part 2, and part 3 as unrelated videos. A viewer who meets part 3 in a
 feed cannot tell that earlier parts exist or watch the story in order.
 
 The first release needs one complete loop: a creator publishes a new video into
-a named series, and a viewer can identify the part and start the series from
-part 1.
+a named series, and a viewer can identify the part and open the series there.
 
 ## Scope
 
@@ -19,8 +21,8 @@ Version 1 includes:
 
 - Creating or selecting one of the creator's series while publishing a video.
 - Appending each successfully published video to that series.
-- Showing `Part 3 of 10 · Series name` on a series video.
-- Opening the existing curated-list feed at part 1 from that label.
+- Showing `Series name · Ep 3 of 10` on a series video.
+- Opening the existing curated-list feed at that part from that label.
 - Showing part numbers in the existing curated-list grid.
 - Swiping through the ordered parts with the existing fullscreen list player.
 
@@ -211,11 +213,13 @@ video.
 is localized. It renders only from a loaded `VideoSeriesCubit` state and reads:
 
 ```text
-Part 3 of 10 · Series name
+Series name · Ep 3 of 10
 ```
 
 Tapping it opens the existing author/list route and starts
-`CuratedListFeedScreen` playback at index 0. That screen cannot do this today,
+`CuratedListFeedScreen` playback at the part's position in the list. Inside
+the player of that same series the chip is not shown, since it would open the
+series again. That screen cannot do this today,
 so version 1 extends it — see [Playback entry contract](#playback-entry-contract).
 The series mode of that screen adds part numbers to grid items; playback remains
 `PooledFullscreenVideoFeedScreen`. Swipe and auto-advance behavior remain
@@ -228,7 +232,7 @@ order.
 cached event ids, then cached addressable coordinates, then relay results in
 arrival order, yielding again as each event arrives. The grid and fullscreen
 player render that emitted order verbatim. Reusing it without an ordering step
-would make `play=0`, displayed part numbers, and swipe order depend on cache and
+would make `play`, displayed part numbers, and swipe order depend on cache and
 relay timing rather than the series list.
 
 Every provider emission used for a curated list must therefore be projected
@@ -248,7 +252,7 @@ playback: its constructor takes `listId`, `listName`, `videoIds` and
 `authorPubkey` only, and `_activeVideoIndex` is initialized to `null`, which is
 exactly what selects the grid
 (`mobile/lib/screens/curated_list_feed_screen.dart:59-64`, `82`, `95`). The
-acceptance criterion "tapping the chip starts the ordered series at part 1"
+acceptance criterion "tapping the chip opens the ordered series at that part"
 therefore requires a screen change, not just navigation.
 
 Version 1 adds:
@@ -275,8 +279,11 @@ Version 1 adds:
   it with `int.tryParse`, and `CuratedListByAuthorScreen` only forwards the
   nullable parsed value; screen `pathFor` methods remain thin `RoutePaths`
   delegates.
-- **`SeriesChip` navigates through `RoutePaths` with `play: 0`.** This keeps the
-  entry point a plain deep link, so a shared series URL can also open at a part.
+- **`SeriesChip` navigates through the typed author/list route with `play` set
+  to the part's position in the list.** That position counts every list entry,
+  so it can differ from the part number when the list holds entries that are
+  not parts. This keeps the entry point a plain deep link, so a shared series
+  URL can also open at a part.
 
 The existing list route, deep link, sharing, loading, and missing-video behavior
 are otherwise reused. Version 1 adds no previous/next overlay buttons and no new series
@@ -300,8 +307,8 @@ updated list.
 ### Watch
 
 A viewer meets part 3 in any feed. Once the referenced list resolves, the chip
-reads `Part 3 of 10 · Series name`. Tapping it starts the existing list player at
-part 1; the viewer swipes or auto-advances through the remaining parts.
+reads `Series name · Ep 3 of 10`. Tapping it opens the existing list player at
+part 3; the viewer swipes back to earlier parts, or on through the rest.
 
 ## Failure handling
 
@@ -334,7 +341,7 @@ part 1; the viewer swipes or auto-advances through the remaining parts.
 - `VideoSeriesCubit`: absent/malformed coordinate, missing list, wrong owner,
   missing membership, and valid index.
 - Widget: chip copy, no chip for ordinary or invalid videos, numbered series
-  grid, and chip navigation starts playback at part 1. Cover mixed cache/relay
+  grid, and chip navigation starts playback at that part. Cover mixed cache/relay
   arrival, late insertion, and missing-video gaps to prove that grid numbering,
   playback start, and swipe order follow `videoIds`; also cover that
   `initialListIndex: null` still opens the grid, malformed/negative/out-of-range
@@ -352,7 +359,7 @@ part 1; the viewer swipes or auto-advances through the remaining parts.
 - A successfully published part appears once at the end of the series list.
 - A series video encountered outside the series resolves to the correct name,
   position, and total without scanning all lists.
-- Tapping the chip starts the ordered series at part 1.
+- Tapping the chip opens the ordered series at that part.
 - Ordinary videos and inconsistent or unavailable series data show no series
   UI and continue to play normally.
 - No reply/comment behavior, existing-video republish flow, editor duration

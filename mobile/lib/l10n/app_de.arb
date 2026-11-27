@@ -54,6 +54,8 @@
   "videoStickerAddYoursButton": "Du bist dran",
   "videoStickerAddYoursWatchSeries": "Serie ansehen",
   "videoStickerAddYoursWatchSeriesSemanticLabel": "Serie ansehen: {prompt}",
+  "videoSeriesChipEpisode": "Folge {episode} von {total}",
+  "videoSeriesChipSemanticLabel": "Serie {seriesName}, Folge {episode} von {total}",
   "videoStickerAddYoursJoined": "{count, plural, =0{Fang du an} =1{{count} macht mit} other{{count} machen mit}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} machen mit",
   "videoStickerAddYoursOpenSemanticLabel": "Sehen, wer mitmacht",

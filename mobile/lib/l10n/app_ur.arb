@@ -54,6 +54,8 @@
   "videoStickerAddYoursButton": "آپ کی باری",
   "videoStickerAddYoursWatchSeries": "سیریز دیکھیں",
   "videoStickerAddYoursWatchSeriesSemanticLabel": "سیریز دیکھیں: {prompt}",
+  "videoSeriesChipEpisode": "قسط {episode} از {total}",
+  "videoSeriesChipSemanticLabel": "سیریز {seriesName}، قسط {episode} از {total}",
   "videoStickerAddYoursJoined": "{count, plural, =0{پہلے آپ} =1{{count} نے حصہ لیا} other{{count} نے حصہ لیا}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} نے حصہ لیا",
   "videoStickerAddYoursOpenSemanticLabel": "دیکھیں کس نے حصہ لیا",

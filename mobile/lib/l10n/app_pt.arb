@@ -54,6 +54,8 @@
   "videoStickerAddYoursButton": "Sua vez",
   "videoStickerAddYoursWatchSeries": "Assista à série",
   "videoStickerAddYoursWatchSeriesSemanticLabel": "Assista à série: {prompt}",
+  "videoSeriesChipEpisode": "Ep. {episode} de {total}",
+  "videoSeriesChipSemanticLabel": "Série {seriesName}, episódio {episode} de {total}",
   "videoStickerAddYoursJoined": "{count, plural, =0{Comece você} =1{{count} participação} many{{count} de participações} other{{count} participações}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} participações",
   "videoStickerAddYoursOpenSemanticLabel": "Ver quem participou",

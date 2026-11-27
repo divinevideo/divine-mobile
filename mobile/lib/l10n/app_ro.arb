@@ -54,6 +54,8 @@
   "videoStickerAddYoursButton": "Rândul tău",
   "videoStickerAddYoursWatchSeries": "Urmărește seria",
   "videoStickerAddYoursWatchSeriesSemanticLabel": "Urmărește seria: {prompt}",
+  "videoSeriesChipEpisode": "Ep. {episode} din {total}",
+  "videoSeriesChipSemanticLabel": "Seria {seriesName}, episodul {episode} din {total}",
   "videoStickerAddYoursJoined": "{count, plural, =0{Începe tu} =1{{count} participare} few{{count} participări} other{{count} de participări}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} de participări",
   "videoStickerAddYoursOpenSemanticLabel": "Vezi cine participă",

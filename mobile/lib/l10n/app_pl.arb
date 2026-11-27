@@ -54,6 +54,8 @@
   "videoStickerAddYoursButton": "Twoja kolej",
   "videoStickerAddYoursWatchSeries": "Obejrzyj serię",
   "videoStickerAddYoursWatchSeriesSemanticLabel": "Obejrzyj serię: {prompt}",
+  "videoSeriesChipEpisode": "Odc. {episode} z {total}",
+  "videoSeriesChipSemanticLabel": "Seria {seriesName}, odcinek {episode} z {total}",
   "videoStickerAddYoursJoined": "{count, plural, =0{Ty zaczynasz} =1{{count} osoba dołączyła} few{{count} osoby dołączyły} many{{count} osób dołączyło} other{{count} osoby dołączyło}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} osób dołączyło",
   "videoStickerAddYoursOpenSemanticLabel": "Zobacz, kto bierze udział",

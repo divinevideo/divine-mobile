@@ -54,6 +54,8 @@
   "videoStickerAddYoursButton": "À ton tour",
   "videoStickerAddYoursWatchSeries": "Voir la série",
   "videoStickerAddYoursWatchSeriesSemanticLabel": "Voir la série : {prompt}",
+  "videoSeriesChipEpisode": "Ép. {episode} sur {total}",
+  "videoSeriesChipSemanticLabel": "Série {seriesName}, épisode {episode} sur {total}",
   "videoStickerAddYoursJoined": "{count, plural, =0{Lance-toi} =1{{count} participation} many{{count} de participations} other{{count} participations}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} participations",
   "videoStickerAddYoursOpenSemanticLabel": "Voir qui a participé",

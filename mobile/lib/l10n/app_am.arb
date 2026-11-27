@@ -54,6 +54,8 @@
   "videoStickerAddYoursButton": "የእርስዎ ተራ",
   "videoStickerAddYoursWatchSeries": "ተከታታዩን ይመልከቱ",
   "videoStickerAddYoursWatchSeriesSemanticLabel": "ተከታታዩን ይመልከቱ፦ {prompt}",
+  "videoSeriesChipEpisode": "ክፍል {episode} ከ{total}",
+  "videoSeriesChipSemanticLabel": "ተከታታይ {seriesName}፣ ክፍል {episode} ከ{total}",
   "videoStickerAddYoursJoined": "{count, plural, =0{ቀድመው ይጀምሩ} =1{{count} ተሳታፊ} other{{count} ተሳታፊዎች}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} ተሳታፊዎች",
   "videoStickerAddYoursOpenSemanticLabel": "ተሳታፊዎችን ይመልከቱ",

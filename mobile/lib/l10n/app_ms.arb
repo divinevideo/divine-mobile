@@ -54,6 +54,8 @@
   "videoStickerAddYoursButton": "Giliran anda",
   "videoStickerAddYoursWatchSeries": "Tonton siri ini",
   "videoStickerAddYoursWatchSeriesSemanticLabel": "Tonton siri ini: {prompt}",
+  "videoSeriesChipEpisode": "Ep {episode} daripada {total}",
+  "videoSeriesChipSemanticLabel": "Siri {seriesName}, episod {episode} daripada {total}",
   "videoStickerAddYoursJoined": "{count, plural, =0{Jadilah yang pertama} =1{{count} orang menyertai} other{{count} orang menyertai}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} orang menyertai",
   "videoStickerAddYoursOpenSemanticLabel": "Lihat siapa yang menyertai",

@@ -54,6 +54,8 @@
   "videoStickerAddYoursButton": "Твой ред",
   "videoStickerAddYoursWatchSeries": "Гледай поредицата",
   "videoStickerAddYoursWatchSeriesSemanticLabel": "Гледай поредицата: {prompt}",
+  "videoSeriesChipEpisode": "Еп. {episode} от {total}",
+  "videoSeriesChipSemanticLabel": "Поредица {seriesName}, епизод {episode} от {total}",
   "videoStickerAddYoursJoined": "{count, plural, =0{Започни ти} =1{{count} се включи} other{{count} се включиха}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} се включиха",
   "videoStickerAddYoursOpenSemanticLabel": "Виж кой се включи",
