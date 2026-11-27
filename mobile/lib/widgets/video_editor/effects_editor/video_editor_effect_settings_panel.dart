@@ -191,10 +191,13 @@ class _SettingsGroup extends StatelessWidget {
     final values = effectSettingValuesOf(type, overrides);
     final settings = [
       for (final setting in effectSettingsOf(type))
-        if (setting.group == group && setting.isShown(values, onBeat: onBeat))
-          setting,
+        if (setting.group == group) setting,
     ];
-    if (settings.isEmpty) return const SizedBox.shrink();
+    final visible = [
+      for (final setting in settings)
+        if (setting.isShown(values, onBeat: onBeat)) setting,
+    ];
+    if (visible.isEmpty) return const SizedBox.shrink();
     final changed = settings.any(
       (setting) => values[setting.key] != setting.defaultParam,
     );
@@ -224,7 +227,7 @@ class _SettingsGroup extends StatelessWidget {
                 ),
               ),
             ),
-            for (final setting in settings)
+            for (final setting in visible)
               _SettingControl(
                 key: ValueKey(setting.key),
                 setting: setting,

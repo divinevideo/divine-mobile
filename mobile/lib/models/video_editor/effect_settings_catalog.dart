@@ -1114,7 +1114,7 @@ const _timeWarpSettings = <EffectSetting>[
 ];
 
 /// The settings of a built-in effect: what its `VideoEffect.params` shape.
-/// Speeds and tempos only show off the beat, where a hit keeps its own pace.
+/// Controls for the timing of a recurring hit only show off the beat.
 List<EffectSetting> _builtInSettingsOf(VideoEffectType type) => switch (type) {
   VideoEffectType.glitch => const [_frequency, _distance],
   VideoEffectType.rgbSplit => const [_distance, _builtInSpeed],
@@ -1146,6 +1146,7 @@ const _frequency = EffectSliderSetting(
   group: EffectSettingGroup.look,
   defaultValue: 1,
   max: 2.5,
+  shownWhen: _whenNotOnBeat,
 );
 
 /// How far a glitch, an RGB split or a shake jumps.
