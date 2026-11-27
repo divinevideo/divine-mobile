@@ -60,6 +60,33 @@ class _DelayedFunnelcakeAvailable extends FunnelcakeAvailable {
   }
 }
 
+/// Stands in for funnelcakeApiClientProvider. A new client, as after an
+/// environment switch, makes Funnelcake availability reload rather than
+/// refresh, and a reload drops the previous value from `asData`.
+final _funnelcakeClientChanges =
+    NotifierProvider<_FunnelcakeClientChanges, int>(
+      _FunnelcakeClientChanges.new,
+    );
+
+class _FunnelcakeClientChanges extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void replaceClient() => state++;
+}
+
+class _ReloadingFunnelcakeAvailable extends FunnelcakeAvailable {
+  _ReloadingFunnelcakeAvailable(this.recheck);
+
+  final Future<bool> recheck;
+
+  @override
+  Future<bool> build() async {
+    if (ref.watch(_funnelcakeClientChanges) == 0) return true;
+    return recheck;
+  }
+}
+
 VideoEvent _classicVideo(String idDigit) => VideoEvent(
   id: idDigit * 64,
   pubkey: 'c' * 64,
@@ -424,5 +451,69 @@ void main() {
         reason: 'New tab should be selected at index 1, after Latest',
       );
     });
+
+    testWidgets(
+      'keeps New Diviners selected while Funnelcake availability reloads',
+      (tester) async {
+        final availabilityRecheck = Completer<bool>();
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              appForegroundProvider.overrideWith(_FakeAppForeground.new),
+              videoEventServiceProvider.overrideWithValue(videoEventService),
+              routerLocationStreamProvider.overrideWith(
+                (ref) => Stream.value(ExploreScreen.pathForTab('new')),
+              ),
+              exploreTabVideosProvider.overrideWith((ref) => null),
+              funnelcakeAvailableProvider.overrideWith(
+                () => _ReloadingFunnelcakeAvailable(availabilityRecheck.future),
+              ),
+              classicVinesAvailableProvider.overrideWith((ref) async => false),
+              forYouAvailableProvider.overrideWithValue(false),
+              curatedListsStateProvider.overrideWith(
+                _FakeCuratedListsState.new,
+              ),
+              isFeatureEnabledProvider(
+                FeatureFlag.integratedApps,
+              ).overrideWithValue(false),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: ExploreScreen(initialTabName: 'new')),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final newDivinersTab = find.descendant(
+          of: find.byType(TabBar),
+          matching: find.text(l10n.exploreTabNewDiviners),
+        );
+        int? selectedIndex() =>
+            tester.widget<TabBar>(find.byType(TabBar)).controller?.index;
+
+        expect(newDivinersTab, findsOneWidget);
+        expect(selectedIndex(), equals(1));
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(ExploreScreen)),
+        );
+        container.read(_funnelcakeClientChanges.notifier).replaceClient();
+        await tester.pump();
+        await tester.pump();
+
+        expect(container.read(funnelcakeAvailableProvider).isLoading, isTrue);
+        expect(newDivinersTab, findsOneWidget);
+        expect(selectedIndex(), equals(1));
+
+        availabilityRecheck.complete(true);
+        await tester.pumpAndSettle();
+
+        expect(newDivinersTab, findsOneWidget);
+        expect(selectedIndex(), equals(1));
+      },
+    );
   });
 }
