@@ -20,10 +20,12 @@ import 'package:openvine/blocs/email_verification/email_verification_cubit.dart'
 import 'package:openvine/l10n/email_verification_error_l10n.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/classics_warmup.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pending_verification_restore_policy.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
@@ -163,7 +165,7 @@ class _EmailVerificationScreenState
   Future<void> _handleAuthenticated() async {
     if (!_claimLeavingVerification()) return;
     Log.info(
-      'Auth state became authenticated, navigating to explore '
+      'Auth state became authenticated, leaving verification '
       '(cubit=${_cubit.hashCode})',
       name: 'EmailVerificationScreen',
       category: LogCategory.auth,
@@ -171,7 +173,13 @@ class _EmailVerificationScreenState
     _cubit.stopPolling();
     await _clearPendingVerification();
     if (!mounted) return;
-    context.go(ExploreScreen.pathForTab('popular'));
+    final viewer = ref.read(authServiceProvider).currentPublicKeyHex;
+    final prefs = ref.read(sharedPreferencesProvider);
+    context.go(
+      ClassicsWarmup.isEnrolled(prefs, viewer)
+          ? RoutePaths.videoFeedForIndex(0)
+          : ExploreScreen.pathForTab('popular'),
+    );
   }
 
   void _initializeVerification() {
@@ -253,6 +261,7 @@ class _EmailVerificationScreenState
       deviceCode: pending.deviceCode,
       verifier: pending.verifier,
       email: pending.email,
+      newlyRegistered: pending.ownerPublicKeyHex == null,
     );
   }
 
@@ -290,6 +299,7 @@ class _EmailVerificationScreenState
         deviceCode: pending.deviceCode,
         verifier: pending.verifier,
         email: pending.email,
+        newlyRegistered: pending.ownerPublicKeyHex == null,
       );
     } else {
       Log.info(

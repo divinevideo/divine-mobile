@@ -17,6 +17,7 @@ import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/signer_secure_store.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
+import 'package:openvine/services/classics_warmup.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -280,6 +281,7 @@ void main() {
           expect(target.committedAccountActivationReceipt!.isCurrent, isTrue);
           expect(coordinator.hasUnresolvedActivation, isFalse);
           expect(outgoing.committedAccountActivationReceipt, isNull);
+          expect(ClassicsWarmup.startsInClassics(prefs, owner), createsFresh);
           final grant = target.takeFreshAccountListCreationPermit();
           if (createsFresh) {
             expect(grant, isNotNull);

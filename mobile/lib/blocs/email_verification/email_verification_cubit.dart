@@ -80,6 +80,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState>
   String? _pendingVerifier;
   String? _pendingVerificationToken;
   bool _isVerifyingEmailToken = false;
+  bool _newlyRegistered = true;
   int _verificationGeneration = 0;
 
   /// True once a terminal completion has been claimed for the current
@@ -163,6 +164,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState>
     required String deviceCode,
     required String verifier,
     required String email,
+    bool newlyRegistered = true,
   }) {
     Log.info(
       'startPolling called for ${redactEmailForLogs(email)} '
@@ -175,6 +177,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState>
     _verificationGeneration++;
     _pendingDeviceCode = deviceCode;
     _pendingVerifier = verifier;
+    _newlyRegistered = newlyRegistered;
 
     emit(
       EmailVerificationState(
@@ -520,6 +523,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState>
       deviceCode: deviceCode,
       verifier: verifier,
       email: state.pendingEmail ?? '',
+      newlyRegistered: _newlyRegistered,
     );
   }
 
@@ -1034,6 +1038,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState>
     _completionClaimed = true;
     final exchangeGeneration = _verificationGeneration;
     final claimedDeviceCode = _pendingDeviceCode;
+    final newlyRegistered = _newlyRegistered;
     _pendingDeviceCode = null;
     _pendingVerifier = null;
 
@@ -1083,7 +1088,10 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState>
 
         // Now sign in — this triggers GoRouter redirect to home
         try {
-          await _authService.signInWithDivineOAuth(session);
+          await _authService.signInWithDivineOAuth(
+            session,
+            newlyRegistered: newlyRegistered,
+          );
         } on UserDataCleanupException {
           // The code is already redeemed and `_cleanup()` made this exchange
           // stale, so the generic handler below would drop the failure.

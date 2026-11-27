@@ -16,13 +16,16 @@ import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/router/route_extra_codec.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
+import 'package:openvine/services/classics_warmup.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/widgets/divine_video_metrics_tracker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
@@ -255,6 +258,8 @@ class _RecordedPlaybackSession {
   final ProductAnalyticsV2PlaybackEndReason endReason;
 }
 
+late SharedPreferences _prefs;
+
 void main() {
   group(DivineVideoMetricsTracker, () {
     late _MockAuthService authService;
@@ -262,7 +267,9 @@ void main() {
     late _RecordingSeenVideosService seenVideosService;
     late DateTime now;
 
-    setUp(() {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      _prefs = await SharedPreferences.getInstance();
       authService = _MockAuthService();
       analyticsService = _RecordingAnalyticsService();
       seenVideosService = _RecordingSeenVideosService();
@@ -298,6 +305,32 @@ void main() {
         }
       }
     }
+
+    testWidgets('records qualified watch progress for the playback viewer', (
+      tester,
+    ) async {
+      final viewer = authService.currentPublicKeyHex!;
+      await ClassicsWarmup.enroll(_prefs, viewer);
+      final controller = _stubController(isPlaying: true);
+      addTearDown(controller.close);
+
+      await tester.pumpWidget(
+        _buildTracker(
+          authService: authService,
+          analyticsService: analyticsService,
+          seenVideosService: seenVideosService,
+          controller: controller.controller,
+          isActive: true,
+          clock: () => now,
+        ),
+      );
+      final key = ClassicsWarmup.storageKey(viewer);
+      expect(_prefs.getStringList(key), isEmpty);
+
+      now = now.add(const Duration(seconds: 1));
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(_prefs.getStringList(key), [_video.id]);
+    });
 
     testWidgets('active tracker sends view_start once playback starts', (
       tester,
@@ -485,6 +518,8 @@ void main() {
     testWidgets(
       'restored message playback emits no clip, viewer or impression analytics',
       (tester) async {
+        final viewer = authService.currentPublicKeyHex!;
+        await ClassicsWarmup.enroll(_prefs, viewer);
         final controller = _stubController(isPlaying: true);
         await tester.pumpWidget(
           _buildTracker(
@@ -501,6 +536,10 @@ void main() {
         now = now.add(const Duration(seconds: 16));
         await tester.pump(const Duration(seconds: 16));
         await tester.pumpWidget(const SizedBox.shrink());
+        expect(
+          _prefs.getStringList(ClassicsWarmup.storageKey(viewer)),
+          isEmpty,
+        );
         expect(analyticsService.events, isEmpty);
         expect(analyticsService.impressions, isEmpty);
         expect(analyticsService.playbackSessions, isEmpty);
@@ -1690,6 +1729,7 @@ Widget _buildTracker({
 }) {
   return ProviderScope(
     overrides: [
+      sharedPreferencesProvider.overrideWithValue(_prefs),
       authServiceProvider.overrideWithValue(authService),
       analyticsServiceProvider.overrideWithValue(analyticsService),
       seenVideosServiceProvider.overrideWithValue(seenVideosService),
@@ -1730,6 +1770,7 @@ Widget _buildTrackerHarness({
 }) {
   return ProviderScope(
     overrides: [
+      sharedPreferencesProvider.overrideWithValue(_prefs),
       authServiceProvider.overrideWithValue(authService),
       analyticsServiceProvider.overrideWithValue(analyticsService),
       seenVideosServiceProvider.overrideWithValue(seenVideosService),

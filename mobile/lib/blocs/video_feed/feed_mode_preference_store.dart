@@ -55,6 +55,10 @@ class FeedModePreferenceStore {
 
   String? get _savedScopedValue => _lease.savedValue;
 
+  bool _usesAutomaticDefault(FeedMode mode) =>
+      mode == FeedMode.forYou &&
+      ClassicsWarmup.isEnrolled(_sharedPreferences, _userPubkey);
+
   /// The persisted source, or [VideoFeedSource.fromMode] of [fallbackMode] when
   /// nothing is stored.
   ///
@@ -65,9 +69,17 @@ class FeedModePreferenceStore {
     FeedMode fallbackMode, {
     List<PeopleListSearchResult> followedPeopleLists = const [],
   }) {
-    final saved = savedValue();
+    // An enrolled account has its own Home history. A legacy global value
+    // could belong to a different account on this device.
+    final automatic = _usesAutomaticDefault(fallbackMode);
+    final saved = automatic ? _savedScopedValue : savedValue();
     if (saved == null) {
-      return VideoFeedSource.fromMode(fallbackMode);
+      return VideoFeedSource.fromMode(
+        automatic &&
+                ClassicsWarmup.startsInClassics(_sharedPreferences, _userPubkey)
+            ? FeedMode.classic
+            : fallbackMode,
+      );
     }
     return sourceFromValue(saved, followedPeopleLists: followedPeopleLists) ??
         const VideoFeedSource.forYou();

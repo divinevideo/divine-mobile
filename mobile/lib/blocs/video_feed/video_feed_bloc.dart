@@ -18,6 +18,7 @@ import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_feed/home_feed_cache.dart';
 import 'package:openvine/blocs/video_feed/home_feed_resume_manager.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/services/classics_warmup.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
@@ -687,6 +688,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
             );
       mayPersist =
           !event.forceMode &&
+          // An automatic source needs to be re-evaluated on the next Home.
+          !(stored == null &&
+              _modePreferences._usesAutomaticDefault(event.mode)) &&
           await _mayPersistRestoredSource(source, followedRead);
       if (_startupWasSuperseded(
         startupSelection,

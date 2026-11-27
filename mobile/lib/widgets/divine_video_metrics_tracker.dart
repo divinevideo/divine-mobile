@@ -12,10 +12,13 @@ import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/models/view_traffic_source.dart'
     show ViewTrafficSource;
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/classics_warmup.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/utils/playback_loops.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:uuid/uuid.dart';
 
@@ -86,6 +89,7 @@ class _DivineVideoMetricsTrackerState
   /// AnalyticsService suppresses double-fires within a session but lets a
   /// remount re-watch report its own start.
   String? _sessionToken;
+  String? _playbackViewer;
 
   /// Whether playback has actually started at least once in this session.
   /// The view is counted at that moment, not at mount: a scroll-past that
@@ -141,6 +145,7 @@ class _DivineVideoMetricsTrackerState
   ProviderSubscription<AnalyticsService>? _analyticsServiceSubscription;
   late AuthService _authService;
   late SeenVideosService _seenVideosService;
+  late SharedPreferences _prefs;
 
   @override
   void initState() {
@@ -154,6 +159,7 @@ class _DivineVideoMetricsTrackerState
     );
     _authService = ref.read(authServiceProvider);
     _seenVideosService = ref.read(seenVideosServiceProvider);
+    _prefs = ref.read(sharedPreferencesProvider);
     if (_isTracking) _startTracking();
   }
 
@@ -332,6 +338,7 @@ class _DivineVideoMetricsTrackerState
     _hasStartedPlayback = true;
     if (!_canReport) return;
     _sessionToken = const Uuid().v4();
+    _playbackViewer = _authService.currentPublicKeyHex;
 
     unawaited(
       _analyticsService
@@ -418,6 +425,13 @@ class _DivineVideoMetricsTrackerState
     final cumulativeLoops = _cumulativeLoops(totalDuration);
     final fractionalLoops = cumulativeLoops - _loopsFlushed;
     if (deltaSeconds <= 0 && fractionalLoops <= 0) return;
+
+    final viewer = _playbackViewer;
+    if (viewer != null &&
+        viewer == _authService.currentPublicKeyHex &&
+        (cumulativeSeconds >= 1 || cumulativeLoops >= 1)) {
+      unawaited(ClassicsWarmup.recordView(_prefs, viewer, video.id));
+    }
 
     unawaited(
       _analyticsService
@@ -603,6 +617,7 @@ class _DivineVideoMetricsTrackerState
   /// belongs to the mount rather than to the session.
   void _resetViewSession() {
     _sessionToken = null;
+    _playbackViewer = null;
     _hasStartedPlayback = false;
     _mountedAt = _isTracking ? widget._clock() : null;
     _playIntervalStartedAt = null;

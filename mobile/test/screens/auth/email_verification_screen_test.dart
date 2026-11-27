@@ -21,6 +21,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/classics_warmup.dart';
 import 'package:openvine/services/geo_blocking_service.dart';
 import 'package:openvine/services/pending_verification_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
@@ -102,6 +103,7 @@ void main() {
     EmailVerificationState initialState = const EmailVerificationState(),
     Stream<EmailVerificationState>? stateStream,
     EmailConfirmationCubit? emailConfirmationCubit,
+    SharedPreferences? prefs,
   }) {
     // Set up cubit state
     when(() => mockCubit.state).thenReturn(initialState);
@@ -113,7 +115,10 @@ void main() {
 
     return ProviderScope(
       overrides: [
-        ...getStandardTestOverrides(mockAuthService: mockAuthService),
+        ...getStandardTestOverrides(
+          mockAuthService: mockAuthService,
+          mockSharedPreferences: prefs,
+        ),
         oauthClientProvider.overrideWithValue(mockOAuth),
         pendingVerificationServiceProvider.overrideWithValue(
           mockPendingVerification,
@@ -153,6 +158,10 @@ void main() {
                     'Login Options ${state.uri.queryParameters['email'] ?? ''}',
                   ),
                 ),
+              ),
+              GoRoute(
+                path: '/home/0',
+                builder: (_, _) => const Scaffold(body: Text('Home feed')),
               ),
               GoRoute(
                 path: '/explore',
@@ -421,6 +430,30 @@ void main() {
         await tester.pump();
 
         expect(_divineIcon(DivineIconName.x), findsNothing);
+      });
+
+      testWidgets('new account verification lands on Home', (tester) async {
+        final viewer = 'a' * 64;
+        final prefs = createMockSharedPreferences();
+        when(() => prefs.containsKey(ClassicsWarmup.storageKey(viewer)))
+            .thenReturn(true);
+        when(() => mockAuthService.currentPublicKeyHex).thenReturn(viewer);
+        await tester.pumpWidget(
+          createTestWidget(
+            deviceCode: 'test-device-code',
+            verifier: 'test-verifier',
+            prefs: prefs,
+            initialState: const EmailVerificationState(
+              status: EmailVerificationStatus.success,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        authStateController.add(AuthState.authenticated);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Home feed'), findsOneWidget);
       });
 
       testWidgets('auth success navigates to the Popular explore tab by URL', (

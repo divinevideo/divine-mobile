@@ -32,6 +32,7 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/auth_service.dart'
     show AuthService, AuthState;
+import 'package:openvine/services/classics_warmup.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:rxdart/rxdart.dart';
@@ -1842,6 +1843,79 @@ void main() {
           );
         },
       );
+
+      test('automatic Classics graduates on a new Home start', () async {
+        final viewer = 'a' * 64;
+        // A global value from an older app install is not this viewer's choice.
+        SharedPreferences.setMockInitialValues({
+          legacyHomeFeedModeKey: FeedMode.forYou.name,
+        });
+        final prefs = await SharedPreferences.getInstance();
+        await ClassicsWarmup.enroll(prefs, viewer);
+        for (var i = 0; i < 99; i++) {
+          await ClassicsWarmup.recordView(
+            prefs,
+            viewer,
+            i.toRadixString(16).padLeft(64, '0'),
+          );
+        }
+
+        final videos = createTestVideos(2);
+        when(
+          () => mockVideosRepository.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer((_) async => HomeFeedResult(videos: videos));
+        when(
+          () => mockVideosRepository.getRecommendedVideos(
+            userPubkey: viewer,
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer((_) async => HomeFeedResult(videos: videos));
+
+        Future<VideoFeedBloc> startHome({VideoFeedStarted? event}) async {
+          final bloc = VideoFeedBloc(
+            videosRepository: mockVideosRepository,
+            followRepository: mockFollowRepository,
+            curatedListRepository: mockCuratedListRepository,
+            sharedPreferences: prefs,
+            userPubkey: viewer,
+            serveCachedHomeFeed: false,
+          );
+          addTearDown(bloc.close);
+          final loaded = bloc.stream.firstWhere(
+            (state) => state.status == VideoFeedStatus.success,
+          );
+          bloc.add(event ?? const VideoFeedStarted());
+          await loaded;
+          return bloc;
+        }
+
+        final first = await startHome();
+        final modeKey = '${legacyHomeFeedModeKey}_$viewer';
+        expect(first.state.mode, FeedMode.classic);
+        expect(prefs.getString(modeKey), isNull);
+
+        await ClassicsWarmup.recordView(prefs, viewer, 'f' * 64);
+        expect(first.state.mode, FeedMode.classic);
+        final next = await startHome();
+        expect(next.state.mode, FeedMode.forYou);
+        expect(prefs.getString(modeKey), isNull);
+
+        await prefs.setString(modeKey, FeedMode.classic.name);
+        final chosen = await startHome();
+        expect(chosen.state.mode, FeedMode.classic);
+        final forced = await startHome(
+          event: const VideoFeedStarted(forceMode: true),
+        );
+        expect(forced.state.mode, FeedMode.forYou);
+        expect(prefs.getString(modeKey), FeedMode.classic.name);
+      });
 
       feedBlocTest(
         'restores persisted classic to Classics',
