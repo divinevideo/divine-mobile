@@ -1190,9 +1190,8 @@ const _pulseTempo = EffectSliderSetting(
   shownWhen: _whenNotOnBeat,
 );
 
-/// How often the strobe flashes: slower only, so it never flashes more than
-/// twice a second on its own and a flash transition still fits within the
-/// three a second that WCAG 2.3.1 allows.
+/// How often the strobe flashes, up to twice a second on its own. The output
+/// planner accounts for other flashes around it.
 const _strobeTempo = EffectSliderSetting(
   key: VideoEffectParams.tempo,
   label: EffectSettingLabel.tempo,
