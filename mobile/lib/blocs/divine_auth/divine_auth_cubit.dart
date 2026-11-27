@@ -340,6 +340,7 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
         result.code!,
         verifier,
         confirmation: (result.pubkey, EmailConfirmation.unconfirmed(email)),
+        newlyRegistered: true,
       );
       return;
     }
@@ -383,6 +384,7 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
     String code,
     String verifier, {
     required (String, EmailConfirmation)? confirmation,
+    bool newlyRegistered = false,
   }) async {
     try {
       Log.info(
@@ -410,7 +412,10 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       }
 
       // Get the session and sign in
-      await _authService.signInWithDivineOAuth(session);
+      await _authService.signInWithDivineOAuth(
+        session,
+        newlyRegistered: newlyRegistered,
+      );
 
       Log.info(
         'Successfully signed in',

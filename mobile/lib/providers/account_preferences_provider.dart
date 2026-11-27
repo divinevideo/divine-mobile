@@ -3,6 +3,7 @@
 
 import 'package:account_state_repository/account_state_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
@@ -17,26 +18,30 @@ final accountStateWriteBarrierProvider = Provider<AccountStateWriteBarrier>(
 );
 
 /// Owns one Classics progress writer for an account in the current scope.
-final classicsWarmupWriterProvider = Provider.family<ClassicsWarmup, String>((
-  ref,
-  viewer,
-) {
-  final writer = ClassicsWarmup(ref.watch(sharedPreferencesProvider), viewer);
-  final close = ref
-      .read(accountStateWriteBarrierProvider)
-      .register(
+final ProviderFamily<ClassicsWarmup, String> classicsWarmupWriterProvider =
+    Provider.family<ClassicsWarmup, String>((
+      ref,
+      viewer,
+    ) {
+      final writer = ClassicsWarmup(
+        ref.watch(sharedPreferencesProvider),
         viewer,
-        writer.close,
       );
-  ref.onDispose(() {
-    runProviderDetached(
-      close(),
-      'close Classics warmup',
-      logName: 'ClassicsWarmup',
-    );
-  });
-  return writer;
-});
+      final close = ref
+          .read(accountStateWriteBarrierProvider)
+          .register(
+            viewer,
+            writer.close,
+          );
+      ref.onDispose(() {
+        runProviderDetached(
+          close(),
+          'close Classics warmup',
+          logName: 'ClassicsWarmup',
+        );
+      });
+      return writer;
+    });
 
 final accountPreferenceStoreProvider = Provider<AccountPreferenceStore>((ref) {
   final store = AccountPreferenceStore(ref.watch(sharedPreferencesProvider));

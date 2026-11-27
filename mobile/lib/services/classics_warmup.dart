@@ -36,7 +36,7 @@ final class ClassicsWarmup {
   /// Records a logical video once and serializes the native writes.
   Future<void> recordView(String videoKey) {
     if (_closed) return Future<void>.value();
-    _writes = _writes.then((_) async {
+    return _writes = _writes.then((_) async {
       final views = _prefs.getStringList(storageKey(_viewer));
       if (views == null ||
           views.contains(_completed) ||
@@ -47,9 +47,9 @@ final class ClassicsWarmup {
         _prefs,
         _viewer,
         views.length + 1 >= _viewTarget ? [_completed] : [...views, videoKey],
+        previous: views,
       );
     });
-    return _writes;
   }
 
   /// Prevents new writes and waits for any native write before account cleanup.
@@ -61,17 +61,36 @@ final class ClassicsWarmup {
   static Future<void> _save(
     SharedPreferences prefs,
     String pubkey,
-    List<String> views,
-  ) async {
-    try {
-      if (await prefs.setStringList(storageKey(pubkey), views)) return;
-    } on Exception {
-      // This device preference must never prevent sign-in or playback.
-    }
+    List<String> views, {
+    List<String>? previous,
+  }) async {
+    final key = storageKey(pubkey);
+    if (await _write(prefs, key, views)) return;
+
+    // A refused write leaves the optimistic value in the preferences cache.
+    // Restore the previous progress so a retry starts from the accepted value.
+    final restored = await _write(prefs, key, previous);
     Log.warning(
-      'Could not save Classics progress',
+      restored
+          ? 'Could not save Classics progress'
+          : 'Could not save or restore Classics progress',
       name: 'ClassicsWarmup',
       category: LogCategory.storage,
     );
+  }
+
+  static Future<bool> _write(
+    SharedPreferences prefs,
+    String key,
+    List<String>? views,
+  ) async {
+    try {
+      return views == null
+          ? await prefs.remove(key)
+          : await prefs.setStringList(key, views);
+    } on Exception {
+      // This device preference must never prevent sign-in or playback.
+      return false;
+    }
   }
 }

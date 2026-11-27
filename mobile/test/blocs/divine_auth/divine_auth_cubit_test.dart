@@ -927,6 +927,12 @@ void main() {
                 testVerifier,
               ),
             );
+            when(
+              () => mockAuthService.signInWithDivineOAuth(
+                any(),
+                newlyRegistered: true,
+              ),
+            ).thenAnswer((_) async {});
             final cubit = buildCubit(emailConfirmationRepository: confirmations)
               ..initialize()
               ..updateEmail(testEmail)
@@ -939,7 +945,10 @@ void main() {
                 pubkey,
                 const EmailConfirmation.unconfirmed(testEmail),
               ),
-              () => mockAuthService.signInWithDivineOAuth(any()),
+              () => mockAuthService.signInWithDivineOAuth(
+                any(),
+                newlyRegistered: true,
+              ),
             ]);
             await cubit.close();
           },
@@ -1373,7 +1382,10 @@ void main() {
               (_) async => const TokenResponse(bunkerUrl: 'bunker://test'),
             );
             when(
-              () => mockAuthService.signInWithDivineOAuth(any()),
+              () => mockAuthService.signInWithDivineOAuth(
+                any(),
+                newlyRegistered: any(named: 'newlyRegistered'),
+              ),
             ).thenAnswer((_) async {});
           },
           build: buildCubit,
@@ -1405,6 +1417,12 @@ void main() {
                 code: testCode,
                 verifier: testVerifier,
                 persistSession: false,
+              ),
+            ).called(1);
+            verify(
+              () => mockAuthService.signInWithDivineOAuth(
+                any(),
+                newlyRegistered: true,
               ),
             ).called(1);
             verifyNever(

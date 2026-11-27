@@ -3,6 +3,23 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/classics_warmup.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
+
+class _RefuseFirstWrite extends InMemorySharedPreferencesStore {
+  _RefuseFirstWrite(String key, List<String> values)
+    : super.withData({'flutter.$key': values});
+
+  bool _refused = false;
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) {
+    if (!_refused) {
+      _refused = true;
+      return Future<bool>.value(false);
+    }
+    return super.setValue(valueType, key, value);
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +42,30 @@ void main() {
   });
 
   group('recordView', () {
+    test('keeps the previous progress when completion is refused', () async {
+      final key = ClassicsWarmup.storageKey(viewer);
+      final views = List.generate(99, (id) => id.toRadixString(16));
+      final original = SharedPreferencesStorePlatform.instance;
+      final backend = _RefuseFirstWrite(key, views);
+      SharedPreferences.setMockInitialValues({});
+      SharedPreferencesStorePlatform.instance = backend;
+      addTearDown(() {
+        SharedPreferences.setMockInitialValues({});
+        SharedPreferencesStorePlatform.instance = original;
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final warmup = ClassicsWarmup(prefs, viewer);
+      expect(prefs.getStringList(key), views);
+
+      await warmup.recordView('new-video');
+      expect(ClassicsWarmup.startsInClassics(prefs, viewer), isTrue);
+      expect(prefs.getStringList(key), views);
+
+      await warmup.recordView('new-video');
+      await prefs.reload();
+      expect(ClassicsWarmup.startsInClassics(prefs, viewer), isFalse);
+    });
+
     test('graduates after 100 distinct views and releases the IDs', () async {
       await ClassicsWarmup.enroll(prefs, viewer);
       final warmup = ClassicsWarmup(prefs, viewer);
