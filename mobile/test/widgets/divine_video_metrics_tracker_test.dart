@@ -1488,8 +1488,9 @@ void main() {
 
         final ends = _viewEndEvents(analyticsService);
         expect(ends, hasLength(2));
-        // The relay rejects an end event carrying more loops than its whole
-        // watched seconds plus one.
+        // The relay change in divinevideo/divine-funnelcake#1641 discards a
+        // reported count above whole watched seconds plus one and derives it
+        // from watch time instead.
         for (final end in ends) {
           expect(
             end.loopCount,
