@@ -253,19 +253,40 @@ void main() {
         },
       );
 
-      // A signer built from a session not yet bound to its account cannot
-      // name it; its refusal still locks the signed-in account.
+      // Every live signer is bound to its verified account; an unattributed
+      // refusal cannot be proven to belong to the signed-in account.
       blocTest<EmailConfirmationCubit, EmailConfirmationState>(
-        'takes a refusal that names no account as the signed-in one',
+        'ignores a refusal that names no account',
+        build: buildCubit,
+        seed: () => _confirmed,
+        act: (cubit) => cubit.markUnconfirmedByKeycast(null),
+        expect: () => const <EmailConfirmationState>[],
+        verify: (_) {
+          verifyNever(() => repository.remember(any(), any()));
+          verifyNever(() => repository.fetchStatus(any()));
+        },
+      );
+
+      blocTest<EmailConfirmationCubit, EmailConfirmationState>(
+        'locks the account even when its email address is not known yet',
         setUp: () {
           when(
             () => repository.fetchStatus(any()),
           ).thenAnswer((_) async => const EmailConfirmation.unknown());
         },
         build: buildCubit,
-        seed: () => _confirmed,
-        act: (cubit) => cubit.markUnconfirmedByKeycast(null),
-        expect: () => const [_unconfirmed],
+        seed: () => const EmailConfirmationState(account: _account),
+        act: (cubit) => cubit.markUnconfirmedByKeycast(_account),
+        expect: () => const [
+          EmailConfirmationState(
+            account: _account,
+            status: EmailConfirmationStatus.unconfirmed,
+          ),
+        ],
+        verify: (_) {
+          verifyNever(() => repository.remember(any(), any()));
+          verify(() => repository.fetchStatus(_account)).called(1);
+        },
       );
 
       blocTest<EmailConfirmationCubit, EmailConfirmationState>(
@@ -283,6 +304,14 @@ void main() {
         build: buildCubit,
         seed: () => _unconfirmed,
         act: (cubit) => cubit.reportCapReached(_otherAccount),
+        expect: () => const <EmailConfirmationState>[],
+      );
+
+      blocTest<EmailConfirmationCubit, EmailConfirmationState>(
+        'ignores a cap that names no account',
+        build: buildCubit,
+        seed: () => _unconfirmed,
+        act: (cubit) => cubit.reportCapReached(null),
         expect: () => const <EmailConfirmationState>[],
       );
 

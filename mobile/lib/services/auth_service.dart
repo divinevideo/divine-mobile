@@ -627,7 +627,11 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       // Keycast signer before building the identity so we get a
       // KeycastNostrIdentity instead of a LocalNostrIdentity.
       if (session != null && session.hasRpcAccess) {
-        _setKeycastSigner(_newKeycastSigner(session));
+        final boundSession =
+            (session.userPubkey == null || session.userPubkey!.isEmpty)
+            ? session.copyWith(userPubkey: localKey!.publicKeyHex)
+            : session;
+        _setKeycastSigner(_newKeycastSigner(boundSession));
       }
 
       await _setupUserSession(
@@ -3013,13 +3017,21 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         throw Exception('Could not retrieve public key from server');
       }
 
+      final boundSession = session.userPubkey == publicKeyHex
+          ? session
+          : session.copyWith(userPubkey: publicKeyHex);
+      if (session.hasRpcAccess && _keycastSigner?.owner != publicKeyHex) {
+        // Bind the live signer to the verified account so policy refusals
+        // always carry its owner; close the temporary unbound client.
+        _setKeycastSigner(_newKeycastSigner(boundSession));
+      }
+
       // Commit the exact bound input after older native writes have drained.
       // A caller's earlier save may have preceded an outgoing rollback.
       ensureAttempt();
       final mutation = await _mutateAccountNative<void>(
         publicKeyHex,
         (ensureCurrent) async {
-          final boundSession = session.copyWith(userPubkey: publicKeyHex);
           await _signerStore.saveKeycastSession(
             boundSession,
             ensureCurrent: ensureCurrent,
@@ -3267,10 +3279,12 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     // getSession() answers null for an expired session, so this refreshes on
     // exactly the same condition getSessionOrRefresh() would.
     var session = await client.getSession();
-    session ??= await _oauthCoordinator.refreshSession(
-      expectedOwnerPubkey: ownerPubkey,
-    );
-    if (session == null) return null;
+    if (session == null && currentPublicKeyHex == ownerPubkey) {
+      session = await _oauthCoordinator.refreshSession(
+        expectedOwnerPubkey: ownerPubkey,
+      );
+    }
+    if (session == null || currentPublicKeyHex != ownerPubkey) return null;
 
     // Strict equality also rejects a session that never carried an owner:
     // it cannot be attributed to this account, and a token whose account we

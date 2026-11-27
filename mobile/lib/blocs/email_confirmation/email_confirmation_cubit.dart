@@ -97,27 +97,36 @@ class EmailConfirmationCubit extends Cubit<EmailConfirmationState>
   /// sees that account's email as unconfirmed.
   ///
   /// Keycast is the authority, so the account locks again even if the app
-  /// had it as confirmed, and then re-checks. A refusal naming another
-  /// account is dropped: it arrived after a switch. A signer built from a
-  /// session that was not yet bound to its account names nobody, and its
-  /// refusal is taken as the signed-in account's.
+  /// had it as confirmed or has not learned its address yet, and then
+  /// re-checks. A refusal that does not name the signed-in account is dropped:
+  /// it arrived after a switch or from an unbound signer.
   Future<void> markUnconfirmedByKeycast(String? refusedAccount) async {
     final account = state.account;
     final email = state.email;
     final session = _accountSession;
     if (account == null || session == null) return;
-    if (refusedAccount != null && refusedAccount != account) return;
-    if (email != null && !state.isUnconfirmed) {
-      final confirmation = EmailConfirmation.unconfirmed(email);
-      emitIfOpen(
-        EmailConfirmationState.fromConfirmation(
-          account,
-          confirmation,
-          resendStatus: state.resendStatus,
-        ),
-      );
-      if (identical(_accountSession, session)) {
-        await _repository.remember(account, confirmation);
+    if (refusedAccount == null || refusedAccount != account) return;
+    if (!state.isUnconfirmed) {
+      if (email != null) {
+        final confirmation = EmailConfirmation.unconfirmed(email);
+        emitIfOpen(
+          EmailConfirmationState.fromConfirmation(
+            account,
+            confirmation,
+            resendStatus: state.resendStatus,
+          ),
+        );
+        if (identical(_accountSession, session)) {
+          await _repository.remember(account, confirmation);
+        }
+      } else {
+        emitIfOpen(
+          EmailConfirmationState(
+            account: account,
+            status: EmailConfirmationStatus.unconfirmed,
+            resendStatus: state.resendStatus,
+          ),
+        );
       }
     }
     if (identical(_accountSession, session)) await refresh();
@@ -126,12 +135,12 @@ class EmailConfirmationCubit extends Cubit<EmailConfirmationState>
   /// Keycast refused a post, comment or report because [refusedAccount] used
   /// up the hourly allowance that applies until it confirms its email.
   ///
-  /// Dropped when [refusedAccount] names another account, as for
+  /// Dropped unless [refusedAccount] names the signed-in account, as for
   /// [markUnconfirmedByKeycast].
   void reportCapReached(String? refusedAccount) {
     final account = state.account;
     if (account == null || _accountSession == null) return;
-    if (refusedAccount != null && refusedAccount != account) return;
+    if (refusedAccount == null || refusedAccount != account) return;
     emitIfOpen(state.copyWith(capRefusals: state.capRefusals + 1));
   }
 

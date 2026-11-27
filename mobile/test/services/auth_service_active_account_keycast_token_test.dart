@@ -1,11 +1,16 @@
 // ABOUTME: Tests AuthService.activeAccountKeycastToken: the Keycast bearer token
 // ABOUTME: is only handed out for the account a caller is acting for.
 
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:nostr_sdk/nostr_sdk.dart' show Nip19, generatePrivateKey;
+import 'package:nostr_sdk/nostr_sdk.dart' show Event, Nip19, generatePrivateKey;
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
@@ -96,6 +101,90 @@ void main() {
           isNull,
         );
         verifyNever(() => oauthClient.getSession());
+      },
+    );
+
+    test(
+      'returns nothing when the active account changes during token lookup',
+      () async {
+        final (authService, pubkeyHex) = await signedInAuthService();
+        final pendingSession = Completer<KeycastSession?>();
+        when(
+          () => oauthClient.getSession(),
+        ).thenAnswer((_) => pendingSession.future);
+
+        final tokenFuture = authService.activeAccountKeycastToken(
+          forAccount: pubkeyHex,
+        );
+        await ignoringDiscoveryErrors(
+          () => authService.importFromNsec(
+            Nip19.encodePrivateKey(generatePrivateKey()),
+          ),
+        );
+        expect(authService.currentPublicKeyHex, isNot(pubkeyHex));
+        pendingSession.complete(
+          KeycastSession(
+            bunkerUrl: 'https://bunker.example.com',
+            accessToken: accessToken,
+            expiresAt: DateTime.now().add(const Duration(hours: 1)),
+            userPubkey: pubkeyHex,
+          ),
+        );
+
+        expect(await tokenFuture, isNull);
+      },
+    );
+
+    test(
+      'binds the live signer to the verified account on unbound OAuth sign-in',
+      () async {
+        final verifiedPubkey = freshPubkeyHex();
+        final nextRefusal = KeycastPolicyRefusals.stream.first;
+
+        await http.runWithClient(
+          () async {
+            final authService = buildTestAuthService(
+              cleanupService: cleanupService,
+              oauthClient: oauthClient,
+            );
+            addTearDown(authService.dispose);
+
+            await ignoringDiscoveryErrors(
+              () => authService.signInWithDivineOAuth(
+                KeycastSession(
+                  bunkerUrl: 'https://bunker.example.com',
+                  accessToken: accessToken,
+                  expiresAt: DateTime.now().add(const Duration(hours: 1)),
+                ),
+              ),
+            );
+            expect(authService.currentPublicKeyHex, verifiedPubkey);
+
+            await expectLater(
+              authService.currentIdentity!.signEvent(
+                Event(verifiedPubkey, 1059, const [], 'ciphertext'),
+              ),
+              throwsA(isA<EmailNotConfirmedException>()),
+            );
+          },
+          () => MockClient((request) async {
+            final body = jsonDecode(request.body) as Map<String, dynamic>;
+            if (body['method'] == 'get_public_key') {
+              return http.Response(jsonEncode({'result': verifiedPubkey}), 200);
+            }
+            return http.Response(
+              jsonEncode({
+                'error': 'confirm your email',
+                'code': 'EMAIL_NOT_CONFIRMED',
+              }),
+              403,
+            );
+          }),
+        );
+
+        final refusal = await nextRefusal;
+        expect(refusal.kind, KeycastPolicyRefusalKind.emailNotConfirmed);
+        expect(refusal.owner, verifiedPubkey);
       },
     );
   });
