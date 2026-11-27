@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart' show Provider;
 import 'package:models/models.dart';
+import 'package:nostr_sdk/aid.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -18,6 +19,7 @@ import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/video_event_service.dart'
     show VideoEventService;
 import 'package:openvine/utils/curated_lists_snapshot.dart';
+import 'package:openvine/utils/list_video_order.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -333,16 +335,24 @@ Stream<List<VideoEvent>> videoEventsByIds(Ref ref, List<String> videoIds) {
 }
 
 /// The videos [videoRefs] names (64-hex event ids and `kind:pubkey:d-tag`
-/// coordinates), those the feed pool already holds first.
+/// coordinates) in the list's order, those the feed pool already holds
+/// first.
 ///
 /// Pooled videos show at once. The rest come from
 /// [VideosRepository.watchVideosForList]: Funnelcake first, the relays for
-/// what it does not hold, or the relays alone when [relayOnly] is set. They
-/// are appended as they arrive, so a tile already on screen keeps its place,
-/// and are added to the pool. The viewer's
-/// feed-shape preference does not apply, because the list's author chose
-/// these videos; videos [VideoEventService.shouldHideVideo] hides are left
-/// out. A reference of any other shape is skipped.
+/// what it does not hold, or the relays alone when [relayOnly] is set, and
+/// are added to the pool. Every emission is put back into the list's order
+/// (#8105), whatever order the pool and the read return them in. The
+/// viewer's feed-shape preference does not apply, because the list's author
+/// chose these videos; videos [VideoEventService.shouldHideVideo] hides are
+/// left out. A reference of any other shape is skipped.
+///
+/// A list can name an old event id and the current coordinate of the same
+/// video, so revisions share a tile: the newest is shown, at the earliest
+/// position that names any of them. Older Divine lists used 34236 for
+/// regular-length addressable videos, so a pooled 34235 video with the same
+/// author and d-tag stands in for a 34236 coordinate until the read finds the
+/// exact address with media.
 ///
 /// A read that fails with an [Exception] after pooled videos showed keeps
 /// them; one that fails with nothing to show surfaces the error. An [Error]
@@ -363,75 +373,106 @@ Stream<List<VideoEvent>> _listVideos({
   final videoEventService = live.videoEventService;
   if (videoEventService == null) return;
 
-  final foundVideos = <VideoEvent>[];
-  final slotByVideoKey = <String, int>{};
+  final order = ListVideoOrder(videoRefs);
+  // One tile per video, by feedDedupKey, in arrival order.
+  final tiles = <String, VideoEvent>{};
+  // The earliest list position that names each tile.
+  final positions = <String, int>{};
+  // The pooled 34235 video standing in for each 34236 coordinate.
+  final legacyHits = <AId, VideoEvent>{};
   final missingRefs = <String>[];
 
-  // A list can name an old event id and the current coordinate of the same
-  // video, so revisions share a tile: the newest keeps the first one's slot.
+  void place(String videoKey, int? position) {
+    if (position == null) return;
+    final current = positions[videoKey];
+    if (current == null || position < current) positions[videoKey] = position;
+  }
+
   // Returns whether the tiles changed.
   bool keepNewest(VideoEvent video) {
-    final slot = slotByVideoKey[video.feedDedupKey];
-    if (slot == null) {
-      slotByVideoKey[video.feedDedupKey] = foundVideos.length;
-      foundVideos.add(video);
-      return true;
-    }
-    if (!isNewerVideoRevision(video, foundVideos[slot])) return false;
-    foundVideos[slot] = video;
+    final key = video.feedDedupKey;
+    place(key, order.positionOf(video));
+    final shown = tiles[key];
+    if (shown != null && !isNewerVideoRevision(video, shown)) return false;
+    tiles[key] = video;
     return true;
   }
 
-  // Every subscription's pool, for the coordinates (kind:pubkey:d-tag).
-  final pooledVideos = <VideoEvent>{
+  // A tile the list does not name keeps its arrival order after the rest.
+  List<VideoEvent> inListOrder() {
+    final placed =
+        [
+          for (final (arrival, video) in tiles.values.indexed)
+            (
+              position: positions[video.feedDedupKey],
+              arrival: arrival,
+              video: video,
+            ),
+        ]..sort((a, b) {
+          final (pa, pb) = (a.position, b.position);
+          if (pa == pb) return a.arrival.compareTo(b.arrival);
+          if (pa == null) return 1;
+          if (pb == null) return -1;
+          return pa.compareTo(pb);
+        });
+    return [for (final entry in placed) entry.video];
+  }
+
+  // Every subscription's pool, by address, for the coordinates.
+  final pooledByAddress = <AId, VideoEvent>{};
+  for (final video in [
     ...videoEventService.discoveryVideos,
     ...videoEventService.homeFeedVideos,
     ...videoEventService.profileVideos,
-  };
+  ]) {
+    if (ListVideoOrder.addressOf(video) case final address?) {
+      pooledByAddress.putIfAbsent(address, () => video);
+    }
+  }
 
   // Hidden videos are skipped on a pool hit too, or a blocked author would
   // pass through unfiltered (#5104).
   for (final ref in videoRefs) {
+    final address = ListVideoOrder.parseAddress(ref);
     final VideoEvent? pooled;
-    if (ref.contains(':')) {
-      final parts = ref.split(':');
-      if (parts.length < 3) continue;
-      final pubkey = parts[1];
-      final dTag = parts[2];
-      pooled = pooledVideos
-          .where(
-            (video) =>
-                video.pubkey == pubkey &&
-                (video.rawTags['d'] ?? video.vineId ?? video.id) == dTag,
-          )
-          .firstOrNull;
+    if (address != null) {
+      pooled = pooledByAddress[address];
     } else if (_hexEventId.hasMatch(ref)) {
-      pooled = videoEventService.getVideoById(ref);
+      pooled = videoEventService.getVideoById(ref.toLowerCase());
     } else {
       continue;
     }
-    if (pooled == null) {
-      missingRefs.add(ref);
-    } else if (!videoEventService.shouldHideVideo(pooled)) {
-      keepNewest(pooled);
+    if (pooled != null) {
+      if (!videoEventService.shouldHideVideo(pooled)) keepNewest(pooled);
+      continue;
     }
+    missingRefs.add(ref);
+
+    if (address == null ||
+        address.kind != NIP71VideoKinds.addressableShortVideo) {
+      continue;
+    }
+    final legacy =
+        pooledByAddress[AId(
+          kind: NIP71VideoKinds.addressableNormalVideo,
+          pubkey: address.pubkey,
+          dTag: address.dTag,
+        )];
+    if (legacy == null || videoEventService.shouldHideVideo(legacy)) continue;
+    legacyHits[address] = legacy;
+    keepNewest(legacy);
+    place(legacy.feedDedupKey, order.positionOfReference(ref));
   }
 
-  List<VideoEvent> orderedVideos() => order.sort([
-    ...foundVideos,
-    for (final video in legacyCacheHits.values)
-      if (!seenIds.contains(video.id.toLowerCase())) video,
-  ], legacyMatches: legacyCacheHits);
-
   Log.info(
-    '📋 Found ${foundVideos.length} of ${videoRefs.length} videos in the '
-    'pool; reading ${missingRefs.length}',
+    '📋 Found ${tiles.length} of ${videoRefs.length} videos in the pool; '
+    'reading ${missingRefs.length}',
     name: logName,
     category: LogCategory.video,
   );
 
   // An empty yield would show "No videos" instead of the loading state.
-  if (foundVideos.isNotEmpty) yield List.of(foundVideos);
+  if (tiles.isNotEmpty) yield inListOrder();
 
   if (missingRefs.isNotEmpty) {
     // Null once the provider is disposed — see the pool lookup above.
@@ -446,16 +487,25 @@ Stream<List<VideoEvent>> _listVideos({
       )) {
         var changed = false;
         for (final video in videos) {
+          final address = ListVideoOrder.addressOf(video);
+          final legacy = legacyHits[address];
+          if (legacy != null) {
+            // A read without media cannot replace a playable pooled video.
+            if (video.videoUrl?.trim().isNotEmpty != true) continue;
+            legacyHits.remove(address);
+            tiles.remove(legacy.feedDedupKey);
+            changed = true;
+          }
           if (videoEventService.shouldHideVideo(video) || !keepNewest(video)) {
             continue;
           }
           changed = true;
           videoEventService.addVideoEvent(video);
         }
-        if (changed) yield List.of(foundVideos);
+        if (changed) yield inListOrder();
       }
     } on Exception catch (error, stackTrace) {
-      if (foundVideos.isEmpty) rethrow;
+      if (tiles.isEmpty) rethrow;
       Log.warning(
         "📋 Reading the list's other videos failed; keeping the pooled ones",
         name: logName,
@@ -466,7 +516,7 @@ Stream<List<VideoEvent>> _listVideos({
     }
   }
 
-  yield foundVideos;
+  yield inListOrder();
 }
 
 final _hexEventId = RegExp(r'^[a-fA-F0-9]{64}$');

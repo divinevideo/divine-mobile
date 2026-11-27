@@ -7,7 +7,7 @@ import 'dart:io';
 import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/misc.dart' show Override, ProviderListenable;
+import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive_ce.dart';
 import 'package:mocktail/mocktail.dart';
@@ -92,38 +92,6 @@ VideoEvent _video({
     title: id,
     videoUrl: 'https://example.com/$id.mp4',
     rawTags: dTag == null ? const {} : {'d': dTag},
-  );
-}
-
-/// The overrides for a list whose first video only a relay holds and whose
-/// second the cache answers at once, so the cache's video is emitted first.
-///
-/// Returns them with the relay's event, whose video belongs first.
-(List<Override>, Event) _cacheAnswersBeforeRelay() {
-  registerFallbackValue(_video(id: 'fallback', pubkey: _ownerA));
-  final fromRelay = Event(_ownerA, 34236, [
-    ['d', 'part-1'],
-    ['url', 'https://example.com/part-1.mp4'],
-  ], '');
-  final cached = _video(id: _allowedVideoId, pubkey: _ownerA);
-  final videoEventService = _MockVideoEventService();
-  final nostrClient = _MockNostrClient();
-  when(() => videoEventService.discoveryVideos).thenReturn(const []);
-  when(() => videoEventService.homeFeedVideos).thenReturn(const []);
-  when(() => videoEventService.profileVideos).thenReturn(const []);
-  when(
-    () => videoEventService.getVideoById(_allowedVideoId),
-  ).thenReturn(cached);
-  when(() => videoEventService.shouldHideVideo(any())).thenReturn(false);
-  when(
-    () => nostrClient.subscribe(any(), closeOnEose: true),
-  ).thenAnswer((_) => Stream.value(fromRelay));
-  return (
-    [
-      videoEventServiceProvider.overrideWithValue(videoEventService),
-      nostrServiceProvider.overrideWithValue(nostrClient),
-    ],
-    fromRelay,
   );
 }
 
@@ -884,26 +852,141 @@ void main() {
       },
     );
 
-    test('shows pooled videos first and appends what the read finds', () async {
-      final pooled = _video(id: _allowedVideoId, pubkey: _ownerA);
-      final fetched = _video(id: missingVideoId, pubkey: _ownerB);
+    test(
+      'shows pooled videos first, then every video in the list order',
+      () async {
+        final pooled = _video(id: _allowedVideoId, pubkey: _ownerA);
+        final fetched = _video(id: missingVideoId, pubkey: _ownerB);
+        when(
+          () => videoEventService.getVideoById(_allowedVideoId),
+        ).thenReturn(pooled);
+        answerRepository(Stream.value([fetched]));
+
+        final states = await collect([missingVideoId, _allowedVideoId]);
+
+        expect(
+          idsOf(states),
+          equals([
+            [_allowedVideoId],
+            [missingVideoId, _allowedVideoId],
+            [missingVideoId, _allowedVideoId],
+          ]),
+        );
+        verify(() => videoEventService.addVideoEvent(fetched)).called(1);
+      },
+    );
+
+    test('keeps pooled legacy videos in their requested order', () async {
+      final legacy = _video(
+        id: 'legacy-video',
+        pubkey: _ownerA,
+        dTag: 'chapter-1',
+      ).copyWith(eventKind: 34235);
+      final later = _video(
+        id: 'later-video',
+        pubkey: _ownerA,
+        dTag: 'chapter-2',
+      ).copyWith(eventKind: 34236);
+      when(() => videoEventService.discoveryVideos).thenReturn([later, legacy]);
+      answerRepository(Stream.value(const []));
+
+      final states = await collect([
+        '34236:$_ownerA:chapter-1',
+        '34236:$_ownerA:chapter-2',
+      ]);
+
+      expect(idsOf(states).last, [legacy.id, later.id]);
+      // The legacy video only stands in: the exact address is still read.
+      verify(
+        () => videosRepository.watchVideosForList(
+          ['34236:$_ownerA:chapter-1'],
+          includeFeedShape: false,
+        ),
+      ).called(1);
+    });
+
+    test('matches pooled addresses by kind and the entire d-tag', () async {
+      final wrong = _video(
+        id: 'wrong-video',
+        pubkey: _ownerA,
+        dTag: 'chapter',
+      ).copyWith(eventKind: 34235);
+      final expected = _video(
+        id: _allowedVideoId,
+        pubkey: _ownerA,
+        dTag: 'chapter:one',
+      ).copyWith(eventKind: 34236);
+      when(() => videoEventService.discoveryVideos)
+          .thenReturn([wrong, expected]);
       when(
         () => videoEventService.getVideoById(_allowedVideoId),
-      ).thenReturn(pooled);
-      answerRepository(Stream.value([fetched]));
+      ).thenReturn(expected);
 
-      final states = await collect([missingVideoId, _allowedVideoId]);
+      final states = await collect([
+        _allowedVideoId,
+        '34236:$_ownerA:chapter:one',
+      ]);
 
-      expect(
-        idsOf(states),
-        equals([
-          [_allowedVideoId],
-          [_allowedVideoId, missingVideoId],
-          [_allowedVideoId, missingVideoId],
-        ]),
-      );
-      verify(() => videoEventService.addVideoEvent(fetched)).called(1);
+      expect(idsOf(states).last, [_allowedVideoId]);
     });
+
+    for (final (exactAddressExists, description) in [
+      (true, 'prefers the exact address over a pooled legacy video'),
+      (
+        false,
+        'keeps a pooled legacy video when the exact address has no media',
+      ),
+    ]) {
+      test(description, () async {
+        final read = StreamController<List<VideoEvent>>();
+        addTearDown(read.close);
+        final legacy = _video(
+          id: 'legacy-video',
+          pubkey: _ownerA,
+          dTag: 'chapter',
+        ).copyWith(eventKind: 34235);
+        final exact = VideoEvent.fromNostrEvent(
+          Event(_ownerA, 34236, [
+            ['d', 'chapter'],
+            ['url', 'https://example.com/chapter.mp4'],
+          ], ''),
+          permissive: true,
+        );
+        final withoutMedia = VideoEvent.fromNostrEvent(
+          Event(_ownerA, 34236, [
+            ['d', 'chapter'],
+          ], ''),
+          permissive: true,
+        );
+        when(() => videoEventService.discoveryVideos).thenReturn([legacy]);
+        answerRepository(read.stream);
+        final container = ProviderContainer(
+          overrides: [
+            videoEventServiceProvider.overrideWithValue(videoEventService),
+            videosRepositoryProvider.overrideWithValue(videosRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+        final provider = videoEventsByIdsProvider(['34236:$_ownerA:chapter']);
+        final emitted = <List<String>>[];
+        final subscription = container.listen(provider, (_, next) {
+          if (next case AsyncData(:final value)) {
+            emitted.add([for (final video in value) video.id]);
+          }
+        });
+        addTearDown(subscription.close);
+        await pumpEventQueue();
+
+        expect(emitted, [
+          [legacy.id],
+        ]);
+        read.add([if (exactAddressExists) exact else withoutMedia]);
+        await read.close();
+        await pumpEventQueue();
+        final expectedId = exactAddressExists ? exact.id : legacy.id;
+        expect(emitted.last, [expectedId]);
+      });
+    }
 
     test(
       'ignores an older revision that arrives later',
@@ -1127,6 +1210,49 @@ void main() {
   });
 
   group(curatedListVideoEventsProvider, () {
+    test('emits the videos in the list order as the read answers', () async {
+      const listId = 'series-list';
+      registerFallbackValue(_video(id: 'fallback', pubkey: _ownerA));
+      final fromRead = _video(
+        id: 'part-1-video',
+        pubkey: _ownerA,
+        dTag: 'part-1',
+      ).copyWith(eventKind: 34236);
+      final pooled = _video(id: _allowedVideoId, pubkey: _ownerA);
+      final videoEventService = _MockVideoEventService();
+      final videosRepository = _MockVideosRepository();
+      when(() => videoEventService.discoveryVideos).thenReturn(const []);
+      when(() => videoEventService.homeFeedVideos).thenReturn(const []);
+      when(() => videoEventService.profileVideos).thenReturn(const []);
+      when(
+        () => videoEventService.getVideoById(_allowedVideoId),
+      ).thenReturn(pooled);
+      when(() => videoEventService.shouldHideVideo(any())).thenReturn(false);
+      when(
+        () => videosRepository.watchVideosForList(
+          ['34236:$_ownerA:part-1'],
+          includeFeedShape: false,
+          relayOnly: true,
+        ),
+      ).thenAnswer((_) => Stream.value([fromRead]));
+      final container = ProviderContainer(
+        overrides: [
+          videoEventServiceProvider.overrideWithValue(videoEventService),
+          videosRepositoryProvider.overrideWithValue(videosRepository),
+          curatedListVideosProvider(
+            listId,
+          ).overrideWith((ref) => ['34236:$_ownerA:part-1', _allowedVideoId]),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final provider = curatedListVideoEventsProvider(listId);
+      final emitted = await _emittedIds(container, provider, provider.future);
+
+      expect(emitted.first, equals([_allowedVideoId]));
+      expect(emitted.last, equals([fromRead.id, _allowedVideoId]));
+    });
+
     test('reads the videos the pool lacks from the relays alone', () async {
       const listId = 'repository-list';
       final fetched = _video(id: _allowedVideoId, pubkey: _ownerA);
