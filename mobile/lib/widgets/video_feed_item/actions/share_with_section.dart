@@ -251,6 +251,10 @@ class _ContactItem extends ConsumerWidget {
     );
 
     final longPress = onLongPress;
+    final select = enabled && longPress != null
+        ? () => longPress(resolved)
+        : null;
+    final opensComposer = tapSends && select != null;
     return Semantics(
       button: true,
       selected: isSelected,
@@ -258,15 +262,19 @@ class _ContactItem extends ConsumerWidget {
       label: tapSends
           ? context.l10n.shareRecipientSendTo(displayName)
           : displayName,
-      onLongPressHint: enabled && tapSends && longPress != null
-          ? context.l10n.shareMessageHint
+      onLongPressHint: opensComposer ? context.l10n.shareMessageHint : null,
+      // VoiceOver ignores long-press hint overrides.
+      customSemanticsActions:
+          opensComposer && defaultTargetPlatform == TargetPlatform.iOS
+          ? {
+              CustomSemanticsAction(label: context.l10n.shareMessageHint):
+                  select,
+            }
           : null,
       child: InkWell(
         borderRadius: BorderRadius.circular(_ShareWithSection._avatarRadius),
         onTap: enabled ? () => onTap(resolved) : null,
-        onLongPress: enabled && longPress != null
-            ? () => longPress(resolved)
-            : null,
+        onLongPress: select,
         // The row's own label names the action, so the avatar and name
         // below would only repeat it to a screen reader.
         child: ExcludeSemantics(

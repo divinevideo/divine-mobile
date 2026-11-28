@@ -2266,6 +2266,41 @@ void main() {
           });
 
           testWidgets(
+            'offers VoiceOver an add-message action that opens the composer',
+            (tester) async {
+              final semantics = tester.ensureSemantics();
+              await pumpOpenSheet(tester);
+
+              final node = tester.getSemantics(
+                find.bySemanticsLabel(l10n.shareRecipientSendTo('Alice')),
+              );
+              final id = CustomSemanticsAction.getIdentifier(
+                CustomSemanticsAction(label: l10n.shareMessageHint),
+              );
+              expect(
+                node.getSemanticsData().customSemanticsActionIds,
+                contains(id),
+              );
+
+              node.owner!.performAction(
+                node.id,
+                SemanticsAction.customAction,
+                id,
+              );
+              await tester.pumpAndSettle();
+
+              expect(find.byType(TextField), findsOneWidget);
+              expect(
+                node.getSemanticsData().customSemanticsActionIds ??
+                    const <int>[],
+                isNot(contains(id)),
+              );
+              semantics.dispose();
+            },
+            variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+          );
+
+          testWidgets(
             'a contact a live block disables cannot be sent to or selected',
             (tester) async {
               final blocklist = ContentBlocklistRepository();
