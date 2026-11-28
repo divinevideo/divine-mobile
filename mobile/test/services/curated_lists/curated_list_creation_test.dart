@@ -89,6 +89,31 @@ void main() {
       });
     }
 
+    void answerSigning({
+      List<List<String>> Function(List<List<String>>)? changeTags,
+    }) {
+      final signer = LocalNostrSigner('1'.padLeft(64, '0'));
+      when(
+        () => auth.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
+        ),
+      ).thenAnswer((i) async {
+        final tags = i.namedArguments[#tags] as List<List<String>>;
+        final event = Event(
+          _owner,
+          i.namedArguments[#kind] as int,
+          [...(changeTags?.call(tags) ?? tags), Nip89ClientTag.tag],
+          i.namedArguments[#content] as String,
+          createdAt: i.namedArguments[#createdAt] as int?,
+        );
+        await signer.signEvent(event);
+        return event;
+      });
+    }
+
     Future<List<CuratedList>> savedLists() async {
       final stored = await storage.getAll();
       final raw = stored['flutter.${CuratedListService.listsStorageKey}'];
@@ -130,6 +155,7 @@ void main() {
       when(() => auth.isAuthenticated).thenReturn(true);
       when(() => auth.currentPublicKeyHex).thenReturn(_owner);
       stubListPublishing(client: client, auth: auth, pubkey: _owner);
+      answerSigning();
     });
 
     tearDown(() {
@@ -225,6 +251,27 @@ void main() {
         expect((await savedLists()).where((list) => list.isSeries), isEmpty);
       });
 
+      test(
+        'rejects a same-owner signed event for another coordinate',
+        () async {
+          answerSigning(
+            changeTags: (tags) => [
+              for (final tag in tags)
+                if (tag.first == 'd') ['d', 'existing-series'] else tag,
+            ],
+          );
+          answerPublishes(acceptedOutcome);
+          final service = await buildService();
+
+          final result = await service.createSeries('Road trip');
+
+          expect(result, isA<SeriesCreationRejected>());
+          expect(sent, isEmpty);
+          expect(service.lists, isEmpty);
+          expect(await savedLists(), isEmpty);
+        },
+      );
+
       test('publishes without reading relays first, so an unreachable '
           'relay does not stop it', () async {
         answerPublishes(acceptedOutcome);
@@ -259,11 +306,7 @@ void main() {
 
       test('recovers an accepted series from the relay after a failed local '
           'save without republishing it', () async {
-        final signer = LocalNostrSigner('1'.padLeft(64, '0'));
-        when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
-          final event = i.positionalArguments.single as Event;
-          await signer.signEvent(event);
-          sent.add(event);
+        answerPublishes((event) {
           storage.rejectNextListWrite = true;
           return acceptedOutcome(event);
         });

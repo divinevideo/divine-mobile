@@ -75,17 +75,20 @@ extension _CuratedListCreation on CuratedListService {
 
     final Event? event;
     try {
+      final createdAt = _publishClock.next(ownerPubkey: owner, listId: listId);
       event = await _relayGateway.signList(
         series,
         ownerPubkey: owner,
-        createdAt: () => _publishClock.next(ownerPubkey: owner, listId: listId),
+        createdAt: () => createdAt,
       );
       if (!isReadyForMutations ||
           !_isCurrent(owner) ||
           !_relayEvidence.allows(series)) {
         return const SeriesCreationFailed();
       }
-      if (event == null) return const SeriesCreationRejected();
+      if (event == null || !_matchesSeriesEvent(event, series, createdAt)) {
+        return const SeriesCreationRejected();
+      }
       final outcome = await _nostrService.publishEventAwaitOk(event);
       if (!_isCurrent(owner)) return const SeriesCreationFailed();
       if (!outcome.acceptedByAny) return const SeriesCreationRejected();
@@ -122,6 +125,19 @@ extension _CuratedListCreation on CuratedListService {
       return const SeriesCreationFailed();
     }
     return SeriesCreated(saved);
+  }
+
+  /// Only the intended event can prove that this new coordinate was accepted.
+  bool _matchesSeriesEvent(Event event, CuratedList series, int createdAt) {
+    final tags = CuratedListConverter.toEventTags(series);
+    const equality = DeepCollectionEquality();
+    return event.kind == 30005 &&
+        event.createdAt == createdAt &&
+        event.content == 'Curated video list: ${series.name}' &&
+        (equality.equals(event.tags, tags) ||
+            equality.equals(event.tags, [...tags, Nip89ClientTag.tag])) &&
+        event.isValid &&
+        event.isSigned;
   }
 
   Future<CuratedList?> _createList({

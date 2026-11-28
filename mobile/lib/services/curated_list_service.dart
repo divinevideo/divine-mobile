@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:clock/clock.dart';
+import 'package:collection/collection.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
