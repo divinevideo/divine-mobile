@@ -23,6 +23,8 @@ import 'package:divine_camera/src/desktop/desktop_camera_backend.dart';
 const channel = MethodChannel('video.divine/desktop_capture');
 final previewFrames = <int, Completer<Map>>{};
 final cameraErrors = <int, Completer<String>>{};
+final disposedStreamIds = <int>{};
+var lateStreamFrames = 0;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   channel.setMethodCallHandler((call) async {
@@ -33,6 +35,9 @@ Future<void> main() async {
     }
     if (call.method == 'imageStreamFrame' && call.arguments is Map) {
       final frame = call.arguments as Map;
+      if (disposedStreamIds.contains(frame['cameraId'])) {
+        lateStreamFrames++;
+      }
       final pending = previewFrames[frame['cameraId']];
       if (pending != null && !pending.isCompleted && (frame['width'] as num) > 0 &&
           (frame['height'] as num) > 0 && (frame['bytes'] as List).isNotEmpty) {
@@ -228,6 +233,8 @@ Future<void> main() async {
     if (Platform.isLinux) {
       setStage('completed-private-transfer');
       await verifyPrivateTransfer(root);
+      setStage('image-stream-dispose-retirement');
+      await verifyImageStreamDisposeRetirement(device);
     }
     if (Platform.isWindows) {
       setStage('initialization-disposal');
@@ -313,6 +320,28 @@ Future<void> verifySourcesReleased() async {
   if (Platform.isWindows &&
       await channel.invokeMethod<int>('testCaptureSourcesInUse') != 0) {
     throw StateError('Dispose acknowledged an active capture source');
+  }
+}
+
+Future<void> verifyImageStreamDisposeRetirement(
+  Map<Object?, Object?> device,
+) async {
+  final created = await channel.invokeMapMethod<String, Object?>('create', {
+    'cameraName': device['name'], 'resolutionPreset': 1,
+    'enableAudio': false, 'fps': 30, 'mirrorOutput': false,
+  });
+  final streamId = created!['cameraId']! as int;
+  await channel.invokeMethod<Object?>('initialize', {'cameraId': streamId});
+  final first = previewFrames[streamId] = Completer<Map>();
+  await channel.invokeMethod<void>('startImageStream', {'cameraId': streamId});
+  await first.future.timeout(const Duration(seconds: 15));
+  previewFrames.remove(streamId);
+  await channel.invokeMethod<void>('dispose', {'cameraId': streamId});
+  disposedStreamIds.add(streamId);
+  await channel.invokeMethod<Object?>('testMainLoopBarrier');
+  await Future<void>.delayed(const Duration(milliseconds: 100));
+  if (lateStreamFrames != 0) {
+    throw StateError('Image stream frame arrived after dispose reply');
   }
 }
 

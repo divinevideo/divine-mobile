@@ -39,7 +39,7 @@ enum class CameraState {
 
 struct CameraConfig {
   std::wstring symbolic_link;
-  int  resolution_preset = 4;  // 0=low … 4=max
+  int  resolution_preset = 5;  // 0=low … 5=max
   bool enable_audio      = false;
   bool mirror_output     = false;
   int  target_fps        = 30;
@@ -182,6 +182,9 @@ class Camera : public std::enable_shared_from_this<Camera> {
   std::wstring                   current_record_path_;
   std::atomic<bool>              is_recording_{false};
   int                            active_record_bitrate_ = 0;
+  std::mutex                     record_stop_mutex_;
+  std::condition_variable        record_stop_cv_;
+  bool                           record_stopped_ = true;
 
   // ── Preview / frame state ───────────────────────────────────────────────
   std::atomic<bool> first_frame_received_{false};

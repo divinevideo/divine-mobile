@@ -20,8 +20,9 @@ ffmpeg -f lavfi -i 'color=c=green:s=128x240' -frames:v 1 \
 
 These are decoder characterization inputs, not output from a physical webcam.
 The explicit native entrypoint is outside normal unit-test discovery because
-those jobs do not install the native runtime. From the camera package on Linux
-with libmpv2 and Flutter 3.47.9:
+platform-neutral Dart jobs do not install the native runtime; it runs in
+`Divine Camera CI` (`Linux Capture Ownership`) with `libmpv2` installed, and
+can also be run locally on Linux with `libmpv2` and Flutter 3.47.9:
 
 ```sh
 flutter test --no-pub \

@@ -280,7 +280,7 @@ void CameraDesktopPlugin::HandleCreate(
 
   const int* resolution_preset_ptr =
       std::get_if<int>(&args.at(flutter::EncodableValue("resolutionPreset")));
-  int resolution_preset = resolution_preset_ptr ? *resolution_preset_ptr : 4;
+  int resolution_preset = resolution_preset_ptr ? *resolution_preset_ptr : 5;
 
   const bool* enable_audio_ptr = nullptr;
   auto audio_it = args.find(flutter::EncodableValue("enableAudio"));

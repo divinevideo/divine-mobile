@@ -471,10 +471,15 @@ gboolean Camera::OnBusMessage(GstBus* bus, GstMessage* msg,
       // C-2: load state_ atomically.
       CameraState s = self->state_.load();
       if (s == CameraState::kInitializing) {
-        self->RespondToPendingInit(false, err->message);
+        self->RespondToPendingInit(false, err ? err->message : "Unknown error");
+        self->ReleasePipeline();
+        self->callback_lifetime_ = std::make_shared<int>(0);
         self->state_.store(CameraState::kCreated);
+        g_error_free(err);
+        g_free(debug);
+        return G_SOURCE_REMOVE;
       } else if (s == CameraState::kRunning || s == CameraState::kPaused) {
-        self->SendError(err->message);
+        self->SendError(err ? err->message : "Unknown error");
       }
 
       g_error_free(err);
@@ -502,9 +507,8 @@ gboolean Camera::OnInitTimeout(gpointer user_data) {
   if (self->state_.load() == CameraState::kInitializing) {
     self->RespondToPendingInit(
         false, "Camera initialization timed out, no frames received");
-    if (self->pipeline_) {
-      gst_element_set_state(self->pipeline_, GST_STATE_NULL);
-    }
+    self->ReleasePipeline();
+    self->callback_lifetime_ = std::make_shared<int>(0);
     self->state_.store(CameraState::kCreated);
   }
   return G_SOURCE_REMOVE;

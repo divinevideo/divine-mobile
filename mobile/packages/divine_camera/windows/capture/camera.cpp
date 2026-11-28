@@ -259,8 +259,9 @@ uint32_t Camera::MaxPreviewHeightForPreset() const {
     case 0:  return 240;
     case 1:  return 480;
     case 2:  return 720;
-    case 3:  return 720;
-    case 4:  return 1080;
+    case 3:  return 1080;
+    case 4:  return 2160;
+    case 5:
     default: return 0xFFFFFFFF;
   }
 }
@@ -849,6 +850,27 @@ void Camera::Initialize(
 // ============================================================================
 
 void Camera::PostEngineEvent(IMFMediaEvent* event) {
+  if (event) {
+    GUID event_type = GUID_NULL;
+    if (SUCCEEDED(event->GetExtendedType(&event_type))) {
+      bool recording_ended = event_type == MF_CAPTURE_ENGINE_RECORD_STOPPED ||
+                             event_type == MF_CAPTURE_ENGINE_ERROR;
+      if (!recording_ended &&
+          event_type == MF_CAPTURE_ENGINE_RECORD_STARTED) {
+        HRESULT status = S_OK;
+        if (FAILED(event->GetStatus(&status)) || FAILED(status)) {
+          recording_ended = true;
+        }
+      }
+      if (recording_ended) {
+        {
+          std::lock_guard<std::mutex> lk(record_stop_mutex_);
+          record_stopped_ = true;
+        }
+        record_stop_cv_.notify_all();
+      }
+    }
+  }
   ComPtr<IMFMediaEvent> retained = event;
   auto weak = weak_from_this();
   platform_task_poster_([weak, retained]() {
@@ -1361,6 +1383,10 @@ void Camera::StartVideoRecording(
   }
 
   record_handler_->SetStarting();
+  {
+    std::lock_guard<std::mutex> lk(record_stop_mutex_);
+    record_stopped_ = false;
+  }
   is_recording_ = true;
 
   {
@@ -1372,6 +1398,11 @@ void Camera::StartVideoRecording(
   if (FAILED(hr)) {
     DebugLog("StartVideoRecording: StartRecord failed " + HrToString(hr));
     is_recording_ = false;
+    {
+      std::lock_guard<std::mutex> lk(record_stop_mutex_);
+      record_stopped_ = true;
+    }
+    record_stop_cv_.notify_all();
     record_handler_.reset();
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> r;
     {
@@ -1422,6 +1453,11 @@ void Camera::StopVideoRecording(
   if (FAILED(hr)) {
     DebugLog("StopVideoRecording: StopRecord failed " + HrToString(hr));
     is_recording_ = false;
+    {
+      std::lock_guard<std::mutex> lk(record_stop_mutex_);
+      record_stopped_ = true;
+    }
+    record_stop_cv_.notify_all();
     record_handler_.reset();
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> r;
     {
@@ -1656,12 +1692,23 @@ void Camera::DisposeInternal() {
   FailAllPendingResults("Camera disposed");
   photo_writers_.CloseAndWait();
 
-  // Stop recording (non-finalizing, we don't care about the output file).
-  if (is_recording_.load() && capture_engine_) {
-    is_recording_ = false;
+  // Stop recording (non-finalizing, we don't care about the output file) and
+  // wait for Media Foundation to signal RECORD_STOPPED before releasing the
+  // engine and replying so no writer handle remains open on the capture file.
+  if (is_recording_.exchange(false) && capture_engine_) {
+    const bool already_stopping =
+        record_handler_ && !record_handler_->CanStop();
     HRESULT stop_rec_hr = capture_engine_->StopRecord(FALSE, FALSE);
     if (FAILED(stop_rec_hr)) {
       DebugLog("DisposeInternal: StopRecord failed " + HrToString(stop_rec_hr));
+    }
+    if (SUCCEEDED(stop_rec_hr) || already_stopping) {
+      std::unique_lock<std::mutex> lk(record_stop_mutex_);
+      if (!record_stop_cv_.wait_for(
+              lk, std::chrono::seconds(5),
+              [this] { return record_stopped_; })) {
+        DebugLog("DisposeInternal: timed out waiting for RECORD_STOPPED");
+      }
     }
     record_handler_.reset();
   }
