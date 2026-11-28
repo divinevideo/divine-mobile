@@ -150,8 +150,8 @@ class _FindPeopleItem extends StatelessWidget {
     return Semantics(
       button: true,
       label: context.l10n.shareFindPeople,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(_ShareWithSection._avatarRadius),
         onTap: onTap,
         child: SizedBox(
           width: _ShareWithSection._itemWidth,

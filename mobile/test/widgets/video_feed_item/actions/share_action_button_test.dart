@@ -52,6 +52,7 @@ import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart'
 import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
+import 'package:openvine/widgets/find_people_sheet.dart';
 import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/actions/share_action_button.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -1776,6 +1777,8 @@ void main() {
             authState: AuthState.authenticated,
             currentPublicKeyHex: testPubkeyFromSeed(71),
           );
+          final identity = mockAuth.requireIdentity;
+          when(() => mockAuth.currentIdentity).thenReturn(identity);
           final repository = _MockDmRepository();
           when(
             () => repository.watchDeliveryState(
@@ -2099,6 +2102,27 @@ void main() {
         );
 
         group('tap to send', () {
+          Future<void> tabTo(
+            WidgetTester tester,
+            bool Function(Widget) matches,
+          ) async {
+            bool hasFocus() {
+              var found = false;
+              FocusManager.instance.primaryFocus?.context
+                  ?.visitAncestorElements((element) {
+                    found = matches(element.widget);
+                    return !found;
+                  });
+              return found;
+            }
+
+            for (var i = 0; i < 12 && !hasFocus(); i++) {
+              await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+              await tester.pump();
+            }
+            expect(hasFocus(), isTrue);
+          }
+
           testWidgets(
             'a contact can be focused and sent to from the keyboard',
             (
@@ -2117,28 +2141,12 @@ void main() {
               );
               await pumpOpenSheet(tester);
 
-              bool aliceHasFocus() {
-                var found = false;
-                FocusManager.instance.primaryFocus?.context
-                    ?.visitAncestorElements((element) {
-                      final widget = element.widget;
-                      found =
-                          widget is Semantics &&
-                          widget.properties.label ==
-                              l10n.shareRecipientSendTo('Alice');
-                      return !found;
-                    });
-                return found;
-              }
-
-              for (var i = 0; i < 12 && !aliceHasFocus(); i++) {
-                await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-                await tester.pump();
-              }
-              expect(
-                aliceHasFocus(),
-                isTrue,
-                reason: 'Tab never reached Alice',
+              await tabTo(
+                tester,
+                (widget) =>
+                    widget is Semantics &&
+                    widget.properties.label ==
+                        l10n.shareRecipientSendTo('Alice'),
               );
 
               await tester.sendKeyEvent(LogicalKeyboardKey.enter);
@@ -2153,6 +2161,43 @@ void main() {
               expect(find.text(l10n.shareWithTitle), findsNothing);
             },
           );
+
+          testWidgets('Find people opens the composer from the keyboard', (
+            tester,
+          ) async {
+            await pumpOpenSheet(tester);
+
+            await tabTo(
+              tester,
+              (widget) =>
+                  widget is Semantics &&
+                  widget.properties.label == l10n.shareFindPeople,
+            );
+            await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+            await tester.pumpAndSettle();
+
+            final picker = find.byType(FindPeopleSheet);
+            expect(picker, findsOneWidget);
+            await tabTo(
+              tester,
+              (widget) =>
+                  widget is ListTile &&
+                  widget.title is Text &&
+                  (widget.title! as Text).data == 'Alice',
+            );
+            await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+            await tester.pumpAndSettle();
+
+            expect(picker, findsNothing);
+            expect(find.byType(TextField), findsOneWidget);
+            verifyNever(
+              () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                video: any(named: 'video'),
+                recipientPubkeys: any(named: 'recipientPubkeys'),
+                personalMessage: any(named: 'personalMessage'),
+              ),
+            );
+          });
 
           testWidgets('announces which recipient a tap sends to and that a '
               'long-press adds a message', (tester) async {
