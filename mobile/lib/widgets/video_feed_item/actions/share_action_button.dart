@@ -585,7 +585,7 @@ class _UnifiedShareSheetView extends StatelessWidget {
                 void toggleRecipient(ShareableUser user) {
                   final deselectingLast =
                       state.attemptedRecipients.length == 1 &&
-                      state.isSelected(user);
+                      state.attemptedRecipients.single.pubkey == user.pubkey;
                   if (deselectingLast) messageController.clear();
                   bloc.add(ShareSheetRecipientToggled(user));
                 }
@@ -666,15 +666,7 @@ class _UnifiedShareSheetView extends StatelessWidget {
                                 ),
                                 onDeleted: state.isSending
                                     ? null
-                                    : () {
-                                        if (state.attemptedRecipients.length ==
-                                            1) {
-                                          messageController.clear();
-                                        }
-                                        bloc.add(
-                                          ShareSheetRecipientToggled(user),
-                                        );
-                                      },
+                                    : () => toggleRecipient(user),
                               ),
                           ],
                         ),

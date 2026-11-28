@@ -2004,29 +2004,36 @@ void main() {
           expect(find.byType(TextField), findsNothing);
         });
 
-        testWidgets(
-          'tapping the last selected contact again deselects, restores '
-          'more actions, and drops the draft',
-          (tester) async {
-            await pumpOpenSheet(tester);
+        for (final removal in ['avatar', 'chip']) {
+          testWidgets(
+            'removing the last recipient via the $removal drops the draft',
+            (tester) async {
+              await pumpOpenSheet(tester);
 
-            await tester.longPress(find.text('Alice').first);
-            await tester.pumpAndSettle();
-            await tester.enterText(find.byType(TextField), 'draft text');
+              final contact = find.text('Alice').first;
+              await tester.longPress(contact);
+              await tester.pumpAndSettle();
+              await tester.enterText(find.byType(TextField), 'draft text');
 
-            await tester.tap(find.text('Alice').first);
-            await tester.pumpAndSettle();
+              final remove = removal == 'avatar'
+                  ? contact
+                  : find.byTooltip(
+                      MaterialLocalizations.of(tester.element(contact))
+                          .deleteButtonTooltip,
+                    );
+              await tester.tap(remove);
+              await tester.pumpAndSettle();
 
-            expect(find.byType(TextField), findsNothing);
-            expect(find.text('More actions'), findsOneWidget);
+              expect(find.byType(TextField), findsNothing);
+              expect(find.text('More actions'), findsOneWidget);
 
-            // Re-selecting shows an empty composer — the draft was dropped.
-            await tester.longPress(find.text('Alice').first);
-            await tester.pumpAndSettle();
-            final field = tester.widget<TextField>(find.byType(TextField));
-            expect(field.controller!.text, isEmpty);
-          },
-        );
+              await tester.longPress(contact);
+              await tester.pumpAndSettle();
+              final field = tester.widget<TextField>(find.byType(TextField));
+              expect(field.controller!.text, isEmpty);
+            },
+          );
+        }
 
         testWidgets(
           'tapping more contacts adds them to the selection and keeps '
