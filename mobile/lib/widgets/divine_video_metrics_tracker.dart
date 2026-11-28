@@ -15,6 +15,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
+import 'package:openvine/utils/playback_loops.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:uuid/uuid.dart';
 
@@ -126,6 +127,9 @@ class _DivineVideoMetricsTrackerState
   Duration _seenWatchRecorded = Duration.zero;
 
   Duration? _lastPosition;
+
+  /// Playback time of the session when the last wrap was counted.
+  Duration _playedAtLastWrap = Duration.zero;
 
   /// Last duration the player reported. Read at flush time in preference to
   /// the controller, which may already be serving the next video.
@@ -292,11 +296,28 @@ class _DivineVideoMetricsTrackerState
         position < _lastPosition! &&
         position < const Duration(seconds: 1) &&
         duration > Duration.zero &&
-        _lastPosition!.inMilliseconds > duration.inMilliseconds - 1000) {
+        _lastPosition!.inMilliseconds > duration.inMilliseconds - 1000 &&
+        _isCountableWrap(now, duration)) {
       _wrapsTotal += 1;
+      _playedAtLastWrap = _playedTime(now);
       widget.loopCounts?.loopCompleted();
     }
     if (state.isPlaying) _lastPosition = position;
+  }
+
+  /// Whether a wrap of a clip [duration] long counts as a loop. Every wrap of
+  /// a clip at least [minimumLoopDuration] long does; a shorter clip's wraps
+  /// count only once that much playback has passed since the last one.
+  bool _isCountableWrap(DateTime now, Duration duration) {
+    if (duration >= minimumLoopDuration) return true;
+    return _playedTime(now) - _playedAtLastWrap >= minimumLoopDuration;
+  }
+
+  /// Playback time of the session so far, including the open play interval.
+  Duration _playedTime(DateTime now) {
+    final startedAt = _playIntervalStartedAt;
+    if (startedAt == null) return _watchTotal;
+    return _watchTotal + now.difference(startedAt);
   }
 
   /// The view is counted here: one start-phase event, fired at the first
@@ -516,11 +537,15 @@ class _DivineVideoMetricsTrackerState
 
   /// Loops for the whole session so far: counted wrap-arounds, or the
   /// watch-time ratio when that is larger, so a wrap missed across a flush
-  /// seam does not lose the pass.
+  /// seam does not lose the pass. The ratio divides by at least
+  /// [minimumLoopDuration], so a sub-second clip adds one loop per second.
   double _cumulativeLoops(Duration? totalDuration) {
     var loops = _wrapsTotal;
     if (totalDuration != null && totalDuration > Duration.zero) {
-      final ratio = _watchTotal.inMilliseconds / totalDuration.inMilliseconds;
+      final ratio = loopsInPlayback(
+        watched: _watchTotal,
+        clipLength: totalDuration,
+      );
       if (ratio > loops) loops = ratio;
     }
     return loops;
@@ -536,9 +561,15 @@ class _DivineVideoMetricsTrackerState
     if (widget._clock().difference(mountedAt) <= Duration.zero) return;
 
     final deltaWatch = _watchTotal - _seenWatchRecorded;
-    // Round the cumulative figure, not each delta, so repeated partial
-    // segments cannot each round down to zero and lose the pass.
-    final cumulativeSeenLoops = _cumulativeLoops(totalDuration).round();
+    // Convert the cumulative figure to whole loops so partial segments can
+    // contribute to the next loop. Short clips round down to keep a revisit
+    // of less than a second from adding a whole loop to the history.
+    final loops = _cumulativeLoops(totalDuration);
+    final isShortClip =
+        totalDuration != null &&
+        totalDuration > Duration.zero &&
+        totalDuration < minimumLoopDuration;
+    final cumulativeSeenLoops = isShortClip ? loops.floor() : loops.round();
     final deltaLoops = cumulativeSeenLoops - _seenLoopsRecorded;
 
     if (_hasRecordedImpression &&
@@ -586,6 +617,7 @@ class _DivineVideoMetricsTrackerState
     _seenLoopsRecorded = 0;
     _seenWatchRecorded = Duration.zero;
     _lastPosition = null;
+    _playedAtLastWrap = Duration.zero;
     _lastKnownDuration = null;
   }
 

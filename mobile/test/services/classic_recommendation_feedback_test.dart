@@ -139,6 +139,28 @@ void main() {
     );
 
     test(
+      'without loops, a clip under a second counts as a second long',
+      () async {
+        await analytics.initialize();
+        // By clip length, 900 ms of a 67 ms clip would be 13.4 loops, a
+        // replay; at one second per loop it is 0.9, a completed view.
+        await analytics.trackDetailedVideoViewWithUser(
+          _video,
+          userId: null,
+          source: 'mobile',
+          eventType: 'view_end',
+          watchDuration: const Duration(milliseconds: 900),
+          totalDuration: const Duration(milliseconds: 67),
+        );
+        await Future<void>.value();
+        expect(
+          outcomes.whereType<ClassicFeedInteraction>().map((v) => v.signal),
+          [ClassicFeedSignal.completed],
+        );
+      },
+    );
+
+    test(
       'confirmed likes tune recommendations until the reaction is retracted',
       () async {
         await analytics.initialize();

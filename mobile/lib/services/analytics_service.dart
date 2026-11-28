@@ -16,6 +16,7 @@ import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/product_event_queue.dart';
 import 'package:openvine/services/view_event_publisher.dart';
 import 'package:openvine/services/view_event_retry_service.dart';
+import 'package:openvine/utils/playback_loops.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:uuid/uuid.dart';
@@ -902,7 +903,10 @@ class AnalyticsService implements BackgroundAwareService {
       final ratio =
           loopCount ??
           (totalDuration != null && totalDuration > Duration.zero
-              ? watchDuration.inMicroseconds / totalDuration.inMicroseconds
+              ? loopsInPlayback(
+                  watched: watchDuration,
+                  clipLength: totalDuration,
+                )
               : null);
       if (ratio != null && ratio.isFinite && ratio > 0) {
         recordRecommendationInteraction(

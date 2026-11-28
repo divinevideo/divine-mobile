@@ -73,6 +73,7 @@ void main() {
       required String id,
       PendingViewEventStatus status = PendingViewEventStatus.pending,
       int watchDurationMs = 2500,
+      int totalDurationMs = 6000,
       int retryCount = 0,
       DateTime? lastAttemptAt,
       String eventVideoPubkey = videoPubkey,
@@ -93,7 +94,7 @@ void main() {
         videoEventKind: videoEventKind,
         userPubkey: userPubkey,
         watchDurationMs: watchDurationMs,
-        totalDurationMs: 6000,
+        totalDurationMs: totalDurationMs,
         loopCount: 1,
         trafficSource: 'home',
         sourceDetail: 'following',
@@ -755,6 +756,35 @@ void main() {
           source: any(named: 'source'),
           sourceDetail: any(named: 'sourceDetail'),
           loopCount: any(named: 'loopCount'),
+          phase: ViewEventPhase.end,
+          appVersion: any(named: 'appVersion'),
+        ),
+      ).called(1);
+    });
+
+    test('counts a clip under a second as a second long', () async {
+      // By clip length, 5 s of a 67 ms clip would be 74.6 loops, far past the
+      // relay's bound of one loop per watched second.
+      await dao.enqueue(
+        makeEvent(
+          id: 'view-short-clip',
+          watchDurationMs: 5000,
+          totalDurationMs: 67,
+          phase: 'end',
+        ),
+      );
+      final service = makeService();
+
+      await service.sweep();
+
+      verify(
+        () => publisher.publishViewEvent(
+          video: any(named: 'video'),
+          startSeconds: 0,
+          endSeconds: 5,
+          source: any(named: 'source'),
+          sourceDetail: any(named: 'sourceDetail'),
+          loopCount: 5.0,
           phase: ViewEventPhase.end,
           appVersion: any(named: 'appVersion'),
         ),

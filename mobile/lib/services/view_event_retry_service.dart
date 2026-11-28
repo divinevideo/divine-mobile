@@ -8,6 +8,7 @@ import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/services/view_event_publisher.dart';
+import 'package:openvine/utils/playback_loops.dart';
 
 /// Backoff configuration for [ViewEventRetryService].
 class ViewEventRetryConfig {
@@ -167,12 +168,16 @@ class ViewEventRetryService {
 
           double? fractionalLoops;
           if (phase != ViewEventPhase.start) {
-            // Derive fractional loops from watch/total already on the row
-            // instead of the rounded IntColumn, so 0.75 does not become 1.0
-            // and the queue vs direct paths agree.
-            if (row.totalDurationMs != null && row.totalDurationMs! > 0) {
-              fractionalLoops =
-                  row.watchDurationMs / row.totalDurationMs!.toDouble();
+            // Derive loops from the queued watch time and the same minimum
+            // clip length as the tracker. The tracker sends whole watched
+            // seconds to the queue, while direct publishing can use its
+            // fractional loop count.
+            final totalDurationMs = row.totalDurationMs;
+            if (totalDurationMs != null && totalDurationMs > 0) {
+              fractionalLoops = loopsInPlayback(
+                watched: Duration(milliseconds: row.watchDurationMs),
+                clipLength: Duration(milliseconds: totalDurationMs),
+              );
             } else {
               fractionalLoops = row.loopCount?.toDouble();
             }
