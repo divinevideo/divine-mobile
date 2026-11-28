@@ -89,6 +89,7 @@ dependency when it is one of:
 - a **native plugin** — it ships a `flutter: plugin:` block and talks over a
   `MethodChannel` (`background_uploader`, `caption_generator`,
   `divine_device_attestation`, `divine_quick_actions`,
+  `divine_desktop_video_editor` (native media-helper location and process lifetime),
   `image_metadata_stripper`, `publishing_suggestions`), or wraps one
   (`keycast_flutter`, `nostr_key_manager`, `media_cache`,
   `permissions_service`, `sound_service`);

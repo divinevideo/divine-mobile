@@ -50,6 +50,7 @@ workspace:
   - packages/divine_ui
   - packages/db_client
   - packages/divine_camera
+  - packages/divine_desktop_video_editor
   - packages/divine_device_attestation
   - packages/divine_quick_actions
   - packages/divine_status_client

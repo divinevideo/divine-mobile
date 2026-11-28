@@ -10,6 +10,7 @@ class MockDivineCameraPlatform
     with MockPlatformInterfaceMixin
     implements DivineCameraPlatform {
   CameraState _state = const CameraState();
+  int previewTextureOffset = 0;
   void Function(VideoRecordingResult? result)? _onRecordingAutoStopped;
   void Function(RemoteRecordTrigger trigger)? _onRemoteRecordTrigger;
 
@@ -158,10 +159,8 @@ class MockDivineCameraPlatform
   Future<CameraState> getCameraState() async => _state;
 
   @override
-  Widget buildPreview(int textureId) => Container(
-    key: Key('texture_$textureId'),
-    color: Colors.blue,
-  );
+  Widget buildPreview(int textureId) =>
+      Texture(textureId: textureId + previewTextureOffset);
 }
 
 /// Mock with wide aspect ratio for testing preview calculation
@@ -326,6 +325,17 @@ void main() {
 
       expect(find.byType(Texture), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsNothing);
+    });
+
+    testWidgets('uses the platform preview for an opaque camera handle', (
+      tester,
+    ) async {
+      mockPlatform.previewTextureOffset = 100;
+      await camera.initialize();
+      await tester.pumpWidget(buildTestWidget());
+
+      expect(tester.widget<Texture>(find.byType(Texture)).textureId, 101);
+      expect(camera.state.textureId, 1);
     });
 
     testWidgets('displays preview with correct aspect ratio', (tester) async {

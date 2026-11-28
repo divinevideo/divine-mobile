@@ -132,6 +132,21 @@ class CameraMobileService extends CameraService implements DualCameraCapture {
   }) async {
     _isInitialized = false;
     _initializationError = null;
+    _camera.onCameraError = (error) {
+      if (!identical(_cameraOwner, this)) return;
+      Log.error(
+        '📷 Camera error after initialization: $error',
+        name: 'CameraMobileService',
+        category: .video,
+        error: error,
+      );
+      final wasInitialized = _isInitialized;
+      _isInitialized = false;
+      _isSwitchingCamera = false;
+      _secondaryRecording = null;
+      _initializationError = CameraInitializationError.failed;
+      if (wasInitialized) onUpdateState(forceCameraRebuild: true);
+    };
 
     Log.info(
       '📷 Initializing mobile camera with quality: ${videoQuality.value}, '

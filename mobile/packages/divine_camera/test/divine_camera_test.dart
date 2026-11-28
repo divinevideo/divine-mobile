@@ -10,10 +10,14 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 class MockDivineCameraPlatform
     with MockPlatformInterfaceMixin
-    implements DivineCameraPlatform {
+    implements DivineCameraPlatform, CameraErrorEvents {
   CameraState _state = const CameraState();
   bool _isRecording = false;
   bool throwOnStopRecording = false;
+  Object? errorWhileInitializing;
+
+  @override
+  void Function(Object error)? onCameraError;
 
   /// Records the `releaseAudio` argument of the last [pausePreview] call, or
   /// `null` if it was never called.
@@ -100,6 +104,7 @@ class MockDivineCameraPlatform
         DivineVideoStabilizationMode.off,
   }) async {
     lastInitStabilizationMode = videoStabilizationMode;
+    if (errorWhileInitializing case final error?) onCameraError?.call(error);
     return _state = CameraState(
       isInitialized: true,
       lens: lens,
@@ -376,6 +381,37 @@ void main() {
     });
 
     group('initialize', () {
+      test(
+        'does not restore readiness after a device fails while opening',
+        () async {
+          final error = StateError(
+            'Synthetic device lost during initialization',
+          );
+          final failures = <Object>[];
+          mockPlatform.errorWhileInitializing = error;
+          DivineCamera.instance.onCameraError = failures.add;
+
+          await expectLater(
+            DivineCamera.instance.initialize(),
+            throwsA(
+              isA<CameraException>().having(
+                (error) => error.code,
+                'code',
+                'camera_unavailable',
+              ),
+            ),
+          );
+
+          expect(DivineCamera.instance.state.isInitialized, isFalse);
+          expect(failures, [error]);
+          mockPlatform.errorWhileInitializing = null;
+          expect(
+            (await DivineCamera.instance.initialize()).isInitialized,
+            isTrue,
+          );
+        },
+      );
+
       test('initializes with default lens (back)', () async {
         final state = await DivineCamera.instance.initialize();
 

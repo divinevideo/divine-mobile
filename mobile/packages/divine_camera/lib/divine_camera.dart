@@ -1,6 +1,8 @@
 // ABOUTME: Base service for camera operations across different platforms
 // ABOUTME: Provides unified API for camera control, recording, and preview
 
+import 'package:camera_platform_interface/camera_platform_interface.dart'
+    show CameraException;
 import 'package:divine_camera/divine_camera_platform_interface.dart';
 import 'package:divine_camera/src/models/camera_lens.dart';
 import 'package:divine_camera/src/models/camera_state.dart';
@@ -15,6 +17,8 @@ import 'package:divine_camera/src/models/video_stabilization_mode.dart';
 import 'package:flutter/widgets.dart';
 
 // Export models for external use
+export 'package:camera_platform_interface/camera_platform_interface.dart'
+    show CameraException;
 export 'src/models/camera_lens.dart';
 export 'src/models/camera_lens_metadata.dart';
 export 'src/models/camera_state.dart';
@@ -45,6 +49,9 @@ class DivineCamera {
 
   /// Callback invoked when camera state changes.
   void Function(CameraState state)? onStateChanged;
+
+  /// Reports a device failure after capture resources have been released.
+  void Function(Object error)? onCameraError;
 
   /// Callback invoked when the native layer stops a recording on its own —
   /// the max duration was reached, or (iOS and Android) the camera was lost
@@ -89,6 +96,9 @@ class DivineCamera {
   /// The platform interface instance.
   DivineCameraPlatform get _platform => DivineCameraPlatform.instance;
 
+  /// Builds the preview for the platform's opaque preview handle.
+  Widget buildPreview(int textureId) => _platform.buildPreview(textureId);
+
   /// Handles auto-stop event from platform.
   void _handleAutoStop(VideoRecordingResult? result) {
     _state = _state.copyWith(isRecording: false);
@@ -104,6 +114,12 @@ class DivineCamera {
   /// Handles a screen flash change from platform.
   void _handleScreenFlashChanged(bool isActive) {
     onScreenFlashChanged?.call(isActive);
+  }
+
+  void _handleCameraError(Object error) {
+    _state = const CameraState();
+    _notifyStateChanged();
+    onCameraError?.call(error);
   }
 
   /// Returns the platform version.
@@ -149,11 +165,18 @@ class DivineCamera {
     _platform.onRemoteRecordTrigger = _handleRemoteRecordTrigger;
 
     _platform.onScreenFlashChanged = _handleScreenFlashChanged;
+    var deviceFailed = false;
+    if (_platform case final CameraErrorEvents events) {
+      events.onCameraError = (error) {
+        deviceFailed = true;
+        _handleCameraError(error);
+      };
+    }
 
     // Store the mirror setting for preview widget
     _mirrorFrontCameraOutput = mirrorFrontCameraOutput;
 
-    _state = await _platform.initializeCamera(
+    final state = await _platform.initializeCamera(
       lens: lens,
       videoQuality: videoQuality,
       enableScreenFlash: enableScreenFlash,
@@ -162,6 +185,13 @@ class DivineCamera {
       preferUnprocessedAudio: preferUnprocessedAudio,
       videoStabilizationMode: videoStabilizationMode,
     );
+    if (deviceFailed) {
+      throw CameraException(
+        'camera_unavailable',
+        'Camera became unavailable during initialization.',
+      );
+    }
+    _state = state;
     _notifyStateChanged();
     return _state;
   }
@@ -176,12 +206,16 @@ class DivineCamera {
 
     // Clear listeners to prevent memory leaks
     onStateChanged = null;
+    onCameraError = null;
     onRecordingAutoStopped = null;
     onRemoteRecordTrigger = null;
     onScreenFlashChanged = null;
     _platform.onRecordingAutoStopped = null;
     _platform.onRemoteRecordTrigger = null;
     _platform.onScreenFlashChanged = null;
+    if (_platform case final CameraErrorEvents events) {
+      events.onCameraError = null;
+    }
     _remoteRecordControlEnabled = false;
   }
 
