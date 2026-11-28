@@ -724,6 +724,19 @@ class BlossomUploadService {
     return servers;
   }
 
+  /// The URL [serverUrl] serves the blob with [fileHash] at.
+  ///
+  /// BUD-01 serves every blob at `{server}/{sha256}`, so the URL has to name
+  /// the server that accepted the upload: a custom server keeps the blob only
+  /// there, and a URL on the default server would 404.
+  String _blobUrl(String serverUrl, String fileHash) {
+    var base = serverUrl;
+    while (base.endsWith('/')) {
+      base = base.substring(0, base.length - 1);
+    }
+    return '$base/$fileHash';
+  }
+
   /// Get the configured Blossom server URL.
   ///
   /// Falls back to the injected `defaultServerUrl` when nothing (or an empty
@@ -1644,6 +1657,7 @@ class BlossomUploadService {
 
     return _parseUploadResponse(
       response,
+      serverUrl: serverUrl,
       fileHash: fileHash,
       onProgress: onProgress,
     );
@@ -1696,6 +1710,7 @@ class BlossomUploadService {
 
   BlossomUploadResult _parseUploadResponse(
     Response<dynamic> response, {
+    required String serverUrl,
     required String fileHash,
     void Function(double)? onProgress,
   }) {
@@ -1763,7 +1778,7 @@ class BlossomUploadService {
     }
 
     if (response.statusCode == 409) {
-      final existingUrl = '$_defaultServerUrl/$fileHash';
+      final existingUrl = _blobUrl(serverUrl, fileHash);
       onProgress?.call(1);
 
       return BlossomUploadResult(
@@ -1898,6 +1913,7 @@ class BlossomUploadService {
       );
       return _parseUploadResponse(
         response,
+        serverUrl: serverUrl,
         fileHash: fileHash,
         onProgress: onProgress,
       );
@@ -2133,7 +2149,7 @@ class BlossomUploadService {
             // Construct the canonical Blossom URL from server + hash
             // Per Blossom spec (BUD-01), blobs are always at {server}/{sha256}
             // This is deterministic and doesn't depend on server response
-            final canonicalUrl = '$_defaultServerUrl/$fileHash';
+            final canonicalUrl = _blobUrl(serverUrl, fileHash);
 
             Log.info(
               'Video uploaded to: $serverUrl',
@@ -2587,7 +2603,7 @@ class BlossomUploadService {
   }) {
     switch (event.status) {
       case BlossomBackgroundTransferStatus.completed:
-        final canonicalUrl = '$serverUrl/$fileHash';
+        final canonicalUrl = _blobUrl(serverUrl, fileHash);
         final body = event.responseBody;
         final decoded = body == null ? null : _tryDecodeJsonMap(body);
         String? responseUrl;
@@ -2641,7 +2657,7 @@ class BlossomUploadService {
         // content-addressed URL on the server the file was actually uploaded
         // to (not necessarily the default when a custom server is configured).
         if (statusCode == 409) {
-          final existingUrl = '$serverUrl/$fileHash';
+          final existingUrl = _blobUrl(serverUrl, fileHash);
           return BlossomUploadResult(
             success: true,
             url: existingUrl,
@@ -2943,8 +2959,8 @@ class BlossomUploadService {
         );
 
         if (result.success) {
-          // Construct canonical Blossom URL from server + hash
-          final canonicalUrl = '$_defaultServerUrl/$fileHash';
+          // BUD-01 URL on the server that stored the blob.
+          final canonicalUrl = _blobUrl(serverUrl, fileHash);
 
           Log.info(
             'Image uploaded to: $serverUrl',
@@ -3163,8 +3179,8 @@ class BlossomUploadService {
           );
 
           if (result.success) {
-            // Construct canonical Blossom URL from server + hash
-            final canonicalUrl = '$_defaultServerUrl/$fileHash';
+            // BUD-01 URL on the server that stored the blob.
+            final canonicalUrl = _blobUrl(serverUrl, fileHash);
 
             Log.info(
               'Audio uploaded to: $serverUrl',
@@ -3298,7 +3314,7 @@ class BlossomUploadService {
           );
 
           if (result.success) {
-            final canonicalUrl = '$_defaultServerUrl/$fileHash';
+            final canonicalUrl = _blobUrl(serverUrl, fileHash);
 
             Log.info(
               'Subtitle uploaded to: $serverUrl, '
@@ -3420,7 +3436,7 @@ class BlossomUploadService {
 
         if (cancelToken?.isCancelled ?? false) throw cancelToken!.cancelError!;
         if (result.success) {
-          final canonicalUrl = '$_defaultServerUrl/$fileHash';
+          final canonicalUrl = _blobUrl(serverUrl, fileHash);
           return BlossomUploadResult(
             success: true,
             url: canonicalUrl,
