@@ -1940,12 +1940,13 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => 'Wyślij';
-
-  @override
   String shareRecipientSendTo(String name) {
     return 'Wyślij do $name';
   }
+
+  @override
+  String get shareRecipientGestureHint =>
+      'Dotknij, aby wysłać. Przytrzymaj, aby dodać wiadomość.';
 
   @override
   String get shareMessageHint => 'Dodaj opcjonalną wiadomość...';

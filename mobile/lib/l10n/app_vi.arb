@@ -956,8 +956,8 @@
       }
     }
   },
-  "shareRecipientSend": "Gửi",
   "shareRecipientSendTo": "Gửi cho {name}",
+  "shareRecipientGestureHint": "Chạm để gửi. Nhấn giữ để thêm lời nhắn.",
   "shareMessageHint": "Thêm tin nhắn (không bắt buộc)...",
   "videoActionUnlike": "Bỏ thích video",
   "videoActionLike": "Thích video",

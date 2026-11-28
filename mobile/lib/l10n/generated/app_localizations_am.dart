@@ -1850,12 +1850,12 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => 'ይላኩ';
-
-  @override
   String shareRecipientSendTo(String name) {
     return 'ወደ $name ላክ';
   }
+
+  @override
+  String get shareRecipientGestureHint => 'ለመላክ ይንኩ። መልእክት ለመጨመር ተጭነው ይያዙ።';
 
   @override
   String get shareMessageHint => 'አማራጭ መልእክት አክል...';

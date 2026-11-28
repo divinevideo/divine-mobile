@@ -739,8 +739,8 @@
       }
     }
   },
-  "shareRecipientSend": "Envoyer",
   "shareRecipientSendTo": "Envoyer à {name}",
+  "shareRecipientGestureHint": "Appuie pour envoyer. Maintiens appuyé pour ajouter un message.",
   "shareMessageHint": "Ajouter un message (facultatif)...",
   "videoActionUnlike": "Ne plus aimer la vidéo",
   "videoActionLike": "Aimer la vidéo",

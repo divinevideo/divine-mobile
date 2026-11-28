@@ -978,7 +978,9 @@ void main() {
       (widget) => widget is DivineIcon && widget.icon == DivineIconName.arrowUp,
     );
 
-    testWidgets('tapping contact selects it and never sends', (tester) async {
+    testWidgets('long-pressing a contact selects it and never sends', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildSubjectWithContacts());
       await tester.tap(find.byType(ShareActionButton));
       await tester.pumpAndSettle();
@@ -986,8 +988,8 @@ void main() {
       // Verify contact appears in horizontal row
       expect(find.text('Alice'), findsOneWidget);
 
-      // Tap contact — selects and reveals the message composer
-      await tester.tap(find.text('Alice').first);
+      // Long-press selects and reveals the message composer.
+      await tester.longPress(find.text('Alice').first);
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.shareMessageHint), findsOneWidget);
@@ -1020,7 +1022,7 @@ void main() {
       await tester.tap(find.byType(ShareActionButton));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Alice').first);
+      await tester.longPress(find.text('Alice').first);
       await tester.pumpAndSettle();
       await tester.tap(sendButton());
       await tester.pumpAndSettle();
@@ -1046,7 +1048,7 @@ void main() {
       await tester.tap(find.byType(ShareActionButton));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Alice').first);
+      await tester.longPress(find.text('Alice').first);
       await tester.pumpAndSettle();
       expect(find.text(l10n.shareMessageHint), findsOneWidget);
 
@@ -1083,7 +1085,7 @@ void main() {
       await tester.tap(find.byType(ShareActionButton));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Alice').first);
+      await tester.longPress(find.text('Alice').first);
       await tester.pumpAndSettle();
       await tester.tap(sendButton());
       await tester.pumpAndSettle();

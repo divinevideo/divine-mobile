@@ -10,6 +10,7 @@ import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,6 +28,7 @@ import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -51,6 +53,7 @@ import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart'
 import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
+import 'package:openvine/widgets/find_people_sheet.dart';
 import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/actions/share_action_button.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -1716,7 +1719,7 @@ void main() {
           ) async {
             await pumpWithContact(tester, vanished, isVanished: true);
 
-            await tester.tap(find.text(l10n.profileDeletedAccountName));
+            await tester.longPress(find.text(l10n.profileDeletedAccountName));
             await tester.pumpAndSettle();
 
             // The selection chip in the composer header names the recipient
@@ -1775,6 +1778,8 @@ void main() {
             authState: AuthState.authenticated,
             currentPublicKeyHex: testPubkeyFromSeed(71),
           );
+          final identity = mockAuth.requireIdentity;
+          when(() => mockAuth.currentIdentity).thenReturn(identity);
           final repository = _MockDmRepository();
           when(
             () => repository.watchDeliveryState(
@@ -1846,16 +1851,23 @@ void main() {
 
             await pumpOpenSheet(tester, confirmation: confirmation);
 
-            expect(find.text(l10n.shareRecipientSend), findsNothing);
             expect(
               find.text(l10n.emailConfirmationSendBlocked),
               findsOneWidget,
             );
+            expect(find.text(l10n.shareRecipientGestureHint), findsNothing);
             expect(find.text(l10n.emailConfirmationResendSent), findsNothing);
 
             await tester.tap(find.text('Alice'));
             await tester.pumpAndSettle();
 
+            expect(
+              find.descendant(
+                of: find.byType(InputChip),
+                matching: find.text('Alice'),
+              ),
+              findsOneWidget,
+            );
             expect(
               find.text(l10n.emailConfirmationSendBlocked),
               findsOneWidget,
@@ -1885,20 +1897,55 @@ void main() {
           },
         );
 
+        testWidgets('tapping a contact sends the video to that person alone', (
+          tester,
+        ) async {
+          when(
+            () => mockVideoSharingService.shareVideoWithMultipleUsers(
+              video: any(named: 'video'),
+              recipientPubkeys: any(named: 'recipientPubkeys'),
+              personalMessage: any(named: 'personalMessage'),
+            ),
+          ).thenAnswer(
+            (_) async => {
+              alice.pubkey: const ShareResult.queued('rumor-a', 'chat-a'),
+            },
+          );
+          await pumpOpenSheet(tester);
+
+          await tester.tap(find.text('Alice').first);
+          await tester.pumpAndSettle();
+
+          verify(
+            () => mockVideoSharingService.shareVideoWithMultipleUsers(
+              video: any(named: 'video'),
+              recipientPubkeys: [alice.pubkey],
+            ),
+          ).called(1);
+          expect(find.text(l10n.shareWithTitle), findsNothing);
+          expect(find.text(l10n.dmPendingVideoSending), findsOneWidget);
+        });
+
         testWidgets(
-          'tapping a contact selects it and swaps more actions for the '
+          'long-pressing a contact selects it and swaps more actions for the '
           'message composer without sending',
           (tester) async {
             await pumpOpenSheet(tester);
             expect(find.text('More actions'), findsOneWidget);
-            expect(find.text(l10n.shareRecipientSend), findsNWidgets(2));
+            expect(
+              find.text(l10n.shareRecipientGestureHint),
+              findsOneWidget,
+            );
 
-            await tester.tap(find.text('Alice').first);
+            await tester.longPress(find.text('Alice').first);
             await tester.pumpAndSettle();
 
+            expect(
+              find.text(l10n.shareRecipientGestureHint),
+              findsNothing,
+            );
             expect(find.byType(TextField), findsOneWidget);
             expect(tester.testTextInput.isVisible, isFalse);
-            expect(find.text(l10n.shareRecipientSend), findsNothing);
             await tester.tap(find.byType(TextField));
             await tester.pump();
             expect(tester.testTextInput.isVisible, isTrue);
@@ -1914,7 +1961,7 @@ void main() {
         );
 
         testWidgets(
-          'explicit row Send queues just its recipient once while busy',
+          'a second tap while a send is in flight queues nothing more',
           (tester) async {
             final pending = Completer<Map<String, ShareResult>>();
             when(
@@ -1925,24 +1972,27 @@ void main() {
               ),
             ).thenAnswer((_) => pending.future);
             await pumpOpenSheet(tester);
-            final button = find.text(l10n.shareRecipientSend).first;
-            await tester.tap(button);
-            await tester.tap(button);
+            final contact = find.text('Alice').first;
+            await tester.tap(contact);
             await tester.pump();
-            expect(
-              find.byType(DivineCircularProgressIndicator),
-              findsNWidgets(2),
-            );
-            verify(
-              () => mockVideoSharingService.shareVideoWithMultipleUsers(
-                video: any(named: 'video'),
-                recipientPubkeys: [alice.pubkey],
-              ),
-            ).called(1);
+            await tester.tap(contact, warnIfMissed: false);
+            await tester.tap(find.text('Bob').first, warnIfMissed: false);
+            await tester.pump();
             pending.complete({
               alice.pubkey: const ShareResult.failure(ShareRefusal.blocked),
             });
             await tester.pumpAndSettle();
+
+            final recipients = verify(
+              () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                video: any(named: 'video'),
+                recipientPubkeys: captureAny(named: 'recipientPubkeys'),
+                personalMessage: any(named: 'personalMessage'),
+              ),
+            ).captured;
+            expect(recipients, [
+              [alice.pubkey],
+            ]);
             expect(find.byType(TextField), findsOneWidget);
           },
         );
@@ -1979,27 +2029,68 @@ void main() {
           expect(find.byType(TextField), findsNothing);
         });
 
+        for (final removal in ['avatar', 'chip']) {
+          testWidgets(
+            'removing the last recipient via the $removal drops the draft',
+            (tester) async {
+              await pumpOpenSheet(tester);
+
+              final contact = find.text('Alice').first;
+              await tester.longPress(contact);
+              await tester.pumpAndSettle();
+              await tester.enterText(find.byType(TextField), 'draft text');
+
+              final remove = removal == 'avatar'
+                  ? contact
+                  : find.byTooltip(
+                      MaterialLocalizations.of(tester.element(contact))
+                          .deleteButtonTooltip,
+                    );
+              await tester.tap(remove);
+              await tester.pumpAndSettle();
+
+              expect(find.byType(TextField), findsNothing);
+              expect(find.text('More actions'), findsOneWidget);
+
+              await tester.longPress(contact);
+              await tester.pumpAndSettle();
+              final field = tester.widget<TextField>(find.byType(TextField));
+              expect(field.controller!.text, isEmpty);
+            },
+          );
+        }
+
         testWidgets(
-          'tapping the last selected contact again deselects, restores '
-          'more actions, and drops the draft',
-          (tester) async {
+          'removing the last recipient in Find people drops the draft',
+          (
+            tester,
+          ) async {
             await pumpOpenSheet(tester);
 
-            await tester.tap(find.text('Alice').first);
+            final contact = find.text('Alice').first;
+            await tester.longPress(contact);
             await tester.pumpAndSettle();
             await tester.enterText(find.byType(TextField), 'draft text');
 
-            await tester.tap(find.text('Alice').first);
+            await tester.tap(find.text(l10n.shareFindPeopleMultiline));
+            await tester.pumpAndSettle();
+            await tester.tap(
+              find.descendant(
+                of: find.byType(FindPeopleSheet),
+                matching: find.text('Alice'),
+              ),
+            );
             await tester.pumpAndSettle();
 
             expect(find.byType(TextField), findsNothing);
             expect(find.text('More actions'), findsOneWidget);
 
-            // Re-selecting shows an empty composer — the draft was dropped.
-            await tester.tap(find.text('Alice').first);
+            await tester.longPress(contact);
             await tester.pumpAndSettle();
-            final field = tester.widget<TextField>(find.byType(TextField));
-            expect(field.controller!.text, isEmpty);
+            expect(
+              tester.widget<TextField>(find.byType(TextField)).controller!.text,
+              isEmpty,
+            );
           },
         );
 
@@ -2009,7 +2100,7 @@ void main() {
           (tester) async {
             await pumpOpenSheet(tester);
 
-            await tester.tap(find.text('Alice').first);
+            await tester.longPress(find.text('Alice').first);
             await tester.pumpAndSettle();
             await tester.enterText(find.byType(TextField), 'draft text');
 
@@ -2033,7 +2124,7 @@ void main() {
           (tester) async {
             await pumpOpenSheet(tester);
 
-            await tester.tap(find.text('Alice').first);
+            await tester.longPress(find.text('Alice').first);
             await tester.pumpAndSettle();
             await tester.tap(find.text('Bob').first);
             await tester.pumpAndSettle();
@@ -2054,23 +2145,205 @@ void main() {
           },
         );
 
-        group('row Send', () {
-          Finder sendButtonFor(String name) => find.byWidgetPredicate(
-            (widget) =>
-                widget is DivineButton &&
-                widget.semanticLabel == l10n.shareRecipientSendTo(name),
+        group('tap to send', () {
+          Future<void> tabTo(
+            WidgetTester tester,
+            bool Function(Widget) matches,
+          ) async {
+            bool hasFocus() {
+              var found = false;
+              FocusManager.instance.primaryFocus?.context
+                  ?.visitAncestorElements((element) {
+                    found = matches(element.widget);
+                    return !found;
+                  });
+              return found;
+            }
+
+            for (var i = 0; i < 12 && !hasFocus(); i++) {
+              await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+              await tester.pump();
+            }
+            expect(hasFocus(), isTrue);
+          }
+
+          testWidgets(
+            'a contact can be focused and sent to from the keyboard',
+            (
+              tester,
+            ) async {
+              when(
+                () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                  video: any(named: 'video'),
+                  recipientPubkeys: any(named: 'recipientPubkeys'),
+                  personalMessage: any(named: 'personalMessage'),
+                ),
+              ).thenAnswer(
+                (_) async => {
+                  alice.pubkey: const ShareResult.queued('rumor-a', 'chat-a'),
+                },
+              );
+              await pumpOpenSheet(tester);
+
+              await tabTo(
+                tester,
+                (widget) =>
+                    widget is Semantics &&
+                    widget.properties.label ==
+                        l10n.shareRecipientSendTo('Alice'),
+              );
+
+              await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+              await tester.pumpAndSettle();
+
+              verify(
+                () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                  video: any(named: 'video'),
+                  recipientPubkeys: [alice.pubkey],
+                ),
+              ).called(1);
+              expect(find.text(l10n.shareWithTitle), findsNothing);
+            },
           );
 
-          testWidgets('announces which recipient it sends to', (tester) async {
+          testWidgets('shares with a message using the keyboard', (
+            tester,
+          ) async {
+            when(
+              () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                video: any(named: 'video'),
+                recipientPubkeys: any(named: 'recipientPubkeys'),
+                personalMessage: any(named: 'personalMessage'),
+              ),
+            ).thenAnswer(
+              (_) async => {
+                alice.pubkey: const ShareResult.queued('rumor-a', 'chat-a'),
+              },
+            );
+            await pumpOpenSheet(tester);
+
+            await tabTo(
+              tester,
+              (widget) =>
+                  widget is Semantics &&
+                  widget.properties.label == l10n.shareFindPeople,
+            );
+            await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+            await tester.pumpAndSettle();
+
+            final picker = find.byType(FindPeopleSheet);
+            expect(picker, findsOneWidget);
+            await tabTo(
+              tester,
+              (widget) =>
+                  widget is ListTile &&
+                  widget.title is Text &&
+                  (widget.title! as Text).data == 'Alice',
+            );
+            await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+            await tester.pumpAndSettle();
+
+            expect(picker, findsNothing);
+            expect(find.byType(TextField), findsOneWidget);
+            verifyNever(
+              () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                video: any(named: 'video'),
+                recipientPubkeys: any(named: 'recipientPubkeys'),
+                personalMessage: any(named: 'personalMessage'),
+              ),
+            );
+
+            await tester.enterText(find.byType(TextField), 'For you');
+            await tabTo(
+              tester,
+              (widget) =>
+                  widget is Semantics &&
+                  widget.properties.label == l10n.dmMessageSendLabel,
+            );
+            await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+            await tester.pumpAndSettle();
+
+            verify(
+              () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                video: any(named: 'video'),
+                recipientPubkeys: [alice.pubkey],
+                personalMessage: 'For you',
+              ),
+            ).called(1);
+            expect(find.text(l10n.shareWithTitle), findsNothing);
+          });
+
+          testWidgets('announces which recipient a tap sends to and that a '
+              'long-press adds a message', (tester) async {
             final semantics = tester.ensureSemantics();
             await pumpOpenSheet(tester);
 
-            final node = tester.getSemantics(sendButtonFor('Alice'));
+            final node = tester.getSemantics(
+              find.bySemanticsLabel(l10n.shareRecipientSendTo('Alice')),
+            );
 
             expect(node.label, l10n.shareRecipientSendTo('Alice'));
             expect(node.flagsCollection.isButton, isTrue);
+            expect(
+              node.getSemanticsData().hasAction(SemanticsAction.tap),
+              isTrue,
+            );
+            expect(
+              node.getSemanticsData().hasAction(SemanticsAction.longPress),
+              isTrue,
+            );
+            expect(
+              node.hintOverrides?.onLongPressHint,
+              l10n.shareMessageHint,
+            );
+
+            node.owner!.performAction(node.id, SemanticsAction.longPress);
+            await tester.pumpAndSettle();
+
+            expect(find.byType(TextField), findsOneWidget);
+            expect(node.hintOverrides?.onLongPressHint, isNull);
             semantics.dispose();
           });
+
+          testWidgets(
+            'offers VoiceOver an add-message action that opens the composer',
+            (tester) async {
+              final semantics = tester.ensureSemantics();
+              await pumpOpenSheet(tester);
+
+              final contact = find.bySemanticsIdentifier(
+                SemanticIds.shareContact(0),
+              );
+              final node = tester.getSemantics(contact);
+              final initialNodeId = node.id;
+              expect(node.label, l10n.shareRecipientSendTo('Alice'));
+              final id = CustomSemanticsAction.getIdentifier(
+                CustomSemanticsAction(label: l10n.shareMessageHint),
+              );
+              expect(
+                node.getSemanticsData().customSemanticsActionIds,
+                contains(id),
+              );
+
+              node.owner!.performAction(
+                node.id,
+                SemanticsAction.customAction,
+                id,
+              );
+              await tester.pumpAndSettle();
+
+              expect(find.byType(TextField), findsOneWidget);
+              final selectedNode = tester.getSemantics(contact);
+              expect(selectedNode.id, isNot(initialNodeId));
+              expect(
+                selectedNode.getSemanticsData().customSemanticsActionIds ??
+                    const <int>[],
+                isNot(contains(id)),
+              );
+              semantics.dispose();
+            },
+            variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+          );
 
           testWidgets(
             'a contact a live block disables cannot be sent to or selected',
@@ -2085,20 +2358,25 @@ void main() {
                   ),
                 ],
               );
-              DivineButton button(String name) =>
-                  tester.widget<DivineButton>(sendButtonFor(name));
-              expect(button('Alice').onPressed, isNotNull);
-
               when(
                 () => mockRankingSignalsLoader.isEligible(alice.pubkey),
               ).thenReturn(false);
               unawaited(blocklist.blockUser(alice.pubkey));
               await tester.pumpAndSettle();
 
-              expect(button('Alice').onPressed, isNull);
-              expect(button('Bob').onPressed, isNotNull);
               await tester.tap(find.text('Alice').first, warnIfMissed: false);
+              await tester.longPress(
+                find.text('Alice').first,
+                warnIfMissed: false,
+              );
               await tester.pumpAndSettle();
+              verifyNever(
+                () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                  video: any(named: 'video'),
+                  recipientPubkeys: any(named: 'recipientPubkeys'),
+                  personalMessage: any(named: 'personalMessage'),
+                ),
+              );
               final bloc = tester
                   .element(find.text(l10n.shareWithTitle))
                   .read<ShareSheetBloc>();
@@ -2137,7 +2415,7 @@ void main() {
               );
               await pumpOpenSheet(tester);
 
-              await tester.tap(sendButtonFor('Alice'));
+              await tester.tap(find.text('Alice').first);
               await tester.pumpAndSettle();
               final refusal = find.text(l10n.shareCouldNotSendTo('Alice'));
               expect(refusal, findsOneWidget);
@@ -2200,8 +2478,12 @@ void main() {
             String? note,
           }) async {
             await pumpOpenSheet(tester);
-            for (final name in names) {
-              await tester.tap(find.text(name));
+            for (final (index, name) in names.indexed) {
+              if (index == 0) {
+                await tester.longPress(find.text(name));
+              } else {
+                await tester.tap(find.text(name));
+              }
               await tester.pumpAndSettle();
             }
             if (note != null) {
@@ -2229,7 +2511,7 @@ void main() {
                 ),
               ).thenAnswer((_) => commit.future);
               await pumpOpenSheet(tester);
-              await tester.tap(find.text('Alice').first);
+              await tester.longPress(find.text('Alice').first);
               await tester.pumpAndSettle();
               final haptics = <Object?>[];
               final messenger = tester.binding.defaultBinaryMessenger;
@@ -2297,7 +2579,7 @@ void main() {
                 ),
               ).thenAnswer((_) => commit.future);
               await pumpOpenSheet(tester);
-              await tester.tap(find.text(l10n.shareRecipientSend).first);
+              await tester.tap(find.text('Alice').first);
               await tester.pump();
               final sheetContext = tester.element(
                 find.text(l10n.shareWithTitle),

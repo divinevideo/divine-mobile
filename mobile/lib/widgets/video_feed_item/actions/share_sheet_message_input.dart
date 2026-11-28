@@ -73,10 +73,10 @@ class _SendButton extends StatelessWidget {
       label: context.l10n.dmMessageSendLabel,
       button: true,
       enabled: !isSending,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+      child: InkWell(
+        customBorder: const CircleBorder(),
         onTap: isSending ? null : onTap,
-        child: Container(
+        child: Ink(
           width: 48,
           height: 48,
           decoration: BoxDecoration(

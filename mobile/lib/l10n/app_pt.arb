@@ -739,8 +739,8 @@
       }
     }
   },
-  "shareRecipientSend": "Enviar",
   "shareRecipientSendTo": "Enviar para {name}",
+  "shareRecipientGestureHint": "Toque para enviar. Toque e segure para adicionar uma mensagem.",
   "shareMessageHint": "Adicione uma mensagem opcional...",
   "videoActionUnlike": "Descurtir vídeo",
   "videoActionLike": "Curtir vídeo",

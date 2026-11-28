@@ -1888,12 +1888,13 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => 'Skicka';
-
-  @override
   String shareRecipientSendTo(String name) {
     return 'Skicka till $name';
   }
+
+  @override
+  String get shareRecipientGestureHint =>
+      'Tryck för att skicka. Håll ned för att lägga till ett meddelande.';
 
   @override
   String get shareMessageHint => 'Lägg till valfritt meddelande...';

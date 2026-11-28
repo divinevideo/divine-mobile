@@ -739,8 +739,8 @@
       }
     }
   },
-  "shareRecipientSend": "Kirim",
   "shareRecipientSendTo": "Kirim ke {name}",
+  "shareRecipientGestureHint": "Ketuk untuk mengirim. Tekan lama untuk menambahkan pesan.",
   "shareMessageHint": "Tambahkan pesan opsional...",
   "videoActionUnlike": "Batalkan suka video",
   "videoActionLike": "Suka video",

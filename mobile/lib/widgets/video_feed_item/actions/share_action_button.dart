@@ -1,10 +1,11 @@
 // ABOUTME: Share action button for video feed overlay.
-// ABOUTME: Opens unified share sheet: tap a contact to select it (never an
-// ABOUTME: instant send), compose an optional message, send explicitly.
+// ABOUTME: Opens the unified share sheet for direct sends, optional messages,
+// ABOUTME: and other ways to share a video.
 
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -76,9 +77,9 @@ void _runShareDetached(Future<void> operation, String description) {
 /// Shows a share icon that opens a unified share bottom sheet with:
 /// - Video context/preview header
 /// - "Share with" horizontal contact row with "Find people" search.
-///   Tapping contacts toggles their selection (tick on the avatar) —
-///   nothing is sent until the explicit send button, which fans the
-///   video out to every selected person as separate DMs.
+///   Tap a contact for a direct send, or long-press to start a selection.
+///   While a selection is open, taps toggle recipients and the composer
+///   sends the video to each selected person in a separate DM.
 /// - Message composer shown while any recipient is selected (replaces
 ///   the actions row)
 /// - "More actions" horizontal row (Save, download, Add to List, Copy,
@@ -244,6 +245,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       messageController: _messageController,
       isOwnContent: isOwnContent,
       onFindPeople: _handleFindPeople,
+      onRecipientToggled: _toggleRecipient,
       onAddToList: () => openAddToList(context, widget.video),
       onEditVideo: switch (_ownerVideoActionsCubit) {
         null => null,
@@ -436,8 +438,18 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     );
     _findingPeople = false;
     if (selectedUser != null && mounted) {
-      _shareSheetBloc.add(ShareSheetRecipientToggled(selectedUser));
+      _toggleRecipient(selectedUser);
     }
+  }
+
+  void _toggleRecipient(ShareableUser user) {
+    final state = _shareSheetBloc.state;
+    if (state.isSending || state.ownerExpired) return;
+    if (state.attemptedRecipients.length == 1 &&
+        state.attemptedRecipients.single.pubkey == user.pubkey) {
+      _messageController.clear();
+    }
+    _shareSheetBloc.add(ShareSheetRecipientToggled(user));
   }
 
   Future<void> _handleCrosspost() async {
@@ -526,6 +538,7 @@ class _UnifiedShareSheetView extends StatelessWidget {
     required this.messageController,
     required this.isOwnContent,
     required this.onFindPeople,
+    required this.onRecipientToggled,
     required this.onAddToList,
     required this.onSaveWithWatermark,
     required this.onCrosspostShown,
@@ -539,6 +552,7 @@ class _UnifiedShareSheetView extends StatelessWidget {
   final TextEditingController messageController;
   final bool isOwnContent;
   final VoidCallback onFindPeople;
+  final ValueChanged<ShareableUser> onRecipientToggled;
   final Future<void> Function() onAddToList;
   final Future<void> Function()? onEditVideo;
   final Future<void> Function()? onDeleteVideo;
@@ -579,6 +593,10 @@ class _UnifiedShareSheetView extends StatelessWidget {
             child: BlocBuilder<ShareSheetBloc, ShareSheetState>(
               builder: (context, state) {
                 final bloc = context.read<ShareSheetBloc>();
+                final tapSends =
+                    !emailConfirmationRequired &&
+                    state.attemptedRecipients.isEmpty &&
+                    messageController.text.isEmpty;
 
                 // Read from lasting fields, not the one-off actionResult that
                 // a background contact refresh clears.
@@ -602,30 +620,21 @@ class _UnifiedShareSheetView extends StatelessWidget {
                           state.contactsLoaded || state.contacts.isNotEmpty,
                       disabledPubkeys: state.disabledPubkeys,
                       isSending: state.isSending,
-                      onSend:
-                          !emailConfirmationRequired &&
-                              state.attemptedRecipients.isEmpty &&
-                              messageController.text.isEmpty
-                          ? (user) => bloc.add(
-                              ShareSheetSendRequested(only: user),
-                            )
-                          : null,
+                      tapSends: tapSends,
                       selectedPubkeys: {
                         for (final r in state.selectedRecipients) r.pubkey,
                       },
                       onFindPeople: onFindPeople,
-                      // Select-then-send, multi-select: each tap toggles a
-                      // recipient's tick. Nothing sends until the explicit
-                      // send button. The draft survives selection changes
-                      // and is dropped only when the last recipient is
+                      // A tap sends to that person straight away. A
+                      // long-press starts a selection for a message or more
+                      // recipients; while one is open, taps toggle ticks and
+                      // nothing sends until the composer's send button. The
+                      // draft is dropped only when the last recipient is
                       // deselected.
-                      onContactTapped: (user) {
-                        final deselectingLast =
-                            state.attemptedRecipients.length == 1 &&
-                            state.isSelected(user);
-                        if (deselectingLast) messageController.clear();
-                        bloc.add(ShareSheetRecipientToggled(user));
-                      },
+                      onContactTapped: (user) => tapSends
+                          ? bloc.add(ShareSheetSendRequested(only: user))
+                          : onRecipientToggled(user),
+                      onContactLongPressed: onRecipientToggled,
                     ),
                     if (error != null)
                       Padding(
@@ -665,15 +674,7 @@ class _UnifiedShareSheetView extends StatelessWidget {
                                 ),
                                 onDeleted: state.isSending
                                     ? null
-                                    : () {
-                                        if (state.attemptedRecipients.length ==
-                                            1) {
-                                          messageController.clear();
-                                        }
-                                        bloc.add(
-                                          ShareSheetRecipientToggled(user),
-                                        );
-                                      },
+                                    : () => onRecipientToggled(user),
                               ),
                           ],
                         ),

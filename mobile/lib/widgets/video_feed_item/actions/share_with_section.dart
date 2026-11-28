@@ -23,19 +23,24 @@ class _ShareWithSection extends StatelessWidget {
     required this.selectedPubkeys,
     required this.onFindPeople,
     required this.onContactTapped,
+    required this.onContactLongPressed,
     required this.disabledPubkeys,
     required this.isSending,
-    this.onSend,
+    required this.tapSends,
   });
 
   final List<ShareableUser> contacts;
   final bool contactsLoaded;
   final Set<String> disabledPubkeys;
   final bool isSending;
-  final ValueChanged<ShareableUser>? onSend;
+
+  /// Whether tapping a contact sends the video straight to them, rather than
+  /// toggling them in an in-progress selection.
+  final bool tapSends;
   final Set<String> selectedPubkeys;
   final VoidCallback onFindPeople;
   final ValueChanged<ShareableUser> onContactTapped;
+  final ValueChanged<ShareableUser> onContactLongPressed;
 
   static const double _itemWidth = 72;
   static const double _avatarSize = 48;
@@ -47,6 +52,12 @@ class _ShareWithSection extends StatelessWidget {
     // While loading, render placeholder rows so the shimmer matches the real
     // avatar + name layout it will dissolve into.
     final displayContacts = contactsLoaded ? contacts : _skeletonContacts;
+    final showGestureHint =
+        tapSends &&
+        contacts.any(
+          (user) =>
+              user.hasVisibleIdentity && !disabledPubkeys.contains(user.pubkey),
+        );
 
     return Semantics(
       identifier: SemanticIds.shareWithSection,
@@ -59,17 +70,30 @@ class _ShareWithSection extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                context.l10n.shareWithTitle,
-                style: TextStyle(
-                  color: context.vineColors.primaryText,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 4,
+                children: [
+                  Text(
+                    context.l10n.shareWithTitle,
+                    style: TextStyle(
+                      color: context.vineColors.primaryText,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (showGestureHint)
+                    Text(
+                      context.l10n.shareRecipientGestureHint,
+                      style: VineTheme.bodySmallFont(
+                        color: context.vineColors.secondaryText,
+                      ),
+                    ),
+                ],
               ),
             ),
             SizedBox(
-              height: _rowHeight + (onSend == null ? 0 : 48),
+              height: _rowHeight,
               // Skeleton contacts shimmer, then dissolve into the real list when
               // it loads (enableSwitchAnimation), instead of a spinner that pops.
               child: IdentitySkeletonizer(
@@ -104,24 +128,23 @@ class _ShareWithSection extends StatelessWidget {
                               user: _skeletonContact,
                               isSelected: false,
                               onTap: (_) {},
+                              enabled: false,
                             ),
                           ),
                         ),
                       );
                     }
 
-                    return Semantics(
-                      identifier: SemanticIds.shareContact(index - 1),
-                      child: _ContactItem(
-                        user: contact,
-                        isSelected: selectedPubkeys.contains(contact.pubkey),
-                        enabled:
-                            !disabledPubkeys.contains(contact.pubkey) &&
-                            !isSending,
-                        isSending: isSending,
-                        onSend: onSend,
-                        onTap: onContactTapped,
-                      ),
+                    return _ContactItem(
+                      user: contact,
+                      isSelected: selectedPubkeys.contains(contact.pubkey),
+                      enabled:
+                          !disabledPubkeys.contains(contact.pubkey) &&
+                          !isSending,
+                      tapSends: tapSends,
+                      semanticIdentifier: SemanticIds.shareContact(index - 1),
+                      onTap: onContactTapped,
+                      onLongPress: onContactLongPressed,
                     );
                   },
                 ),
@@ -144,8 +167,8 @@ class _FindPeopleItem extends StatelessWidget {
     return Semantics(
       button: true,
       label: context.l10n.shareFindPeople,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(_ShareWithSection._avatarRadius),
         onTap: onTap,
         child: SizedBox(
           width: _ShareWithSection._itemWidth,
@@ -189,27 +212,30 @@ class _FindPeopleItem extends StatelessWidget {
 
 /// One contact in the "Share with" row.
 ///
-/// The row is a DM send target — tapping it selects a recipient that
-/// `ShareSheetBloc` hands to `DmRepository.sendMessage` — so it resolves its
-/// peer through the same chain the inbox rows use, and hands the *resolved*
-/// [ShareableUser] to [onTap] so the selection chip, the screen-reader
-/// announcement and the success snackbar all name the same account (#8421).
+/// The row is a DM send target — a tap sends the video to this person, and a
+/// long-press selects them to add a message or more recipients — so it
+/// resolves its peer through the same chain the inbox rows use, and hands the
+/// *resolved* [ShareableUser] to [onTap] and [onLongPress] so the selection
+/// chip, the screen-reader announcement and the success snackbar all name the
+/// same account (#8421).
 class _ContactItem extends ConsumerWidget {
   const _ContactItem({
     required this.user,
     required this.isSelected,
     required this.onTap,
+    this.onLongPress,
     this.enabled = true,
-    this.isSending = false,
-    this.onSend,
+    this.tapSends = false,
+    this.semanticIdentifier,
   });
 
   final ShareableUser user;
   final bool isSelected;
   final bool enabled;
-  final bool isSending;
-  final ValueChanged<ShareableUser>? onSend;
+  final bool tapSends;
+  final String? semanticIdentifier;
   final ValueChanged<ShareableUser> onTap;
+  final ValueChanged<ShareableUser>? onLongPress;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -243,83 +269,89 @@ class _ContactItem extends ConsumerWidget {
       picture: avatar.imageUrl,
     );
 
-    final send = onSend;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Semantics(
-          button: true,
-          selected: isSelected,
-          enabled: enabled,
-          label: displayName,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: enabled ? () => onTap(resolved) : null,
-            child: SizedBox(
-              width: _ShareWithSection._itemWidth,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 6,
-                children: [
-                  Stack(
-                    children: [
-                      UserAvatar(
-                        imageUrl: avatar.imageUrl,
-                        name: displayName,
-                        size: _ShareWithSection._avatarSize,
-                        contentOverride: avatar.contentOverride,
-                      ),
-                      if (isSelected)
-                        Positioned(
-                          right: 0,
-                          bottom: 0,
-                          child: Container(
-                            width: 20,
-                            height: 20,
-                            decoration: const BoxDecoration(
-                              color: VineTheme.vineGreen,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const DivineIcon(
-                              icon: DivineIconName.check,
-                              size: 14,
-                              color: VineTheme.onPrimary,
-                            ),
+    final longPress = onLongPress;
+    final select = enabled && longPress != null
+        ? () => longPress(resolved)
+        : null;
+    final opensComposer = tapSends && select != null;
+    final isIOS = defaultTargetPlatform == TargetPlatform.iOS;
+    return Semantics(
+      // The iOS bridge retains old custom actions on reused nodes when the
+      // new action list is empty. Recreate the node when the action changes.
+      key: isIOS ? ValueKey(opensComposer) : null,
+      identifier: semanticIdentifier,
+      button: true,
+      selected: isSelected,
+      enabled: enabled,
+      label: tapSends
+          ? context.l10n.shareRecipientSendTo(displayName)
+          : displayName,
+      onLongPressHint: opensComposer ? context.l10n.shareMessageHint : null,
+      // VoiceOver ignores long-press hint overrides.
+      customSemanticsActions: opensComposer && isIOS
+          ? {
+              CustomSemanticsAction(label: context.l10n.shareMessageHint):
+                  select,
+            }
+          : null,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(_ShareWithSection._avatarRadius),
+        onTap: enabled ? () => onTap(resolved) : null,
+        onLongPress: select,
+        // The row's own label names the action, so the avatar and name
+        // below would only repeat it to a screen reader.
+        child: ExcludeSemantics(
+          child: SizedBox(
+            width: _ShareWithSection._itemWidth,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 6,
+              children: [
+                Stack(
+                  children: [
+                    UserAvatar(
+                      imageUrl: avatar.imageUrl,
+                      name: displayName,
+                      size: _ShareWithSection._avatarSize,
+                      contentOverride: avatar.contentOverride,
+                    ),
+                    if (isSelected)
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 20,
+                          height: 20,
+                          decoration: const BoxDecoration(
+                            color: VineTheme.vineGreen,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const DivineIcon(
+                            icon: DivineIconName.check,
+                            size: 14,
+                            color: VineTheme.onPrimary,
                           ),
                         ),
-                    ],
+                      ),
+                  ],
+                ),
+                Text(
+                  displayName,
+                  style: TextStyle(
+                    color: isSelected
+                        ? context.vineColors.accentPositive
+                        : context.vineColors.secondaryText,
+                    fontSize: 11,
                   ),
-                  Text(
-                    displayName,
-                    style: TextStyle(
-                      color: isSelected
-                          ? context.vineColors.accentPositive
-                          : context.vineColors.secondaryText,
-                      fontSize: 11,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ),
-        if (send != null)
-          SizedBox(
-            width: _ShareWithSection._itemWidth,
-            height: 48,
-            child: DivineButton(
-              label: context.l10n.shareRecipientSend,
-              semanticLabel: context.l10n.shareRecipientSendTo(displayName),
-              size: DivineButtonSize.small,
-              type: DivineButtonType.secondary,
-              isLoading: isSending,
-              onPressed: enabled ? () => send(resolved) : null,
-            ),
-          ),
-      ],
+      ),
     );
   }
 }

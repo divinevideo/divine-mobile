@@ -739,8 +739,8 @@
       }
     }
   },
-  "shareRecipientSend": "Verzenden",
   "shareRecipientSendTo": "Versturen naar {name}",
+  "shareRecipientGestureHint": "Tik om te versturen. Houd ingedrukt om een bericht toe te voegen.",
   "shareMessageHint": "Voeg optioneel een bericht toe...",
   "videoActionUnlike": "Like verwijderen",
   "videoActionLike": "Video liken",

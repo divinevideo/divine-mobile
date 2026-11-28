@@ -1890,12 +1890,13 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => 'Ipadala';
-
-  @override
   String shareRecipientSendTo(String name) {
     return 'Ipadala kay $name';
   }
+
+  @override
+  String get shareRecipientGestureHint =>
+      'I-tap para ipadala. Pindutin nang matagal para magdagdag ng mensahe.';
 
   @override
   String get shareMessageHint => 'Magdagdag ng optional na mensahe...';

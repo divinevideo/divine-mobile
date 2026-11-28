@@ -739,8 +739,8 @@
       }
     }
   },
-  "shareRecipientSend": "Gönder",
   "shareRecipientSendTo": "{name} adlı kişiye gönder",
+  "shareRecipientGestureHint": "Göndermek için dokun. Mesaj eklemek için basılı tut.",
   "shareMessageHint": "Opsiyonel mesaj ekle...",
   "videoActionUnlike": "Beğenmekten vazgeç",
   "videoActionLike": "Videoyu beğen",

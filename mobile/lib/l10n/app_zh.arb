@@ -956,8 +956,8 @@
       }
     }
   },
-  "shareRecipientSend": "发送",
   "shareRecipientSendTo": "发送给{name}",
+  "shareRecipientGestureHint": "轻点即可发送，长按可添加留言。",
   "shareMessageHint": "附上一句话（可选）...",
   "videoActionUnlike": "取消点赞视频",
   "videoActionLike": "点赞视频",

@@ -1754,12 +1754,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => '发送';
-
-  @override
   String shareRecipientSendTo(String name) {
     return '发送给$name';
   }
+
+  @override
+  String get shareRecipientGestureHint => '轻点即可发送，长按可添加留言。';
 
   @override
   String get shareMessageHint => '附上一句话（可选）...';

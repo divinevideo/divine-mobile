@@ -1871,12 +1871,13 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => 'Hantar';
-
-  @override
   String shareRecipientSendTo(String name) {
     return 'Hantar kepada $name';
   }
+
+  @override
+  String get shareRecipientGestureHint =>
+      'Ketik untuk menghantar. Tekan lama untuk menambah mesej.';
 
   @override
   String get shareMessageHint => 'Tambah mesej pilihan...';

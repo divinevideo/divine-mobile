@@ -1895,12 +1895,13 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => 'بھیجیں';
-
-  @override
   String shareRecipientSendTo(String name) {
     return '$name کو بھیجیں';
   }
+
+  @override
+  String get shareRecipientGestureHint =>
+      'بھیجنے کے لیے تھپتھپائیں۔ پیغام شامل کرنے کے لیے دبا کر رکھیں۔';
 
   @override
   String get shareMessageHint => 'اختیاری پیغام شامل کریں...';

@@ -784,8 +784,8 @@
       }
     }
   },
-  "shareRecipientSend": "Изпрати",
   "shareRecipientSendTo": "Изпращане до {name}",
+  "shareRecipientGestureHint": "Докосни, за да изпратиш. Задръж, за да добавиш съобщение.",
   "shareMessageHint": "Добави съобщение (по избор)...",
   "videoActionUnlike": "Премахни харесването",
   "videoActionLike": "Харесай видеото",

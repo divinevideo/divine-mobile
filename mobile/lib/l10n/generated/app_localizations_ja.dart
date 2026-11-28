@@ -1740,12 +1740,12 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get shareRecipientSend => '送信';
-
-  @override
   String shareRecipientSendTo(String name) {
     return '$nameに送信';
   }
+
+  @override
+  String get shareRecipientGestureHint => 'タップで送信、長押しでメッセージを追加できます。';
 
   @override
   String get shareMessageHint => 'メッセージを追加 (任意)...';

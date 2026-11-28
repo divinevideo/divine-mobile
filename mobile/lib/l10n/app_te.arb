@@ -1190,8 +1190,8 @@
       }
     }
   },
-  "shareRecipientSend": "పంపండి",
   "shareRecipientSendTo": "{name}కు పంపు",
+  "shareRecipientGestureHint": "పంపడానికి తట్టండి. సందేశాన్ని జోడించడానికి నొక్కి పట్టుకోండి.",
   "shareMessageHint": "ఐచ్ఛిక సందేశాన్ని జోడించండి...",
   "videoActionUnlike": "వీడియో కాకుండా",
   "videoActionLike": "వీడియోని ఇష్టపడండి",
