@@ -187,13 +187,17 @@ At publish time:
    that makes publication happen.
 
    `createSeries` therefore has a series-specific confirmed-creation contract.
-   It returns an explicit result with `success(list)`, `unauthenticated`, and
-   `relayRejected` outcomes. It creates a public, non-collaborative manual list,
-   awaits the confirmed publish result, and returns `success` only when
-   `acceptedByAny` is true. On signing failure or relay rejection it removes the
-   provisional local list and persists that removal before returning
-   `relayRejected`. The publish flow continues to step 2 only for `success`;
-   both failure outcomes keep the metadata state and offer retry or cancel.
+   It creates a public, non-collaborative manual list with a fresh coordinate.
+   It saves the list locally only after `acceptedByAny` is true and returns
+   `SeriesCreated` once the local save succeeds. An absent account returns
+   `SeriesCreationUnauthenticated`. A signing failure or unconfirmed send returns
+   `SeriesCreationRejected` without saving a local series. A local failure or
+   account change returns `SeriesCreationFailed`. A relay-confirmed list that
+   could not be saved can be recovered by syncing with relays. The publish flow
+   continues to step 2 only for `SeriesCreated`. A failed result keeps the
+   metadata state. The publish flow must reconcile an indeterminate or confirmed
+   send before offering another attempt for the same request. If it resends
+   an indeterminate event, it reuses the original signed event and coordinate.
 2. Sign and publish the video with the marked series `a` tag.
 3. After the video publish succeeds, append its stable kind-34236 coordinate to
    the list through `CuratedListService`.
@@ -314,7 +318,7 @@ part 3; the viewer swipes back to earlier parts, or on through the rest.
 
 | Failure | Behavior |
 |---|---|
-| Series creation is unauthenticated or no relay accepts it | `createSeries` returns the corresponding non-success result. Remove any provisional list, do not start the video publish, keep the metadata state, and offer retry or cancel. |
+| Series creation is unauthenticated, unconfirmed, or fails locally | Keep the metadata state. Reconcile a send that may have reached a relay before retrying the same request. A series without relay confirmation from the send is never saved by creation. |
 | Video publish fails | Do not append the part. The background retry retains the selected series coordinate. |
 | Video succeeds but list relay publish fails | Keep the locally appended part and the existing pending-republish state; remote viewers see no chip until the list update reaches a relay. |
 | Series list is missing or deleted | Render no chip. The video remains an ordinary playable video. |
@@ -333,8 +337,9 @@ part 3; the viewer swipes back to earlier parts, or on through the rest.
   invalidation completes.
 - `CuratedListService`: `createSeries` invariants and append behavior using a
   full kind-34236 coordinate, including its explicit success,
-  unauthenticated, and relay-rejected outcomes, provisional-list rollback, and
-  the fact that generic `createList` retains its existing offline semantics.
+  unauthenticated, relay-rejected, and local-failure outcomes, including restart
+  during an unconfirmed send, recovery of an accepted series, and ordinary
+  `createList` keeping a list when no relay accepts it.
 - Publish: selected series is retained in the draft, the marked tag is signed,
   append happens only after successful video publication, and failed list
   publication retains retry state.
