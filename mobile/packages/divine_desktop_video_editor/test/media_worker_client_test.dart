@@ -680,6 +680,13 @@ void main() {
     test(
       'returns consumed result when temporary cleanup fails after retries',
       () async {
+        await client.dispose();
+        final cleanupErrors = <FileSystemException>[];
+        client = MediaWorkerClient(
+          locate: () async => command,
+          temporaryDirectory: () async => root,
+          onCleanupError: cleanupErrors.add,
+        );
         final values = <double>[];
         final subscription = client.progress.listen((event) {
           values.add(event.value);
@@ -696,6 +703,7 @@ void main() {
         await subscription.cancel();
         expect(result, 'committed');
         expect(values, [0.25, 1.0]);
+        expect(cleanupErrors, hasLength(1));
       },
     );
 

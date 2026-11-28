@@ -2,8 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show debugPrint;
-
 /// An installed media helper and its fixed launch configuration.
 class MediaWorkerCommand {
   /// Creates a command. Media requests are sent over stdin, never arguments.
@@ -74,6 +72,7 @@ class MediaWorkerClient {
     Future<Process> Function(MediaWorkerCommand)? start,
     this.claimProcess,
     this.registryPath,
+    this.onCleanupError,
   }) : _start = start ?? _startProcess;
 
   /// Resolves the installed helper without launching it.
@@ -94,6 +93,10 @@ class MediaWorkerClient {
   /// When omitted, the client allocates one temporary registry file and reuses
   /// it across jobs until [dispose].
   final String? registryPath;
+
+  /// Optional callback invoked when temporary directory cleanup still fails
+  /// after retries.
+  final void Function(FileSystemException error)? onCleanupError;
 
   final Future<Process> Function(MediaWorkerCommand) _start;
 
@@ -283,9 +286,9 @@ class MediaWorkerClient {
       try {
         await directory.delete(recursive: true);
         return;
-      } on FileSystemException {
+      } on FileSystemException catch (error) {
         if (attempt == 2) {
-          debugPrint('Desktop media temporary directory cleanup failed.');
+          onCleanupError?.call(error);
           return;
         }
         await Future<void>.delayed(const Duration(milliseconds: 50));

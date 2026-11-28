@@ -231,10 +231,10 @@ Future<void> main() async {
     setStage('concurrent-stop-dispose');
     await verifyConcurrentStop(device, audio);
     if (Platform.isLinux) {
-      setStage('completed-private-transfer');
-      await verifyPrivateTransfer(root);
       setStage('image-stream-dispose-retirement');
       await verifyImageStreamDisposeRetirement(device);
+      setStage('completed-private-transfer');
+      await verifyPrivateTransfer(root);
     }
     if (Platform.isWindows) {
       setStage('initialization-disposal');
