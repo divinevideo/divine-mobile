@@ -59,8 +59,9 @@ class FeedModePreferenceStore {
       mode == FeedMode.forYou &&
       ClassicsWarmup.isEnrolled(_sharedPreferences, _userPubkey);
 
-  /// The persisted source, or [VideoFeedSource.fromMode] of [fallbackMode] when
-  /// nothing is stored.
+  /// Restores the saved source. For an enrolled account without a saved
+  /// choice, the For You default starts in Classics until warmup completes.
+  /// Other starts use [fallbackMode] when nothing is stored.
   ///
   /// A stored people list is restored only while it is still among
   /// [followedPeopleLists]; otherwise the feed falls back to For You, as it

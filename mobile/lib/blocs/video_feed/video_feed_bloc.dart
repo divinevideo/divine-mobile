@@ -615,11 +615,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   /// so curated list changes refresh the feed. The first replay can finish
   /// resolving a selection whose copy arrived while the initial feed loaded.
   ///
-  /// If a feed mode was previously saved to SharedPreferences, that mode is
-  /// restored. Otherwise [event.mode] is used. A forced start
+  /// A saved feed source takes precedence over [event.mode]. With neither a
+  /// saved choice nor a forced mode, an enrolled account's For You default
+  /// starts in Classics until warmup completes. A forced start
   /// ([VideoFeedStarted.forceMode]) uses [event.mode] and leaves the stored
-  /// preference untouched, so a campaign landing cannot rewrite the account's
-  /// home source.
+  /// preference untouched.
   Future<void> _onStarted(
     VideoFeedStarted event,
     Emitter<VideoFeedBlocState> emit,
