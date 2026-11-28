@@ -156,26 +156,31 @@ int main() {
         !fs::is_empty(directory)) throw Failure{"storage"};
     const auto method = text(member(root, "method"));
     JsonObject* args = object(member(root, "arguments"));
+    const bool is_render = method == "renderVideo";
+    const bool is_metadata =
+        method == "getMetadata" || method == "hasAudioTrack";
+    const bool is_frames = method == "getThumbnails" ||
+        method == "startThumbnailStream" || method == "startFrameStream";
+    if (!is_render && !is_metadata && !is_frames) {
+      throw Failure{"unsupported"};
+    }
     gst_init(nullptr, nullptr);
-    if (!ges_init()) throw Failure{"encoder"};
+    if (is_render && !ges_init()) throw Failure{"encoder"};
     // Marking completion precedes the terminal event: the caller may acknowledge
     // that event with EOF immediately, while this thread is flushing stdout.
     // Rendering only emits the terminal result after EOS and pipeline teardown.
-    if (method == "renderVideo") {
+    if (is_render) {
       const auto output = render_video(args, directory, send_progress);
       finished.store(true);
       send_result(output);
-    } else if (method == "getMetadata" || method == "hasAudioTrack") {
+    } else if (is_metadata) {
       JsonNode* node = metadata(args, method == "hasAudioTrack");
       finished.store(true);
       send_node(node);
-    } else if (method == "getThumbnails" || method == "startThumbnailStream" ||
-               method == "startFrameStream") {
+    } else {
       JsonNode* node = read_frames(method, args, directory, data);
       finished.store(true);
       send_node(node);
-    } else {
-      throw Failure{"unsupported"};
     }
   } catch (const Failure& failure) {
     finished.store(true);

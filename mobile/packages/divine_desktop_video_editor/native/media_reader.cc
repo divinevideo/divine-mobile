@@ -92,7 +92,10 @@ JsonNode* metadata(JsonObject* args, bool audio_only) {
   json_object_set_int_member(result, "duration", static_cast<gint64>(duration / GST_MSECOND));
   json_object_set_int_member(result, "fileSize", static_cast<gint64>(fs::file_size(input)));
   json_object_set_int_member(result, "bitrate", bitrate);
-  if (denominator != 0) json_object_set_double_member(result, "frameRate", static_cast<double>(numerator) / denominator);
+  if (numerator != 0 && denominator != 0) {
+    json_object_set_double_member(
+        result, "frameRate", static_cast<double>(numerator) / denominator);
+  }
   if (boolean(member(args, "checkStreamingOptimization"), false)) {
     json_object_set_boolean_member(result, "isOptimizedForStreaming", streaming_optimized(input));
   }
@@ -176,7 +179,16 @@ class FrameReader {
       throw Failure{"decoder"};
     }
     Sample sample(gst_app_sink_try_pull_preroll(GST_APP_SINK(sink_), 10 * GST_SECOND));
-    if (!sample) throw Failure{"decoder"};
+    Object<GstBus> bus(gst_element_get_bus(pipeline_.get()));
+    GstMessage* error = gst_bus_pop_filtered(bus.get(), GST_MESSAGE_ERROR);
+    if (error) {
+      gst_message_unref(error);
+      throw Failure{"decoder"};
+    }
+    if (!sample) {
+      if (gst_app_sink_is_eos(GST_APP_SINK(sink_))) return {};
+      throw Failure{"decoder"};
+    }
     return sample;
   }
 
@@ -379,6 +391,10 @@ JsonNode* read_frames(const std::string& method, JsonObject* args,
         continue;
       }
       Sample sample = final_picture ? reader.last(duration) : reader.seek(time);
+      if (!sample) {
+        if (!streaming) json_array_add_null_element(json_node_get_array(result.get()));
+        continue;
+      }
       const auto output = directory / (streaming ? "thumbnail.frame" : "thumbnail-" + std::to_string(index) + ".frame");
       write_sample(sample.get(), output, false);
       Node event = path_node(output);

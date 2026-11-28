@@ -1,7 +1,10 @@
 #include "media_renderer.h"
 #include <ges/ges.h>
+#include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <vector>
 #include <utility>
 
@@ -86,25 +89,53 @@ void select_encoders(bool enable_audio) {
   if (audio) gst_plugin_feature_set_rank(GST_PLUGIN_FEATURE(audio.get()), GST_RANK_PRIMARY + 100);
 }
 
-struct MuxOptions {
+struct RenderElementOptions {
   bool optimize;
-  std::atomic<bool> configured{false};
+  std::atomic<bool> muxer_configured{false};
   std::string temporary_file;
+  guint video_bitrate = 0;
+  std::atomic<bool> encoder_configured{false};
 };
 
-void configure_muxer(GstBin*, GstBin*, GstElement* element, gpointer data) {
-  auto* options = static_cast<MuxOptions*>(data);
-  if (!options->optimize) return;
+guint target_video_bitrate(guint width, guint height,
+                           guint fps_numerator, guint fps_denominator) {
+  const double fps = fps_denominator > 0
+      ? static_cast<double>(fps_numerator) / static_cast<double>(fps_denominator)
+      : 30.0;
+  const double pixels_per_second =
+      static_cast<double>(width) * static_cast<double>(height) * fps;
+  // Scale H.264 target bitrate with output resolution and frame rate
+  // (~3.6 Mbps at 720p30, ~8.1 Mbps at 1080p30) instead of openh264enc's
+  // 128 kbit/s default.
+  const double scaled = std::round(pixels_per_second * 0.13);
+  constexpr double kMinBitrate = 250000.0;
+  constexpr double kMaxBitrate = 20000000.0;
+  return static_cast<guint>(std::clamp(scaled, kMinBitrate, kMaxBitrate));
+}
+
+void configure_render_element(GstBin*, GstBin*, GstElement* element, gpointer data) {
+  auto* options = static_cast<RenderElementOptions*>(data);
   GstElementFactory* factory = gst_element_get_factory(element);
   if (!factory) return;
   const char* name = gst_plugin_feature_get_name(GST_PLUGIN_FEATURE(factory));
-  if (!g_str_equal(name, "mp4mux") && !g_str_equal(name, "qtmux")) return;
   GObjectClass* type = G_OBJECT_GET_CLASS(element);
+  if (g_str_equal(name, "openh264enc")) {
+    if (g_object_class_find_property(type, "bitrate") && options->video_bitrate > 0) {
+      g_object_set(element, "bitrate", options->video_bitrate, nullptr);
+    }
+    if (g_object_class_find_property(type, "rate-control")) {
+      gst_util_set_object_arg(G_OBJECT(element), "rate-control", "bitrate");
+    }
+    options->encoder_configured.store(true);
+    return;
+  }
+  if (!options->optimize) return;
+  if (!g_str_equal(name, "mp4mux") && !g_str_equal(name, "qtmux")) return;
   if (!g_object_class_find_property(type, "faststart") ||
       !g_object_class_find_property(type, "faststart-file")) return;
   g_object_set(element, "faststart", TRUE,
       "faststart-file", options->temporary_file.c_str(), nullptr);
-  options->configured.store(true);
+  options->muxer_configured.store(true);
 }
 
 }  // namespace
@@ -152,13 +183,15 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
     prepared.push_back(std::move(clip));
   }
   select_encoders(enable_audio);
-  MuxOptions mux{boolean(member(args, "shouldOptimizeForNetworkUse"), false),
-      false, (directory / "mux-media.tmp").u8string()};
+  RenderElementOptions render_options{
+      boolean(member(args, "shouldOptimizeForNetworkUse"), false),
+      false, (directory / "mux-media.tmp").u8string(), 0, false};
   Object<GESTimeline> timeline(static_cast<GESTimeline*>(
       g_object_ref_sink(ges_timeline_new_audio_video())));
   Object<GESPipeline> pipeline(static_cast<GESPipeline*>(
       g_object_ref_sink(ges_pipeline_new())));
-  g_signal_connect(pipeline.get(), "deep-element-added", G_CALLBACK(configure_muxer), &mux);
+  g_signal_connect(pipeline.get(), "deep-element-added",
+      G_CALLBACK(configure_render_element), &render_options);
   struct StopPipeline {
     GESPipeline* pipeline;
     ~StopPipeline() { gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL); }
@@ -186,6 +219,8 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
     output_numerator = maximum_numerator;
     output_denominator = maximum_denominator;
   }
+  render_options.video_bitrate = target_video_bitrate(
+      width, height, output_numerator, output_denominator);
   const std::string restriction = "video/x-raw,pixel-aspect-ratio=1/1,width=" + std::to_string(width) +
       ",height=" + std::to_string(height) + ",framerate=" + std::to_string(output_numerator) +
       "/" + std::to_string(output_denominator);
@@ -247,6 +282,15 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
   if (gst_element_set_state(GST_ELEMENT(pipeline.get()), GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE) {
     throw Failure{"encoder"};
   }
+  using Clock = std::chrono::steady_clock;
+  const auto started = Clock::now();
+  auto last_progress = started;
+  gint64 last_position = -1;
+  const auto stall_limit = std::chrono::seconds(30);
+  const auto duration_seconds =
+      static_cast<int64_t>(total_duration / GST_SECOND);
+  const auto deadline = std::chrono::seconds(
+      std::max<int64_t>(60, duration_seconds * 10 + 60));
   progress(0);
   bool finished = false;
   while (!finished) {
@@ -258,13 +302,22 @@ fs::path render_video(JsonObject* args, const fs::path& directory,
       if (type == GST_MESSAGE_ERROR) throw Failure{"encoder"};
       finished = type == GST_MESSAGE_EOS;
     }
+    const auto now = Clock::now();
     gint64 position = 0;
     if (!finished && gst_element_query_position(GST_ELEMENT(pipeline.get()), GST_FORMAT_TIME, &position)) {
+      if (position > last_position) {
+        last_position = position;
+        last_progress = now;
+      }
       progress(std::min(0.99, std::max(0.0, static_cast<double>(position) / static_cast<double>(total_duration))));
+    }
+    if (!finished && (now - last_progress > stall_limit || now - started > deadline)) {
+      throw Failure{"timeout"};
     }
   }
   gst_element_set_state(GST_ELEMENT(pipeline.get()), GST_STATE_NULL);
-  if (mux.optimize && !mux.configured.load()) throw Failure{"encoder"};
+  if (render_options.optimize && !render_options.muxer_configured.load()) throw Failure{"encoder"};
+  if (!render_options.encoder_configured.load()) throw Failure{"encoder"};
   if (!fs::is_regular_file(output) || fs::file_size(output) == 0) throw Failure{"storage"};
   return output;
 }

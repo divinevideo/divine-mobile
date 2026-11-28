@@ -117,6 +117,45 @@ class WorkerTests(unittest.TestCase):
         self.assertAlmostEqual(metadata['duration'], 1000, delta=50)
         self.assertNotIn('frameRate', metadata)
 
+    def test_metadata_omits_zero_frame_rate_for_vfr_clips(self):
+        directory = tempfile.TemporaryDirectory(prefix='vfr input ')
+        self.addCleanup(directory.cleanup)
+        source = Path(directory.name) / 'vfr.mkv'
+        # Variable frame intervals in Matroska omit DefaultDuration so
+        # GStreamer's discoverer reports framerate 0/1.
+        subprocess.run(['ffmpeg', '-v', 'error', '-f', 'lavfi',
+            '-i', 'color=red:s=128x240:r=20:d=1',
+            '-vf', "setpts='if(eq(N,0),0,N*N*0.002/TB)'",
+            '-fps_mode', 'vfr', '-c:v', 'libx264', '-an', str(source)], check=True)
+        code, events = self.invoke('getMetadata', {'inputPath': str(source)})
+        self.assertEqual(code, 0, events)
+        metadata = events[-1]['value']
+        self.assertTrue(metadata['hasVideo'])
+        self.assertEqual((metadata['width'], metadata['height']), (128, 240))
+        if 'frameRate' in metadata:
+            self.assertGreater(metadata['frameRate'], 0)
+
+    def test_hd_export_uses_scaled_video_bitrate(self):
+        directory = tempfile.TemporaryDirectory(prefix='hd bitrate input ')
+        self.addCleanup(directory.cleanup)
+        source = Path(directory.name) / 'hd-complex.mp4'
+        subprocess.run(['ffmpeg', '-v', 'error', '-f', 'lavfi',
+            '-i', 'testsrc2=s=1280x720:r=30:d=1',
+            '-vf', 'noise=alls=30:allf=t',
+            '-c:v', 'libx264', '-b:v', '4000k', '-an', str(source)], check=True)
+        code, events = self.invoke(args={
+            'videoClips': [{'inputPath': str(source)}],
+            'enableAudio': False,
+        })
+        self.assertEqual(code, 0, events)
+        output = Path(events[-1]['value']['path'])
+        streams = json.loads(subprocess.check_output(['ffprobe', '-v', 'error',
+            '-show_streams', '-of', 'json', str(output)]))['streams']
+        video = next(s for s in streams if s['codec_type'] == 'video')
+        self.assertEqual((video['width'], video['height']), (1280, 720))
+        # Must exceed openh264enc's 128 kbit/s default by a wide margin.
+        self.assertGreater(int(video['bit_rate']), 500_000)
+
     def test_detects_actual_audio_track(self):
         code, events = self.invoke('hasAudioTrack', {'inputPath': str(FIXTURE)})
         self.assertEqual(code, 0, events)
@@ -279,6 +318,41 @@ class WorkerTests(unittest.TestCase):
             for index in range(3):
                 offset = (y * 64 + x) * 3 + index
                 self.assertAlmostEqual(actual[offset], expected[offset], delta=8)
+
+    def test_thumbnails_handle_timestamps_past_last_video_frame_when_audio_is_longer(self):
+        directory = tempfile.TemporaryDirectory(prefix='late thumb seek ')
+        self.addCleanup(directory.cleanup)
+        source = Path(directory.name) / 'long-audio.mp4'
+        subprocess.run(['ffmpeg', '-v', 'error', '-f', 'lavfi',
+            '-i', 'color=red:s=128x240:r=20:d=0.5', '-f', 'lavfi',
+            '-i', 'color=blue:s=128x240:r=20:d=0.5', '-f', 'lavfi',
+            '-i', 'sine=frequency=440:duration=2', '-filter_complex',
+            '[0:v][1:v]concat=n=2:v=1:a=0[video]', '-map', '[video]', '-map', '2:a:0',
+            '-c:v', 'libx264', '-c:a', 'aac', str(source)], check=True)
+        base_args = dict(inputPath=str(source), timestamps=[250000, 1500000, 750000],
+            outputWidth=64, outputHeight=120, boxFit='contain', outputFormat='png')
+        code, events = self.invoke('getThumbnails', base_args)
+        self.assertEqual(code, 0, events)
+        entries = events[-1]['value']
+        self.assertEqual(len(entries), 3)
+        self.assertIsNotNone(entries[0])
+        self.assertIsNone(entries[1])
+        self.assertIsNotNone(entries[2])
+        red = self.rgb(Path(entries[0]['path']))
+        blue = self.rgb(Path(entries[2]['path']))
+        self.assertGreater(red[0], 200)
+        self.assertGreater(blue[2], 200)
+
+        streamed = []
+        code, events = self.invoke(
+            'startThumbnailStream',
+            base_args,
+            on_data=lambda value: streamed.append((value['indices'], self.rgb(Path(value['path'])))),
+        )
+        self.assertEqual(code, 0, events)
+        self.assertEqual([indices for indices, _ in streamed], [[0], [2]])
+        self.assertGreater(streamed[0][1][0], 200)
+        self.assertGreater(streamed[1][1][2], 200)
 
     def test_anamorphic_input_preserves_display_geometry(self):
         directory = tempfile.TemporaryDirectory(prefix='anamorphic input ')
