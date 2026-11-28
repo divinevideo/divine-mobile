@@ -3,6 +3,7 @@
 // ABOUTME: native video feed
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -10,10 +11,15 @@ import 'package:feed_tuning_repository/feed_tuning_repository.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart' show StateProvider;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:infinite_video_feed/infinite_video_feed.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:media_cache/media_cache.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
@@ -24,17 +30,21 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/analytics_providers.dart';
+import 'package:openvine/providers/find_people_providers.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/providers/shell_obscured_provider.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
+import 'package:openvine/screens/feed/feed_auto_advance_cubit.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/feed/video_feed_page/feed_empty_widget.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
+import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../helpers/recording_consumption_analytics.dart';
 import '../../helpers/test_provider_overrides.dart';
@@ -47,6 +57,13 @@ class _MockVideoFeedBloc extends MockBloc<VideoFeedEvent, VideoFeedBlocState>
 
 class _MockVideoVolumeCubit extends MockCubit<VideoVolumeState>
     implements VideoVolumeCubit {}
+
+const _testPeopleOwnerA =
+    '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798';
+const _testPeopleOwnerB =
+    'c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5';
+const _testPeopleCreator =
+    'f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9';
 
 List<Object?> _captureAnnouncements(WidgetTester tester) {
   final announced = <Object?>[];
@@ -1690,6 +1707,294 @@ void main() {
           expect(feedVideos(tester).releaseNeighboursWhenInactive, isTrue);
 
           await drainAndDispose(tester);
+        },
+      );
+    });
+
+    group('Home feed people card', () {
+      FindPeopleRepository makePeopleRepo({
+        required String owner,
+        bool empty = false,
+      }) => FindPeopleRepository(
+        apiClient: FunnelcakeApiClient(
+          baseUrl: 'https://example.test',
+          retryBaseDelay: Duration.zero,
+          httpClient: MockClient(
+            (_) async => http.Response(
+              jsonEncode({
+                'suggestions': empty
+                    ? <Object>[]
+                    : [
+                        {
+                          'pubkey': _testPeopleCreator,
+                          'profile': {'display_name': 'Suggested Creator'},
+                          'reason': 'popular',
+                          'is_classic': false,
+                        },
+                      ],
+              }),
+              200,
+            ),
+          ),
+        ),
+        accountPubkey: owner,
+        currentPubkey: () => owner,
+        isExcluded: (_) => false,
+        readDismissed: () => [],
+        writeDismissed: (_) async {},
+      );
+
+      Future<void> pumpHomeWithPeopleCard(
+        WidgetTester tester, {
+        required StateProvider<FindPeopleRepository> repoProvider,
+        required RecordingConsumptionAnalytics analytics,
+        int initialIndex = 9,
+      }) async {
+        VisibilityDetectorController.instance.updateInterval = Duration.zero;
+        addTearDown(() {
+          VisibilityDetectorController.instance.updateInterval = const Duration(
+            milliseconds: 500,
+          );
+        });
+        final videos = List.generate(
+          12,
+          (i) => createTestVideoEvent(id: 'home-video-$i'),
+        );
+        final state = VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: videos,
+        );
+        when(() => videoFeedBloc.state).thenReturn(state);
+        whenListen(
+          videoFeedBloc,
+          const Stream<VideoFeedBlocState>.empty(),
+          initialState: state,
+        );
+        final cache = createMockMediaCacheManager();
+        when(
+          () => cache.cacheFileCancellable(
+            any(),
+            key: any(named: 'key'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).thenAnswer(
+          (_) => CancellableCacheOperation.fromStream(const Stream.empty()),
+        );
+        await tester.pumpWidget(
+          testMaterialApp(
+            mockMediaCacheManager: cache,
+            additionalOverrides: [
+              consumptionAnalyticsTrackerProvider.overrideWithValue(
+                ConsumptionAnalyticsTracker(analytics: () => analytics),
+              ),
+              isFeatureEnabledProvider(FeatureFlag.findPeople)
+                  .overrideWithValue(true),
+              isFeatureEnabledProvider(FeatureFlag.feedPeopleSuggestions)
+                  .overrideWithValue(true),
+              findPeopleActionRecorderProvider.overrideWithValue(
+                (_) => (_, _, _) {},
+              ),
+              findPeopleRepositoryProvider.overrideWith(
+                (ref) => ref.watch(repoProvider),
+              ),
+            ],
+            home: MultiBlocProvider(
+              providers: [
+                BlocProvider<VideoFeedBloc>.value(value: videoFeedBloc),
+                BlocProvider<VideoPlaybackStatusCubit>(
+                  create: (_) => VideoPlaybackStatusCubit(),
+                ),
+                BlocProvider<VideoVolumeCubit>.value(value: videoVolumeCubit),
+              ],
+              child: VideoFeedView(initialIndex: initialIndex),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      Future<void> settleFrames(WidgetTester tester) async {
+        for (var i = 0; i < 8; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+      }
+
+      Future<void> disposeFeed(WidgetTester tester) async {
+        await tester.pump(const Duration(seconds: 3));
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+      }
+
+      testWidgets(
+        'Keep watching advances to video 10 and records feed depth',
+        (tester) async {
+          final analytics = RecordingConsumptionAnalytics();
+          final repo = makePeopleRepo(owner: _testPeopleOwnerA);
+          final repoProvider = StateProvider<FindPeopleRepository>((_) => repo);
+
+          try {
+            await pumpHomeWithPeopleCard(
+              tester,
+              repoProvider: repoProvider,
+              analytics: analytics,
+            );
+            await settleFrames(tester);
+
+            final feedState = tester.state<InfiniteVideoFeedState>(
+              find.byType(InfiniteVideoFeed),
+            );
+            await tester.drag(find.byType(PageView), const Offset(0, -600));
+            await settleFrames(tester);
+            expect(feedState.isShowingInterstitial, isTrue);
+
+            final l10n = lookupAppLocalizations(const Locale('en'));
+            await tester.tap(find.text(l10n.findPeopleContinueWatching));
+            await settleFrames(tester);
+
+            expect(feedState.isShowingInterstitial, isFalse);
+            expect(feedState.currentIndex, equals(10));
+            expect(
+              analytics.events.where((e) => e.name == 'feed_depth_recorded'),
+              hasLength(1),
+            );
+            expect(
+              analytics.events.single.parameters['depth'],
+              equals(2),
+            );
+          } finally {
+            await disposeFeed(tester);
+            await repo.dispose();
+            analytics.dispose();
+          }
+        },
+      );
+
+      testWidgets(
+        'swiping back from the card returns to video 9 without duplicating activation',
+        (tester) async {
+          final analytics = RecordingConsumptionAnalytics();
+          final repo = makePeopleRepo(owner: _testPeopleOwnerA);
+          final repoProvider = StateProvider<FindPeopleRepository>((_) => repo);
+
+          try {
+            await pumpHomeWithPeopleCard(
+              tester,
+              repoProvider: repoProvider,
+              analytics: analytics,
+            );
+            await settleFrames(tester);
+
+            final feedState = tester.state<InfiniteVideoFeedState>(
+              find.byType(InfiniteVideoFeed),
+            );
+            await tester.drag(find.byType(PageView), const Offset(0, -600));
+            await settleFrames(tester);
+            expect(feedState.isShowingInterstitial, isTrue);
+
+            // Drag downward on the card itself to verify no nested vertical
+            // scroll view traps the return swipe.
+            await tester.drag(
+              find.text('Suggested Creator'),
+              const Offset(0, 600),
+            );
+            await settleFrames(tester);
+
+            expect(feedState.isShowingInterstitial, isFalse);
+            expect(feedState.currentIndex, equals(9));
+            verifyNever(
+              () => videoFeedBloc.add(const VideoFeedActiveIndexChanged(9)),
+            );
+            expect(analytics.events, isEmpty);
+          } finally {
+            await disposeFeed(tester);
+            await repo.dispose();
+            analytics.dispose();
+          }
+        },
+      );
+
+      testWidgets(
+        'Auto stops on the people card instead of flying across it',
+        (tester) async {
+          final analytics = RecordingConsumptionAnalytics();
+          final repo = makePeopleRepo(owner: _testPeopleOwnerA);
+          final repoProvider = StateProvider<FindPeopleRepository>((_) => repo);
+
+          try {
+            await pumpHomeWithPeopleCard(
+              tester,
+              repoProvider: repoProvider,
+              analytics: analytics,
+            );
+            await settleFrames(tester);
+
+            final feedWidget = tester.widget<InfiniteVideoFeed>(
+              find.byType(InfiniteVideoFeed),
+            );
+            final feedState = tester.state<InfiniteVideoFeedState>(
+              find.byType(InfiniteVideoFeed),
+            );
+            final autoCubit = tester
+                .element(find.byType(FeedVideos))
+                .read<FeedAutoAdvanceCubit>();
+            autoCubit.toggle();
+            expect(autoCubit.state.isEffectivelyActive, isTrue);
+
+            feedWidget.onVideoLoopCompleted?.call(9);
+            await settleFrames(tester);
+
+            expect(feedState.isShowingInterstitial, isTrue);
+            expect(feedState.currentIndex, equals(9));
+            expect(autoCubit.state.isEffectivelyActive, isFalse);
+          } finally {
+            await disposeFeed(tester);
+            await repo.dispose();
+            analytics.dispose();
+          }
+        },
+      );
+
+      testWidgets(
+        'account switch while the card is showing clears it cleanly',
+        (tester) async {
+          final analytics = RecordingConsumptionAnalytics();
+          final repoA = makePeopleRepo(owner: _testPeopleOwnerA);
+          final repoB = makePeopleRepo(owner: _testPeopleOwnerB, empty: true);
+          final repoProvider = StateProvider<FindPeopleRepository>(
+            (_) => repoA,
+          );
+
+          try {
+            await pumpHomeWithPeopleCard(
+              tester,
+              repoProvider: repoProvider,
+              analytics: analytics,
+            );
+            await settleFrames(tester);
+
+            final feedState = tester.state<InfiniteVideoFeedState>(
+              find.byType(InfiniteVideoFeed),
+            );
+            await tester.drag(find.byType(PageView), const Offset(0, -600));
+            await settleFrames(tester);
+            expect(feedState.isShowingInterstitial, isTrue);
+
+            // Swap to a new account's repository while the card is showing.
+            final container = ProviderScope.containerOf(
+              tester.element(find.byType(VideoFeedView)),
+            );
+            container.read(repoProvider.notifier).state = repoB;
+            await settleFrames(tester);
+
+            expect(feedState.isShowingInterstitial, isFalse);
+            expect(feedState.currentIndex, equals(9));
+          } finally {
+            await disposeFeed(tester);
+            await repoA.dispose();
+            await repoB.dispose();
+            analytics.dispose();
+          }
         },
       );
     });

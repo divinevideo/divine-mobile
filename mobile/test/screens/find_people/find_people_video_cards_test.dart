@@ -36,10 +36,19 @@ class _ContentVersion extends ContentFilterVersion {
 }
 
 void main() {
-  final owner = 'a' * 64;
-  final firstKey = 'b' * 64;
-  final secondKey = 'c' * 64;
-  final previewId = 'd' * 64;
+  const owner =
+      '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798';
+  const firstKey =
+      'c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5';
+  const secondKey =
+      'f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9';
+  const thirdKey =
+      'e493dbf1c10d80f3581e4904930b1404cc6c13900ee0758474fa94abe8c4cd13';
+  const fourthKey =
+      '2f8bde4d1a07209355b4a7250a5c5128e88b84bddc619ab7cba8d569b240efe4';
+  const creatorKeys = [firstKey, secondKey, thirdKey, fourthKey];
+  const previewId =
+      'fff97bd5755eeea420453a14355235d382f6472f8568a18b2f057a1460297556';
   late FindPeopleRepository repository;
   late FindPeopleCubit cubit;
   late _Follows follows;
@@ -62,7 +71,7 @@ void main() {
               'suggestions': [
                 for (var i = 0; i < creatorCount; i++)
                   {
-                    'pubkey': ['b', 'c', 'e', 'f'][i] * 64,
+                    'pubkey': creatorKeys[i],
                     'profile': {
                       'name': [
                         'Creator one',
@@ -165,16 +174,16 @@ void main() {
           await tester.pumpWidget(subject());
           await tester.pumpAndSettle();
           final first = tester.getRect(
-            find.byKey(ValueKey('creator-card:$firstKey')),
+            find.byKey(const ValueKey('creator-card:$firstKey')),
           );
           final third = tester.getRect(
-            find.byKey(ValueKey('creator-card:${'e' * 64}')),
+            find.byKey(const ValueKey('creator-card:$thirdKey')),
           );
           expect(first.width, lessThanOrEqualTo(320));
           expect(third.top, first.top);
           if (width >= 1040) {
             final fourth = tester.getRect(
-              find.byKey(ValueKey('creator-card:${'f' * 64}')),
+              find.byKey(const ValueKey('creator-card:$fourthKey')),
             );
             expect(fourth.top, first.top);
             expect(first.left, greaterThan(160));
@@ -202,10 +211,10 @@ void main() {
             await tester.pumpWidget(subject(dark: dark));
             await tester.pumpAndSettle();
             final first = tester.getRect(
-              find.byKey(ValueKey('creator-card:$firstKey')),
+              find.byKey(const ValueKey('creator-card:$firstKey')),
             );
             final second = tester.getRect(
-              find.byKey(ValueKey('creator-card:$secondKey')),
+              find.byKey(const ValueKey('creator-card:$secondKey')),
             );
             expect(first.top, second.top);
             expect(second.left, greaterThan(first.right));
@@ -241,16 +250,16 @@ void main() {
           await tester.pumpWidget(subject(scale: 2));
           await tester.pumpAndSettle();
           final first = tester.getRect(
-            find.byKey(ValueKey('creator-card:$firstKey')),
+            find.byKey(const ValueKey('creator-card:$firstKey')),
           );
           final second = tester.getRect(
-            find.byKey(ValueKey('creator-card:$secondKey')),
+            find.byKey(const ValueKey('creator-card:$secondKey')),
           );
           expect(first.left, second.left);
           expect(second.top, greaterThan(first.bottom));
           expect(tester.takeException(), isNull);
           final follow = find.descendant(
-            of: find.byKey(ValueKey('creator-card:$firstKey')),
+            of: find.byKey(const ValueKey('creator-card:$firstKey')),
             matching: find.text('Follow'),
           );
           when(() => follows.followWithResult(firstKey))
@@ -321,7 +330,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Creator one'), findsOneWidget);
         final dismiss = find.descendant(
-          of: find.byKey(ValueKey('creator-card:$firstKey')),
+          of: find.byKey(const ValueKey('creator-card:$firstKey')),
           matching: find.byWidgetPredicate(
             (widget) =>
                 widget is DivineIconButton &&
@@ -329,6 +338,23 @@ void main() {
           ),
         );
         expect(dismiss, findsOneWidget);
+        expect(
+          tester.widget<DivineIconButton>(dismiss).type,
+          equals(DivineIconButtonType.ghostOverMedia),
+        );
+        final semantics = tester.ensureSemantics();
+        final identityButton = find.descendant(
+          of: find.byKey(const ValueKey('creator-card:$firstKey')),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.button == true &&
+                widget.properties.label == 'Creator one',
+          ),
+        );
+        expect(identityButton, findsOneWidget);
+        expect(tester.getSize(identityButton).height, greaterThanOrEqualTo(48));
+        semantics.dispose();
         await tester.tap(dismiss);
         await tester.pumpAndSettle();
         expect(
@@ -393,7 +419,9 @@ void main() {
           try {
             await tester.pumpWidget(subject(router: router));
             await tester.pumpAndSettle();
-            await tester.tap(find.byKey(ValueKey('creator-preview:$firstKey')));
+            await tester.tap(
+              find.byKey(const ValueKey('creator-preview:$firstKey')),
+            );
             await tester.pumpAndSettle();
             expect(find.text('Video destination'), findsOneWidget);
             expect(videoDestination!.pathParameters['id'], previewId);

@@ -6,12 +6,20 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
 
+const _ownerPubkey =
+    '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798';
+const _creatorPubkey =
+    'c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5';
+const _archivePubkey =
+    'f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9';
+const _previewVideoId =
+    'e493dbf1c10d80f3581e4904930b1404cc6c13900ee0758474fa94abe8c4cd13';
+
 void main() {
   group('FunnelcakeApiClient.getFollowSuggestions', () {
     test(
       'encodes opaque cursors and parses active and archived creators',
       () async {
-        final pubkey = 'a' * 64;
         Uri? requested;
         final client = FunnelcakeApiClient(
           baseUrl: 'https://example.test',
@@ -21,17 +29,17 @@ void main() {
               jsonEncode({
                 'suggestions': [
                   {
-                    'pubkey': 'b' * 64,
+                    'pubkey': _creatorPubkey,
                     'profile': {'display_name': 'Creator'},
                     'reason': 'personalized',
                     'is_classic': false,
                     'video_preview': {
-                      'id': 'd' * 64,
+                      'id': _previewVideoId,
                       'thumbnail_url': 'https://media.example.test/thumb.jpg',
                     },
                   },
                   {
-                    'pubkey': 'c' * 64,
+                    'pubkey': _archivePubkey,
                     'profile': {'name': 'Archive'},
                     'reason': 'classic',
                     'is_classic': true,
@@ -44,16 +52,16 @@ void main() {
           }),
         );
         final result = await client.getFollowSuggestions(
-          pubkey: pubkey,
+          pubkey: _ownerPubkey,
           cursor: 'a +/?=',
           limit: 3,
         );
-        expect(requested!.path, '/api/users/$pubkey/follow-suggestions');
+        expect(requested!.path, '/api/users/$_ownerPubkey/follow-suggestions');
         expect(requested!.queryParameters['cursor'], 'a +/?=');
         expect(requested!.queryParameters['limit'], '3');
         expect(requested!.queryParameters['content_safety'], 'default');
         expect(result.suggestions.first.profile.displayName, 'Creator');
-        expect(result.suggestions.first.videoPreview!.id, 'd' * 64);
+        expect(result.suggestions.first.videoPreview!.id, _previewVideoId);
         expect(
           result.suggestions.first.videoPreview!.thumbnailUrl,
           'https://media.example.test/thumb.jpg',
@@ -80,7 +88,7 @@ void main() {
           }),
         );
         await client.getFollowSuggestions(
-          pubkey: 'a' * 64,
+          pubkey: _ownerPubkey,
           limit: 500,
           cursor: 'opaque +/?=',
           contentSafety: 'strict',
@@ -105,14 +113,16 @@ void main() {
     );
 
     test(
-      'retired requests never sign or dispatch after the async boundary',
+      'retired requests abort immediately without retrying or dispatching',
       () async {
         for (final retireBeforeSigning in [false, true]) {
           var current = !retireBeforeSigning;
+          var currentChecks = 0;
           var signatures = 0;
           var requests = 0;
           final client = FunnelcakeApiClient(
             baseUrl: 'https://example.test',
+            retryBaseDelay: Duration.zero,
             httpClient: MockClient((_) async {
               requests++;
               return http.Response('{"suggestions": []}', 200);
@@ -120,8 +130,11 @@ void main() {
           );
           await expectLater(
             client.getFollowSuggestions(
-              pubkey: 'a' * 64,
-              isCurrent: () => current,
+              pubkey: _ownerPubkey,
+              isCurrent: () {
+                currentChecks++;
+                return current;
+              },
               requestHeaders: (_) async {
                 signatures++;
                 current = false;
@@ -130,9 +143,43 @@ void main() {
             ),
             throwsA(isA<FunnelcakeException>()),
           );
+          // No retry attempts: 1 check when retired before signing, 2 checks
+          // (before + after signing on attempt 1) when retired during signing.
+          expect(currentChecks, retireBeforeSigning ? 1 : 2);
           expect(signatures, retireBeforeSigning ? 0 : 1);
           expect(requests, 0);
         }
+      },
+    );
+
+    test(
+      'retired signer error aborts immediately without retrying',
+      () async {
+        var current = true;
+        var signatures = 0;
+        var requests = 0;
+        final client = FunnelcakeApiClient(
+          baseUrl: 'https://example.test',
+          retryBaseDelay: Duration.zero,
+          httpClient: MockClient((_) async {
+            requests++;
+            return http.Response('{"suggestions": []}', 200);
+          }),
+        );
+        await expectLater(
+          client.getFollowSuggestions(
+            pubkey: _ownerPubkey,
+            isCurrent: () => current,
+            requestHeaders: (_) async {
+              signatures++;
+              current = false;
+              throw StateError('retired account');
+            },
+          ),
+          throwsA(isA<FunnelcakeException>()),
+        );
+        expect(signatures, 1);
+        expect(requests, 0);
       },
     );
 
@@ -149,7 +196,7 @@ void main() {
       );
       await expectLater(
         client.getFollowSuggestions(
-          pubkey: 'a' * 64,
+          pubkey: _ownerPubkey,
           requestHeaders: (_) => signing.future,
         ),
         throwsA(isA<FunnelcakeTimeoutException>()),
@@ -173,7 +220,7 @@ void main() {
         }),
       );
       await expectLater(
-        client.getFollowSuggestions(pubkey: 'a' * 64),
+        client.getFollowSuggestions(pubkey: _ownerPubkey),
         throwsA(
           isA<FunnelcakeApiException>().having(
             (error) => error.statusCode,
@@ -200,7 +247,7 @@ void main() {
             return http.Response('{"suggestions": []}', 200);
           }),
         );
-        final page = await client.getFollowSuggestions(pubkey: 'a' * 64);
+        final page = await client.getFollowSuggestions(pubkey: _ownerPubkey);
         expect(page.suggestions, isEmpty);
         expect(requests, 2);
       },
@@ -214,7 +261,7 @@ void main() {
           httpClient: MockClient((_) async => http.Response('{}', 404)),
         );
         expect(
-          client.getFollowSuggestions(pubkey: 'a' * 64),
+          client.getFollowSuggestions(pubkey: _ownerPubkey),
           throwsA(isA<FunnelcakeApiException>()),
         );
       },

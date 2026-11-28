@@ -13,9 +13,14 @@ import 'package:profile_repository/profile_repository.dart';
 class _FollowRepository extends Mock implements FollowRepository {}
 
 void main() {
-  final owner = 'a' * 64;
-  final candidate = 'b' * 64;
-  final follows = _FollowRepository();
+  const owner =
+      '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798';
+  const candidate =
+      'c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5';
+  const secondCandidate =
+      'f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9';
+  const thirdCandidate =
+      'e493dbf1c10d80f3581e4904930b1404cc6c13900ee0758474fa94abe8c4cd13';
   FindPeopleRepository repository(
     Future<http.Response> Function(http.Request) handler,
   ) => FindPeopleRepository(
@@ -43,6 +48,12 @@ void main() {
   });
 
   group('FindPeopleCubit', () {
+    late _FollowRepository follows;
+
+    setUp(() {
+      follows = _FollowRepository();
+    });
+
     test('newer loads keep their generation and page size in state', () async {
       final firstResponse = Completer<http.Response>();
       final firstRequested = Completer<void>();
@@ -55,7 +66,7 @@ void main() {
         return http.Response(
           jsonEncode({
             'suggestions': [
-              {'pubkey': 'c' * 64},
+              {'pubkey': secondCandidate},
             ],
           }),
           200,
@@ -70,12 +81,12 @@ void main() {
       await cubit.load(limit: 5);
       expect(cubit.state.requestGeneration, 2);
       expect(cubit.state.limit, 5);
-      expect(cubit.state.suggestions.single.pubkey, 'c' * 64);
+      expect(cubit.state.suggestions.single.pubkey, secondCandidate);
       firstResponse.complete(http.Response(payload(), 200));
       await first;
       expect(cubit.state.requestGeneration, 2);
       expect(cubit.state.limit, 5);
-      expect(cubit.state.suggestions.single.pubkey, 'c' * 64);
+      expect(cubit.state.suggestions.single.pubkey, secondCandidate);
       await cubit.close();
       await repo.dispose();
     });
@@ -163,20 +174,27 @@ void main() {
       await second.close();
       await repo.dispose();
     });
-    test('closing a cubit ignores a pending response', () async {
-      final response = Completer<http.Response>();
-      final repo = repository((_) => response.future);
-      final cubit = FindPeopleCubit(
-        repository: repo,
-        followRepository: follows,
-      );
-      final pending = cubit.load();
-      await cubit.close();
-      response.complete(http.Response(payload(), 200));
-      await pending;
-      expect(cubit.state.suggestions, isEmpty);
-      await repo.dispose();
-    });
+    test(
+      'closing a cubit ignores a pending response without emitting',
+      () async {
+        final response = Completer<http.Response>();
+        final repo = repository((_) => response.future);
+        final cubit = FindPeopleCubit(
+          repository: repo,
+          followRepository: follows,
+        );
+        final pending = cubit.load();
+        expect(cubit.state.status, FindPeopleStatus.loading);
+        await cubit.close();
+        response.complete(http.Response(payload(), 200));
+        // Without the post-await isClosed guard, emit() runs outside the try
+        // block and throws StateError here.
+        await expectLater(pending, completes);
+        expect(cubit.state.status, FindPeopleStatus.loading);
+        expect(cubit.state.suggestions, isEmpty);
+        await repo.dispose();
+      },
+    );
     test(
       'an expired cursor restarts discovery without appending stale people',
       () async {
@@ -193,7 +211,7 @@ void main() {
             jsonEncode({
               'suggestions': [
                 {
-                  'pubkey': 'c' * 64,
+                  'pubkey': secondCandidate,
                   'profile': {'name': 'Fresh creator'},
                   'reason': 'popular',
                   'is_classic': false,
@@ -209,7 +227,10 @@ void main() {
         );
         await cubit.load();
         await cubit.loadMore();
-        expect(cubit.state.suggestions.map((item) => item.pubkey), ['c' * 64]);
+        expect(
+          cubit.state.suggestions.map((item) => item.pubkey),
+          [secondCandidate],
+        );
         expect(cubit.state.nextCursor, isNull);
         expect(cubit.state.status, FindPeopleStatus.success);
         await cubit.close();
@@ -282,7 +303,7 @@ void main() {
                     ? jsonEncode({
                         'suggestions': [
                           {
-                            'pubkey': 'c' * 64,
+                            'pubkey': secondCandidate,
                             'profile': {'name': 'Next creator'},
                             'reason': 'popular',
                             'is_classic': false,
@@ -325,10 +346,10 @@ void main() {
             .toList();
         publication.completeError(StateError('publication failed'));
         await pendingFollow;
-        expect(duringPublication, [candidate, 'c' * 64]);
+        expect(duringPublication, [candidate, secondCandidate]);
         expect(cubit.state.suggestions.map((item) => item.pubkey), [
           candidate,
-          'c' * 64,
+          secondCandidate,
         ]);
         expect(cubit.state.pendingPubkeys, isEmpty);
         expect(cubit.state.actionFailed, isTrue);
@@ -484,7 +505,9 @@ void main() {
                 if (request.url.queryParameters.containsKey('cursor')) {
                   return http.Response('{}', 410);
                 }
-                final keys = initial ? [candidate, 'd' * 64] : ['c' * 64];
+                final keys = initial
+                    ? [candidate, thirdCandidate]
+                    : [secondCandidate];
                 initial = false;
                 return http.Response(
                   jsonEncode({
@@ -538,10 +561,10 @@ void main() {
               .toList();
           publication.completeError(StateError('publication failed'));
           await pendingFollow;
-          expect(duringPublication, [candidate, 'c' * 64]);
+          expect(duringPublication, [candidate, secondCandidate]);
           expect(cubit.state.suggestions.map((item) => item.pubkey), [
             candidate,
-            'c' * 64,
+            secondCandidate,
           ]);
           expect(cubit.state.pendingPubkeys, isEmpty);
           expect(cubit.state.actionFailed, isTrue);

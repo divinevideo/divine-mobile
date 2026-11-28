@@ -86,13 +86,9 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.text('Find people'), findsOneWidget);
-        expect(
-          find.text(
-            'No more suggestions right now. Try searching for someone.',
-          ),
-          findsOneWidget,
-        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.findPeopleTitle), findsOneWidget);
+        expect(find.text(l10n.findPeopleEmpty), findsOneWidget);
         final semantics = tester.ensureSemantics();
         await tester.tap(find.bySemanticsIdentifier('back_button'));
         semantics.dispose();

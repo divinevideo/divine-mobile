@@ -4,7 +4,7 @@ import 'package:openvine/screens/feed/feed_people_interstitial_cubit.dart';
 void main() {
   group('FeedPeopleInterstitialCubit', () {
     test(
-      'arms only with available recommendations before the boundary',
+      'arms with available recommendations and disarms before the boundary if lost',
       () async {
         final cubit = FeedPeopleInterstitialCubit(initialVideoIndex: 0);
         expect(cubit.state.armed, isFalse);
@@ -13,6 +13,15 @@ void main() {
         cubit.videoChanged(9);
         cubit.availabilityChanged(true);
         expect(cubit.state.armed, isTrue);
+        // Losing suggestions before reaching the card disarms it.
+        cubit.availabilityChanged(false);
+        expect(cubit.state.armed, isFalse);
+        // Recovering before the boundary can re-arm it.
+        cubit.availabilityChanged(true);
+        expect(cubit.state.armed, isTrue);
+        // While the card is visible on screen, normal exhaustion keeps it stable.
+        cubit.availabilityChanged(false, cardVisible: true);
+        expect(cubit.state.armed, isTrue);
         cubit.videoChanged(10);
         expect(cubit.state.boundaryPassed, isTrue);
         cubit.availabilityChanged(false);
@@ -20,6 +29,10 @@ void main() {
           cubit.state.armed,
           isTrue,
         ); // Keep the slot stable until session reset.
+        // A server policy refusal immediately clears the card regardless of position.
+        cubit.clearForPolicy();
+        expect(cubit.state.armed, isFalse);
+        expect(cubit.state.boundaryPassed, isTrue);
         await cubit.close();
       },
     );

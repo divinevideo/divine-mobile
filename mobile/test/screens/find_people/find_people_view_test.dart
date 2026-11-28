@@ -101,7 +101,10 @@ void main() {
     testWidgets(
       'restored archives stay labeled and onboarding can skip without following',
       (tester) async {
-        final owner = 'a' * 64;
+        const owner =
+            '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798';
+        const candidate =
+            'c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5';
         final repository = FindPeopleRepository(
           apiClient: FunnelcakeApiClient(
             baseUrl: 'https://example.test',
@@ -110,7 +113,7 @@ void main() {
                 jsonEncode({
                   'suggestions': [
                     {
-                      'pubkey': 'b' * 64,
+                      'pubkey': candidate,
                       'profile': {'display_name': 'Classic creator'},
                       'reason': 'classic',
                       'is_classic': true,
@@ -167,7 +170,10 @@ void main() {
       (
         tester,
       ) async {
-        final owner = 'a' * 64;
+        const owner =
+            '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798';
+        const candidate =
+            'c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5';
         final repository = FindPeopleRepository(
           apiClient: FunnelcakeApiClient(
             baseUrl: 'https://example.test',
@@ -177,7 +183,7 @@ void main() {
                   'next_cursor': 'more',
                   'suggestions': [
                     {
-                      'pubkey': 'b' * 64,
+                      'pubkey': candidate,
                       'profile': {'name': 'Creator'},
                       'reason': 'follow_graph',
                       'is_classic': false,
@@ -234,7 +240,10 @@ void main() {
       testWidgets(
         '${permanentPage ? 'permanent page' : 'shared feed card'} exposes pending rows only after foreground resume',
         (tester) async {
-          final owner = 'a' * 64;
+          const owner =
+              '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798';
+          const candidate =
+              'c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5';
           final response = Completer<http.Response>();
           final repository = FindPeopleRepository(
             apiClient: FunnelcakeApiClient(
@@ -284,7 +293,7 @@ void main() {
                 jsonEncode({
                   'suggestions': [
                     {
-                      'pubkey': 'b' * 64,
+                      'pubkey': candidate,
                       'profile': {'name': 'Foreground creator'},
                       'reason': 'popular',
                       'is_classic': false,

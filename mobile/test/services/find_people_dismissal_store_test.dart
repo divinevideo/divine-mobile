@@ -42,9 +42,14 @@ class _DelayedRejectionPreferences extends InMemorySharedPreferencesStore {
 
 void main() {
   group('FindPeopleDismissalStore', () {
-    final firstOwner = 'a' * 64;
-    final secondOwner = 'b' * 64;
-    final candidate = 'c' * 64;
+    const firstOwner =
+        '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798';
+    const secondOwner =
+        'c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5';
+    const candidate =
+        'f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9';
+    const otherCandidate =
+        'e493dbf1c10d80f3581e4904930b1404cc6c13900ee0758474fa94abe8c4cd13';
 
     late SharedPreferencesStorePlatform originalStore;
     setUp(() {
@@ -63,10 +68,27 @@ void main() {
       await store.write(firstOwner, [candidate]);
       expect(store.read(firstOwner), [candidate]);
       expect(store.read(secondOwner), isEmpty);
-      await store.write(secondOwner, ['d' * 64]);
+      await store.write(secondOwner, [otherCandidate]);
       final reopened = FindPeopleDismissalStore(preferences);
       expect(reopened.read(firstOwner), [candidate]);
-      expect(reopened.read(secondOwner), ['d' * 64]);
+      expect(reopened.read(secondOwner), [otherCandidate]);
+    });
+
+    test('caps stored dismissals to maxEntries keeping the newest', () async {
+      final preferences = await SharedPreferences.getInstance();
+      final store = FindPeopleDismissalStore(preferences);
+      final entries = List.generate(
+        FindPeopleDismissalStore.maxEntries + 5,
+        (index) => index.toRadixString(16).padLeft(64, '0'),
+      );
+      await store.write(firstOwner, [...entries, entries.first]);
+      final stored = store.read(firstOwner);
+      expect(stored, hasLength(FindPeopleDismissalStore.maxEntries));
+      // Re-dismissing entries[0] moved it to the newest end; entries[1..5]
+      // were evicted as the oldest.
+      expect(stored.last, equals(entries.first));
+      expect(stored.first, equals(entries[6]));
+      expect(stored, isNot(contains(entries[1])));
     });
 
     for (final throwsError in [false, true]) {
@@ -74,7 +96,7 @@ void main() {
         test(
           '${throwsError ? 'thrown' : 'rejected'} write restores ${hadPrevious ? 'previous' : 'empty'} dismissals',
           () async {
-            final previous = ['d' * 64];
+            final previous = [otherCandidate];
             SharedPreferencesStorePlatform.instance = _FailingPreferences(
               throwsError: throwsError,
               data: {
@@ -115,14 +137,14 @@ void main() {
         final pending = first.write(firstOwner, [candidate]);
         final failure = expectLater(pending, throwsA(isA<StateError>()));
         await platform.requested.future;
-        await second.write(secondOwner, ['d' * 64]);
-        expect(second.read(secondOwner), ['d' * 64]);
+        await second.write(secondOwner, [otherCandidate]);
+        expect(second.read(secondOwner), [otherCandidate]);
         platform.result.complete(false);
         await failure;
         expect(first.read(firstOwner), isEmpty);
-        expect(second.read(secondOwner), ['d' * 64]);
+        expect(second.read(secondOwner), [otherCandidate]);
         await preferences.reload();
-        expect(second.read(secondOwner), ['d' * 64]);
+        expect(second.read(secondOwner), [otherCandidate]);
       },
     );
   });

@@ -8,8 +8,16 @@ import 'package:http/testing.dart';
 import 'package:profile_repository/profile_repository.dart';
 
 void main() {
-  final owner = 'a' * 64;
-  final candidate = 'b' * 64;
+  const owner =
+      '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798';
+  const candidate =
+      'c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5';
+  const secondCandidate =
+      'f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9';
+  const thirdCandidate =
+      'e493dbf1c10d80f3581e4904930b1404cc6c13900ee0758474fa94abe8c4cd13';
+  const otherOwner =
+      '2f8bde4d1a07209355b4a7250a5c5128e88b84bddc619ab7cba8d569b240efe4';
   Map<String, Object?> suggestion(String key, {bool classic = false}) => {
     'pubkey': key,
     'profile': {'display_name': 'A creator'},
@@ -30,8 +38,8 @@ void main() {
                   suggestion(owner),
                   suggestion(candidate),
                   suggestion(candidate),
-                  suggestion('c' * 64),
-                  suggestion('d' * 64),
+                  suggestion(secondCandidate),
+                  suggestion(thirdCandidate),
                 ],
                 'next_cursor': 'opaque +/?',
               }),
@@ -43,7 +51,7 @@ void main() {
           apiClient: client,
           accountPubkey: owner,
           currentPubkey: () => owner,
-          isExcluded: (key) => key == 'c' * 64 || key == 'd' * 64,
+          isExcluded: (key) => key == secondCandidate || key == thirdCandidate,
           readDismissed: () => [],
           writeDismissed: (_) async {},
         );
@@ -80,6 +88,42 @@ void main() {
         );
         expect((await repository.load()).suggestions.single.pubkey, candidate);
         expect(requests.single.headers.containsKey('Authorization'), isFalse);
+        await repository.dispose();
+      },
+    );
+
+    test(
+      'hung signer falls back to public recommendations within budget',
+      () async {
+        final hungSigner = Completer<Map<String, String>>();
+        final requests = <http.Request>[];
+        final repository = FindPeopleRepository(
+          apiClient: FunnelcakeApiClient(
+            baseUrl: 'https://example.test',
+            httpClient: MockClient((request) async {
+              requests.add(request);
+              return http.Response(
+                jsonEncode({
+                  'suggestions': [suggestion(candidate)],
+                }),
+                200,
+              );
+            }),
+          ),
+          accountPubkey: owner,
+          currentPubkey: () => owner,
+          isExcluded: (_) => false,
+          readDismissed: () => [],
+          writeDismissed: (_) async {},
+          signerTimeout: const Duration(milliseconds: 20),
+          requestHeaders: (_) => hungSigner.future,
+        );
+        final page = await repository.load();
+        expect(page.suggestions.single.pubkey, candidate);
+        expect(requests.single.headers.containsKey('Authorization'), isFalse);
+        // Late error after timeout must not leak as an unhandled async error.
+        hungSigner.completeError(StateError('late signer failure'));
+        await Future<void>.delayed(Duration.zero);
         await repository.dispose();
       },
     );
@@ -195,7 +239,7 @@ void main() {
         );
         final pending = repository.load();
         await started.future;
-        current = 'e' * 64;
+        current = otherOwner;
         if (failSigning) {
           signing.completeError(StateError('signer retired'));
         } else {
@@ -219,7 +263,7 @@ void main() {
             retryBaseDelay: Duration.zero,
             httpClient: MockClient((_) async {
               requests++;
-              current = 'e' * 64;
+              current = otherOwner;
               throw http.ClientException('connection interrupted');
             }),
           ),
@@ -285,7 +329,7 @@ void main() {
         writeDismissed: (_) async {},
       );
       final pending = repository.load();
-      current = 'e' * 64;
+      current = otherOwner;
       response.complete(
         http.Response(
           jsonEncode({
@@ -342,11 +386,11 @@ void main() {
           },
         );
         final first = repo.dismiss(candidate);
-        final second = repo.dismiss('c' * 64);
+        final second = repo.dismiss(secondCandidate);
         await Future<void>.delayed(Duration.zero);
         firstWrite.complete();
         await Future.wait([first, second]);
-        expect(stored.toSet(), {candidate, 'c' * 64});
+        expect(stored.toSet(), {candidate, secondCandidate});
         await repo.dispose();
       },
     );
@@ -454,7 +498,7 @@ void main() {
             if (cursor != null) {
               return http.Response('{}', 410);
             }
-            final key = firstPage ? candidate : 'c' * 64;
+            final key = firstPage ? candidate : secondCandidate;
             final next = firstPage ? 'expired +/?=' : 'fresh';
             firstPage = false;
             return http.Response(
@@ -476,7 +520,7 @@ void main() {
       expect(initial.suggestions.single.pubkey, candidate);
       final restarted = await repo.load(limit: 3, cursor: initial.nextCursor);
       expect(restarted.restarted, isTrue);
-      expect(restarted.suggestions.single.pubkey, 'c' * 64);
+      expect(restarted.suggestions.single.pubkey, secondCandidate);
       expect(restarted.nextCursor, 'fresh');
       expect(cursors, [null, 'expired +/?=', null]);
       await repo.dispose();
@@ -487,7 +531,7 @@ void main() {
       () async {
         var writes = 0;
         var stored = <String>[];
-        final otherCandidate = 'c' * 64;
+        const otherCandidate = secondCandidate;
         final repo = FindPeopleRepository(
           apiClient: FunnelcakeApiClient(
             baseUrl: 'https://example.test',

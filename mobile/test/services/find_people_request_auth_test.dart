@@ -12,8 +12,10 @@ class _MockAuthService extends Mock implements AuthService {}
 
 void main() {
   group(FindPeopleRequestAuth, () {
-    final owner = 'a' * 64;
-    final other = 'b' * 64;
+    const owner =
+        '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798';
+    const other =
+        'c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5';
     late _MockAuthService auth;
     late Nip98AuthService nip98;
     late FindPeopleRequestAuth requestAuth;
