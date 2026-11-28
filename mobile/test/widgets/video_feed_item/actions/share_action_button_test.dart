@@ -2079,6 +2079,61 @@ void main() {
         );
 
         group('tap to send', () {
+          testWidgets(
+            'a contact can be focused and sent to from the keyboard',
+            (
+              tester,
+            ) async {
+              when(
+                () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                  video: any(named: 'video'),
+                  recipientPubkeys: any(named: 'recipientPubkeys'),
+                  personalMessage: any(named: 'personalMessage'),
+                ),
+              ).thenAnswer(
+                (_) async => {
+                  alice.pubkey: const ShareResult.queued('rumor-a', 'chat-a'),
+                },
+              );
+              await pumpOpenSheet(tester);
+
+              bool aliceHasFocus() {
+                var found = false;
+                FocusManager.instance.primaryFocus?.context
+                    ?.visitAncestorElements((element) {
+                      final widget = element.widget;
+                      found =
+                          widget is Semantics &&
+                          widget.properties.label ==
+                              l10n.shareRecipientSendTo('Alice');
+                      return !found;
+                    });
+                return found;
+              }
+
+              for (var i = 0; i < 12 && !aliceHasFocus(); i++) {
+                await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+                await tester.pump();
+              }
+              expect(
+                aliceHasFocus(),
+                isTrue,
+                reason: 'Tab never reached Alice',
+              );
+
+              await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+              await tester.pumpAndSettle();
+
+              verify(
+                () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                  video: any(named: 'video'),
+                  recipientPubkeys: [alice.pubkey],
+                ),
+              ).called(1);
+              expect(find.text(l10n.shareWithTitle), findsNothing);
+            },
+          );
+
           testWidgets('announces which recipient a tap sends to and that a '
               'long-press adds a message', (tester) async {
             final semantics = tester.ensureSemantics();

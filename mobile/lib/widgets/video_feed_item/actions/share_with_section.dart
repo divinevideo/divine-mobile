@@ -109,6 +109,7 @@ class _ShareWithSection extends StatelessWidget {
                               user: _skeletonContact,
                               isSelected: false,
                               onTap: (_) {},
+                              enabled: false,
                             ),
                           ),
                         ),
@@ -258,8 +259,8 @@ class _ContactItem extends ConsumerWidget {
           ? context.l10n.shareRecipientSendTo(displayName)
           : displayName,
       onLongPressHint: longPress == null ? null : context.l10n.shareMessageHint,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(_ShareWithSection._avatarRadius),
         onTap: enabled ? () => onTap(resolved) : null,
         onLongPress: enabled && longPress != null
             ? () => longPress(resolved)
