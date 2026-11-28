@@ -1267,6 +1267,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           TargetPlatform.android,
           TargetPlatform.iOS,
           TargetPlatform.macOS,
+          TargetPlatform.windows,
         }.contains(defaultTargetPlatform) &&
         !(Uri.tryParse(source)?.path.toLowerCase().endsWith('.m3u8') ?? false);
     final load = FeedPlaybackTelemetry.startLoad(

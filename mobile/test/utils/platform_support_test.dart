@@ -59,9 +59,9 @@ void main() {
       expect(hasNativeVideoPlayer, isFalse);
     });
 
-    test('is false on Windows', () {
+    test('is true on Windows', () {
       debugDefaultTargetPlatformOverride = TargetPlatform.windows;
-      expect(hasNativeVideoPlayer, isFalse);
+      expect(hasNativeVideoPlayer, isTrue);
     });
   });
 }

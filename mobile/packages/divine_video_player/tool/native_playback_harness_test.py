@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 import unittest
 
-from native_playback_harness import MAIN, flutter_command
+from native_playback_harness import MAIN, flutter_command, register_audio_effect
 
 
 class HttpFixtureTest(unittest.TestCase):
@@ -68,6 +68,27 @@ Future<void> main() async {
                                     capture_output=True, text=True, timeout=20)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn('HTTP_FIXTURE_PASS', result.stdout)
+
+
+class AudioEffectManifestTest(unittest.TestCase):
+    def test_registers_the_effect_once_inside_the_assembly(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / 'runner.exe.manifest'
+            manifest.write_text('<assembly>\n  <application/>\n</assembly>\n',
+                                encoding='utf-8')
+            register_audio_effect(manifest)
+            register_audio_effect(manifest)
+            text = manifest.read_text(encoding='utf-8')
+            self.assertEqual(text.count('DivineVideoPlayer.AudioShapingEffect'), 1)
+            self.assertLess(text.index('divine_video_player_plugin.dll'),
+                            text.index('</assembly>'))
+
+    def test_refuses_an_unexpected_manifest(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / 'runner.exe.manifest'
+            manifest.write_text('<other/>', encoding='utf-8')
+            with self.assertRaises(RuntimeError):
+                register_audio_effect(manifest)
 
 
 if __name__ == '__main__':

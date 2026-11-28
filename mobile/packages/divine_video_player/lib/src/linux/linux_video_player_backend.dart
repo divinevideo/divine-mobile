@@ -3,11 +3,10 @@ import 'dart:io' show Platform;
 import 'dart:math' as math;
 
 import 'package:divine_video_player/src/audio_track.dart' as divine;
-import 'package:divine_video_player/src/desktop/desktop_video_configuration.dart';
 import 'package:divine_video_player/src/desktop/desktop_video_frame_ready.dart';
+import 'package:divine_video_player/src/linux/linux_video_configuration.dart';
 import 'package:divine_video_player/src/video_clip.dart';
 import 'package:divine_video_player/src/video_player_state.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart' as media_kit;
@@ -738,11 +737,9 @@ class MediaKitLinuxVideoPlayerBackend
       );
       return const _DisabledVideoController();
     }
-    // Keep Linux's virtual-GPU workaround without forcing Windows onto its
-    // size-limited software output.
     return media_kit.VideoController(
       player,
-      configuration: desktopVideoConfiguration(defaultTargetPlatform),
+      configuration: linuxVideoConfiguration(),
     );
   }
 

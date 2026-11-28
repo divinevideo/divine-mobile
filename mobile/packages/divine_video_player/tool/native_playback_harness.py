@@ -22,6 +22,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:divine_video_player/divine_video_player.dart';
 
@@ -151,8 +152,12 @@ Future<void> main() async {
   final hold = Platform.environment['DIVINE_PLAYBACK_HOLD'];
   try {
     await controller.initialize().timeout(const Duration(seconds: 20));
-    if (!controller.usesLinuxBackend)
-      throw ProbeFailure('desktop_registration');
+    // Linux plays through media_kit, Windows through the native Media
+    // Foundation player, which always renders into a texture.
+    final registered = Platform.isWindows
+        ? !controller.usesLinuxBackend && controller.textureId != null
+        : controller.usesLinuxBackend;
+    if (!registered) throw ProbeFailure('desktop_registration');
     final key = GlobalKey();
     runApp(
       Directionality(
@@ -247,9 +252,15 @@ Future<void> main() async {
     final rejected = controller.stateStream.firstWhere(
       (state) => state.status == PlaybackStatus.error,
     );
-    await controller.setSource(
-      VideoClip(uri: invalid.uri.toString(), end: const Duration(seconds: 1)),
-    );
+    try {
+      await controller.setSource(
+        VideoClip(uri: invalid.uri.toString(), end: const Duration(seconds: 1)),
+      );
+    } on PlatformException catch (error) {
+      // The native Windows player also rejects the load itself, as Android
+      // does; the error state below is still required.
+      if (!Platform.isWindows || error.code != 'PLAYER_ERROR') rethrow;
+    }
     final invalidFrame = controller.firstFrameRendered;
     await rejected.timeout(const Duration(seconds: 10));
     if (controller.state.isFirstFrameRendered)
@@ -344,6 +355,28 @@ Future<void> main() async {
 """
 
 
+# The manifest entry the README asks a Windows app to add, so the probe plays
+# through the plugin's audio effect as the application does.
+AUDIO_EFFECT_MANIFEST_ENTRY = """  <file name="divine_video_player_plugin.dll">
+    <activatableClass
+        name="DivineVideoPlayer.AudioShapingEffect"
+        threadingModel="both"
+        xmlns="urn:schemas-microsoft-com:winrt.v1"/>
+  </file>
+"""
+
+
+def register_audio_effect(manifest):
+    text = manifest.read_text(encoding='utf-8')
+    if 'DivineVideoPlayer.AudioShapingEffect' in text:
+        return
+    if '</assembly>' not in text:
+        raise RuntimeError('Unexpected runner manifest: ' + str(manifest))
+    manifest.write_text(
+        text.replace('</assembly>', AUDIO_EFFECT_MANIFEST_ENTRY + '</assembly>'),
+        encoding='utf-8')
+
+
 def flutter_command():
     installed = shutil.which('flutter')
     if not installed:
@@ -412,6 +445,8 @@ dependencies:
     path: ../divine_video_player
 ''', encoding='utf-8')
         (app / 'lib/main.dart').write_text(MAIN, encoding='utf-8')
+        if args.platform == 'windows':
+            register_audio_effect(app / 'windows/runner/runner.exe.manifest')
         (app / 'analysis_options.yaml').write_text(
             'linter:\n  rules:\n    discarded_futures: true\n    unawaited_futures: true\n', encoding='utf-8')
         lock = PACKAGE.parents[1] / 'pubspec.lock'

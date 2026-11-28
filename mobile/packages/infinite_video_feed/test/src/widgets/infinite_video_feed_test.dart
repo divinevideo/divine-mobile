@@ -2579,6 +2579,71 @@ void main() {
         },
       );
 
+      testWidgets('Windows MP4 loads expect native network samples', (
+        tester,
+      ) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(
+          playerIds: const <int>[0],
+          firstFrameRenderedOnListen: false,
+        );
+        FeedPlaybackTelemetry.configure(enabled: true);
+        final terminals = <Map<String, Object?>>[];
+        final subscription = FeedPlaybackTelemetry.events.listen(
+          terminals.add,
+        );
+        addTearDown(() async {
+          FeedPlaybackTelemetry.configure(enabled: false);
+          await subscription.cancel();
+        });
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [
+                  _makeVideo(
+                    'windows',
+                    videoUrl: 'https://example.com/windows.mp4',
+                  ),
+                ],
+                cache: cache,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+          final headers =
+              harness.clipsHandedToPlayer.single['httpHeaders'] as Map? ?? {};
+          expect(
+            headers['X-Playback-Load-Id'],
+            matches(
+              RegExp(
+                '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}'
+                r'-[0-9a-f]{12}$',
+              ),
+            ),
+          );
+          await harness.sendEvent(0, const {
+            'status': 'ready',
+            'videoWidth': 1280,
+            'videoHeight': 720,
+            'isFirstFrameRendered': true,
+          });
+          await tester.pump();
+          // No sample arrived, but the Windows player sends them for MP4s,
+          // so the gap is unknown rather than unsupported.
+          expect(terminals.single['network_coverage'], 'unknown');
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
       testWidgets('legacy native binary receives no telemetry headers', (
         tester,
       ) async {

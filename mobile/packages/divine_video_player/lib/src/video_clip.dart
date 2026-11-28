@@ -126,7 +126,8 @@ class VideoClip {
   final Duration? end;
 
   /// Audio volume for this clip (0.0 = muted, 1.0 = original volume, above
-  /// 1.0 = amplified, except on the web, which caps it at 1.0).
+  /// 1.0 = amplified, except on the web, which caps it at 1.0, and on Windows
+  /// when the app manifest does not register the plugin's audio effect).
   final double volume;
 
   /// Playback speed multiplier for this clip (1.0 = normal, 2.0 = 2× fast).
@@ -170,16 +171,22 @@ class VideoClip {
   ///   frame that much longer at every restart. Only a clip starting at zero
   ///   is clipped this way; one with a [start] uses lengths already seen for
   ///   its source.
-  /// * Neither platform clamps an HLS source: an HLS asset exposes no tracks
-  ///   to Apple, and a playlist has no container for Android to read them
-  ///   from. An HLS clip plays unclamped on both.
+  /// * Windows reads the boxes up to `moov` before the clip's first frame —
+  ///   from disk, or with Range requests alongside the player's own first
+  ///   request — and applies Apple's rules: the end, and a start past an
+  ///   empty first edit of at most 100 ms, for a clip starting at zero.
+  /// * No platform clamps an HLS source: an HLS asset exposes no tracks to
+  ///   Apple, and a playlist has no container for Android or Windows to read
+  ///   them from. An HLS clip plays unclamped on all three.
   final bool trimToCommonTrackEnd;
 
   /// The equalizer this clip's audio plays through, ahead of its [volume];
   /// `null` plays it unchanged.
   ///
-  /// Only players created with [VideoBufferProfile.full] apply it, on Android,
-  /// iOS and macOS.
+  /// Android and Windows apply it only on players created with
+  /// [VideoBufferProfile.full]; iOS and macOS apply it on any profile. Windows
+  /// also needs the app manifest to register the plugin's audio effect (see
+  /// the package README).
   final AudioEqualizer? equalizer;
 
   /// Serializes this clip for platform channel transport.
