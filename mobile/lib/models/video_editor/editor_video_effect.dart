@@ -10,7 +10,7 @@ import 'package:openvine/models/video_editor/effect_settings_catalog.dart';
 import 'package:openvine/models/video_editor/hit_timing_settings.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show CustomVideoEffect, VideoEffect, VideoEffectType;
+    show CustomVideoEffect, VideoEffect, VideoEffectParams, VideoEffectType;
 
 /// The id Divine's echo trail is registered under with pro_video_editor, by
 /// the native `EchoVideoEffect` on Android, iOS and macOS (#9708).
@@ -1550,18 +1550,24 @@ Map<CustomVideoEffect, List<Duration>> flashStrikesOnOutput(
   }
   final loopPoint = timelineMap.loopPoint;
   final others = [
-    ...timelineMap.flashes,
-    ..._flashOnsets(flashingEffects, loopPoint),
+    for (final invertReturns in [false, true])
+      [
+        ...timelineMap.flashes,
+        ..._flashOnsets(
+          flashingEffects,
+          loopPoint,
+          invertReturns: invertReturns,
+        ),
+      ],
   ];
   for (final effect in effects) {
     if (!isFlashingCustomVideoEffect(effect.id)) continue;
     var strikes = _strikeCandidates(effect, timelineMap, beats);
     while (true) {
       Duration? drop;
-      for (final crowded in _crowdedSeconds([
-        ...others,
-        ...strikes,
-      ], loopPoint)) {
+      for (final crowded in others.expand(
+        (onsets) => _crowdedSeconds([...onsets, ...strikes], loopPoint),
+      )) {
         Duration? latestAt;
         for (final strike in strikes) {
           final at = _lastOccurrenceIn(strike, crowded, loopPoint);
@@ -1579,7 +1585,11 @@ Map<CustomVideoEffect, List<Duration>> flashStrikesOnOutput(
       ];
     }
     result[effect] = strikes;
-    if (customVideoEffectIntensity(effect) > 0) others.addAll(strikes);
+    if (customVideoEffectIntensity(effect) > 0) {
+      for (final onsets in others) {
+        onsets.addAll(strikes);
+      }
+    }
   }
   return result;
 }
@@ -1878,6 +1888,11 @@ double introOutroSwing(double progress, {required bool ending}) {
 /// of the looping video, across its loop point too. The flash transitions on
 /// [timelineMap] count toward those three.
 ///
+/// A continuous strobe with a custom tempo ends before its final dark tail,
+/// retaining every pulse and earlier dim interval. Otherwise returning from
+/// that tail can add a flash at its boundary, crowded by video frames whose
+/// pulse became visible slightly after its mathematical onset.
+///
 /// The export and the live preview both time effects this way, so the preview
 /// shows what the file will.
 List<VideoEffect> videoEffectsOnOutput(
@@ -1930,7 +1945,13 @@ List<VideoEffect> videoEffectsOnOutput(
   }
   final loopPoint = timelineMap.loopPoint;
   return _withinFlashLimit(
-    _endFlashingBeforeLoopPoint(result, loopPoint: loopPoint),
+    [
+      for (final effect in _endFlashingBeforeLoopPoint(
+        result,
+        loopPoint: loopPoint,
+      ))
+        _endCustomStrobeBeforeDimmingRecovery(effect, loopPoint),
+    ],
     loopPoint: loopPoint,
     transitionFlashes: timelineMap.flashes,
   );
@@ -1975,6 +1996,51 @@ List<VideoEffect> _endFlashingBeforeLoopPoint(
           params: effect.params,
         ),
   ];
+}
+
+/// Removes only a custom-tempo strobe's final dark tail, if it has one.
+///
+/// Unlike its earlier dim intervals, this tail ends at an arbitrary window
+/// boundary rather than a white pulse. Going back to the plain picture there
+/// is a new flash. Video frame sampling can crowd it with neighbouring pulses
+/// even when their mathematical onsets are just over a second apart.
+VideoEffect _endCustomStrobeBeforeDimmingRecovery(
+  VideoEffect effect,
+  Duration loopPoint,
+) {
+  if (effect.type != VideoEffectType.strobe ||
+      effect.triggers.isNotEmpty ||
+      !effect.params.containsKey(VideoEffectParams.tempo)) {
+    return effect;
+  }
+  final start = effect.startTime ?? Duration.zero;
+  final end = effect.endTime != null && effect.endTime! < loopPoint
+      ? effect.endTime!
+      : loopPoint;
+  if (end <= start ||
+      effect.frameAt(end - const Duration(microseconds: 1)).brightness >= 0) {
+    return effect;
+  }
+
+  // The plugin's continuous animation advances on a local 24 Hz clock.
+  // Walk back from the final dark bucket to the preceding flash/fade, then
+  // end at the exact start of the tail. Ceil to the first microsecond whose
+  // integer bucket lookup is the next bucket.
+  const rate = 24;
+  Duration bucketStart(int bucket) =>
+      start +
+      Duration(
+        microseconds:
+            (bucket * Duration.microsecondsPerSecond + rate - 1) ~/ rate,
+      );
+  var bucket =
+      ((end - start).inMicroseconds - 1) *
+      rate ~/
+      Duration.microsecondsPerSecond;
+  while (bucket > 0 && effect.frameAt(bucketStart(bucket)).brightness < 0) {
+    bucket--;
+  }
+  return effect.copyWith(endTime: bucketStart(bucket + 1));
 }
 
 /// Whether [effect] flashes on its own clock rather than on the beat.
@@ -2115,23 +2181,64 @@ Iterable<Duration> _crowdedFlashSeconds(
   List<VideoEffect> effects,
   Duration loopPoint,
   List<Duration> transitionFlashes,
-) => _crowdedSeconds([
-  ..._flashOnsets(effects, loopPoint),
-  ...transitionFlashes,
-], loopPoint);
+) sync* {
+  // Negative turns dark footage light when it starts, but light footage
+  // light when it ends. Check both clocks separately: counting both edges
+  // as separate flashes would double-count every negative pulse.
+  for (final invertReturns in [false, true]) {
+    yield* _crowdedSeconds([
+      ..._flashOnsets(effects, loopPoint, invertReturns: invertReturns),
+      ...transitionFlashes,
+    ], loopPoint);
+  }
+}
 
-/// Where the flashes of the flashing ones of [effects] start on the video,
-/// which loops at [loopPoint]: where a frame turns clearly whiter or turns
-/// negative, or returns from strobe dimming, sampled at the rate the
-/// renderers place beats at. Even a small dimming recovery counts here,
-/// conservatively, since its luminance change depends on the footage.
-List<Duration> _flashOnsets(List<VideoEffect> effects, Duration loopPoint) {
+/// Where flashing effects brighten the video as it loops at [loopPoint].
+///
+/// [invertReturns] selects the return from negative, which brightens light
+/// footage, instead of its start, which brightens dark footage. White flashes
+/// and recovery from strobe dimming count on both clocks, conservatively,
+/// since their luminance change depends on the footage.
+List<Duration> _flashOnsets(
+  List<VideoEffect> effects,
+  Duration loopPoint, {
+  bool invertReturns = false,
+}) {
   final flashing = [
     for (final effect in effects)
       if (isFlashingVideoEffect(effect.type)) effect,
   ];
-  if (flashing.isEmpty) return const [];
-  const step = Duration(microseconds: 1000000 ~/ 120);
+  if (flashing.isEmpty || loopPoint <= Duration.zero) return const [];
+
+  // A flashing effect is piecewise constant on its own 1/120 s grid (a
+  // continuous one changes only every fifth tick). Include every exact
+  // boundary, rounded up to the first microsecond in the next bucket, plus
+  // window ends. An accumulated 8333 us step misses a negative echo clipped
+  // to 250–253 ms; a global grid can also miss a hit on an offset window.
+  const rate = 120;
+  final times = <Duration>{Duration.zero};
+  for (final effect in flashing) {
+    final start = effect.startTime ?? Duration.zero;
+    final end = effect.endTime != null && effect.endTime! < loopPoint
+        ? effect.endTime!
+        : loopPoint;
+    if (end <= Duration.zero || start >= end) continue;
+    if (end < loopPoint) times.add(end);
+    var tick = start.isNegative
+        ? -start.inMicroseconds * rate ~/ Duration.microsecondsPerSecond
+        : 0;
+    while (true) {
+      final at =
+          start +
+          Duration(
+            microseconds:
+                (tick * Duration.microsecondsPerSecond + rate - 1) ~/ rate,
+          );
+      if (at >= end) break;
+      if (at >= Duration.zero) times.add(at);
+      tick++;
+    }
+  }
   ({double flash, double invert, double brightness}) sample(Duration at) {
     final frame = VideoEffect.resolve(flashing, at);
     return (
@@ -2141,20 +2248,18 @@ List<Duration> _flashOnsets(List<VideoEffect> effects, Duration loopPoint) {
     );
   }
 
-  // A flash starts wherever the picture turns clearly whiter or turns
-  // negative, even while the hit before it is still fading: over dark
-  // footage, white, 55% white, white again is two flashes. Strobe peaks at
-  // 0.25 + intensity, even below half intensity. Its fade-out never rises,
+  // A flash can rise while the preceding hit is still fading. Strobe peaks
+  // at 0.25 + intensity, even below half intensity. Its fade-out never rises,
   // but returning from its dimmed state to the normal picture does.
   final onsets = <Duration>[];
-  final last = loopPoint - step;
-  var before = last > Duration.zero
-      ? sample(last)
-      : (flash: 0.0, invert: 0.0, brightness: 0.0);
-  for (var at = Duration.zero; at < loopPoint; at += step) {
+  var before = sample(loopPoint - const Duration(microseconds: 1));
+  for (final at in times.toList()..sort()) {
     final now = sample(at);
+    final invertEdge = invertReturns
+        ? now.invert < 0.5 && before.invert >= 0.5
+        : now.invert >= 0.5 && before.invert < 0.5;
     if ((now.flash >= flashOnsetStrength && now.flash >= before.flash + 0.1) ||
-        (now.invert >= 0.5 && before.invert < 0.5) ||
+        invertEdge ||
         now.brightness > before.brightness) {
       onsets.add(at);
     }
