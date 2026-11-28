@@ -878,10 +878,10 @@ class _ListBody extends ConsumerWidget {
     );
   }
 
-  /// The episode number [video] shows on its tile: its place among the
-  /// series' episodes, or null when it is not one of them.
+  /// Uses the same address as list resolution so a cached episode keeps its
+  /// number even when its d-tag was stored in an older field.
   int? _episodeNumberOf(VideoEvent video) {
-    final address = video.addressableId;
+    final address = ListVideoOrder.addressOf(video)?.toAString();
     return address == null ? null : series?.episodeNumberOf(address);
   }
 }

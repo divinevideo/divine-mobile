@@ -1870,6 +1870,28 @@ void main() {
         expect(episodeBadges(), findsNothing);
       });
 
+      testWidgets('numbers an episode resolved from a cached d-tag', (
+        tester,
+      ) async {
+        final cachedPart = part(1).copyWith(
+          clearAddressableDTag: true,
+          rawTags: const {},
+          vineId: 'part-1',
+        );
+        expect(cachedPart.addressableId, isNull);
+
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            videoEvents: [cachedPart],
+            discoveredList: roadTrip(isSeries: true),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text(l10n.videoSeriesEpisodeBadge('1')), findsOneWidget);
+      });
+
       testWidgets('keeps episode numbers while managing posts', (
         tester,
       ) async {
