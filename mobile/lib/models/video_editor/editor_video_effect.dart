@@ -1924,7 +1924,16 @@ List<VideoEffect> videoEffectsOnOutput(
           startTime: start,
           endTime: end,
           triggers: triggers,
-          params: effect.params,
+          // Beat-synced negative hits keep their default duration. A custom
+          // hold can crowd the presented recoveries at fractional frame
+          // rates despite unchanged onset spacing. Keep the authored params
+          // intact so continuous playback restores the user's length.
+          params: effect.type == VideoEffectType.negativeFlash
+              ? {
+                  for (final MapEntry(:key, :value) in effect.params.entries)
+                    if (key != VideoEffectParams.length) key: value,
+                }
+              : effect.params,
         ),
       );
       continue;

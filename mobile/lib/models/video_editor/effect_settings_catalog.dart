@@ -1272,6 +1272,10 @@ const _builtInSize = EffectSliderSetting(
   max: 3,
 );
 
+// Beat-synced negative hits keep the default hold for their intensity.
+// Custom lengths shift recovery timing on fractional frame rates. Keep this
+// setting for continuous playback, including values saved before On the beat
+// was enabled.
 const _flashLength = EffectSliderSetting(
   key: VideoEffectParams.length,
   label: EffectSettingLabel.length,
@@ -1279,6 +1283,7 @@ const _flashLength = EffectSliderSetting(
   defaultValue: 1,
   min: 0.3,
   max: 3,
+  shownWhen: _whenNotOnBeat,
 );
 
 const _blockSize = EffectSliderSetting(
