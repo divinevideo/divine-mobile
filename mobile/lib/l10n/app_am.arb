@@ -6700,5 +6700,13 @@
   "emailConfirmationAddEmailSubtitle": "መለያዎ አሁን ኢሜይል የለውም። ሁልጊዜ ተመልሰው መግባት እንዲችሉ አንድ ያክሉ።",
   "emailConfirmationAddEmailButton": "ኢሜይል ያክሉ",
   "emailConfirmationSendBlocked": "መልእክቶችን ለመላክ ኢሜይልዎን ያረጋግጡ።",
-  "emailConfirmationCapReached": "ለአዲስ መለያዎች የሰዓት ገደቡ ይህ ነው። ገደቡን ለማንሳት ኢሜይልዎን ያረጋግጡ።"
+  "emailConfirmationCapReached": "ለአዲስ መለያዎች የሰዓት ገደቡ ይህ ነው። ገደቡን ለማንሳት ኢሜይልዎን ያረጋግጡ።",
+  "findPeopleTitle": "ሰዎችን ፈልግ",
+  "findPeopleDescription": "ንቁ ፈጣሪዎችን እና የተመለሱ የVine ማህደሮችን ተከተል።",
+  "findPeopleSuggested": "ለእርስዎ የተጠቆመ",
+  "findPeopleArchive": "የተመለሰ የVine ማህደር",
+  "findPeopleEmpty": "አሁን ተጨማሪ ጥቆማዎች የሉም። አንድ ሰው ለመፈለግ ይሞክሩ።",
+  "findPeopleDismiss": "ጥቆማውን አስወግድ",
+  "findPeopleLoadMore": "ተጨማሪ ጫን",
+  "findPeopleContinueWatching": "መመልከትዎን ይቀጥሉ"
 }

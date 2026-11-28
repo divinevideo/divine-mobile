@@ -6200,5 +6200,13 @@
   "emailConfirmationAddEmailSubtitle": "지금은 계정에 이메일이 없어요. 언제든 계정에 다시 들어올 수 있도록 이메일을 추가해주세요.",
   "emailConfirmationAddEmailButton": "이메일 추가",
   "emailConfirmationSendBlocked": "메시지를 보내려면 이메일을 인증해주세요.",
-  "emailConfirmationCapReached": "새 계정의 시간당 한도에 도달했어요. 이메일을 인증하면 한도가 풀려요."
+  "emailConfirmationCapReached": "새 계정의 시간당 한도에 도달했어요. 이메일을 인증하면 한도가 풀려요.",
+  "findPeopleTitle": "사람 찾기",
+  "findPeopleDescription": "활동 중인 크리에이터와 복원된 Vine 아카이브를 팔로우하세요.",
+  "findPeopleSuggested": "추천 사용자",
+  "findPeopleArchive": "복원된 Vine 아카이브",
+  "findPeopleEmpty": "지금은 더 이상 추천이 없어요. 사람을 검색해 보세요.",
+  "findPeopleDismiss": "추천 숨기기",
+  "findPeopleLoadMore": "더 불러오기",
+  "findPeopleContinueWatching": "계속 시청하기"
 }

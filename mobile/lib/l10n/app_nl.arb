@@ -6647,5 +6647,13 @@
   "emailConfirmationAddEmailSubtitle": "Je account heeft nu geen e-mail. Voeg er een toe, zodat je altijd weer in je account komt.",
   "emailConfirmationAddEmailButton": "E-mail toevoegen",
   "emailConfirmationSendBlocked": "Bevestig je e-mail om berichten te sturen.",
-  "emailConfirmationCapReached": "Dat is de limiet per uur voor nieuwe accounts. Bevestig je e-mail om die op te heffen."
+  "emailConfirmationCapReached": "Dat is de limiet per uur voor nieuwe accounts. Bevestig je e-mail om die op te heffen.",
+  "findPeopleTitle": "Mensen vinden",
+  "findPeopleDescription": "Volg actieve makers en herstelde Vine-archieven.",
+  "findPeopleSuggested": "Voorgesteld voor jou",
+  "findPeopleArchive": "Hersteld Vine-archief",
+  "findPeopleEmpty": "Momenteel geen verdere suggesties. Zoek eens naar iemand.",
+  "findPeopleDismiss": "Suggestie verbergen",
+  "findPeopleLoadMore": "Meer laden",
+  "findPeopleContinueWatching": "Verder kijken"
 }

@@ -1,6 +1,8 @@
 // ABOUTME: Explore view — owns the tab bar/controller and delegates tab
 // ABOUTME: configuration to ExploreTabsCubit and content to tab widgets.
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +22,7 @@ import 'package:openvine/providers/for_you_provider.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/providers/tab_visibility_provider.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/router/routes/find_people_routes.dart';
 import 'package:openvine/router/routes/search_routes.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/explore/widgets/explore_feed_content.dart';
@@ -356,11 +359,11 @@ class _ExploreViewState extends ConsumerState<ExploreView>
             bottom: false,
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: DivineSearchBar(
-                hintText: context.l10n.exploreSearchHint,
-                readOnly: true,
-                onTap: _openSearchPage,
-                semanticIdentifier: SemanticIds.exploreSearchBar,
+              child: _ExploreSearchHeader(
+                showFindPeople: ref.watch(
+                  isFeatureEnabledProvider(FeatureFlag.findPeople),
+                ),
+                onSearch: _openSearchPage,
               ),
             ),
           ),
@@ -446,5 +449,58 @@ class _ExploreViewState extends ConsumerState<ExploreView>
             ),
           ),
         );
+  }
+}
+
+/// Keeps discovery alongside search, stacking only when space or text needs it.
+class _ExploreSearchHeader extends StatelessWidget {
+  const _ExploreSearchHeader({
+    required this.showFindPeople,
+    required this.onSearch,
+  });
+
+  final bool showFindPeople;
+  final VoidCallback onSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    final search = DivineSearchBar(
+      hintText: context.l10n.exploreSearchHint,
+      readOnly: true,
+      onTap: onSearch,
+      semanticIdentifier: SemanticIds.exploreSearchBar,
+    );
+    if (!showFindPeople) return search;
+    final people = DivineButton(
+      label: context.l10n.findPeopleTitle,
+      leadingIcon: DivineIconName.userPlus,
+      type: DivineButtonType.secondary,
+      size: DivineButtonSize.small,
+      maxLines: 2,
+      onPressed: () =>
+          unawaited(const FindPeopleRouteData().push<void>(context)),
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final largeText = MediaQuery.textScalerOf(context).scale(16) > 24;
+        if (constraints.maxWidth < 480 || largeText) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 8,
+            children: [
+              search,
+              Align(alignment: AlignmentDirectional.centerEnd, child: people),
+            ],
+          );
+        }
+        return Row(
+          spacing: 12,
+          children: [
+            Expanded(child: search),
+            people,
+          ],
+        );
+      },
+    );
   }
 }

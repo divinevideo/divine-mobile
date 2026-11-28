@@ -56,6 +56,7 @@ final _locations = <String, List<String>>{
   'dmInboxTabsPrototype': [RoutePaths.dmInboxTabsPrototype],
   'emailVerification': [RoutePaths.emailVerification],
   'explore': [RoutePaths.explore],
+  'findPeople': [RoutePaths.findPeople],
   'followedHashtags': [RoutePaths.followedHashtags],
   'followingNew': [RoutePaths.followingNew],
   'generalSettings': [RoutePaths.generalSettings],

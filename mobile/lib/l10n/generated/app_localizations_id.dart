@@ -17105,4 +17105,29 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get emailConfirmationCapReached =>
       'Itu batas per jam untuk akun baru. Konfirmasi emailmu untuk menghapus batas ini.';
+
+  @override
+  String get findPeopleTitle => 'Temukan orang';
+
+  @override
+  String get findPeopleDescription =>
+      'Ikuti kreator aktif dan arsip Vine yang dipulihkan.';
+
+  @override
+  String get findPeopleSuggested => 'Disarankan untukmu';
+
+  @override
+  String get findPeopleArchive => 'Arsip Vine yang dipulihkan';
+
+  @override
+  String get findPeopleEmpty => 'Belum ada saran lain. Coba cari seseorang.';
+
+  @override
+  String get findPeopleDismiss => 'Abaikan saran';
+
+  @override
+  String get findPeopleLoadMore => 'Muat lagi';
+
+  @override
+  String get findPeopleContinueWatching => 'Terus menonton';
 }

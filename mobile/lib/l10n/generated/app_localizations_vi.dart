@@ -17156,4 +17156,30 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get emailConfirmationCapReached =>
       'Đó là giới hạn mỗi giờ cho tài khoản mới. Xác nhận email để gỡ giới hạn nhé.';
+
+  @override
+  String get findPeopleTitle => 'Tìm người';
+
+  @override
+  String get findPeopleDescription =>
+      'Theo dõi các nhà sáng tạo đang hoạt động và kho Vine được khôi phục.';
+
+  @override
+  String get findPeopleSuggested => 'Gợi ý cho bạn';
+
+  @override
+  String get findPeopleArchive => 'Kho Vine được khôi phục';
+
+  @override
+  String get findPeopleEmpty =>
+      'Hiện chưa có thêm gợi ý. Hãy thử tìm kiếm ai đó.';
+
+  @override
+  String get findPeopleDismiss => 'Ẩn gợi ý';
+
+  @override
+  String get findPeopleLoadMore => 'Tải thêm';
+
+  @override
+  String get findPeopleContinueWatching => 'Tiếp tục xem';
 }

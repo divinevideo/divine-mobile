@@ -6647,5 +6647,13 @@
   "emailConfirmationAddEmailSubtitle": "現在、アカウントにメールアドレスが登録されていません。いつでもアカウントに戻れるよう、メールアドレスを追加してください。",
   "emailConfirmationAddEmailButton": "メールアドレスを追加",
   "emailConfirmationSendBlocked": "メッセージを送信するには、メールアドレスを認証してください。",
-  "emailConfirmationCapReached": "新しいアカウントの1時間あたりの上限に達しました。メールアドレスを認証すると、上限が解除されます。"
+  "emailConfirmationCapReached": "新しいアカウントの1時間あたりの上限に達しました。メールアドレスを認証すると、上限が解除されます。",
+  "findPeopleTitle": "ユーザーを探す",
+  "findPeopleDescription": "活動中のクリエイターや復元されたVineアーカイブをフォローしよう。",
+  "findPeopleSuggested": "あなたへのおすすめ",
+  "findPeopleArchive": "復元されたVineアーカイブ",
+  "findPeopleEmpty": "今のところ他のおすすめはありません。ユーザーを検索してみてください。",
+  "findPeopleDismiss": "おすすめを非表示",
+  "findPeopleLoadMore": "もっと読み込む",
+  "findPeopleContinueWatching": "視聴を続ける"
 }

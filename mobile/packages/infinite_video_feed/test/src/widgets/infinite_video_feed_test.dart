@@ -229,6 +229,483 @@ void main() {
     ).thenReturn(mockCancellable);
   });
 
+  group('non-video interstitial', () {
+    testWidgets('a foreground card keeps the next video warm', (tester) async {
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      final harness = _NativePlayerHarness(tester);
+      await harness.install(playerIds: List.generate(20, (index) => index));
+      final key = GlobalKey<InfiniteVideoFeedState>();
+      final activated = <int>[];
+      try {
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              key: key,
+              videos: [_makeVideo('first'), _makeVideo('second')],
+              cache: cache,
+              releaseNeighboursWhenInactive: true,
+              prefetchCount: 0,
+              preloadGracePeriod: Duration.zero,
+              interstitialIndex: 1,
+              interstitialBuilder: (_) => const Text('People to follow'),
+              onActiveVideoChanged: (_, index) => activated.add(index),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(key.currentState!.debugLiveControllerIndices, {0, 1});
+        expect(harness.countCallsForPlayer(1, 'setClips'), 1);
+        await tester.drag(find.byType(PageView), const Offset(0, -600));
+        await tester.pumpAndSettle();
+        expect(key.currentState!.isShowingInterstitial, isTrue);
+        expect(key.currentState!.debugLiveControllerIndices, {0, 1});
+        expect(harness.countCalls('dispose'), 0);
+        final navigation = key.currentState!.animateToPage(1);
+        await tester.pumpAndSettle();
+        await navigation;
+        expect(key.currentState!.currentIndex, 1);
+        expect(activated, [1]);
+        expect(harness.countCallsForPlayer(1, 'play'), greaterThan(0));
+        expect(harness.countCallsForPlayer(1, 'setClips'), 1);
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await harness.dispose();
+      }
+    });
+
+    testWidgets('a codec-heavy owner transition drains a paused card', (
+      tester,
+    ) async {
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      final harness = _NativePlayerHarness(tester);
+      await harness.install(playerIds: List.generate(20, (index) => index));
+      final key = GlobalKey<InfiniteVideoFeedState>();
+      final videos = [_makeVideo('first'), _makeVideo('second')];
+      Widget feed({required bool active, bool drain = false}) => _wrapFeed(
+        InfiniteVideoFeed(
+          key: key,
+          videos: videos,
+          cache: cache,
+          isActive: active,
+          releaseNeighboursWhenInactive: true,
+          releaseCurrentWhenInactive: drain,
+          prefetchCount: 0,
+          preloadGracePeriod: Duration.zero,
+          interstitialIndex: 1,
+          interstitialBuilder: (_) => const Text('People to follow'),
+        ),
+      );
+      try {
+        await tester.pumpWidget(feed(active: true));
+        await tester.pumpAndSettle();
+        expect(key.currentState!.debugLiveControllerIndices, {0, 1});
+        await tester.drag(find.byType(PageView), const Offset(0, -600));
+        await tester.pumpAndSettle();
+        expect(key.currentState!.isShowingInterstitial, isTrue);
+        expect(key.currentState!.debugLiveControllerIndices, isNotEmpty);
+        await tester.pumpWidget(feed(active: false, drain: true));
+        await tester.pumpAndSettle();
+        expect(key.currentState!.debugLiveControllerIndices, isEmpty);
+        final plays = harness.countCalls('play');
+        await tester.pumpWidget(feed(active: true));
+        await tester.pumpAndSettle();
+        expect(key.currentState!.isShowingInterstitial, isTrue);
+        expect(harness.countCalls('play'), plays);
+        await tester.drag(find.byType(PageView), const Offset(0, -600));
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, 1);
+        expect(key.currentState!.debugLiveControllerIndices, contains(1));
+        expect(harness.countCalls('play'), greaterThan(plays));
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await harness.dispose();
+      }
+    });
+
+    testWidgets('pauses at card and preserves video indices', (tester) async {
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      final harness = _NativePlayerHarness(tester);
+      await harness.install(playerIds: List.generate(20, (index) => index));
+      final key = GlobalKey<InfiniteVideoFeedState>();
+      final activated = <int>[];
+      final visibility = <bool>[];
+      try {
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              key: key,
+              videos: [
+                _makeVideo('first'),
+                _makeVideo('second'),
+                _makeVideo('third'),
+              ],
+              cache: cache,
+              prefetchCount: 0,
+              preloadGracePeriod: Duration.zero,
+              interstitialIndex: 1,
+              interstitialBuilder: (_) =>
+                  const Center(child: Text('People to follow')),
+              onInterstitialChanged: visibility.add,
+              onActiveVideoChanged: (_, index) => activated.add(index),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        await tester.drag(find.byType(PageView), const Offset(0, -600));
+        await tester.pumpAndSettle();
+        expect(find.text('People to follow'), findsOneWidget);
+        expect(key.currentState!.isShowingInterstitial, isTrue);
+        expect(key.currentState!.currentIndex, 0);
+        expect(activated, isEmpty);
+        expect(visibility, [true]);
+        expect(harness.countCalls('pause'), greaterThan(0));
+        final plays = harness.countCalls('play');
+        key.currentState!.resumeActive();
+        key.currentState!.resumeCurrentPlayback();
+        await tester.pump();
+        expect(harness.countCalls('play'), plays);
+        await tester.drag(find.byType(PageView), const Offset(0, -600));
+        await tester.pumpAndSettle();
+        expect(key.currentState!.isShowingInterstitial, isFalse);
+        expect(key.currentState!.currentIndex, 1);
+        expect(activated, [1]);
+        expect(visibility, [true, false]);
+        final navigation = key.currentState!.animateToPage(2);
+        await tester.pumpAndSettle();
+        await navigation;
+        expect(key.currentState!.currentIndex, 2);
+        expect(activated, [1, 2]);
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await harness.dispose();
+      }
+    });
+    testWidgets('an explicit owner pause survives scrolling past the card', (
+      tester,
+    ) async {
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      final harness = _NativePlayerHarness(tester);
+      await harness.install(playerIds: List.generate(20, (index) => index));
+      final key = GlobalKey<InfiniteVideoFeedState>();
+      try {
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              key: key,
+              videos: [_makeVideo('first'), _makeVideo('second')],
+              cache: cache,
+              prefetchCount: 0,
+              preloadGracePeriod: Duration.zero,
+              interstitialIndex: 1,
+              interstitialBuilder: (_) => const Text('People to follow'),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        key.currentState!.pauseActive();
+        await tester.pump();
+        final plays = harness.countCalls('play');
+        await tester.drag(find.byType(PageView), const Offset(0, -600));
+        await tester.pumpAndSettle();
+        await tester.drag(find.byType(PageView), const Offset(0, -600));
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, 1);
+        expect(harness.countCalls('play'), plays);
+        key.currentState!.resumeActive();
+        await tester.pump();
+        expect(harness.countCalls('play'), greaterThan(plays));
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await harness.dispose();
+      }
+    });
+
+    testWidgets('slot changes preserve the visible video', (tester) async {
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      final harness = _NativePlayerHarness(tester);
+      await harness.install(playerIds: List.generate(20, (index) => index));
+      final key = GlobalKey<InfiniteVideoFeedState>();
+      final videos = [
+        _makeVideo('first'),
+        _makeVideo('second'),
+        _makeVideo('third'),
+      ];
+      Widget feed({bool slot = false}) => _wrapFeed(
+        InfiniteVideoFeed(
+          key: key,
+          videos: videos,
+          initialIndex: 2,
+          cache: cache,
+          prefetchCount: 0,
+          preloadGracePeriod: Duration.zero,
+          interstitialIndex: slot ? 1 : null,
+          interstitialBuilder: slot
+              ? (_) => const Text('People to follow')
+              : null,
+        ),
+      );
+      try {
+        await tester.pumpWidget(feed());
+        await tester.pump();
+        await tester.pumpWidget(feed(slot: true));
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, 2);
+        expect(
+          tester.widget<PageView>(find.byType(PageView)).controller!.page,
+          3,
+        );
+        await tester.pumpWidget(feed());
+        await tester.pumpAndSettle();
+        expect(key.currentState!.currentIndex, 2);
+        expect(
+          tester.widget<PageView>(find.byType(PageView)).controller!.page,
+          2,
+        );
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await harness.dispose();
+      }
+    });
+
+    testWidgets('removing a visible card returns to the current video', (
+      tester,
+    ) async {
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      final harness = _NativePlayerHarness(tester);
+      await harness.install(playerIds: List.generate(20, (index) => index));
+      final key = GlobalKey<InfiniteVideoFeedState>();
+      final videos = [_makeVideo('first'), _makeVideo('second')];
+      final visibility = <bool>[];
+      final activated = <int>[];
+      Widget feed({required bool slot}) => _wrapFeed(
+        InfiniteVideoFeed(
+          key: key,
+          videos: videos,
+          cache: cache,
+          prefetchCount: 0,
+          preloadGracePeriod: Duration.zero,
+          interstitialIndex: slot ? 1 : null,
+          interstitialBuilder: slot
+              ? (_) => const Text('People to follow')
+              : null,
+          onInterstitialChanged: visibility.add,
+          onActiveVideoChanged: (_, index) => activated.add(index),
+        ),
+      );
+      try {
+        await tester.pumpWidget(feed(slot: true));
+        await tester.pump();
+        await tester.pump();
+        await tester.drag(find.byType(PageView), const Offset(0, -600));
+        await tester.pumpAndSettle();
+        expect(key.currentState!.isShowingInterstitial, isTrue);
+        expect(visibility, [true]);
+        expect(activated, isEmpty);
+        final plays = harness.countCalls('play');
+        expect(plays, greaterThan(0));
+        await tester.pumpWidget(feed(slot: false));
+        await tester.pumpAndSettle();
+        expect(key.currentState!.isShowingInterstitial, isFalse);
+        expect(key.currentState!.currentIndex, 0);
+        expect(
+          tester.widget<PageView>(find.byType(PageView)).controller!.page,
+          0,
+        );
+        expect(visibility, [true, false]);
+        expect(activated, isEmpty);
+        expect(harness.countCalls('play'), greaterThan(plays));
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await harness.dispose();
+      }
+    });
+
+    testWidgets(
+      'leaving the card back to the previous video resumes without '
+      're-activating',
+      (tester) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(playerIds: List.generate(20, (index) => index));
+        final key = GlobalKey<InfiniteVideoFeedState>();
+        final visibility = <bool>[];
+        final activated = <int>[];
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: [_makeVideo('first'), _makeVideo('second')],
+                cache: cache,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+                interstitialIndex: 1,
+                interstitialBuilder: (_) => const Text('People to follow'),
+                onInterstitialChanged: visibility.add,
+                onActiveVideoChanged: (_, index) => activated.add(index),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.drag(find.byType(PageView), const Offset(0, -600));
+          await tester.pumpAndSettle();
+          expect(key.currentState!.isShowingInterstitial, isTrue);
+          expect(visibility, [true]);
+          final plays = harness.countCalls('play');
+          await tester.drag(find.byType(PageView), const Offset(0, 600));
+          await tester.pumpAndSettle();
+          expect(key.currentState!.isShowingInterstitial, isFalse);
+          expect(key.currentState!.currentIndex, 0);
+          expect(visibility, [true, false]);
+          expect(activated, isEmpty);
+          expect(harness.countCalls('play'), greaterThan(plays));
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      },
+    );
+
+    testWidgets(
+      'nextPage and previousPage stop on the card while animateToPage skips '
+      'past it cleanly',
+      (tester) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(playerIds: List.generate(20, (index) => index));
+        final key = GlobalKey<InfiniteVideoFeedState>();
+        final visibility = <bool>[];
+        final activated = <int>[];
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: [
+                  _makeVideo('first'),
+                  _makeVideo('second'),
+                  _makeVideo('third'),
+                ],
+                cache: cache,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+                interstitialIndex: 1,
+                interstitialBuilder: (_) => const Text('People to follow'),
+                onInterstitialChanged: visibility.add,
+                onActiveVideoChanged: (_, index) => activated.add(index),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(key.currentState!.hasInterstitialBefore(1), isTrue);
+          expect(key.currentState!.hasInterstitialBefore(2), isFalse);
+
+          final toCard = key.currentState!.nextPage();
+          await tester.pumpAndSettle();
+          await toCard;
+          expect(key.currentState!.isShowingInterstitial, isTrue);
+          expect(key.currentState!.currentIndex, 0);
+          expect(visibility, [true]);
+          expect(activated, isEmpty);
+
+          final backToFirst = key.currentState!.previousPage();
+          await tester.pumpAndSettle();
+          await backToFirst;
+          expect(key.currentState!.isShowingInterstitial, isFalse);
+          expect(key.currentState!.currentIndex, 0);
+          expect(visibility, [true, false]);
+          expect(activated, isEmpty);
+
+          final jumpPastCard = key.currentState!.animateToPage(2);
+          await tester.pumpAndSettle();
+          await jumpPastCard;
+          expect(key.currentState!.isShowingInterstitial, isFalse);
+          expect(key.currentState!.currentIndex, 2);
+          // Crossing page 1 while animating directly to video 2 must not flash
+          // or report interstitial visibility.
+          expect(visibility, [true, false]);
+          expect(activated, [1, 2]);
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      },
+    );
+
+    testWidgets('source replacement while on a card activates the new video', (
+      tester,
+    ) async {
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      final harness = _NativePlayerHarness(tester);
+      await harness.install(playerIds: List.generate(20, (index) => index));
+      final key = GlobalKey<InfiniteVideoFeedState>();
+      final visibility = <bool>[];
+      final activated = <String>[];
+      Widget feed(List<VideoEvent> videos, {int initialIndex = 0}) => _wrapFeed(
+        InfiniteVideoFeed(
+          key: key,
+          videos: videos,
+          initialIndex: initialIndex,
+          cache: cache,
+          prefetchCount: 0,
+          preloadGracePeriod: Duration.zero,
+          interstitialIndex: 1,
+          interstitialBuilder: (_) => const Text('People to follow'),
+          onInterstitialChanged: visibility.add,
+          onActiveVideoChanged: (video, _) => activated.add(video.id),
+        ),
+      );
+      try {
+        await tester.pumpWidget(
+          feed([
+            _makeVideo('old-first'),
+            _makeVideo('old-second'),
+            _makeVideo('old-third'),
+          ]),
+        );
+        await tester.pump();
+        await tester.pump();
+        await tester.drag(find.byType(PageView), const Offset(0, -600));
+        await tester.pumpAndSettle();
+        expect(key.currentState!.isShowingInterstitial, isTrue);
+        expect(visibility, [true]);
+        expect(activated, isEmpty);
+        final plays = harness.countCalls('play');
+        await tester.pumpWidget(
+          feed([
+            _makeVideo('new-first'),
+            _makeVideo('new-second'),
+            _makeVideo('new-third'),
+          ], initialIndex: 2),
+        );
+        await tester.pumpAndSettle();
+        expect(key.currentState!.isShowingInterstitial, isFalse);
+        expect(key.currentState!.currentIndex, 2);
+        expect(
+          tester.widget<PageView>(find.byType(PageView)).controller!.page,
+          3,
+        );
+        expect(visibility, [true, false]);
+        expect(activated, ['new-third']);
+        expect(harness.countCalls('play'), greaterThan(plays));
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await harness.dispose();
+      }
+    });
+  });
+
   group('Bunny playback canary', () {
     const path =
         '/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/720p.mp4';

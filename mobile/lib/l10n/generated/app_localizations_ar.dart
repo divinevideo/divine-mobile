@@ -17248,4 +17248,30 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get emailConfirmationCapReached =>
       'هذا هو الحد المسموح به في الساعة للحسابات الجديدة. تأكيد البريد الإلكتروني يرفع هذا الحد.';
+
+  @override
+  String get findPeopleTitle => 'العثور على أشخاص';
+
+  @override
+  String get findPeopleDescription =>
+      'تابع المبدعين النشطين وأرشيفات Vine المستعادة.';
+
+  @override
+  String get findPeopleSuggested => 'مقترح لك';
+
+  @override
+  String get findPeopleArchive => 'أرشيف Vine مستعاد';
+
+  @override
+  String get findPeopleEmpty =>
+      'لا توجد اقتراحات أخرى الآن. جرّب البحث عن شخص.';
+
+  @override
+  String get findPeopleDismiss => 'إخفاء الاقتراح';
+
+  @override
+  String get findPeopleLoadMore => 'تحميل المزيد';
+
+  @override
+  String get findPeopleContinueWatching => 'متابعة المشاهدة';
 }

@@ -17214,4 +17214,30 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get emailConfirmationCapReached =>
       'Anda telah mencapai had sejam untuk akaun baharu. Sahkan e-mel anda untuk menghapuskan had ini.';
+
+  @override
+  String get findPeopleTitle => 'Cari orang';
+
+  @override
+  String get findPeopleDescription =>
+      'Ikuti pencipta aktif dan arkib Vine yang dipulihkan.';
+
+  @override
+  String get findPeopleSuggested => 'Dicadangkan untuk anda';
+
+  @override
+  String get findPeopleArchive => 'Arkib Vine yang dipulihkan';
+
+  @override
+  String get findPeopleEmpty =>
+      'Tiada lagi cadangan buat masa ini. Cuba cari seseorang.';
+
+  @override
+  String get findPeopleDismiss => 'Abaikan cadangan';
+
+  @override
+  String get findPeopleLoadMore => 'Muat lagi';
+
+  @override
+  String get findPeopleContinueWatching => 'Teruskan menonton';
 }

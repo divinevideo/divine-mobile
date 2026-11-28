@@ -17487,4 +17487,30 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get emailConfirmationCapReached =>
       'C\'est la limite horaire pour les nouveaux comptes. Confirme ton e-mail pour la lever.';
+
+  @override
+  String get findPeopleTitle => 'Trouver des personnes';
+
+  @override
+  String get findPeopleDescription =>
+      'Suis des créateurs actifs et des archives Vine restaurées.';
+
+  @override
+  String get findPeopleSuggested => 'Suggestion pour toi';
+
+  @override
+  String get findPeopleArchive => 'Archive Vine restaurée';
+
+  @override
+  String get findPeopleEmpty =>
+      'Plus de suggestions pour le moment. Essaie de rechercher quelqu’un.';
+
+  @override
+  String get findPeopleDismiss => 'Masquer la suggestion';
+
+  @override
+  String get findPeopleLoadMore => 'Afficher plus';
+
+  @override
+  String get findPeopleContinueWatching => 'Continuer à regarder';
 }

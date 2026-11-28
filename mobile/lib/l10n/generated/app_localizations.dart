@@ -28816,6 +28816,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'That\'s the hourly limit for new accounts. Confirm your email to lift it.'**
   String get emailConfirmationCapReached;
+
+  /// Find people discovery screen copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Find people'**
+  String get findPeopleTitle;
+
+  /// Find people discovery screen copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow active creators and restored Vine archives.'**
+  String get findPeopleDescription;
+
+  /// Generic recommendation label. Do not imply mutual follows or recent activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested for you'**
+  String get findPeopleSuggested;
+
+  /// Provenance label for restored Vine archive accounts; does not imply the creator is active or has claimed the account.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored Vine archive'**
+  String get findPeopleArchive;
+
+  /// Find people discovery screen copy.
+  ///
+  /// In en, this message translates to:
+  /// **'No more suggestions right now. Try searching for someone.'**
+  String get findPeopleEmpty;
+
+  /// Find people discovery screen copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss suggestion'**
+  String get findPeopleDismiss;
+
+  /// Find people discovery screen copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get findPeopleLoadMore;
+
+  /// Button leaving the optional people recommendation card in the video feed.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep watching'**
+  String get findPeopleContinueWatching;
 }
 
 class _AppLocalizationsDelegate

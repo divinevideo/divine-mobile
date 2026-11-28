@@ -6647,5 +6647,13 @@
   "emailConfirmationAddEmailSubtitle": "Hesabında şu anda e-posta yok. Her zaman geri dönebilmek için bir tane ekle.",
   "emailConfirmationAddEmailButton": "E-posta ekle",
   "emailConfirmationSendBlocked": "Mesaj göndermek için e-postanı doğrula.",
-  "emailConfirmationCapReached": "Yeni hesaplar için saatlik sınır bu kadar. Sınırı kaldırmak için e-postanı doğrula."
+  "emailConfirmationCapReached": "Yeni hesaplar için saatlik sınır bu kadar. Sınırı kaldırmak için e-postanı doğrula.",
+  "findPeopleTitle": "Kişileri bul",
+  "findPeopleDescription": "Aktif içerik üreticilerini ve geri yüklenen Vine arşivlerini takip et.",
+  "findPeopleSuggested": "Senin için önerildi",
+  "findPeopleArchive": "Geri yüklenen Vine arşivi",
+  "findPeopleEmpty": "Şimdilik başka öneri yok. Birini aramayı dene.",
+  "findPeopleDismiss": "Öneriyi gizle",
+  "findPeopleLoadMore": "Daha fazla yükle",
+  "findPeopleContinueWatching": "İzlemeye devam et"
 }

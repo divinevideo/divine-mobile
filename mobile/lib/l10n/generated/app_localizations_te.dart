@@ -17597,4 +17597,30 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get emailConfirmationCapReached =>
       'కొత్త ఖాతాలకు గంటకు ఉన్న పరిమితి ఇదే. దాన్ని తొలగించడానికి మీ ఇమెయిల్‌ను నిర్ధారించండి.';
+
+  @override
+  String get findPeopleTitle => 'వ్యక్తులను కనుగొనండి';
+
+  @override
+  String get findPeopleDescription =>
+      'చురుకైన సృష్టికర్తలను, పునరుద్ధరించిన Vine ఆర్కైవ్‌లను అనుసరించండి.';
+
+  @override
+  String get findPeopleSuggested => 'మీ కోసం సూచించబడింది';
+
+  @override
+  String get findPeopleArchive => 'పునరుద్ధరించిన Vine ఆర్కైవ్';
+
+  @override
+  String get findPeopleEmpty =>
+      'ప్రస్తుతానికి మరిన్ని సూచనలు లేవు. ఎవరినైనా వెతకండి.';
+
+  @override
+  String get findPeopleDismiss => 'సూచనను తీసివేయండి';
+
+  @override
+  String get findPeopleLoadMore => 'మరిన్ని లోడ్ చేయండి';
+
+  @override
+  String get findPeopleContinueWatching => 'చూడటం కొనసాగించండి';
 }

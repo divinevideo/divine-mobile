@@ -17215,4 +17215,30 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get emailConfirmationCapReached =>
       'نئے اکاؤنٹس کے لیے فی گھنٹہ کی حد یہی ہے۔ یہ حد ختم کرنے کے لیے اپنی ای میل کی تصدیق کریں۔';
+
+  @override
+  String get findPeopleTitle => 'لوگوں کو تلاش کریں';
+
+  @override
+  String get findPeopleDescription =>
+      'فعال تخلیق کاروں اور بحال شدہ Vine آرکائیوز کو فالو کریں۔';
+
+  @override
+  String get findPeopleSuggested => 'آپ کے لیے تجویز کردہ';
+
+  @override
+  String get findPeopleArchive => 'بحال شدہ Vine آرکائیو';
+
+  @override
+  String get findPeopleEmpty =>
+      'فی الحال مزید تجاویز نہیں ہیں۔ کسی کو تلاش کر کے دیکھیں۔';
+
+  @override
+  String get findPeopleDismiss => 'تجویز ہٹائیں';
+
+  @override
+  String get findPeopleLoadMore => 'مزید لوڈ کریں';
+
+  @override
+  String get findPeopleContinueWatching => 'دیکھنا جاری رکھیں';
 }

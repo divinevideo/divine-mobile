@@ -316,6 +316,59 @@ void main() {
       );
     });
 
+    test('people suggestions record actions without target identity', () async {
+      final queue = _MockProductEventQueue();
+      when(queue.clear).thenAnswer((_) async {});
+      when(() => queue.enqueue(any(), ownerPubkey: any(named: 'ownerPubkey')))
+          .thenAnswer((_) async {});
+      analyticsService.dispose();
+      analyticsService = AnalyticsService(
+        backgroundActivityManager: backgroundActivityManager,
+        productEventQueue: queue,
+        productAnalyticsEnabled: true,
+        consumptionAnalyticsEnabled: true,
+        currentUserPubkey: () =>
+            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      );
+      await analyticsService.initialize();
+      for (final action in ProductAnalyticsV2PeopleSuggestionAction.values) {
+        await analyticsService.peopleSuggestionRecorded(
+          discoverySource: ProductAnalyticsV2PeopleDiscoverySource.feedCard,
+          action: action,
+          position: 2,
+        );
+      }
+      final events = verify(
+        () =>
+            queue.enqueue(captureAny(), ownerPubkey: any(named: 'ownerPubkey')),
+      ).captured.cast<ProductAnalyticsV2Event>();
+      expect(events, hasLength(3));
+      expect(
+        events.map((event) => event.propertiesJson['action']),
+        unorderedEquals(['exposed', 'followed', 'dismissed']),
+      );
+      for (final event in events) {
+        expect(event.eventName, 'people_suggestion_recorded');
+        expect(event.propertiesJson, {
+          'discovery_source': 'feed_card',
+          'action': event.propertiesJson['action'],
+          'position': 2,
+        });
+      }
+      await analyticsService.setAnalyticsEnabled(false);
+      expect(
+        await analyticsService.peopleSuggestionRecorded(
+          discoverySource: ProductAnalyticsV2PeopleDiscoverySource.findPeople,
+          action: ProductAnalyticsV2PeopleSuggestionAction.exposed,
+          position: 0,
+        ),
+        isNull,
+      );
+      verifyNever(
+        () => queue.enqueue(any(), ownerPubkey: any(named: 'ownerPubkey')),
+      );
+    });
+
     test(
       'records a signed version-two impression with no raw identity',
       () async {

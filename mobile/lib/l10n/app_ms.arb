@@ -7940,5 +7940,13 @@
   "emailConfirmationAddEmailSubtitle": "Akaun anda tiada e-mel buat masa ini. Tambah satu supaya anda sentiasa boleh kembali ke akaun anda.",
   "emailConfirmationAddEmailButton": "Tambah e-mel",
   "emailConfirmationSendBlocked": "Sahkan e-mel anda untuk menghantar mesej.",
-  "emailConfirmationCapReached": "Anda telah mencapai had sejam untuk akaun baharu. Sahkan e-mel anda untuk menghapuskan had ini."
+  "emailConfirmationCapReached": "Anda telah mencapai had sejam untuk akaun baharu. Sahkan e-mel anda untuk menghapuskan had ini.",
+  "findPeopleTitle": "Cari orang",
+  "findPeopleDescription": "Ikuti pencipta aktif dan arkib Vine yang dipulihkan.",
+  "findPeopleSuggested": "Dicadangkan untuk anda",
+  "findPeopleArchive": "Arkib Vine yang dipulihkan",
+  "findPeopleEmpty": "Tiada lagi cadangan buat masa ini. Cuba cari seseorang.",
+  "findPeopleDismiss": "Abaikan cadangan",
+  "findPeopleLoadMore": "Muat lagi",
+  "findPeopleContinueWatching": "Teruskan menonton"
 }

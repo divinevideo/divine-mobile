@@ -99,6 +99,9 @@ class FeedVideos extends ConsumerStatefulWidget {
     this.currentIndex = 0,
     this.scrollPhysics,
     this.loadMoreOnEndSwipe = false,
+    this.interstitialIndex,
+    this.interstitialBuilder,
+    this.onInterstitialChanged,
     this.shouldPortraitExpand = true,
     this.showTopScrim = false,
     this.isActive = true,
@@ -126,6 +129,11 @@ class FeedVideos extends ConsumerStatefulWidget {
 
   /// Allows a swipe past the last video to request more, even with one video.
   final bool loadMoreOnEndSwipe;
+
+  /// Optional non-video page; public indices remain video-only.
+  final int? interstitialIndex;
+  final WidgetBuilder? interstitialBuilder;
+  final ValueChanged<bool>? onInterstitialChanged;
   final String? contextTitle;
   final bool shouldPortraitExpand;
 
@@ -328,6 +336,17 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
     }
   }
 
+  Future<void> _autoAdvanceToPage(int currentIndex, int targetIndex) async {
+    final feedState = _feedKey.currentState;
+    if (feedState == null) return;
+    if (targetIndex == currentIndex + 1 &&
+        feedState.hasInterstitialBefore(targetIndex)) {
+      await feedState.nextPage();
+      return;
+    }
+    await _animateToPage(targetIndex);
+  }
+
   Future<PooledRetryOutcome> _retryPooledVideoAt(
     int index,
     Map<String, String> httpHeaders,
@@ -372,7 +391,8 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
           hasMore: widget.hasMore,
           isLoadingMore: widget.isLoadingMore,
         ),
-        animateToPage: (index) => unawaited(_animateToPage(index)),
+        animateToPage: (index) =>
+            unawaited(_autoAdvanceToPage(currentIndex, index)),
       );
     }
   }
@@ -471,7 +491,8 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         hasMore: widget.hasMore,
         isLoadingMore: widget.isLoadingMore,
       ),
-      animateToPage: (index) => unawaited(_animateToPage(index)),
+      animateToPage: (index) =>
+          unawaited(_autoAdvanceToPage(currentIndex, index)),
       requestLoadMore: widget.onNearEnd,
     );
   }
@@ -608,6 +629,16 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
           scrollPhysics: widget.loadMoreOnEndSwipe
               ? const AlwaysScrollableScrollPhysics()
               : widget.scrollPhysics,
+          interstitialIndex: widget.interstitialIndex,
+          interstitialBuilder: widget.interstitialBuilder,
+          onInterstitialChanged: (visible) {
+            if (visible) {
+              _suppressAutoAdvance();
+            } else {
+              _resumeAutoAdvanceAfterSwipe();
+            }
+            widget.onInterstitialChanged?.call(visible);
+          },
           onNearEnd: widget.onNearEnd,
           onForwardBoundary: widget.onForwardBoundary,
           prefetchOnMount: widget.prefetchOnMount,

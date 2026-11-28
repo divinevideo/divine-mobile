@@ -67,6 +67,9 @@ class InfiniteVideoFeed extends StatefulWidget {
     this.errorBuilder,
     this.overlayBuilder,
     this.scrollPhysics,
+    this.interstitialIndex,
+    this.interstitialBuilder,
+    this.onInterstitialChanged,
     this.initialIndex = 0,
     this.initialVolume = 1.0,
     this.onVolumeChanged,
@@ -170,6 +173,18 @@ class InfiniteVideoFeed extends StatefulWidget {
   ///
   /// When `null`, a tuned default is used for short-video feeds.
   final ScrollPhysics? scrollPhysics;
+
+  /// Optional non-video page inserted before this logical video index.
+  /// Ignored unless a builder exists and the index lies inside the video list.
+  /// Video indices, controller keys and callbacks remain video-only.
+  final int? interstitialIndex;
+
+  /// Builds the optional non-video page. No player or video telemetry is
+  /// allocated for it; playback pauses while the page is visible.
+  final WidgetBuilder? interstitialBuilder;
+
+  /// Reports entering or leaving the non-video page.
+  final ValueChanged<bool>? onInterstitialChanged;
 
   /// The cache manager used for disk prefetching and cached playback.
   ///
@@ -401,10 +416,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   late final PageController _pageController;
   final _pointerScrollPager = PointerScrollPager();
 
-  /// The page a [nextPage] or [previousPage] animation is heading for, so a
-  /// second key press during the animation moves on from there rather than
+  /// The physical page a [nextPage] or [previousPage] animation is heading for,
+  /// so a second key press during the animation moves on from there rather than
   /// repeating the step it is still finishing.
-  int? _stepTargetIndex;
+  int? _stepTargetPage;
 
   /// One revision counter per page index; the page's subtree listens to it.
   ///
@@ -452,6 +467,89 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   final _networkSubscriptions =
       <int, StreamSubscription<Map<String, Object?>>>{};
   int _currentIndex = 0;
+  bool _interstitialVisible = false;
+  bool _ignoringTransientInterstitial = false;
+  bool _suppressSameVideoActivationOnJump = false;
+
+  /// Whether the visible page is the optional non-video interstitial.
+  bool get isShowingInterstitial => _interstitialVisible;
+
+  /// Whether an optional interstitial sits immediately before [videoIndex].
+  bool hasInterstitialBefore(int videoIndex) => _slotFor(widget) == videoIndex;
+
+  int? _slotFor(InfiniteVideoFeed feed) {
+    final index = feed.interstitialIndex;
+    return feed.interstitialBuilder != null &&
+            index != null &&
+            index > 0 &&
+            index < feed.videos.length
+        ? index
+        : null;
+  }
+
+  int _pageForVideo(int index) {
+    final slot = _slotFor(widget);
+    return slot != null && index >= slot ? index + 1 : index;
+  }
+
+  int get _physicalPageCount =>
+      widget.videos.length + (_slotFor(widget) == null ? 0 : 1);
+
+  int get _currentPhysicalPage {
+    final slot = _slotFor(widget);
+    if (_interstitialVisible && slot != null) return slot;
+    return _pageForVideo(_currentIndex);
+  }
+
+  void _onPhysicalPageChanged(int page) {
+    final slot = _slotFor(widget);
+    if (slot != null && page == slot) {
+      if (_ignoringTransientInterstitial || _interstitialVisible) return;
+      _interstitialVisible = true;
+      _setPlaybackActive(false);
+      _watchdog.stop(_currentIndex);
+      _staleDetector.stop();
+      _rebuildPage(_currentIndex);
+      widget.onInterstitialChanged?.call(true);
+      return;
+    }
+    final targetVideoIndex = slot != null && page > slot ? page - 1 : page;
+    if (_interstitialVisible) {
+      _interstitialVisible = false;
+      widget.onInterstitialChanged?.call(false);
+      if (targetVideoIndex == _currentIndex) {
+        // Returning to the same video paused behind the card: resume through
+        // _setPlaybackActive (which skips first-frame timing for an already
+        // painted frame) without re-running _onPageChanged or duplicating
+        // onActiveVideoChanged.
+        _setPlaybackActive(_ownerWantsPlayback);
+        _rebuildPage(_currentIndex);
+        return;
+      }
+      // Activate the incoming video's controller below, without briefly
+      // resuming the outgoing video behind the card.
+      _isActive = _ownerWantsPlayback;
+    } else if (_suppressSameVideoActivationOnJump &&
+        targetVideoIndex == _currentIndex) {
+      _suppressSameVideoActivationOnJump = false;
+      return;
+    }
+    _suppressSameVideoActivationOnJump = false;
+    _onPageChanged(targetVideoIndex);
+  }
+
+  void _jumpToCurrentVideo() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.videos.isEmpty || !_pageController.hasClients) {
+        return;
+      }
+      final target = _pageForVideo(_currentIndex);
+      if (_pageController.page?.round() != target) {
+        _pageController.jumpToPage(target);
+      }
+      _suppressSameVideoActivationOnJump = false;
+    });
+  }
 
   /// The autoplay-gate answer this widget last acted on for [_currentIndex].
   ///
@@ -467,6 +565,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   // controllers that become active. Seeded from widget.initialVolume.
   late double _volume;
   late bool _isActive;
+  // Distinguish the owner's playback request from the temporary card pause.
+  late bool _ownerWantsPlayback;
 
   // Set when a full drain (releaseCurrentWhenInactive) tore down the current
   // controller while inactive. The next activation re-initializes the window
@@ -508,7 +608,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   // ─── Public API ─────────────────────────────────────────────────────────
 
-  /// The feed index of the currently active (visible) video.
+  /// Logical index of the last active video, retained while the card is
+  /// visible.
   int get currentIndex => _currentIndex;
 
   /// The feed indices that currently have a live player controller.
@@ -540,12 +641,14 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   /// Pauses the currently active video without changing the page.
   void pauseActive() {
+    _ownerWantsPlayback = false;
     _setPlaybackActive(false);
   }
 
   /// Resumes the currently active video without changing the page.
   void resumeActive() {
-    _setPlaybackActive(true);
+    _ownerWantsPlayback = true;
+    _setPlaybackActive(!_interstitialVisible);
   }
 
   /// Re-evaluates playback for the active video and starts it if allowed.
@@ -592,34 +695,46 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     if (!mounted || widget.videos.isEmpty) return;
 
     final targetIndex = index.clamp(0, widget.videos.length - 1);
-    await _pageController.animateToPage(
-      targetIndex,
-      duration: _pageJumpDuration,
-      curve: _pageJumpCurve,
-    );
+    _ignoringTransientInterstitial = true;
+    try {
+      await _pageController.animateToPage(
+        _pageForVideo(targetIndex),
+        duration: _pageJumpDuration,
+        curve: _pageJumpCurve,
+      );
+    } finally {
+      _ignoringTransientInterstitial = false;
+    }
   }
 
-  /// Animates to the next video, or calls [InfiniteVideoFeed.onForwardBoundary]
-  /// when already on the last one.
+  /// Animates to the next page (video or armed interstitial), or calls
+  /// [InfiniteVideoFeed.onForwardBoundary] when already on the last video.
   Future<void> nextPage() => _stepPage(1);
 
-  /// Animates to the previous video. Does nothing on the first one.
+  /// Animates to the previous page (video or armed interstitial). Does nothing
+  /// on the first one.
   Future<void> previousPage() => _stepPage(-1);
 
   Future<void> _stepPage(int step) async {
-    final from = _stepTargetIndex ?? _currentIndex;
-    final target = _clampIndex(from + step);
+    if (!mounted || widget.videos.isEmpty) return;
+    final currentPage = _currentPhysicalPage;
+    final from = _stepTargetPage ?? currentPage;
+    final target = (from + step).clamp(0, _physicalPageCount - 1);
     if (target == from) {
-      if (step > 0 && from == _currentIndex && widget.videos.isNotEmpty) {
+      if (step > 0 && from == currentPage) {
         widget.onForwardBoundary?.call();
       }
       return;
     }
-    _stepTargetIndex = target;
+    _stepTargetPage = target;
     try {
-      await animateToPage(target);
+      await _pageController.animateToPage(
+        target,
+        duration: _pageJumpDuration,
+        curve: _pageJumpCurve,
+      );
     } finally {
-      if (_stepTargetIndex == target) _stepTargetIndex = null;
+      if (_stepTargetPage == target) _stepTargetPage = null;
     }
   }
 
@@ -699,7 +814,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   @visibleForTesting
   void debugActivatePage(int index) {
     if (!mounted || widget.videos.isEmpty) return;
-    _onPageChanged(index.clamp(0, widget.videos.length - 1));
+    _onPhysicalPageChanged(
+      _pageForVideo(index.clamp(0, widget.videos.length - 1)),
+    );
   }
 
   /// Marks [index] as having hit a source failure during loading, for widget
@@ -716,8 +833,14 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     } else {
       page = _currentIndex.toDouble(); // coverage:ignore-line
     }
-    if ((_pagePosition.value - page).abs() < 0.0001) return;
-    _pagePosition.value = page;
+    final slot = _slotFor(widget);
+    final videoPosition = slot == null || page <= slot - 1
+        ? page
+        : page <= slot
+        ? (slot - 1).toDouble()
+        : page - 1;
+    if ((_pagePosition.value - videoPosition).abs() < 0.0001) return;
+    _pagePosition.value = videoPosition;
   }
 
   // ─── Lifecycle ──────────────────────────────────────────────────────────
@@ -728,8 +851,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _currentIndex = _clampIndex(widget.initialIndex);
     _volume = widget.initialVolume;
     _isActive = widget.isActive;
+    _ownerWantsPlayback = widget.isActive;
     _pagePosition = ValueNotifier<double>(_currentIndex.toDouble());
-    _pageController = PageController(initialPage: _currentIndex)
+    _pageController = PageController(initialPage: _pageForVideo(_currentIndex))
       ..addListener(_syncPagePosition);
 
     _sources = PlaybackSourceRegistry();
@@ -764,8 +888,21 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   @override
   void didUpdateWidget(InfiniteVideoFeed oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (_slotFor(widget) != _slotFor(oldWidget)) {
+      if (_interstitialVisible) {
+        _interstitialVisible = false;
+        _suppressSameVideoActivationOnJump = true;
+        _setPlaybackActive(_ownerWantsPlayback);
+        _rebuildPage(_currentIndex);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) widget.onInterstitialChanged?.call(false);
+        });
+      }
+      _jumpToCurrentVideo();
+    }
     if (widget.isActive != oldWidget.isActive) {
-      _setPlaybackActive(widget.isActive);
+      _ownerWantsPlayback = widget.isActive;
+      _setPlaybackActive(widget.isActive && !_interstitialVisible);
     } else if (!widget.isActive) {
       _reconcileInactiveReleasePolicy(oldWidget);
     }
@@ -831,6 +968,14 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       keepViewerHeaders: sameVideos && bunnyRoutingChanged,
     );
 
+    _suppressSameVideoActivationOnJump = false;
+    if (_interstitialVisible) {
+      _interstitialVisible = false;
+      _isActive = _ownerWantsPlayback;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onInterstitialChanged?.call(false);
+      });
+    }
     _currentIndex = _clampIndex(
       sameVideos && bunnyRoutingChanged ? _currentIndex : widget.initialIndex,
     );
@@ -850,8 +995,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       if (!mounted) return;
       if (widget.videos.isEmpty) return;
       if (!_pageController.hasClients) return;
-      if (_pageController.page?.round() == _currentIndex) return;
-      _pageController.jumpToPage(_currentIndex);
+      final target = _pageForVideo(_currentIndex);
+      if (_pageController.page?.round() == target) return;
+      _pageController.jumpToPage(target);
     });
 
     unawaited(_onIndexChanged(_currentIndex));
@@ -986,7 +1132,12 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       _pageRevisions.putIfAbsent(index, () => ValueNotifier<int>(0));
 
   void _setPlaybackActive(bool isActive) {
-    if (_isActive == isActive) return;
+    if (_isActive == isActive) {
+      // A card already pauses playback, but an owner hiding the feed still
+      // needs to release its players, including a simultaneous codec drain.
+      if (!isActive) _releasePlayersForInactiveOwner();
+      return;
+    }
     _isActive = isActive;
     if (_isActive) {
       final currentController = _controllers[_currentIndex];
@@ -1033,11 +1184,17 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       _cancelPreloadGraceTimers();
       _pauseCurrentPlayback();
       _cancelAutoRetry(_currentIndex);
-      if (widget.releaseCurrentWhenInactive) {
-        _fullyReleaseWhileInactive();
-      } else if (widget.releaseNeighboursWhenInactive) {
-        _releaseNeighboursAndPrefetch();
-      }
+      _releasePlayersForInactiveOwner();
+    }
+  }
+
+  void _releasePlayersForInactiveOwner() {
+    // An in-feed card is not a backgrounded feed. Keep its next video warm.
+    if (_ownerWantsPlayback) return;
+    if (widget.releaseCurrentWhenInactive) {
+      _fullyReleaseWhileInactive();
+    } else if (widget.releaseNeighboursWhenInactive) {
+      _releaseNeighboursAndPrefetch();
     }
   }
 
@@ -1352,11 +1509,12 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     // video-list update while drained must not re-allocate a decoder the
     // camera/editor needs. Flag a re-init so the window rebuilds from the
     // current list once the feed becomes active again.
-    if (widget.releaseCurrentWhenInactive && !_isActive) {
+    if (widget.releaseCurrentWhenInactive && !_ownerWantsPlayback) {
       _controllers.keys.toList().forEach(_disposeAt);
       _needsReinitOnActivate = true;
       return;
     }
+    _needsReinitOnActivate = false;
 
     final lastIndex = widget.videos.length - 1;
     // Neighbour players are kept alive while the feed is active. When the feed
@@ -1364,7 +1522,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     // ([InfiniteVideoFeed.releaseNeighboursWhenInactive]), the window collapses
     // to the current video so a background feed holds only one native player;
     // the neighbours re-initialize when it becomes active again.
-    final keepNeighbours = !widget.releaseNeighboursWhenInactive || _isActive;
+    final keepNeighbours =
+        !widget.releaseNeighboursWhenInactive || _ownerWantsPlayback;
     final start = widget.keepPreviousAlive && keepNeighbours
         ? (index - 1).clamp(0, lastIndex)
         : index;
@@ -1449,7 +1608,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     // only, or a full drain under a codec-heavy surface) so it stops
     // downloading upcoming videos. It resumes from the current index on
     // reactivation.
-    if (!_isActive &&
+    if (!_ownerWantsPlayback &&
         (widget.releaseNeighboursWhenInactive ||
             widget.releaseCurrentWhenInactive)) {
       return;
@@ -2591,12 +2750,17 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         controller: _pageController,
         physics: widget.scrollPhysics,
         scrollDirection: widget.scrollDirection,
-        onPageChanged: _onPageChanged,
-        itemCount: widget.videos.length,
-        itemBuilder: (context, index) => ValueListenableBuilder<int>(
-          valueListenable: _pageRevision(index),
-          builder: (context, _, _) => _buildPage(context, index),
-        ),
+        onPageChanged: _onPhysicalPageChanged,
+        itemCount: widget.videos.length + (_slotFor(widget) == null ? 0 : 1),
+        itemBuilder: (context, page) {
+          final slot = _slotFor(widget);
+          if (page == slot) return widget.interstitialBuilder!(context);
+          final index = slot != null && page > slot ? page - 1 : page;
+          return ValueListenableBuilder<int>(
+            valueListenable: _pageRevision(index),
+            builder: (context, _, _) => _buildPage(context, index),
+          );
+        },
       ),
     );
   }
@@ -2619,7 +2783,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       context,
       index,
       controller,
-      isActive: index == _currentIndex,
+      isActive: index == _currentIndex && !_interstitialVisible,
     );
     final videoItem = VideoItemWidget(
       controller: controller,
