@@ -15178,7 +15178,14 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'Je bent ingelogd met Google of Apple, dus je hebt nog geen wachtwoord. Stel er een in via ‘Wachtwoord vergeten?’ op het inlogscherm.';
+      'Je bent ingelogd met Google of Apple, dus je hebt nog geen wachtwoord. We kunnen je een link mailen om er een in te stellen.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'Mail me een link';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Check je mail voor een link om je wachtwoord in te stellen.';
 
   @override
   String get accountCredentialsRateLimited =>

@@ -15408,7 +15408,15 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'Te-ai conectat cu Google sau Apple, așa că încă nu ai parolă. Setează una din „Ai uitat parola?” pe ecranul de conectare.';
+      'Te-ai conectat cu Google sau Apple, așa că încă nu ai parolă. Îți putem trimite pe e-mail un link ca să setezi una.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend =>
+      'Trimite-mi un link pe e-mail';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Verifică-ți e-mailul pentru linkul de setare a parolei.';
 
   @override
   String get accountCredentialsRateLimited =>

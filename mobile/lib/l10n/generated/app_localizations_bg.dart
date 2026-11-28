@@ -15243,7 +15243,14 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'Влезе с Google или Apple, затова още нямаш парола. Задай си такава чрез „Забравена парола?“ на екрана за вход.';
+      'Влезе с Google или Apple, затова още нямаш парола. Можем да ти изпратим линк по имейл, за да си зададеш такава.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'Изпрати ми линк по имейл';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Провери имейла си за линк, с който да зададеш паролата си.';
 
   @override
   String get accountCredentialsRateLimited =>

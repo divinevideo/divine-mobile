@@ -25308,8 +25308,20 @@ abstract class AppLocalizations {
   /// Shown when an account created with Google or Apple tries something that needs its password.
   ///
   /// In en, this message translates to:
-  /// **'You signed in with Google or Apple, so there\'s no password yet. Set one with “Forgot password?” on the sign-in screen.'**
+  /// **'You signed in with Google or Apple, so there\'s no password yet. We can email you a link to set one.'**
   String get accountCredentialsPasswordNotSet;
+
+  /// Button under accountCredentialsPasswordNotSet that emails a link for setting a first password.
+  ///
+  /// In en, this message translates to:
+  /// **'Email me a link'**
+  String get accountCredentialsPasswordSetupSend;
+
+  /// Shown after the password-setup link was requested. Keycast does not say whether a link went out, so this asks to check the inbox rather than confirming delivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your email for a link to set your password.'**
+  String get accountCredentialsPasswordSetupSent;
 
   /// No description provided for @accountCredentialsRateLimited.
   ///

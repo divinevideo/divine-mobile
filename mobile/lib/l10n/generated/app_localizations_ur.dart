@@ -15096,7 +15096,14 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'آپ نے Google یا Apple سے سائن ان کیا ہے، اس لیے ابھی کوئی پاس ورڈ نہیں ہے۔ سائن ان اسکرین پر “پاس ورڈ بھول گئے؟” سے ایک سیٹ کریں۔';
+      'آپ نے Google یا Apple سے سائن ان کیا ہے، اس لیے ابھی کوئی پاس ورڈ نہیں ہے۔ ہم آپ کو پاس ورڈ سیٹ کرنے کا لنک ای میل کر سکتے ہیں۔';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'مجھے لنک ای میل کریں';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'پاس ورڈ سیٹ کرنے کے لنک کے لیے اپنی ای میل دیکھیں۔';
 
   @override
   String get accountCredentialsRateLimited =>

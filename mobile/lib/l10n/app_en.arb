@@ -12221,9 +12221,17 @@
   "@accountCredentialsNeedsSignIn": {
     "description": "Shown when the session can no longer authorize an email or password change."
   },
-  "accountCredentialsPasswordNotSet": "You signed in with Google or Apple, so there's no password yet. Set one with “Forgot password?” on the sign-in screen.",
+  "accountCredentialsPasswordNotSet": "You signed in with Google or Apple, so there's no password yet. We can email you a link to set one.",
   "@accountCredentialsPasswordNotSet": {
     "description": "Shown when an account created with Google or Apple tries something that needs its password."
+  },
+  "accountCredentialsPasswordSetupSend": "Email me a link",
+  "@accountCredentialsPasswordSetupSend": {
+    "description": "Button under accountCredentialsPasswordNotSet that emails a link for setting a first password."
+  },
+  "accountCredentialsPasswordSetupSent": "Check your email for a link to set your password.",
+  "@accountCredentialsPasswordSetupSent": {
+    "description": "Shown after the password-setup link was requested. Keycast does not say whether a link went out, so this asks to check the inbox rather than confirming delivery."
   },
   "accountCredentialsRateLimited": "Too many tries. Give it a few minutes.",
   "accountCredentialsNetwork": "Couldn't reach Divine. Check your connection and try again.",

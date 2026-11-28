@@ -15111,7 +15111,14 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'Du loggade in med Google eller Apple, så du har inget lösenord än. Skapa ett via ”Glömt lösenord?” på inloggningsskärmen.';
+      'Du loggade in med Google eller Apple, så du har inget lösenord än. Vi kan mejla dig en länk så att du kan skapa ett.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'Mejla mig en länk';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Kolla din mejl efter en länk för att skapa ditt lösenord.';
 
   @override
   String get accountCredentialsRateLimited =>

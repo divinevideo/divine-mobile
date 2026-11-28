@@ -15233,7 +15233,14 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'Nag-sign in ka gamit ang Google o Apple, kaya wala ka pang password. Mag-set ng isa gamit ang “Nakalimutan ang password?” sa sign-in screen.';
+      'Nag-sign in ka gamit ang Google o Apple, kaya wala ka pang password. Puwede ka naming padalhan ng link sa email para mag-set ng isa.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'I-email sa akin ang link';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Tingnan ang email mo para sa link na magse-set ng password mo.';
 
   @override
   String get accountCredentialsRateLimited =>

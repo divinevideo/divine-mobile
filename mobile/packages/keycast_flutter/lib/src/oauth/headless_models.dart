@@ -659,8 +659,9 @@ enum ExportKeyFailure {
   /// No exportable key is on record for this account.
   noKey,
 
-  /// The account has no password: it was created with Google or Apple. A
-  /// password can be set through the forgot-password flow.
+  /// The account has no password: it was created with Google or Apple. The
+  /// signed-in account can ask for a link to set one with
+  /// `KeycastOAuth.sendPasswordResetEmail` and its bearer token.
   passwordNotSet,
 
   /// Too many export attempts have been made for now. Unlike every other
@@ -719,8 +720,9 @@ enum ChangePasswordFailure {
   /// The server rejected the new password (it enforces its own minimum length).
   weakPassword,
 
-  /// The account has no password: it was created with Google or Apple. A
-  /// password can be set through the forgot-password flow.
+  /// The account has no password: it was created with Google or Apple. The
+  /// signed-in account can ask for a link to set one with
+  /// `KeycastOAuth.sendPasswordResetEmail` and its bearer token.
   passwordNotSet,
 
   /// Too many attempts for now — waiting is the remedy, not a retry.
@@ -773,8 +775,9 @@ enum ChangeEmailFailure {
   /// The server rejected the address as malformed.
   invalidEmail,
 
-  /// The account has no password: it was created with Google or Apple. A
-  /// password can be set through the forgot-password flow.
+  /// The account has no password: it was created with Google or Apple. The
+  /// signed-in account can ask for a link to set one with
+  /// `KeycastOAuth.sendPasswordResetEmail` and its bearer token.
   passwordNotSet,
 
   /// Too many attempts for now — waiting is the remedy, not a retry.

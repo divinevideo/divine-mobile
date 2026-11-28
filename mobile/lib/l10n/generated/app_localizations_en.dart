@@ -15188,7 +15188,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'You signed in with Google or Apple, so there\'s no password yet. Set one with “Forgot password?” on the sign-in screen.';
+      'You signed in with Google or Apple, so there\'s no password yet. We can email you a link to set one.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'Email me a link';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Check your email for a link to set your password.';
 
   @override
   String get accountCredentialsRateLimited =>

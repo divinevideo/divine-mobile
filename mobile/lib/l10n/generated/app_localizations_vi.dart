@@ -15038,7 +15038,15 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'Bạn đã đăng nhập bằng Google hoặc Apple nên chưa có mật khẩu. Hãy tạo mật khẩu qua “Quên mật khẩu?” trên màn hình đăng nhập.';
+      'Bạn đã đăng nhập bằng Google hoặc Apple nên chưa có mật khẩu. Chúng tôi có thể gửi email cho bạn một liên kết để tạo mật khẩu.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend =>
+      'Gửi liên kết qua email cho tôi';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Hãy kiểm tra email để tìm liên kết tạo mật khẩu.';
 
   @override
   String get accountCredentialsRateLimited =>

@@ -15340,7 +15340,15 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'Ta connexion passe par Google ou Apple, donc tu n\'as pas encore de mot de passe. Crée-en un avec « Mot de passe oublié ? » sur l\'écran de connexion.';
+      'Ta connexion passe par Google ou Apple, donc tu n\'as pas encore de mot de passe. On peut t\'envoyer un lien par e-mail pour en créer un.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend =>
+      'M\'envoyer un lien par e-mail';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Regarde tes e-mails : tu y trouveras un lien pour créer ton mot de passe.';
 
   @override
   String get accountCredentialsRateLimited =>

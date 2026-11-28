@@ -14380,7 +14380,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'Google または Apple でサインインしているため、まだパスワードがありません。サインイン画面の「パスワードを忘れた?」から設定してください。';
+      'Google または Apple でサインインしているため、まだパスワードがありません。パスワードを設定するためのリンクをメールでお送りできます。';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'リンクをメールで送信';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'パスワードを設定するためのリンクをメールでご確認ください。';
 
   @override
   String get accountCredentialsRateLimited => '試行が多すぎます。数分待ってからどうぞ。';

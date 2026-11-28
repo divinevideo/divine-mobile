@@ -15411,7 +15411,14 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'Logujesz się przez Google lub Apple, więc nie masz jeszcze hasła. Ustaw je przez „Zapomniałeś hasła?” na ekranie logowania.';
+      'Logujesz się przez Google lub Apple, więc nie masz jeszcze hasła. Możemy wysłać ci e-mailem link do jego ustawienia.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'Wyślij mi link e-mailem';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Sprawdź skrzynkę: znajdziesz tam link do ustawienia hasła.';
 
   @override
   String get accountCredentialsRateLimited =>

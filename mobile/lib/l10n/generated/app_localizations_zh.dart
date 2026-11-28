@@ -14206,7 +14206,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      '你是通过 Google 或 Apple 登录的，所以还没有密码。请在登录界面点“忘记密码？”设置一个。';
+      '你是通过 Google 或 Apple 登录的，所以还没有密码。我们可以给你发一封邮件，里面有设置密码的链接。';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => '通过邮件发送链接';
+
+  @override
+  String get accountCredentialsPasswordSetupSent => '请查看邮箱，用里面的链接设置密码。';
 
   @override
   String get accountCredentialsRateLimited => '尝试次数太多，过几分钟再试。';

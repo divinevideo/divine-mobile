@@ -3,6 +3,19 @@
 
 import 'package:keycast_flutter/keycast_flutter.dart';
 
+/// Outcome of [AccountCredentialsRepository.requestPasswordSetup].
+enum PasswordSetupRequestResult {
+  /// Keycast accepted the request. Like "Forgot password", it never says
+  /// whether a link actually went out.
+  requested,
+
+  /// No session for this account; only signing in again produces one.
+  needsSignIn,
+
+  /// The request never reached a verdict, or no email is on file to send to.
+  failed,
+}
+
 /// The email and password behind a Divine account that was created with
 /// email/password (`AuthenticationSource.divineOAuth`).
 ///
@@ -58,6 +71,34 @@ class AccountCredentialsRepository {
         ChangePasswordFailure.network,
         message: 'Change password failed: $e',
       );
+    }
+  }
+
+  /// Ask Keycast to email a link that sets a first password.
+  ///
+  /// For an account created with Google or Apple, which has none yet. Keycast
+  /// sends that link only when the request carries the account's own session,
+  /// so it goes out with the bearer token here; the public "Forgot password"
+  /// form cannot start it. The link goes to the email Keycast has on file.
+  Future<PasswordSetupRequestResult> requestPasswordSetup() async {
+    try {
+      final token = await _readAccessToken();
+      if (token == null || token.isEmpty) {
+        return PasswordSetupRequestResult.needsSignIn;
+      }
+      final email = (await _oauthClient.getAccountStatus(token))?.email;
+      if (email == null || email.isEmpty) {
+        return PasswordSetupRequestResult.failed;
+      }
+      final result = await _oauthClient.sendPasswordResetEmail(
+        email,
+        bearerToken: token,
+      );
+      return result.success
+          ? PasswordSetupRequestResult.requested
+          : PasswordSetupRequestResult.failed;
+    } catch (_) {
+      return PasswordSetupRequestResult.failed;
     }
   }
 

@@ -15117,7 +15117,15 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'تم تسجيل الدخول باستخدام Google أو Apple، لذلك لا توجد كلمة مرور بعد. يمكن تعيينها عبر «نسيت كلمة المرور؟» في شاشة تسجيل الدخول.';
+      'تم تسجيل الدخول باستخدام Google أو Apple، لذلك لا توجد كلمة مرور بعد. يمكننا إرسال رابط إلى بريدك الإلكتروني لتعيينها.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend =>
+      'أرسل لي رابطًا بالبريد الإلكتروني';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'تحقّق من بريدك الإلكتروني للعثور على رابط تعيين كلمة المرور.';
 
   @override
   String get accountCredentialsRateLimited => 'محاولات كثيرة. انتظر بضع دقائق.';

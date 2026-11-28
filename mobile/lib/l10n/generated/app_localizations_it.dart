@@ -15296,7 +15296,14 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'Hai effettuato l\'accesso con Google o Apple, quindi non hai ancora una password. Impostala con “Password dimenticata?” nella schermata di accesso.';
+      'Hai effettuato l\'accesso con Google o Apple, quindi non hai ancora una password. Possiamo mandarti via email un link per impostarne una.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'Mandami un link via email';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Controlla la tua email: troverai un link per impostare la password.';
 
   @override
   String get accountCredentialsRateLimited =>

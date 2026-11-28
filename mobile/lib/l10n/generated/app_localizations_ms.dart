@@ -15093,7 +15093,15 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'Anda log masuk dengan Google atau Apple, jadi belum ada kata laluan. Tetapkan satu melalui “Lupa kata laluan?” pada skrin log masuk.';
+      'Anda log masuk dengan Google atau Apple, jadi belum ada kata laluan. Kami boleh e-melkan pautan kepada anda untuk menetapkannya.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend =>
+      'E-melkan pautan kepada saya';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Semak e-mel anda untuk pautan bagi menetapkan kata laluan.';
 
   @override
   String get accountCredentialsRateLimited =>

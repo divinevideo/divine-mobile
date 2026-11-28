@@ -15464,7 +15464,15 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'మీరు Google లేదా Appleతో సైన్ ఇన్ చేశారు, కాబట్టి ఇంకా పాస్‌వర్డ్ లేదు. సైన్ ఇన్ స్క్రీన్‌లోని “పాస్‌వర్డ్ మర్చిపోయారా?” ద్వారా ఒకటి సెట్ చేయండి.';
+      'మీరు Google లేదా Appleతో సైన్ ఇన్ చేశారు, కాబట్టి ఇంకా పాస్‌వర్డ్ లేదు. ఒకటి సెట్ చేయడానికి మేము మీకు ఈమెయిల్‌లో లింక్ పంపగలం.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend =>
+      'నాకు ఈమెయిల్‌లో లింక్ పంపండి';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'మీ పాస్‌వర్డ్ సెట్ చేసే లింక్ కోసం మీ ఈమెయిల్ చూడండి.';
 
   @override
   String get accountCredentialsRateLimited =>

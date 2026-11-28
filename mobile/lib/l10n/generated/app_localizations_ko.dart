@@ -14399,7 +14399,13 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'Google이나 Apple로 로그인해서 아직 비밀번호가 없어요. 로그인 화면의 \'비밀번호를 잊으셨나요?\'에서 설정하세요.';
+      'Google이나 Apple로 로그인해서 아직 비밀번호가 없어요. 비밀번호를 설정할 수 있는 링크를 이메일로 보내 드릴 수 있어요.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => '이메일로 링크 받기';
+
+  @override
+  String get accountCredentialsPasswordSetupSent => '이메일에서 비밀번호 설정 링크를 확인하세요.';
 
   @override
   String get accountCredentialsRateLimited => '시도가 너무 많아요. 몇 분 뒤에 다시 해 주세요.';

@@ -1671,6 +1671,39 @@ void main() {
         expect(result.message, 'Email sent');
       });
 
+      test('sends no authorization from the public form', () async {
+        final mockClient = MockClient((request) async {
+          expect(request.headers.containsKey('Authorization'), isFalse);
+          return http.Response(jsonEncode({'success': true}), 200);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final result = await oauth.sendPasswordResetEmail('test@example.com');
+
+        expect(result.success, isTrue);
+      });
+
+      test(
+        'carries the signed-in session for a first password setup',
+        () async {
+          final mockClient = MockClient((request) async {
+            expect(request.url.path, '/api/auth/forgot-password');
+            expect(request.headers['Authorization'], 'Bearer session-token');
+            final body = jsonDecode(request.body) as Map<String, dynamic>;
+            expect(body['email'], 'social@example.com');
+            return http.Response(jsonEncode({'success': true}), 200);
+          });
+
+          final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+          final result = await oauth.sendPasswordResetEmail(
+            'social@example.com',
+            bearerToken: 'session-token',
+          );
+
+          expect(result.success, isTrue);
+        },
+      );
+
       test('returns success on 201 response', () async {
         final mockClient = MockClient((request) async {
           return http.Response(jsonEncode({'success': true}), 201);

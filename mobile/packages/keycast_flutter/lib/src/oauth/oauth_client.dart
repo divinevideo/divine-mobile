@@ -771,13 +771,26 @@ class KeycastOAuth {
     }
   }
 
-  /// Send a password reset link to the provided email address
-  Future<ForgotPasswordResult> sendPasswordResetEmail(String email) async {
+  /// Send a password reset link to the provided email address.
+  ///
+  /// An account created with Google or Apple has no password yet, and Keycast
+  /// only sends it a link to set one when the request carries that account's
+  /// own session. Pass the signed-in account's [bearerToken] for that; the
+  /// public "Forgot password" form leaves it out. Either way Keycast answers
+  /// the same, so success means the request was accepted, not that a link was
+  /// sent.
+  Future<ForgotPasswordResult> sendPasswordResetEmail(
+    String email, {
+    String? bearerToken,
+  }) async {
     try {
       final response = await _client
           .post(
             Uri.parse('${config.serverUrl}/api/auth/forgot-password'),
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+              'Content-Type': 'application/json',
+              if (bearerToken != null) 'Authorization': 'Bearer $bearerToken',
+            },
             body: jsonEncode({'email': email}),
           )
           .timeout(requestTimeout);

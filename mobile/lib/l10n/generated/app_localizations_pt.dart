@@ -15243,7 +15243,14 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'Você entrou com o Google ou a Apple, então ainda não tem senha. Crie uma em “Esqueceu a senha?” na tela de login.';
+      'Você entrou com o Google ou a Apple, então ainda não tem senha. Podemos enviar um link por e-mail para você criar uma.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'Enviar link por e-mail';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Confira seu e-mail: lá está o link para criar sua senha.';
 
   @override
   String get accountCredentialsRateLimited =>

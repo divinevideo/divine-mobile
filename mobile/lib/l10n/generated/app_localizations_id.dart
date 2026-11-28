@@ -14990,7 +14990,15 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'Kamu masuk dengan Google atau Apple, jadi belum ada kata sandi. Buat lewat “Lupa kata sandi?” di layar masuk.';
+      'Kamu masuk dengan Google atau Apple, jadi belum ada kata sandi. Kami bisa mengirim tautan ke email kamu untuk membuatnya.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend =>
+      'Kirim tautan ke email saya';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Cek email kamu untuk tautan membuat kata sandi.';
 
   @override
   String get accountCredentialsRateLimited =>

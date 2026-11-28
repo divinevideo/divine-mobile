@@ -15025,7 +15025,15 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'Google veya Apple ile giriş yaptın, bu yüzden henüz bir parolan yok. Giriş ekranındaki “Parolanı mı unuttun?” ile bir tane belirle.';
+      'Google veya Apple ile giriş yaptın, bu yüzden henüz bir parolan yok. Bir tane belirlemen için e-postana bir bağlantı gönderebiliriz.';
+
+  @override
+  String get accountCredentialsPasswordSetupSend =>
+      'Bana e-postayla bağlantı gönder';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'Parolanı belirlemek için e-postandaki bağlantıya bak.';
 
   @override
   String get accountCredentialsRateLimited =>

@@ -14733,7 +14733,14 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get accountCredentialsPasswordNotSet =>
-      'በGoogle ወይም በApple ስለገቡ እስካሁን የይለፍ ቃል የለም። በመግቢያ ገጹ ላይ «የይለፍ ቃል ረሱ?» በመጠቀም ያዘጋጁ።';
+      'በGoogle ወይም በApple ስለገቡ እስካሁን የይለፍ ቃል የለም። የይለፍ ቃል ለማዘጋጀት የሚያስችል ሊንክ በኢሜይል ልንልክልዎ እንችላለን።';
+
+  @override
+  String get accountCredentialsPasswordSetupSend => 'ሊንክ በኢሜይል ላኩልኝ';
+
+  @override
+  String get accountCredentialsPasswordSetupSent =>
+      'የይለፍ ቃልዎን ለማዘጋጀት የሚያስችለውን ሊንክ በኢሜይልዎ ውስጥ ይፈልጉ።';
 
   @override
   String get accountCredentialsRateLimited => 'በጣም ብዙ ሙከራ። ጥቂት ደቂቃ ቆይ።';
