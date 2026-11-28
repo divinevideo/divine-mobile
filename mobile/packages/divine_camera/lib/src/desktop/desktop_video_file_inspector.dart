@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:camera_platform_interface/camera_platform_interface.dart'
+    show CameraException;
 import 'package:media_kit/media_kit.dart';
 
 /// Media information read from the completed file, rather than its preview.
@@ -101,7 +103,10 @@ class DesktopVideoFileInspector {
 
     final released = Completer<void>();
     _pending[released.future] = () => fail(
-      StateError('Recording inspection was cancelled.'),
+      CameraException(
+        'inspection_cancelled',
+        'Recording inspection was cancelled.',
+      ),
       StackTrace.current,
     );
 
@@ -114,7 +119,13 @@ class DesktopVideoFileInspector {
       collect();
     }, onError: fail);
     final errors = player.stream.error.listen(
-      (message) => fail(StateError(message), StackTrace.current),
+      (_) => fail(
+        CameraException(
+          'inspection_failed',
+          'The recording could not be decoded.',
+        ),
+        StackTrace.current,
+      ),
       onError: fail,
     );
     final timer = _createTimer(const Duration(seconds: 10), () {

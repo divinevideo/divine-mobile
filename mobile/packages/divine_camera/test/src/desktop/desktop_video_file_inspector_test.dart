@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:camera_platform_interface/camera_platform_interface.dart'
+    show CameraException;
 import 'package:divine_camera/src/desktop/desktop_video_file_inspector.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -56,7 +58,24 @@ void main() {
         () async {
           native.deferMetadata = true;
           final reading = inspector.inspect(file.path);
-          final rejected = expectLater(reading, throwsStateError);
+          final rejected = expectLater(
+            reading,
+            streamError
+                ? throwsStateError
+                : throwsA(
+                    isA<CameraException>()
+                        .having(
+                          (error) => error.code,
+                          'code',
+                          'inspection_failed',
+                        )
+                        .having(
+                          (error) => error.description,
+                          'description',
+                          isNot(contains('/private/')),
+                        ),
+                  ),
+          );
           await native.openEntered.future;
           native.emitDecoderError(streamError: streamError);
           await rejected;
@@ -106,7 +125,16 @@ void main() {
     test('cancels an unfinished read and releases its native reader', () async {
       native.deferMetadata = true;
       final reading = inspector.inspect(file.path);
-      final cancelled = expectLater(reading, throwsStateError);
+      final cancelled = expectLater(
+        reading,
+        throwsA(
+          isA<CameraException>().having(
+            (error) => error.code,
+            'code',
+            'inspection_cancelled',
+          ),
+        ),
+      );
       await native.openEntered.future;
       try {
         await inspector.cancelPending();
@@ -185,7 +213,7 @@ class _MetadataPlayer extends PlatformPlayer {
     if (streamError) {
       tracksController.addError(StateError('Synthetic decoder error'));
     } else {
-      errorController.add('Synthetic decoder error');
+      errorController.add('Failed to open /private/secret/take.mp4');
     }
   }
 

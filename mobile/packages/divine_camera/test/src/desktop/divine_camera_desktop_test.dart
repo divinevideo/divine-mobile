@@ -17,6 +17,14 @@ import 'package:unified_logger/unified_logger.dart';
 import '../../helpers/fixtures.dart';
 
 void main() {
+  final throwsCancelled = throwsA(
+    isA<CameraException>().having(
+      (error) => error.code,
+      'code',
+      'operation_cancelled',
+    ),
+  );
+
   group('DivineCameraDesktop', () {
     late _CameraBackend backend;
     late DivineCameraDesktop camera;
@@ -304,7 +312,7 @@ void main() {
         try {
           await camera.initializeCamera();
           final starting = camera.startRecording();
-          final cancelled = expectLater(starting, throwsStateError);
+          final cancelled = expectLater(starting, completion(isFalse));
           await backend.startEntered.future;
           final closing = camera.disposeCamera();
           gate.complete();
@@ -352,7 +360,10 @@ void main() {
           final capture = action == 'recording'
               ? camera.startRecording()
               : camera.capturePhoto();
-          final cancelled = expectLater(capture, throwsStateError);
+          final cancelled = expectLater(
+            capture,
+            completion(action == 'recording' ? isFalse : isNull),
+          );
 
           await camera.disposeCamera();
           await cancelled;
@@ -372,7 +383,7 @@ void main() {
             mirrorFrontCameraOutput: false,
           );
           await backend.initializationEntered.future;
-          final cancelled = expectLater(initializing, throwsStateError);
+          final cancelled = expectLater(initializing, throwsCancelled);
           final closing = camera.disposeCamera();
           try {
             await closing.timeout(const Duration(seconds: 1));
@@ -394,7 +405,7 @@ void main() {
           videoQuality: DivineVideoQuality.hd,
         );
         await backend.initializationEntered.future;
-        final cancelled = expectLater(initializing, throwsStateError);
+        final cancelled = expectLater(initializing, throwsCancelled);
 
         final closed = camera.disposeCamera();
         gate.complete();
@@ -999,7 +1010,7 @@ void main() {
           videoQuality: DivineVideoQuality.hd,
         );
         await backend.initializationEntered.future;
-        final cancelled = expectLater(initializing, throwsStateError);
+        final cancelled = expectLater(initializing, throwsCancelled);
         final pausing = camera.pausePreview();
         try {
           await pausing.timeout(const Duration(seconds: 1));
@@ -1146,6 +1157,63 @@ void main() {
       );
 
       test(
+        'reports and logs when backgrounding cancels a max-duration auto-stop',
+        () async {
+          final directory = await Directory.systemTemp.createTemp(
+            'autostop-bg-',
+          );
+          final source = await File(
+            '${directory.path}/take.mp4',
+          ).writeAsBytes([1, 2, 3]);
+          final gate = Completer<void>();
+          final results = <VideoRecordingResult?>[];
+          final previous = DivineCameraPlatform.instance;
+          final facade = DivineCamera.instance;
+          const warningMessage =
+              'Desktop recording limit stop was cancelled when backgrounding.';
+          int warnings() => LogCaptureService()
+              .getRecentLogs()
+              .where((entry) => entry.message == warningMessage)
+              .length;
+          final beforeWarnings = warnings();
+          try {
+            backend
+              ..recordedFile = XFile(source.path)
+              ..stopGate = gate;
+            DivineCameraPlatform.instance = camera;
+            facade.onRecordingAutoStopped = results.add;
+            await facade.initialize();
+            expect(
+              await facade.startRecording(
+                maxDuration: const Duration(milliseconds: 20),
+              ),
+              isTrue,
+            );
+            expect(facade.state.isRecording, isTrue);
+            await backend.stopEntered.future;
+
+            await facade.handleAppLifecycleState(AppLifecycleState.paused);
+            await pumpEventQueue();
+
+            expect(results, [null]);
+            expect(facade.state.isRecording, isFalse);
+            expect(backend.activeCameraIds, isEmpty);
+            expect(warnings(), beforeWarnings + 1);
+
+            gate.complete();
+            await pumpEventQueue();
+            expect(source.existsSync(), isFalse);
+            expect(results, [null]);
+          } finally {
+            if (!gate.isCompleted) gate.complete();
+            await facade.dispose();
+            DivineCameraPlatform.instance = previous;
+            await directory.delete(recursive: true);
+          }
+        },
+      );
+
+      test(
         'new initialization cancels inspection before opening capture',
         () async {
           backend.recordedFile = XFile('/synthetic/retired-take.mp4');
@@ -1185,7 +1253,7 @@ void main() {
             await camera.startRecording();
             Future<void>? rejected;
             if (!disposingActiveTake) {
-              rejected = expectLater(camera.stopRecording(), throwsStateError);
+              rejected = expectLater(camera.stopRecording(), throwsCancelled);
               await backend.stopEntered.future;
             }
             await camera.disposeCamera();
@@ -1224,7 +1292,7 @@ void main() {
             await camera.startRecording();
             final rejected = expectLater(
               camera.stopRecording(),
-              throwsStateError,
+              throwsCancelled,
             );
             await backend.stopEntered.future;
             await camera.disposeCamera();
@@ -1301,7 +1369,14 @@ void main() {
             expect(backend.activeCameraIds, isEmpty);
             expect(backend.stopCalls, 1);
             await stopping;
-            expect(stopError, isA<StateError>());
+            expect(
+              stopError,
+              isA<CameraException>().having(
+                (error) => error.code,
+                'code',
+                'operation_cancelled',
+              ),
+            );
             await camera.resumePreview();
             expect(backend.activeCameraIds, {8});
             expect((await camera.getCameraState()).isInitialized, isTrue);
@@ -1338,7 +1413,7 @@ void main() {
             await camera.startRecording();
             expect(backend.activeCameraIds, {7});
             final stopping = camera.stopRecording();
-            final rejected = expectLater(stopping, throwsStateError);
+            final rejected = expectLater(stopping, throwsCancelled);
             await backend.stopEntered.future;
             final failures = <Object>[];
             camera.onCameraError = failures.add;
@@ -1683,10 +1758,7 @@ void main() {
         await camera.initializeCamera(mirrorFrontCameraOutput: false);
         backend.recordingError = CameraException('audio_denied', 'Denied');
 
-        await expectLater(
-          camera.startRecording(),
-          throwsA(isA<CameraException>()),
-        );
+        expect(await camera.startRecording(), isFalse);
         expect((await camera.getCameraState()).isRecording, isFalse);
         backend.recordingError = null;
         expect(await camera.startRecording(), isTrue);
@@ -1705,7 +1777,7 @@ void main() {
           backend.startGate = gate;
           await camera.initializeCamera();
           final starting = camera.startRecording();
-          final rejected = expectLater(starting, throwsStateError);
+          final rejected = expectLater(starting, completion(isFalse));
           await backend.startEntered.future;
           Future<Object?>? interrupted;
           try {
@@ -1791,9 +1863,9 @@ void main() {
           final destination = Directory('${directory.path}/photos');
           await camera.initializeCamera(mirrorFrontCameraOutput: false);
           try {
-            await expectLater(
-              camera.capturePhoto(outputDirectory: destination.path),
-              throwsA(isA<Exception>()),
+            expect(
+              await camera.capturePhoto(outputDirectory: destination.path),
+              isNull,
             );
 
             expect(destination.existsSync(), isFalse);
@@ -1820,7 +1892,7 @@ void main() {
           await camera.initializeCamera();
           await camera.startRecording();
           final stopping = camera.stopRecording();
-          final rejected = expectLater(stopping, throwsStateError);
+          final rejected = expectLater(stopping, throwsCancelled);
           await backend.stopEntered.future;
           final closing = camera.disposeCamera();
           gate.complete();
@@ -1885,7 +1957,7 @@ void main() {
             ..initializationGate = gate
             ..nextInitializationEntered = Completer<void>();
           final opening = camera.resumeAudioCapture();
-          final rejected = expectLater(opening, throwsStateError);
+          final rejected = expectLater(opening, throwsCancelled);
           await backend.nextInitializationEntered!.future;
           await camera.pausePreview();
           await rejected;
@@ -1928,7 +2000,10 @@ void main() {
                       outputDirectory: '${directory.path}/draft',
                     )
                   : camera.stopRecording();
-              final rejected = expectLater(operation, throwsStateError);
+              final rejected = expectLater(
+                operation,
+                photo ? completion(isNull) : throwsCancelled,
+              );
               await gate.copied.future;
               final closing = camera.disposeCamera();
               gate.finish.complete();

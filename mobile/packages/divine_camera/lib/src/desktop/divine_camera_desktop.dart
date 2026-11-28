@@ -36,8 +36,9 @@ class DivineCameraDesktop extends DivineCameraPlatform
   final DesktopVideoFileInspector fileInspector;
 
   final capture.CameraPlatform _cameraPlatform;
-  // camera_desktop's Windows dispose reply acknowledges the request. Its
-  // cameraClosing event is posted only after releasing the capture engine.
+  // Windows replies from DisposeAsync completion after releasing the capture
+  // engine and queuing cameraClosing. Waiting for that event drains the
+  // channel before disposal finishes.
   final bool _waitForNativeClosing;
   final _closedCameraIds = <int>{};
   final _deviceSubscriptions = <StreamSubscription<dynamic>>[];
@@ -46,6 +47,7 @@ class DivineCameraDesktop extends DivineCameraPlatform
   bool _audioEnabled = false;
   bool _mirrorFrontCameraOutput = false;
   int? _recordingCameraId;
+  int? _autoStopGeneration;
   int _generation = 0;
   Completer<void>? _initializationCancellation;
   Future<void> _pending = Future<void>.value();
@@ -282,7 +284,10 @@ class DivineCameraDesktop extends DivineCameraPlatform
         configuring,
         failed.future,
         cancellation.future.then<void>((_) {
-          throw StateError('Camera initialization was cancelled.');
+          throw capture.CameraException(
+            'operation_cancelled',
+            'Camera initialization was cancelled.',
+          );
         }),
       ]);
       initializing = false;
@@ -376,58 +381,80 @@ class DivineCameraDesktop extends DivineCameraPlatform
     bool useCache = true,
     String? outputDirectory,
   }) {
-    final generation = _generation;
-    return _serialize(() async {
-      _checkGeneration(generation);
-      _requireCamera();
-      if (_state.isRecording || _isFinalizing) return false;
-      if (maxDuration != null && maxDuration <= Duration.zero) {
-        throw ArgumentError.value(
+    if (maxDuration != null && maxDuration <= Duration.zero) {
+      return Future<bool>.error(
+        ArgumentError.value(
           maxDuration,
           'maxDuration',
           'must be positive',
-        );
-      }
-      if (!_audioEnabled) await _reconfigureAudio(true, generation);
-      _checkGeneration(generation);
-      final cameraId = _requireCamera();
-      _recordingOutputDirectory =
-          outputDirectory ??
-          (useCache ? null : (await getApplicationDocumentsDirectory()).path);
-      _checkGeneration(generation);
-      _recordingCameraId = cameraId;
+        ),
+      );
+    }
+    final generation = _generation;
+    return _serialize(() async {
       try {
-        await _startWithCancellation(cameraId);
-      } catch (_) {
-        _recordingCameraId = null;
-        rethrow;
+        _checkGeneration(generation);
+        if (_cameraId == null || _state.isRecording || _isFinalizing) {
+          return false;
+        }
+        if (!_audioEnabled) await _reconfigureAudio(true, generation);
+        _checkGeneration(generation);
+        final cameraId = _cameraId;
+        if (cameraId == null) return false;
+        _recordingOutputDirectory =
+            outputDirectory ??
+            (useCache ? null : (await getApplicationDocumentsDirectory()).path);
+        _checkGeneration(generation);
+        _recordingCameraId = cameraId;
+        try {
+          await _startWithCancellation(cameraId);
+        } catch (_) {
+          _recordingCameraId = null;
+          rethrow;
+        }
+        _checkGeneration(generation);
+        _state = _state.copyWith(isRecording: true);
+        if (maxDuration != null) {
+          _recordingLimit = Timer(maxDuration, () {
+            if (generation != _generation || !_state.isRecording) return;
+            _autoStopGeneration = generation;
+            unawaited(
+              stopRecording().then<void>(
+                (result) {
+                  if (_autoStopGeneration == generation) {
+                    _autoStopGeneration = null;
+                  }
+                  if (generation == _generation) {
+                    onRecordingAutoStopped?.call(result);
+                  }
+                },
+                onError: (Object error, StackTrace stackTrace) {
+                  if (_autoStopGeneration == generation) {
+                    _autoStopGeneration = null;
+                  }
+                  if (generation != _generation) return;
+                  Log.error(
+                    'Desktop recording limit could not finalize the take.',
+                    name: 'divine_camera',
+                    error: error,
+                    stackTrace: stackTrace,
+                  );
+                  onRecordingAutoStopped?.call(null);
+                },
+              ),
+            );
+          });
+        }
+        return true;
+      } on Object catch (error, stackTrace) {
+        Log.error(
+          'Desktop startRecording failed.',
+          name: 'divine_camera',
+          error: error,
+          stackTrace: stackTrace,
+        );
+        return false;
       }
-      _checkGeneration(generation);
-      _state = _state.copyWith(isRecording: true);
-      if (maxDuration != null) {
-        _recordingLimit = Timer(maxDuration, () {
-          unawaited(
-            stopRecording().then<void>(
-              (result) {
-                if (generation == _generation) {
-                  onRecordingAutoStopped?.call(result);
-                }
-              },
-              onError: (Object error, StackTrace stackTrace) {
-                if (generation != _generation) return;
-                Log.error(
-                  'Desktop recording limit could not finalize the take.',
-                  name: 'divine_camera',
-                  error: error,
-                  stackTrace: stackTrace,
-                );
-                onRecordingAutoStopped?.call(null);
-              },
-            ),
-          );
-        });
-      }
-      return true;
     });
   }
 
@@ -487,7 +514,12 @@ class DivineCameraDesktop extends DivineCameraPlatform
       // device rather than enqueue another stop behind the same stuck drain.
       _recordingCameraId = null;
       final file = stopped = await _stopWithCancellation(cameraId);
-      if (file == null) throw StateError('Camera operation was cancelled.');
+      if (file == null) {
+        throw capture.CameraException(
+          'operation_cancelled',
+          'Camera operation was cancelled.',
+        );
+      }
       _checkGeneration(generation);
       _state = _state.copyWith(isRecording: false);
       _isFinalizing = true;
@@ -606,23 +638,41 @@ class DivineCameraDesktop extends DivineCameraPlatform
 
   @override
   Future<void> pausePreview({bool releaseAudio = true}) {
+    var cancelledAutoStop = false;
     if (releaseAudio &&
         (_initializationCancellation != null ||
             _nativeStartCancellation != null ||
             _nativeStopCancellation != null)) {
+      if (_nativeStopCancellation != null &&
+          _autoStopGeneration == _generation) {
+        cancelledAutoStop = true;
+        _autoStopGeneration = null;
+      }
       _generation++;
       _cancelPendingInitialization();
       _cancelNativeStart();
       _cancelNativeStop();
       _resumeOnForeground = true;
     }
-    return _pausePreview(releaseAudio: releaseAudio);
+    return _pausePreview(
+      releaseAudio: releaseAudio,
+      cancelledAutoStop: cancelledAutoStop,
+    );
   }
 
-  Future<void> _pausePreview({required bool releaseAudio}) async {
+  Future<void> _pausePreview({
+    required bool releaseAudio,
+    required bool cancelledAutoStop,
+  }) async {
     final generation = _generation;
-    var wasRecording = false;
+    var wasRecording = cancelledAutoStop;
     VideoRecordingResult? result;
+    if (cancelledAutoStop) {
+      Log.warning(
+        'Desktop recording limit stop was cancelled when backgrounding.',
+        name: 'divine_camera',
+      );
+    }
     try {
       final take = await _serialize(() async {
         final cameraId = _cameraId;
@@ -635,9 +685,9 @@ class DivineCameraDesktop extends DivineCameraPlatform
           return null;
         }
         _resumeOnForeground = true;
-        wasRecording = _state.isRecording;
+        wasRecording = _state.isRecording || wasRecording;
         try {
-          return wasRecording ? await _stopNativeTake() : null;
+          return _state.isRecording ? await _stopNativeTake() : null;
         } finally {
           await _releaseDevice();
         }
@@ -674,11 +724,13 @@ class DivineCameraDesktop extends DivineCameraPlatform
   }) {
     final generation = _generation;
     return _serialize(() async {
-      _checkGeneration(generation);
-      if (_state.isRecording) return null;
-      final file = await _cameraPlatform.takePicture(_requireCamera());
+      capture.XFile? file;
       String? retained;
       try {
+        _checkGeneration(generation);
+        final cameraId = _cameraId;
+        if (cameraId == null || _state.isRecording) return null;
+        file = await _cameraPlatform.takePicture(cameraId);
         _checkGeneration(generation);
         final dimensions = await _photoDimensions(file.path);
         _checkGeneration(generation);
@@ -697,12 +749,18 @@ class DivineCameraDesktop extends DivineCameraPlatform
           width: dimensions.width,
           height: dimensions.height,
         );
-      } catch (_) {
-        await _discardFile(file.path);
-        if (retained != null && retained != file.path) {
+      } on Object catch (error, stackTrace) {
+        if (file != null) await _discardFile(file.path);
+        if (retained != null && retained != file?.path) {
           await _discardFile(retained);
         }
-        rethrow;
+        Log.error(
+          'Desktop capturePhoto failed.',
+          name: 'divine_camera',
+          error: error,
+          stackTrace: stackTrace,
+        );
+        return null;
       }
     });
   }
@@ -782,7 +840,10 @@ class DivineCameraDesktop extends DivineCameraPlatform
 
   void _checkGeneration(int generation) {
     if (generation != _generation) {
-      throw StateError('Camera operation was cancelled.');
+      throw capture.CameraException(
+        'operation_cancelled',
+        'Camera operation was cancelled.',
+      );
     }
   }
 

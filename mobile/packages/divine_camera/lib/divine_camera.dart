@@ -1,6 +1,8 @@
 // ABOUTME: Base service for camera operations across different platforms
 // ABOUTME: Provides unified API for camera control, recording, and preview
 
+import 'package:camera_platform_interface/camera_platform_interface.dart'
+    show CameraException;
 import 'package:divine_camera/divine_camera_platform_interface.dart';
 import 'package:divine_camera/src/models/camera_lens.dart';
 import 'package:divine_camera/src/models/camera_state.dart';
@@ -14,6 +16,8 @@ import 'package:divine_camera/src/models/video_stabilization_mode.dart';
 import 'package:flutter/widgets.dart';
 
 // Export models for external use
+export 'package:camera_platform_interface/camera_platform_interface.dart'
+    show CameraException;
 export 'src/models/camera_lens.dart';
 export 'src/models/camera_lens_metadata.dart';
 export 'src/models/camera_state.dart';
@@ -180,7 +184,10 @@ class DivineCamera {
       videoStabilizationMode: videoStabilizationMode,
     );
     if (deviceFailed) {
-      throw StateError('Camera became unavailable during initialization.');
+      throw CameraException(
+        'camera_unavailable',
+        'Camera became unavailable during initialization.',
+      );
     }
     _state = state;
     _notifyStateChanged();

@@ -379,7 +379,13 @@ void main() {
 
           await expectLater(
             DivineCamera.instance.initialize(),
-            throwsStateError,
+            throwsA(
+              isA<CameraException>().having(
+                (error) => error.code,
+                'code',
+                'camera_unavailable',
+              ),
+            ),
           );
 
           expect(DivineCamera.instance.state.isInitialized, isFalse);
