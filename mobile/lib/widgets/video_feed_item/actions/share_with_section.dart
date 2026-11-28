@@ -258,7 +258,9 @@ class _ContactItem extends ConsumerWidget {
       label: tapSends
           ? context.l10n.shareRecipientSendTo(displayName)
           : displayName,
-      onLongPressHint: longPress == null ? null : context.l10n.shareMessageHint,
+      onLongPressHint: enabled && tapSends && longPress != null
+          ? context.l10n.shareMessageHint
+          : null,
       child: InkWell(
         borderRadius: BorderRadius.circular(_ShareWithSection._avatarRadius),
         onTap: enabled ? () => onTap(resolved) : null,

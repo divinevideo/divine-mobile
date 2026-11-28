@@ -10,6 +10,7 @@ import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -2146,9 +2147,23 @@ void main() {
             expect(node.label, l10n.shareRecipientSendTo('Alice'));
             expect(node.flagsCollection.isButton, isTrue);
             expect(
+              node.getSemanticsData().hasAction(SemanticsAction.tap),
+              isTrue,
+            );
+            expect(
+              node.getSemanticsData().hasAction(SemanticsAction.longPress),
+              isTrue,
+            );
+            expect(
               node.hintOverrides?.onLongPressHint,
               l10n.shareMessageHint,
             );
+
+            node.owner!.performAction(node.id, SemanticsAction.longPress);
+            await tester.pumpAndSettle();
+
+            expect(find.byType(TextField), findsOneWidget);
+            expect(node.hintOverrides?.onLongPressHint, isNull);
             semantics.dispose();
           });
 
