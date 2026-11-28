@@ -72,6 +72,7 @@ Future<void> startAccountDeletionFlow({
     if (overdue) {
       unawaited(monitor!.resume(pendingDeletion.attempt));
     }
+    final router = GoRouter.maybeOf(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(context.l10n.accountDeletionOtherAccountPending),
@@ -79,7 +80,13 @@ Future<void> startAccountDeletionFlow({
         action: offerSupport
             ? SnackBarAction(
                 label: context.l10n.supportContactSupport,
-                onPressed: () => context.push(RoutePaths.supportCenter),
+                onPressed: () {
+                  if (router != null) {
+                    unawaited(router.push(RoutePaths.supportCenter));
+                  } else if (context.mounted) {
+                    unawaited(context.push(RoutePaths.supportCenter));
+                  }
+                },
               )
             : null,
       ),

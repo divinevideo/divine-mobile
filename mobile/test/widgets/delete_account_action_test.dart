@@ -19,6 +19,7 @@ import 'package:openvine/providers/owned_divine_username_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/repositories/account_deletion_recovery_repository.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
@@ -668,6 +669,215 @@ void main() {
         expect(find.text(l10n.supportContactSupport), findsOneWidget);
         verify(() => recoveryCubit.resume(_processing)).called(1);
         await expectFlowStopped(tester);
+      },
+    );
+
+    testWidgets(
+      'tapping Contact support after leaving the screen opens support '
+      'without throwing',
+      (tester) async {
+        final recoveryCubit = _MockRecoveryCubit();
+        when(() => recoveryCubit.state).thenReturn(
+          const AccountDeletionRecoveryState(
+            status: AccountDeletionRecoveryStatus.processing,
+            attempt: _processing,
+            pollingPaused: true,
+          ),
+        );
+        when(() => recoveryCubit.resume(_processing)).thenAnswer((_) async {});
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        final sharedPreferences = await SharedPreferences.getInstance();
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+            authServiceProvider.overrideWithValue(authService),
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+            currentAuthRpcCapabilityProvider.overrideWithValue(
+              AuthRpcCapability.rpcReady,
+            ),
+            accountDeletionServiceProvider.overrideWithValue(deletionService),
+            accountDeletionRecoveryRepositoryProvider.overrideWithValue(
+              repository,
+            ),
+            ownedDivineUsernameProvider.overrideWith(
+              (ref) async => const DivineUsernameNotFound(),
+            ),
+            fetchUserProfileProvider(
+              _pubkeyHex,
+            ).overrideWith((ref) async => null),
+            submittedAccountDeletionMonitorProvider.overrideWithValue(
+              recoveryCubit,
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        await container
+            .read(submittedAccountDeletionAttemptProvider.notifier)
+            .record(
+              pubkeyHex: 'different-account-pubkey',
+              attempt: _processing,
+              vanishEventId: 'other-vanish-event-id',
+            );
+
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) => Scaffold(
+                body: Consumer(
+                  builder: (context, ref, _) => ElevatedButton(
+                    key: const Key('delete'),
+                    onPressed: () => startAccountDeletionFlow(
+                      context: context,
+                      ref: ref,
+                      screenName: 'Test',
+                    ),
+                    child: const Text('Delete'),
+                  ),
+                ),
+              ),
+            ),
+            GoRoute(
+              path: '/other',
+              builder: (_, _) => const Scaffold(body: Text('Other screen')),
+            ),
+            GoRoute(
+              path: RoutePaths.supportCenter,
+              builder: (_, _) => const Scaffold(body: Text('Support center')),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byKey(const Key('delete')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.supportContactSupport), findsOneWidget);
+
+        // Leave the screen that showed the snackbar; the app-level
+        // ScaffoldMessenger keeps the action snackbar visible.
+        router.go('/other');
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('delete')), findsNothing);
+        expect(find.text('Other screen'), findsOneWidget);
+        expect(find.text(l10n.supportContactSupport), findsOneWidget);
+
+        await tester.tap(find.text(l10n.supportContactSupport));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Support center'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'tapping Contact support after unmounting without GoRouter does not '
+      'throw',
+      (tester) async {
+        final recoveryCubit = _MockRecoveryCubit();
+        when(() => recoveryCubit.state).thenReturn(
+          const AccountDeletionRecoveryState(
+            status: AccountDeletionRecoveryStatus.processing,
+            attempt: _processing,
+            pollingPaused: true,
+          ),
+        );
+        when(() => recoveryCubit.resume(_processing)).thenAnswer((_) async {});
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        final sharedPreferences = await SharedPreferences.getInstance();
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+            authServiceProvider.overrideWithValue(authService),
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+            currentAuthRpcCapabilityProvider.overrideWithValue(
+              AuthRpcCapability.rpcReady,
+            ),
+            accountDeletionServiceProvider.overrideWithValue(deletionService),
+            accountDeletionRecoveryRepositoryProvider.overrideWithValue(
+              repository,
+            ),
+            ownedDivineUsernameProvider.overrideWith(
+              (ref) async => const DivineUsernameNotFound(),
+            ),
+            fetchUserProfileProvider(
+              _pubkeyHex,
+            ).overrideWith((ref) async => null),
+            submittedAccountDeletionMonitorProvider.overrideWithValue(
+              recoveryCubit,
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        await container
+            .read(submittedAccountDeletionAttemptProvider.notifier)
+            .record(
+              pubkeyHex: 'different-account-pubkey',
+              attempt: _processing,
+              vanishEventId: 'other-vanish-event-id',
+            );
+
+        final showTrigger = ValueNotifier<bool>(true);
+        addTearDown(showTrigger.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: ValueListenableBuilder<bool>(
+                  valueListenable: showTrigger,
+                  builder: (context, visible, _) {
+                    if (!visible) return const SizedBox.shrink();
+                    return Consumer(
+                      builder: (context, ref, _) => ElevatedButton(
+                        key: const Key('delete'),
+                        onPressed: () => startAccountDeletionFlow(
+                          context: context,
+                          ref: ref,
+                          screenName: 'Test',
+                        ),
+                        child: const Text('Delete'),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.byKey(const Key('delete')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.supportContactSupport), findsOneWidget);
+
+        showTrigger.value = false;
+        await tester.pump();
+        expect(find.byKey(const Key('delete')), findsNothing);
+        expect(find.text(l10n.supportContactSupport), findsOneWidget);
+
+        await tester.tap(find.text(l10n.supportContactSupport));
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
       },
     );
   });
