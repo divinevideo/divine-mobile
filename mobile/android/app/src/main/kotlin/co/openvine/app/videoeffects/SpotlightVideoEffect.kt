@@ -15,18 +15,26 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * along each axis, through the middle of the frame, so about as much of the
  * picture is lit all the time and it never pulses brighter and darker.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
- * dark the picture is outside the lights). The lights move with the time
- * since the effect started, so they follow the same path in the preview and
- * in the export.
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how dark
+ * the picture gets outside the lights), `size` (0.5–2: how large the lights
+ * are, as a share of the default) and `speed` (0–3: how fast they wander, as a
+ * share of the default; 0 holds them still). The lights move with the time
+ * since the effect started, so they follow the same path in the preview and in
+ * the export.
  */
 class SpotlightVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
     private val intensity = intensityOf(params)
 
+    private val spread = numberOf(params, "size", 1f, 0.5f, 2f)
+
+    private val speed = numberOf(params, "speed", 1f, 0f, 3f)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uIntensity", intensity)
         shader.setFloat("uTime", (effectTimeUs / 1_000_000.0).toFloat())
+        shader.setFloat("uSpread", spread)
+        shader.setFloat("uSpeed", speed)
     }
 
     companion object {
@@ -43,7 +51,10 @@ class SpotlightVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGME
         private const val FRAGMENT_SHADER = ShaderVideoEffect.PRELUDE + """
 uniform float uIntensity;
 uniform float uTime;
+uniform float uSpread;
+uniform float uSpeed;
 
+// A round light with a flat top and a short, soft edge.
 float spot(vec2 p, vec2 centre, float reach) {
   vec2 d = (p - centre) / reach;
   float r2 = dot(d, d);
@@ -53,12 +64,12 @@ float spot(vec2 p, vec2 centre, float reach) {
 void main() {
   vec2 p = vTexCoord * uSize;
   float l = max(uSize.x, uSize.y);
-  float t = uTime;
+  float t = uTime * uSpeed;
   vec2 warmCentre = uSize * vec2(0.5 + 0.28 * sin(0.41 * t + 0.3), 0.56 + 0.2 * sin(0.53 * t + 1.7));
   vec2 coolCentre = uSize * vec2(0.5 + 0.3 * sin(0.33 * t + 3.4), 0.44 + 0.22 * sin(0.47 * t + 0.6));
   vec3 light = max(
-    vec3(1.12, 1.04, 0.9) * spot(p, warmCentre, 0.2 * l),
-    vec3(0.92, 0.98, 1.12) * spot(p, coolCentre, 0.17 * l));
+    vec3(1.12, 1.04, 0.9) * spot(p, warmCentre, 0.2 * l * uSpread),
+    vec3(0.92, 0.98, 1.12) * spot(p, coolCentre, 0.17 * l * uSpread));
   float dark = 0.8 * uIntensity;
   vec3 base = tap(p);
   gl_FragColor = vec4(clamp(base * (1.0 - dark + dark * light), 0.0, 1.0), 1.0);

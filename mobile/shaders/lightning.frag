@@ -29,6 +29,11 @@ uniform vec4 uPathB;
 // has a branch.
 uniform vec4 uBranch;
 
+// The colour the flash lights the picture with, and that of the glow around
+// the bolt.
+uniform vec3 uTint;
+uniform vec3 uGlow;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -79,8 +84,8 @@ void main() {
   float sideEnd = clamp((p.y - b3.y) / (2.0 * rise), 0.0, 1.0);
   float core = (0.3 + 0.7 * trunkEnd) * exp(-trunk * trunk / (w * w)) + 0.7 * uBranch.w * sideEnd * exp(-side * side / (0.36 * w * w));
   float glow = (0.3 + 0.7 * trunkEnd) * exp(-trunk / (0.035 * l)) + 0.5 * uBranch.w * sideEnd * exp(-side / (0.025 * l));
-  vec3 tint = vec3(0.78, 0.86, 1.0);
+  vec3 tint = uTint;
   vec3 lit = base * (1.0 + 0.9 * flash * tint) + 0.22 * flash * tint;
-  lit += bolt * (min(core, 1.0) * vec3(0.95, 0.97, 1.0) + 0.6 * glow * vec3(0.55, 0.65, 1.0));
+  lit += bolt * (min(core, 1.0) * vec3(0.95, 0.97, 1.0) + 0.6 * glow * uGlow);
   fragColor = vec4(clamp(lit, 0.0, 1.0), 1.0);
 }

@@ -9554,6 +9554,21 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Mờ xoay';
 
   @override
+  String get videoEditorEffectShockwave => 'Sóng xung kích';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Loa siêu trầm';
+
+  @override
+  String get videoEditorEffectPlasma => 'Plasma';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Sóng năng lượng';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Vụ nổ khói';
+
+  @override
   String get videoEditorEffectComic => 'Truyện tranh';
 
   @override
@@ -9749,9 +9764,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Tông màu';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'Điều chỉnh giọt nước';
-
-  @override
   String get videoEditorDropsCountLabel => 'Số lượng';
 
   @override
@@ -9797,6 +9809,203 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Thêm nhạc hoặc bật âm thanh của một clip';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Cài đặt hiệu ứng';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Cài đặt: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds giây';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Thời lượng';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Lặp lại';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'Một lần, tại điểm hiệu ứng bắt đầu trên dòng thời gian';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Khoảng cách';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Giao diện';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Vị trí ngang';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Vị trí dọc';
+
+  @override
+  String get videoEditorEffectHitReach => 'Phạm vi';
+
+  @override
+  String get videoEditorEffectHitShake => 'Rung';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Cú thu phóng';
+
+  @override
+  String get videoEditorEffectLookReset => 'Đặt lại giao diện';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'Thời điểm';
+
+  @override
+  String get videoEditorEffectTimingReset => 'Đặt lại thời điểm';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'Chuyển động';
+
+  @override
+  String get videoEditorEffectMotionReset => 'Đặt lại chuyển động';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'Tiêu điểm';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'Độ rộng';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'Hướng';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'Ngang';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'Dọc';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'Theo chiều kim đồng hồ';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'Ngược chiều kim đồng hồ';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'Phóng to';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'Thu nhỏ';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'Khoảng cách';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'Góc';
+
+  @override
+  String get videoEditorEffectSettingHue => 'Sắc độ';
+
+  @override
+  String get videoEditorEffectSettingLength => 'Độ dài';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'Độ nhạy';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'Vị trí';
+
+  @override
+  String get videoEditorEffectSettingWind => 'Gió';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'Kích thước chấm';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'Đường viền';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'Mức';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'Kích thước điểm ảnh';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'Độ lệch';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'Cỡ cọ';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'Mật độ';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'Hạt';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'Lưới';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'Lớp';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'Bóng';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'Mực thứ nhất';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'Mực thứ hai';
+
+  @override
+  String get videoEditorEffectSettingColors => 'Màu sắc';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'Gốc';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'Một màu';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'Độ trễ';
+
+  @override
+  String get videoEditorEffectSettingDown => 'Xuống';
+
+  @override
+  String get videoEditorEffectSettingUp => 'Lên';
+
+  @override
+  String get videoEditorEffectSettingRight => 'Sang phải';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'Sang trái';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'Tần suất';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'Khoảng cách';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'Đường quét';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'Kích thước hạt';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'Màu nâu cổ';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'Nhấp nháy';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'Viền tối';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'Nhịp độ';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'Bước sóng';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

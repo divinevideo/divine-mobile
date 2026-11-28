@@ -17,6 +17,15 @@ uniform vec2 uSize;
 // How long and bright the streaks are, 0 to 1.
 uniform float uIntensity;
 
+// The streaks' colour.
+uniform vec3 uColor;
+
+// How long the streaks are, as a share of the default.
+uniform float uLength;
+
+// How dim a light may be and still streak: 0.5 is the default.
+uniform float uSensitivity;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -33,8 +42,8 @@ float luma(vec3 c) {
 void main() {
   vec2 fragCoord = FlutterFragCoord().xy;
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
-  float reach = (0.08 + 0.17 * uIntensity) * uSize.x;
-  float threshold = 0.85 - 0.1 * uIntensity;
+  float reach = (0.08 + 0.17 * uIntensity) * uSize.x * uLength;
+  float threshold = min(0.85 - 0.1 * uIntensity - 0.3 * (uSensitivity - 0.5), 0.95);
   float jitter = fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
   float streak = 0.0;
   for (int i = 0; i < 48; i++) {
@@ -44,7 +53,7 @@ void main() {
     streak += h * h * w * w;
   }
   streak *= 3.0 / 48.0;
-  vec3 lit = clamp(vec3(0.3, 0.62, 1.0) * (5.0 * streak * uIntensity), 0.0, 1.0);
+  vec3 lit = clamp(uColor * (5.0 * streak * uIntensity), 0.0, 1.0);
   vec3 base = tap(p);
   fragColor = vec4(1.0 - (1.0 - base) * (1.0 - lit), 1.0);
 }

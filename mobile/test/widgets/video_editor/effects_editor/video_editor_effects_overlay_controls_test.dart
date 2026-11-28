@@ -1,6 +1,4 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -9,7 +7,6 @@ import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/models/video_editor/drops_effect_settings.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -17,9 +14,6 @@ import 'package:openvine/widgets/video_editor/video_editor_vertical_slider.dart'
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show VideoEffect, VideoEffectType;
-
-import '../../../helpers/scroll.dart';
-import '../../../helpers/text_lines.dart';
 
 class _MockVideoEditorMainBloc
     extends MockBloc<VideoEditorMainEvent, VideoEditorMainState>
@@ -239,158 +233,64 @@ void main() {
       });
     });
 
-    group('on the beat switch', () {
-      testWidgets('shows for an effect that can fire on the beat, and turns '
-          'it on', (tester) async {
-        cubit.selectType(const EditorEffectType.builtIn(VideoEffectType.vhs));
+    group('settings button', () {
+      final settingsLabel = l10n.videoEditorEffectSettingsOpen;
+
+      testWidgets('shows only for an effect with settings', (tester) async {
+        cubit.selectType(EditorEffectType.tealOrange);
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
-        expect(find.text(l10n.videoEditorEffectsOnBeat), findsNothing);
-
-        cubit.selectType(
-          const EditorEffectType.builtIn(VideoEffectType.zoomPulse),
-        );
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(l10n.videoEditorEffectsOnBeat));
-        await tester.pumpAndSettle();
-
-        expect(cubit.state.onBeat, isTrue);
-      });
-
-      testWidgets('shows for the zoom blur and the spin blur, the effects '
-          'Divine draws that can fire on the beat', (tester) async {
-        cubit.selectType(EditorEffectType.tiltShift);
-        await tester.pumpWidget(buildWidget());
-        await tester.pumpAndSettle();
-        expect(find.text(l10n.videoEditorEffectsOnBeat), findsNothing);
+        expect(find.bySemanticsLabel(settingsLabel), findsNothing);
 
         for (final type in [
-          EditorEffectType.zoomBlur,
-          EditorEffectType.spinBlur,
+          const EditorEffectType.builtIn(VideoEffectType.zoomPulse),
+          EditorEffectType.shockwave,
+          EditorEffectType.plasma,
+          EditorEffectType.drops,
         ]) {
-          cubit
-            ..selectType(type)
-            ..setOnBeat(onBeat: false);
+          cubit.selectType(type);
           await tester.pumpAndSettle();
-          await tester.tap(find.text(l10n.videoEditorEffectsOnBeat));
-          await tester.pumpAndSettle();
-
-          expect(cubit.state.selectionOnBeat, isTrue, reason: type.name);
-        }
-      });
-
-      testWidgets('says when nothing in the video makes a sound', (
-        tester,
-      ) async {
-        cubit
-          ..syncBeatSource(sounds: const [], clips: const [])
-          ..selectType(const EditorEffectType.builtIn(VideoEffectType.strobe))
-          ..setOnBeat(onBeat: true);
-        await tester.pumpWidget(buildWidget());
-        await tester.pumpAndSettle();
-
-        expect(find.text(l10n.videoEditorEffectsOnBeatNoSound), findsOneWidget);
-      });
-    });
-
-    group('drops settings', () {
-      Future<void> openSettings(WidgetTester tester) async {
-        cubit.selectType(EditorEffectType.drops);
-        await tester.pumpWidget(buildWidget());
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(l10n.videoEditorDropsSettingsTitle));
-        await tester.pumpAndSettle();
-      }
-
-      testWidgets('show only while the drops are picked', (tester) async {
-        cubit.selectType(EditorEffectType.echo);
-        await tester.pumpWidget(buildWidget());
-        await tester.pumpAndSettle();
-        expect(find.text(l10n.videoEditorDropsSettingsTitle), findsNothing);
-
-        cubit.selectType(EditorEffectType.drops);
-        await tester.pumpAndSettle();
-
-        expect(find.text(l10n.videoEditorDropsSettingsTitle), findsOneWidget);
-        expect(find.text(l10n.videoEditorDropsCountLabel), findsNothing);
-      });
-
-      testWidgets('open to sliders that change the drops', (tester) async {
-        final semantics = tester.ensureSemantics();
-        await openSettings(tester);
-        // A count, not a share of the range.
-        expect(
-          tester.getSemantics(
-            find.bySemanticsLabel(l10n.videoEditorDropsCountLabel),
-          ),
-          isSemantics(
-            label: l10n.videoEditorDropsCountLabel,
-            isSlider: true,
-            value: '${DropsEffectSettings.defaultCount}',
-          ),
-        );
-
-        await tester.drag(
-          find.bySemanticsLabel(l10n.videoEditorDropsCountLabel),
-          const Offset(400, 0),
-        );
-        await tester.pumpAndSettle();
-
-        expect(
-          cubit.state.dropsSettings,
-          const DropsEffectSettings(count: DropsEffectSettings.maxCount),
-        );
-        expect(find.text('${DropsEffectSettings.maxCount}'), findsOneWidget);
-        semantics.dispose();
-      });
-
-      testWidgets('shuffle gives the drops a new arrangement', (tester) async {
-        await openSettings(tester);
-        final shuffle = find.text(l10n.videoEditorDropsShuffle);
-
-        await scrollUntilTappable(
-          tester,
-          shuffle,
-          50,
-          scrollable: find.descendant(
-            of: find.byType(ExpansionTile),
-            matching: find.byType(Scrollable),
-          ),
-        );
-        await tester.tap(shuffle);
-        await tester.pump();
-
-        expect(cubit.state.dropsSettings.seed, 42);
-      });
-
-      group('over a short preview', () {
-        Future<void> openShort(WidgetTester tester) async {
-          cubit.selectType(EditorEffectType.drops);
-          // The preview left above the effects picker on a small phone.
-          await tester.pumpWidget(buildWidget(height: 380));
-          await tester.pumpAndSettle();
-          await tester.tap(find.text(l10n.videoEditorDropsSettingsTitle));
-          await tester.pumpAndSettle();
-        }
-
-        testWidgets('open below the toolbar', (tester) async {
-          await openShort(tester);
-
-          expect(tester.takeException(), isNull);
-          expect(find.text(l10n.videoEditorDropsCountLabel), findsOneWidget);
           expect(
-            tester.getRect(find.byType(ExpansionTile)).top,
-            greaterThanOrEqualTo(
-              tester.getRect(find.bySemanticsLabel(doneLabel)).bottom,
-            ),
+            find.bySemanticsLabel(settingsLabel),
+            findsOneWidget,
+            reason: type.name,
           );
-        });
+        }
+      });
+
+      testWidgets('opens the settings, and closes them again', (tester) async {
+        cubit.selectType(EditorEffectType.shockwave);
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.bySemanticsLabel(settingsLabel));
+        await tester.pumpAndSettle();
+        expect(cubit.state.showsSettings, isTrue);
+
+        await tester.tap(find.bySemanticsLabel(settingsLabel));
+        await tester.pumpAndSettle();
+        expect(cubit.state.showsSettings, isFalse);
+      });
+
+      testWidgets('sits on the right just above the bar under the preview, '
+          'clear of the slider', (tester) async {
+        cubit.selectType(EditorEffectType.plasma);
+        await tester.pumpWidget(buildWidget(height: 380));
+        await tester.pumpAndSettle();
+
+        final slider = tester.getRect(find.byType(VideoEditorVerticalSlider));
+        final button = tester.getRect(find.bySemanticsLabel(settingsLabel));
+        final controls = tester.getRect(
+          find.byType(VideoEditorEffectsOverlayControls),
+        );
+        expect(button.top, greaterThan(slider.bottom));
+        expect(controls.bottom - button.bottom, inInclusiveRange(8, 24));
+        expect(controls.right - button.right, lessThanOrEqualTo(24));
+        expect(tester.takeException(), isNull);
       });
     });
 
     group('at a large text size', () {
-      final de = lookupAppLocalizations(const Locale('de'));
-
       // The preview left above the effects picker on a small phone, which
       // gets shorter as the picker grows with the text.
       Future<void> pumpAt(
@@ -408,34 +308,6 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      testWidgets('keeps the on-the-beat switch off the slider', (
-        tester,
-      ) async {
-        cubit
-          ..syncBeatSource(sounds: const [], clips: const [])
-          ..selectType(const EditorEffectType.builtIn(VideoEffectType.strobe))
-          ..setOnBeat(onBeat: true);
-
-        await pumpAt(
-          tester,
-          textScale: 1.65,
-          width: 375,
-          height: 330,
-          locale: const Locale('de'),
-        );
-
-        final slider = tester.getRect(find.byType(VideoEditorVerticalSlider));
-        final onBeatSwitch = tester.getRect(find.byType(DivineSwitchTile));
-        expect(slider.overlaps(onBeatSwitch), isFalse);
-        final status = tester.renderObject<RenderParagraph>(
-          find.text(de.videoEditorEffectsOnBeatNoSound),
-        );
-        expect(
-          status.size.height,
-          greaterThanOrEqualTo(status.textSize.height),
-        );
-      });
-
       testWidgets('lays the preview notice over the preview, beside the '
           'slider', (tester) async {
         cubit.selectType(const EditorEffectType.builtIn(VideoEffectType.vhs));
@@ -449,39 +321,6 @@ void main() {
         final slider = tester.getRect(find.byType(VideoEditorVerticalSlider));
         expect(slider.top, lessThan(notice.bottom));
         expect(slider.left, greaterThanOrEqualTo(notice.right));
-      });
-
-      testWidgets('keeps the drops settings whole', (tester) async {
-        cubit.selectType(EditorEffectType.drops);
-        await pumpAt(
-          tester,
-          textScale: 3.12,
-          width: 375,
-          height: 330,
-          locale: const Locale('de'),
-        );
-        await tester.tap(find.text(de.videoEditorDropsSettingsTitle));
-        await tester.pumpAndSettle();
-
-        expect(
-          tester
-              .renderObject<RenderParagraph>(
-                find.text(de.videoEditorDropsSettingsTitle),
-              )
-              .didExceedMaxLines,
-          isFalse,
-        );
-        final fringes = find.text(de.videoEditorDropsFringesLabel);
-        await scrollUntilTappable(
-          tester,
-          fringes,
-          50,
-          scrollable: find.descendant(
-            of: find.byType(ExpansionTile),
-            matching: find.byType(Scrollable),
-          ),
-        );
-        expect(wordsSplitAcrossLines(tester, fringes), isEmpty);
       });
     });
 

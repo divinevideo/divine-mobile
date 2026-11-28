@@ -22,8 +22,11 @@ import io.flutter.FlutterInjector
  * glyph is drawn in the cell's colour brightened to full strength, so the
  * glyphs carry the brightness and the colour stays clear.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
- * far the picture turns into characters).
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+ * the picture turns into characters), `size` (0.5–3: how large the characters
+ * are, as a share of the default), `single` (1 to draw them in one colour
+ * rather than the picture's own) and `color` (that colour, as an ARGB integer:
+ * terminal green by default).
  */
 class AsciiVideoEffect(glyphs: Bitmap, params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
@@ -31,9 +34,18 @@ class AsciiVideoEffect(glyphs: Bitmap, params: Map<String, Any?>) : ShaderVideoE
 
     private val glyphTexture = upload(glyphs)
 
+    private val char = numberOf(params, "size", 1f, 0.5f, 3f)
+
+    private val single = if ((params["single"] as? Number)?.toInt() == 1) 1f else 0f
+
+    private val color = colorOf(params, "color", 0xFF33FF66)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setTexture("uGlyphs", glyphTexture, 1)
         shader.setFloat("uIntensity", intensity)
+        shader.setFloat("uChar", char)
+        shader.setFloat("uSingle", single)
+        shader.setFloats("uColor", color)
     }
 
     override fun release() {
@@ -97,6 +109,9 @@ class AsciiVideoEffect(glyphs: Bitmap, params: Map<String, Any?>) : ShaderVideoE
         // four taps inside it, which steadies the glyphs against noise.
         private const val FRAGMENT_SHADER = ShaderVideoEffect.PRELUDE + """
 uniform float uIntensity;
+uniform float uChar;
+uniform float uSingle;
+uniform vec3 uColor;
 uniform sampler2D uGlyphs;
 
 const float kGlyphs = 10.0;
@@ -109,7 +124,7 @@ float luma(vec3 c) {
 void main() {
   vec2 p = vTexCoord * uSize;
   float s = min(uSize.x, uSize.y);
-  float c = max(8.0, s / 60.0);
+  float c = max(8.0, s / 60.0 * uChar);
   vec2 cell = floor(p / c);
   vec2 middle = (cell + 0.5) * c;
   vec3 ink = 0.25 * (tap(middle + vec2(-0.25, -0.25) * c) + tap(middle + vec2(0.25, -0.25) * c) +
@@ -120,7 +135,7 @@ void main() {
   vec2 atlas = vec2(kGlyphs * kGlyphSize, kGlyphSize);
   float glyph = texture2D(uGlyphs, vec2(level * kGlyphSize + texel.x, texel.y) / atlas).r;
   float hi = max(max(ink.r, ink.g), ink.b);
-  vec3 ascii = clamp(ink / max(hi, 0.25), 0.0, 1.0) * glyph;
+  vec3 ascii = (uSingle > 0.5 ? uColor : clamp(ink / max(hi, 0.25), 0.0, 1.0)) * glyph;
   gl_FragColor = vec4(mix(tap(p), ascii, uIntensity), 1.0);
 }
 """

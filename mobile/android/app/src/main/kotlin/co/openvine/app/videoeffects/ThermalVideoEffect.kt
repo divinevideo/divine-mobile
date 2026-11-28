@@ -14,15 +14,19 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * cold. A thermal camera's picture is soft, so the warmth is averaged over
  * five taps first, then stretched and run through an ironbow palette.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
- * far the picture turns into the thermal view).
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+ * the picture turns into the thermal view), `sensitivity` (0–1: how warm a spot
+ * must be to glow; 0.5 by default, higher glows sooner).
  */
 class ThermalVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
     private val intensity = intensityOf(params)
 
+    private val sensitivity = numberOf(params, "sensitivity", 0.5f, 0f, 1f)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uIntensity", intensity)
+        shader.setFloat("uSensitivity", sensitivity)
     }
 
     companion object {
@@ -40,6 +44,7 @@ class ThermalVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT
         // after another.
         private const val FRAGMENT_SHADER = ShaderVideoEffect.PRELUDE + """
 uniform float uIntensity;
+uniform float uSensitivity;
 
 float warmth(vec3 c) {
   return 0.3 * dot(c, vec3(0.299, 0.587, 0.114)) + 1.6 * max(c.r - 0.5 * (c.g + c.b), 0.0);
@@ -61,7 +66,8 @@ void main() {
   float heat = (2.0 * warmth(color) + warmth(tap(p + vec2(e, 0.0))) +
     warmth(tap(p - vec2(e, 0.0))) + warmth(tap(p + vec2(0.0, e))) +
     warmth(tap(p - vec2(0.0, e)))) / 6.0;
-  vec3 thermal = ironbow(smoothstep(0.1, 0.75, heat));
+  float shift = 0.6 * (uSensitivity - 0.5);
+  vec3 thermal = ironbow(smoothstep(0.1 - shift, 0.75 - shift, heat));
   gl_FragColor = vec4(mix(color, thermal, uIntensity), 1.0);
 }
 """

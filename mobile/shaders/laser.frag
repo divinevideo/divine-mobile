@@ -25,6 +25,9 @@ uniform float uPhase;
 uniform float uStep;
 uniform float uMix;
 
+// How many beams the fan has, 1 to 9.
+uniform float uBeams;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -55,8 +58,9 @@ void main() {
   float core = 0.0022 * l;
   float glow = 0.012 * l;
   vec3 light = vec3(0.0);
-  for (int i = 0; i < 7; i++) {
-    float across = dist * abs(sin(angle - aim - (float(i) - 3.0) * spread));
+  for (int i = 0; i < 9; i++) {
+    if (float(i) >= uBeams) break;
+    float across = dist * abs(sin(angle - aim - (float(i) - 0.5 * (uBeams - 1.0)) * spread));
     float beam = exp(-across * across / (core * core)) + 0.35 * exp(-across / glow);
     light += beam * mix(first, second, float(i) - 2.0 * floor(float(i) / 2.0));
   }

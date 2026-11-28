@@ -27,6 +27,14 @@ uniform float uIntensity;
 // Which of the 64 noise patterns shows, 0 to 63.
 uniform float uNoiseFrame;
 
+// How much grain the tube adds, as a share of the default.
+uniform float uGrain;
+
+// The phosphor's colour when dim, and how far it lifts towards white as it
+// glows brighter.
+uniform vec3 uBase;
+uniform vec3 uLift;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -55,7 +63,7 @@ void main() {
   float scan = 0.94 + 0.06 * step(0.5, fract(p.y / (2.0 * e)));
   float corner = length(p / uSize - 0.5);
   float tube = 1.0 - 0.65 * smoothstep(0.35, 0.75, corner);
-  float glow = clamp((level + 0.12 * noise) * scan * tube, 0.0, 1.0);
-  vec3 phosphor = vec3(0.1 + 0.5 * glow, 1.0, 0.15 + 0.4 * glow) * glow + vec3(0.0, 0.03, 0.01);
+  float glow = clamp((level + 0.12 * uGrain * noise) * scan * tube, 0.0, 1.0);
+  vec3 phosphor = (uBase + uLift * glow) * glow + vec3(0.0, 0.03, 0.01);
   fragColor = vec4(mix(color, clamp(phosphor, 0.0, 1.0), uIntensity), 1.0);
 }

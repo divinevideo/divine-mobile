@@ -9611,6 +9611,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'تمويه الدوران';
 
   @override
+  String get videoEditorEffectShockwave => 'موجة صدمية';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'مضخم الجهير';
+
+  @override
+  String get videoEditorEffectPlasma => 'بلازما';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'موجة طاقة';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'انفجار دخان';
+
+  @override
   String get videoEditorEffectComic => 'رسوم مصوّرة';
 
   @override
@@ -9807,9 +9822,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'ألوان';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'ضبط القطرات';
-
-  @override
   String get videoEditorDropsCountLabel => 'العدد';
 
   @override
@@ -9856,6 +9868,203 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'إضافة موسيقى أو تشغيل صوت أحد المقاطع';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'إعدادات التأثير';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'الإعدادات: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds ث';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'المدة';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'تكرار';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'مرة واحدة، حيث يبدأ التأثير على الخط الزمني';
+
+  @override
+  String get videoEditorEffectHitInterval => 'الفاصل';
+
+  @override
+  String get videoEditorEffectLookTitle => 'المظهر';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'الموضع الأفقي';
+
+  @override
+  String get videoEditorEffectHitVertical => 'الموضع العمودي';
+
+  @override
+  String get videoEditorEffectHitReach => 'المدى';
+
+  @override
+  String get videoEditorEffectHitShake => 'الاهتزاز';
+
+  @override
+  String get videoEditorEffectHitPunch => 'دفعة التكبير';
+
+  @override
+  String get videoEditorEffectLookReset => 'إعادة ضبط المظهر';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'التوقيت';
+
+  @override
+  String get videoEditorEffectTimingReset => 'إعادة ضبط التوقيت';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'الحركة';
+
+  @override
+  String get videoEditorEffectMotionReset => 'إعادة ضبط الحركة';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'التركيز';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'العرض';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'الاتجاه';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'أفقي';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'عمودي';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'مع عقارب الساعة';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'عكس عقارب الساعة';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'تكبير';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'تصغير';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'التباعد';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'الزاوية';
+
+  @override
+  String get videoEditorEffectSettingHue => 'درجة اللون';
+
+  @override
+  String get videoEditorEffectSettingLength => 'الطول';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'الحساسية';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'الموضع';
+
+  @override
+  String get videoEditorEffectSettingWind => 'الرياح';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'حجم النقاط';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'الحدود';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'المستويات';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'حجم البكسل';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'الإزاحة';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'حجم الفرشاة';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'الكثافة';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'الحبيبات';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'الشبكة';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'الطبقات';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'الظل';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'الحبر الأول';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'الحبر الثاني';
+
+  @override
+  String get videoEditorEffectSettingColors => 'الألوان';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'الأصلية';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'لون واحد';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'التأخير';
+
+  @override
+  String get videoEditorEffectSettingDown => 'للأسفل';
+
+  @override
+  String get videoEditorEffectSettingUp => 'للأعلى';
+
+  @override
+  String get videoEditorEffectSettingRight => 'لليمين';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'لليسار';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'التكرار';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'المسافة';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'خطوط المسح';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'حجم الحبيبات';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'البني الداكن';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'الوميض';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'تعتيم الحواف';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'الإيقاع';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'طول الموجة';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

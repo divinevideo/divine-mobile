@@ -9645,6 +9645,21 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Draaivervaging';
 
   @override
+  String get videoEditorEffectShockwave => 'Schokgolf';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Subwoofer';
+
+  @override
+  String get videoEditorEffectPlasma => 'Plasma';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Energiegolf';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Rookexplosie';
+
+  @override
   String get videoEditorEffectComic => 'Strip';
 
   @override
@@ -9840,9 +9855,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Tinten';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'Druppels aanpassen';
-
-  @override
   String get videoEditorDropsCountLabel => 'Aantal';
 
   @override
@@ -9888,6 +9900,203 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Voeg muziek toe of zet het geluid van een clip aan';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Effectinstellingen';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Instellingen: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Duur';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Herhalen';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'Eén keer, waar het effect op de tijdlijn begint';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Interval';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Uiterlijk';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Horizontale positie';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Verticale positie';
+
+  @override
+  String get videoEditorEffectHitReach => 'Bereik';
+
+  @override
+  String get videoEditorEffectHitShake => 'Schudden';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Zoomstoot';
+
+  @override
+  String get videoEditorEffectLookReset => 'Uiterlijk herstellen';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'Timing';
+
+  @override
+  String get videoEditorEffectTimingReset => 'Timing herstellen';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'Beweging';
+
+  @override
+  String get videoEditorEffectMotionReset => 'Beweging herstellen';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'Focus';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'Breedte';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'Richting';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'Horizontaal';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'Verticaal';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'Met de klok mee';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'Tegen de klok in';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'Inzoomen';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'Uitzoomen';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'Afstand';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'Hoek';
+
+  @override
+  String get videoEditorEffectSettingHue => 'Tint';
+
+  @override
+  String get videoEditorEffectSettingLength => 'Lengte';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'Gevoeligheid';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'Positie';
+
+  @override
+  String get videoEditorEffectSettingWind => 'Wind';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'Puntgrootte';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'Omtrek';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'Niveaus';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'Pixelgrootte';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'Verschuiving';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'Penseelgrootte';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'Dichtheid';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'Korrel';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'Raster';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'Lagen';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'Schaduw';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'Eerste inkt';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'Tweede inkt';
+
+  @override
+  String get videoEditorEffectSettingColors => 'Kleuren';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'Origineel';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'Eén kleur';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'Vertraging';
+
+  @override
+  String get videoEditorEffectSettingDown => 'Omlaag';
+
+  @override
+  String get videoEditorEffectSettingUp => 'Omhoog';
+
+  @override
+  String get videoEditorEffectSettingRight => 'Naar rechts';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'Naar links';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'Frequentie';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'Afstand';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'Scanlijnen';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'Korrelgrootte';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'Sepia';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'Flikkering';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'Vignet';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'Tempo';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'Golflengte';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

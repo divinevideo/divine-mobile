@@ -9600,6 +9600,21 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'اسپن بلر';
 
   @override
+  String get videoEditorEffectShockwave => 'جھٹکے کی لہر';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'سب ووفر';
+
+  @override
+  String get videoEditorEffectPlasma => 'پلازما';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'توانائی کی لہر';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'دھوئیں کا دھماکا';
+
+  @override
   String get videoEditorEffectComic => 'کامک';
 
   @override
@@ -9796,9 +9811,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'رنگ';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'قطرے ایڈجسٹ کریں';
-
-  @override
   String get videoEditorDropsCountLabel => 'تعداد';
 
   @override
@@ -9845,6 +9857,203 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'موسیقی شامل کریں یا کسی کلپ کی آواز آن کریں';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'ایفیکٹ کی ترتیبات';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'ترتیبات: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds سیکنڈ';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'دورانیہ';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'دہرائیں';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'ایک بار، جہاں ٹائم لائن پر ایفیکٹ شروع ہوتا ہے';
+
+  @override
+  String get videoEditorEffectHitInterval => 'وقفہ';
+
+  @override
+  String get videoEditorEffectLookTitle => 'ظاہری شکل';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'افقی جگہ';
+
+  @override
+  String get videoEditorEffectHitVertical => 'عمودی جگہ';
+
+  @override
+  String get videoEditorEffectHitReach => 'پہنچ';
+
+  @override
+  String get videoEditorEffectHitShake => 'جھٹکا';
+
+  @override
+  String get videoEditorEffectHitPunch => 'زوم کا دھکا';
+
+  @override
+  String get videoEditorEffectLookReset => 'ظاہری شکل ری سیٹ کریں';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'وقت بندی';
+
+  @override
+  String get videoEditorEffectTimingReset => 'وقت بندی ری سیٹ کریں';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'حرکت';
+
+  @override
+  String get videoEditorEffectMotionReset => 'حرکت ری سیٹ کریں';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'فوکس';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'چوڑائی';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'سمت';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'افقی';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'عمودی';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'گھڑی کی سمت';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'گھڑی کی الٹی سمت';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'زوم اِن';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'زوم آؤٹ';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'فاصلہ';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'زاویہ';
+
+  @override
+  String get videoEditorEffectSettingHue => 'رنگت';
+
+  @override
+  String get videoEditorEffectSettingLength => 'لمبائی';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'حساسیت';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'مقام';
+
+  @override
+  String get videoEditorEffectSettingWind => 'ہوا';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'نقطوں کا سائز';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'خاکہ';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'درجے';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'پکسل کا سائز';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'کھسکاؤ';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'برش کا سائز';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'کثافت';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'دانے';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'گرڈ';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'تہیں';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'سایہ';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'پہلی سیاہی';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'دوسری سیاہی';
+
+  @override
+  String get videoEditorEffectSettingColors => 'رنگ';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'اصل';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'ایک رنگ';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'تاخیر';
+
+  @override
+  String get videoEditorEffectSettingDown => 'نیچے';
+
+  @override
+  String get videoEditorEffectSettingUp => 'اوپر';
+
+  @override
+  String get videoEditorEffectSettingRight => 'دائیں';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'بائیں';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'تعدد';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'فاصلہ';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'اسکین لائنز';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'دانوں کا سائز';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'سیپیا';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'جھلملاہٹ';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'وگنیٹ';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'رفتار';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'لہر کی لمبائی';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

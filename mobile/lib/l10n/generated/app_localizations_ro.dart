@@ -9816,6 +9816,21 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Estompare rotativă';
 
   @override
+  String get videoEditorEffectShockwave => 'Undă de șoc';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Subwoofer';
+
+  @override
+  String get videoEditorEffectPlasma => 'Plasmă';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Undă de energie';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Explozie de fum';
+
+  @override
   String get videoEditorEffectComic => 'Benzi desenate';
 
   @override
@@ -10012,9 +10027,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Nuanțe';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'Ajustează picăturile';
-
-  @override
   String get videoEditorDropsCountLabel => 'Număr';
 
   @override
@@ -10061,6 +10073,203 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Adaugă muzică sau pornește sunetul unui clip';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Setări efect';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Setări: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Durată';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Repetă';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'O dată, unde începe efectul pe cronologie';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Interval';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Aspect';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Poziție orizontală';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Poziție verticală';
+
+  @override
+  String get videoEditorEffectHitReach => 'Rază';
+
+  @override
+  String get videoEditorEffectHitShake => 'Zguduire';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Lovitură de zoom';
+
+  @override
+  String get videoEditorEffectLookReset => 'Resetează aspectul';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'Sincronizare';
+
+  @override
+  String get videoEditorEffectTimingReset => 'Resetează sincronizarea';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'Mișcare';
+
+  @override
+  String get videoEditorEffectMotionReset => 'Resetează mișcarea';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'Focalizare';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'Lățime';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'Direcție';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'Orizontal';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'Vertical';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'În sens orar';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'În sens antiorar';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'Apropie';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'Depărtează';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'Spațiere';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'Unghi';
+
+  @override
+  String get videoEditorEffectSettingHue => 'Nuanță';
+
+  @override
+  String get videoEditorEffectSettingLength => 'Lungime';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'Sensibilitate';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'Poziție';
+
+  @override
+  String get videoEditorEffectSettingWind => 'Vânt';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'Mărimea punctelor';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'Contur';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'Niveluri';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'Mărimea pixelilor';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'Decalaj';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'Mărimea pensulei';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'Densitate';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'Granulație';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'Grilă';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'Straturi';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'Umbră';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'Prima cerneală';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'A doua cerneală';
+
+  @override
+  String get videoEditorEffectSettingColors => 'Culori';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'Originale';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'O culoare';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'Întârziere';
+
+  @override
+  String get videoEditorEffectSettingDown => 'În jos';
+
+  @override
+  String get videoEditorEffectSettingUp => 'În sus';
+
+  @override
+  String get videoEditorEffectSettingRight => 'Spre dreapta';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'Spre stânga';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'Frecvență';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'Distanță';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'Linii de scanare';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'Mărimea granulației';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'Sepia';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'Pâlpâire';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'Vignetare';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'Tempo';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'Lungime de undă';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

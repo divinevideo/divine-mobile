@@ -15,15 +15,23 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * shade the cloth beside them. The cloth shows between the stitches, with a
  * hole at every corner where the needle went through.
  *
- * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
- * far the picture turns into embroidery).
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+ * the picture turns into embroidery), `size` (0.5–3: how large the stitches
+ * are, as a share of the default) and `color` (the cloth's colour, as an ARGB
+ * integer).
  */
 class CrossStitchVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
     private val intensity = intensityOf(params)
 
+    private val stitch = numberOf(params, "size", 1f, 0.5f, 3f)
+
+    private val cloth = colorOf(params, "color", 0xFFF0EBDB)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uIntensity", intensity)
+        shader.setFloat("uStitch", stitch)
+        shader.setFloats("uCloth", cloth)
     }
 
     companion object {
@@ -42,6 +50,8 @@ class CrossStitchVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAG
         // turn, where the GPU's sine stays exact.
         private const val FRAGMENT_SHADER = ShaderVideoEffect.PRELUDE + """
 uniform float uIntensity;
+uniform float uStitch;
+uniform vec3 uCloth;
 
 float luma(vec3 c) {
   return dot(c, vec3(0.299, 0.587, 0.114));
@@ -50,7 +60,7 @@ float luma(vec3 c) {
 void main() {
   vec2 p = vTexCoord * uSize;
   float s = min(uSize.x, uSize.y);
-  float c = max(6.0, s / 36.0);
+  float c = max(6.0, s / 36.0 * uStitch);
   vec2 cell = floor(p / c);
   vec2 middle = (cell + 0.5) * c;
   vec3 ink = 0.25 * (tap(middle + vec2(-0.25, -0.25) * c) + tap(middle + vec2(0.25, -0.25) * c) +
@@ -72,7 +82,7 @@ void main() {
   float beside = max(1.0 - smoothstep(w, w + 0.08, under), 1.0 - smoothstep(w, w + 0.08, over));
   vec2 hole = inCell - floor(inCell + 0.5);
   float holes = smoothstep(0.04, 0.09, length(hole));
-  vec3 cloth = vec3(0.94, 0.92, 0.86) * (0.7 + 0.3 * holes) * (1.0 - 0.25 * beside * inside);
+  vec3 cloth = uCloth * (0.7 + 0.3 * holes) * (1.0 - 0.25 * beside * inside);
   vec3 stitch = mix(cloth, floss * underTwist * underRound, underMask);
   stitch = mix(stitch, floss * overTwist * overRound * 1.05, overMask);
   gl_FragColor = vec4(mix(tap(p), clamp(stitch, 0.0, 1.0), uIntensity), 1.0);

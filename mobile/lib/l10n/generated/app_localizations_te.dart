@@ -9860,6 +9860,21 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'స్పిన్ బ్లర్';
 
   @override
+  String get videoEditorEffectShockwave => 'షాక్‌వేవ్';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'సబ్‌వూఫర్';
+
+  @override
+  String get videoEditorEffectPlasma => 'ప్లాస్మా';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'శక్తి తరంగం';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'పొగ పేలుడు';
+
+  @override
   String get videoEditorEffectComic => 'కామిక్';
 
   @override
@@ -10055,9 +10070,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'రంగులు';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'బిందువుల సర్దుబాటు';
-
-  @override
   String get videoEditorDropsCountLabel => 'సంఖ్య';
 
   @override
@@ -10103,6 +10115,203 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'సంగీతాన్ని జోడించండి లేదా ఒక క్లిప్ ధ్వనిని ఆన్ చేయండి';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'ఎఫెక్ట్ సెట్టింగ్‌లు';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'సెట్టింగ్‌లు: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds సె';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'వ్యవధి';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'పునరావృతం';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'ఒకసారి, టైమ్‌లైన్‌లో ఎఫెక్ట్ మొదలయ్యే చోట';
+
+  @override
+  String get videoEditorEffectHitInterval => 'విరామం';
+
+  @override
+  String get videoEditorEffectLookTitle => 'రూపం';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'అడ్డ స్థానం';
+
+  @override
+  String get videoEditorEffectHitVertical => 'నిలువు స్థానం';
+
+  @override
+  String get videoEditorEffectHitReach => 'పరిధి';
+
+  @override
+  String get videoEditorEffectHitShake => 'కుదుపు';
+
+  @override
+  String get videoEditorEffectHitPunch => 'జూమ్ పంచ్';
+
+  @override
+  String get videoEditorEffectLookReset => 'రూపాన్ని రీసెట్ చేయి';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'సమయం';
+
+  @override
+  String get videoEditorEffectTimingReset => 'సమయాన్ని రీసెట్ చేయి';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'కదలిక';
+
+  @override
+  String get videoEditorEffectMotionReset => 'కదలికను రీసెట్ చేయి';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'ఫోకస్';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'వెడల్పు';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'దిశ';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'అడ్డంగా';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'నిలువుగా';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'సవ్యదిశలో';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'అపసవ్యదిశలో';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'జూమ్ ఇన్';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'జూమ్ అవుట్';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'అంతరం';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'కోణం';
+
+  @override
+  String get videoEditorEffectSettingHue => 'వర్ణం';
+
+  @override
+  String get videoEditorEffectSettingLength => 'పొడవు';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'సున్నితత్వం';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'స్థానం';
+
+  @override
+  String get videoEditorEffectSettingWind => 'గాలి';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'చుక్కల పరిమాణం';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'అవుట్‌లైన్';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'స్థాయిలు';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'పిక్సెల్ పరిమాణం';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'తేడా';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'బ్రష్ పరిమాణం';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'సాంద్రత';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'గ్రెయిన్';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'గ్రిడ్';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'పొరలు';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'నీడ';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'మొదటి ఇంక్';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'రెండవ ఇంక్';
+
+  @override
+  String get videoEditorEffectSettingColors => 'రంగులు';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'అసలు';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'ఒకే రంగు';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'ఆలస్యం';
+
+  @override
+  String get videoEditorEffectSettingDown => 'కిందికి';
+
+  @override
+  String get videoEditorEffectSettingUp => 'పైకి';
+
+  @override
+  String get videoEditorEffectSettingRight => 'కుడికి';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'ఎడమకు';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'తరచుదనం';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'దూరం';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'స్కాన్‌లైన్‌లు';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'గ్రెయిన్ పరిమాణం';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'సెపియా';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'మిణుకు';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'విగ్నెట్';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'టెంపో';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'తరంగదైర్ఘ్యం';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

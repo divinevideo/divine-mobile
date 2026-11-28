@@ -18,11 +18,13 @@ import kotlin.math.roundToLong
  * middle leads one copy deeper.
  *
  * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
- * large the copy is), `periodUs` (how long a step takes; the Dart side fits a
- * whole number of steps into the effect's window, so a video that loops
- * zooms on seamlessly) and, for an effect on the beat, `beatsUs`: the beats,
- * in microseconds after the effect's start, each taking one step; see
- * [TunnelSteps].
+ * large the copy is), `speed` (0.25–3: how fast it zooms, as a share of the
+ * natural pace, when nothing else times it), `direction` (-1 to zoom out of the
+ * copies instead of into them), `periodUs` (how long a step takes; the Dart
+ * side fits a whole number of steps into the effect's window, so a video that
+ * loops zooms on seamlessly) and, for an effect on the beat, `beatsUs`: the
+ * beats, in microseconds after the effect's start, each taking one step; see
+ * TUNNEL_STEPS.
  */
 class TunnelVideoEffect(
     private val spiral: Boolean,
@@ -33,13 +35,20 @@ class TunnelVideoEffect(
 
     private val periodUs =
         (params["periodUs"] as? Number)?.toLong()?.takeIf { it > 0 }
-            ?: TunnelSteps.naturalPeriodUs(intensity)
+            ?: (TunnelSteps.naturalPeriodUs(intensity) /
+                numberOf(params, "speed", 1f, 0.25f, 3f)).roundToLong()
 
     private val beatsUs = BlurHits.beatsOf(params)
 
+    private val direction = directionOf(params)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         shader.setFloat("uIntensity", intensity)
-        shader.setFloat("uPhase", TunnelSteps.phase(periodUs, beatsUs, effectTimeUs))
+        // Zooming out runs the phase backwards; the shader wraps it into a turn.
+        shader.setFloat(
+            "uPhase",
+            direction * TunnelSteps.phase(periodUs, beatsUs, effectTimeUs),
+        )
         shader.setFloat("uSpiral", if (spiral) 1f else 0f)
     }
 

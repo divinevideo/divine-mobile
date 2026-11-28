@@ -9727,6 +9727,21 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Dreh-Unschärfe';
 
   @override
+  String get videoEditorEffectShockwave => 'Druckwelle';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Subwoofer';
+
+  @override
+  String get videoEditorEffectPlasma => 'Plasma';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Energiewelle';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Rauchexplosion';
+
+  @override
   String get videoEditorEffectComic => 'Comic';
 
   @override
@@ -9922,9 +9937,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Farbtöne';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'Tropfen anpassen';
-
-  @override
   String get videoEditorDropsCountLabel => 'Anzahl';
 
   @override
@@ -9971,6 +9983,203 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Füg Musik hinzu oder schalte den Ton eines Clips ein';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Effekt-Einstellungen';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Einstellungen: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Dauer';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Wiederholen';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'Einmal, dort wo der Effekt auf der Timeline beginnt';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Abstand';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Aussehen';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Position horizontal';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Position vertikal';
+
+  @override
+  String get videoEditorEffectHitReach => 'Reichweite';
+
+  @override
+  String get videoEditorEffectHitShake => 'Erschütterung';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Zoom-Stoß';
+
+  @override
+  String get videoEditorEffectLookReset => 'Aussehen zurücksetzen';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'Timing';
+
+  @override
+  String get videoEditorEffectTimingReset => 'Timing zurücksetzen';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'Bewegung';
+
+  @override
+  String get videoEditorEffectMotionReset => 'Bewegung zurücksetzen';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'Fokus';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'Breite';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'Richtung';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'Horizontal';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'Vertikal';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'Im Uhrzeigersinn';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'Gegen den Uhrzeigersinn';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'Hineinzoomen';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'Herauszoomen';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'Abstand';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'Winkel';
+
+  @override
+  String get videoEditorEffectSettingHue => 'Farbton';
+
+  @override
+  String get videoEditorEffectSettingLength => 'Länge';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'Empfindlichkeit';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'Position';
+
+  @override
+  String get videoEditorEffectSettingWind => 'Wind';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'Punktgröße';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'Kontur';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'Stufen';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'Pixelgröße';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'Versatz';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'Pinselgröße';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'Dichte';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'Körnung';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'Raster';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'Ebenen';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'Schatten';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'Erste Farbe';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'Zweite Farbe';
+
+  @override
+  String get videoEditorEffectSettingColors => 'Farben';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'Original';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'Eine Farbe';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'Verzögerung';
+
+  @override
+  String get videoEditorEffectSettingDown => 'Nach unten';
+
+  @override
+  String get videoEditorEffectSettingUp => 'Nach oben';
+
+  @override
+  String get videoEditorEffectSettingRight => 'Nach rechts';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'Nach links';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'Häufigkeit';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'Weite';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'Bildzeilen';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'Körnungsgröße';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'Sepia';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'Flackern';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'Vignette';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'Tempo';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'Wellenlänge';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

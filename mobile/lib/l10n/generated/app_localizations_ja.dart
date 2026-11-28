@@ -9137,6 +9137,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'スピンブラー';
 
   @override
+  String get videoEditorEffectShockwave => '衝撃波';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'サブウーファー';
+
+  @override
+  String get videoEditorEffectPlasma => 'プラズマ';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'エネルギー波';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'スモークバースト';
+
+  @override
   String get videoEditorEffectComic => 'コミック';
 
   @override
@@ -9332,9 +9347,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'ティント';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'しずくを調整';
-
-  @override
   String get videoEditorDropsCountLabel => '数';
 
   @override
@@ -9379,6 +9391,202 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorEffectsOnBeatNoSound => '音楽を追加するか、クリップの音をオンにしてください';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'エフェクト設定';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return '設定：$effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds秒';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => '長さ';
+
+  @override
+  String get videoEditorEffectHitRepeat => '繰り返し';
+
+  @override
+  String get videoEditorEffectHitOnce => '1回だけ（タイムライン上でエフェクトが始まる位置）';
+
+  @override
+  String get videoEditorEffectHitInterval => '間隔';
+
+  @override
+  String get videoEditorEffectLookTitle => '見た目';
+
+  @override
+  String get videoEditorEffectHitHorizontal => '横の位置';
+
+  @override
+  String get videoEditorEffectHitVertical => '縦の位置';
+
+  @override
+  String get videoEditorEffectHitReach => '範囲';
+
+  @override
+  String get videoEditorEffectHitShake => '揺れ';
+
+  @override
+  String get videoEditorEffectHitPunch => 'ズームの衝撃';
+
+  @override
+  String get videoEditorEffectLookReset => '見た目をリセット';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'タイミング';
+
+  @override
+  String get videoEditorEffectTimingReset => 'タイミングをリセット';
+
+  @override
+  String get videoEditorEffectMotionTitle => '動き';
+
+  @override
+  String get videoEditorEffectMotionReset => '動きをリセット';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'ピント';
+
+  @override
+  String get videoEditorEffectSettingWidth => '幅';
+
+  @override
+  String get videoEditorEffectSettingDirection => '向き';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => '横';
+
+  @override
+  String get videoEditorEffectSettingVertical => '縦';
+
+  @override
+  String get videoEditorEffectSettingClockwise => '時計回り';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => '反時計回り';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'ズームイン';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'ズームアウト';
+
+  @override
+  String get videoEditorEffectSettingSpacing => '間隔';
+
+  @override
+  String get videoEditorEffectSettingAngle => '角度';
+
+  @override
+  String get videoEditorEffectSettingHue => '色相';
+
+  @override
+  String get videoEditorEffectSettingLength => '長さ';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => '感度';
+
+  @override
+  String get videoEditorEffectSettingPosition => '位置';
+
+  @override
+  String get videoEditorEffectSettingWind => '風';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'ドットの大きさ';
+
+  @override
+  String get videoEditorEffectSettingOutline => '輪郭';
+
+  @override
+  String get videoEditorEffectSettingLevels => '階調';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'ピクセルの大きさ';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'ずれ';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => '筆の大きさ';
+
+  @override
+  String get videoEditorEffectSettingDensity => '密度';
+
+  @override
+  String get videoEditorEffectSettingGrain => '粒子';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'グリッド';
+
+  @override
+  String get videoEditorEffectSettingLayers => '層';
+
+  @override
+  String get videoEditorEffectSettingShadow => '影';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => '1色目';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => '2色目';
+
+  @override
+  String get videoEditorEffectSettingColors => '色';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => '元の色';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => '単色';
+
+  @override
+  String get videoEditorEffectSettingDelay => '遅れ';
+
+  @override
+  String get videoEditorEffectSettingDown => '下へ';
+
+  @override
+  String get videoEditorEffectSettingUp => '上へ';
+
+  @override
+  String get videoEditorEffectSettingRight => '右へ';
+
+  @override
+  String get videoEditorEffectSettingLeft => '左へ';
+
+  @override
+  String get videoEditorEffectSettingFrequency => '頻度';
+
+  @override
+  String get videoEditorEffectSettingDistance => '距離';
+
+  @override
+  String get videoEditorEffectSettingScanlines => '走査線';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => '粒子の大きさ';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'セピア';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'ちらつき';
+
+  @override
+  String get videoEditorEffectSettingVignette => '周辺減光';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'テンポ';
+
+  @override
+  String get videoEditorEffectSettingWavelength => '波長';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

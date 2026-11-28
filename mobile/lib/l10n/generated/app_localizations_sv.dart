@@ -9600,6 +9600,21 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Rotationsoskärpa';
 
   @override
+  String get videoEditorEffectShockwave => 'Tryckvåg';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Subwoofer';
+
+  @override
+  String get videoEditorEffectPlasma => 'Plasma';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Energivåg';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Rökexplosion';
+
+  @override
   String get videoEditorEffectComic => 'Serie';
 
   @override
@@ -9795,9 +9810,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Toner';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'Justera droppar';
-
-  @override
   String get videoEditorDropsCountLabel => 'Antal';
 
   @override
@@ -9844,6 +9856,203 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Lägg till musik eller slå på ljudet i ett klipp';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Effektinställningar';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Inställningar: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Längd';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Upprepa';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'En gång, där effekten börjar på tidslinjen';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Intervall';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Utseende';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Horisontell position';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Vertikal position';
+
+  @override
+  String get videoEditorEffectHitReach => 'Räckvidd';
+
+  @override
+  String get videoEditorEffectHitShake => 'Skakning';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Zoomstöt';
+
+  @override
+  String get videoEditorEffectLookReset => 'Återställ utseende';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'Timing';
+
+  @override
+  String get videoEditorEffectTimingReset => 'Återställ timing';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'Rörelse';
+
+  @override
+  String get videoEditorEffectMotionReset => 'Återställ rörelse';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'Fokus';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'Bredd';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'Riktning';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'Vågrät';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'Lodrät';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'Medurs';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'Moturs';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'Zooma in';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'Zooma ut';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'Avstånd';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'Vinkel';
+
+  @override
+  String get videoEditorEffectSettingHue => 'Nyans';
+
+  @override
+  String get videoEditorEffectSettingLength => 'Längd';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'Känslighet';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'Position';
+
+  @override
+  String get videoEditorEffectSettingWind => 'Vind';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'Punktstorlek';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'Kontur';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'Nivåer';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'Pixelstorlek';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'Förskjutning';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'Penselstorlek';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'Täthet';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'Korn';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'Rutnät';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'Lager';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'Skugga';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'Första färgen';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'Andra färgen';
+
+  @override
+  String get videoEditorEffectSettingColors => 'Färger';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'Original';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'En färg';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'Fördröjning';
+
+  @override
+  String get videoEditorEffectSettingDown => 'Nedåt';
+
+  @override
+  String get videoEditorEffectSettingUp => 'Uppåt';
+
+  @override
+  String get videoEditorEffectSettingRight => 'Åt höger';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'Åt vänster';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'Frekvens';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'Avstånd';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'Bildlinjer';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'Kornstorlek';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'Sepia';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'Flimmer';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'Vinjett';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'Tempo';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'Våglängd';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

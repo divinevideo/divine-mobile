@@ -9601,6 +9601,21 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'Kabur Putar';
 
   @override
+  String get videoEditorEffectShockwave => 'Gelombang Kejutan';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'Subwoofer';
+
+  @override
+  String get videoEditorEffectPlasma => 'Plasma';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'Gelombang Tenaga';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'Letupan Asap';
+
+  @override
   String get videoEditorEffectComic => 'Komik';
 
   @override
@@ -9796,9 +9811,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'Warna';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'Laras titisan';
-
-  @override
   String get videoEditorDropsCountLabel => 'Bilangan';
 
   @override
@@ -9845,6 +9857,203 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get videoEditorEffectsOnBeatNoSound =>
       'Tambah muzik atau hidupkan bunyi klip';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'Tetapan kesan';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'Tetapan: $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds saat';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'Tempoh';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'Ulang';
+
+  @override
+  String get videoEditorEffectHitOnce =>
+      'Sekali, di mana kesan bermula pada garis masa';
+
+  @override
+  String get videoEditorEffectHitInterval => 'Selang';
+
+  @override
+  String get videoEditorEffectLookTitle => 'Rupa';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'Kedudukan mendatar';
+
+  @override
+  String get videoEditorEffectHitVertical => 'Kedudukan menegak';
+
+  @override
+  String get videoEditorEffectHitReach => 'Jangkauan';
+
+  @override
+  String get videoEditorEffectHitShake => 'Gegaran';
+
+  @override
+  String get videoEditorEffectHitPunch => 'Hentakan zum';
+
+  @override
+  String get videoEditorEffectLookReset => 'Tetapkan semula rupa';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'Masa';
+
+  @override
+  String get videoEditorEffectTimingReset => 'Tetapkan semula masa';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'Pergerakan';
+
+  @override
+  String get videoEditorEffectMotionReset => 'Tetapkan semula pergerakan';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'Fokus';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'Lebar';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'Arah';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'Mendatar';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'Menegak';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'Ikut arah jam';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'Lawan arah jam';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'Zum masuk';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'Zum keluar';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'Jarak';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'Sudut';
+
+  @override
+  String get videoEditorEffectSettingHue => 'Rona';
+
+  @override
+  String get videoEditorEffectSettingLength => 'Panjang';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'Kepekaan';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'Kedudukan';
+
+  @override
+  String get videoEditorEffectSettingWind => 'Angin';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'Saiz titik';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'Garis luar';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'Tahap';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'Saiz piksel';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'Anjakan';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'Saiz berus';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'Ketumpatan';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'Butiran';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'Grid';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'Lapisan';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'Bayang';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'Dakwat pertama';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'Dakwat kedua';
+
+  @override
+  String get videoEditorEffectSettingColors => 'Warna';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'Asal';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'Satu warna';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'Lengah';
+
+  @override
+  String get videoEditorEffectSettingDown => 'Ke bawah';
+
+  @override
+  String get videoEditorEffectSettingUp => 'Ke atas';
+
+  @override
+  String get videoEditorEffectSettingRight => 'Ke kanan';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'Ke kiri';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'Kekerapan';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'Jarak';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'Garisan imbasan';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'Saiz butiran';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'Sepia';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'Kerlipan';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'Vignet';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'Tempo';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'Panjang gelombang';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

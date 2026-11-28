@@ -11,11 +11,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
+import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/drops_effect_settings.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/effect_setting.dart';
+import 'package:openvine/models/video_editor/effect_settings_catalog.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effect_settings_panel.dart';
 import 'package:openvine/widgets/video_editor/video_editor_category_picker.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show VideoEffect, VideoEffectPreview, VideoEffectType;
@@ -23,7 +27,9 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// Bottom bar of the effects editor: a [VideoEditorCategoryPicker] of the
 /// effects, one section per [EditorEffectCategory]. Opened on an effect of
-/// the timeline, the grid starts at that effect's section.
+/// the timeline, the grid starts at that effect's section. While the picked
+/// effect's settings are open (see [VideoEditorEffectsState.showsSettings]),
+/// the [VideoEditorEffectSettingsPanel] takes the picker's place.
 ///
 /// Each tile shows its effect on the first clip's thumbnail, at full strength
 /// and at the start of the effect, where the glitch always bursts. An intro or
@@ -46,16 +52,24 @@ class VideoEditorEffectsBottomBar extends ConsumerWidget {
     final selectedType = context.select(
       (VideoEditorEffectsCubit c) => c.state.selectedType,
     );
-    return VideoEditorCategoryPicker<EditorEffectCategory, EditorEffectType>(
-      sections: _sections,
-      categoryLabel: _categoryLabel,
-      initialCategory: selectedType?.category,
-      isSelected: (type) => type == selectedType,
-      tileBuilder: (context, type, isSelected) => _EffectItem(
-        type: type,
-        isSelected: isSelected,
-        thumbnailPath: thumbnailPath,
-      ),
+    final showsSettings = context.select(
+      (VideoEditorEffectsCubit c) => c.state.showsSettings,
+    );
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200).autoReduceMotion(context),
+      child: showsSettings
+          ? const VideoEditorEffectSettingsPanel()
+          : VideoEditorCategoryPicker<EditorEffectCategory, EditorEffectType>(
+              sections: _sections,
+              categoryLabel: _categoryLabel,
+              initialCategory: selectedType?.category,
+              isSelected: (type) => type == selectedType,
+              tileBuilder: (context, type, isSelected) => _EffectItem(
+                type: type,
+                isSelected: isSelected,
+                thumbnailPath: thumbnailPath,
+              ),
+            ),
     );
   }
 }
@@ -252,13 +266,116 @@ const _particlesTileSeconds = 3.0;
 /// well inside the corner.
 const _prismTileSeconds = 6.0;
 
+/// The shader the shockwave and subwoofer tiles draw with, the one the native
+/// `BassHitVideoEffect` runs; its last value is the style.
+const _bassHitShader = 'shaders/bass_hit.frag';
+
+/// The uniforms of the tile of the effect that hits, [type], [seconds] into
+/// its animation: full strength, the [style] its shader branches on, its
+/// default look (see [effectSettingsOf]), and for a blast its own colour,
+/// red, green and blue from 0 to 1, last. A setting [type] does not have
+/// takes the shader's own value, 1, or the middle of the frame.
+@visibleForTesting
+List<double> hitTileValues(
+  EditorEffectType type, {
+  required double seconds,
+  required double style,
+}) {
+  double look(String key, {double fallback = 1}) =>
+      effectSettingDefaultOf<double>(type, key, fallback: fallback);
+  final color = effectSettingOf(type, EffectSettingKeys.color)?.defaultParam;
+  return [
+    1,
+    seconds,
+    style,
+    look(EffectSettingKeys.reach),
+    look(EffectSettingKeys.centerX, fallback: 0.5),
+    look(EffectSettingKeys.centerY, fallback: 0.5),
+    look(EffectSettingKeys.shake),
+    look(EffectSettingKeys.punch),
+    if (color is int)
+      for (final shift in const [16, 8, 0]) ((color >> shift) & 0xFF) / 255
+    else
+      look(EffectSettingKeys.fringe),
+  ];
+}
+
+/// The defaults of [type]'s settings under [keys], in that order, as its tile
+/// shader reads them, so the tile shows the look a new effect starts with: a
+/// colour as its red, green and blue from 0 to 1, anything else as a number.
+List<double> _settingDefaults(EditorEffectType type, List<String> keys) => [
+  for (final key in keys)
+    ...switch (effectSettingOf(type, key)!) {
+      EffectColorSetting(:final defaultColor) => _rgbOf(defaultColor),
+      final setting => [(setting.defaultParam as num).toDouble()],
+    },
+];
+
+/// The red, green and blue of the ARGB colour [argb], from 0 to 1.
+List<double> _rgbOf(int argb) => [
+  for (final shift in const [16, 8, 0]) ((argb >> shift) & 0xFF) / 255,
+];
+
+/// The defaults of the particles' size, speed and wind, as their tile shader
+/// reads them after the style.
+List<double> _particleDefaults(EditorEffectType type) => _settingDefaults(
+  type,
+  const [
+    EffectSettingKeys.size,
+    EffectSettingKeys.speed,
+    EffectSettingKeys.wind,
+  ],
+);
+
+/// The cosine and sine of [degrees].
+List<double> _turnOf(double degrees) {
+  final radians = degrees * math.pi / 180;
+  return [math.cos(radians), math.sin(radians)];
+}
+
+/// The default of [type]'s setting under [key], in degrees.
+double _degreesOf(EditorEffectType type, String key) =>
+    effectSettingDefaultOf<double>(type, key, fallback: 0);
+
+const List<String> _center = [
+  EffectSettingKeys.centerX,
+  EffectSettingKeys.centerY,
+];
+
+const List<String> _centerAndSize = [..._center, EffectSettingKeys.size];
+
+/// The direction the window light's slats run across, when they lean
+/// [degrees] from level: one slat every 12% of the shorter side along it.
+List<double> _windowSlantOf(double degrees) {
+  const length = 1.0965856;
+  final radians = degrees * math.pi / 180;
+  return [length * math.sin(radians), length * math.cos(radians)];
+}
+
+/// Seconds after the hit at which the shockwave tile shows it, when the ring
+/// is halfway out.
+const _shockwaveTileSeconds = 0.12;
+
+/// The shader the plasma, energy wave and smoke burst tiles draw with, the
+/// one the native `BlastVideoEffect` runs; its last value is the style.
+const _blastShader = 'shaders/blast.frag';
+
+/// Seconds after the blast at which the plasma and energy wave tiles show it,
+/// when the hot core has opened into a ring.
+const _blastTileSeconds = 0.17;
+
+/// Seconds after the blast at which the smoke burst tile shows it, when the
+/// smoke has spread about halfway out.
+const _smokeBurstTileSeconds = 0.3;
+
 /// The lightning tile: its first bolt at full brightness, with the picture
 /// half lit by the flash, as just after a strike.
 final List<double> _lightningTileValues = [0.45, 1.0, ...lightningBolt(0)];
 
 /// The tile of [type], or `null` for an effect whose tile is drawn otherwise.
 ///
-/// Each shows the effect at full strength, except an intro or outro: its
+/// Each shows the effect at full strength, with every setting its shader reads
+/// at its default (see [effectSettingsOf]), except an intro or outro: its
 /// still is the one [IntroOutroTile] stands at with reduced motion, half
 /// covered at its look's starting structure. The fisheye's value is the
 /// `CIBumpDistortion` scale `FisheyeVideoEffect` uses at intensity 1; night
@@ -267,140 +384,259 @@ final List<double> _lightningTileValues = [0.45, 1.0, ...lightningBolt(0)];
 /// first colours with the ball or the fan where it starts; the Time effects
 /// stand the thumbnail in for their earlier frames, shifted as if the picture
 /// moved to the right by their last value, a share of its width each frame;
-/// lightning shows its
-/// first bolt (see [lightningBolt]) just after it strikes; the particles' last
-/// value is the style the native `ParticlesVideoEffect` draws; watercolour and oil
-/// paint share one shader, told apart by their last value. The looks share one
-/// shader, which reads the look's table from [lookTableAssets]; the ASCII
-/// shader reads its glyphs from [asciiGlyphsAsset] (see [shaderTileTextureOf]).
+/// lightning shows its first bolt (see [lightningBolt]) just after it strikes;
+/// the shockwave shows its ring halfway out and the subwoofer its cone bulged
+/// out, right as they hit, the plasma and energy wave their core opened into
+/// a ring and the smoke burst its smoke halfway out; the particles' third value
+/// is the style the native `ParticlesVideoEffect` draws; watercolour and oil
+/// paint share one shader, told apart by their second value; the bass hits
+/// share one and the blasts
+/// another, told apart by their third (see [hitTileValues]). The looks share
+/// one shader, which reads the look's table from
+/// [lookTableAssets]; the ASCII shader reads its glyphs from [asciiGlyphsAsset]
+/// (see [shaderTileTextureOf]).
 @visibleForTesting
 ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
   timeSplitVideoEffectId => (
     asset: 'shaders/time_split.frag',
-    values: const [1.0, 0.012],
+    values: [
+      1.0,
+      0.012,
+      ..._settingDefaults(type, const [EffectSettingKeys.delay]),
+    ],
   ),
   longExposureVideoEffectId => (
     asset: 'shaders/long_exposure.frag',
-    values: const [1.0, 0.008],
+    values: [
+      1.0,
+      0.008,
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.length,
+        EffectSettingKeys.sensitivity,
+      ]),
+    ],
   ),
+  // The default sensitivity, 0.5, leaves the change that counts as movement
+  // as it is.
   motionOnlyVideoEffectId => (
     asset: 'shaders/motion_only.frag',
-    values: const [1.0, 0.03],
+    values: const [1.0, 0.03, 1.0],
   ),
+  // At the default direction the top is now and the bottom furthest back.
   timeWarpVideoEffectId => (
     asset: 'shaders/time_warp.frag',
-    values: const [7.0, 0.009],
+    values: const [7.0, 0.009, 0.0, -1.0, 1.0],
   ),
-  fisheyeVideoEffectId => (asset: 'shaders/fisheye.frag', values: const [0.8]),
+  fisheyeVideoEffectId => (
+    asset: 'shaders/fisheye.frag',
+    values: [0.8, ..._settingDefaults(type, _centerAndSize)],
+  ),
   dropsVideoEffectId => (asset: 'shaders/drops.frag', values: _dropsTileValues),
   lightLeakVideoEffectId => (
     asset: 'shaders/light_leak.frag',
-    values: const [1.0, 0.0],
+    values: [
+      1.0,
+      0.0,
+      ..._turnOf(_degreesOf(type, EffectSettingKeys.hue)),
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.size,
+        EffectSettingKeys.speed,
+      ]),
+    ],
   ),
   lightRaysVideoEffectId => (
     asset: 'shaders/light_rays.frag',
-    values: const [1.0, 0.0],
+    values: [
+      1.0,
+      0.0,
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.centerX,
+        EffectSettingKeys.color,
+        EffectSettingKeys.length,
+        EffectSettingKeys.speed,
+      ]),
+    ],
   ),
   anamorphicVideoEffectId => (
     asset: 'shaders/anamorphic.frag',
-    values: const [1.0],
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.color,
+        EffectSettingKeys.length,
+        EffectSettingKeys.sensitivity,
+      ]),
+    ],
   ),
   prismVideoEffectId => (
     asset: 'shaders/prism.frag',
-    values: const [1.0, _prismTileSeconds],
+    values: [
+      1.0,
+      _prismTileSeconds,
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.position,
+        EffectSettingKeys.width,
+        EffectSettingKeys.speed,
+      ]),
+    ],
   ),
   windowLightVideoEffectId => (
     asset: 'shaders/window_light.frag',
-    values: const [1.0, 0.0],
+    values: [
+      1.0,
+      0.0,
+      ..._windowSlantOf(_degreesOf(type, EffectSettingKeys.angle)),
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.width,
+        EffectSettingKeys.color,
+        EffectSettingKeys.speed,
+      ]),
+    ],
   ),
   spotlightVideoEffectId => (
     asset: 'shaders/spotlight.frag',
-    values: const [1.0, 0.0],
+    values: [
+      1.0,
+      0.0,
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.size,
+        EffectSettingKeys.speed,
+      ]),
+    ],
   ),
   discoVideoEffectId => (
     asset: 'shaders/disco.frag',
-    values: const [1.0, 0.0, 1.0, 1.0],
+    values: [
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      ..._settingDefaults(type, const [EffectSettingKeys.size]),
+    ],
   ),
   laserVideoEffectId => (
     asset: 'shaders/laser.frag',
-    values: const [1.0, 0.0, 1.0, 1.0],
+    values: [
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      ..._settingDefaults(type, const [EffectSettingKeys.count]),
+    ],
   ),
   lightningVideoEffectId => (
     asset: 'shaders/lightning.frag',
-    values: _lightningTileValues,
+    values: [
+      ..._lightningTileValues,
+      ..._settingDefaults(type, const [EffectSettingKeys.color]),
+      // The glow at the default colour, as the native effect draws it.
+      0.55,
+      0.65,
+      1.0,
+    ],
   ),
   snowVideoEffectId => (
     asset: 'shaders/particles.frag',
-    values: const [1.0, _particlesTileSeconds, 0.0],
+    values: [1.0, _particlesTileSeconds, 0.0, ..._particleDefaults(type)],
   ),
   confettiVideoEffectId => (
     asset: 'shaders/particles.frag',
-    values: const [1.0, _particlesTileSeconds, 1.0],
+    values: [1.0, _particlesTileSeconds, 1.0, ..._particleDefaults(type)],
   ),
   heartsVideoEffectId => (
     asset: 'shaders/particles.frag',
-    values: const [1.0, _particlesTileSeconds, 2.0],
+    values: [1.0, _particlesTileSeconds, 2.0, ..._particleDefaults(type)],
   ),
   sparklesVideoEffectId => (
     asset: 'shaders/particles.frag',
-    values: const [1.0, _particlesTileSeconds, 3.0],
+    values: [1.0, _particlesTileSeconds, 3.0, ..._particleDefaults(type)],
   ),
   rainVideoEffectId => (
     asset: 'shaders/particles.frag',
-    values: const [1.0, _particlesTileSeconds, 4.0],
+    values: [1.0, _particlesTileSeconds, 4.0, ..._particleDefaults(type)],
   ),
   leavesVideoEffectId => (
     asset: 'shaders/particles.frag',
-    values: const [1.0, _particlesTileSeconds, 5.0],
+    values: [1.0, _particlesTileSeconds, 5.0, ..._particleDefaults(type)],
   ),
   blossomsVideoEffectId => (
     asset: 'shaders/particles.frag',
-    values: const [1.0, _particlesTileSeconds, 6.0],
+    values: [1.0, _particlesTileSeconds, 6.0, ..._particleDefaults(type)],
   ),
   bubblesVideoEffectId => (
     asset: 'shaders/particles.frag',
-    values: const [1.0, _particlesTileSeconds, 7.0],
+    values: [1.0, _particlesTileSeconds, 7.0, ..._particleDefaults(type)],
   ),
   bokehVideoEffectId => (
     asset: 'shaders/particles.frag',
-    values: const [1.0, _particlesTileSeconds, 8.0],
+    values: [1.0, _particlesTileSeconds, 8.0, ..._particleDefaults(type)],
   ),
   notesVideoEffectId => (
     asset: 'shaders/particles.frag',
-    values: const [1.0, _particlesTileSeconds, 9.0],
+    values: [1.0, _particlesTileSeconds, 9.0, ..._particleDefaults(type)],
   ),
   starsVideoEffectId => (
     asset: 'shaders/particles.frag',
-    values: const [1.0, _particlesTileSeconds, 10.0],
+    values: [1.0, _particlesTileSeconds, 10.0, ..._particleDefaults(type)],
   ),
   firefliesVideoEffectId => (
     asset: 'shaders/particles.frag',
-    values: const [1.0, _particlesTileSeconds, 11.0],
+    values: [1.0, _particlesTileSeconds, 11.0, ..._particleDefaults(type)],
   ),
   embersVideoEffectId => (
     asset: 'shaders/particles.frag',
-    values: const [1.0, _particlesTileSeconds, 12.0],
+    values: [1.0, _particlesTileSeconds, 12.0, ..._particleDefaults(type)],
   ),
   moneyVideoEffectId => (
     asset: 'shaders/particles.frag',
-    values: const [1.0, _particlesTileSeconds, 13.0],
+    values: [1.0, _particlesTileSeconds, 13.0, ..._particleDefaults(type)],
   ),
   balloonsVideoEffectId => (
     asset: 'shaders/particles.frag',
-    values: const [1.0, _particlesTileSeconds, 14.0],
+    values: [1.0, _particlesTileSeconds, 14.0, ..._particleDefaults(type)],
   ),
   tiltShiftVideoEffectId => (
     asset: 'shaders/tilt_shift.frag',
-    values: const [1.0],
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.focus,
+        EffectSettingKeys.width,
+        EffectSettingKeys.orientation,
+      ]),
+    ],
   ),
-  swirlVideoEffectId => (asset: 'shaders/swirl.frag', values: const [1.0]),
+  swirlVideoEffectId => (
+    asset: 'shaders/swirl.frag',
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [
+        ..._centerAndSize,
+        EffectSettingKeys.direction,
+      ]),
+    ],
+  ),
   rippleVideoEffectId => (
     asset: 'shaders/ripple.frag',
-    values: const [1.0, 0.0],
+    values: [
+      1.0,
+      0.0,
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.centerX,
+        EffectSettingKeys.centerY,
+        EffectSettingKeys.spacing,
+        EffectSettingKeys.speed,
+      ]),
+    ],
   ),
   flutedGlassVideoEffectId => (
     asset: 'shaders/fluted_glass.frag',
-    values: const [1.0],
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [EffectSettingKeys.width]),
+      // The direction across the ribs, with y up.
+      ..._turnOf(_degreesOf(type, EffectSettingKeys.angle)),
+    ],
   ),
   tunnelVideoEffectId => (
     asset: 'shaders/tunnel.frag',
@@ -412,59 +648,192 @@ ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
   ),
   zoomBlurVideoEffectId => (
     asset: 'shaders/zoom_blur.frag',
-    values: const [1.0],
+    values: [1.0, ..._settingDefaults(type, _center)],
   ),
   spinBlurVideoEffectId => (
     asset: 'shaders/spin_blur.frag',
-    values: const [1.0],
+    values: [1.0, ..._settingDefaults(type, _center)],
   ),
-  comicVideoEffectId => (asset: 'shaders/comic.frag', values: const [1.0]),
+  shockwaveVideoEffectId => (
+    asset: _bassHitShader,
+    values: hitTileValues(type, seconds: _shockwaveTileSeconds, style: 0),
+  ),
+  subwooferVideoEffectId => (
+    asset: _bassHitShader,
+    values: hitTileValues(type, seconds: 0, style: 1),
+  ),
+  plasmaVideoEffectId => (
+    asset: _blastShader,
+    values: hitTileValues(type, seconds: _blastTileSeconds, style: 0),
+  ),
+  energyWaveVideoEffectId => (
+    asset: _blastShader,
+    values: hitTileValues(type, seconds: _blastTileSeconds, style: 1),
+  ),
+  smokeBurstVideoEffectId => (
+    asset: _blastShader,
+    values: hitTileValues(type, seconds: _smokeBurstTileSeconds, style: 2),
+  ),
+  comicVideoEffectId => (
+    asset: 'shaders/comic.frag',
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.size,
+        EffectSettingKeys.outline,
+        EffectSettingKeys.levels,
+      ]),
+    ],
+  ),
   eightBitVideoEffectId => (
     asset: 'shaders/eight_bit.frag',
-    values: const [1.0],
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.size,
+        EffectSettingKeys.levels,
+      ]),
+    ],
   ),
   anaglyphVideoEffectId => (
     asset: 'shaders/anaglyph.frag',
-    values: const [1.0],
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [EffectSettingKeys.offset]),
+    ],
   ),
-  risoVideoEffectId => (asset: 'shaders/riso.frag', values: const [1.0]),
+  risoVideoEffectId => (
+    asset: 'shaders/riso.frag',
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.color,
+        EffectSettingKeys.color2,
+        EffectSettingKeys.offset,
+      ]),
+    ],
+  ),
   watercolorVideoEffectId => (
     asset: 'shaders/paint.frag',
-    values: const [1.0, 0.0],
+    values: [
+      1.0,
+      0.0,
+      ..._settingDefaults(type, const [EffectSettingKeys.size]),
+    ],
   ),
   oilPaintVideoEffectId => (
     asset: 'shaders/paint.frag',
-    values: const [1.0, 1.0],
+    values: [
+      1.0,
+      1.0,
+      ..._settingDefaults(type, const [EffectSettingKeys.size]),
+    ],
   ),
   pencilSketchVideoEffectId => (
     asset: 'shaders/pencil_sketch.frag',
-    values: const [1.0],
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.density,
+        EffectSettingKeys.outline,
+      ]),
+    ],
   ),
   neonEdgesVideoEffectId => (
     asset: 'shaders/neon_edges.frag',
-    values: const [1.0],
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.width,
+        EffectSettingKeys.single,
+        EffectSettingKeys.color,
+      ]),
+    ],
   ),
-  asciiVideoEffectId => (asset: 'shaders/ascii.frag', values: const [1.0]),
+  asciiVideoEffectId => (
+    asset: 'shaders/ascii.frag',
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.size,
+        EffectSettingKeys.single,
+        EffectSettingKeys.color,
+      ]),
+    ],
+  ),
   stainedGlassVideoEffectId => (
     asset: 'shaders/stained_glass.frag',
-    values: const [1.0],
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.size,
+        EffectSettingKeys.outline,
+      ]),
+    ],
   ),
-  thermalVideoEffectId => (asset: 'shaders/thermal.frag', values: const [1.0]),
+  thermalVideoEffectId => (
+    asset: 'shaders/thermal.frag',
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [EffectSettingKeys.sensitivity]),
+    ],
+  ),
   nightVisionVideoEffectId => (
     asset: 'shaders/night_vision.frag',
-    values: const [1.0, 0.0],
+    values: [
+      1.0,
+      0.0,
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.grain,
+        EffectSettingKeys.color,
+      ]),
+      // How far the default phosphor lifts towards white as it glows.
+      0.5,
+      0.0,
+      0.4,
+    ],
   ),
-  xRayVideoEffectId => (asset: 'shaders/x_ray.frag', values: const [1.0]),
-  popArtVideoEffectId => (asset: 'shaders/pop_art.frag', values: const [1.0]),
+  xRayVideoEffectId => (
+    asset: 'shaders/x_ray.frag',
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [EffectSettingKeys.color]),
+    ],
+  ),
+  popArtVideoEffectId => (
+    asset: 'shaders/pop_art.frag',
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [EffectSettingKeys.grid]),
+    ],
+  ),
   paperCutVideoEffectId => (
     asset: 'shaders/paper_cut.frag',
-    values: const [1.0],
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.layers,
+        EffectSettingKeys.shadow,
+      ]),
+    ],
   ),
   crossStitchVideoEffectId => (
     asset: 'shaders/cross_stitch.frag',
-    values: const [1.0],
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [
+        EffectSettingKeys.size,
+        EffectSettingKeys.color,
+      ]),
+    ],
   ),
-  bricksVideoEffectId => (asset: 'shaders/bricks.frag', values: const [1.0]),
+  bricksVideoEffectId => (
+    asset: 'shaders/bricks.frag',
+    values: [
+      1.0,
+      ..._settingDefaults(type, const [EffectSettingKeys.size]),
+    ],
+  ),
   final id? when lookTableAssets.containsKey(id) => (
     asset: 'shaders/look.frag',
     values: const [1.0],
@@ -782,6 +1151,11 @@ String videoEffectLabel(BuildContext context, EditorEffectType? type) {
     spiralTunnelVideoEffectId => context.l10n.videoEditorEffectSpiralTunnel,
     zoomBlurVideoEffectId => context.l10n.videoEditorEffectZoomBlur,
     spinBlurVideoEffectId => context.l10n.videoEditorEffectSpinBlur,
+    shockwaveVideoEffectId => context.l10n.videoEditorEffectShockwave,
+    subwooferVideoEffectId => context.l10n.videoEditorEffectSubwoofer,
+    plasmaVideoEffectId => context.l10n.videoEditorEffectPlasma,
+    energyWaveVideoEffectId => context.l10n.videoEditorEffectEnergyWave,
+    smokeBurstVideoEffectId => context.l10n.videoEditorEffectSmokeBurst,
     comicVideoEffectId => context.l10n.videoEditorEffectComic,
     eightBitVideoEffectId => context.l10n.videoEditorEffectEightBit,
     anaglyphVideoEffectId => context.l10n.videoEditorEffectAnaglyph,

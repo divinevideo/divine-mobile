@@ -9381,6 +9381,21 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectSpinBlur => 'የማሽከርከር ብዥታ';
 
   @override
+  String get videoEditorEffectShockwave => 'የግፊት ሞገድ';
+
+  @override
+  String get videoEditorEffectSubwoofer => 'ሰብዉፈር';
+
+  @override
+  String get videoEditorEffectPlasma => 'ፕላዝማ';
+
+  @override
+  String get videoEditorEffectEnergyWave => 'የኃይል ሞገድ';
+
+  @override
+  String get videoEditorEffectSmokeBurst => 'የጭስ ፍንዳታ';
+
+  @override
   String get videoEditorEffectComic => 'ኮሚክ';
 
   @override
@@ -9576,9 +9591,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorFilterCategoryTints => 'ቀለሞች';
 
   @override
-  String get videoEditorDropsSettingsTitle => 'ጠብታዎችን አስተካክል';
-
-  @override
   String get videoEditorDropsCountLabel => 'ብዛት';
 
   @override
@@ -9623,6 +9635,202 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorEffectsOnBeatNoSound => 'ሙዚቃ ያክሉ ወይም የአንድ ክሊፕ ድምፅ ያብሩ';
+
+  @override
+  String get videoEditorEffectSettingsOpen => 'የኢፌክት ቅንብሮች';
+
+  @override
+  String videoEditorEffectSettingsTitle(String effect) {
+    return 'ቅንብሮች፦ $effect';
+  }
+
+  @override
+  String videoEditorEffectSeconds(String seconds) {
+    return '$seconds ሰ';
+  }
+
+  @override
+  String get videoEditorEffectHitDuration => 'ቆይታ';
+
+  @override
+  String get videoEditorEffectHitRepeat => 'ድገም';
+
+  @override
+  String get videoEditorEffectHitOnce => 'አንድ ጊዜ፣ ኢፌክቱ በጊዜ መስመሩ ላይ በሚጀምርበት';
+
+  @override
+  String get videoEditorEffectHitInterval => 'ክፍተት';
+
+  @override
+  String get videoEditorEffectLookTitle => 'መልክ';
+
+  @override
+  String get videoEditorEffectHitHorizontal => 'አግድም ቦታ';
+
+  @override
+  String get videoEditorEffectHitVertical => 'ቁም ቦታ';
+
+  @override
+  String get videoEditorEffectHitReach => 'ስፋት';
+
+  @override
+  String get videoEditorEffectHitShake => 'መንቀጥቀጥ';
+
+  @override
+  String get videoEditorEffectHitPunch => 'የማጉላት ምት';
+
+  @override
+  String get videoEditorEffectLookReset => 'መልክን ዳግም አስጀምር';
+
+  @override
+  String get videoEditorEffectTimingTitle => 'ጊዜ አቆጣጠር';
+
+  @override
+  String get videoEditorEffectTimingReset => 'ጊዜ አቆጣጠርን ዳግም አስጀምር';
+
+  @override
+  String get videoEditorEffectMotionTitle => 'እንቅስቃሴ';
+
+  @override
+  String get videoEditorEffectMotionReset => 'እንቅስቃሴን ዳግም አስጀምር';
+
+  @override
+  String get videoEditorEffectSettingFocus => 'ትኩረት';
+
+  @override
+  String get videoEditorEffectSettingWidth => 'ስፋት';
+
+  @override
+  String get videoEditorEffectSettingDirection => 'አቅጣጫ';
+
+  @override
+  String get videoEditorEffectSettingHorizontal => 'አግድም';
+
+  @override
+  String get videoEditorEffectSettingVertical => 'ቁልቁል';
+
+  @override
+  String get videoEditorEffectSettingClockwise => 'በሰዓት አቅጣጫ';
+
+  @override
+  String get videoEditorEffectSettingAnticlockwise => 'ከሰዓት አቅጣጫ ተቃራኒ';
+
+  @override
+  String get videoEditorEffectSettingZoomIn => 'አቅርብ';
+
+  @override
+  String get videoEditorEffectSettingZoomOut => 'አርቅ';
+
+  @override
+  String get videoEditorEffectSettingSpacing => 'ክፍተት';
+
+  @override
+  String get videoEditorEffectSettingAngle => 'ማዕዘን';
+
+  @override
+  String get videoEditorEffectSettingHue => 'ቀለም ዓይነት';
+
+  @override
+  String get videoEditorEffectSettingLength => 'ርዝመት';
+
+  @override
+  String get videoEditorEffectSettingSensitivity => 'ስሜታዊነት';
+
+  @override
+  String get videoEditorEffectSettingPosition => 'ቦታ';
+
+  @override
+  String get videoEditorEffectSettingWind => 'ነፋስ';
+
+  @override
+  String get videoEditorEffectSettingDotSize => 'የነጥብ መጠን';
+
+  @override
+  String get videoEditorEffectSettingOutline => 'ዝርዝር መስመር';
+
+  @override
+  String get videoEditorEffectSettingLevels => 'ደረጃዎች';
+
+  @override
+  String get videoEditorEffectSettingPixelSize => 'የፒክሰል መጠን';
+
+  @override
+  String get videoEditorEffectSettingOffset => 'ማፈንገጥ';
+
+  @override
+  String get videoEditorEffectSettingBrushSize => 'የብሩሽ መጠን';
+
+  @override
+  String get videoEditorEffectSettingDensity => 'ጥግግት';
+
+  @override
+  String get videoEditorEffectSettingGrain => 'ጥራጥሬ';
+
+  @override
+  String get videoEditorEffectSettingGrid => 'ፍርግርግ';
+
+  @override
+  String get videoEditorEffectSettingLayers => 'ንብርብሮች';
+
+  @override
+  String get videoEditorEffectSettingShadow => 'ጥላ';
+
+  @override
+  String get videoEditorEffectSettingFirstInk => 'የመጀመሪያ ቀለም';
+
+  @override
+  String get videoEditorEffectSettingSecondInk => 'ሁለተኛ ቀለም';
+
+  @override
+  String get videoEditorEffectSettingColors => 'ቀለሞች';
+
+  @override
+  String get videoEditorEffectSettingOriginalColors => 'የመጀመሪያ';
+
+  @override
+  String get videoEditorEffectSettingSingleColor => 'አንድ ቀለም';
+
+  @override
+  String get videoEditorEffectSettingDelay => 'መዘግየት';
+
+  @override
+  String get videoEditorEffectSettingDown => 'ወደ ታች';
+
+  @override
+  String get videoEditorEffectSettingUp => 'ወደ ላይ';
+
+  @override
+  String get videoEditorEffectSettingRight => 'ወደ ቀኝ';
+
+  @override
+  String get videoEditorEffectSettingLeft => 'ወደ ግራ';
+
+  @override
+  String get videoEditorEffectSettingFrequency => 'ድግግሞሽ';
+
+  @override
+  String get videoEditorEffectSettingDistance => 'ርቀት';
+
+  @override
+  String get videoEditorEffectSettingScanlines => 'የፍተሻ መስመሮች';
+
+  @override
+  String get videoEditorEffectSettingGrainSize => 'የጥራጥሬ መጠን';
+
+  @override
+  String get videoEditorEffectSettingSepia => 'ሴፒያ';
+
+  @override
+  String get videoEditorEffectSettingFlicker => 'ብልጭታ';
+
+  @override
+  String get videoEditorEffectSettingVignette => 'ጠርዝ ጨለማ';
+
+  @override
+  String get videoEditorEffectSettingTempo => 'ፍጥነት';
+
+  @override
+  String get videoEditorEffectSettingWavelength => 'የሞገድ ርዝመት';
 
   @override
   String videoEditorEffectOnBeatLabel(String effect) {

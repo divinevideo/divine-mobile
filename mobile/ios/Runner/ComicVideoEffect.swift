@@ -11,16 +11,25 @@ import pro_video_editor
 /// sharply, found with a Sobel filter whose taps stay about the same share of
 /// the frame at every resolution.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
-/// far the picture turns into the comic).
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+/// the picture turns into the comic), `size` (0.5–2.5: how large the printed
+/// dots are, as a share of the default), `outline` (0–2: how dark the inked
+/// outlines are, as a share of the default) and `levels` (2–6: how many bands
+/// of shade the colours fall into).
 final class ComicVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.comic"
 
   private let intensity: Double
+  private let dot: Double
+  private let ink: Double
+  private let levels: Double
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
+    dot = Self.readNumber(params, "size", fallback: 1, in: 0.5...2.5)
+    ink = Self.readNumber(params, "outline", fallback: 1, in: 0...2)
+    levels = Self.readNumber(params, "levels", fallback: 4, in: 2...6).rounded()
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -33,7 +42,7 @@ final class ComicVideoEffect: ShaderVideoEffect {
   }
 
   override func values(effectTimeUs: Int64) -> [Double]? {
-    intensity > 0 ? [intensity] : nil
+    intensity > 0 ? [intensity] + [dot, ink, levels] : nil
   }
 
   static let function = "divineComic"
@@ -52,9 +61,13 @@ final class ComicVideoEffect: ShaderVideoEffect {
     ) {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
-      float intensity = u[3].x;
+      float2 uSize = f.size;
+      float uIntensity = u[3].x;
+      float uDot = u[3].y;
+      float uInk = u[3].z;
+      float uLevels = u[3].w;
       float2 p = pixelOf(u, gid, target.get_height());
-      float s = min(f.size.x, f.size.y);
+      float s = min(uSize.x, uSize.y);
       float e = max(1.0, s / 540.0);
       float3 color = tap(frame, f, p);
       float tl = luma(tap(frame, f, p + float2(-e, e)));
@@ -70,15 +83,15 @@ final class ComicVideoEffect: ShaderVideoEffect {
       float ink = smoothstep(0.3, 0.8, length(float2(gx, gy)));
       float l = luma(color);
       float3 vivid = mix(float3(l), color, 1.4);
-      float band = 0.2 + 0.27 * min(floor(l * 4.0), 3.0);
+      float band = 0.2 + 0.81 * min(floor(l * uLevels), uLevels - 1.0) / (uLevels - 1.0);
       float3 poster = clamp(vivid * band / max(l, 0.04), 0.0, 1.0);
-      float cell = 0.018 * s;
+      float cell = 0.018 * uDot * s;
       float2 grid = float2(p.x + p.y, p.y - p.x) * 0.70710678 / cell;
       float2 d = (fract(grid) - 0.5) * cell;
       float radius = 0.6 * cell * sqrt(max(0.7 - l, 0.0));
       float spot = clamp(radius - length(d), 0.0, 1.0);
-      float3 comic = poster * (1.0 - 0.35 * spot) * (1.0 - 0.85 * ink);
-      target.write(float4(mix(color, comic, intensity), 1.0), gid);
+      float3 comic = poster * (1.0 - 0.35 * spot) * (1.0 - min(0.85 * ink * uInk, 1.0));
+      target.write(float4(mix(color, comic, uIntensity), 1.0), gid);
     }
     """
 }

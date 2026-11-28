@@ -40,6 +40,8 @@ extension FlutterError: @retroactive Error {}
     TunnelVideoEffect.register()
     ZoomBlurVideoEffect.register()
     SpinBlurVideoEffect.register()
+    BassHitVideoEffect.register()
+    BlastVideoEffect.register()
     ComicVideoEffect.register()
     EightBitVideoEffect.register()
     AnaglyphVideoEffect.register()

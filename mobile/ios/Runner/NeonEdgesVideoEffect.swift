@@ -11,16 +11,24 @@ import pro_video_editor
 /// colour that turns with the outline's direction, so a grey picture glows in
 /// every colour.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
-/// far the picture turns into neon).
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+/// the picture turns into neon), `width` (0.5–3: how wide the glow reaches, as
+/// a share of the default), `single` (1 to glow in one colour rather than the
+/// picture's own) and `color` (that colour, as an ARGB integer).
 final class NeonEdgesVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.neonEdges"
 
   private let intensity: Double
+  private let width: Double
+  private let single: Double
+  private let color: [Double]
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
+    width = Self.readNumber(params, "width", fallback: 1, in: 0.5...3)
+    single = (params["single"] as? NSNumber)?.intValue == 1 ? 1 : 0
+    color = Self.readColor(params, "color", fallback: 0xFF00_E5FF)
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -33,7 +41,7 @@ final class NeonEdgesVideoEffect: ShaderVideoEffect {
   }
 
   override func values(effectTimeUs: Int64) -> [Double]? {
-    intensity > 0 ? [intensity] : nil
+    intensity > 0 ? [intensity] + [width, single] + color : nil
   }
 
   static let function = "divineNeonEdges"
@@ -47,6 +55,7 @@ final class NeonEdgesVideoEffect: ShaderVideoEffect {
       return dot(c, float3(0.299, 0.587, 0.114));
     }
 
+    // How the brightness changes across `p`, from taps `d` pixels to each side.
     static float2 slope(texture2d<float, access::sample> frame, Frame f, float2 p, float d) {
       return float2(
         luma(tap(frame, f, p + float2(d, 0.0))) - luma(tap(frame, f, p - float2(d, 0.0))),
@@ -61,10 +70,14 @@ final class NeonEdgesVideoEffect: ShaderVideoEffect {
     ) {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
-      float intensity = u[3].x;
+      float2 uSize = f.size;
+      float uIntensity = u[3].x;
+      float uWidth = u[3].y;
+      float uSingle = u[3].z;
+      float3 uColor = float3(u[3].w, u[4].x, u[4].y);
       float2 p = pixelOf(u, gid, target.get_height());
-      float s = min(f.size.x, f.size.y);
-      float e = max(1.0, s / 540.0);
+      float s = min(uSize.x, uSize.y);
+      float e = max(1.0, s / 540.0) * uWidth;
       float3 color = tap(frame, f, p);
       float2 near = slope(frame, f, p, e);
       float2 mid = slope(frame, f, p, 3.0 * e);
@@ -80,9 +93,9 @@ final class NeonEdgesVideoEffect: ShaderVideoEffect {
       float lo = min(min(color.r, color.g), color.b);
       float hi = max(max(color.r, color.g), color.b);
       float3 own = (color - lo) / max(hi - lo, 0.001);
-      float3 tint = mix(turning, own, smoothstep(0.08, 0.25, hi - lo));
+      float3 tint = uSingle > 0.5 ? uColor : mix(turning, own, smoothstep(0.08, 0.25, hi - lo));
       float3 neon = clamp(tint * glow + 0.6 * core * core, 0.0, 1.0);
-      target.write(float4(mix(color, neon, intensity), 1.0), gid);
+      target.write(float4(mix(color, neon, uIntensity), 1.0), gid);
     }
     """
 }

@@ -16,17 +16,34 @@ import pro_video_editor
 /// The sun drifts slowly along the top edge, at the same strength all the
 /// time, so the picture never pulses brighter and darker.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
-/// strong the light is). The sun moves with the time since the effect started,
-/// so it follows the same path in the preview and in the export.
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
+/// strong the light is), `centerX` (0–1: where the sun sits across the top as
+/// it starts, as a share of the width from the left), `color` (the light's
+/// colour, as an ARGB integer), `length` (0.3–2: how far the rays reach, as a
+/// share of the default) and `speed` (0–3: how fast the sun drifts, as a share
+/// of the default; 0 holds it still). The sun moves with the time since the
+/// effect started, so it follows the same path in the preview and in the
+/// export.
 final class LightRaysVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.lightRays"
 
+  /// Where the sun starts across the top by default: it drifts 25% of the
+  /// width either way from 30%, starting at the sine of 0.8 along it.
+  private static let sunX = 0.47933902
+
   private let intensity: Double
+  private let sunX: Double
+  private let color: [Double]
+  private let length: Double
+  private let speed: Double
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
+    sunX = Self.readNumber(params, "centerX", fallback: Self.sunX, in: 0...1)
+    color = Self.readColor(params, "color", fallback: 0xFFFF_DB9E)
+    length = Self.readNumber(params, "length", fallback: 1, in: 0.3...2)
+    speed = Self.readNumber(params, "speed", fallback: 1, in: 0...3)
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -39,7 +56,8 @@ final class LightRaysVideoEffect: ShaderVideoEffect {
   }
 
   override func values(effectTimeUs: Int64) -> [Double]? {
-    intensity > 0 ? [intensity, Double(effectTimeUs) / 1_000_000] : nil
+    intensity > 0
+      ? [intensity, Double(effectTimeUs) / 1_000_000, sunX] + color + [length, speed] : nil
   }
 
   static let function = "divineLightRays"
@@ -58,23 +76,28 @@ final class LightRaysVideoEffect: ShaderVideoEffect {
     ) {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
-      float intensity = u[3].x;
-      float t = u[3].y;
+      float2 uSize = f.size;
+      float uIntensity = u[3].x;
+      float uTime = u[3].y;
+      float uSunX = u[3].z;
+      float3 uColor = float3(u[3].w, u[4].x, u[4].y);
+      float uLength = u[4].z;
+      float uSpeed = u[4].w;
       float2 p = pixelOf(u, gid, target.get_height());
-      float l = max(f.size.x, f.size.y);
-      float2 sun = f.size * float2(0.3 + 0.25 * sin(0.23 * t + 0.8), 1.06);
+      float l = max(uSize.x, uSize.y);
+      float2 sun = uSize * float2(uSunX + 0.25 * (sin(0.23 * uTime * uSpeed + 0.8) - 0.7173561), 1.06);
       float2 toSun = sun - p;
       float jitter = fract(52.9829189 * fract(dot(p, float2(0.06711056, 0.00583715))));
       float3 rays = float3(0.0);
       for (int i = 0; i < 32; i++) {
         float share = (float(i) + jitter) / 32.0;
-        float3 c = tap(frame, f, p + toSun * (0.5 * share));
+        float3 c = tap(frame, f, p + toSun * (0.5 * uLength * share));
         rays += c * (smoothstep(0.7, 1.0, luma(c)) * (1.0 - share));
       }
       float2 d = toSun / l;
       float sunGlow = exp(-5.0 * dot(d, d));
-      float3 glow = float3(1.0, 0.86, 0.62) * (rays * (2.0 / 16.0) + 0.35 * sunGlow);
-      float3 lit = clamp(glow * intensity, 0.0, 1.0);
+      float3 glow = uColor * (rays * (2.0 / 16.0) + 0.35 * sunGlow);
+      float3 lit = clamp(glow * uIntensity, 0.0, 1.0);
       float3 base = tap(frame, f, p);
       target.write(float4(1.0 - (1.0 - base) * (1.0 - lit), 1.0), gid);
     }

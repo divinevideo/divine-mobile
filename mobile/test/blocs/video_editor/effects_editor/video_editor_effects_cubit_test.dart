@@ -9,6 +9,9 @@ import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/drops_effect_settings.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/effect_setting.dart';
+import 'package:openvine/models/video_editor/effect_settings_catalog.dart';
+import 'package:openvine/models/video_editor/hit_timing_settings.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -282,7 +285,10 @@ void main() {
           expect(cubit.state.previewCustomEffects, const [
             CustomVideoEffect(
               id: echoVideoEffectId,
-              params: {EditorVideoEffect.intensityParam: 0.8},
+              params: {
+                EditorVideoEffect.intensityParam: 0.8,
+                EffectSettingKeys.spacing: 1.0,
+              },
             ),
           ]);
           expect(cubit.state.previewEffects, const [vhs]);
@@ -301,7 +307,10 @@ void main() {
           expect(cubit.state.previewCustomEffects, [
             const CustomVideoEffect(
               id: echoVideoEffectId,
-              params: {EditorVideoEffect.intensityParam: 0.9},
+              params: {
+                EditorVideoEffect.intensityParam: 0.9,
+                EffectSettingKeys.spacing: 1.0,
+              },
             ),
           ]);
         },
@@ -353,7 +362,10 @@ void main() {
           id: 'new',
           custom: CustomVideoEffect(
             id: echoVideoEffectId,
-            params: {EditorVideoEffect.intensityParam: 0.6},
+            params: {
+              EditorVideoEffect.intensityParam: 0.6,
+              EffectSettingKeys.spacing: 1.0,
+            },
           ),
         );
         expect(cubit.confirm().effects, const [vhs, added]);
@@ -616,6 +628,271 @@ void main() {
       });
     });
 
+    group('hit timing', () {
+      const slow = HitTimingSettings(
+        duration: Duration(seconds: 2),
+        interval: Duration(seconds: 3),
+        repeats: false,
+      );
+
+      HitTimingSettings timingOf(
+        EditorEffectType type,
+        Map<String, Object?> params,
+      ) => HitTimingSettings.fromParams(params, defaults: type.hitTiming!);
+
+      test('a new shockwave stores its timing and its default look next to '
+          'its intensity', () async {
+        final cubit = buildCubit()
+          ..startEditing()
+          ..selectType(EditorEffectType.shockwave);
+        slow.toParams().forEach(cubit.setSetting);
+
+        final params = cubit.confirm().effects.single.custom!.params;
+
+        expect(timingOf(EditorEffectType.shockwave, params), slow);
+        expect(params, containsPair(EffectSettingKeys.centerX, 0.5));
+        expect(params, containsPair(EffectSettingKeys.fringe, 1.0));
+        expect(
+          params,
+          containsPair(
+            EditorVideoEffect.intensityParam,
+            VideoEditorEffectsCubit.defaultIntensity,
+          ),
+        );
+        await cubit.close();
+      });
+
+      test('editing a committed effect starts from its timing', () async {
+        final committed = EditorVideoEffect.of(
+          id: 'plasma',
+          type: EditorEffectType.plasma,
+          intensity: 0.5,
+          settings: slow.toParams(),
+        );
+        final cubit = buildCubit()
+          ..syncApplied([committed])
+          ..startEditing(effectId: 'plasma');
+
+        expect(
+          timingOf(EditorEffectType.plasma, cubit.state.selectedSettings),
+          slow,
+        );
+        await cubit.close();
+      });
+
+      test(
+        'keeps the timing for an effect that starts from the same one, '
+        'and only whether it repeats for one that starts from another',
+        () async {
+          final cubit = buildCubit()
+            ..startEditing()
+            ..selectType(EditorEffectType.shockwave);
+          slow.toParams().forEach(cubit.setSetting);
+          cubit.selectType(EditorEffectType.subwoofer);
+          expect(
+            timingOf(EditorEffectType.subwoofer, cubit.state.selectedSettings),
+            slow,
+          );
+
+          cubit.selectType(EditorEffectType.plasma);
+
+          expect(
+            timingOf(EditorEffectType.plasma, cubit.state.selectedSettings),
+            EditorEffectType.plasma.hitTiming!.copyWith(repeats: false),
+          );
+          await cubit.close();
+        },
+      );
+    });
+
+    group('hit look', () {
+      test('a new blast stores its look next to its timing', () async {
+        final cubit = buildCubit()
+          ..startEditing()
+          ..selectType(EditorEffectType.plasma)
+          ..setSetting(EffectSettingKeys.color, 0xFF00FF00)
+          ..setSetting(EffectSettingKeys.centerX, 0.2);
+
+        final params = cubit.confirm().effects.single.custom!.params;
+
+        expect(params, containsPair(EffectSettingKeys.color, 0xFF00FF00));
+        expect(params, containsPair(EffectSettingKeys.centerX, 0.2));
+        expect(params, containsPair(HitTimingSettings.hitParam, 800000));
+        await cubit.close();
+      });
+
+      test('a blast keeps its own colour until the user picks one', () async {
+        final cubit = buildCubit()
+          ..startEditing()
+          ..selectType(EditorEffectType.energyWave);
+
+        final params = cubit.confirm().effects.single.custom!.params;
+
+        expect(params, containsPair(EffectSettingKeys.color, 0xFFFF290F));
+        await cubit.close();
+      });
+
+      test('editing a committed effect starts from its look, and resetting '
+          'the look puts its defaults back and leaves the timing', () async {
+        final committed = EditorVideoEffect.of(
+          id: 'smoke',
+          type: EditorEffectType.smokeBurst,
+          intensity: 0.5,
+          settings: const {
+            EffectSettingKeys.centerX: 0.2,
+            EffectSettingKeys.reach: 0.5,
+            EffectSettingKeys.color: 0xFF00FF00,
+            HitTimingSettings.hitParam: 2000000,
+          },
+        );
+        final cubit = buildCubit()
+          ..syncApplied([committed])
+          ..startEditing(effectId: 'smoke');
+        expect(cubit.state.selectedSettings[EffectSettingKeys.centerX], 0.2);
+        expect(cubit.state.selectedSettings[EffectSettingKeys.reach], 0.5);
+
+        cubit.resetSettings(EffectSettingGroup.look);
+
+        final settings = cubit.state.selectedSettings;
+        expect(settings[EffectSettingKeys.centerX], 0.5);
+        expect(settings[EffectSettingKeys.reach], 1.0);
+        expect(settings[EffectSettingKeys.color], 0xFFD1CFC9);
+        expect(settings[HitTimingSettings.hitParam], 2000000);
+        await cubit.close();
+      });
+    });
+
+    group('settings', () {
+      test('confirming a legacy effect without changes keeps its history '
+          'entry intact', () async {
+        final committed = EditorVideoEffect.of(
+          id: 'fisheye',
+          type: EditorEffectType.fisheye,
+          intensity: 0.6,
+          startTime: const Duration(seconds: 1),
+        );
+        final cubit = buildCubit()
+          ..syncApplied([committed])
+          ..startEditing(effectId: committed.id);
+
+        expect(cubit.confirm().effects, [committed]);
+        await cubit.close();
+      });
+
+      test('open only for an effect that has any, and close when the editor '
+          'opens or closes', () async {
+        final cubit = buildCubit()
+          ..startEditing()
+          ..selectType(EditorEffectType.tealOrange)
+          ..setSettingsOpen(open: true);
+        expect(cubit.state.showsSettings, isFalse);
+
+        cubit.selectType(EditorEffectType.shockwave);
+        expect(cubit.state.showsSettings, isTrue);
+
+        cubit.cancel();
+        expect(cubit.state.isSettingsOpen, isFalse);
+
+        cubit
+          ..startEditing()
+          ..selectType(EditorEffectType.drops)
+          ..setSettingsOpen(open: true)
+          ..confirm();
+        expect(cubit.state.isSettingsOpen, isFalse);
+        await cubit.close();
+      });
+
+      test('setSetting brings a value into the range of its setting, and '
+          'ignores a key the picked effect has no setting for', () async {
+        final cubit = buildCubit()
+          ..startEditing()
+          ..selectType(EditorEffectType.shockwave)
+          ..setSetting(EffectSettingKeys.shake, 9)
+          ..setSetting(DropsEffectSettings.countParam, 4);
+
+        expect(cubit.state.settingValues, {EffectSettingKeys.shake: 2.0});
+        await cubit.close();
+      });
+
+      test('keeps a setting for an effect with the very same one, and drops '
+          'the others', () async {
+        final cubit = buildCubit()
+          ..startEditing()
+          ..selectType(EditorEffectType.shockwave)
+          ..setSetting(EffectSettingKeys.centerX, 0.2)
+          ..setSetting(EffectSettingKeys.fringe, 0)
+          ..selectType(EditorEffectType.plasma)
+          ..setSetting(EffectSettingKeys.color, 0xFF00FF00);
+        expect(cubit.state.settingValues, {
+          EffectSettingKeys.centerX: 0.2,
+          EffectSettingKeys.color: 0xFF00FF00,
+        });
+
+        cubit.selectType(EditorEffectType.energyWave);
+        expect(cubit.state.settingValues, {EffectSettingKeys.centerX: 0.2});
+
+        cubit.selectType(EditorEffectType.echo);
+        expect(cubit.state.settingValues, isEmpty);
+        await cubit.close();
+      });
+
+      test('resetting a group leaves the settings of the others', () async {
+        final cubit = buildCubit()
+          ..startEditing()
+          ..selectType(EditorEffectType.shockwave)
+          ..setSetting(EffectSettingKeys.centerX, 0.2)
+          ..setSetting(HitTimingSettings.hitParam, 2000000)
+          ..resetSettings(EffectSettingGroup.timing);
+
+        expect(cubit.state.settingValues, {EffectSettingKeys.centerX: 0.2});
+        await cubit.close();
+      });
+    });
+
+    group('built-in settings', () {
+      test('a built-in effect keeps only the settings the user changed in its '
+          'params', () async {
+        final cubit = buildCubit()
+          ..startEditing()
+          ..selectType(const EditorEffectType.builtIn(VideoEffectType.glitch))
+          ..setSetting(VideoEffectParams.frequency, 2.0);
+
+        final effect = cubit.confirm().effects.single.effect!;
+
+        expect(effect.params, {VideoEffectParams.frequency: 2.0});
+        await cubit.close();
+      });
+
+      test('an untouched built-in effect has no params', () async {
+        final cubit = buildCubit()
+          ..startEditing()
+          ..selectType(const EditorEffectType.builtIn(VideoEffectType.wave));
+
+        expect(cubit.confirm().effects.single.effect!.params, isEmpty);
+        await cubit.close();
+      });
+
+      test(
+        'editing a committed built-in effect starts from its params',
+        () async {
+          const wave = EditorVideoEffect(
+            id: 'wave',
+            effect: VideoEffect.wave(params: {VideoEffectParams.speed: 2}),
+          );
+          final cubit = buildCubit()
+            ..syncApplied(const [wave])
+            ..startEditing(effectId: 'wave');
+
+          expect(cubit.state.selectedSettings[VideoEffectParams.speed], 2.0);
+          expect(
+            cubit.confirm().effects.single.effect!.params,
+            {VideoEffectParams.speed: 2.0},
+          );
+          await cubit.close();
+        },
+      );
+    });
+
     group('drops settings', () {
       const custom = DropsEffectSettings(count: 2, size: 0.8, seed: 9);
       final committed = EditorVideoEffect.custom(
@@ -652,8 +929,8 @@ void main() {
         () async {
           final cubit = buildCubit()
             ..startEditing()
-            ..selectType(EditorEffectType.drops)
-            ..setDropsSettings(custom);
+            ..selectType(EditorEffectType.drops);
+          custom.toParams().forEach(cubit.setSetting);
 
           final preview = cubit.state.previewCustomEffects.single;
 
@@ -668,7 +945,10 @@ void main() {
         final cubit = buildCubit()
           ..syncApplied([committed])
           ..startEditing(effectId: 'drops');
-        expect(cubit.state.dropsSettings, custom);
+        expect(
+          DropsEffectSettings.fromParams(cubit.state.selectedSettings),
+          custom,
+        );
 
         cubit.setIntensity(0.9);
         final edited = cubit.confirm().effects.single;
@@ -684,21 +964,21 @@ void main() {
         final cubit = buildCubit()
           ..syncApplied([committed])
           ..startEditing(effectId: 'drops');
-        expect(cubit.state.dropsSettings, custom);
+        expect(cubit.state.settingValues, isNotEmpty);
 
         cubit
           ..cancel()
           ..startEditing();
 
-        expect(cubit.state.dropsSettings, const DropsEffectSettings());
+        expect(cubit.state.settingValues, isEmpty);
         await cubit.close();
       });
 
       test('other effects store none of the drops settings', () async {
         final cubit = buildCubit()
           ..startEditing()
-          ..selectType(EditorEffectType.echo)
-          ..setDropsSettings(custom);
+          ..selectType(EditorEffectType.tealOrange);
+        custom.toParams().forEach(cubit.setSetting);
 
         expect(cubit.confirm().effects.single.custom!.params, {
           EditorVideoEffect.intensityParam:
@@ -707,7 +987,7 @@ void main() {
         await cubit.close();
       });
 
-      test('shuffleDrops picks a seed other than the current one', () async {
+      test('shuffle picks a seed other than the current one', () async {
         final seeds = [9, 9, 4];
         final cubit =
             VideoEditorEffectsCubit(
@@ -715,14 +995,35 @@ void main() {
                 createSeed: () => seeds.removeAt(0),
               )
               ..startEditing()
-              ..selectType(EditorEffectType.drops)
-              ..setDropsSettings(custom);
+              ..selectType(EditorEffectType.drops);
+        custom.toParams().forEach(cubit.setSetting);
 
-        cubit.shuffleDrops();
+        cubit.shuffle(DropsEffectSettings.seedParam);
 
-        expect(cubit.state.dropsSettings, custom.copyWith(seed: 4));
+        expect(
+          DropsEffectSettings.fromParams(cubit.state.selectedSettings),
+          custom.copyWith(seed: 4),
+        );
         await cubit.close();
       });
+
+      test(
+        'shuffle changes nothing for a setting that does not shuffle',
+        () async {
+          final cubit =
+              VideoEditorEffectsCubit(
+                  createId: () => 'new',
+                  createSeed: () => fail('no seed is drawn'),
+                )
+                ..startEditing()
+                ..selectType(EditorEffectType.drops);
+
+          cubit.shuffle(DropsEffectSettings.sizeParam);
+
+          expect(cubit.state.settingValues, isEmpty);
+          await cubit.close();
+        },
+      );
     });
 
     group('intros and outros', () {

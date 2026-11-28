@@ -30,6 +30,16 @@ uniform float uTime;
 // 14 balloons.
 uniform float uStyle;
 
+// How large the particles are, as a share of the default.
+uniform float uScale;
+
+// How fast they fall or rise, as a share of the default.
+uniform float uSpeed;
+
+// How hard the wind blows them sideways: -1 to the left, 1 to the right, a
+// third of the shorter side a second at most.
+uniform float uWind;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -324,12 +334,14 @@ void main() {
   int style = int(uStyle + 0.5);
   vec3 color = tap(p);
   vec4 look = lookOf(style);
-  // How fast the cells move sideways, for the rain and petals the wind slants.
-  float drift = style == 4 ? 0.22 : (style == 6 ? 0.08 : 0.0);
-  vec2 fall = normalize(vec2(drift, look.y));
+  // How fast the cells move sideways: the wind, and the slant of the rain and
+  // the petals.
+  float drift = (style == 4 ? 0.22 : (style == 6 ? 0.08 : 0.0)) * uSpeed + 0.3 * uWind;
+  float rise = look.y * uSpeed;
+  vec2 fall = normalize(vec2(drift, rise));
   for (int k = 0; k < 3; k++) {
     float depth = 0.55 + 0.225 * float(k);
-    vec2 q = (p - vec2(drift * depth * t * s, look.y * depth * t * s)) / (s * look.x * depth) + vec2(0.37 * float(k), 0.0);
+    vec2 q = (p - vec2(drift * depth * t * s, rise * depth * t * s)) / (s * look.x * uScale * depth) + vec2(0.37 * float(k), 0.0);
     vec2 id = floor(q) + vec2(131.0, 71.0) * float(k);
     vec3 h = hash3(id);
     if (h.z >= look.w * uIntensity) continue;

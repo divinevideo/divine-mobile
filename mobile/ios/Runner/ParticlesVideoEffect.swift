@@ -14,10 +14,13 @@ import pro_video_editor
 /// inside its cell however it sways or spins, so each pixel only looks at the
 /// cell it lies in, in each layer.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
-/// many of the cells hold a particle). The particles move with the time since
-/// the effect started, so they follow the same path in the preview and in the
-/// export.
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
+/// many of the cells hold a particle), `size` (0.5–2.5: how large the particles
+/// are, as a share of the default), `speed` (0.1–3: how fast they fall or rise,
+/// as a share of the default) and `wind` (-1–1: how hard the wind blows them
+/// sideways, to the left below 0 and to the right above it). The particles move
+/// with the time since the effect started, so they follow the same path in the
+/// preview and in the export.
 final class ParticlesVideoEffect: ShaderVideoEffect {
   /// What the particles are; the raw value is what the shader branches on.
   enum Style: Double, CaseIterable {
@@ -61,10 +64,16 @@ final class ParticlesVideoEffect: ShaderVideoEffect {
 
   private let style: Style
   private let intensity: Double
+  private let scale: Double
+  private let speed: Double
+  private let wind: Double
 
   init(style: Style, params: [String: Any]) {
     self.style = style
     intensity = Self.readIntensity(params)
+    scale = Self.readNumber(params, "size", fallback: 1, in: 0.5...2.5)
+    speed = Self.readNumber(params, "speed", fallback: 1, in: 0.1...3)
+    wind = Self.readNumber(params, "wind", fallback: 0, in: -1...1)
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -83,7 +92,8 @@ final class ParticlesVideoEffect: ShaderVideoEffect {
   }
 
   override func values(effectTimeUs: Int64) -> [Double]? {
-    intensity > 0 ? [intensity, Double(effectTimeUs) / 1_000_000, style.rawValue] : nil
+    intensity > 0
+      ? [intensity, Double(effectTimeUs) / 1_000_000, style.rawValue, scale, speed, wind] : nil
   }
 
   static let function = "divineParticles"
@@ -379,22 +389,30 @@ final class ParticlesVideoEffect: ShaderVideoEffect {
     ) {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
-      float intensity = u[3].x;
-      int style = int(u[3].z + 0.5);
+      float2 uSize = f.size;
+      float uIntensity = u[3].x;
+      float uTime = u[3].y;
+      float uStyle = u[3].z;
+      float uScale = u[3].w;
+      float uSpeed = u[4].x;
+      float uWind = u[4].y;
       float2 p = pixelOf(u, gid, target.get_height());
-      float s = min(f.size.x, f.size.y);
-      float t = u[3].y;
+      float s = min(uSize.x, uSize.y);
+      float t = uTime;
+      int style = int(uStyle + 0.5);
       float3 color = tap(frame, f, p);
       float4 look = lookOf(style);
-      // How fast the cells move sideways, for the rain and petals the wind slants.
-      float drift = style == 4 ? 0.22 : (style == 6 ? 0.08 : 0.0);
-      float2 fall = normalize(float2(drift, look.y));
+      // How fast the cells move sideways: the wind, and the slant of the rain and
+      // the petals.
+      float drift = (style == 4 ? 0.22 : (style == 6 ? 0.08 : 0.0)) * uSpeed + 0.3 * uWind;
+      float rise = look.y * uSpeed;
+      float2 fall = normalize(float2(drift, rise));
       for (int k = 0; k < 3; k++) {
         float depth = 0.55 + 0.225 * float(k);
-        float2 q = (p - float2(drift * depth * t * s, look.y * depth * t * s)) / (s * look.x * depth) + float2(0.37 * float(k), 0.0);
+        float2 q = (p - float2(drift * depth * t * s, rise * depth * t * s)) / (s * look.x * uScale * depth) + float2(0.37 * float(k), 0.0);
         float2 id = floor(q) + float2(131.0, 71.0) * float(k);
         float3 h = hash3(id);
-        if (h.z >= look.w * intensity) continue;
+        if (h.z >= look.w * uIntensity) continue;
         float3 g = hash3(id + 17.0);
         float2 d = fract(q) - (0.25 + 0.5 * h.xy);
         d.x -= look.z * sin(t * (0.6 + 0.6 * g.x) + 6.2832 * g.y);
@@ -422,7 +440,7 @@ final class ParticlesVideoEffect: ShaderVideoEffect {
         } else if (style == 11) {
           color = firefly(color, d, g, alpha, t);
         } else if (style == 12) {
-          color = ember(color, d, g, alpha, t, p.y / f.size.y);
+          color = ember(color, d, g, alpha, t, p.y / uSize.y);
         } else if (style == 13) {
           color = banknote(color, d, h, g, alpha, t);
         } else if (style == 14) {

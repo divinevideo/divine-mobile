@@ -21,6 +21,12 @@ uniform float uIntensity;
 // Seconds since the effect started.
 uniform float uTime;
 
+// How large the lights are, as a share of the default.
+uniform float uSpread;
+
+// How fast it the lights wander, as a share of the default; 0 holds it still.
+uniform float uSpeed;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -41,12 +47,12 @@ void main() {
   vec2 fragCoord = FlutterFragCoord().xy;
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
   float l = max(uSize.x, uSize.y);
-  float t = uTime;
+  float t = uTime * uSpeed;
   vec2 warmCentre = uSize * vec2(0.5 + 0.28 * sin(0.41 * t + 0.3), 0.56 + 0.2 * sin(0.53 * t + 1.7));
   vec2 coolCentre = uSize * vec2(0.5 + 0.3 * sin(0.33 * t + 3.4), 0.44 + 0.22 * sin(0.47 * t + 0.6));
   vec3 light = max(
-    vec3(1.12, 1.04, 0.9) * spot(p, warmCentre, 0.2 * l),
-    vec3(0.92, 0.98, 1.12) * spot(p, coolCentre, 0.17 * l));
+    vec3(1.12, 1.04, 0.9) * spot(p, warmCentre, 0.2 * l * uSpread),
+    vec3(0.92, 0.98, 1.12) * spot(p, coolCentre, 0.17 * l * uSpread));
   float dark = 0.8 * uIntensity;
   vec3 base = tap(p);
   fragColor = vec4(clamp(base * (1.0 - dark + dark * light), 0.0, 1.0), 1.0);

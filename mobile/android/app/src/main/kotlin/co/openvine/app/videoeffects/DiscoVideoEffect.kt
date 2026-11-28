@@ -17,12 +17,13 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * of three colours that change together, blended over a moment; see
  * [PartyLights].
  *
- * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
- * dim the picture gets and how bright the spots are) and, for an effect on
- * the beat, `beatsUs`: the beats, in microseconds after the effect's start.
- * On the beat the colours change and the ball turns the other way on each
- * beat; otherwise the colours change every one and a half seconds and it
- * keeps turning one way.
+ * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how dim
+ * the picture gets and how bright the spots are), `size` (0.5–2: how large the
+ * spots are, as a share of the default), `speed` (0–3: how fast the ball turns,
+ * as a share of the default; 0 holds it still) and, for an effect on the beat,
+ * `beatsUs`: the beats, in microseconds after the effect's start. On the beat
+ * the colours change and the ball turns the other way on each beat; otherwise
+ * the colours change every one and a half seconds and it keeps turning one way.
  */
 class DiscoVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
@@ -30,12 +31,17 @@ class DiscoVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_S
 
     private val beatsUs = BlurHits.beatsOf(params)
 
+    private val spotSize = numberOf(params, "size", 1f, 0.5f, 2f)
+
+    private val speed = numberOf(params, "speed", 1f, 0f, 3f)
+
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
         val lights = PartyLights.at(beatsUs, effectTimeUs)
         shader.setFloat("uIntensity", intensity)
-        shader.setFloat("uPhase", lights.phase)
+        shader.setFloat("uPhase", lights.phase * speed)
         shader.setFloat("uStep", lights.step)
         shader.setFloat("uMix", lights.mix)
+        shader.setFloat("uSpotSize", spotSize)
     }
 
     companion object {
@@ -56,6 +62,7 @@ uniform float uIntensity;
 uniform float uPhase;
 uniform float uStep;
 uniform float uMix;
+uniform float uSpotSize;
 
 void main() {
   vec2 p = vTexCoord * uSize;
@@ -71,7 +78,7 @@ void main() {
   float index = floor(turn / cell + 0.5 * odd);
   float centreTurn = (index + 0.5 - 0.5 * odd) * cell - spin;
   vec2 centre = ball + (ring + 0.5) * spacing * vec2(sin(centreTurn), -cos(centreTurn));
-  float size = 0.018 * l * (0.75 + 0.5 * fract(index * 0.618034 + ring * 0.371));
+  float size = 0.018 * l * uSpotSize * (0.75 + 0.5 * fract(index * 0.618034 + ring * 0.371));
   vec2 q = (p - centre) / size;
   float r2 = dot(q, q);
   float spot = exp(-r2 * r2 * r2);

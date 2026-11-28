@@ -13,16 +13,22 @@ import pro_video_editor
 /// sheet casts a soft shadow on the ones below, and a sheet's edge facing the
 /// light catches it. The paper has a faint grain.
 ///
-/// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
-/// far the picture turns into paper).
+/// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how far
+/// the picture turns into paper), `layers` (2–8: how many sheets the picture is
+/// cut into) and `shadow` (0.3–2.5: how far the sheets stand apart, which sets
+/// how long their shadows are, as a share of the default).
 final class PaperCutVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.paperCut"
 
   private let intensity: Double
+  private let layers: Double
+  private let depth: Double
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
+    layers = Self.readNumber(params, "layers", fallback: 4, in: 2...8).rounded()
+    depth = Self.readNumber(params, "shadow", fallback: 1, in: 0.3...2.5)
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -35,7 +41,7 @@ final class PaperCutVideoEffect: ShaderVideoEffect {
   }
 
   override func values(effectTimeUs: Int64) -> [Double]? {
-    intensity > 0 ? [intensity] : nil
+    intensity > 0 ? [intensity] + [layers, depth] : nil
   }
 
   static let function = "divinePaperCut"
@@ -52,6 +58,8 @@ final class PaperCutVideoEffect: ShaderVideoEffect {
       return fract(52.9829189 * fract(dot(q, float2(0.06711056, 0.00583715))));
     }
 
+    // The picture at `q`, softened over its centre and eight taps on a ring `e`
+    // around it.
     static float3 soft(texture2d<float, access::sample> frame, Frame f, float2 q, float e) {
       float d = 0.70710678 * e;
       float3 ring = tap(frame, f, q + float2(e, 0.0)) + tap(frame, f, q - float2(e, 0.0)) + tap(frame, f, q + float2(0.0, e)) +
@@ -60,8 +68,9 @@ final class PaperCutVideoEffect: ShaderVideoEffect {
       return (tap(frame, f, q) + ring) / 9.0;
     }
 
-    static float layer(float3 c) {
-      return min(floor(clamp(luma(c), 0.0, 1.0) * 4.0), 3.0);
+    // Which of the n layers a colour lies on, 0 the lowest.
+    static float layer(float3 c, float n) {
+      return min(floor(clamp(luma(c), 0.0, 1.0) * n), n - 1.0);
     }
 
     kernel void divinePaperCut(
@@ -72,24 +81,27 @@ final class PaperCutVideoEffect: ShaderVideoEffect {
     ) {
       if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
       Frame f = frameOf(u);
-      float intensity = u[3].x;
+      float2 uSize = f.size;
+      float uIntensity = u[3].x;
+      float uLayers = u[3].y;
+      float uDepth = u[3].z;
       float2 p = pixelOf(u, gid, target.get_height());
-      float s = min(f.size.x, f.size.y);
+      float s = min(uSize.x, uSize.y);
       float e = max(1.5, s / 180.0);
-      float2 toLight = float2(-0.70710678, 0.70710678) * e;
+      float2 toLight = float2(-0.70710678, 0.70710678) * e * uDepth;
       float3 here = soft(frame, f, p, e);
-      float h = layer(here);
-      float near = layer(soft(frame, f, p + toLight, e));
-      float far = layer(soft(frame, f, p + 2.0 * toLight, e));
+      float h = layer(here, uLayers);
+      float near = layer(soft(frame, f, p + toLight, e), uLayers);
+      float far = layer(soft(frame, f, p + 2.0 * toLight, e), uLayers);
       float shadow = max(step(h + 0.5, near) * 0.7, step(h + 0.5, far) * 0.35);
       float lit = step(near + 0.5, h);
       float l = luma(here);
       float3 hue = (here - l) * 0.8;
-      float sheetLuma = 0.16 + 0.24 * h;
+      float sheetLuma = 0.16 + 0.72 * h / (uLayers - 1.0);
       float3 sheet = clamp(sheetLuma + hue * min(sheetLuma / max(l, 0.05), 1.5), 0.0, 1.0);
       float fibre = 0.97 + 0.03 * grain(floor(p / max(1.0, s / 540.0)));
       float3 paper = clamp(sheet * (1.0 - 0.4 * shadow) * (1.0 + 0.12 * lit) * fibre, 0.0, 1.0);
-      target.write(float4(mix(tap(frame, f, p), paper, intensity), 1.0), gid);
+      target.write(float4(mix(tap(frame, f, p), paper, uIntensity), 1.0), gid);
     }
     """
 }

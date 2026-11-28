@@ -7180,6 +7180,26 @@
   "@videoEditorEffectSpinBlur": {
     "description": "Name of a video effect: the picture streaks around its centre, as if the camera turned during the shot."
   },
+  "videoEditorEffectShockwave": "Shockwave",
+  "@videoEditorEffectShockwave": {
+    "description": "Name of a video effect for heavy music: on each hit a ring of pressure races from the centre to the edges, bending the picture like a lens, while the picture punches in and rattles."
+  },
+  "videoEditorEffectSubwoofer": "Subwoofer",
+  "@videoEditorEffectSubwoofer": {
+    "description": "Name of a video effect for heavy music, named after a bass loudspeaker: on each hit the middle of the picture bulges out like a speaker cone and springs back."
+  },
+  "videoEditorEffectPlasma": "Plasma",
+  "@videoEditorEffectPlasma": {
+    "description": "Name of a video effect for heavy music: on each hit a white-hot blast bursts in the middle and spreads as a glowing ring of liquid that bends the picture like water. It flashes."
+  },
+  "videoEditorEffectEnergyWave": "Energy Wave",
+  "@videoEditorEffectEnergyWave": {
+    "description": "Name of a video effect for heavy music: on each hit a red-hot blast bursts in the middle and spreads as a red ring crackling with arcs of energy. It flashes."
+  },
+  "videoEditorEffectSmokeBurst": "Smoke Burst",
+  "@videoEditorEffectSmokeBurst": {
+    "description": "Name of a video effect for heavy music: on each hit a billow of grey smoke bursts from the middle and is pushed out past the edges of the picture."
+  },
   "videoEditorEffectComic": "Comic",
   "@videoEditorEffectComic": {
     "description": "Name of a video effect: the picture looks like a printed comic book, with flat colours, halftone dots and ink outlines."
@@ -7440,10 +7460,6 @@
   "@videoEditorFilterCategoryTints": {
     "description": "Name of a group in the colour filter picker of the video editor: filters that lay one strong colour, such as red or blue, over the whole picture."
   },
-  "videoEditorDropsSettingsTitle": "Adjust drops",
-  "@videoEditorDropsSettingsTitle": {
-    "description": "Header of the expandable card in the video effects editor that holds the settings of the Drops effect."
-  },
   "videoEditorDropsCountLabel": "Number",
   "@videoEditorDropsCountLabel": {
     "description": "Slider label in the Drops effect settings: how many glass drops float over the video (1 to 5)."
@@ -7499,6 +7515,274 @@
   "videoEditorEffectsOnBeatNoSound": "Add music or turn a clip's sound on",
   "@videoEditorEffectsOnBeatNoSound": {
     "description": "Shown under the 'On the beat' switch when nothing in the video makes a sound: no music was added and every clip is muted."
+  },
+  "videoEditorEffectSettingsOpen": "Effect settings",
+  "@videoEditorEffectSettingsOpen": {
+    "description": "Label and tooltip of the button under the intensity slider of the video effects editor that shows the picked effect's settings in place of the effects picker."
+  },
+  "videoEditorEffectSettingsTitle": "{effect} settings",
+  "@videoEditorEffectSettingsTitle": {
+    "description": "Title over the settings of the picked video effect, which replace the effects picker; effect is the effect's name, for example Shockwave.",
+    "placeholders": {
+      "effect": {
+        "type": "String",
+        "example": "Shockwave"
+      }
+    }
+  },
+  "videoEditorEffectSeconds": "{seconds} s",
+  "@videoEditorEffectSeconds": {
+    "description": "A length of time in seconds next to a slider in a video effect's settings, for example 0.8 s. {seconds} is already formatted for the locale.",
+    "placeholders": {
+      "seconds": {
+        "type": "String",
+        "example": "0.8"
+      }
+    }
+  },
+  "videoEditorEffectHitDuration": "Duration",
+  "@videoEditorEffectHitDuration": {
+    "description": "Label of the slider that sets how long one hit of a video effect such as the shockwave lasts."
+  },
+  "videoEditorEffectHitRepeat": "Repeat",
+  "@videoEditorEffectHitRepeat": {
+    "description": "Label of the switch that makes a video effect such as the shockwave hit again and again, rather than once."
+  },
+  "videoEditorEffectHitOnce": "Once, where the effect starts on the timeline",
+  "@videoEditorEffectHitOnce": {
+    "description": "Line under the repeat switch while it is off: the effect hits once, at the start of its bar on the editor timeline."
+  },
+  "videoEditorEffectHitInterval": "Interval",
+  "@videoEditorEffectHitInterval": {
+    "description": "Label of the slider that sets how long it takes until a repeating video effect such as the shockwave hits again."
+  },
+  "videoEditorEffectLookTitle": "Look",
+  "@videoEditorEffectLookTitle": {
+    "description": "Title over the settings that change how a video effect looks, such as where a shockwave hits and how far it spreads, or how many drops there are and how large."
+  },
+  "videoEditorEffectHitHorizontal": "Horizontal position",
+  "@videoEditorEffectHitHorizontal": {
+    "description": "Label of the slider that moves where a video effect such as the shockwave hits from left to right."
+  },
+  "videoEditorEffectHitVertical": "Vertical position",
+  "@videoEditorEffectHitVertical": {
+    "description": "Label of the slider that moves where a video effect such as the shockwave hits from top to bottom."
+  },
+  "videoEditorEffectHitReach": "Reach",
+  "@videoEditorEffectHitReach": {
+    "description": "Label of the slider that sets how far a video effect such as the shockwave spreads across the picture."
+  },
+  "videoEditorEffectHitShake": "Shake",
+  "@videoEditorEffectHitShake": {
+    "description": "Label of the slider that sets how hard the picture rattles when a video effect such as the shockwave hits."
+  },
+  "videoEditorEffectHitPunch": "Zoom punch",
+  "@videoEditorEffectHitPunch": {
+    "description": "Label of the slider that sets how far the picture zooms in for a moment when a video effect such as the shockwave hits."
+  },
+  "videoEditorEffectLookReset": "Reset look",
+  "@videoEditorEffectLookReset": {
+    "description": "Button that puts the look settings of a video effect such as the shockwave back to their defaults."
+  },
+  "videoEditorEffectTimingTitle": "Timing",
+  "@videoEditorEffectTimingTitle": {
+    "description": "Title over the settings that change when and how often a video effect such as the shockwave hits: how long a hit lasts, whether it repeats and how often."
+  },
+  "videoEditorEffectTimingReset": "Reset timing",
+  "@videoEditorEffectTimingReset": {
+    "description": "Button under the timing settings of a video effect that puts them all back to their defaults."
+  },
+  "videoEditorEffectMotionTitle": "Movement",
+  "@videoEditorEffectMotionTitle": {
+    "description": "Title over the settings that change how a video effect moves, such as how fast a tunnel zooms and whether it zooms in or out."
+  },
+  "videoEditorEffectMotionReset": "Reset movement",
+  "@videoEditorEffectMotionReset": {
+    "description": "Button under the movement settings of a video effect that puts them all back to their defaults."
+  },
+  "videoEditorEffectSettingFocus": "Focus",
+  "@videoEditorEffectSettingFocus": {
+    "description": "Slider label in a video effect's settings: where the sharp band of the tilt-shift effect lies on the picture."
+  },
+  "videoEditorEffectSettingWidth": "Width",
+  "@videoEditorEffectSettingWidth": {
+    "description": "Slider label in a video effect's settings: how wide something in the effect is, such as the sharp band of tilt-shift or the ribs of fluted glass."
+  },
+  "videoEditorEffectSettingDirection": "Direction",
+  "@videoEditorEffectSettingDirection": {
+    "description": "Label over a row of options in a video effect's settings: which way the effect runs, turns or zooms."
+  },
+  "videoEditorEffectSettingHorizontal": "Horizontal",
+  "@videoEditorEffectSettingHorizontal": {
+    "description": "Option in a video effect's settings: the effect's band runs from side to side."
+  },
+  "videoEditorEffectSettingVertical": "Vertical",
+  "@videoEditorEffectSettingVertical": {
+    "description": "Option in a video effect's settings: the effect's band runs from top to bottom."
+  },
+  "videoEditorEffectSettingClockwise": "Clockwise",
+  "@videoEditorEffectSettingClockwise": {
+    "description": "Option in a video effect's settings: the swirl turns the picture clockwise."
+  },
+  "videoEditorEffectSettingAnticlockwise": "Counterclockwise",
+  "@videoEditorEffectSettingAnticlockwise": {
+    "description": "Option in a video effect's settings: the swirl turns the picture counterclockwise."
+  },
+  "videoEditorEffectSettingZoomIn": "Zoom in",
+  "@videoEditorEffectSettingZoomIn": {
+    "description": "Option in a video effect's settings: the tunnel zooms into its copies of the picture."
+  },
+  "videoEditorEffectSettingZoomOut": "Zoom out",
+  "@videoEditorEffectSettingZoomOut": {
+    "description": "Option in a video effect's settings: the tunnel zooms out of its copies of the picture."
+  },
+  "videoEditorEffectSettingSpacing": "Spacing",
+  "@videoEditorEffectSettingSpacing": {
+    "description": "Slider label in a video effect's settings: how far apart the ripple's rings are."
+  },
+  "videoEditorEffectSettingAngle": "Angle",
+  "@videoEditorEffectSettingAngle": {
+    "description": "Slider label in a video effect's settings: how far the fluted glass's ribs turn from upright, in degrees."
+  },
+  "videoEditorEffectSettingHue": "Hue",
+  "@videoEditorEffectSettingHue": {
+    "description": "Slider label in a video effect's settings: turns the colours of the effect's light around the colour wheel."
+  },
+  "videoEditorEffectSettingLength": "Length",
+  "@videoEditorEffectSettingLength": {
+    "description": "Slider label in a video effect's settings: how long the effect's rays or streaks of light are."
+  },
+  "videoEditorEffectSettingSensitivity": "Sensitivity",
+  "@videoEditorEffectSettingSensitivity": {
+    "description": "Slider label in a video effect's settings: how easily the effect reacts, for example how bright a light must be before it streaks."
+  },
+  "videoEditorEffectSettingPosition": "Position",
+  "@videoEditorEffectSettingPosition": {
+    "description": "Slider label in a video effect's settings: where on the picture the effect lies, such as the prism's rainbow."
+  },
+  "videoEditorEffectSettingWind": "Wind",
+  "@videoEditorEffectSettingWind": {
+    "description": "Slider label in a video effect's settings: how strongly the wind blows the falling particles sideways, left or right."
+  },
+  "videoEditorEffectSettingDotSize": "Dot size",
+  "@videoEditorEffectSettingDotSize": {
+    "description": "Slider label in a video effect's settings: how large the comic effect's printed dots are."
+  },
+  "videoEditorEffectSettingOutline": "Outline",
+  "@videoEditorEffectSettingOutline": {
+    "description": "Slider label in a video effect's settings: how strong or wide the drawn outlines are, such as the comic effect's ink or the lead between stained glass panes."
+  },
+  "videoEditorEffectSettingLevels": "Levels",
+  "@videoEditorEffectSettingLevels": {
+    "description": "Slider label in a video effect's settings: how many shades or colour steps the effect uses."
+  },
+  "videoEditorEffectSettingPixelSize": "Pixel size",
+  "@videoEditorEffectSettingPixelSize": {
+    "description": "Slider label in a video effect's settings: how large the 8-bit effect's pixels are."
+  },
+  "videoEditorEffectSettingOffset": "Offset",
+  "@videoEditorEffectSettingOffset": {
+    "description": "Slider label in a video effect's settings: how far the effect's colour layers are shifted apart, as in 3D glasses or a misprinted riso print."
+  },
+  "videoEditorEffectSettingBrushSize": "Brush size",
+  "@videoEditorEffectSettingBrushSize": {
+    "description": "Slider label in a video effect's settings: how large the painting effects' brush strokes are."
+  },
+  "videoEditorEffectSettingDensity": "Density",
+  "@videoEditorEffectSettingDensity": {
+    "description": "Slider label in a video effect's settings: how close together the effect's lines are, such as the pencil sketch's hatching."
+  },
+  "videoEditorEffectSettingGrain": "Grain",
+  "@videoEditorEffectSettingGrain": {
+    "description": "Slider label in a video effect's settings: how much grainy noise the effect adds, such as night vision's."
+  },
+  "videoEditorEffectSettingGrid": "Grid",
+  "@videoEditorEffectSettingGrid": {
+    "description": "Slider label in a video effect's settings: how many copies of the picture the pop art effect lines up along each side."
+  },
+  "videoEditorEffectSettingLayers": "Layers",
+  "@videoEditorEffectSettingLayers": {
+    "description": "Slider label in a video effect's settings: how many layers of paper the paper cut effect stacks."
+  },
+  "videoEditorEffectSettingShadow": "Shadow",
+  "@videoEditorEffectSettingShadow": {
+    "description": "Slider label in a video effect's settings: how deep the shadows between the paper cut effect's layers are."
+  },
+  "videoEditorEffectSettingFirstInk": "First ink",
+  "@videoEditorEffectSettingFirstInk": {
+    "description": "Label of a colour picker in the riso print effect's settings: the colour of the first of its two inks."
+  },
+  "videoEditorEffectSettingSecondInk": "Second ink",
+  "@videoEditorEffectSettingSecondInk": {
+    "description": "Label of a colour picker in the riso print effect's settings: the colour of the second of its two inks."
+  },
+  "videoEditorEffectSettingColors": "Colors",
+  "@videoEditorEffectSettingColors": {
+    "description": "Label over a row of options in a video effect's settings: whether the effect keeps the picture's own colours or draws in one colour."
+  },
+  "videoEditorEffectSettingOriginalColors": "Original",
+  "@videoEditorEffectSettingOriginalColors": {
+    "description": "Option in a video effect's settings: the effect keeps the picture's own colours."
+  },
+  "videoEditorEffectSettingSingleColor": "Single color",
+  "@videoEditorEffectSettingSingleColor": {
+    "description": "Option in a video effect's settings: the effect draws in one colour the user picks."
+  },
+  "videoEditorEffectSettingDelay": "Delay",
+  "@videoEditorEffectSettingDelay": {
+    "description": "Slider label in a video effect's settings: how far behind the present the earlier frames the effect shows lie, such as the time split's colour layers."
+  },
+  "videoEditorEffectSettingDown": "Down",
+  "@videoEditorEffectSettingDown": {
+    "description": "Option in a video effect's settings: going down the picture leads further back in time."
+  },
+  "videoEditorEffectSettingUp": "Up",
+  "@videoEditorEffectSettingUp": {
+    "description": "Option in a video effect's settings: going up the picture leads further back in time."
+  },
+  "videoEditorEffectSettingRight": "Right",
+  "@videoEditorEffectSettingRight": {
+    "description": "Option in a video effect's settings: going right across the picture leads further back in time."
+  },
+  "videoEditorEffectSettingLeft": "Left",
+  "@videoEditorEffectSettingLeft": {
+    "description": "Option in a video effect's settings: going left across the picture leads further back in time."
+  },
+  "videoEditorEffectSettingFrequency": "Frequency",
+  "@videoEditorEffectSettingFrequency": {
+    "description": "Slider label in a video effect's settings: how often the effect's bursts, such as a glitch's, come."
+  },
+  "videoEditorEffectSettingDistance": "Distance",
+  "@videoEditorEffectSettingDistance": {
+    "description": "Slider label in a video effect's settings: how far the picture or its colours jump, as in a glitch or a shake."
+  },
+  "videoEditorEffectSettingScanlines": "Scanlines",
+  "@videoEditorEffectSettingScanlines": {
+    "description": "Slider label in a video effect's settings: how strong the thin horizontal lines of an old screen or tape are."
+  },
+  "videoEditorEffectSettingGrainSize": "Grain size",
+  "@videoEditorEffectSettingGrainSize": {
+    "description": "Slider label in a video effect's settings: how coarse the effect's grain is."
+  },
+  "videoEditorEffectSettingSepia": "Sepia",
+  "@videoEditorEffectSettingSepia": {
+    "description": "Slider label in a video effect's settings: how brown and old the old film effect makes the picture look."
+  },
+  "videoEditorEffectSettingFlicker": "Flicker",
+  "@videoEditorEffectSettingFlicker": {
+    "description": "Slider label in a video effect's settings: how much the old film effect's brightness flickers."
+  },
+  "videoEditorEffectSettingVignette": "Vignette",
+  "@videoEditorEffectSettingVignette": {
+    "description": "Slider label in a video effect's settings: how dark the corners of the picture get."
+  },
+  "videoEditorEffectSettingTempo": "Tempo",
+  "@videoEditorEffectSettingTempo": {
+    "description": "Slider label in a video effect's settings: how often the effect's pulse or flash repeats."
+  },
+  "videoEditorEffectSettingWavelength": "Wavelength",
+  "@videoEditorEffectSettingWavelength": {
+    "description": "Slider label in a video effect's settings: how tall the wave effect's waves are."
   },
   "videoEditorEffectOnBeatLabel": "{effect} on the beat",
   "@videoEditorEffectOnBeatLabel": {

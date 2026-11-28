@@ -28,6 +28,12 @@ uniform vec2 uSize;
 // How far the picture turns into glass, 0 to 1.
 uniform float uIntensity;
 
+// How large the panes are, as a share of the default.
+uniform float uPane;
+
+// How wide the lead between them is, as a share of the default.
+uniform float uLead;
+
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -51,7 +57,7 @@ void main() {
   vec2 fragCoord = FlutterFragCoord().xy;
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
   float s = min(uSize.x, uSize.y);
-  float g = max(8.0, s / 16.0);
+  float g = max(8.0, s / 16.0 * uPane);
   vec2 q = p / g;
   vec2 cell = floor(q);
   vec2 inSquare = q - cell;
@@ -86,7 +92,7 @@ void main() {
   float tint = 0.9 + 0.2 * hash2(cell + best + 17.0).x;
   float shine = 1.15 - 0.35 * sqrt(nearest);
   vec3 glass = clamp(mix(vec3(luma(pane)), pane, 1.4) * tint * shine, 0.0, 1.0);
-  float lead = max(1.0, s / 400.0);
+  float lead = max(1.0, s / 400.0) * uLead;
   float edge = 1.0 - smoothstep(lead - 0.75, lead + 0.75, border * g);
   vec3 window = mix(glass, vec3(0.06, 0.06, 0.07), edge);
   fragColor = vec4(mix(color, window, uIntensity), 1.0);
