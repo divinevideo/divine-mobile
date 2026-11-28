@@ -244,6 +244,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       messageController: _messageController,
       isOwnContent: isOwnContent,
       onFindPeople: _handleFindPeople,
+      onRecipientToggled: _toggleRecipient,
       onAddToList: () => openAddToList(context, widget.video),
       onEditVideo: switch (_ownerVideoActionsCubit) {
         null => null,
@@ -436,8 +437,18 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     );
     _findingPeople = false;
     if (selectedUser != null && mounted) {
-      _shareSheetBloc.add(ShareSheetRecipientToggled(selectedUser));
+      _toggleRecipient(selectedUser);
     }
+  }
+
+  void _toggleRecipient(ShareableUser user) {
+    final state = _shareSheetBloc.state;
+    if (state.isSending || state.ownerExpired) return;
+    if (state.attemptedRecipients.length == 1 &&
+        state.attemptedRecipients.single.pubkey == user.pubkey) {
+      _messageController.clear();
+    }
+    _shareSheetBloc.add(ShareSheetRecipientToggled(user));
   }
 
   Future<void> _handleCrosspost() async {
@@ -526,6 +537,7 @@ class _UnifiedShareSheetView extends StatelessWidget {
     required this.messageController,
     required this.isOwnContent,
     required this.onFindPeople,
+    required this.onRecipientToggled,
     required this.onAddToList,
     required this.onSaveWithWatermark,
     required this.onCrosspostShown,
@@ -539,6 +551,7 @@ class _UnifiedShareSheetView extends StatelessWidget {
   final TextEditingController messageController;
   final bool isOwnContent;
   final VoidCallback onFindPeople;
+  final ValueChanged<ShareableUser> onRecipientToggled;
   final Future<void> Function() onAddToList;
   final Future<void> Function()? onEditVideo;
   final Future<void> Function()? onDeleteVideo;
@@ -581,14 +594,8 @@ class _UnifiedShareSheetView extends StatelessWidget {
                 final bloc = context.read<ShareSheetBloc>();
                 final tapSends =
                     !emailConfirmationRequired &&
-                    state.attemptedRecipients.isEmpty;
-                void toggleRecipient(ShareableUser user) {
-                  final deselectingLast =
-                      state.attemptedRecipients.length == 1 &&
-                      state.attemptedRecipients.single.pubkey == user.pubkey;
-                  if (deselectingLast) messageController.clear();
-                  bloc.add(ShareSheetRecipientToggled(user));
-                }
+                    state.attemptedRecipients.isEmpty &&
+                    messageController.text.isEmpty;
 
                 // Read from lasting fields, not the one-off actionResult that
                 // a background contact refresh clears.
@@ -625,8 +632,8 @@ class _UnifiedShareSheetView extends StatelessWidget {
                       // deselected.
                       onContactTapped: (user) => tapSends
                           ? bloc.add(ShareSheetSendRequested(only: user))
-                          : toggleRecipient(user),
-                      onContactLongPressed: toggleRecipient,
+                          : onRecipientToggled(user),
+                      onContactLongPressed: onRecipientToggled,
                     ),
                     if (error != null)
                       Padding(
@@ -666,7 +673,7 @@ class _UnifiedShareSheetView extends StatelessWidget {
                                 ),
                                 onDeleted: state.isSending
                                     ? null
-                                    : () => toggleRecipient(user),
+                                    : () => onRecipientToggled(user),
                               ),
                           ],
                         ),

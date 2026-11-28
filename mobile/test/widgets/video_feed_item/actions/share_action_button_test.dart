@@ -2051,6 +2051,40 @@ void main() {
         }
 
         testWidgets(
+          'removing the last recipient in Find people drops the draft',
+          (
+            tester,
+          ) async {
+            await pumpOpenSheet(tester);
+
+            final contact = find.text('Alice').first;
+            await tester.longPress(contact);
+            await tester.pumpAndSettle();
+            await tester.enterText(find.byType(TextField), 'draft text');
+
+            await tester.tap(find.text(l10n.shareFindPeopleMultiline));
+            await tester.pumpAndSettle();
+            await tester.tap(
+              find.descendant(
+                of: find.byType(FindPeopleSheet),
+                matching: find.text('Alice'),
+              ),
+            );
+            await tester.pumpAndSettle();
+
+            expect(find.byType(TextField), findsNothing);
+            expect(find.text('More actions'), findsOneWidget);
+
+            await tester.longPress(contact);
+            await tester.pumpAndSettle();
+            expect(
+              tester.widget<TextField>(find.byType(TextField)).controller!.text,
+              isEmpty,
+            );
+          },
+        );
+
+        testWidgets(
           'tapping more contacts adds them to the selection and keeps '
           'the draft',
           (tester) async {
