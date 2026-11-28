@@ -46,6 +46,9 @@ final findPeopleRepositoryProvider = Provider<FindPeopleRepository>((ref) {
     ),
   );
   final auth = ref.watch(authServiceProvider);
+  // Reload suggestions when remote signing capability comes online (e.g. cold
+  // start with a Keycast account) so surfaces upgrade from public fallback.
+  ref.watch(currentAuthRpcCapabilityProvider);
   final follows = ref.watch(followRepositoryProvider);
   final blocklist = ref.watch(contentBlocklistRepositoryProvider);
   final engine = ref.watch(contentPolicyEngineProvider);

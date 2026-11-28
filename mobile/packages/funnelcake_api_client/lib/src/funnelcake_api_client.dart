@@ -175,9 +175,9 @@ class FunnelcakeApiClient {
   /// therefore unchanged by retrying — which matters because callers await
   /// this inline (the login pre-fetch blocks the post-auth redirect on it),
   /// and a per-attempt bound would have multiplied that stall by
-  /// [maxGetAttempts]. Domain-specific authoritative refusals may use
-  /// [_retryRead] directly to bypass retries. The trade is that a request
-  /// which burns the entire
+  /// [maxGetAttempts]. Domain-specific authoritative refusals may pass
+  /// `terminalStatusCodes` to [_retryRead] to bypass retries. The trade is
+  /// that a request which burns the entire
   /// budget in one attempt is not retried; the fast failures a flaky link
   /// actually produces — reset sockets, refused connections, 5xx — leave
   /// almost the whole budget intact and still get every attempt.
@@ -228,9 +228,12 @@ class FunnelcakeApiClient {
         if (e.duration != null) rethrow;
         if (!_canRetry(attempt, remaining())) rethrow;
         await _awaitRetryDelay(attempt, remaining());
+      } on FunnelcakeException {
+        // Domain or retirement errors (such as a retired account request) are
+        // terminal and must abort immediately rather than consume retry budget.
+        rethrow;
       } on Object {
-        // Nothing above constructs a FunnelcakeException, so any throw here
-        // is transport-level and worth another attempt.
+        // Any remaining throw is transport-level and worth another attempt.
         if (!_canRetry(attempt, remaining())) rethrow;
         await _awaitRetryDelay(attempt, remaining());
       }
@@ -1337,8 +1340,12 @@ class FunnelcakeApiClient {
           }
 
           requireCurrent();
-          final headers = await requestHeaders?.call(uri);
-          requireCurrent();
+          final Map<String, String>? headers;
+          try {
+            headers = await requestHeaders?.call(uri);
+          } finally {
+            requireCurrent();
+          }
           return _httpClient.get(
             uri,
             headers: {

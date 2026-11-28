@@ -45,13 +45,19 @@ class FindPeopleRepository {
     bool Function(String)? isFollowing,
     this.contentSafety = 'default',
     Future<Map<String, String>> Function(Uri)? requestHeaders,
+    Duration signerTimeout = defaultSignerTimeout,
   }) : _apiClient = apiClient,
        _currentPubkey = currentPubkey,
        _requestHeaders = requestHeaders,
+       _signerTimeout = signerTimeout,
        _isExcluded = isExcluded,
        _isFollowing = isFollowing ?? ((_) => false),
        _writeDismissed = writeDismissed,
        _dismissed = readDismissed().toSet();
+
+  /// Bounds passive signing so a hung remote signer falls back to public
+  /// suggestions well inside the API client's request timeout budget.
+  static const defaultSignerTimeout = Duration(seconds: 3);
 
   final FunnelcakeApiClient _apiClient;
 
@@ -62,6 +68,7 @@ class FindPeopleRepository {
   final String contentSafety;
   final String? Function() _currentPubkey;
   final Future<Map<String, String>> Function(Uri)? _requestHeaders;
+  final Duration _signerTimeout;
   final bool Function(String) _isExcluded;
   final bool Function(String) _isFollowing;
   final Future<void> Function(List<String>) _writeDismissed;
@@ -156,12 +163,16 @@ class FindPeopleRepository {
     );
   }
 
-  // Signer unavailability is a safe public-ranking fallback. Retirement is
-  // different: no retry may sign or send this owner's request after a switch.
+  // Signer unavailability or timeout is a safe public-ranking fallback.
+  // Retirement is different: no retry may sign or send this owner's request
+  // after a switch.
   Future<Map<String, String>> _headersForRequest(Uri uri) async {
     _requireCurrentAccount();
+    final requestHeaders = _requestHeaders;
+    if (requestHeaders == null) return const {};
     try {
-      return await _requestHeaders?.call(uri) ?? const {};
+      final pending = requestHeaders(uri)..ignore();
+      return await pending.timeout(_signerTimeout);
     } on Object {
       return const {};
     } finally {

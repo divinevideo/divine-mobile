@@ -3,9 +3,19 @@
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Account-scoped local dismissal preference store backed by
+/// [SharedPreferences].
+///
+/// Retention policy: capped at [maxEntries] pubkeys per account, keeping the
+/// most recently dismissed entries (evicting oldest entries first in
+/// [FindPeopleDismissalStore.write]). Account keys are also deleted on account
+/// removal/erasure via `UserDataCleanupService` using [storagePrefix].
 class FindPeopleDismissalStore {
   const FindPeopleDismissalStore(this._preferences);
   final SharedPreferences _preferences;
+
+  /// Maximum dismissed pubkeys retained per account (~12.8 KB worst case).
+  static const maxEntries = 200;
 
   static const storagePrefix = 'find_people_dismissed_v1:';
   static String storageKey(String owner) => '$storagePrefix$owner';
@@ -16,8 +26,9 @@ class FindPeopleDismissalStore {
   Future<void> write(String owner, List<String> pubkeys) async {
     final key = storageKey(owner);
     final previous = _preferences.getStringList(key);
+    final capped = _applyRetentionCap(pubkeys);
     try {
-      if (!await _preferences.setStringList(key, pubkeys)) {
+      if (!await _preferences.setStringList(key, capped)) {
         throw StateError('Unable to save dismissed suggestions');
       }
     } on Object {
@@ -37,5 +48,17 @@ class FindPeopleDismissalStore {
       }
       rethrow;
     }
+  }
+
+  /// Deduplicates while keeping the most recent [maxEntries] entries.
+  static List<String> _applyRetentionCap(List<String> pubkeys) {
+    final ordered = <String>{};
+    for (final key in pubkeys) {
+      ordered
+        ..remove(key)
+        ..add(key);
+    }
+    if (ordered.length <= maxEntries) return ordered.toList();
+    return ordered.skip(ordered.length - maxEntries).toList();
   }
 }

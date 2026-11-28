@@ -57,22 +57,45 @@ class FollowSuggestion {
   });
 
   factory FollowSuggestion.fromJson(Map<String, dynamic> json) {
-    final pubkey = json['pubkey'] as String;
-    if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(pubkey)) {
+    final parsed = tryParse(json);
+    if (parsed == null) {
       throw const FormatException('Invalid suggestion public key');
     }
-    return FollowSuggestion(
-      pubkey: pubkey,
-      profile: UserProfileData.fromJson(
-        pubkey,
-        json['profile'] as Map<String, dynamic>? ?? {},
-      ),
-      reason: json['reason'] as String? ?? 'popular',
-      isClassic: json['is_classic'] == true,
-      videoPreview: FollowSuggestionVideoPreview.tryParse(
-        json['video_preview'],
-      ),
-    );
+    return parsed;
+  }
+
+  /// Parses a suggestion row, returning null instead of throwing on malformed
+  /// rows so a single bad entry never fails an entire recommendations page.
+  static FollowSuggestion? tryParse(Object? value) {
+    if (value is! Map<String, dynamic>) return null;
+    final pubkey = value['pubkey'];
+    if (pubkey is! String || !RegExp(r'^[0-9a-f]{64}$').hasMatch(pubkey)) {
+      return null;
+    }
+    final rawProfile = value['profile'];
+    if (rawProfile != null && rawProfile is! Map<String, dynamic>) {
+      return null;
+    }
+    final rawReason = value['reason'];
+    final reason = rawReason is String && rawReason.isNotEmpty
+        ? rawReason
+        : 'popular';
+    try {
+      return FollowSuggestion(
+        pubkey: pubkey,
+        profile: UserProfileData.fromJson(
+          pubkey,
+          rawProfile as Map<String, dynamic>? ?? const {},
+        ),
+        reason: reason,
+        isClassic: value['is_classic'] == true,
+        videoPreview: FollowSuggestionVideoPreview.tryParse(
+          value['video_preview'],
+        ),
+      );
+    } on Object {
+      return null;
+    }
   }
 
   final String pubkey;
@@ -93,9 +116,9 @@ class FollowSuggestionsPage {
   factory FollowSuggestionsPage.fromJson(Map<String, dynamic> json) =>
       FollowSuggestionsPage(
         suggestions: List.unmodifiable(
-          (json['suggestions'] as List<dynamic>).map(
-            (row) => FollowSuggestion.fromJson(row as Map<String, dynamic>),
-          ),
+          (json['suggestions'] as List<dynamic>)
+              .map(FollowSuggestion.tryParse)
+              .whereType<FollowSuggestion>(),
         ),
         nextCursor: json['next_cursor'] as String?,
       );
