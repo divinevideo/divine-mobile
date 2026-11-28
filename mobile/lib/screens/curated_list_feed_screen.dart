@@ -815,6 +815,7 @@ class _ListBody extends ConsumerWidget {
       );
     }
 
+    final episodeNumberOf = series == null ? null : _episodeNumberOf;
     final cubit = manageCubit;
     if (cubit != null && videos != null) {
       return BlocSelector<
@@ -836,6 +837,7 @@ class _ListBody extends ConsumerWidget {
             topOuterRadius: VineTheme.shellInnerCornerRadius,
             backgroundColor: context.vineColors.surfaceContainerHigh,
             selectedVideoIds: selectedVideoIds,
+            episodeNumberOf: episodeNumberOf,
             onVideoTap: (videoList, index, _) => cubit.togglePost(
               videoList[index].id,
               videoAddress: videoList[index].addressableId,
@@ -857,7 +859,7 @@ class _ListBody extends ConsumerWidget {
         topOuterRadius: VineTheme.shellInnerCornerRadius,
         backgroundColor: context.vineColors.surfaceContainerHigh,
         headerSlivers: [SliverToBoxAdapter(child: header)],
-        episodeNumberOf: series == null ? null : _episodeNumberOf,
+        episodeNumberOf: episodeNumberOf,
         onVideoTap: (videoList, index, _) => onVideoTap(videoList, index),
         onRefresh: () async => onRefresh(),
         emptyBuilder: () {

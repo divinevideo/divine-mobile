@@ -1869,6 +1869,37 @@ void main() {
         expect(find.byType(ComposableVideoGrid), findsOneWidget);
         expect(episodeBadges(), findsNothing);
       });
+
+      testWidgets('keeps episode numbers while managing posts', (
+        tester,
+      ) async {
+        final series = roadTrip(isSeries: true).copyWith(id: 'owned-list');
+        stubOwnedList();
+        when(() => mockService.getListById(series.id)).thenReturn(series);
+
+        await tester.pumpWidget(
+          buildSubject(
+            listId: series.id,
+            videoEvents: [part(1), part(3)],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final third = find.text(l10n.videoSeriesEpisodeBadge('3'));
+        expect(third, findsOneWidget);
+
+        await tester.tap(manageVideosButton());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listRemoveVideosButton(0)), findsOneWidget);
+        expect(third, findsOneWidget);
+
+        await tester.tap(third);
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.listRemoveVideosButton(1)), findsOneWidget);
+        expect(third, findsOneWidget);
+      });
     });
 
     group('grid viewport', () {
