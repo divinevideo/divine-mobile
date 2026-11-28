@@ -279,13 +279,14 @@ void main() {
 
         // Assert
         expect(result.success, isTrue);
-        // URL is now constructed client-side: {defaultBlossomServer}/{sha256}
-        // per Blossom spec (BUD-01), regardless of server response URL
+        // URL is constructed client-side as {server}/{sha256} per Blossom spec
+        // (BUD-01) on the server that stored the blob, regardless of the
+        // server response URL.
         const expectedHash =
             '74f81fe167d99b4cb41d6d0ccda82278caee9f3e2f25d5e5a3936ff3dcec60d0';
         expect(
           result.cdnUrl,
-          equals('https://media.divine.video/$expectedHash'),
+          equals('https://cdn.satellite.earth/$expectedHash'),
         );
         expect(result.videoId, equals(expectedHash));
       });
@@ -4763,6 +4764,152 @@ void main() {
         ).called(1);
 
         await tempDir.delete(recursive: true);
+      });
+    });
+
+    group('blob URL on a custom server', () {
+      const customServer = 'https://blossom.example.com';
+      late _MockDio mockDio;
+
+      setUp(() async {
+        mockDio = _MockDio();
+        service = BlossomUploadService(
+          authProvider: mockAuthProvider,
+          dio: mockDio,
+        );
+        await service.setBlossomEnabled(true);
+        await service.setBlossomServer(customServer);
+
+        when(() => mockAuthProvider.isAuthenticated).thenReturn(true);
+        when(
+          () => mockAuthProvider.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer(
+          (_) async => _signedEvent(_testPublicKey, 24242, const [], 'upload'),
+        );
+        // No resumable extension advertised, so every upload is one PUT.
+        when(
+          () => mockDio.head<dynamic>(any(), options: any(named: 'options')),
+        ).thenAnswer(
+          (_) async => Response(
+            requestOptions: RequestOptions(path: '/upload'),
+            statusCode: 200,
+            headers: Headers(),
+          ),
+        );
+        when(
+          () => mockDio.put<dynamic>(
+            any(),
+            data: any(named: 'data'),
+            options: any(named: 'options'),
+            onSendProgress: any(named: 'onSendProgress'),
+          ),
+        ).thenAnswer(
+          (_) async => Response(
+            requestOptions: RequestOptions(path: '/upload'),
+            statusCode: 200,
+            data: {'url': '$customServer/response.bin'},
+          ),
+        );
+      });
+
+      void expectBlobOnServer(BlossomUploadResult result, String server) {
+        expect(result.success, isTrue);
+        final hash = result.videoId;
+        expect(hash, hasLength(64));
+        expect(result.url, equals('$server/$hash'));
+        expect(result.fallbackUrl, equals('$server/$hash'));
+      }
+
+      void verifyPutTo(String uploadUrl) {
+        verify(
+          () => mockDio.put<dynamic>(
+            uploadUrl,
+            data: any(named: 'data'),
+            options: any(named: 'options'),
+            onSendProgress: any(named: 'onSendProgress'),
+          ),
+        ).called(1);
+      }
+
+      File createTempFile(String name, List<int> bytes) {
+        final directory = Directory.systemTemp.createTempSync('custom_blob_');
+        addTearDown(() => directory.delete(recursive: true));
+        return File('${directory.path}/$name')..writeAsBytesSync(bytes);
+      }
+
+      test('uploadImageBytes returns the URL on the server that stored '
+          'the image', () async {
+        final result = await service.uploadImageBytes(
+          bytes: Uint8List.fromList(
+            img.encodeJpg(img.Image(width: 2, height: 2)),
+          ),
+          nostrPubkey: _testPublicKey,
+        );
+
+        verifyPutTo('$customServer/upload');
+        expectBlobOnServer(result, customServer);
+      });
+
+      test('drops a trailing slash from the saved server', () async {
+        await service.setBlossomServer('$customServer/');
+
+        final result = await service.uploadImageBytes(
+          bytes: Uint8List.fromList(
+            img.encodeJpg(img.Image(width: 2, height: 2)),
+          ),
+          nostrPubkey: _testPublicKey,
+        );
+
+        expectBlobOnServer(result, customServer);
+      });
+
+      test('uploadVideo returns the URL on the server that stored '
+          'the video', () async {
+        final result = await service.uploadVideo(
+          videoFile: createTempFile('video.mp4', [1, 2, 3]),
+          nostrPubkey: _testPublicKey,
+          title: 'test',
+          description: null,
+          hashtags: null,
+          proofManifestJson: null,
+        );
+
+        verifyPutTo('$customServer/upload');
+        expectBlobOnServer(result, customServer);
+      });
+
+      test('uploadAudio returns the URL on the server that stored '
+          'the audio', () async {
+        final result = await service.uploadAudio(
+          audioFile: createTempFile('audio.aac', [4, 5, 6]),
+        );
+
+        verifyPutTo('$customServer/upload');
+        expectBlobOnServer(result, customServer);
+      });
+
+      test('uploadSubtitleVtt returns the URL on the server that stored '
+          'the subtitles', () async {
+        final result = await service.uploadSubtitleVtt(
+          bytes: Uint8List.fromList(utf8.encode('WEBVTT\n')),
+        );
+
+        verifyPutTo('$customServer/upload');
+        expectBlobOnServer(result, customServer);
+      });
+
+      test('uploadEncryptedFile returns the URL on the server that stored '
+          'the file', () async {
+        final result = await service.uploadEncryptedFile(
+          ciphertextFile: createTempFile('ciphertext', [7, 8, 9]),
+        );
+
+        verifyPutTo('$customServer/upload');
+        expectBlobOnServer(result, customServer);
       });
     });
 
