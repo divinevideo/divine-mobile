@@ -2206,9 +2206,20 @@ void main() {
             },
           );
 
-          testWidgets('Find people opens the composer from the keyboard', (
+          testWidgets('shares with a message using the keyboard', (
             tester,
           ) async {
+            when(
+              () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                video: any(named: 'video'),
+                recipientPubkeys: any(named: 'recipientPubkeys'),
+                personalMessage: any(named: 'personalMessage'),
+              ),
+            ).thenAnswer(
+              (_) async => {
+                alice.pubkey: const ShareResult.queued('rumor-a', 'chat-a'),
+              },
+            );
             await pumpOpenSheet(tester);
 
             await tabTo(
@@ -2241,6 +2252,25 @@ void main() {
                 personalMessage: any(named: 'personalMessage'),
               ),
             );
+
+            await tester.enterText(find.byType(TextField), 'For you');
+            await tabTo(
+              tester,
+              (widget) =>
+                  widget is Semantics &&
+                  widget.properties.label == l10n.dmMessageSendLabel,
+            );
+            await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+            await tester.pumpAndSettle();
+
+            verify(
+              () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                video: any(named: 'video'),
+                recipientPubkeys: [alice.pubkey],
+                personalMessage: 'For you',
+              ),
+            ).called(1);
+            expect(find.text(l10n.shareWithTitle), findsNothing);
           });
 
           testWidgets('announces which recipient a tap sends to and that a '
