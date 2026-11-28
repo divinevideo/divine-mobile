@@ -9,4 +9,9 @@ export 'src/curated_list_draft_reconciler.dart';
 export 'src/curated_list_publish_clock.dart';
 export 'src/curated_list_repository.dart';
 export 'src/curated_list_search_result.dart';
+export 'src/curated_list_thumbnail_resolver.dart'
+    show
+        kListThumbnailFreshRelayReadTimeout,
+        kListThumbnailRelayReadTimeout,
+        kMaxFiltersPerRelayRequest;
 export 'src/curated_list_video.dart';

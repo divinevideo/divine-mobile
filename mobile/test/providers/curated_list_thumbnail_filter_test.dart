@@ -5,6 +5,8 @@ import 'dart:async';
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
+import 'package:curated_list_repository/curated_list_repository.dart'
+    show kListThumbnailRelayReadTimeout;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
@@ -156,30 +158,39 @@ class _Fixture {
       final pending = fixture.pending;
       return pending?.future ?? Future.value(relay ? null : fixture.stats);
     });
+    final relayVideo = Event.fromJson({
+      'id': _event,
+      'pubkey': _author,
+      'created_at': 1770000000,
+      'kind': 34236,
+      'tags': [
+        ['d', 'video'],
+        ['url', 'https://example.com/video.mp4'],
+        ['thumb', _thumbnail],
+        if (squareOnly) ['dim', '720x1280'],
+        for (final label in relayLabels ?? labels)
+          ['l', label, 'content-warning'],
+      ],
+      'content': '',
+      'sig': '',
+    });
     when(
       () => client.queryEvents(any(), timeout: any(named: 'timeout')),
     ).thenAnswer((i) async {
       final filters = i.positionalArguments.first as List<Filter>;
       if (filters.any((f) => f.kinds?.contains(30005) ?? false)) return [];
-      return [
-        Event.fromJson({
-          'id': _event,
-          'pubkey': _author,
-          'created_at': 1770000000,
-          'kind': 34236,
-          'tags': [
-            ['d', 'video'],
-            ['url', 'https://example.com/video.mp4'],
-            ['thumb', _thumbnail],
-            if (squareOnly) ['dim', '720x1280'],
-            for (final label in relayLabels ?? labels)
-              ['l', label, 'content-warning'],
-          ],
-          'content': '',
-          'sig': '',
-        }),
-      ];
+      return [relayVideo];
     });
+    // The list cards' thumbnail read.
+    when(
+      () => client.queryEventsDetailed(
+        any(),
+        timeout: kListThumbnailRelayReadTimeout,
+        requireAllRelaysSettled: true,
+      ),
+    ).thenAnswer(
+      (_) async => (events: [relayVideo], timedOut: false, noRelays: false),
+    );
     final videoService =
         VideoEventService(
             client,
