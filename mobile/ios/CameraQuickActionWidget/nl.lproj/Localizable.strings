@@ -1,3 +1,6 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Divine-camera openen";
 "divine_quick_actions_camera_widget_description" = "Opent de Divine-camera rechtstreeks vanaf het startscherm.";
+"divine_camera_intent_title" = "Divine-camera openen";
+"divine_camera_intent_description" = "Opent de Divine-camera, klaar om op te nemen.";
+"divine_camera_name" = "Divine-camera";

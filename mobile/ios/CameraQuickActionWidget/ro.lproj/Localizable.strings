@@ -1,3 +1,6 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Deschide camera Divine";
 "divine_quick_actions_camera_widget_description" = "Deschide camera Divine direct de pe ecranul principal.";
+"divine_camera_intent_title" = "Deschide camera Divine";
+"divine_camera_intent_description" = "Deschide camera Divine, gata de filmare.";
+"divine_camera_name" = "Camera Divine";

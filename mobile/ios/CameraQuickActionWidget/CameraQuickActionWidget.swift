@@ -1,7 +1,6 @@
 import SwiftUI
 import WidgetKit
 
-private let cameraQuickActionURL = URL(string: "divine://quick-action/camera")!
 private let divineGreen = Color(red: 39 / 255, green: 197 / 255, blue: 139 / 255)
 private let divineDeepGreen = Color(red: 0, green: 21 / 255, blue: 13 / 255)
 
@@ -45,7 +44,7 @@ struct CameraQuickActionWidgetView: View {
     }
 
     private var systemSmallBody: some View {
-        Link(destination: cameraQuickActionURL) {
+        Link(destination: divineCameraQuickActionURL) {
             VStack(spacing: 10) {
                 Image(systemName: "camera.fill")
                     .font(.system(size: 44, weight: .semibold))
@@ -73,7 +72,7 @@ struct CameraQuickActionWidgetView: View {
                 .font(.system(size: 22, weight: .semibold))
                 .widgetAccentable()
         }
-        .widgetURL(cameraQuickActionURL)
+        .widgetURL(divineCameraQuickActionURL)
         .accessibilityLabel(Text("divine_quick_actions_camera_widget_open_camera"))
     }
 }
@@ -91,12 +90,32 @@ struct CameraQuickActionWidget: Widget {
     }
 }
 
+/// A Control Center control that opens the camera. The Action Button lists
+/// it under Controls, and it can replace a Lock Screen button.
+@available(iOSApplicationExtension 18.0, *)
+struct CameraQuickActionControl: ControlWidget {
+    let kind = "CameraQuickActionControl"
+
+    var body: some ControlWidgetConfiguration {
+        StaticControlConfiguration(kind: kind) {
+            ControlWidgetButton(action: OpenDivineCameraIntent()) {
+                Label("divine_camera_name", systemImage: "camera.fill")
+            }
+        }
+        .displayName("divine_camera_name")
+        .description("divine_camera_intent_description")
+    }
+}
+
 @main
 struct DivineWidgets: WidgetBundle {
     var body: some Widget {
         CameraQuickActionWidget()
         if #available(iOSApplicationExtension 16.2, *) {
             RecorderLiveActivity()
+        }
+        if #available(iOSApplicationExtension 18.0, *) {
+            CameraQuickActionControl()
         }
     }
 }

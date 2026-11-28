@@ -1,3 +1,6 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Ouvrir l'appareil photo Divine";
 "divine_quick_actions_camera_widget_description" = "Ouvre l'appareil photo Divine directement depuis l'écran d'accueil.";
+"divine_camera_intent_title" = "Ouvrir l'appareil photo Divine";
+"divine_camera_intent_description" = "Ouvre l'appareil photo Divine, prêt à filmer.";
+"divine_camera_name" = "Appareil photo Divine";

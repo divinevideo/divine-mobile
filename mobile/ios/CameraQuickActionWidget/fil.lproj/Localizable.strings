@@ -1,3 +1,6 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Buksan ang Divine camera";
 "divine_quick_actions_camera_widget_description" = "Nagbubukas ng Divine camera nang direkta mula sa home screen.";
+"divine_camera_intent_title" = "Buksan ang Divine camera";
+"divine_camera_intent_description" = "Binubuksan ang Divine camera, handa nang mag-record.";
+"divine_camera_name" = "Divine camera";
