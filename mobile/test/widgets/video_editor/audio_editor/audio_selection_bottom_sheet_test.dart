@@ -1935,6 +1935,31 @@ void main() {
         handle.dispose();
       });
 
+      testWidgets("finds Popular's sounds on For you while For you's covers "
+          'are still loading', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            forYouCovers: Completer(),
+            popularSounds: (
+              sounds: [
+                _createTestAudioEvent(id: 'popular-1', title: 'Wednesday beat'),
+              ],
+              usageCounts: const <String, int>{},
+            ),
+          ),
+        );
+        await tester.pump();
+
+        await tester.enterText(find.byType(TextField).first, 'wednes');
+        // Not settled: For you's list waits on the covers, and its loading
+        // indicator keeps animating.
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump();
+
+        expect(find.text('Wednesday beat'), findsOneWidget);
+      });
+
       testWidgets("filters Popular's sounds on For you, not its own", (
         tester,
       ) async {

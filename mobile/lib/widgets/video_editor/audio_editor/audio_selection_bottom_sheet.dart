@@ -1112,7 +1112,13 @@ class _AudioSelectionBottomSheetState
     final newestCoverList = kind == null
         ? trendingSoundCoversProvider
         : soundsOfKindCoversProvider(kind, SoundListOfKind.newest);
-    final openCovers = switch (_category) {
+    // The list the open tab shows: For you shows Popular's while a query is
+    // typed, so a search there does not wait on For you's own covers.
+    final shownList =
+        _category == AudioCategory.forYou && _searchQuery.isNotEmpty
+        ? AudioCategory.popular
+        : _category;
+    final openCovers = switch (shownList) {
       AudioCategory.forYou => settled(ref.watch(forYouCoverList)),
       AudioCategory.popular => settled(ref.watch(popularCoverList)),
       AudioCategory.newest => settled(ref.watch(newestCoverList)),
@@ -1120,7 +1126,7 @@ class _AudioSelectionBottomSheetState
       AudioCategory.mySounds => const <String, SoundCover?>{},
     };
     bool loads(AudioCategory category) =>
-        category == _category || openCovers != null;
+        category == shownList || openCovers != null;
     final forYouAsync = loads(.forYou)
         ? ref.watch(forYouList)
         : const AsyncLoading<PagedSounds>();
