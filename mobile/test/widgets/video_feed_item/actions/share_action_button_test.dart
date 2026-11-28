@@ -1857,6 +1857,13 @@ void main() {
             await tester.pumpAndSettle();
 
             expect(
+              find.descendant(
+                of: find.byType(InputChip),
+                matching: find.text('Alice'),
+              ),
+              findsOneWidget,
+            );
+            expect(
               find.text(l10n.emailConfirmationSendBlocked),
               findsOneWidget,
             );
@@ -1958,16 +1965,21 @@ void main() {
             await tester.tap(contact, warnIfMissed: false);
             await tester.tap(find.text('Bob').first, warnIfMissed: false);
             await tester.pump();
-            verify(
-              () => mockVideoSharingService.shareVideoWithMultipleUsers(
-                video: any(named: 'video'),
-                recipientPubkeys: [alice.pubkey],
-              ),
-            ).called(1);
             pending.complete({
               alice.pubkey: const ShareResult.failure(ShareRefusal.blocked),
             });
             await tester.pumpAndSettle();
+
+            final recipients = verify(
+              () => mockVideoSharingService.shareVideoWithMultipleUsers(
+                video: any(named: 'video'),
+                recipientPubkeys: captureAny(named: 'recipientPubkeys'),
+                personalMessage: any(named: 'personalMessage'),
+              ),
+            ).captured;
+            expect(recipients, [
+              [alice.pubkey],
+            ]);
             expect(find.byType(TextField), findsOneWidget);
           },
         );
