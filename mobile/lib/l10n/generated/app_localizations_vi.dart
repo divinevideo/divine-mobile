@@ -7580,7 +7580,7 @@ class AppLocalizationsVi extends AppLocalizations {
       'Quay lại sau để xem nội dung mới nhé';
 
   @override
-  String get newVideosTabEmptyTitle => 'Chưa có video trong Video mới';
+  String get newDivinersTabEmptyTitle => 'Chưa có video trong Diviners mới';
 
   @override
   String get latestVideosTabEmptyTitle => 'Chưa có video trong Mới nhất';

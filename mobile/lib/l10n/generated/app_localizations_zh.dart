@@ -7178,7 +7178,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get newVideosTabEmptySubtitle => '过会儿再来看看新内容';
 
   @override
-  String get newVideosTabEmptyTitle => '“新视频”里还没有内容';
+  String get newDivinersTabEmptyTitle => '“新 Diviners”里还没有内容';
 
   @override
   String get latestVideosTabEmptyTitle => '“最近”里还没有内容';

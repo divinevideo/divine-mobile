@@ -7618,7 +7618,7 @@ class AppLocalizationsSv extends AppLocalizations {
       'Kom tillbaka senare för nytt innehåll';
 
   @override
-  String get newVideosTabEmptyTitle => 'Inga videor i Nya videor';
+  String get newDivinersTabEmptyTitle => 'Inga videor i Nya Diviners';
 
   @override
   String get latestVideosTabEmptyTitle => 'Inga videor i Senaste';

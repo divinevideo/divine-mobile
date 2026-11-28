@@ -7255,7 +7255,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get newVideosTabEmptySubtitle => '새 콘텐츠를 나중에 다시 확인해보세요';
 
   @override
-  String get newVideosTabEmptyTitle => '새 영상에 영상이 없어요';
+  String get newDivinersTabEmptyTitle => '새 Diviners에 영상이 없어요';
 
   @override
   String get latestVideosTabEmptyTitle => '최신에 영상이 없어요';

@@ -7809,7 +7809,7 @@ class AppLocalizationsRo extends AppLocalizations {
       'Revino mai târziu pentru conținut nou';
 
   @override
-  String get newVideosTabEmptyTitle => 'Niciun videoclip în Videoclipuri noi';
+  String get newDivinersTabEmptyTitle => 'Niciun videoclip în Diviners noi';
 
   @override
   String get latestVideosTabEmptyTitle => 'Niciun videoclip în Recente';

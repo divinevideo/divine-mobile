@@ -7672,7 +7672,7 @@ class AppLocalizationsFil extends AppLocalizations {
       'Bumalik ka mamaya para sa bagong content';
 
   @override
-  String get newVideosTabEmptyTitle => 'Walang video sa New Videos';
+  String get newDivinersTabEmptyTitle => 'Walang video sa Bagong Diviners';
 
   @override
   String get latestVideosTabEmptyTitle => 'Walang video sa Pinakabago';

@@ -12871,11 +12871,11 @@ abstract class AppLocalizations {
   /// **'Check back later for new content'**
   String get newVideosTabEmptySubtitle;
 
-  /// No description provided for @newVideosTabEmptyTitle.
+  /// Empty-state title of the New Diviners tab in Explore. 'Diviners' is the name for people on Divine; keep it untranslated.
   ///
   /// In en, this message translates to:
-  /// **'No videos in New Videos'**
-  String get newVideosTabEmptyTitle;
+  /// **'No videos in New Diviners'**
+  String get newDivinersTabEmptyTitle;
 
   /// Empty-state title of the Latest tab in Explore.
   ///

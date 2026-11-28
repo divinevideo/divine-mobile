@@ -7703,7 +7703,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newVideosTabEmptySubtitle => 'Check back later for new content';
 
   @override
-  String get newVideosTabEmptyTitle => 'No videos in New Videos';
+  String get newDivinersTabEmptyTitle => 'No videos in New Diviners';
 
   @override
   String get latestVideosTabEmptyTitle => 'No videos in Latest';

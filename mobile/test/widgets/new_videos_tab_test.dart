@@ -298,7 +298,7 @@ void main() {
         );
       });
 
-      testWidgets('shows the New empty state, not the Latest one', (
+      testWidgets('shows the New Diviners empty state, not the Latest one', (
         tester,
       ) async {
         when(
@@ -312,7 +312,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(find.text(l10n.newVideosTabEmptyTitle), findsOneWidget);
+        expect(find.text(l10n.newDivinersTabEmptyTitle), findsOneWidget);
         expect(find.text(l10n.latestVideosTabEmptyTitle), findsNothing);
       });
 
@@ -335,7 +335,7 @@ void main() {
 
           final l10n = lookupAppLocalizations(const Locale('en'));
           expect(find.text(l10n.feedFailedToLoadVideos), findsOneWidget);
-          expect(find.text(l10n.newVideosTabEmptyTitle), findsNothing);
+          expect(find.text(l10n.newDivinersTabEmptyTitle), findsNothing);
 
           await tester
               .widget<FeedRefreshControl>(find.byType(FeedRefreshControl))

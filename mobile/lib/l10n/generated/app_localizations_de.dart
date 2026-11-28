@@ -7726,7 +7726,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Schau später wieder für neue Inhalte vorbei';
 
   @override
-  String get newVideosTabEmptyTitle => 'Keine Videos unter „Neue Videos“';
+  String get newDivinersTabEmptyTitle => 'Keine Videos unter „Neue Diviners“';
 
   @override
   String get latestVideosTabEmptyTitle => 'Keine Videos unter „Aktuell“';

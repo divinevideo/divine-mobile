@@ -7442,7 +7442,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get newVideosTabEmptySubtitle => 'አዲስ ይዘት ለማየት በኋላ ተመልሰው ይመልከቱ';
 
   @override
-  String get newVideosTabEmptyTitle => 'በአዲስ ቪዲዮዎች ውስጥ ምንም ቪዲዮ የለም';
+  String get newDivinersTabEmptyTitle => 'በአዲስ Diviners ውስጥ ምንም ቪዲዮ የለም';
 
   @override
   String get latestVideosTabEmptyTitle => 'በየቅርብ ጊዜ ውስጥ ምንም ቪዲዮ የለም';

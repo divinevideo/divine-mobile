@@ -7536,7 +7536,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get newVideosTabEmptySubtitle => 'Cek lagi nanti untuk konten baru';
 
   @override
-  String get newVideosTabEmptyTitle => 'Tidak ada video di Video Baru';
+  String get newDivinersTabEmptyTitle => 'Tidak ada video di Diviners Baru';
 
   @override
   String get latestVideosTabEmptyTitle => 'Tidak ada video di Terbaru';

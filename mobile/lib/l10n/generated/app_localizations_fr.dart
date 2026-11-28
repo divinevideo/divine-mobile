@@ -7736,7 +7736,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Reviens plus tard pour du nouveau contenu';
 
   @override
-  String get newVideosTabEmptyTitle => 'Aucune vidéo dans Nouvelles vidéos';
+  String get newDivinersTabEmptyTitle => 'Aucune vidéo dans Nouveaux Diviners';
 
   @override
   String get latestVideosTabEmptyTitle => 'Aucune vidéo dans Récents';

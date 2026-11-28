@@ -7622,7 +7622,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get newVideosTabEmptySubtitle => 'نئے مواد کے لیے بعد میں دیکھیں';
 
   @override
-  String get newVideosTabEmptyTitle => 'نئی ویڈیوز میں کوئی ویڈیو نہیں';
+  String get newDivinersTabEmptyTitle => 'نئے Diviners میں کوئی ویڈیو نہیں';
 
   @override
   String get latestVideosTabEmptyTitle => 'تازہ ترین میں کوئی ویڈیو نہیں';

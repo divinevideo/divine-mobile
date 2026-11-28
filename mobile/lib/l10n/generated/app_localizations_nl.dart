@@ -7659,7 +7659,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get newVideosTabEmptySubtitle => 'Kom later terug voor nieuwe inhoud';
 
   @override
-  String get newVideosTabEmptyTitle => 'Geen video\'s bij Nieuwe video\'s';
+  String get newDivinersTabEmptyTitle => 'Geen video\'s bij Nieuwe Diviners';
 
   @override
   String get latestVideosTabEmptyTitle => 'Geen video\'s bij Recent';

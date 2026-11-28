@@ -5494,7 +5494,10 @@
   },
   "hashtagInputHint": "Add hashtags... #vine #nostr",
   "newVideosTabEmptySubtitle": "Check back later for new content",
-  "newVideosTabEmptyTitle": "No videos in New Videos",
+  "newDivinersTabEmptyTitle": "No videos in New Diviners",
+  "@newDivinersTabEmptyTitle": {
+    "description": "Empty-state title of the New Diviners tab in Explore. 'Diviners' is the name for people on Divine; keep it untranslated."
+  },
   "latestVideosTabEmptyTitle": "No videos in Latest",
   "@latestVideosTabEmptyTitle": {
     "description": "Empty-state title of the Latest tab in Explore."

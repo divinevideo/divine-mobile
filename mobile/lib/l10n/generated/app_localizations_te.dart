@@ -7840,7 +7840,7 @@ class AppLocalizationsTe extends AppLocalizations {
       'కొత్త కంటెంట్ కోసం తర్వాత మళ్లీ తనిఖీ చేయండి';
 
   @override
-  String get newVideosTabEmptyTitle => 'కొత్త వీడియోలలో వీడియోలు లేవు';
+  String get newDivinersTabEmptyTitle => 'కొత్త Divinersలో వీడియోలు లేవు';
 
   @override
   String get latestVideosTabEmptyTitle => 'తాజావిలో వీడియోలు లేవు';

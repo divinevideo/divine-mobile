@@ -7545,7 +7545,7 @@ class AppLocalizationsTr extends AppLocalizations {
       'Yeni içerik için daha sonra tekrar bak';
 
   @override
-  String get newVideosTabEmptyTitle => 'Yeni Videolar\'da video yok';
+  String get newDivinersTabEmptyTitle => 'Yeni Diviners\'te video yok';
 
   @override
   String get latestVideosTabEmptyTitle => 'Son Eklenenler\'de video yok';

@@ -7811,7 +7811,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get newVideosTabEmptySubtitle => 'Zajrzyj później po nowe treści';
 
   @override
-  String get newVideosTabEmptyTitle => 'Brak filmów w Nowych filmach';
+  String get newDivinersTabEmptyTitle => 'Brak filmów w Nowych Diviners';
 
   @override
   String get latestVideosTabEmptyTitle => 'Brak filmów w Najnowszych';

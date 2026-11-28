@@ -7616,7 +7616,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get newVideosTabEmptySubtitle => 'عُد لاحقًا لمشاهدة محتوى جديد';
 
   @override
-  String get newVideosTabEmptyTitle => 'لا توجد فيديوهات في الفيديوهات الجديدة';
+  String get newDivinersTabEmptyTitle => 'لا توجد فيديوهات في Diviners الجدد';
 
   @override
   String get latestVideosTabEmptyTitle => 'لا توجد فيديوهات في الأحدث';

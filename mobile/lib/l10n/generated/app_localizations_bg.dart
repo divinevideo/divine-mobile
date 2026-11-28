@@ -7702,7 +7702,7 @@ class AppLocalizationsBg extends AppLocalizations {
       'Върни се по-късно за ново съдържание';
 
   @override
-  String get newVideosTabEmptyTitle => 'Няма видеа в Нови видеа';
+  String get newDivinersTabEmptyTitle => 'Няма видеа в Нови Diviners';
 
   @override
   String get latestVideosTabEmptyTitle => 'Няма видеа в Последни';

@@ -354,7 +354,7 @@ class _NewVideosEmptyState extends StatelessWidget {
             switch (feed) {
               PublicationFeed.latest => context.l10n.latestVideosTabEmptyTitle,
               PublicationFeed.newCreators =>
-                context.l10n.newVideosTabEmptyTitle,
+                context.l10n.newDivinersTabEmptyTitle,
             },
             style: TextStyle(
               color: context.vineColors.primaryText,

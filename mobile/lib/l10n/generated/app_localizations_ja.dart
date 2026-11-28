@@ -7229,7 +7229,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get newVideosTabEmptySubtitle => '新しいコンテンツはまたあとでチェックしてね';
 
   @override
-  String get newVideosTabEmptyTitle => '新着動画に動画はないよ';
+  String get newDivinersTabEmptyTitle => '新しいDivinersに動画はないよ';
 
   @override
   String get latestVideosTabEmptyTitle => '最新に動画はないよ';

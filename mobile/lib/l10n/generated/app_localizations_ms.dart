@@ -7621,7 +7621,7 @@ class AppLocalizationsMs extends AppLocalizations {
       'Semak semula nanti untuk kandungan baharu';
 
   @override
-  String get newVideosTabEmptyTitle => 'Tiada video dalam Video Baharu';
+  String get newDivinersTabEmptyTitle => 'Tiada video dalam Diviners Baharu';
 
   @override
   String get latestVideosTabEmptyTitle => 'Tiada video dalam Terkini';
