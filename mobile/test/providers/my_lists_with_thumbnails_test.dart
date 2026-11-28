@@ -14,6 +14,7 @@ import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
@@ -134,9 +135,15 @@ class _Fixture {
     auth = _Auth();
     when(() => auth.currentPublicKeyHex).thenAnswer((_) => owner);
     relay = _Relay();
-    when(() => relay.queryEvents(any())).thenAnswer((_) async {
+    when(
+      () => relay.queryEventsDetailed(
+        any(),
+        timeout: kListThumbnailRelayReadTimeout,
+        requireAllRelaysSettled: true,
+      ),
+    ).thenAnswer((_) async {
       relayReads++;
-      return [];
+      return (events: <Event>[], timedOut: false, noRelays: false);
     });
     client = relay;
     service = _newService();
