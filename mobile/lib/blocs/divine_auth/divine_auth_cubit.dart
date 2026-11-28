@@ -7,10 +7,12 @@ import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/repositories/email_confirmation_repository.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/classics_warmup.dart';
 import 'package:openvine/services/pending_verification_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 import 'package:openvine/utils/validators.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 part 'divine_auth_state.dart';
@@ -30,10 +32,12 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
     required PendingVerificationService pendingVerificationService,
     required AuthValidationMessages validationMessages,
     EmailConfirmationRepository? emailConfirmationRepository,
+    SharedPreferences? sharedPreferences,
     bool requirePasswordConfirmation = false,
     String? appVersion,
   }) : _oauthClient = oauthClient,
        _emailConfirmationRepository = emailConfirmationRepository,
+       _sharedPreferences = sharedPreferences,
        _authService = authService,
        _pendingVerificationService = pendingVerificationService,
        _validationMessages = validationMessages,
@@ -46,6 +50,9 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
   final PendingVerificationService _pendingVerificationService;
   final AuthValidationMessages _validationMessages;
   final EmailConfirmationRepository? _emailConfirmationRepository;
+
+  /// Enrolls an instant sign-up in the Classics warmup; null skips it.
+  final SharedPreferences? _sharedPreferences;
   final bool _requirePasswordConfirmation;
   final String? _appVersion;
 
@@ -336,6 +343,13 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
         name: 'DivineAuthCubit',
         category: LogCategory.auth,
       );
+      // The account exists now. Enroll it before the exchange so a failed
+      // exchange still starts its first password sign-in in Classics.
+      final prefs = _sharedPreferences;
+      if (prefs != null && result.pubkey.isNotEmpty) {
+        await ClassicsWarmup.enroll(prefs, result.pubkey);
+        if (isClosed) return;
+      }
       await _exchangeCodeAndLogin(
         result.code!,
         verifier,

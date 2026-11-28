@@ -17,6 +17,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/email_confirmation_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -65,6 +66,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
     final emailConfirmationRepository = ref.watch(
       emailConfirmationRepositoryProvider,
     );
+    final sharedPreferences = ref.watch(sharedPreferencesProvider);
     return BlocProvider(
       create: (_) => DivineAuthCubit(
         oauthClient: oauthClient,
@@ -72,6 +74,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
         pendingVerificationService: pendingVerificationService,
         validationMessages: AuthValidationMessages.fromL10n(l10n),
         emailConfirmationRepository: emailConfirmationRepository,
+        sharedPreferences: sharedPreferences,
         requirePasswordConfirmation: true,
         appVersion: ref.watch(appVersionProvider),
       )..initialize(),

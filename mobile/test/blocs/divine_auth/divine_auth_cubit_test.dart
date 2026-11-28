@@ -14,6 +14,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
 import 'package:openvine/repositories/email_confirmation_repository.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/classics_warmup.dart';
 import 'package:openvine/services/pending_verification_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/validators.dart';
@@ -88,12 +89,14 @@ void main() {
       String? appVersion,
       KeycastOAuth? oauthClient,
       EmailConfirmationRepository? emailConfirmationRepository,
+      SharedPreferences? sharedPreferences,
     }) {
       return DivineAuthCubit(
         oauthClient: oauthClient ?? mockOAuth,
         authService: mockAuthService,
         pendingVerificationService: mockPendingVerification,
         emailConfirmationRepository: emailConfirmationRepository,
+        sharedPreferences: sharedPreferences,
         appVersion: appVersion,
         validationMessages: AuthValidationMessages.englishDefaults,
       );
@@ -1430,6 +1433,62 @@ void main() {
                 deviceCode: any(named: 'deviceCode'),
                 verifier: any(named: 'verifier'),
                 email: any(named: 'email'),
+              ),
+            );
+          },
+        );
+
+        test(
+          'keeps an instant sign-up enrolled in Classics when the exchange '
+          'fails',
+          () async {
+            const pubkey =
+                'a3c1e0b6f7d2948e5c1b0a9f8e7d6c5b4a3928170f6e5d4c3b2a19087f6e5d4c';
+            SharedPreferences.setMockInitialValues({});
+            final preferences = await SharedPreferences.getInstance();
+            when(
+              () => mockOAuth.headlessRegister(
+                email: any(named: 'email'),
+                password: any(named: 'password'),
+                scope: any(named: 'scope'),
+                marketingConsent: any(named: 'marketingConsent'),
+                instantAccess: any(named: 'instantAccess'),
+              ),
+            ).thenAnswer(
+              (_) async => (
+                HeadlessRegisterResult(
+                  success: true,
+                  pubkey: pubkey,
+                  verificationRequired: false,
+                  code: testCode,
+                  email: testEmail,
+                ),
+                testVerifier,
+              ),
+            );
+            when(
+              () => mockOAuth.exchangeCode(
+                code: testCode,
+                verifier: testVerifier,
+                persistSession: false,
+              ),
+            ).thenThrow(OAuthException('Token exchange failed'));
+            final cubit = buildCubit(sharedPreferences: preferences)
+              ..initialize()
+              ..updateEmail(testEmail)
+              ..updatePassword(testPassword);
+            addTearDown(cubit.close);
+
+            await cubit.submit();
+
+            expect(
+              ClassicsWarmup.startsInClassics(preferences, pubkey),
+              isTrue,
+            );
+            verifyNever(
+              () => mockAuthService.signInWithDivineOAuth(
+                any(),
+                newlyRegistered: any(named: 'newlyRegistered'),
               ),
             );
           },
