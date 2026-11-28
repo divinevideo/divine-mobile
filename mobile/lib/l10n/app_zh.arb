@@ -56,6 +56,8 @@
   "videoStickerAddYoursWatchSeriesSemanticLabel": "观看系列：{prompt}",
   "videoSeriesChipEpisode": "第 {episode} 集 / 共 {total} 集",
   "videoSeriesChipSemanticLabel": "系列 {seriesName}，第 {episode} 集 / 共 {total} 集",
+  "videoSeriesEpisodeBadge": "第 {episode} 集",
+  "videoSeriesEpisodeBadgeSemanticLabel": "第 {episode} 集",
   "videoStickerAddYoursJoined": "{count, plural, =0{来做第一个吧} =1{{count} 人已参与} other{{count} 人已参与}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} 人已参与",
   "videoStickerAddYoursOpenSemanticLabel": "看看谁参与了",

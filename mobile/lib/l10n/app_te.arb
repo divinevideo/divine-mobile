@@ -56,6 +56,8 @@
   "videoStickerAddYoursWatchSeriesSemanticLabel": "సిరీస్ చూడండి: {prompt}",
   "videoSeriesChipEpisode": "{total}లో ఎపిసోడ్ {episode}",
   "videoSeriesChipSemanticLabel": "సిరీస్ {seriesName}, {total}లో ఎపిసోడ్ {episode}",
+  "videoSeriesEpisodeBadge": "ఎపిసోడ్ {episode}",
+  "videoSeriesEpisodeBadgeSemanticLabel": "ఎపిసోడ్ {episode}",
   "videoStickerAddYoursJoined": "{count, plural, =0{మొదట మీరే చేరండి} =1{{count} మంది చేరారు} other{{count} మంది చేరారు}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} మంది చేరారు",
   "videoStickerAddYoursOpenSemanticLabel": "ఎవరు చేరారో చూడండి",

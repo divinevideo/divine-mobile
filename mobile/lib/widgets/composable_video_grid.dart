@@ -7,6 +7,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:intl/intl.dart' show NumberFormat;
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
@@ -71,6 +72,7 @@ class ComposableVideoGrid extends ConsumerStatefulWidget {
     this.selectedVideoIds,
     this.topOuterRadius,
     this.backgroundColor,
+    this.episodeNumberOf,
   });
 
   final List<VideoEvent> videos;
@@ -119,6 +121,10 @@ class ComposableVideoGrid extends ConsumerStatefulWidget {
   /// top-right), so the grid reads as one container rounding into the
   /// surface above it. `null` keeps every tile on the default small radius.
   final double? topOuterRadius;
+
+  /// The episode number a tile shows, for the episodes of a series, or null
+  /// for a tile that is not one. Without it no tile shows a number.
+  final int? Function(VideoEvent video)? episodeNumberOf;
 
   @override
   ConsumerState<ComposableVideoGrid> createState() =>
@@ -282,6 +288,7 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
             viewerPubkey: viewerPubkey,
             onOwnerLongPress: () => _showVideoContextMenu(context, video),
             isSelected: selectedIds?.contains(video.id),
+            episodeNumber: widget.episodeNumberOf?.call(video),
           );
         }
 
@@ -420,6 +427,7 @@ class _VideoItem extends StatelessWidget {
     required this.viewerPubkey,
     required this.onOwnerLongPress,
     this.isSelected,
+    this.episodeNumber,
     this.borderRadius = const BorderRadius.all(Radius.circular(4)),
   });
 
@@ -438,6 +446,9 @@ class _VideoItem extends StatelessWidget {
   /// Selection-mode state: `null` outside selection mode, otherwise whether
   /// this tile is currently selected.
   final bool? isSelected;
+
+  /// The episode number this tile shows, when it is an episode of a series.
+  final int? episodeNumber;
 
   /// Clip radius for this tile; the grid enlarges the outer top corners of
   /// the first row when [ComposableVideoGrid.topOuterRadius] is set.
@@ -496,6 +507,12 @@ class _VideoItem extends StatelessWidget {
                 end: 10,
                 child: _SelectionBadge(isSelected: isSelected),
               ),
+            if (episodeNumber case final episodeNumber?)
+              PositionedDirectional(
+                top: 8,
+                start: 8,
+                child: _EpisodeBadge(number: episodeNumber),
+              ),
           ],
         ),
       ),
@@ -547,6 +564,42 @@ class _SelectionBadge extends StatelessWidget {
         child: Visibility(
           visible: isSelected,
           child: const DivineIcon(icon: DivineIconName.checkboxSelected),
+        ),
+      ),
+    );
+  }
+}
+
+/// The episode number drawn on a series' tile, such as `Ep 3`.
+///
+/// Sits on a video frame, so its colors are fixed media chrome, and it keeps
+/// its size at any text scale, like the other badges on a thumbnail.
+class _EpisodeBadge extends StatelessWidget {
+  const _EpisodeBadge({required this.number});
+
+  final int number;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final episode = NumberFormat.decimalPattern(l10n.localeName).format(number);
+    return Semantics(
+      label: l10n.videoSeriesEpisodeBadgeSemanticLabel(episode),
+      child: ExcludeSemantics(
+        child: MediaQuery.withNoTextScaling(
+          child: DecoratedBox(
+            decoration: const ShapeDecoration(
+              color: VineTheme.scrim65,
+              shape: StadiumBorder(),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Text(
+                l10n.videoSeriesEpisodeBadge(episode),
+                style: VineTheme.labelSmallFont(color: VineTheme.whiteText),
+              ),
+            ),
+          ),
         ),
       ),
     );

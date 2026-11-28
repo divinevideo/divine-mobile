@@ -56,6 +56,8 @@
   "videoStickerAddYoursWatchSeriesSemanticLabel": "시리즈 보기: {prompt}",
   "videoSeriesChipEpisode": "{total}화 중 {episode}화",
   "videoSeriesChipSemanticLabel": "시리즈 {seriesName}, {total}화 중 {episode}화",
+  "videoSeriesEpisodeBadge": "{episode}화",
+  "videoSeriesEpisodeBadgeSemanticLabel": "{episode}화",
   "videoStickerAddYoursJoined": "{count, plural, =0{첫 번째로 참여해 보세요} =1{{count}명 참여} other{{count}명 참여}}",
   "videoStickerAddYoursJoinedAtLeast": "{count}명 참여",
   "videoStickerAddYoursOpenSemanticLabel": "참여한 사람 보기",

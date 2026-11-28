@@ -243,9 +243,9 @@ Every provider emission used for a curated list must therefore be projected
 back into the order of the requested `videoIds`. Matching uses the full event id
 for ordinary events and the full `34236:<pubkey>:<d-tag>` coordinate for
 addressable videos. Missing or blocked videos are omitted without collapsing
-the authoritative position: UI part numbers come from the matched coordinate's
-zero-based position in `videoIds`, plus one, while the total remains the count
-of valid same-author coordinates in the series list. The grid and player receive
+the authoritative position: a part's number is its place among the valid
+same-author coordinates in the series list, counting from one, and the total is
+the count of those coordinates. The grid and player receive
 the same ordered resolved list, so a late arrival inserts at its list position
 rather than at the end.
 

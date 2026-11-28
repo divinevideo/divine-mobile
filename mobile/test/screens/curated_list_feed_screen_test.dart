@@ -28,6 +28,7 @@ import 'package:openvine/widgets/list_action_buttons.dart';
 import 'package:openvine/widgets/list_author_byline.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:openvine/widgets/list_video_player_mode.dart';
+import 'package:openvine/widgets/owner_video_actions_tile.dart';
 import 'package:openvine/widgets/share_list_button.dart';
 import 'package:openvine/widgets/video_feed_item/series_chip.dart';
 import 'package:riverpod/misc.dart' show Override;
@@ -1780,6 +1781,93 @@ void main() {
 
         expect(player(), findsNothing);
         expect(find.byType(ComposableVideoGrid), findsOneWidget);
+      });
+    });
+
+    group('series grid', () {
+      final author = testPubkeyFromSeed(4);
+      final noteId = 'c' * 64;
+      // An entry that is not an episode, then three episodes.
+      final references = [
+        noteId,
+        for (var part = 1; part <= 3; part++) '34236:$author:part-$part',
+      ];
+
+      VideoEvent part(int number) => VideoEvent(
+        id: 'part-$number-event',
+        pubkey: author,
+        content: '',
+        title: 'Part $number',
+        videoUrl: 'https://example.com/part-$number.mp4',
+        thumbnailUrl: 'https://example.com/part-$number.jpg',
+        duration: 5,
+        createdAt: DateTime(2026).millisecondsSinceEpoch ~/ 1000,
+        timestamp: DateTime(2026),
+        rawTags: {'d': 'part-$number'},
+        addressableDTag: 'part-$number',
+      );
+
+      CuratedList roadTrip({required bool isSeries}) => CuratedList(
+        id: 'external-list',
+        name: 'Road trip',
+        pubkey: author,
+        videoEventIds: references,
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+        preservedTags: [
+          if (isSeries) ['series', 'true'],
+        ],
+      );
+
+      Finder episodeBadges() => find.textContaining(RegExp('^Ep '));
+
+      testWidgets('numbers its episodes, keeping a gap for a missing one', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            // Part 2 did not load.
+            videoEvents: [
+              _videoEvent(id: noteId),
+              part(1),
+              part(3),
+            ],
+            discoveredList: roadTrip(isSeries: true),
+          ),
+        );
+        await tester.pump();
+
+        expect(episodeBadges(), findsNWidgets(2));
+        expect(find.text(l10n.videoSeriesEpisodeBadge('1')), findsOneWidget);
+        final third = find.text(l10n.videoSeriesEpisodeBadge('3'));
+        final tile = tester.widget<OwnerVideoActionsTile>(
+          find.ancestor(
+            of: third,
+            matching: find.byType(OwnerVideoActionsTile),
+          ),
+        );
+        expect(tile.video.id, equals(part(3).id));
+      });
+
+      testWidgets('numbers nothing on a list that is not a series', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            videoIds: references,
+            videoEvents: [
+              _videoEvent(id: noteId),
+              part(1),
+              part(3),
+            ],
+            discoveredList: roadTrip(isSeries: false),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byType(ComposableVideoGrid), findsOneWidget);
+        expect(episodeBadges(), findsNothing);
       });
     });
 

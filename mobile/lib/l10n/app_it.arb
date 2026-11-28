@@ -56,6 +56,8 @@
   "videoStickerAddYoursWatchSeriesSemanticLabel": "Guarda la serie: {prompt}",
   "videoSeriesChipEpisode": "Ep. {episode} di {total}",
   "videoSeriesChipSemanticLabel": "Serie {seriesName}, episodio {episode} di {total}",
+  "videoSeriesEpisodeBadge": "Ep. {episode}",
+  "videoSeriesEpisodeBadgeSemanticLabel": "Episodio {episode}",
   "videoStickerAddYoursJoined": "{count, plural, =0{Inizia tu} =1{{count} partecipazione} many{{count} di partecipazioni} other{{count} partecipazioni}}",
   "videoStickerAddYoursJoinedAtLeast": "{count} partecipazioni",
   "videoStickerAddYoursOpenSemanticLabel": "Vedi chi ha partecipato",

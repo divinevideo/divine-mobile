@@ -49,6 +49,7 @@ import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/owner_video_actions_tile.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 // Override lives in riverpod's misc barrel; flutter_riverpod does not
@@ -1089,6 +1090,81 @@ void main() {
 
         expect(selectedBadges(), findsNothing);
         expect(unselectedBadges(), findsNothing);
+      });
+    });
+
+    group('episode numbers', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      Widget buildGrid({int? Function(VideoEvent video)? episodeNumberOf}) {
+        return ProviderScope(
+          overrides: _gridOverrides(mockTracker),
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: ComposableVideoGrid(
+                videos: testVideos.take(2).toList(),
+                episodeNumberOf: episodeNumberOf,
+                onVideoTap: (videos, index, _) {},
+              ),
+            ),
+          ),
+        );
+      }
+
+      Finder episodeBadges() => find.textContaining(RegExp('^Ep '));
+
+      testWidgets('shows its number on each tile that is an episode', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildGrid(
+            episodeNumberOf: (video) => video.id == 'video2' ? 3 : null,
+          ),
+        );
+        await tester.pump();
+
+        final badge = find.text(l10n.videoSeriesEpisodeBadge('3'));
+        expect(badge, findsOneWidget);
+        expect(episodeBadges(), findsOneWidget);
+        final tile = tester.widget<OwnerVideoActionsTile>(
+          find.ancestor(
+            of: badge,
+            matching: find.byType(OwnerVideoActionsTile),
+          ),
+        );
+        expect(tile.video.id, equals('video2'));
+      });
+
+      testWidgets('shows no numbers without episodeNumberOf', (tester) async {
+        await tester.pumpWidget(buildGrid());
+        await tester.pump();
+
+        expect(episodeBadges(), findsNothing);
+      });
+
+      testWidgets('reads the episode as part of its tile', (tester) async {
+        final semantics = tester.ensureSemantics();
+        try {
+          await tester.pumpWidget(
+            buildGrid(
+              episodeNumberOf: (video) => video.id == 'video1' ? 3 : null,
+            ),
+          );
+          await tester.pump();
+
+          final label = tester
+              .getSemantics(find.bySemanticsIdentifier('video_thumbnail_0'))
+              .label;
+          expect(
+            label,
+            contains(l10n.videoSeriesEpisodeBadgeSemanticLabel('3')),
+          );
+          expect(label, isNot(contains(l10n.videoSeriesEpisodeBadge('3'))));
+        } finally {
+          semantics.dispose();
+        }
       });
     });
 

@@ -63,15 +63,14 @@ class VideoSeriesCubit extends Cubit<VideoSeriesState>
   VideoSeriesEpisode? _episodeIn(CuratedList? series) {
     final owner = series?.pubkey;
     if (series == null || owner == null) return null;
-    final episodes = series.seriesEpisodes;
-    final episodeIndex = episodes.indexOf(_episodeCoordinate);
+    final episodeNumber = series.episodeNumberOf(_episodeCoordinate);
     final listPosition = series.videoEventIds.indexOf(_episodeCoordinate);
-    if (episodeIndex < 0 || listPosition < 0) return null;
+    if (episodeNumber == null || listPosition < 0) return null;
     return VideoSeriesEpisode(
       series: series,
       authorPubkey: owner,
-      episodeNumber: episodeIndex + 1,
-      episodeCount: episodes.length,
+      episodeNumber: episodeNumber,
+      episodeCount: series.seriesEpisodes.length,
       listPosition: listPosition,
     );
   }
