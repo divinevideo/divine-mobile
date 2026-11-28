@@ -1,0 +1,3 @@
+/* Phrases for the Divine camera App Shortcut, said to Siri or typed in Spotlight. */
+"Open the ${applicationName} camera" = "${applicationName} 카메라 열기";
+"Record with ${applicationName}" = "${applicationName}로 녹화하기";

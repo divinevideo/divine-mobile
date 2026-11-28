@@ -1,3 +1,6 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Öppna Divine-kamera";
 "divine_quick_actions_camera_widget_description" = "Öppnar Divine-kameran direkt från startskärmen.";
+"divine_camera_intent_title" = "Öppna Divine-kamera";
+"divine_camera_intent_description" = "Öppnar Divine-kameran, redo att spela in.";
+"divine_camera_name" = "Divine-kamera";

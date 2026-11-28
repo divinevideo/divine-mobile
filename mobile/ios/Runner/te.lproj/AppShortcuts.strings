@@ -1,0 +1,3 @@
+/* Phrases for the Divine camera App Shortcut, said to Siri or typed in Spotlight. */
+"Open the ${applicationName} camera" = "${applicationName} కెమెరాను తెరువు";
+"Record with ${applicationName}" = "${applicationName}తో రికార్డ్ చేయి";

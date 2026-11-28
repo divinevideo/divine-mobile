@@ -1,3 +1,6 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Divineカメラを開く";
 "divine_quick_actions_camera_widget_description" = "ホーム画面からDivineカメラを直接開きます。";
+"divine_camera_intent_title" = "Divineカメラを開く";
+"divine_camera_intent_description" = "Divineカメラを開き、すぐに録画できます。";
+"divine_camera_name" = "Divineカメラ";

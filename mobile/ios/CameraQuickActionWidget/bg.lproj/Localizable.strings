@@ -1,3 +1,6 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Отвори камерата на Divine";
 "divine_quick_actions_camera_widget_description" = "Отваря камерата на Divine директно от началния екран.";
+"divine_camera_intent_title" = "Отвори камерата на Divine";
+"divine_camera_intent_description" = "Отваря камерата на Divine, готова за запис.";
+"divine_camera_name" = "Камера на Divine";

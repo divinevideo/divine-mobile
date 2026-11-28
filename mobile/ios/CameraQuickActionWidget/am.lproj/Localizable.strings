@@ -1,3 +1,6 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Divine ካሜራ ክፈት";
 "divine_quick_actions_camera_widget_description" = "Divine ካሜራን ከዋናው ማያ ቀጥታ ይከፍታል።";
+"divine_camera_intent_title" = "Divine ካሜራ ክፈት";
+"divine_camera_intent_description" = "የDivine ካሜራን ለመቅረጽ ዝግጁ አድርጎ ይከፍታል።";
+"divine_camera_name" = "Divine ካሜራ";

@@ -5561,3 +5561,18 @@ final class RecorderActivityContentStateTests: XCTestCase {
     XCTAssertTrue(state.isShutterActive)
   }
 }
+
+@MainActor
+final class OpenDivineCameraIntentTests: XCTestCase {
+  func testPerformOpensTheCameraWidgetLink() async throws {
+    let appOpenURL = OpenDivineCameraIntent.openURL
+    defer { OpenDivineCameraIntent.openURL = appOpenURL }
+    var openedURLs: [URL] = []
+    OpenDivineCameraIntent.openURL = { openedURLs.append($0) }
+
+    _ = try await OpenDivineCameraIntent().perform()
+
+    // The quick-actions plugin routes only this link to the camera.
+    XCTAssertEqual(openedURLs, [URL(string: "divine://quick-action/camera")!])
+  }
+}

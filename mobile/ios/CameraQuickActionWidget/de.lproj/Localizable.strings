@@ -1,3 +1,6 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Divine-Kamera öffnen";
 "divine_quick_actions_camera_widget_description" = "Öffnet die Divine-Kamera direkt vom Startbildschirm.";
+"divine_camera_intent_title" = "Divine-Kamera öffnen";
+"divine_camera_intent_description" = "Öffnet die Divine-Kamera, bereit zur Aufnahme.";
+"divine_camera_name" = "Divine-Kamera";

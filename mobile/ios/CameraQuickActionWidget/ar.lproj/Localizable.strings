@@ -1,3 +1,6 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "فتح كاميرا Divine";
 "divine_quick_actions_camera_widget_description" = "يفتح كاميرا Divine مباشرةً من الشاشة الرئيسية.";
+"divine_camera_intent_title" = "فتح كاميرا Divine";
+"divine_camera_intent_description" = "يفتح كاميرا Divine جاهزة للتسجيل.";
+"divine_camera_name" = "كاميرا Divine";

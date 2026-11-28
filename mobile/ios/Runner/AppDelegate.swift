@@ -67,6 +67,11 @@ extension FlutterError: @retroactive Error {}
         recorderLiveActivity.show(recorderState: recorderState)
       }
     }
+    // The Action Button, Siri and the Control Center control reach the camera
+    // through the same link as the camera widget.
+    OpenDivineCameraIntent.openURL = { url in
+      await UIApplication.shared.open(url)
+    }
     #if DEBUG
     exportScreenshotLaunchConfig()
     #endif

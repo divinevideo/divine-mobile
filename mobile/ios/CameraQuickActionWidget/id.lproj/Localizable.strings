@@ -1,3 +1,6 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Buka kamera Divine";
 "divine_quick_actions_camera_widget_description" = "Membuka kamera Divine langsung dari layar utama.";
+"divine_camera_intent_title" = "Buka kamera Divine";
+"divine_camera_intent_description" = "Membuka kamera Divine, siap merekam.";
+"divine_camera_name" = "Kamera Divine";

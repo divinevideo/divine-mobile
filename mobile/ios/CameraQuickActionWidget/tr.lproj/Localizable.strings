@@ -1,3 +1,6 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Divine kamerasını aç";
 "divine_quick_actions_camera_widget_description" = "Divine kamerasını ana ekrandan doğrudan açar.";
+"divine_camera_intent_title" = "Divine kamerasını aç";
+"divine_camera_intent_description" = "Divine kamerasını kayda hazır şekilde açar.";
+"divine_camera_name" = "Divine kamerası";

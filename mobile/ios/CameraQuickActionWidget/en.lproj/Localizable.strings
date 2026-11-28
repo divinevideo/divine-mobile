@@ -1,3 +1,6 @@
 "divine_quick_actions_camera_widget_name" = "Divine";
 "divine_quick_actions_camera_widget_open_camera" = "Open Divine camera";
 "divine_quick_actions_camera_widget_description" = "Open the Divine camera directly from your home screen.";
+"divine_camera_intent_title" = "Open Divine camera";
+"divine_camera_intent_description" = "Opens the Divine camera, ready to record.";
+"divine_camera_name" = "Divine camera";
