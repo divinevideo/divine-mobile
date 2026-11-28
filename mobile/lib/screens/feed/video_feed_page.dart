@@ -668,13 +668,14 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                                 state.source,
                                 state.feedSessionRevision,
                               ),
-                              initialVideoIndex: clampedIndex,
+                              currentVideoIndex: () => _currentIndex,
                               isFeedActive: _isNewFeedActive,
                               onContinue: () => unawaited(
-                                _feedVideosKey.currentState?.animateToPage(
-                                      FeedPeopleInterstitialCubit
-                                          .insertBeforeIndex,
-                                    ) ??
+                                _feedVideosKey.currentState
+                                        ?.advanceFromUserAction(
+                                          FeedPeopleInterstitialCubit
+                                              .insertBeforeIndex,
+                                        ) ??
                                     Future<void>.value(),
                               ),
                               builder: (context, peopleSlot) => FeedVideos(
@@ -690,53 +691,53 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                                     );
                                   }
                                 },
-                              videos: state.videos,
-                              contextTitle: state.feedContextTitle,
-                              currentIndex: clampedIndex,
-                              isActive: _isNewFeedActive,
-                              // The home feed stays mounted across tab switches and
-                              // pushed routes (StatefulShellRoute keep-alive), so
-                              // release the off-screen neighbour players and pause
-                              // disk prefetch while it is backgrounded. Bottom sheets
-                              // (comments/share) only pause the current player — they
-                              // keep neighbours and prefetch warm via
-                              // shouldRetainPlayer.
-                              releaseNeighboursWhenInactive:
-                                  !shouldRetainPlayer,
-                              hasMore: state.hasMore,
-                              isLoadingMore: state.isLoadingMore,
-                              prefetchOnMount: isForYou,
-                              loadMoreOnEndSwipe:
-                                  isForYou ||
-                                  state.source.type ==
-                                      VideoFeedSourceType.classic,
-                              trafficSource: ViewTrafficSource.home,
-                              // Every feed mode renders through this one page and
-                              // reports source=home, so without this detail the
-                              // For You, following, list, new and classic feeds
-                              // are indistinguishable in view_traffic_sources.
-                              sourceDetail: state.source.type.analyticsTag,
-                              feedSessionRevision: state.feedSessionRevision,
-                              onActiveVideoChanged: (_, index) {
-                                peopleSlot.onVideoChanged?.call(index);
-                                final isTuningAutoAdvance =
-                                    _pendingTuningAutoAdvanceIndex == index;
-                                _pendingTuningAutoAdvanceIndex = null;
-                                if (!isTuningAutoAdvance) {
-                                  _dismissTuningSnackbar();
-                                }
-                                ref
-                                    .read(foregroundFeedActivityGateProvider)
-                                    .markActive();
-                                _currentIndex = index;
-                                context.read<VideoFeedBloc>().add(
-                                  VideoFeedActiveIndexChanged(index),
-                                );
-                                ref
-                                    .read(lastTabPositionProvider.notifier)
-                                    .recordPosition(RouteType.home, index);
-                                _resumeAutoAdvanceAfterSwipe();
-                              },
+                                videos: state.videos,
+                                contextTitle: state.feedContextTitle,
+                                currentIndex: clampedIndex,
+                                isActive: _isNewFeedActive,
+                                // The home feed stays mounted across tab switches and
+                                // pushed routes (StatefulShellRoute keep-alive), so
+                                // release the off-screen neighbour players and pause
+                                // disk prefetch while it is backgrounded. Bottom sheets
+                                // (comments/share) only pause the current player — they
+                                // keep neighbours and prefetch warm via
+                                // shouldRetainPlayer.
+                                releaseNeighboursWhenInactive:
+                                    !shouldRetainPlayer,
+                                hasMore: state.hasMore,
+                                isLoadingMore: state.isLoadingMore,
+                                prefetchOnMount: isForYou,
+                                loadMoreOnEndSwipe:
+                                    isForYou ||
+                                    state.source.type ==
+                                        VideoFeedSourceType.classic,
+                                trafficSource: ViewTrafficSource.home,
+                                // Every feed mode renders through this one page and
+                                // reports source=home, so without this detail the
+                                // For You, following, list, new and classic feeds
+                                // are indistinguishable in view_traffic_sources.
+                                sourceDetail: state.source.type.analyticsTag,
+                                feedSessionRevision: state.feedSessionRevision,
+                                onActiveVideoChanged: (_, index) {
+                                  peopleSlot.onVideoChanged?.call(index);
+                                  final isTuningAutoAdvance =
+                                      _pendingTuningAutoAdvanceIndex == index;
+                                  _pendingTuningAutoAdvanceIndex = null;
+                                  if (!isTuningAutoAdvance) {
+                                    _dismissTuningSnackbar();
+                                  }
+                                  ref
+                                      .read(foregroundFeedActivityGateProvider)
+                                      .markActive();
+                                  _currentIndex = index;
+                                  context.read<VideoFeedBloc>().add(
+                                    VideoFeedActiveIndexChanged(index),
+                                  );
+                                  ref
+                                      .read(lastTabPositionProvider.notifier)
+                                      .recordPosition(RouteType.home, index);
+                                  _resumeAutoAdvanceAfterSwipe();
+                                },
                                 onNearEnd: () {
                                   if (state.hasMore) {
                                     context.read<VideoFeedBloc>().add(

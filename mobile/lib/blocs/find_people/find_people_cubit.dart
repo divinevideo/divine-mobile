@@ -27,6 +27,7 @@ class FindPeopleState extends Equatable {
     this.nextCursor,
     this.pendingPubkeys = const {},
     this.actionFailed = false,
+    this.policyUnavailable = false,
     this.requestGeneration = 0,
     this.limit = 20,
   });
@@ -35,6 +36,7 @@ class FindPeopleState extends Equatable {
   final String? nextCursor;
   final Set<String> pendingPubkeys;
   final bool actionFailed;
+  final bool policyUnavailable;
   final int requestGeneration;
   final int limit;
 
@@ -43,6 +45,7 @@ class FindPeopleState extends Equatable {
     List<FollowSuggestion>? suggestions,
     Set<String>? pendingPubkeys,
     bool? actionFailed,
+    bool? policyUnavailable,
     int? requestGeneration,
     int? limit,
   }) => FindPeopleState(
@@ -51,6 +54,7 @@ class FindPeopleState extends Equatable {
     nextCursor: nextCursor,
     pendingPubkeys: pendingPubkeys ?? this.pendingPubkeys,
     actionFailed: actionFailed ?? this.actionFailed,
+    policyUnavailable: policyUnavailable ?? this.policyUnavailable,
     requestGeneration: requestGeneration ?? this.requestGeneration,
     limit: limit ?? this.limit,
   );
@@ -62,6 +66,7 @@ class FindPeopleState extends Equatable {
     nextCursor,
     pendingPubkeys,
     actionFailed,
+    policyUnavailable,
     requestGeneration,
     limit,
   ];
@@ -87,6 +92,7 @@ class FindPeopleCubit extends Cubit<FindPeopleState> {
       emit(
         FindPeopleState(
           status: FindPeopleStatus.failure,
+          policyUnavailable: true,
           requestGeneration: state.requestGeneration,
           limit: state.limit,
         ),
@@ -95,6 +101,7 @@ class FindPeopleCubit extends Cubit<FindPeopleState> {
     }
     emit(
       state.copyWith(
+        policyUnavailable: false,
         suggestions: _repository.filter(
           state.suggestions,
           pendingFollowPubkeys: state.pendingPubkeys,
@@ -135,27 +142,9 @@ class FindPeopleCubit extends Cubit<FindPeopleState> {
         limit: pageLimit,
       ),
     );
+    final FindPeopleResult page;
     try {
-      final page = await _repository.load(limit: pageLimit, cursor: cursor);
-      if (isClosed || generation != state.requestGeneration) return;
-      emit(
-        FindPeopleState(
-          status: FindPeopleStatus.success,
-          suggestions: _repository.filter([
-            if (append && !page.restarted)
-              ...state.suggestions
-            else
-              ...state.suggestions.where(
-                (item) => state.pendingPubkeys.contains(item.pubkey),
-              ),
-            ...page.suggestions,
-          ], pendingFollowPubkeys: state.pendingPubkeys),
-          nextCursor: page.nextCursor,
-          pendingPubkeys: state.pendingPubkeys,
-          requestGeneration: generation,
-          limit: pageLimit,
-        ),
-      );
+      page = await _repository.load(limit: pageLimit, cursor: cursor);
     } catch (error, stack) {
       if (isClosed || generation != state.requestGeneration) return;
       addError(error, stack);
@@ -163,6 +152,7 @@ class FindPeopleCubit extends Cubit<FindPeopleState> {
         emit(
           FindPeopleState(
             status: FindPeopleStatus.failure,
+            policyUnavailable: true,
             requestGeneration: generation,
             limit: pageLimit,
           ),
@@ -170,7 +160,27 @@ class FindPeopleCubit extends Cubit<FindPeopleState> {
       } else {
         emit(state.copyWith(status: FindPeopleStatus.failure));
       }
+      return;
     }
+    if (isClosed || generation != state.requestGeneration) return;
+    emit(
+      FindPeopleState(
+        status: FindPeopleStatus.success,
+        suggestions: _repository.filter([
+          if (append && !page.restarted)
+            ...state.suggestions
+          else
+            ...state.suggestions.where(
+              (item) => state.pendingPubkeys.contains(item.pubkey),
+            ),
+          ...page.suggestions,
+        ], pendingFollowPubkeys: state.pendingPubkeys),
+        nextCursor: page.nextCursor,
+        pendingPubkeys: state.pendingPubkeys,
+        requestGeneration: generation,
+        limit: pageLimit,
+      ),
+    );
   }
 
   Future<FollowOutcome?> follow(FollowSuggestion suggestion) async {

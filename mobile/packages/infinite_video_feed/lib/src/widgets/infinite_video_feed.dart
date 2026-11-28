@@ -416,10 +416,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   late final PageController _pageController;
   final _pointerScrollPager = PointerScrollPager();
 
-  /// The page a [nextPage] or [previousPage] animation is heading for, so a
-  /// second key press during the animation moves on from there rather than
+  /// The physical page a [nextPage] or [previousPage] animation is heading for,
+  /// so a second key press during the animation moves on from there rather than
   /// repeating the step it is still finishing.
-  int? _stepTargetIndex;
+  int? _stepTargetPage;
 
   /// One revision counter per page index; the page's subtree listens to it.
   ///
@@ -468,9 +468,14 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       <int, StreamSubscription<Map<String, Object?>>>{};
   int _currentIndex = 0;
   bool _interstitialVisible = false;
+  bool _ignoringTransientInterstitial = false;
+  bool _suppressSameVideoActivationOnJump = false;
 
   /// Whether the visible page is the optional non-video interstitial.
   bool get isShowingInterstitial => _interstitialVisible;
+
+  /// Whether an optional interstitial sits immediately before [videoIndex].
+  bool hasInterstitialBefore(int videoIndex) => _slotFor(widget) == videoIndex;
 
   int? _slotFor(InfiniteVideoFeed feed) {
     final index = feed.interstitialIndex;
@@ -487,10 +492,19 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     return slot != null && index >= slot ? index + 1 : index;
   }
 
+  int get _physicalPageCount =>
+      widget.videos.length + (_slotFor(widget) == null ? 0 : 1);
+
+  int get _currentPhysicalPage {
+    final slot = _slotFor(widget);
+    if (_interstitialVisible && slot != null) return slot;
+    return _pageForVideo(_currentIndex);
+  }
+
   void _onPhysicalPageChanged(int page) {
     final slot = _slotFor(widget);
     if (slot != null && page == slot) {
-      if (_interstitialVisible) return;
+      if (_ignoringTransientInterstitial || _interstitialVisible) return;
       _interstitialVisible = true;
       _setPlaybackActive(false);
       _watchdog.stop(_currentIndex);
@@ -499,14 +513,29 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       widget.onInterstitialChanged?.call(true);
       return;
     }
+    final targetVideoIndex = slot != null && page > slot ? page - 1 : page;
     if (_interstitialVisible) {
       _interstitialVisible = false;
+      widget.onInterstitialChanged?.call(false);
+      if (targetVideoIndex == _currentIndex) {
+        // Returning to the same video paused behind the card: resume through
+        // _setPlaybackActive (which skips first-frame timing for an already
+        // painted frame) without re-running _onPageChanged or duplicating
+        // onActiveVideoChanged.
+        _setPlaybackActive(_ownerWantsPlayback);
+        _rebuildPage(_currentIndex);
+        return;
+      }
       // Activate the incoming video's controller below, without briefly
       // resuming the outgoing video behind the card.
       _isActive = _ownerWantsPlayback;
-      widget.onInterstitialChanged?.call(false);
+    } else if (_suppressSameVideoActivationOnJump &&
+        targetVideoIndex == _currentIndex) {
+      _suppressSameVideoActivationOnJump = false;
+      return;
     }
-    _onPageChanged(slot != null && page > slot ? page - 1 : page);
+    _suppressSameVideoActivationOnJump = false;
+    _onPageChanged(targetVideoIndex);
   }
 
   void _jumpToCurrentVideo() {
@@ -518,6 +547,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       if (_pageController.page?.round() != target) {
         _pageController.jumpToPage(target);
       }
+      _suppressSameVideoActivationOnJump = false;
     });
   }
 
@@ -665,34 +695,46 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     if (!mounted || widget.videos.isEmpty) return;
 
     final targetIndex = index.clamp(0, widget.videos.length - 1);
-    await _pageController.animateToPage(
-      _pageForVideo(targetIndex),
-      duration: _pageJumpDuration,
-      curve: _pageJumpCurve,
-    );
+    _ignoringTransientInterstitial = true;
+    try {
+      await _pageController.animateToPage(
+        _pageForVideo(targetIndex),
+        duration: _pageJumpDuration,
+        curve: _pageJumpCurve,
+      );
+    } finally {
+      _ignoringTransientInterstitial = false;
+    }
   }
 
-  /// Animates to the next video, or calls [InfiniteVideoFeed.onForwardBoundary]
-  /// when already on the last one.
+  /// Animates to the next page (video or armed interstitial), or calls
+  /// [InfiniteVideoFeed.onForwardBoundary] when already on the last video.
   Future<void> nextPage() => _stepPage(1);
 
-  /// Animates to the previous video. Does nothing on the first one.
+  /// Animates to the previous page (video or armed interstitial). Does nothing
+  /// on the first one.
   Future<void> previousPage() => _stepPage(-1);
 
   Future<void> _stepPage(int step) async {
-    final from = _stepTargetIndex ?? _currentIndex;
-    final target = _clampIndex(from + step);
+    if (!mounted || widget.videos.isEmpty) return;
+    final currentPage = _currentPhysicalPage;
+    final from = _stepTargetPage ?? currentPage;
+    final target = (from + step).clamp(0, _physicalPageCount - 1);
     if (target == from) {
-      if (step > 0 && from == _currentIndex && widget.videos.isNotEmpty) {
+      if (step > 0 && from == currentPage) {
         widget.onForwardBoundary?.call();
       }
       return;
     }
-    _stepTargetIndex = target;
+    _stepTargetPage = target;
     try {
-      await animateToPage(target);
+      await _pageController.animateToPage(
+        target,
+        duration: _pageJumpDuration,
+        curve: _pageJumpCurve,
+      );
     } finally {
-      if (_stepTargetIndex == target) _stepTargetIndex = null;
+      if (_stepTargetPage == target) _stepTargetPage = null;
     }
   }
 
@@ -849,7 +891,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     if (_slotFor(widget) != _slotFor(oldWidget)) {
       if (_interstitialVisible) {
         _interstitialVisible = false;
-        _isActive = _ownerWantsPlayback;
+        _suppressSameVideoActivationOnJump = true;
+        _setPlaybackActive(_ownerWantsPlayback);
+        _rebuildPage(_currentIndex);
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) widget.onInterstitialChanged?.call(false);
         });
@@ -924,6 +968,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       keepViewerHeaders: sameVideos && bunnyRoutingChanged,
     );
 
+    _suppressSameVideoActivationOnJump = false;
     if (_interstitialVisible) {
       _interstitialVisible = false;
       _isActive = _ownerWantsPlayback;

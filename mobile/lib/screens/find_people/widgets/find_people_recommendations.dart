@@ -65,6 +65,7 @@ class FindPeopleRecommendations extends ConsumerWidget {
     this.limit = 3,
     this.cubit,
     this.isActive = true,
+    this.maxCarouselHeight,
     this.onAction,
     this.onAvailabilityChanged,
     super.key,
@@ -73,6 +74,7 @@ class FindPeopleRecommendations extends ConsumerWidget {
   final int limit;
   final FindPeopleCubit? cubit;
   final bool isActive;
+  final double? maxCarouselHeight;
   final FindPeopleActionCallback? onAction;
   final ValueChanged<bool>? onAvailabilityChanged;
 
@@ -87,6 +89,7 @@ class FindPeopleRecommendations extends ConsumerWidget {
         isActive: isActive,
         layout: FindPeopleSuggestionsLayout.carousel,
         showPagination: false,
+        maxCarouselHeight: maxCarouselHeight,
         onAvailabilityChanged: onAvailabilityChanged,
         onAction: callback,
       ),
@@ -103,6 +106,7 @@ class FindPeopleSuggestionsList extends ConsumerStatefulWidget {
     this.isActive = true,
     this.showPagination = true,
     this.layout = FindPeopleSuggestionsLayout.grid,
+    this.maxCarouselHeight,
     this.onAction,
     this.onAvailabilityChanged,
     super.key,
@@ -114,6 +118,9 @@ class FindPeopleSuggestionsList extends ConsumerStatefulWidget {
   final bool isActive;
   final bool showPagination;
   final FindPeopleSuggestionsLayout layout;
+
+  /// Optional height bound when rendered inside a non-scrolling feed card.
+  final double? maxCarouselHeight;
   final FindPeopleActionCallback? onAction;
   final ValueChanged<bool>? onAvailabilityChanged;
 
@@ -151,6 +158,7 @@ class _FindPeopleSuggestionsListState
             _notify(state);
             final cubit = context.read<FindPeopleCubit>();
             return Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (state.actionFailed)
@@ -171,8 +179,12 @@ class _FindPeopleSuggestionsListState
                           : constraints.maxWidth;
                       final carousel =
                           widget.layout == FindPeopleSuggestionsLayout.carousel;
-                      final largeText =
-                          MediaQuery.textScalerOf(context).scale(14) > 20;
+                      final textScale =
+                          MediaQuery.textScalerOf(
+                            context,
+                          ).scale(14) /
+                          14;
+                      final largeText = textScale > 20 / 14;
                       // Preserve phone pairs; add columns before desktop cards
                       // exceed 320px, with one readable column at large text.
                       final columns = largeText || available < 332
@@ -183,6 +195,34 @@ class _FindPeopleSuggestionsListState
                           : largeText
                           ? available.clamp(0.0, 480.0)
                           : (available - (columns - 1) * 12) / columns;
+                      final boundedCarouselHeight = carousel
+                          ? widget.maxCarouselHeight
+                          : null;
+                      // When inside a feed interstitial card, cap the preview
+                      // height so the carousel fits without a nested vertical
+                      // scrollable that would trap vertical feed swipes.
+                      final bannerReserve = state.actionFailed
+                          ? 32 + 22 * textScale
+                          : 0.0;
+                      final compactMetadataReserve = 160 * textScale + 44;
+                      final fullMetadataReserve = 204 * textScale + 44;
+                      double? previewHeight;
+                      var showBio = true;
+                      if (boundedCarouselHeight != null) {
+                        final availableForCard =
+                            boundedCarouselHeight - 24 - bannerReserve;
+                        final withBio = availableForCard - fullMetadataReserve;
+                        if (withBio >= 120) {
+                          previewHeight = withBio.clamp(120.0, width);
+                        } else {
+                          showBio = false;
+                          final compact =
+                              availableForCard - compactMetadataReserve;
+                          previewHeight = compact >= 72
+                              ? compact.clamp(72.0, width)
+                              : 0;
+                        }
+                      }
                       final cards = [
                         for (
                           var index = 0;
@@ -202,6 +242,8 @@ class _FindPeopleSuggestionsListState
                               isPending: state.pendingPubkeys.contains(
                                 state.suggestions[index].pubkey,
                               ),
+                              previewHeight: previewHeight,
+                              showBio: showBio,
                               onAction: widget.onAction,
                             ),
                           ),
@@ -327,6 +369,8 @@ class _CreatorCard extends StatefulWidget {
     required this.position,
     required this.isActive,
     required this.isPending,
+    this.previewHeight,
+    this.showBio = true,
     this.onAction,
     super.key,
   });
@@ -334,6 +378,8 @@ class _CreatorCard extends StatefulWidget {
   final int position;
   final bool isActive;
   final bool isPending;
+  final double? previewHeight;
+  final bool showBio;
   final FindPeopleActionCallback? onAction;
 
   @override
@@ -377,6 +423,36 @@ class _CreatorCardState extends State<_CreatorCard> {
         $extra: {'displayName': name, 'avatarUrl': profile.picture},
       ).push<void>(context),
     );
+    final showPreview = widget.previewHeight != 0;
+    Future<void> handleDismiss() async {
+      final callback = widget.onAction;
+      final position = widget.position;
+      if (await context.read<FindPeopleCubit>().dismiss(suggestion)) {
+        callback?.call('dismissed', suggestion, position);
+      }
+    }
+
+    final previewStack = Stack(
+      fit: StackFit.expand,
+      children: [
+        _CreatorPreview(
+          suggestion: suggestion,
+          name: name,
+          onProfile: openProfile,
+        ),
+        Positioned(
+          top: 8,
+          right: 8,
+          child: DivineIconButton(
+            icon: DivineIconName.x,
+            type: DivineIconButtonType.ghostOverMedia,
+            semanticLabel: context.l10n.findPeopleDismiss,
+            tooltip: context.l10n.findPeopleDismiss,
+            onPressed: widget.isPending ? null : handleDismiss,
+          ),
+        ),
+      ],
+    );
     return VisibilityDetector(
       key: _visibilityKey,
       onVisibilityChanged: (info) {
@@ -391,74 +467,64 @@ class _CreatorCardState extends State<_CreatorCard> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AspectRatio(
-              aspectRatio: 1,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  _CreatorPreview(
-                    suggestion: suggestion,
-                    name: name,
-                    onProfile: openProfile,
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: DivineIconButton(
-                      icon: DivineIconName.x,
-                      type: DivineIconButtonType.ghost,
-                      semanticLabel: context.l10n.findPeopleDismiss,
-                      tooltip: context.l10n.findPeopleDismiss,
-                      onPressed: widget.isPending
-                          ? null
-                          : () async {
-                              final callback = widget.onAction;
-                              final position = widget.position;
-                              if (await context.read<FindPeopleCubit>().dismiss(
-                                suggestion,
-                              )) {
-                                callback?.call(
-                                  'dismissed',
-                                  suggestion,
-                                  position,
-                                );
-                              }
-                            },
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            if (showPreview)
+              if (widget.previewHeight case final height?)
+                SizedBox(height: height, child: previewStack)
+              else
+                AspectRatio(aspectRatio: 1, child: previewStack),
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      UserAvatar(
-                        imageUrl: profile.picture,
-                        name: name,
-                        size: 28,
-                        placeholderSeed: suggestion.pubkey,
-                        onTap: openProfile,
-                        semanticLabel: name,
-                      ),
-                      const SizedBox(width: 8),
                       Expanded(
-                        child: InkWell(
-                          onTap: openProfile,
-                          child: Text(
-                            name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: VineTheme.titleMediumFont(
-                              color: context.vineColors.primaryText,
+                        child: Semantics(
+                          button: true,
+                          label: name,
+                          child: InkWell(
+                            onTap: openProfile,
+                            borderRadius: BorderRadius.circular(8),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minHeight: 48),
+                              child: Row(
+                                children: [
+                                  ExcludeSemantics(
+                                    child: UserAvatar(
+                                      imageUrl: profile.picture,
+                                      name: name,
+                                      size: 32,
+                                      placeholderSeed: suggestion.pubkey,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: ExcludeSemantics(
+                                      child: Text(
+                                        name,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: VineTheme.titleMediumFont(
+                                          color: context.vineColors.primaryText,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
+                      if (!showPreview)
+                        DivineIconButton(
+                          icon: DivineIconName.x,
+                          type: DivineIconButtonType.ghost,
+                          semanticLabel: context.l10n.findPeopleDismiss,
+                          tooltip: context.l10n.findPeopleDismiss,
+                          onPressed: widget.isPending ? null : handleDismiss,
+                        ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -470,11 +536,12 @@ class _CreatorCardState extends State<_CreatorCard> {
                       color: context.vineColors.secondaryText,
                     ),
                   ),
-                  if (profile.about case final about?
-                      when about.isNotEmpty) ...[
+                  if (widget.showBio &&
+                      profile.about != null &&
+                      profile.about!.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      sanitizeForDisplay(about),
+                      sanitizeForDisplay(profile.about!),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: VineTheme.bodySmallFont(

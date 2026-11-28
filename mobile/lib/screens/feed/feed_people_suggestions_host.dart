@@ -34,7 +34,7 @@ class FeedPeopleSuggestionsHost extends ConsumerWidget {
   const FeedPeopleSuggestionsHost({
     required this.builder,
     required this.sessionKey,
-    required this.initialVideoIndex,
+    required this.currentVideoIndex,
     required this.isFeedActive,
     required this.onContinue,
     super.key,
@@ -42,7 +42,7 @@ class FeedPeopleSuggestionsHost extends ConsumerWidget {
 
   final Widget Function(BuildContext, FeedPeopleSlot) builder;
   final Object sessionKey;
-  final int initialVideoIndex;
+  final int Function() currentVideoIndex;
   final bool isFeedActive;
   final VoidCallback onContinue;
 
@@ -92,7 +92,7 @@ class _PeopleSessionState extends State<_PeopleSession> {
   void initState() {
     super.initState();
     _policy = FeedPeopleInterstitialCubit(
-      initialVideoIndex: widget.configuration.initialVideoIndex,
+      initialVideoIndex: widget.configuration.currentVideoIndex(),
     );
     _people = widget.createCubit();
   }
@@ -101,9 +101,15 @@ class _PeopleSessionState extends State<_PeopleSession> {
   void didUpdateWidget(_PeopleSession oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.configuration.sessionKey != widget.configuration.sessionKey) {
-      _policy.reset(initialVideoIndex: widget.configuration.initialVideoIndex);
-      _policy.availabilityChanged(_people.state.suggestions.isNotEmpty);
       _cardVisible.value = false;
+      _policy.reset(
+        initialVideoIndex: widget.configuration.currentVideoIndex(),
+      );
+      if (_people.state.policyUnavailable) {
+        _policy.clearForPolicy();
+      } else {
+        _policy.availabilityChanged(_people.state.suggestions.isNotEmpty);
+      }
     }
   }
 
@@ -119,9 +125,19 @@ class _PeopleSessionState extends State<_PeopleSession> {
   Widget build(BuildContext context) {
     return BlocListener<FindPeopleCubit, FindPeopleState>(
       bloc: _people,
-      listenWhen: (before, after) => before.suggestions != after.suggestions,
-      listener: (_, state) =>
-          _policy.availabilityChanged(state.suggestions.isNotEmpty),
+      listenWhen: (before, after) =>
+          before.suggestions != after.suggestions ||
+          before.policyUnavailable != after.policyUnavailable,
+      listener: (_, state) {
+        if (state.policyUnavailable) {
+          _policy.clearForPolicy();
+        } else {
+          _policy.availabilityChanged(
+            state.suggestions.isNotEmpty,
+            cardVisible: _cardVisible.value,
+          );
+        }
+      },
       child:
           BlocSelector<
             FeedPeopleInterstitialCubit,
@@ -168,27 +184,33 @@ class _FeedPeopleCard extends StatelessWidget {
     color: context.vineColors.surface,
     child: SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 80, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 64, 16, 20),
         child: Column(
           children: [
             Text(
               context.l10n.findPeopleTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: VineTheme.titleLargeFont(
                 color: context.vineColors.primaryText,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Expanded(
-              child: SingleChildScrollView(
-                child: ValueListenableBuilder<bool>(
-                  valueListenable: cardVisible,
-                  builder: (context, visible, _) => FindPeopleRecommendations(
-                    cubit: people,
-                    isActive: visible && isFeedActive,
+              child: LayoutBuilder(
+                builder: (context, constraints) => Center(
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: cardVisible,
+                    builder: (context, visible, _) => FindPeopleRecommendations(
+                      cubit: people,
+                      isActive: visible && isFeedActive,
+                      maxCarouselHeight: constraints.maxHeight,
+                    ),
                   ),
                 ),
               ),
             ),
+            const SizedBox(height: 12),
             DivineButton(
               label: context.l10n.findPeopleContinueWatching,
               onPressed: onContinue,
