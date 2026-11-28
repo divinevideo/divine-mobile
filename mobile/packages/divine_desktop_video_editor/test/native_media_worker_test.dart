@@ -113,8 +113,10 @@ void main() {
     test(
       'requires a positive pid before requesting native ownership',
       () async {
-        messenger.setMockMethodCallHandler(channel, (_) async {
-          fail('An invalid pid crossed the native boundary.');
+        final calls = <MethodCall>[];
+        messenger.setMockMethodCallHandler(channel, (call) async {
+          calls.add(call);
+          return null;
         });
         await expectLater(
           worker.claimProcess(0),
@@ -126,6 +128,7 @@ void main() {
             ),
           ),
         );
+        expect(calls, isEmpty);
       },
     );
 

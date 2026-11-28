@@ -25,9 +25,10 @@ void main() {
         locate: () async => command,
         temporaryDirectory: () async => root,
         start: (command) async {
-          jobDirectories.add(
-            File(command.environment['GST_REGISTRY_1_0']!).parent,
+          final created = root.listSync().whereType<Directory>().where(
+            (dir) => !jobDirectories.any((seen) => seen.path == dir.path),
           );
+          jobDirectories.addAll(created);
           return Process.start(
             command.executable,
             command.arguments,
@@ -639,31 +640,64 @@ void main() {
       },
     );
 
-    test('does not report completion when temporary cleanup fails', () async {
-      final values = <double>[];
-      final subscription = client.progress.listen((event) {
-        values.add(event.value);
-      });
-      await expectLater(
-        client.execute(
+    test(
+      'completes process ownership claim before writing request to stdin',
+      () async {
+        await client.dispose();
+        final events = <String>[];
+        client = MediaWorkerClient(
+          locate: () async => command,
+          temporaryDirectory: () async => root,
+          start: (command) async => _RecordingInputProcess(
+            await Process.start(
+              command.executable,
+              command.arguments,
+              environment: command.environment,
+            ),
+            onWrite: () => events.add('stdin-write'),
+          ),
+          claimProcess: (_) async {
+            events.add('claim-start');
+            await Future<void>.delayed(Duration.zero);
+            events.add('claim-end');
+          },
+        );
+        final value = await client.execute(
+          'render',
+          {},
+          taskId: 'claim-order',
+          consume: (_) => 'ok',
+        );
+        expect(value, 'ok');
+        expect(events.take(3).toList(), [
+          'claim-start',
+          'claim-end',
+          'stdin-write',
+        ]);
+      },
+    );
+
+    test(
+      'returns consumed result when temporary cleanup fails after retries',
+      () async {
+        final values = <double>[];
+        final subscription = client.progress.listen((event) {
+          values.add(event.value);
+        });
+        final result = await client.execute(
           'render',
           {},
           taskId: 'cleanup',
           consume: (output) async {
             await output.directory.delete(recursive: true);
+            return 'committed';
           },
-        ),
-        throwsA(
-          isA<MediaWorkerFailure>().having(
-            (failure) => failure.code,
-            'code',
-            'cleanup',
-          ),
-        ),
-      );
-      await subscription.cancel();
-      expect(values, [0.25]);
-    });
+        );
+        await subscription.cancel();
+        expect(result, 'committed');
+        expect(values, [0.25, 1.0]);
+      },
+    );
 
     test('terminates a child whose output stream cannot be read', () async {
       await client.dispose();
@@ -712,24 +746,70 @@ void main() {
       },
     );
 
-    test('confines the native plugin registry to the job directory', () async {
-      final original = Platform.environment['GST_REGISTRY_1_0'];
-      await client.execute(
-        'render',
-        {},
-        taskId: 'registry',
-        consume: (output) {
-          final value = output.value! as Map<String, dynamic>;
-          expect(
-            value['registry'],
-            '${output.directory.path}/gstreamer-registry.bin',
-          );
-          expect(value['registryFork'], 'no');
-        },
-      );
-      expect(Platform.environment['GST_REGISTRY_1_0'], original);
-      expect(command.environment, isEmpty);
-    });
+    test(
+      'reuses a stable plugin registry across jobs and cleans up on dispose',
+      () async {
+        final original = Platform.environment['GST_REGISTRY_1_0'];
+        late String firstRegistry;
+        late String secondRegistry;
+        await client.execute(
+          'render',
+          {},
+          taskId: 'registry-1',
+          consume: (output) {
+            final value = output.value! as Map<String, dynamic>;
+            firstRegistry = value['registry'] as String;
+            expect(
+              firstRegistry,
+              isNot('${output.directory.path}/gstreamer-registry.bin'),
+            );
+            expect(value['registryFork'], 'no');
+          },
+        );
+        await client.execute(
+          'render',
+          {},
+          taskId: 'registry-2',
+          consume: (output) {
+            final value = output.value! as Map<String, dynamic>;
+            secondRegistry = value['registry'] as String;
+          },
+        );
+        expect(secondRegistry, firstRegistry);
+        final registryDir = File(firstRegistry).parent;
+        expect(registryDir.existsSync(), isTrue);
+        await client.dispose();
+        expect(registryDir.existsSync(), isFalse);
+        expect(Platform.environment['GST_REGISTRY_1_0'], original);
+        expect(command.environment, isEmpty);
+      },
+    );
+
+    test(
+      'uses an explicit per-app registry path without deleting it',
+      () async {
+        await client.dispose();
+        final customRegistry = '${root.path}/app-registry.bin';
+        client = MediaWorkerClient(
+          locate: () async => command,
+          temporaryDirectory: () async => root,
+          registryPath: customRegistry,
+        );
+        late String seenRegistry;
+        await client.execute(
+          'render',
+          {},
+          taskId: 'custom-registry',
+          consume: (output) {
+            final value = output.value! as Map<String, dynamic>;
+            seenRegistry = value['registry'] as String;
+          },
+        );
+        expect(seenRegistry, customRegistry);
+        await client.dispose();
+        expect(root.existsSync(), isTrue);
+      },
+    );
 
     test(
       'preserves the caller temp directory and its unrelated files',
@@ -1103,6 +1183,63 @@ class _RejectedEofSink implements IOSink {
   void write(Object? value) => sink.write(value);
   @override
   void writeln([Object? value = '']) => sink.writeln(value);
+  @override
+  void writeAll(Iterable<dynamic> objects, [String separator = '']) =>
+      sink.writeAll(objects, separator);
+  @override
+  void writeCharCode(int charCode) => sink.writeCharCode(charCode);
+}
+
+class _RecordingInputProcess extends _BrokenOutputProcess {
+  _RecordingInputProcess(super.process, {required void Function() onWrite})
+    : _input = _RecordingInputSink(process.stdin, onWrite);
+  final IOSink _input;
+  @override
+  IOSink get stdin => _input;
+  @override
+  Stream<List<int>> get stdout => process.stdout;
+}
+
+class _RecordingInputSink implements IOSink {
+  _RecordingInputSink(this.sink, this.onWrite);
+  final IOSink sink;
+  final void Function() onWrite;
+  @override
+  Encoding get encoding => sink.encoding;
+  @override
+  set encoding(Encoding value) {
+    sink.encoding = value;
+  }
+
+  @override
+  Future<void> get done => sink.done;
+  @override
+  void add(List<int> data) {
+    onWrite();
+    sink.add(data);
+  }
+
+  @override
+  void addError(Object error, [StackTrace? stackTrace]) =>
+      sink.addError(error, stackTrace);
+  @override
+  Future<void> addStream(Stream<List<int>> stream) => sink.addStream(stream);
+  @override
+  Future<void> flush() => sink.flush();
+  @override
+  Future<void> close() => sink.close();
+  @override
+  void write(Object? value) {
+    onWrite();
+    sink.write(value);
+  }
+
+  @override
+  void writeln([Object? value = '']) {
+    onWrite();
+    sink.writeln(value);
+  }
+
   @override
   void writeAll(Iterable<dynamic> objects, [String separator = '']) =>
       sink.writeAll(objects, separator);

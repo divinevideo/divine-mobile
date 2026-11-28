@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show debugPrint;
+
 /// An installed media helper and its fixed launch configuration.
 class MediaWorkerCommand {
   /// Creates a command. Media requests are sent over stdin, never arguments.
@@ -71,6 +73,7 @@ class MediaWorkerClient {
     required this.temporaryDirectory,
     Future<Process> Function(MediaWorkerCommand)? start,
     this.claimProcess,
+    this.registryPath,
   }) : _start = start ?? _startProcess;
 
   /// Resolves the installed helper without launching it.
@@ -86,10 +89,17 @@ class MediaWorkerClient {
   /// inside the helper before reading requests.
   final Future<void> Function(int pid)? claimProcess;
 
+  /// Optional stable GStreamer plugin registry path reused across jobs.
+  ///
+  /// When omitted, the client allocates one temporary registry file and reuses
+  /// it across jobs until [dispose].
+  final String? registryPath;
+
   final Future<Process> Function(MediaWorkerCommand) _start;
 
   final _progress = StreamController<MediaWorkerProgress>.broadcast(sync: true);
   final _jobs = <String, _Job>{};
+  Directory? _registryDirectory;
   Future<void> _tail = Future<void>.value();
   Future<void>? _disposing;
 
@@ -159,13 +169,15 @@ class MediaWorkerClient {
       job.checkCancelled();
       directory = await parent.createTemp('divine-media-');
       job.checkCancelled();
+      final registry = await _resolveRegistryPath();
+      job.checkCancelled();
       final process = await _start(
         MediaWorkerCommand(
           command.executable,
           arguments: command.arguments,
           environment: {
             ...command.environment,
-            'GST_REGISTRY_1_0': '${directory.path}/gstreamer-registry.bin',
+            'GST_REGISTRY_1_0': registry,
             'GST_REGISTRY_FORK': 'no',
           },
         ),
@@ -249,11 +261,34 @@ class MediaWorkerClient {
       await outputDone;
       await stderrDone;
       if (directory != null) {
-        try {
-          await directory.delete(recursive: true);
-        } on FileSystemException {
-          throw MediaWorkerFailure('cleanup');
+        await _deleteTemporaryDirectory(directory);
+      }
+    }
+  }
+
+  Future<String> _resolveRegistryPath() async {
+    final explicit = registryPath;
+    if (explicit != null) return explicit;
+    final existing = _registryDirectory;
+    if (existing != null) return '${existing.path}/gstreamer-registry.bin';
+    final created = await Directory.systemTemp.createTemp(
+      'divine-media-registry-',
+    );
+    _registryDirectory = created;
+    return '${created.path}/gstreamer-registry.bin';
+  }
+
+  Future<void> _deleteTemporaryDirectory(Directory directory) async {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        await directory.delete(recursive: true);
+        return;
+      } on FileSystemException {
+        if (attempt == 2) {
+          debugPrint('Desktop media temporary directory cleanup failed.');
+          return;
         }
+        await Future<void>.delayed(const Duration(milliseconds: 50));
       }
     }
   }
@@ -285,6 +320,11 @@ class MediaWorkerClient {
   Future<void> _dispose() async {
     await Future.wait(_jobs.keys.toList().map(cancel));
     await _tail;
+    final registryDirectory = _registryDirectory;
+    _registryDirectory = null;
+    if (registryDirectory != null) {
+      await _deleteTemporaryDirectory(registryDirectory);
+    }
     await _progress.close();
   }
 }

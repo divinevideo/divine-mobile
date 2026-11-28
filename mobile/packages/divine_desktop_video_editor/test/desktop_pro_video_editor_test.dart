@@ -13,6 +13,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   group('DesktopProVideoEditor', () {
     late Directory root;
+    late MediaWorkerClient client;
     late DesktopProVideoEditor editor;
     late EditorVideo video;
     var locations = 0;
@@ -22,20 +23,19 @@ void main() {
       root = await Directory.systemTemp.createTemp('editor adapter ');
       final executable = await dartExecutable();
       final worker = await fixtureFile('worker.dart');
-      editor = DesktopProVideoEditor(
-        client: MediaWorkerClient(
-          locate: () async {
-            locations++;
-            return MediaWorkerCommand(
-              executable,
-              arguments: [
-                worker.path,
-              ],
-            );
-          },
-          temporaryDirectory: () async => root,
-        ),
+      client = MediaWorkerClient(
+        locate: () async {
+          locations++;
+          return MediaWorkerCommand(
+            executable,
+            arguments: [
+              worker.path,
+            ],
+          );
+        },
+        temporaryDirectory: () async => root,
       );
+      editor = DesktopProVideoEditor(client: client);
       video = EditorVideo.file(
         await fixtureFile('synthetic-colors.mp4'),
       );
@@ -53,6 +53,25 @@ void main() {
       expect(metadata.frameRate, 20.0);
       expect(await editor.hasAudioTrack(video), isTrue);
     });
+
+    test(
+      'accepts video metadata when frameRate is omitted for VFR clips',
+      () async {
+        final result = await editor.methodChannel
+            .invokeMethod<Map<Object?, Object?>>('getMetadata', {
+              'fixtureResult': {
+                'width': 128,
+                'height': 240,
+                'duration': 1000,
+                'hasVideo': true,
+              },
+            });
+        expect(result!['width'], 128);
+        expect(result['height'], 240);
+        expect(result.containsKey('frameRate'), isFalse);
+        expect(root.listSync(), isEmpty);
+      },
+    );
 
     test(
       'accepts audio metadata only with an explicit no-video result',
@@ -849,10 +868,10 @@ void main() {
         await expectLater(
           editor.getThumbnailStream(thumbnails()).toList(),
           throwsA(
-            isA<MediaWorkerFailure>().having(
+            isA<PlatformException>().having(
               (error) => error.code,
               'code',
-              'disposed',
+              'DESKTOP_MEDIA_DISPOSED',
             ),
           ),
         );
@@ -862,7 +881,7 @@ void main() {
       test('holds the frame lease while its subscriber is paused', () async {
         final first = Completer<void>();
         final completed = Completer<void>();
-        final nativeCompleted = editor.client.progress.firstWhere(
+        final nativeCompleted = client.progress.firstWhere(
           (event) => event.value == 1,
         );
         final received = <ThumbnailFrame>[];

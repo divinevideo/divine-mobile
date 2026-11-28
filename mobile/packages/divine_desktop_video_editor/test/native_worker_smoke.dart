@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:divine_desktop_video_editor/divine_desktop_video_editor.dart';
+import 'package:divine_desktop_video_editor/src/media_worker_client.dart'
+    show MediaWorkerCommand;
 import 'package:flutter/widgets.dart' show Size;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';

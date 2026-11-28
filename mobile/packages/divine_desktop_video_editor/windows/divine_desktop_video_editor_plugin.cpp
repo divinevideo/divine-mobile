@@ -13,6 +13,18 @@
 namespace {
 using Value = flutter::EncodableValue;
 using Map = flutter::EncodableMap;
+
+std::string wide_to_utf8(const wchar_t* wide) {
+  if (!wide || *wide == L'\0') return {};
+  const int size = WideCharToMultiByte(
+      CP_UTF8, 0, wide, -1, nullptr, 0, nullptr, nullptr);
+  if (size <= 1) return {};
+  std::string utf8(static_cast<size_t>(size - 1), '\0');
+  WideCharToMultiByte(
+      CP_UTF8, 0, wide, -1, utf8.data(), size, nullptr, nullptr);
+  return utf8;
+}
+
 std::filesystem::path installed_worker() {
   std::wstring executable(32768, L'\0');
   const DWORD size = GetModuleFileNameW(nullptr, executable.data(), static_cast<DWORD>(executable.size()));
@@ -36,11 +48,12 @@ class DesktopMediaPlugin : public flutter::Plugin {
         }
         const auto root = worker.parent_path();
         std::string path = root.u8string();
-        char* inherited = nullptr;
+        wchar_t* inherited = nullptr;
         size_t inherited_size = 0;
-        if (_dupenv_s(&inherited, &inherited_size, "PATH") == 0 && inherited) {
-          path += ";" + std::string(inherited);
+        if (_wdupenv_s(&inherited, &inherited_size, L"PATH") == 0 && inherited) {
+          const std::string utf8_inherited = wide_to_utf8(inherited);
           std::free(inherited);
+          if (!utf8_inherited.empty()) path += ";" + utf8_inherited;
         }
         // These values are applied only to the media child. They never alter
         // DLL lookup or plugin selection in the Flutter process.

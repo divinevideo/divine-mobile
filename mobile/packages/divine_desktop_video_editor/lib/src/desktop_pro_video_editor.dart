@@ -11,10 +11,10 @@ import 'package:pro_video_editor/pro_video_editor.dart';
 /// Registration is explicit. The app must only select this backend once its
 /// required native operations have passed the desktop creation tests.
 class DesktopProVideoEditor extends MethodChannelProVideoEditor {
-  /// Creates a backend that owns [client] until [dispose].
-  DesktopProVideoEditor({required this.client}) {
-    _transport = _EditorWorkerChannel(client, _tasks);
-    _progress = client.progress.listen((event) {
+  /// Creates a backend that owns the injected worker client until [dispose].
+  DesktopProVideoEditor({required this._client}) {
+    _transport = _EditorWorkerChannel(_client, _tasks);
+    _progress = _client.progress.listen((event) {
       final id = _transport.publicTaskId(event.taskId);
       if (id != null) {
         progressCtrl.add(ProgressModel(id: id, progress: event.value));
@@ -22,8 +22,7 @@ class DesktopProVideoEditor extends MethodChannelProVideoEditor {
     });
   }
 
-  /// The injected media worker owned by this backend.
-  final MediaWorkerClient client;
+  final MediaWorkerClient _client;
   late final _EditorWorkerChannel _transport;
   late final StreamSubscription<MediaWorkerProgress> _progress;
   Future<void>? _disposing;
@@ -199,7 +198,7 @@ class DesktopProVideoEditor extends MethodChannelProVideoEditor {
     if (task != null) {
       task.cancel();
       final key = task.workerId;
-      if (key != null) await client.cancel(key);
+      if (key != null) await _client.cancel(key);
       return;
     }
     await super.cancel(taskId);
@@ -218,7 +217,12 @@ class DesktopProVideoEditor extends MethodChannelProVideoEditor {
     Future<void> start() async {
       var registered = false;
       try {
-        if (_disposing != null) throw MediaWorkerFailure('disposed');
+        if (_disposing != null) {
+          throw PlatformException(
+            code: 'DESKTOP_MEDIA_DISPOSED',
+            message: 'Desktop media task failed.',
+          );
+        }
         await _tasks.start<void>(id, () async {
           _frameTasks[id] = task;
           registered = true;
@@ -275,7 +279,7 @@ class DesktopProVideoEditor extends MethodChannelProVideoEditor {
           ..unsubscribed = true
           ..cancel();
         final key = task.workerId;
-        if (!task.done.isCompleted && key != null) await client.cancel(key);
+        if (!task.done.isCompleted && key != null) await _client.cancel(key);
         await task.done.future;
       },
     );
@@ -290,7 +294,7 @@ class DesktopProVideoEditor extends MethodChannelProVideoEditor {
     for (final task in frames) {
       task.cancel();
     }
-    await client.dispose();
+    await _client.dispose();
     await Future.wait(frames.map((task) => task.done.future));
     await _progress.cancel();
     await progressCtrl.close();
